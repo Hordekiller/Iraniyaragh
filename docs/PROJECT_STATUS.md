@@ -20,6 +20,7 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Docker Compose services for PostgreSQL, Redis and MinIO
 - Architecture, API, security, operations and domain principles
 - Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
+- Typed API startup configuration, explicit CORS allowlist and initial Vitest unit tests
 
 ### Partial
 
@@ -29,6 +30,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
   fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
+- Unit tests cover environment/CORS validation; database integration and browser E2E
+  harnesses are not implemented yet.
 
 ### Not implemented
 
@@ -37,18 +40,18 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
-- Tests, seed script, initial migration, observability and deployment pipeline
+- Integration/E2E tests, seed script, initial migration, observability and deployment pipeline
 
 ## Known engineering gaps
 
 1. No committed database migration or deterministic development seed.
-2. No automated test suite or coverage thresholds.
-3. The storefront prototype is decomposed into typed single-purpose components
-   (issue #19, PR merging into main). The remaining structural debt is the
-   prototype's static fixture data in `apps/web/src/data/prototype.ts`, which must
-   be replaced by a typed API client (TEMP::G3-07) and the web app needs to grow
-   only via explicit routing/API boundaries.
-4. CORS currently accepts dynamic origins and must use an environment allowlist.
+2. Only configuration unit tests exist; domain, database integration, concurrency,
+   browser E2E and coverage thresholds remain.
+3. The storefront prototype is decomposed into typed single-purpose components.
+   Static fixture data in `apps/web/src/data/prototype.ts` must be replaced by a
+   typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.
+4. CORS now uses a validated environment allowlist; deployment configuration must
+   supply the correct staging/production origins and retain negative tests.
 5. Critical serializable transactions need bounded retry behavior for transaction
    conflicts and concurrency tests.
 6. Inventory commands do not yet capture authenticated actor/audit metadata.

@@ -6,6 +6,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "lint": "eslint src --max-warnings=0",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -31,6 +32,7 @@
     "globals": "^16.5.0",
     "prisma": "^6.15.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.0"
+    "typescript-eslint": "^8.48.0",
+    "vitest": "^4.0.18"
   }
 }
