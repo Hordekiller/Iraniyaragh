@@ -20,6 +20,7 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Docker Compose services for PostgreSQL, Redis and MinIO
 - Architecture, API, security, operations and domain principles
 - Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
+- Typed API startup configuration, explicit CORS allowlist and initial Vitest unit tests
 
 ### Partial
 
@@ -28,6 +29,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Shared contracts only contain basic response/money/inventory types.
 - The storefront has responsive interactions but uses in-file static data and
   simulated actions.
+- Unit tests cover environment/CORS validation; database integration and browser E2E
+  harnesses are not implemented yet.
 
 ### Not implemented
 
@@ -36,15 +39,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
-- Tests, seed script, initial migration, observability and deployment pipeline
+- Integration/E2E tests, seed script, initial migration, observability and deployment pipeline
 
 ## Known engineering gaps
 
 1. No committed database migration or deterministic development seed.
-2. No automated test suite or coverage thresholds.
+2. Only configuration unit tests exist; domain, database integration, concurrency,
+   browser E2E and coverage thresholds remain.
 3. `apps/web/src/App.tsx` is a large prototype component and must be decomposed
    route-by-route; it must not become the production application structure.
-4. CORS currently accepts dynamic origins and must use an environment allowlist.
+4. CORS now uses a validated environment allowlist; deployment configuration must
+   supply the correct staging/production origins and retain negative tests.
 5. Critical serializable transactions need bounded retry behavior for transaction
    conflicts and concurrency tests.
 6. Inventory commands do not yet capture authenticated actor/audit metadata.
