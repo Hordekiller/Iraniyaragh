@@ -185,24 +185,19 @@
   border-radius: 14px;
 }
 
-.searchBox input {
+.searchBox > span {
+  display: flex;
   flex: 1;
-  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
   color: #8b97a9;
-  background: transparent;
-  border: 0;
-  outline: 0;
+  font-size: 0.75rem;
 }
 
-.searchBox input::placeholder {
-  color: #9ba6b6;
-}
-
-.searchBox kbd {
-  padding: 3px 6px;
+.searchBox small {
+  padding: 3px 7px;
   color: #8d98a8;
-  font-family: inherit;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   background: #fff;
   border: 1px solid #dfe4ec;
   border-radius: 7px;
@@ -219,17 +214,6 @@
   border: 1px solid #e8edf4;
   border-radius: 13px;
   place-items: center;
-}
-
-.notificationDot {
-  position: absolute;
-  top: 9px;
-  right: 9px;
-  width: 6px;
-  height: 6px;
-  background: #ff5a17;
-  border: 2px solid #fff;
-  border-radius: 50%;
 }
 
 .profile {
@@ -272,18 +256,6 @@
 
 .backdrop {
   display: none;
-}
-
-.visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 @media (max-width: 980px) {
@@ -329,8 +301,7 @@
     place-content: center;
   }
 
-  .searchBox input,
-  .searchBox kbd {
+  .searchBox > span {
     display: none;
   }
 

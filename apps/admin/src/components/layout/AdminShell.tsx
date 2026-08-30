@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, ChevronLeft, Menu, Search, X } from 'lucide-react';
 import { navigation } from '@/config/navigation';
 import styles from './AdminShell.module.css';
@@ -11,10 +11,59 @@ import styles from './AdminShell.module.css';
 export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const closeMenuRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeMenuRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        return;
+      }
+
+      if (event.key !== 'Tab' || !sidebarRef.current) return;
+
+      const focusable = Array.from(
+        sidebarRef.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'),
+      );
+      const first = focusable.at(0);
+      const last = focusable.at(-1);
+
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [mobileMenuOpen]);
 
   return (
     <div className={styles.shell}>
-      <aside className={`${styles.sidebar} ${mobileMenuOpen ? styles.sidebarOpen : ''}`} aria-label="منوی اصلی">
+      <aside
+        ref={sidebarRef}
+        className={`${styles.sidebar} ${mobileMenuOpen ? styles.sidebarOpen : ''}`}
+        aria-label="منوی اصلی"
+        aria-modal={mobileMenuOpen || undefined}
+        role={mobileMenuOpen ? 'dialog' : undefined}
+      >
         <div className={styles.brand}>
           <div className={styles.brandMark} aria-hidden="true">
             آی
@@ -23,7 +72,13 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
             <strong>ایران یراق</strong>
             <span>مرکز عملیات</span>
           </div>
-          <button className={styles.closeMenu} onClick={() => setMobileMenuOpen(false)} type="button" aria-label="بستن منو">
+          <button
+            ref={closeMenuRef}
+            className={styles.closeMenu}
+            onClick={() => setMobileMenuOpen(false)}
+            type="button"
+            aria-label="بستن منو"
+          >
             <X size={20} />
           </button>
         </div>
@@ -38,7 +93,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
                 if (item.status === 'planned') {
                   return (
-                    <span className={`${styles.navItem} ${styles.planned}`} key={item.href} aria-disabled="true">
+                    <span className={`${styles.navItem} ${styles.planned}`} key={item.href} title="این بخش هنوز پیاده‌سازی نشده است">
                       <Icon size={18} strokeWidth={1.8} />
                       <span>{item.label}</span>
                       <small>به‌زودی</small>
@@ -81,18 +136,15 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
             </button>
             <div className={styles.searchBox}>
               <Search size={18} aria-hidden="true" />
-              <label className={styles.visuallyHidden} htmlFor="admin-search">
-                جستجو در پنل
-              </label>
-              <input id="admin-search" placeholder="جستجو در سفارش، کالا یا مشتری…" disabled />
-              <kbd>⌘ K</kbd>
+              <span>
+                جستجو در پنل <small>به‌زودی</small>
+              </span>
             </div>
           </div>
 
           <div className={styles.headerActions}>
-            <button type="button" aria-label="اعلان‌ها" disabled>
+            <button type="button" aria-label="اعلان‌ها — به‌زودی" title="اعلان‌ها هنوز فعال نیست" disabled>
               <Bell size={19} />
-              <span className={styles.notificationDot} />
             </button>
             <div className={styles.profile}>
               <div className={styles.avatar} aria-hidden="true">

@@ -63,7 +63,7 @@ decision blocking Sprint 0/1.
 | G1-06 | Playwright E2E harness and web/admin smoke tests | B | A |
 | G1-07 | Web feature/route decomposition with prototype visual parity | B | A |
 | G1-08 | Custom RTL admin shell/tokens on self-hosted Vuexy technical baseline | B | A |
-| G1-09 | API client, auth/error/loading conventions and mock fixtures | B | A |
+| G1-09 | API client, auth/error/loading conventions and OpenAPI-validated fixtures | B | A |
 | G1-09A | Runtime external-asset scan, CSP and local font/icon verification | A | B |
 | G1-10 | Production Dockerfiles, local compose profiles and CI artifacts | A | B |
 | G1-11 | Live/readiness endpoints and dependency failure behavior | A | B |

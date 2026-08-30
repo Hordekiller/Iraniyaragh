@@ -20,10 +20,12 @@ Example permission groups:
 - `pricing.read`, `pricing.write`
 - `inventory.read`, `inventory.adjust`, `inventory.transfer`
 - `orders.read`, `orders.manage`
+- `shipments.read`, `shipments.manage`
 - `payments.read`, `payments.refund`
 - `customers.read`, `customers.manage`
 - `users.manage`, `roles.manage`
 - `reports.read`
+- `audit.read`, `settings.manage`
 
 Roles are collections of permissions. Critical backend actions must always enforce permissions server-side.
 

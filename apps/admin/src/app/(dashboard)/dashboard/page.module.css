@@ -49,6 +49,10 @@
   letter-spacing: 0.02em;
 }
 
+.panelEyebrow {
+  color: #a83a0f;
+}
+
 .hero h1 {
   margin: 0;
   font-size: clamp(1.65rem, 3vw, 2.4rem);

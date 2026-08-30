@@ -6,6 +6,7 @@ import {
   FileClock,
   Gauge,
   PackageSearch,
+  ChartNoAxesCombined,
   ReceiptText,
   Settings2,
   ShieldCheck,
@@ -39,7 +40,19 @@ export const navigation: NavigationGroup[] = [
       { label: 'سفارش‌ها', href: '/orders', icon: ShoppingBag, permission: 'orders.read', status: 'planned' },
       { label: 'پرداخت‌ها', href: '/payments', icon: CreditCard, permission: 'payments.read', status: 'planned' },
       { label: 'مشتریان', href: '/customers', icon: Users, permission: 'customers.read', status: 'planned' },
-      { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'orders.read', status: 'planned' },
+      { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'shipments.read', status: 'planned' },
+    ],
+  },
+  {
+    label: 'گزارش‌ها',
+    items: [
+      {
+        label: 'گزارش‌های عملیاتی',
+        href: '/reports',
+        icon: ChartNoAxesCombined,
+        permission: 'reports.read',
+        status: 'planned',
+      },
     ],
   },
   {

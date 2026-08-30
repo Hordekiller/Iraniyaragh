@@ -34,6 +34,10 @@ Every implementation issue must have:
 - test expectations;
 - dependencies and migration/API impact labels.
 
+Every `needs:decision` issue also has one accountable assignee and an explicit
+decision deadline tied to the dependent sprint. If the deadline passes, the issue is
+escalated/re-scoped; no developer silently invents policy in code.
+
 If both people must code, split it into a contract issue followed by two dependent
 issues. Do not have two branches editing the same endpoint or component blindly.
 

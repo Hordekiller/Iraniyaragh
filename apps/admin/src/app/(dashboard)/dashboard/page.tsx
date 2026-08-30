@@ -3,6 +3,7 @@ import styles from './page.module.css';
 
 const metrics = [
   {
+    id: 'today-orders',
     label: 'سفارش‌های امروز',
     value: '—',
     note: 'پس از اتصال API نمایش داده می‌شود',
@@ -10,6 +11,7 @@ const metrics = [
     tone: 'orange',
   },
   {
+    id: 'processing-orders',
     label: 'در انتظار پردازش',
     value: '—',
     note: 'وضعیت سفارش از سرور خوانده می‌شود',
@@ -17,6 +19,7 @@ const metrics = [
     tone: 'blue',
   },
   {
+    id: 'low-stock',
     label: 'موجودی کم',
     value: '—',
     note: 'بر اساس آستانهٔ هر انبار',
@@ -24,6 +27,7 @@ const metrics = [
     tone: 'amber',
   },
   {
+    id: 'ready-shipments',
     label: 'آمادهٔ ارسال',
     value: '—',
     note: 'پس از تکمیل جریان fulfillment',
@@ -45,7 +49,7 @@ export default function DashboardPage() {
       <section className={styles.hero} aria-labelledby="dashboard-title">
         <div>
           <span className={styles.eyebrow}>مرکز عملیات</span>
-          <h1 id="dashboard-title">صبح بخیر؛ وضعیت کسب‌وکار در یک نگاه</h1>
+          <h1 id="dashboard-title">نمای کلی وضعیت کسب‌وکار</h1>
           <p>
             این داشبورد فعلاً پوستهٔ اجرایی است. هیچ عدد ساختگی به‌عنوان دادهٔ واقعی نمایش داده نمی‌شود
             و هر کارت همراه با API همان دامنه فعال خواهد شد.
@@ -59,13 +63,13 @@ export default function DashboardPage() {
       </section>
 
       <section className={styles.metrics} aria-label="شاخص‌های کلیدی">
-        {metrics.map(({ label, value, note, icon: Icon, tone }) => (
-          <article className={styles.metricCard} key={label}>
+        {metrics.map(({ id, label, value, note, icon: Icon, tone }) => (
+          <article className={styles.metricCard} key={id} aria-labelledby={`metric-${id}`}>
             <div className={`${styles.metricIcon} ${styles[tone]}`} aria-hidden="true">
               <Icon size={21} strokeWidth={1.8} />
             </div>
             <div className={styles.metricCopy}>
-              <span>{label}</span>
+              <span id={`metric-${id}`}>{label}</span>
               <strong>{value}</strong>
               <small>{note}</small>
             </div>

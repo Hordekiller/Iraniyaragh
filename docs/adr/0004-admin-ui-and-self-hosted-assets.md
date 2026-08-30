@@ -1,6 +1,6 @@
 # ADR-0004: Custom Admin UI on a Self-Hosted Vuexy Baseline
 
-Status: Proposed — awaiting Developer B design review in GitHub Issue #9
+Status: Accepted — Developer B design review recorded in GitHub Issue #9
 
 Date: 2026-08-30
 
@@ -31,6 +31,9 @@ that runtime assets remain internal.
   references and runs as part of lint/CI.
 - CSP denies unlisted runtime origins. It will be tightened with nonces/hashes when
   authentication/server rendering stabilizes.
+- Navigation permission keys are a temporary declarative view. They must be derived
+  from or validated against the G2-04 backend RBAC registry; shipment access uses
+  `shipments.read` and reporting uses `reports.read`.
 
 ## Licensing
 
@@ -52,6 +55,11 @@ notice is stored beside the font files.
 - More upfront design work is required than rebranding a full demo, but the result
   fits Iranian operators and remains maintainable.
 - Template upgrades are evaluated selectively; they are never bulk-merged.
+- The source scanner intentionally covers `src` and `public`; config, dependencies
+  and generated output still require review. Browser Network verification remains
+  G1-09A/G9-02 acceptance evidence, not something the scanner replaces.
+- `sharp` installation/build approval and standalone image/runtime packaging are
+  handled explicitly with the production Docker work in G1-10.
 
 ## Verification
 
@@ -60,3 +68,5 @@ notice is stored beside the font files.
 - `pnpm --filter @iranyaragh/admin typecheck`
 - `pnpm --filter @iranyaragh/admin build`
 - Browser network inspection must show no third-party asset request.
+- G1-09A/G9-02 must replace or justify remaining CSP `unsafe-inline` allowances
+  using the final Next.js/MUI nonce/hash strategy.
