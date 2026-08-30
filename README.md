@@ -56,5 +56,10 @@ This repository is designed for a two-developer team. Before opening a branch:
 3. Check the ownership and hand-off rules in [`docs/COLLABORATION.md`](docs/COLLABORATION.md).
 4. Follow the sprint sequence in [`docs/DEVELOPMENT_PLAN.md`](docs/DEVELOPMENT_PLAN.md).
 
+For the complete product behavior and work breakdown, also read
+[`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) and
+[`docs/EXECUTION_BACKLOG.md`](docs/EXECUTION_BACKLOG.md). Team identities and the
+current proposed ownership split are recorded in [`docs/TEAM.md`](docs/TEAM.md).
+
 All changes go through pull requests. Direct pushes to `main` are reserved for
 repository recovery only.

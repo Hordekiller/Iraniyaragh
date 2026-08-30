@@ -18,9 +18,10 @@ both developers understand critical paths.
 | Secondary | Review UI architecture and API consumption | Review contracts, acceptance tests and migration effects |
 | Shared | Contracts, security-sensitive flows, release, incident response | Contracts, security-sensitive flows, release, incident response |
 
-Until the second GitHub username is known, assignments use `Developer A` and
-`Developer B`. Record actual names in the GitHub issue assignee field, not by
-hardcoding personal identity throughout source files.
+Current proposed mapping is `Developer A = @Hordekiller` and
+`Developer B = @Maddyrampant`. It is provisional until both developers complete
+the onboarding agreement in `TEAM.md`. GitHub issue assignees remain the source of
+truth for each specific task.
 
 ## One issue, one owner, one reviewer
 
