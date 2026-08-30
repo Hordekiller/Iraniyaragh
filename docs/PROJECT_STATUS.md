@@ -19,6 +19,7 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Initial inventory service for on-hand mutation, reservation and release
 - Docker Compose services for PostgreSQL, Redis and MinIO
 - Architecture, API, security, operations and domain principles
+- Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
 
 ### Partial
 
@@ -32,7 +33,7 @@ The repository is in **foundation/prototype**, before release `0.1`.
 
 - Authentication, sessions, OTP, 2FA and RBAC enforcement
 - Catalog, customer, order, payment, supplier and audit use cases/controllers
-- Admin application and mobile application
+- Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
 - Tests, seed script, initial migration, observability and deployment pipeline
@@ -53,6 +54,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 9. Order status currently combines concepts that the foundation says must be
    separated. Migrate to distinct order/payment/fulfillment state machines.
 10. API response envelopes, stable errors, correlation IDs and OpenAPI are not wired.
+11. GitHub branch protection cannot be enabled for the private repository on the
+    current account plan. CODEOWNERS and the two-person PR/CI policy are present,
+    but enforcement is manual until plan capability changes.
 
 ## Status update template
 

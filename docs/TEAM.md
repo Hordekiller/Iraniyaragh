@@ -7,7 +7,13 @@ Last updated: 2026-08-30
 | Member | Proposed track | Repository role | Status |
 | --- | --- | --- | --- |
 | [@Hordekiller](https://github.com/Hordekiller) | Developer A — Platform/API/Data/Operations | Owner/release driver | Active |
-| [@Maddyrampant](https://github.com/Maddyrampant) | Developer B — Product/Web/Admin/E2E | Write collaborator/reviewer | Active; onboarding response pending |
+| [@Maddyrampant](https://github.com/Maddyrampant) | Developer B — Product/Web/Admin/E2E | Write collaborator/reviewer | Active; onboarding review complete |
+
+Onboarding response is now complete. Maddyrampant reports approximately 35 hours
+per week in Iran time, normally same-day communication and a maximum one-working-day
+review target. Hordekiller's weekly capacity still needs to be recorded before the
+first sprint is committed; sprint scope must use the lower real capacity, not the
+headline roadmap estimate.
 
 This ownership is a starting proposal, not a statement about either person's
 ability. Change it after the onboarding response if skills, interest or weekly
@@ -45,6 +51,11 @@ as an external customer or throw work over the wall.
 Both must approve product scope, public contracts, database migrations, security,
 inventory/financial state transitions, production release and rollback decisions.
 Release roles rotate after the first release.
+
+Shared contracts, OpenAPI compatibility/drift checks and API integration fixtures
+are joint ownership. Developer A leads API generation and persistence correctness;
+Developer B verifies consumer fixtures and integration behavior against the accepted
+contract.
 
 ## Onboarding response required from Maddyrampant
 

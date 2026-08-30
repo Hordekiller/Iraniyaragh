@@ -34,6 +34,10 @@ Every implementation issue must have:
 - test expectations;
 - dependencies and migration/API impact labels.
 
+Every `needs:decision` issue also has one accountable assignee and an explicit
+decision deadline tied to the dependent sprint. If the deadline passes, the issue is
+escalated/re-scoped; no developer silently invents policy in code.
+
 If both people must code, split it into a contract issue followed by two dependent
 issues. Do not have two branches editing the same endpoint or component blindly.
 
@@ -54,7 +58,10 @@ public types, but the OpenAPI document is the externally testable API contract.
 
 ## GitHub flow
 
-- Protected branch: `main`.
+- Target protected branch: `main`. GitHub rejected protection for this private
+  repository on the current account plan (requires GitHub Pro or public visibility).
+  Until the plan supports it, both developers manually enforce no direct pushes,
+  green CI, one non-author approval and resolved review conversations.
 - Short-lived branches from current `main`.
 - Naming: `feat/123-product-crud`, `fix/245-reservation-race`,
   `docs/88-payment-flow`, `chore/31-ci-cache`.
