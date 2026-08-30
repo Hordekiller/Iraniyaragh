@@ -8,7 +8,6 @@ export default function App() {
       style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif' }}
       dir="rtl"
     >
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800;900&display=swap');`}</style>
       <ToastProvider>
         <HomePage />
       </ToastProvider>
