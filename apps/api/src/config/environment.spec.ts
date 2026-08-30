@@ -72,6 +72,31 @@ describe('validateEnvironment', () => {
     ).toThrow('JWT_ACCESS_SECRET');
   });
 
+  it('requires an explicit API port in staging and production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validDevelopmentEnvironment,
+        NODE_ENV: 'production',
+        API_PORT: undefined,
+        CORS_ORIGINS: 'https://admin.example.com',
+        JWT_ACCESS_SECRET: 'access-secret-with-at-least-32-characters',
+        JWT_REFRESH_SECRET: 'refresh-secret-with-at-least-32-characters',
+        OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
+      }),
+    ).toThrow('API_PORT is required');
+  });
+
+  it('rejects placeholder or short staging secrets', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validDevelopmentEnvironment,
+        NODE_ENV: 'staging',
+        CORS_ORIGINS: 'https://staging-admin.example.com',
+        JWT_ACCESS_SECRET: 'change-me-access',
+      }),
+    ).toThrow('JWT_ACCESS_SECRET');
+  });
+
   it('accepts explicit strong production configuration', () => {
     const result = validateEnvironment({
       ...validDevelopmentEnvironment,

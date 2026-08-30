@@ -13,8 +13,9 @@ Production databases/credentials must never be reused for development.
 The API validates configuration before opening a listening socket. Development may
 default to the known local web/admin origins; staging and production must provide an
 explicit comma-separated `CORS_ORIGINS` allowlist. Wildcards are forbidden when
-credentialed requests are enabled. Production JWT/object-storage secrets must be
-non-placeholder values of at least 32 characters, and access/refresh secrets differ.
+credentialed requests are enabled. Staging and production must also provide an
+explicit `API_PORT`; their JWT/object-storage secrets must be non-placeholder values
+of at least 32 characters, and access/refresh secrets must differ.
 
 Environment values are configuration only; business policy and secrets never use
 client-exposed variables. Update `.env.example`, deployment secrets and this matrix

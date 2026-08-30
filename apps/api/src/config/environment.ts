@@ -25,7 +25,11 @@ function requiredString(config: Record<string, unknown>, key: keyof EnvironmentV
   return value.trim();
 }
 
-function parsePort(value: unknown) {
+function parsePort(value: unknown, environment: NodeEnvironment) {
+  if ((value === undefined || value === null || value === '') && ['staging', 'production'].includes(environment)) {
+    throw new Error('API_PORT is required in staging and production.');
+  }
+
   const port = typeof value === 'number' ? value : Number(value ?? 4000);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
     throw new Error('API_PORT must be an integer between 1 and 65535.');
@@ -82,9 +86,9 @@ export function parseCorsOrigins(value: unknown, environment: NodeEnvironment) {
   return [...new Set(origins)];
 }
 
-function validateProductionSecret(value: string, key: string, environment: NodeEnvironment) {
-  if (environment === 'production' && (value.length < 32 || value.toLowerCase().includes('change-me'))) {
-    throw new Error(`${key} must be a non-placeholder secret of at least 32 characters in production.`);
+function validateDeploymentSecret(value: string, key: string, environment: NodeEnvironment) {
+  if (['staging', 'production'].includes(environment) && (value.length < 32 || value.toLowerCase().includes('change-me'))) {
+    throw new Error(`${key} must be a non-placeholder secret of at least 32 characters in staging and production.`);
   }
   return value;
 }
@@ -102,9 +106,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     'http:',
     'https:',
   ]);
-  const accessSecret = validateProductionSecret(requiredString(config, 'JWT_ACCESS_SECRET'), 'JWT_ACCESS_SECRET', environment);
-  const refreshSecret = validateProductionSecret(requiredString(config, 'JWT_REFRESH_SECRET'), 'JWT_REFRESH_SECRET', environment);
-  const objectStorageSecret = validateProductionSecret(
+  const accessSecret = validateDeploymentSecret(requiredString(config, 'JWT_ACCESS_SECRET'), 'JWT_ACCESS_SECRET', environment);
+  const refreshSecret = validateDeploymentSecret(requiredString(config, 'JWT_REFRESH_SECRET'), 'JWT_REFRESH_SECRET', environment);
+  const objectStorageSecret = validateDeploymentSecret(
     requiredString(config, 'OBJECT_STORAGE_SECRET_KEY'),
     'OBJECT_STORAGE_SECRET_KEY',
     environment,
@@ -117,7 +121,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   return {
     ...config,
     NODE_ENV: environment,
-    API_PORT: parsePort(config.API_PORT),
+    API_PORT: parsePort(config.API_PORT, environment),
     DATABASE_URL: databaseUrl,
     REDIS_URL: redisUrl,
     CORS_ORIGINS: parseCorsOrigins(config.CORS_ORIGINS, environment).join(','),
