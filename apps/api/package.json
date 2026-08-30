@@ -6,6 +6,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "lint": "eslint src --max-warnings=0",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
@@ -41,6 +42,7 @@
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.0"
+    "typescript-eslint": "^8.48.0",
+    "vitest": "^4.0.18"
   }
 }

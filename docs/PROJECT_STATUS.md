@@ -39,10 +39,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
     request-id middleware, `withSerializableRetry`, `PageQueryDto`/`buildPageMeta`
   - Committed baseline migration `20260831000000_commerce_customer_journey` with
     appended CHECK constraints (auth + commerce); `prisma migrate diff` shows no drift
-  - Jest test harness (`jest.config.js`, ts-jest) with unit tests for the state
-    machines, checkout DTO/checks (idempotency, min-quantity, server-side pricing),
-    payment idempotency + amount mismatch, and stock-alert dedupe/double-notify.
-    Verified: `typecheck`, `lint`, `build` and `test` (22 passing) all green.
+  - Vitest unit tests for the state machines, checkout DTO/checks (idempotency,
+    min-quantity, server-side pricing), payment idempotency + amount mismatch, and
+    stock-alert dedupe/double-notify. Verified: `typecheck`, `lint`, `build` and
+    `test` (22 passing) all green.
+- Typed API startup configuration, explicit CORS allowlist and initial Vitest unit tests
 
 ### Partial
 
@@ -51,6 +52,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Shared contracts only contain basic response/money/inventory types.
 - The storefront has responsive interactions but uses in-file static data and
   simulated actions.
+- Unit tests cover environment/CORS validation; database integration and browser E2E
+  harnesses are not implemented yet.
 
 ### Not implemented
 
@@ -71,7 +74,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 2. No deterministic development seed for the full customer journey.
 3. `apps/web/src/App.tsx` is a large prototype component and must be decomposed
    route-by-route; it must not become the production application structure.
-4. CORS currently accepts dynamic origins and must use an environment allowlist.
+4. CORS now uses a validated environment allowlist; deployment configuration must
+   supply the correct staging/production origins and retain negative tests.
 5. Inventory commands do not yet capture authenticated actor/audit metadata.
 6. Reservation consume/expire and transfer flows are not implemented.
 7. Payment refunds, shipping and fulfillment command controllers are not implemented.

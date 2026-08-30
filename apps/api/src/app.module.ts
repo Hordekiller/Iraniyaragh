@@ -14,10 +14,16 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { StockAlertsModule } from './modules/stock-alerts/stock-alerts.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
+import { validateEnvironment } from './config/environment';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      expandVariables: false,
+      validate: validateEnvironment,
+    }),
     DatabaseModule,
     HealthModule,
     AuthModule,
