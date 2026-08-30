@@ -21,6 +21,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Architecture, API, security, operations and domain principles
 - Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
 - Typed API startup configuration, explicit CORS allowlist and initial Vitest unit tests
+- Playwright smoke suite (`e2e/`) covering the storefront and admin shells
+  on desktop + mobile viewports, with a strict zero-external-asset network gate
+- Self-hosted Vazirmatn variable font in the storefront (no Google Fonts at runtime)
 
 ### Partial
 
@@ -30,8 +33,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
   fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
-- Unit tests cover environment/CORS validation; database integration and browser E2E
-  harnesses are not implemented yet.
+- Unit tests cover environment/CORS validation; a Playwright smoke suite covers the
+  web and admin shells, but domain/database integration harnesses are not implemented yet.
 
 ### Not implemented
 
@@ -40,13 +43,13 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
-- Integration/E2E tests, seed script, initial migration, observability and deployment pipeline
+- Integration tests, seed script, initial migration, observability and deployment pipeline
 
 ## Known engineering gaps
 
 1. No committed database migration or deterministic development seed.
-2. Only configuration unit tests exist; domain, database integration, concurrency,
-   browser E2E and coverage thresholds remain.
+2. Configuration unit tests and a Playwright shell smoke suite exist; domain,
+   database integration, concurrency and coverage thresholds remain.
 3. The storefront prototype is decomposed into typed single-purpose components.
    Static fixture data in `apps/web/src/data/prototype.ts` must be replaced by a
    typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.

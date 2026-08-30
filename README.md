@@ -14,6 +14,9 @@ Startup-ready commerce and warehouse platform for Iranian hardware/fittings reta
 - `apps/api` — NestJS modular-monolith business API.
 - `packages/contracts` — shared API/domain contracts.
 - `infrastructure/docker` — local PostgreSQL, Redis and MinIO.
+- `e2e` — Playwright smoke suite covering the storefront (`web`) and the admin
+  panel shells on desktop + mobile viewports, with a strict zero-external-asset
+  network gate for both apps.
 - `docs` — architecture and delivery roadmap.
 
 ## Core architecture
@@ -33,6 +36,13 @@ pnpm install
 pnpm --filter @iranyaragh/api prisma:generate
 pnpm --filter @iranyaragh/api prisma:migrate
 pnpm dev
+```
+
+Run the storefront + admin smoke suite (Playwright, Chromium; builds both apps first):
+
+```bash
+pnpm e2e:install   # first time only: download the Chromium browser
+pnpm e2e
 ```
 
 ## Engineering baseline

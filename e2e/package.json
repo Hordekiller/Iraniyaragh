@@ -1,0 +1,15 @@
+{
+  "name": "@iranyaragh/e2e",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Playwright smoke suite for the storefront (web) and admin shells",
+  "scripts": {
+    "smoke": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:install": "playwright install chromium",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}
