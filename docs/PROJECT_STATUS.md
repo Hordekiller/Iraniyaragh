@@ -26,8 +26,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Inventory rules exist in one service but have no public controller, authorization,
   audit actor, retry policy, tests or complete reservation lifecycle.
 - Shared contracts only contain basic response/money/inventory types.
-- The storefront has responsive interactions but uses in-file static data and
-  simulated actions.
+- The storefront has responsive interactions and its component tree is decomposed
+  (see #19), but actions are simulated and all data comes from static prototype
+  fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
 
 ### Not implemented
 
@@ -42,8 +43,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
 
 1. No committed database migration or deterministic development seed.
 2. No automated test suite or coverage thresholds.
-3. `apps/web/src/App.tsx` is a large prototype component and must be decomposed
-   route-by-route; it must not become the production application structure.
+3. The storefront prototype is decomposed into typed single-purpose components
+   (issue #19, PR merging into main). The remaining structural debt is the
+   prototype's static fixture data in `apps/web/src/data/prototype.ts`, which must
+   be replaced by a typed API client (TEMP::G3-07) and the web app needs to grow
+   only via explicit routing/API boundaries.
 4. CORS currently accepts dynamic origins and must use an environment allowlist.
 5. Critical serializable transactions need bounded retry behavior for transaction
    conflicts and concurrency tests.
