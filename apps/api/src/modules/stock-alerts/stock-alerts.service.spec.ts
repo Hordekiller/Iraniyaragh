@@ -1,14 +1,15 @@
+import { describe, expect, it, vi } from 'vitest';
 import { Prisma } from '@prisma/client';
 import { StockAlertsService } from './stock-alerts.service';
 
 describe('StockAlertsService.subscribe', () => {
   const build = (prismaOverrides: Record<string, unknown> = {}) => {
-    const notifications = { notifyStockRestocked: jest.fn() };
+    const notifications = { notifyStockRestocked: vi.fn() };
     const prisma = {
-      sku: { findUnique: jest.fn() },
+      sku: { findUnique: vi.fn() },
       stockAlertSubscription: {
-        create: jest.fn(),
-        findFirst: jest.fn(),
+        create: vi.fn(),
+        findFirst: vi.fn(),
       },
       ...prismaOverrides,
     };

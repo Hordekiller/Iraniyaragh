@@ -1,35 +1,36 @@
+import { describe, expect, it, vi } from 'vitest';
 import { ErrorCodes } from '../../common/errors/app-error';
 import { CheckoutService } from './checkout.service';
 
 type MockTx = {
-  order: { findFirst: jest.Mock; create: jest.Mock; count: jest.Mock };
-  cart: { findFirst: jest.Mock };
-  cartItem: { deleteMany: jest.Mock };
-  price: { findFirst: jest.Mock };
-  customer: { upsert: jest.Mock };
-  inventoryBalance: { aggregate: jest.Mock; findMany: jest.Mock; update: jest.Mock };
-  stockReservation: { create: jest.Mock };
+  order: { findFirst: vi.Mock; create: vi.Mock; count: vi.Mock };
+  cart: { findFirst: vi.Mock };
+  cartItem: { deleteMany: vi.Mock };
+  price: { findFirst: vi.Mock };
+  customer: { upsert: vi.Mock };
+  inventoryBalance: { aggregate: vi.Mock; findMany: vi.Mock; update: vi.Mock };
+  stockReservation: { create: vi.Mock };
 };
 
 type MockPrisma = {
-  $transaction: jest.Mock;
+  $transaction: vi.Mock;
 };
 
 function makePrisma(
   overrides: Partial<MockTx> = {},
 ): { prisma: MockPrisma; tx: MockTx } {
   const tx: MockTx = {
-    order: { findFirst: jest.fn(), create: jest.fn(), count: jest.fn() },
-    cart: { findFirst: jest.fn() },
-    cartItem: { deleteMany: jest.fn() },
-    price: { findFirst: jest.fn() },
-    customer: { upsert: jest.fn() },
-    inventoryBalance: { aggregate: jest.fn(), findMany: jest.fn(), update: jest.fn() },
-    stockReservation: { create: jest.fn() },
+    order: { findFirst: vi.fn(), create: vi.fn(), count: vi.fn() },
+    cart: { findFirst: vi.fn() },
+    cartItem: { deleteMany: vi.fn() },
+    price: { findFirst: vi.fn() },
+    customer: { upsert: vi.fn() },
+    inventoryBalance: { aggregate: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    stockReservation: { create: vi.fn() },
     ...overrides,
   };
   const prisma: MockPrisma = {
-    $transaction: jest.fn(async (work: (t: unknown) => Promise<unknown>) => work(tx)),
+    $transaction: vi.fn(async (work: (t: unknown) => Promise<unknown>) => work(tx)),
   };
   return { prisma, tx };
 }

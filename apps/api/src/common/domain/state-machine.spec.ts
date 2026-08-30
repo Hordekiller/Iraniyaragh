@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { AppError } from '../errors/app-error';
 import {
   FULFILLMENT_TRANSITIONS,

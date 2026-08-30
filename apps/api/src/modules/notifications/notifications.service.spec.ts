@@ -1,20 +1,21 @@
+import { describe, expect, it, vi } from 'vitest';
 import { NotificationsService } from './notifications.service';
 import { DevSmsSender } from './sms-sender';
 
 type MockPrisma = {
   stockAlertSubscription: {
-    findMany: jest.Mock;
-    updateMany: jest.Mock;
+    findMany: vi.Mock;
+    updateMany: vi.Mock;
   };
 };
 
 function build() {
   const sms = new DevSmsSender();
-  const sendSpy = jest.spyOn(sms, 'send').mockResolvedValue(undefined);
+  const sendSpy = vi.spyOn(sms, 'send').mockResolvedValue(undefined);
   const prisma: MockPrisma = {
     stockAlertSubscription: {
-      findMany: jest.fn(),
-      updateMany: jest.fn(),
+      findMany: vi.fn(),
+      updateMany: vi.fn(),
     },
   };
   const service = new NotificationsService(prisma as unknown as never, sms);

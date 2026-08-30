@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '../../common/errors/app-error';
 import { PaymentService } from './payments.service';
 import { FakePaymentGateway, PaymentGateway } from './payment-gateway';
@@ -14,24 +15,24 @@ const PAYMENT = {
 };
 
 type MockTx = {
-  payment: { findFirst: jest.Mock; update: jest.Mock };
-  order: { update: jest.Mock };
+  payment: { findFirst: vi.Mock; update: vi.Mock };
+  order: { update: vi.Mock };
 };
 
-type MockPrisma = { $transaction: jest.Mock };
+type MockPrisma = { $transaction: vi.Mock };
 
 function makePrisma(): { prisma: MockPrisma; tx: MockTx } {
   const tx: MockTx = {
     payment: {
-      findFirst: jest.fn(),
-      update: jest.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
     },
     order: {
-      update: jest.fn(),
+      update: vi.fn(),
     },
   };
   const prisma: MockPrisma = {
-    $transaction: jest.fn(async (work: (t: unknown) => Promise<unknown>) => work(tx)),
+    $transaction: vi.fn(async (work: (t: unknown) => Promise<unknown>) => work(tx)),
   };
   return { prisma, tx };
 }
@@ -48,7 +49,7 @@ describe('PaymentService.verify', () => {
       status: 'PAID',
       order: { status: 'PAID', payments: [] },
     });
-    const gateway = { verifyPayment: jest.fn() };
+    const gateway = { verifyPayment: vi.fn() };
     const service = makeService(prisma, gateway as unknown as PaymentGateway);
 
     const result = await service.verify('auth-1');
@@ -67,7 +68,7 @@ describe('PaymentService.verify', () => {
       Promise.resolve({ ...PAYMENT, ...data }),
     );
     const gateway = {
-      verifyPayment: jest.fn().mockResolvedValue({
+      verifyPayment: vi.fn().mockResolvedValue({
         success: true,
         status: 'PAID',
         amount: 500_000, // does not match expected 1,000,000
