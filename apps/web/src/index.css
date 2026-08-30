@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+/* Self-hosted variable Vazirmatn (OFL-1.1) — replaces the Google Fonts CSS
+   reference so the storefront routes zero external asset requests. */
+@font-face {
+  font-family: 'Vazirmatn';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/Vazirmatn[wght].woff2') format('woff2');
+}
