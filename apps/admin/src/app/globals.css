@@ -1,0 +1,55 @@
+@font-face {
+  font-family: 'Iraniyaragh Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/NotoSansArabic-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Iraniyaragh Sans';
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+  src: url('/fonts/NotoSansArabic-Bold.ttf') format('truetype');
+}
+
+:root {
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  color: #17233a;
+  font-family: 'Iraniyaragh Sans', Tahoma, Arial, sans-serif;
+  background: #f4f6f9;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 3px solid rgb(255 90 23 / 35%);
+  outline-offset: 3px;
+}

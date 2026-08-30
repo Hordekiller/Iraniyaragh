@@ -9,7 +9,8 @@ Startup-ready commerce and warehouse platform for Iranian hardware/fittings reta
 ## Workspace
 
 - `apps/web` — customer storefront (existing visual prototype preserved here).
-- `apps/admin` — operations/admin application boundary.
+- `apps/admin` — custom Persian RTL Next.js/MUI operations application, selectively
+  based on the locally licensed Vuexy technical starter with self-hosted assets.
 - `apps/api` — NestJS modular-monolith business API.
 - `packages/contracts` — shared API/domain contracts.
 - `infrastructure/docker` — local PostgreSQL, Redis and MinIO.

@@ -234,6 +234,11 @@ actor identity with correlation/business references.
 
 ### Admin application
 
+- The locally purchased Vuexy Next.js/TypeScript starter is a selective technical
+  reference; all Iraniyaragh information architecture, tokens and workflows are
+  team-designed and product-owned.
+- No runtime font, CSS, script, icon, image or telemetry is loaded from third-party
+  domains. Assets are bundled/self-hosted; API/object-storage origins are explicit.
 - Dashboard emphasizes actionable orders, low stock, failed jobs and payment issues.
 - Tables have server pagination/filter/sort and URL-restorable state.
 - Forms have accessible labels/errors, dirty-state protection and optimistic use
