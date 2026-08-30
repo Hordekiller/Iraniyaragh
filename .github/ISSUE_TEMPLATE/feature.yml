@@ -1,0 +1,49 @@
+name: Feature
+description: Plan a user- or operator-facing capability
+title: "[Feature]: "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What measurable user or business outcome is required?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and current behavior
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use observable Given/When/Then or checklist statements.
+      placeholder: |
+        - [ ] Given ..., when ..., then ...
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+    validations:
+      required: true
+  - type: textarea
+    id: technical
+    attributes:
+      label: Contract, data, security and test notes
+      description: Mention API/schema/migration/permissions/audit/idempotency and expected tests.
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and blockers
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk
+      options: [Low, Medium, High - critical business/security/data path]
+    validations:
+      required: true
