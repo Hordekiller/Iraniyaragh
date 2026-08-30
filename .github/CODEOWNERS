@@ -1,0 +1,11 @@
+# Default: both developers share review and continuity.
+* @Hordekiller @Maddyrampant
+
+# Primary track ownership; critical changes still require the other reviewer.
+/apps/api/ @Hordekiller @Maddyrampant
+/apps/admin/ @Maddyrampant @Hordekiller
+/apps/web/ @Maddyrampant @Hordekiller
+/apps/mobile/ @Maddyrampant @Hordekiller
+/infrastructure/ @Hordekiller @Maddyrampant
+/packages/contracts/ @Hordekiller @Maddyrampant
+/docs/ @Hordekiller @Maddyrampant

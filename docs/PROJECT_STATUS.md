@@ -54,6 +54,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 9. Order status currently combines concepts that the foundation says must be
    separated. Migrate to distinct order/payment/fulfillment state machines.
 10. API response envelopes, stable errors, correlation IDs and OpenAPI are not wired.
+11. GitHub branch protection cannot be enabled for the private repository on the
+    current account plan. CODEOWNERS and the two-person PR/CI policy are present,
+    but enforcement is manual until plan capability changes.
 
 ## Status update template
 
