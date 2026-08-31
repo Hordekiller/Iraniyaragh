@@ -7,16 +7,46 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  WAREHOUSE_MANAGER
-  WAREHOUSE_OPERATOR
-  SALES
-  SUPPORT
-  ACCOUNTING
-  CONTENT_MANAGER
-  CUSTOMER
+enum UserStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+  LOCKED
+  DELETED
+}
+
+enum OtpPurpose {
+  SIGN_IN
+  SIGN_UP
+  VERIFY_MOBILE
+  VERIFY_EMAIL
+  PASSWORD_RESET
+  CHANGE_MOBILE
+  SENSITIVE_ACTION
+}
+
+enum OtpChannel {
+  SMS
+  EMAIL
+}
+
+enum LoginMethod {
+  PASSWORD
+  OTP
+  REFRESH_TOKEN
+  TOTP
+  RECOVERY_CODE
+}
+
+enum LoginAttemptOutcome {
+  SUCCESS
+  INVALID_CREDENTIALS
+  INVALID_CODE
+  EXPIRED_CODE
+  RATE_LIMITED
+  ACCOUNT_LOCKED
+  ACCOUNT_SUSPENDED
+  ACCOUNT_DELETED
 }
 
 enum ProductStatus {
@@ -94,17 +124,175 @@ enum StocktakeStatus {
 }
 
 model User {
+  id                     String           @id @default(cuid())
+  mobile                 String?          @unique @db.VarChar(13)
+  email                  String?          @unique @db.VarChar(320)
+  passwordHash           String?          @db.Text
+  firstName              String?          @db.VarChar(100)
+  lastName               String?          @db.VarChar(100)
+  status                 UserStatus       @default(PENDING)
+  isMobileVerified       Boolean          @default(false)
+  mobileVerifiedAt       DateTime?
+  isEmailVerified        Boolean          @default(false)
+  emailVerifiedAt        DateTime?
+  passwordChangedAt      DateTime?
+  failedLoginCount       Int              @default(0)
+  lockedUntil            DateTime?
+  lastLoginAt            DateTime?
+  deletedAt              DateTime?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  sessions               Session[]
+  otpCodes               OtpCode[]
+  loginAttempts          LoginAttempt[]
+  auditLogs              AuditLog[]       @relation("AuditActor")
+  roleAssignments        UserRole[]       @relation("UserRoleSubject")
+  roleAssignmentsGranted UserRole[]       @relation("UserRoleAssigner")
+  roleAssignmentsRevoked UserRole[]       @relation("UserRoleRevoker")
+  permissionGrants       RolePermission[] @relation("RolePermissionGrantor")
+  permissionRevocations  RolePermission[] @relation("RolePermissionRevoker")
+
+  @@index([status, createdAt])
+  @@index([lockedUntil])
+  @@index([deletedAt])
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  key         String           @unique @db.VarChar(100)
+  name        String           @db.VarChar(150)
+  description String?          @db.Text
+  isSystem    Boolean          @default(false)
+  isActive    Boolean          @default(true)
+  users       UserRole[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([isActive, key])
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique @db.VarChar(150)
+  name        String           @db.VarChar(150)
+  description String?          @db.Text
+  group       String           @db.VarChar(100)
+  isActive    Boolean          @default(true)
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([group, isActive])
+}
+
+model UserRole {
+  id           String    @id @default(cuid())
+  userId       String
+  roleId       String
+  assignedById String?
+  assignedAt   DateTime  @default(now())
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  revokedById  String?
+  revokeReason String?   @db.VarChar(500)
+  user         User      @relation("UserRoleSubject", fields: [userId], references: [id], onDelete: Cascade)
+  role         Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  assignedBy   User?     @relation("UserRoleAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+  revokedBy    User?     @relation("UserRoleRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, roleId])
+  @@index([userId, revokedAt, expiresAt])
+  @@index([roleId, revokedAt])
+  @@index([assignedById])
+  @@index([revokedById])
+}
+
+model RolePermission {
   id           String     @id @default(cuid())
-  mobile       String     @unique
-  email        String?    @unique
-  passwordHash String?
-  firstName    String?
-  lastName     String?
-  role         UserRole   @default(CUSTOMER)
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  auditLogs    AuditLog[]
+  roleId       String
+  permissionId String
+  grantedById  String?
+  grantedAt    DateTime   @default(now())
+  revokedAt    DateTime?
+  revokedById  String?
+  revokeReason String?    @db.VarChar(500)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+  grantedBy    User?      @relation("RolePermissionGrantor", fields: [grantedById], references: [id], onDelete: SetNull)
+  revokedBy    User?      @relation("RolePermissionRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId, revokedAt])
+  @@index([permissionId, revokedAt])
+  @@index([grantedById])
+  @@index([revokedById])
+}
+
+model Session {
+  id                  String    @id @default(cuid())
+  userId              String
+  refreshTokenHash    String    @unique @db.VarChar(255)
+  tokenFamilyId       String    @db.VarChar(30)
+  replacedBySessionId String?   @unique
+  deviceIdHash        String?   @db.VarChar(255)
+  deviceName          String?   @db.VarChar(150)
+  userAgent           String?   @db.Text
+  ipHash              String?   @db.VarChar(255)
+  lastUsedAt          DateTime?
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  revokeReason        String?   @db.VarChar(500)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy          Session?  @relation("SessionRotation", fields: [replacedBySessionId], references: [id], onDelete: SetNull)
+  replaces            Session?  @relation("SessionRotation")
+
+  @@index([userId, revokedAt, expiresAt])
+  @@index([tokenFamilyId, createdAt])
+  @@index([expiresAt])
+}
+
+model OtpCode {
+  id              String     @id @default(cuid())
+  userId          String?
+  destinationHash String     @db.VarChar(255)
+  codeHash        String     @db.VarChar(255)
+  purpose         OtpPurpose
+  channel         OtpChannel
+  attempts        Int        @default(0)
+  maxAttempts     Int        @default(5)
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  invalidatedAt   DateTime?
+  requestedIpHash String?    @db.VarChar(255)
+  requestId       String?    @db.VarChar(100)
+  createdAt       DateTime   @default(now())
+  user            User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([destinationHash, purpose, createdAt])
+  @@index([userId, purpose, createdAt])
+  @@index([expiresAt, consumedAt, invalidatedAt])
+  @@index([requestedIpHash, createdAt])
+}
+
+model LoginAttempt {
+  id             String              @id @default(cuid())
+  userId         String?
+  identifierHash String?             @db.VarChar(255)
+  ipHash         String?             @db.VarChar(255)
+  method         LoginMethod
+  outcome        LoginAttemptOutcome
+  requestId      String?             @db.VarChar(100)
+  userAgent      String?             @db.Text
+  createdAt      DateTime            @default(now())
+  user           User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([identifierHash, createdAt])
+  @@index([ipHash, createdAt])
+  @@index([userId, createdAt])
+  @@index([outcome, createdAt])
 }
 
 model Brand {
@@ -429,16 +617,20 @@ model Payment {
 model AuditLog {
   id         String   @id @default(cuid())
   actorId    String?
-  actor      User?    @relation(fields: [actorId], references: [id])
-  action     String
-  entityType String
-  entityId   String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action     String   @db.VarChar(150)
+  entityType String   @db.VarChar(150)
+  entityId   String?  @db.VarChar(100)
   before     Json?
   after      Json?
-  ip         String?
-  userAgent  String?
+  metadata   Json?
+  requestId  String?  @db.VarChar(100)
+  ipHash     String?  @db.VarChar(255)
+  userAgent  String?  @db.Text
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId, createdAt])
   @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([requestId])
 }
