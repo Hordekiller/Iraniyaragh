@@ -35,6 +35,27 @@ Production deployments should be reproducible and Docker-based.
 - Schema changes use reviewed migrations.
 - Avoid manual production schema edits.
 - Destructive migrations require explicit data migration/backout consideration.
+- `20260830180000_auth_rbac_persistence` is the initial baseline. Because no prior
+  migration history existed, it creates both the pre-existing platform tables and
+  the Auth/RBAC tables. New empty environments apply it with `prisma migrate deploy`.
+- A local database previously created with `prisma db push` is unmanaged state, not
+  proof that this migration ran. Back up any needed data, then recreate disposable
+  development databases from migrations. Never mark a production migration as
+  applied merely to suppress drift; use a separately reviewed baselining/runbook.
+- Never edit an already-shared migration. Preserve custom Auth `CHECK` constraints
+  and add a forward migration for every later schema change.
+
+For Auth persistence changes, verify on a clean PostgreSQL database:
+
+```bash
+pnpm --filter api exec prisma validate
+pnpm --filter api exec prisma migrate deploy
+psql "$DATABASE_URL" -f apps/api/prisma/tests/auth_constraints.sql
+pnpm --filter api run prisma:generate
+```
+
+The SQL verification runs inside a transaction and rolls back its fixture data. It
+intentionally exercises rejected values and must be run with `ON_ERROR_STOP` enabled.
 
 ## Observability
 Plan for:

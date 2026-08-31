@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-08-31
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -21,6 +21,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Architecture, API, security, operations and domain principles
 - Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
 - Typed API startup configuration, explicit CORS allowlist and initial Vitest unit tests
+- Auth/RBAC persistence foundation: canonical users, roles, permissions, assignments,
+  sessions, hashed OTP records, login attempts and safe audit metadata
+- Initial reviewed Prisma migration with PostgreSQL Auth constraints and a rollback-only
+  database verification script
 
 ### Partial
 
@@ -32,21 +36,26 @@ The repository is in **foundation/prototype**, before release `0.1`.
   fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
 - Unit tests cover environment/CORS validation; database integration and browser E2E
   harnesses are not implemented yet.
+- Auth storage and lifecycle constraints exist, but credential verification, token
+  issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
+  permission enforcement are not implemented yet.
 
 ### Not implemented
 
-- Authentication, sessions, OTP, 2FA and RBAC enforcement
+- Authentication controllers/services, OTP delivery, 2FA and RBAC enforcement
 - Catalog, customer, order, payment, supplier and audit use cases/controllers
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
-- Integration/E2E tests, seed script, initial migration, observability and deployment pipeline
+- Automated integration/E2E harnesses, seed script, observability and deployment pipeline
 
 ## Known engineering gaps
 
-1. No committed database migration or deterministic development seed.
-2. Only configuration unit tests exist; domain, database integration, concurrency,
-   browser E2E and coverage thresholds remain.
+1. The initial database migration is committed, but no deterministic development
+   seed exists. The Auth SQL constraint verification is manual and not wired to CI.
+2. Only configuration unit tests and a rollback-only Auth database verification
+   script exist; domain, automated database integration, concurrency, browser E2E
+   and coverage thresholds remain.
 3. The storefront prototype is decomposed into typed single-purpose components.
    Static fixture data in `apps/web/src/data/prototype.ts` must be replaced by a
    typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.
@@ -64,6 +73,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 11. GitHub branch protection cannot be enabled for the private repository on the
     current account plan. CODEOWNERS and the two-person PR/CI policy are present,
     but enforcement is manual until plan capability changes.
+12. `User` is the canonical security principal while `Customer` remains a separate
+    commerce profile. Their ownership/linkage and migration rules are unresolved in
+    #14; code must not join them implicitly by mobile number.
 
 ## Status update template
 

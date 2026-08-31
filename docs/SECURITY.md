@@ -12,6 +12,27 @@
 - Device/session management and revocation.
 - Sensitive roles should require elevated controls.
 
+### Auth persistence invariants
+- `User` is the security principal. Its ID is an opaque string/CUID; API clients
+  must never infer identity from sequential IDs.
+- At least one canonical identifier is required. Iranian mobile numbers are stored
+  as `+989XXXXXXXXX`; email addresses are trimmed and lowercased before persistence.
+  The database rejects non-canonical values and keeps each identifier unique.
+- Only `passwordHash`, `refreshTokenHash`, `codeHash` and keyed hashes of sensitive
+  lookup metadata are stored. Raw passwords, refresh tokens, OTP codes and IP
+  addresses must never be persisted or logged.
+- User lifecycle is explicit: `ACTIVE`, `PENDING`, `SUSPENDED`, `LOCKED` or
+  `DELETED`. Verification booleans and timestamps must remain consistent.
+- Sessions are expiring, revocable and rotation-aware. A rotated session points to
+  its replacement and must be revoked with a reason.
+- OTP records are purpose- and channel-specific, expire, count failed attempts and
+  have exactly one terminal state: consumed or invalidated.
+- Authentication attempts and audit events retain only safe metadata. JSON audit
+  payloads must be redacted by the application before insertion.
+- Prisma cannot represent all of these checks. The reviewed SQL migration contains
+  the authoritative PostgreSQL `CHECK` constraints; do not remove them when
+  regenerating Prisma artifacts.
+
 ## Authorization
 Use permissions, not scattered role-name comparisons.
 
@@ -28,6 +49,10 @@ Example permission groups:
 - `audit.read`, `settings.manage`
 
 Roles are collections of permissions. Critical backend actions must always enforce permissions server-side.
+
+Role and permission assignments preserve grant/revoke metadata. Revoked rows are
+reactivated or updated deliberately rather than duplicated, and every privilege
+change must also emit an audit event.
 
 ## Audit
 Audit security- and business-sensitive actions, including:
