@@ -30,6 +30,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Self-hosted Vazirmatn variable font in the storefront (no Google Fonts at runtime)
 - Isolated PostgreSQL integration runner and CI database gate covering migration
   deployment/drift, Auth constraints and initial inventory transaction/idempotency behavior
+- Decision #14 accepted: `User` is the sole security principal and `Customer` remains a
+  commerce profile; separate Order, Payment and Fulfillment state machines with
+  append-only transition tables, guarded by ADR-0005/ADR-0006, the shared
+  `apps/api/src/common/state-machine.ts` helper and database CHECK constraints
+  verified in CI
 
 ### Partial
 
@@ -73,15 +78,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
 7. Reservation consume/expire and transfer flows are not implemented.
 8. Money documentation specifies integer-safe persistence while the schema uses
    decimal values; resolve the exact IRR convention with an ADR before commerce work.
-9. Order status currently combines concepts that the foundation says must be
-   separated. Migrate to distinct order/payment/fulfillment state machines.
+9. Order, payment and fulfillment now use separate state machines with append-only
+   transition tables (ADR-0006, G5-07 foundation). Services that drive those machines,
+   reconciliation and the customer-facing status/timeline language remain to be built.
 10. API response envelopes, stable errors, correlation IDs and OpenAPI are not wired.
 11. GitHub branch protection cannot be enabled for the private repository on the
     current account plan. CODEOWNERS and the two-person PR/CI policy are present,
     but enforcement is manual until plan capability changes.
-12. `User` is the canonical security principal while `Customer` remains a separate
-    commerce profile. Their ownership/linkage and migration rules are unresolved in
-    #14; code must not join them implicitly by mobile number.
+12. The `User`/`Customer` identity boundary is decided (ADR-0005 + ADR-0006): `User` is
+    the sole security principal and `Customer` stays a commerce profile; code must not
+    join them implicitly by mobile number. Explicit linkage/merge/anonymization rules
+    still require a forward migration when the product needs them.
 
 ## Status update template
 
