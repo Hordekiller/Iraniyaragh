@@ -7,6 +7,7 @@ import { SiteFooter } from '../components/layout/SiteFooter'
 import { HeroSlider } from '../components/hero/HeroSlider'
 import { CategoryGrid } from '../components/catalog/CategoryGrid'
 import { PopularTools } from '../components/catalog/PopularTools'
+import { SearchResults } from '../components/catalog/SearchResults'
 import { Bestsellers } from '../components/catalog/Bestsellers'
 import { SpecialCollection } from '../components/catalog/SpecialCollection'
 import { BlogSection } from '../components/content/BlogSection'
@@ -30,6 +31,7 @@ export function HomePage() {
       />
       <main>
         <HeroSlider />
+        <SearchResults query={searchQuery.trim()} onSelectProduct={setSelectedProduct} />
         <CategoryGrid />
         <PopularTools onSelectProduct={setSelectedProduct} />
 

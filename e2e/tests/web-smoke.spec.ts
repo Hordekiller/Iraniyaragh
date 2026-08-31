@@ -105,10 +105,18 @@ test.describe('web: storefront shell', () => {
     await search.fill('دریل رونیکس');
     await expect(search).toHaveValue('دریل رونیکس');
 
+    const results = page.locator('section[aria-live="polite"]');
+    await expect(results).toBeVisible();
+    await expect(page.getByRole('heading', { name: /نتایج جستجو/ })).toBeVisible();
+    await expect(page.getByText('۲ کالا یافت شد')).toBeVisible();
+    await expect(results.getByText(/دریل چکشی ۱۳/)).toBeVisible();
+    await expect(results.getByText(/ست دریل و/)).toBeVisible();
+
     await expect(page.getByRole('button', { name: 'پاک کردن جستجو' })).toBeVisible();
     await tap(page.getByRole('button', { name: 'پاک کردن جستجو' }));
     await expect(search).toHaveValue('');
     await expect(page.getByRole('button', { name: 'پاک کردن جستجو' })).toBeHidden();
+    await expect(results).toBeHidden();
 
     await network.assertNone();
   });

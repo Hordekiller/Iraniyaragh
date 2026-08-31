@@ -48,6 +48,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
   fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
+- The storefront search box filters the prototype catalog by title, brand and
+  category (token match) and opens matches in the product modal; the results band
+  is covered by the Playwright suite.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
   database integration currently covers only initial inventory transaction/idempotency
