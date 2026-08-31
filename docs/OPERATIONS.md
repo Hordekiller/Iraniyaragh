@@ -91,6 +91,34 @@ Plan for:
 
 Target stack can evolve toward OpenTelemetry + Prometheus/Grafana/Loki and/or Sentry.
 
+### API health probes
+
+The API exposes two versioned, unauthenticated and non-cacheable probes with distinct
+operational meanings:
+
+| Probe | Success | Failure behavior | Intended consumer |
+| --- | --- | --- | --- |
+| `GET /api/v1/health/live` | `200`, `status: ok` | Fails only when the API process cannot serve HTTP | Container/process restart policy |
+| `GET /api/v1/health/ready` | `200`, `status: ready` | `503`, `DATABASE_UNAVAILABLE` when PostgreSQL fails or exceeds 1.5 seconds | Load balancer traffic gate and deployment readiness |
+
+`GET /api/v1/health` remains a liveness alias for compatibility, but new
+infrastructure must use the explicit `/live` path. The liveness probe never queries
+PostgreSQL. Prisma connects lazily so the API process can start and expose liveness
+while a database outage keeps readiness non-ready.
+
+Dependency exception messages, hosts and credentials are never returned by the
+readiness endpoint. Both responses include an ISO-8601 UTC timestamp and
+`Cache-Control: no-store`. Configure probe timeouts above two seconds so the API's
+bounded database check can finish, and do not use readiness failure alone as a
+container restart signal.
+
+Local smoke commands:
+
+```bash
+curl --fail http://127.0.0.1:4000/api/v1/health/live
+curl --fail http://127.0.0.1:4000/api/v1/health/ready
+```
+
 ## Background jobs
 Use queues for work that should not slow synchronous user requests, such as:
 - SMS/email/push
