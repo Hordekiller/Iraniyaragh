@@ -32,6 +32,71 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/iraniyaragh_ci_test?schema=public
+      PSQL_DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/iraniyaragh_ci_test
+      SHADOW_DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/ci_shadow_test?schema=public
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: iranyaragh_ci_test
+          POSTGRES_USER: app_test
+          POSTGRES_PASSWORD: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app_test -d iranyaragh_ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - run: pnpm install --frozen-lockfile
+      - name: Generate and validate Prisma client
+        run: |
+          pnpm --filter @iranyaragh/api prisma:generate
+          pnpm --filter @iranyaragh/api exec prisma validate
+      - name: Apply and verify migrations
+        run: |
+          pnpm --filter @iranyaragh/api exec prisma migrate deploy
+          pnpm --filter @iranyaragh/api exec prisma migrate status
+      - name: Create isolated migration shadow database
+        run: >-
+          psql "postgresql://app_test:app_test@127.0.0.1:5432/postgres"
+          --set ON_ERROR_STOP=1
+          --command 'CREATE DATABASE "ci_shadow_test"'
+      - name: Reject migration and schema drift
+        working-directory: apps/api
+        run: >-
+          pnpm exec prisma migrate diff
+          --from-migrations prisma/migrations
+          --to-schema-datamodel prisma/schema.prisma
+          --shadow-database-url "$SHADOW_DATABASE_URL"
+          --exit-code
+      - name: Verify Auth database constraints
+        run: >-
+          psql "$PSQL_DATABASE_URL"
+          --set ON_ERROR_STOP=1
+          --file apps/api/prisma/tests/auth_constraints.sql
+      - name: Run database integration tests
+        run: pnpm test:integration
+
   e2e:
     needs: quality
     runs-on: ubuntu-latest

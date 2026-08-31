@@ -29,9 +29,13 @@ Every pull request should run:
 4. Build
 5. Migration/schema validation where applicable
 
-`.github/workflows/ci.yml` runs two jobs per pull request:
+`.github/workflows/ci.yml` runs three jobs per pull request:
+
 - `quality` — `pnpm install`, Prisma client generation, `pnpm lint`,
   `pnpm typecheck`, `pnpm test`, `pnpm build`.
+- `database` — starts an isolated PostgreSQL 18 service, validates Prisma, applies
+  migrations, rejects migration/schema drift through a separate shadow database,
+  runs PostgreSQL constraint checks and executes API integration tests.
 - `e2e` — same setup, then `playwright install --with-deps chromium` and
   `pnpm e2e` (builds both apps and runs the Playwright smoke suite over the
   storefront and admin shells on desktop + mobile viewports). The Playwright
@@ -60,14 +64,20 @@ Production deployments should be reproducible and Docker-based.
 For Auth persistence changes, verify on a clean PostgreSQL database:
 
 ```bash
+export NODE_ENV=test
+export DATABASE_URL='postgresql://app:app@127.0.0.1:5432/iraniyaragh_test?schema=public'
+export PSQL_DATABASE_URL='postgresql://app:app@127.0.0.1:5432/iraniyaragh_test'
 pnpm --filter api exec prisma validate
 pnpm --filter api exec prisma migrate deploy
-psql "$DATABASE_URL" -f apps/api/prisma/tests/auth_constraints.sql
+psql "$PSQL_DATABASE_URL" -f apps/api/prisma/tests/auth_constraints.sql
 pnpm --filter api run prisma:generate
+pnpm test:integration
 ```
 
 The SQL verification runs inside a transaction and rolls back its fixture data. It
 intentionally exercises rejected values and must be run with `ON_ERROR_STOP` enabled.
+The test runner refuses to connect unless `NODE_ENV=test` and the database name ends
+with `_test`. See `docs/TESTING.md` for creation, drift and cleanup commands.
 
 ## Observability
 Plan for:
