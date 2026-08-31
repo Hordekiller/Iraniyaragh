@@ -5,6 +5,10 @@
     "dev": { "cache": false, "persistent": true },
     "lint": { "dependsOn": ["^lint"] },
     "test": { "dependsOn": ["^test"] },
+    "test:integration": {
+      "cache": false,
+      "env": ["DATABASE_URL", "NODE_ENV"]
+    },
     "typecheck": { "dependsOn": ["^typecheck"] }
   }
 }

@@ -28,6 +28,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Playwright smoke suite (`e2e/`) covering the storefront and admin shells
   on desktop + mobile viewports, with a strict zero-external-asset network gate
 - Self-hosted Vazirmatn variable font in the storefront (no Google Fonts at runtime)
+- Isolated PostgreSQL integration runner and CI database gate covering migration
+  deployment/drift, Auth constraints and initial inventory transaction/idempotency behavior
 
 ### Partial
 
@@ -37,8 +39,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
   fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
-- Unit tests cover environment/CORS validation; a Playwright smoke suite covers the
-  web and admin shells, but domain/database integration harnesses are not implemented yet.
+- Unit tests cover environment/CORS and database URL safety; a Playwright smoke suite
+  covers web/admin shells, while database integration currently covers only initial
+  inventory transaction/idempotency behavior and Auth persistence constraints.
 - Auth storage and lifecycle constraints exist, but credential verification, token
   issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
   permission enforcement are not implemented yet.
@@ -50,16 +53,15 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
-- Automated database/domain integration and API E2E tests, seed script, observability
-  and deployment pipeline
+- Broader domain integration and API E2E tests, seed script, observability and
+  deployment pipeline
 
 ## Known engineering gaps
 
-1. The initial database migration is committed, but no deterministic development
-   seed exists. The Auth SQL constraint verification is manual and not wired to CI.
-2. Configuration unit tests, a Playwright shell smoke suite and a rollback-only Auth
-   database verification script exist; domain, automated database integration,
-   concurrency and coverage thresholds remain.
+1. The initial database migration and automated CI migration/constraint checks are
+   committed, but no deterministic development seed exists.
+2. Configuration/guard unit tests, a Playwright shell suite and initial database
+   integration coverage exist; broader domain, concurrency and coverage thresholds remain.
 3. The storefront prototype is decomposed into typed single-purpose components.
    Static fixture data in `apps/web/src/data/prototype.ts` must be replaced by a
    typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.

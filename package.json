@@ -8,6 +8,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test": "turbo test",
+    "test:integration": "turbo test:integration",
     "typecheck": "turbo typecheck",
     "e2e": "pnpm --filter @iranyaragh/web build && pnpm --filter @iranyaragh/admin build && pnpm --filter @iranyaragh/e2e smoke",
     "e2e:install": "pnpm --filter @iranyaragh/e2e exec playwright install chromium",
