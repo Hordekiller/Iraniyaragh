@@ -98,9 +98,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
    transition tables (ADR-0006, G5-07 foundation); the contract and shared
    compare-and-swap helper are approved in #38 and CI-verified. Services that drive those
    machines, reconciliation and the customer-facing status/timeline language remain to be
-   built. The draft #28 commerce-customer-journey rebuild (cart/checkout/orders/payments/
-   notifications/stock-alerts) was blocked on the #40 money migration (now merged) and must
-   be rebased off the approved #38 contract on `main` before it can land.
+   built. Draft #28 was closed as superseded because its alternative baseline migration
+   and cross-cutting foundations conflicted with the approved #30/#38/#40/#43 contracts.
+   Its cart/checkout/order/payment/notification ideas remain backlog input and must be
+   rebuilt as small contract-first changes on current `main`.
 10. API response envelopes, stable error codes, correlation/request IDs and OpenAPI are now
     wired for the HTTP layer (see Implemented). Authentication controllers and the domain
     controllers that will exercise the codes per use case are not implemented yet.
