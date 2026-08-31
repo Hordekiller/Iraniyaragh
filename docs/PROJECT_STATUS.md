@@ -15,7 +15,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - React/Vite Persian storefront visual prototype
 - NestJS application bootstrap, validation, URI versioning and security headers
 - PostgreSQL/Prisma schema covering core commerce and warehouse concepts
-- Database service and health endpoint
+- Database service plus distinct database-independent liveness and bounded PostgreSQL
+  readiness endpoints with safe failure responses
 - Initial inventory service for on-hand mutation, reservation and release
 - Docker Compose services for PostgreSQL, Redis and MinIO
 - Architecture, API, security, operations and domain principles
@@ -39,9 +40,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
   fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
-- Unit tests cover environment/CORS and database URL safety; a Playwright smoke suite
-  covers web/admin shells, while database integration currently covers only initial
-  inventory transaction/idempotency behavior and Auth persistence constraints.
+- Unit/HTTP tests cover environment/CORS validation, database URL safety and
+  liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
+  database integration currently covers only initial inventory transaction/idempotency
+  behavior and Auth persistence constraints.
 - Auth storage and lifecycle constraints exist, but credential verification, token
   issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
   permission enforcement are not implemented yet.
