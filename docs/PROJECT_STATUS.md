@@ -36,6 +36,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
   append-only transition tables, guarded by ADR-0005/ADR-0006, the shared
   `apps/api/src/common/state-machine.ts` helper and database CHECK constraints
   verified in CI
+- Forward BIGINT money migration: all ten money columns now store canonical integer Rial
+  (ADR-0003 extension #13), guarded by a fractional-preflight check and a rollback-only
+  money verification script
 
 ### Partial
 
@@ -78,8 +81,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
    conflicts and concurrency tests.
 6. Inventory commands do not yet capture authenticated actor/audit metadata.
 7. Reservation consume/expire and transfer flows are not implemented.
-8. Money documentation specifies integer-safe persistence while the schema uses
-   decimal values; resolve the exact IRR convention with an ADR before commerce work.
+8. Money convention is decided and landed: the ADR-0003 extension (#13) specifies
+   canonical integer-Rial `BIGINT` storage with Toman presentation-only, and the forward
+   migration converts all ten `Decimal(18,2)` money columns with a fractional-preflight
+   guard. Percentage rounding, invoice and VAT policies still await service-layer work.
 9. Order, payment and fulfillment now use separate state machines with append-only
    transition tables (ADR-0006, G5-07 foundation). Services that drive those machines,
    reconciliation and the customer-facing status/timeline language remain to be built.

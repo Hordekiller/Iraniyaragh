@@ -53,8 +53,8 @@ describe.sequential('InventoryService database integration', () => {
         productId,
         sku: `TEST-SKU-${runId}`,
         title: 'Integration test variant',
-        costPrice: '100000',
-        salePrice: '120000',
+        costPrice: 100000n,
+        salePrice: 120000n,
       },
     });
   });
