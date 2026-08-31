@@ -1,0 +1,102 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_getLegacyHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "HealthController_getLiveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_getReadiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Iraniyaragh Commerce API",
+    "description": "REST API for the Iraniyaragh commerce platform. All responses use a stable error envelope with machine-readable codes and per-request IDs for correlation.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": "Liveness and readiness probes"
+    },
+    {
+      "name": "auth",
+      "description": "Authentication and token lifecycle"
+    },
+    {
+      "name": "catalog",
+      "description": "Products, categories and variants"
+    },
+    {
+      "name": "inventory",
+      "description": "Stocks and ledgers"
+    },
+    {
+      "name": "orders",
+      "description": "Order lifecycle state machine"
+    },
+    {
+      "name": "payments",
+      "description": "Payment lifecycle state machine"
+    },
+    {
+      "name": "customers",
+      "description": "Customer records"
+    },
+    {
+      "name": "suppliers",
+      "description": "Supplier records"
+    },
+    {
+      "name": "audit",
+      "description": "Audit trail"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "access-token": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {}
+  }
+}
