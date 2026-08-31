@@ -9,6 +9,8 @@
     "lint": "turbo lint",
     "test": "turbo test",
     "typecheck": "turbo typecheck",
+    "e2e": "pnpm --filter @iranyaragh/web build && pnpm --filter @iranyaragh/admin build && pnpm --filter @iranyaragh/e2e smoke",
+    "e2e:install": "pnpm --filter @iranyaragh/e2e exec playwright install chromium",
     "format": "prettier --write ."
   },
   "devDependencies": {
