@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . && pnpm check:runtime-assets",
     "typecheck": "tsc -b --pretty false",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:runtime-assets": "node scripts/check-runtime-assets.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",

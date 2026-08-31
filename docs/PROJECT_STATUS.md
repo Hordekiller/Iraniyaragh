@@ -25,6 +25,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
   sessions, hashed OTP records, login attempts and safe audit metadata
 - Initial reviewed Prisma migration with PostgreSQL Auth constraints and a rollback-only
   database verification script
+- Playwright smoke suite (`e2e/`) covering the storefront and admin shells
+  on desktop + mobile viewports, with a strict zero-external-asset network gate
+- Self-hosted Vazirmatn variable font in the storefront (no Google Fonts at runtime)
 
 ### Partial
 
@@ -34,8 +37,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
   fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
-- Unit tests cover environment/CORS validation; database integration and browser E2E
-  harnesses are not implemented yet.
+- Unit tests cover environment/CORS validation; a Playwright smoke suite covers the
+  web and admin shells, but domain/database integration harnesses are not implemented yet.
 - Auth storage and lifecycle constraints exist, but credential verification, token
   issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
   permission enforcement are not implemented yet.
@@ -47,15 +50,16 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
-- Automated integration/E2E harnesses, seed script, observability and deployment pipeline
+- Automated database/domain integration and API E2E tests, seed script, observability
+  and deployment pipeline
 
 ## Known engineering gaps
 
 1. The initial database migration is committed, but no deterministic development
    seed exists. The Auth SQL constraint verification is manual and not wired to CI.
-2. Only configuration unit tests and a rollback-only Auth database verification
-   script exist; domain, automated database integration, concurrency, browser E2E
-   and coverage thresholds remain.
+2. Configuration unit tests, a Playwright shell smoke suite and a rollback-only Auth
+   database verification script exist; domain, automated database integration,
+   concurrency and coverage thresholds remain.
 3. The storefront prototype is decomposed into typed single-purpose components.
    Static fixture data in `apps/web/src/data/prototype.ts` must be replaced by a
    typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.
