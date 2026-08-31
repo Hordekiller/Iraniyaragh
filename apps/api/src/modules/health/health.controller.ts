@@ -24,7 +24,11 @@ export class HealthController {
     const report = await this.healthService.getReadiness();
 
     if (report.status === 'not_ready') {
-      throw new ServiceUnavailableException(report);
+      throw new ServiceUnavailableException({
+        code: 'HEALTH_NOT_READY',
+        message: report.error?.message ?? 'Required dependency is unavailable',
+        details: report,
+      });
     }
 
     return report;

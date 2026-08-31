@@ -41,6 +41,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Forward BIGINT money migration: all ten money columns now store canonical integer Rial
   (ADR-0003 extension #13), guarded by a fractional-preflight check and a rollback-only
   money verification script
+- API foundation (#21): per-request IDs via middleware + AsyncLocalStorage, stable error
+  response envelopes with machine-readable codes, redacted structured JSON logging
+  (secrets/OTP/PII scrubbed), a global exception filter (validation/prisma/internal mapping),
+  and OpenAPI/Swagger generation committed at `apps/api/openapi.json` with a CI drift check
 
 ### Partial
 
@@ -97,7 +101,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
    built. The draft #28 commerce-customer-journey rebuild (cart/checkout/orders/payments/
    notifications/stock-alerts) was blocked on the #40 money migration (now merged) and must
    be rebased off the approved #38 contract on `main` before it can land.
-10. API response envelopes, stable errors, correlation IDs and OpenAPI are not wired.
+10. API response envelopes, stable error codes, correlation/request IDs and OpenAPI are now
+    wired for the HTTP layer (see Implemented). Authentication controllers and the domain
+    controllers that will exercise the codes per use case are not implemented yet.
 11. GitHub branch protection cannot be enabled for the private repository on the
     current account plan. CODEOWNERS and the two-person PR/CI policy are present,
     but enforcement is manual until plan capability changes.

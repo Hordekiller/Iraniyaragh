@@ -1,6 +1,8 @@
 import { type INestApplication, Module, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiFoundationModule } from '../../common/api-foundation.module';
+import type { ErrorEnvelope } from '../../common/error-response';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
 import type { LivenessReport, ReadinessReport } from './health.types';
@@ -24,6 +26,7 @@ const healthService = {
 };
 
 @Module({
+  imports: [ApiFoundationModule],
   controllers: [HealthController],
   providers: [{ provide: HealthService, useValue: healthService }],
 })
@@ -67,7 +70,7 @@ describe('health HTTP endpoints', () => {
     await expect(response.json()).resolves.toEqual(readyReport);
   });
 
-  it('serves a safe 503 response when the database is unavailable', async () => {
+  it('serves a safe 503 envelope when the database is unavailable', async () => {
     const unavailableReport: ReadinessReport = {
       status: 'not_ready',
       service: 'iranyaragh-api',
@@ -81,9 +84,18 @@ describe('health HTTP endpoints', () => {
     healthService.getReadiness.mockResolvedValue(unavailableReport);
 
     const response = await fetch(`${baseUrl}/api/v1/health/ready`);
+    const body = (await response.json()) as ErrorEnvelope & { details: ReadinessReport };
 
     expect(response.status).toBe(503);
     expect(response.headers.get('cache-control')).toBe('no-store');
-    await expect(response.json()).resolves.toEqual(unavailableReport);
+    expect(response.headers.get('x-request-id')).toBeTruthy();
+    expect(body).toMatchObject({
+      code: 'HEALTH_NOT_READY',
+      message: 'Required dependency is unavailable',
+      statusCode: 503,
+      details: unavailableReport,
+    });
+    expect(body.requestId).toBeTruthy();
+    expect(body.requestId).toBe(response.headers.get('x-request-id'));
   });
 });

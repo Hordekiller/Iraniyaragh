@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ApiFoundationModule } from './common/api-foundation.module';
 import { DatabaseModule } from './database/database.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -20,6 +21,7 @@ import { validateEnvironment } from './config/environment';
       expandVariables: false,
       validate: validateEnvironment,
     }),
+    ApiFoundationModule,
     DatabaseModule,
     HealthModule,
     AuthModule,
