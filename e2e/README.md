@@ -13,12 +13,12 @@ point for the self-hosting policies in both applications.
 
 ## Projects
 
-| Project        | App          | Viewport | Device            |
-| -------------- | ------------ | -------- | ----------------- |
-| `web-desktop`  | storefront   | 1440×900 | Desktop Chrome    |
-| `web-mobile`   | storefront   | 412×915  | Pixel 7 (touch)   |
-| `admin-desktop`| operations   | 1440×900 | Desktop Chrome    |
-| `admin-mobile` | operations   | 412×915  | Pixel 7 (touch)   |
+| Project         | App        | Viewport | Device          |
+| --------------- | ---------- | -------- | --------------- |
+| `web-desktop`   | storefront | 1440×900 | Desktop Chrome  |
+| `web-mobile`    | storefront | 412×915  | Pixel 7 (touch) |
+| `admin-desktop` | operations | 1440×900 | Desktop Chrome  |
+| `admin-mobile`  | operations | 412×915  | Pixel 7 (touch) |
 
 Viewport-specific cases are gated with `test.skip(!isMobile(page))` /
 `test.skip(isMobile(page))` at runtime.
@@ -39,6 +39,8 @@ pnpm --filter @iranyaragh/e2e smoke                     # run without building
 pnpm --filter @iranyaragh/e2e smoke --headed
 pnpm --filter @iranyaragh/e2e smoke --project=web-mobile
 pnpm --filter @iranyaragh/e2e test:report               # open the HTML report
+pnpm --filter @iranyaragh/e2e lint
+pnpm --filter @iranyaragh/e2e typecheck
 ```
 
 Configuration overrides (`e2e/playwright.config.ts`):
@@ -55,7 +57,7 @@ and `next start` on pinned ports, `--strictPort`).
 ## Why taps are dispatched
 
 Pointer interactions in the storefront use the `tap()` helper (a dispatched
-`-synthetic 'click'` event) instead of `locator.click()`. Chromium reports a
+synthetic `click` event) instead of `locator.click()`. Chromium reports a
 negative `scrollLeft` on RTL pages; Playwright's hit-target math then mis-places
 the click point under mobile emulation and blames the document root for
 "intercepting pointer events". Dispatched events still invoke the real React
@@ -74,9 +76,13 @@ viewports.
 
 ```text
 pnpm e2e: 14 tests — 11 passed, 3 skipped (viewport-gated), 0 failed, exit 0
-pnpm lint / pnpm typecheck (workspace): green
+pnpm lint / pnpm typecheck (including the E2E package): green
 web build: dist/index.html 0.79 kB — zero external references
 ```
 
 The strict gate is proven by the suite itself: any Google-Fonts-style external
 request would fail `assertNone()` in both applications.
+
+The GitHub Actions `e2e` job installs Chromium with its Linux system dependencies,
+builds both applications, runs this suite after the quality job, and retains the
+HTML report, traces, screenshots and videos when a failure occurs.
