@@ -77,6 +77,16 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED
 }
 
+enum FulfillmentStatus {
+  PENDING
+  PROCESSING
+  READY_TO_SHIP
+  SHIPPED
+  DELIVERED
+  RETURNED
+  CANCELLED
+}
+
 enum InventoryMovementType {
   RECEIPT
   SALE
@@ -124,33 +134,36 @@ enum StocktakeStatus {
 }
 
 model User {
-  id                     String           @id @default(cuid())
-  mobile                 String?          @unique @db.VarChar(13)
-  email                  String?          @unique @db.VarChar(320)
-  passwordHash           String?          @db.Text
-  firstName              String?          @db.VarChar(100)
-  lastName               String?          @db.VarChar(100)
-  status                 UserStatus       @default(PENDING)
-  isMobileVerified       Boolean          @default(false)
+  id                     String                  @id @default(cuid())
+  mobile                 String?                 @unique @db.VarChar(13)
+  email                  String?                 @unique @db.VarChar(320)
+  passwordHash           String?                 @db.Text
+  firstName              String?                 @db.VarChar(100)
+  lastName               String?                 @db.VarChar(100)
+  status                 UserStatus              @default(PENDING)
+  isMobileVerified       Boolean                 @default(false)
   mobileVerifiedAt       DateTime?
-  isEmailVerified        Boolean          @default(false)
+  isEmailVerified        Boolean                 @default(false)
   emailVerifiedAt        DateTime?
   passwordChangedAt      DateTime?
-  failedLoginCount       Int              @default(0)
+  failedLoginCount       Int                     @default(0)
   lockedUntil            DateTime?
   lastLoginAt            DateTime?
   deletedAt              DateTime?
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
   sessions               Session[]
   otpCodes               OtpCode[]
   loginAttempts          LoginAttempt[]
-  auditLogs              AuditLog[]       @relation("AuditActor")
-  roleAssignments        UserRole[]       @relation("UserRoleSubject")
-  roleAssignmentsGranted UserRole[]       @relation("UserRoleAssigner")
-  roleAssignmentsRevoked UserRole[]       @relation("UserRoleRevoker")
-  permissionGrants       RolePermission[] @relation("RolePermissionGrantor")
-  permissionRevocations  RolePermission[] @relation("RolePermissionRevoker")
+  auditLogs              AuditLog[]              @relation("AuditActor")
+  orderTransitions       OrderTransition[]       @relation("OrderActor")
+  paymentTransitions     PaymentTransition[]     @relation("PaymentActor")
+  fulfillmentTransitions FulfillmentTransition[] @relation("FulfillmentActor")
+  roleAssignments        UserRole[]              @relation("UserRoleSubject")
+  roleAssignmentsGranted UserRole[]              @relation("UserRoleAssigner")
+  roleAssignmentsRevoked UserRole[]              @relation("UserRoleRevoker")
+  permissionGrants       RolePermission[]        @relation("RolePermissionGrantor")
+  permissionRevocations  RolePermission[]        @relation("RolePermissionRevoker")
 
   @@index([status, createdAt])
   @@index([lockedUntil])
@@ -576,6 +589,8 @@ model Order {
   items        OrderItem[]
   payments     Payment[]
   reservations StockReservation[]
+  fulfillment  Fulfillment?
+  transitions  OrderTransition[]
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
@@ -599,19 +614,87 @@ model OrderItem {
 }
 
 model Payment {
-  id             String        @id @default(cuid())
+  id             String              @id @default(cuid())
   orderId        String
   provider       String
-  amount         Decimal       @db.Decimal(18, 2)
-  status         PaymentStatus @default(PENDING)
+  amount         Decimal             @db.Decimal(18, 2)
+  status         PaymentStatus       @default(PENDING)
   authority      String?
   referenceId    String?
-  idempotencyKey String        @unique
-  order          Order         @relation(fields: [orderId], references: [id])
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  idempotencyKey String              @unique
+  order          Order               @relation(fields: [orderId], references: [id])
+  transitions    PaymentTransition[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@index([orderId, status])
+}
+
+model OrderTransition {
+  id        String      @id @default(cuid())
+  orderId   String
+  from      OrderStatus
+  to        OrderStatus
+  reason    String?     @db.VarChar(255)
+  actorId   String?
+  actor     User?       @relation("OrderActor", fields: [actorId], references: [id], onDelete: SetNull)
+  requestId String?     @db.VarChar(100)
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([to, createdAt])
+}
+
+model PaymentTransition {
+  id        String        @id @default(cuid())
+  paymentId String
+  from      PaymentStatus
+  to        PaymentStatus
+  reason    String?       @db.VarChar(255)
+  actorId   String?
+  actor     User?         @relation("PaymentActor", fields: [actorId], references: [id], onDelete: SetNull)
+  requestId String?       @db.VarChar(100)
+  createdAt DateTime      @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([to, createdAt])
+}
+
+model Fulfillment {
+  id        String            @id @default(cuid())
+  orderId   String            @unique
+  status    FulfillmentStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  order       Order                   @relation(fields: [orderId], references: [id])
+  transitions FulfillmentTransition[]
+
+  @@index([status, updatedAt])
+}
+
+model FulfillmentTransition {
+  id            String            @id @default(cuid())
+  fulfillmentId String
+  from          FulfillmentStatus
+  to            FulfillmentStatus
+  reason        String?           @db.VarChar(255)
+  actorId       String?
+  actor         User?             @relation("FulfillmentActor", fields: [actorId], references: [id], onDelete: SetNull)
+  requestId     String?           @db.VarChar(100)
+  createdAt     DateTime          @default(now())
+
+  fulfillment Fulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+
+  @@index([fulfillmentId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([to, createdAt])
 }
 
 model AuditLog {
