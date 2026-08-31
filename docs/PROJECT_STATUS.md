@@ -33,9 +33,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   deployment/drift, Auth constraints and initial inventory transaction/idempotency behavior
 - Decision #14 accepted: `User` is the sole security principal and `Customer` remains a
   commerce profile; separate Order, Payment and Fulfillment state machines with
-  append-only transition tables, guarded by ADR-0005/ADR-0006, the shared
-  `apps/api/src/common/state-machine.ts` helper and database CHECK constraints
-  verified in CI
+  append-only transition tables and an approved contract PR (#38): lean `OrderStatus`,
+  `ON DELETE RESTRICT` on append-only audit transitions, `(parentId, requestId)` idempotency
+  unique indexes, a compare-and-swap `recordTransition` (409 on lost updates) plus database
+  CHECK constraints, guarded by ADR-0005/ADR-0006 and verified in CI
+  (`migrate deploy`, `migrate diff --exit-code`, `auth_constraints.sql`, `state_transitions.sql`)
 - Forward BIGINT money migration: all ten money columns now store canonical integer Rial
   (ADR-0003 extension #13), guarded by a fractional-preflight check and a rollback-only
   money verification script
@@ -89,8 +91,12 @@ The repository is in **foundation/prototype**, before release `0.1`.
    migration converts all ten `Decimal(18,2)` money columns with a fractional-preflight
    guard. Percentage rounding, invoice and VAT policies still await service-layer work.
 9. Order, payment and fulfillment now use separate state machines with append-only
-   transition tables (ADR-0006, G5-07 foundation). Services that drive those machines,
-   reconciliation and the customer-facing status/timeline language remain to be built.
+   transition tables (ADR-0006, G5-07 foundation); the contract and shared
+   compare-and-swap helper are approved in #38 and CI-verified. Services that drive those
+   machines, reconciliation and the customer-facing status/timeline language remain to be
+   built. The draft #28 commerce-customer-journey rebuild (cart/checkout/orders/payments/
+   notifications/stock-alerts) was blocked on the #40 money migration (now merged) and must
+   be rebased off the approved #38 contract on `main` before it can land.
 10. API response envelopes, stable errors, correlation IDs and OpenAPI are not wired.
 11. GitHub branch protection cannot be enabled for the private repository on the
     current account plan. CODEOWNERS and the two-person PR/CI policy are present,
