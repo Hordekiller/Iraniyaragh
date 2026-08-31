@@ -82,19 +82,18 @@ transition map (see `apps/api/src/common/state-machine.ts`), not by clients.
 Order (`OrderStatus`):
 
 ```
-DRAFT/PAID/... can only move to a defined next state.
-PENDING_PAYMENT -> PAID -> PROCESSING -> READY_TO_SHIP
+DRAFT -> PENDING_PAYMENT (checkout completed)
+PENDING_PAYMENT -> PAID (order cleared to proceed)
 PENDING_PAYMENT -> CANCELLED (customer/operator cancel before payment)
-PROCESSING -> READY_TO_SHIP
-READY_TO_SHIP -> SHIPPED
-SHIPPED -> DELIVERED
-DELIVERED -> RETURNED (return initiated)
-any active state -> CANCELLED only from PENDING_PAYMENT/PROCESSING/READY_TO_SHIP (operator)
+other states -> CANCELLED via a verified return (order machine terminal)
 PROHIBITED: PAID -> PENDING_PAYMENT (no backwards money-path move),
-            SHIPPED -> READY_TO_SHIP, DELIVERED -> SHIPPED,
-            any transition into/out of a terminal state except RETURNED via a
-            verified return order.
+            any transition into/out of a terminal state (CANCELLED/RETURNED).
 ```
+
+Note: the packing/shipping/delivery progression (`PROCESSING ->
+READY_TO_SHIP -> SHIPPED -> DELIVERED`) belongs to the **Fulfillment**
+machine below, not to `OrderStatus`. The order machine only tracks the
+commercial lifecycle; physical progress is the Fulfillment aggregate.
 
 Payment (`PaymentStatus`):
 

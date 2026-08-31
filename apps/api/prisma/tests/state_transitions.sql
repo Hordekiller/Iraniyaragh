@@ -42,10 +42,8 @@ BEGIN
   INSERT INTO "FulfillmentTransition" ("id", "fulfillmentId", "from", "to", "actorId", "requestId")
   VALUES ('st_ft_01', 'st_fulfillment', 'PENDING', 'PROCESSING', 'st_actor', 'req-1');
 
-  -- DELIVERED -> RETURNED is explicitly allowed for both order and fulfillment.
-  INSERT INTO "OrderTransition" ("id", "orderId", "from", "to")
-  VALUES ('st_ot_delivered_returned', 'st_order', 'DELIVERED', 'RETURNED');
-
+  -- DELIVERED -> RETURNED is explicitly allowed for fulfillment (the packing/
+  -- shipping/delivery lifecycle lives on FulfillmentStatus, not OrderStatus).
   INSERT INTO "FulfillmentTransition" ("id", "fulfillmentId", "from", "to")
   VALUES ('st_ft_delivered_returned', 'st_fulfillment', 'DELIVERED', 'RETURNED');
 

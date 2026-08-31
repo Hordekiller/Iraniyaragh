@@ -108,15 +108,33 @@ ALTER TABLE "FulfillmentTransition" ADD CONSTRAINT "FulfillmentTransition_actorI
 -- AddForeignKey
 ALTER TABLE "FulfillmentTransition" ADD CONSTRAINT "FulfillmentTransition_fulfillmentId_fkey" FOREIGN KEY ("fulfillmentId") REFERENCES "Fulfillment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- =====================================================================
+-- Align the OrderStatus enum with the separate-machine model (ADR-0006):
+-- packing/shipping/delivery states now live on FulfillmentStatus only, so
+-- drop PROCESSING/READY_TO_SHIP/SHIPPED/DELIVERED from OrderStatus. The
+-- shared type is recreated (Postgres has no DROP VALUE) and dependent
+-- columns are re-cast BEFORE the transition CHECK constraints are added
+-- below, so the constraints are validated against the final lean enum.
+-- =====================================================================
+
+CREATE TYPE "OrderStatus_new" AS ENUM ('DRAFT', 'PENDING_PAYMENT', 'PAID', 'CANCELLED', 'RETURNED');
+
+ALTER TABLE "Order" ALTER COLUMN "status" DROP DEFAULT;
+ALTER TABLE "Order" ALTER COLUMN "status" TYPE "OrderStatus_new" USING "status"::text::"OrderStatus_new";
+ALTER TABLE "OrderTransition" ALTER COLUMN "from" TYPE "OrderStatus_new" USING "from"::text::"OrderStatus_new";
+ALTER TABLE "OrderTransition" ALTER COLUMN "to" TYPE "OrderStatus_new" USING "to"::text::"OrderStatus_new";
+ALTER TABLE "Order" ALTER COLUMN "status" SET DEFAULT 'PENDING_PAYMENT'::"OrderStatus_new";
+
+DROP TYPE "OrderStatus";
+ALTER TYPE "OrderStatus_new" RENAME TO "OrderStatus";
+
 -- State-machine invariants (conservative subset enforced in the database).
 -- Prisma does not reproduce these CHECK constraints, so they must be preserved
 -- verbatim in future migrations and covered by tests (see ADR-0005 note).
 
--- A transition must always move between two different states.
 ALTER TABLE "OrderTransition"
   ADD CONSTRAINT "OrderTransition_meaningful" CHECK ("from" <> "to"),
   ADD CONSTRAINT "OrderTransition_no_backwards_to_pending" CHECK (NOT ("from" = 'PAID'::"OrderStatus" AND "to" = 'PENDING_PAYMENT'::"OrderStatus")),
-  ADD CONSTRAINT "OrderTransition_delivered_terminal" CHECK (NOT ("from" = 'DELIVERED'::"OrderStatus" AND "to" <> 'RETURNED'::"OrderStatus")),
   ADD CONSTRAINT "OrderTransition_terminal" CHECK ("from" NOT IN ('CANCELLED'::"OrderStatus", 'RETURNED'::"OrderStatus"));
 
 ALTER TABLE "PaymentTransition"

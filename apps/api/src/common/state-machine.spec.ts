@@ -9,26 +9,19 @@ import {
 } from './state-machine';
 
 describe('order transition machine', () => {
-  it('allows the happy path from pending payment to delivered', () => {
-    const path = ['PENDING_PAYMENT', 'PAID', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED'] as const;
+  it('allows the happy path from draft to paid', () => {
+    const path = ['DRAFT', 'PENDING_PAYMENT', 'PAID'] as const;
     for (let i = 0; i < path.length - 1; i++) {
       expect(canTransition(path[i], path[i + 1], ORDER_TRANSITIONS)).toBe(true);
     }
   });
 
-  it('allows cancellation before payment and during fulfillment', () => {
+  it('allows cancellation before payment', () => {
     expect(canTransition('PENDING_PAYMENT', 'CANCELLED', ORDER_TRANSITIONS)).toBe(true);
-    expect(canTransition('PROCESSING', 'CANCELLED', ORDER_TRANSITIONS)).toBe(true);
-  });
-
-  it('allows delivered orders to return', () => {
-    expect(canTransition('DELIVERED', 'RETURNED', ORDER_TRANSITIONS)).toBe(true);
   });
 
   it.each([
     ['PAID', 'PENDING_PAYMENT'],
-    ['SHIPPED', 'READY_TO_SHIP'],
-    ['DELIVERED', 'SHIPPED'],
     ['CANCELLED', 'PENDING_PAYMENT'],
     ['RETURNED', 'CANCELLED'],
     ['PENDING_PAYMENT', 'PENDING_PAYMENT'],
@@ -88,7 +81,7 @@ describe('assertTransition', () => {
   it('throws a BadRequestException with a stable code for an illegal transition', () => {
     const error = (() => {
       try {
-        assertTransition('DELIVERED', 'SHIPPED', ORDER_TRANSITIONS, 'Cannot redeliver.');
+        assertTransition('PAID', 'PENDING_PAYMENT', ORDER_TRANSITIONS, 'Cannot unpay.');
       } catch (caught) {
         return caught;
       }
@@ -97,7 +90,7 @@ describe('assertTransition', () => {
     expect(error).toBeInstanceOf(Error);
     const body = (error as { response?: { code: string } }).response;
     expect(body?.code).toBe('ORDER_STATE_CONFLICT');
-    expect((error as { message: string }).message).toBe('Cannot redeliver.');
+    expect((error as { message: string }).message).toBe('Cannot unpay.');
   });
 });
 
