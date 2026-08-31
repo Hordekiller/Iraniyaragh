@@ -2,7 +2,9 @@
 
 Playwright smoke coverage for the foundation shells:
 
-- `apps/web` — the storefront (React/Vite) with its self-hosted Vazirmatn font.
+- `apps/web` — the storefront (React/Vite) with its self-hosted Vazirmatn font,
+  covering the RTL shell, hero slider, product modal + cart toast, category
+  filtering and the responsive search interactions.
 - `apps/admin` — the operations panel (Next.js 16 / MUI) with its strict CSP and
   self-hosted assets.
 
@@ -75,7 +77,7 @@ viewports.
 ## Acceptance evidence (2026-08-31)
 
 ```text
-pnpm e2e: 14 tests — 11 passed, 3 skipped (viewport-gated), 0 failed, exit 0
+pnpm e2e: 18 test runs — 14 passed, 4 skipped (viewport-gated), 0 failed, exit 0
 pnpm lint / pnpm typecheck (including the E2E package): green
 web build: dist/index.html 0.79 kB — zero external references
 ```
