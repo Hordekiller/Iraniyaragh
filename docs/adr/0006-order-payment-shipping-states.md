@@ -83,6 +83,7 @@ Order (`OrderStatus`):
 
 ```
 DRAFT -> PENDING_PAYMENT (checkout completed)
+DRAFT -> CANCELLED (customer/operator abandons cart/order before checkout)
 PENDING_PAYMENT -> PAID (order cleared to proceed)
 PENDING_PAYMENT -> CANCELLED (customer/operator cancel before payment)
 other states -> CANCELLED via a verified return (order machine terminal)

@@ -637,8 +637,9 @@ model OrderTransition {
   requestId String?     @db.VarChar(100)
   createdAt DateTime    @default(now())
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
+  @@unique([orderId, requestId])
   @@index([orderId, createdAt])
   @@index([actorId, createdAt])
   @@index([to, createdAt])
@@ -655,8 +656,9 @@ model PaymentTransition {
   requestId String?       @db.VarChar(100)
   createdAt DateTime      @default(now())
 
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
 
+  @@unique([paymentId, requestId])
   @@index([paymentId, createdAt])
   @@index([actorId, createdAt])
   @@index([to, createdAt])
@@ -686,8 +688,9 @@ model FulfillmentTransition {
   requestId     String?           @db.VarChar(100)
   createdAt     DateTime          @default(now())
 
-  fulfillment Fulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+  fulfillment Fulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
 
+  @@unique([fulfillmentId, requestId])
   @@index([fulfillmentId, createdAt])
   @@index([actorId, createdAt])
   @@index([to, createdAt])

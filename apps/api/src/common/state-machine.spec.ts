@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   FULFILLMENT_TRANSITIONS,
   ORDER_TRANSITIONS,
+  ORDER_STATE_CONFLICT_ERROR,
   PAYMENT_TRANSITIONS,
   assertTransition,
   canTransition,
+  recordTransition,
   transitionMachine,
 } from './state-machine';
 
@@ -78,7 +80,7 @@ describe('assertTransition', () => {
     expect(() => assertTransition('PENDING_PAYMENT', 'PAID', ORDER_TRANSITIONS)).not.toThrow();
   });
 
-  it('throws a BadRequestException with a stable code for an illegal transition', () => {
+  it('throws a ConflictException (409) with a stable code for an illegal transition', () => {
     const error = (() => {
       try {
         assertTransition('PAID', 'PENDING_PAYMENT', ORDER_TRANSITIONS, 'Cannot unpay.');
@@ -90,6 +92,7 @@ describe('assertTransition', () => {
     expect(error).toBeInstanceOf(Error);
     const body = (error as { response?: { code: string } }).response;
     expect(body?.code).toBe('ORDER_STATE_CONFLICT');
+    expect((error as { getStatus?: () => number }).getStatus?.()).toBe(409);
     expect((error as { message: string }).message).toBe('Cannot unpay.');
   });
 });
@@ -99,5 +102,77 @@ describe('transitionMachine', () => {
     expect(transitionMachine('order')).toBe(ORDER_TRANSITIONS);
     expect(transitionMachine('payment')).toBe(PAYMENT_TRANSITIONS);
     expect(transitionMachine('fulfillment')).toBe(FULFILLMENT_TRANSITIONS);
+  });
+});
+
+describe('recordTransition', () => {
+  function makeFakeTx(dbStatus: () => string) {
+    const rows: Array<{ from: string; to: string }> = [];
+    return {
+      rows,
+      fulfillmentTransition: {
+        create: async (args: { data: { from: string; to: string } }) => {
+          const row = { id: `trx-${rows.length + 1}`, ...args.data };
+          rows.push(row);
+          return row;
+        },
+      },
+      fulfillment: {
+        updateMany: async (args: {
+          where: { id: string; status: string };
+          data: { status: string };
+        }) => {
+          if (args.where.status === dbStatus()) {
+            return { count: 1 };
+          }
+          return { count: 0 };
+        },
+      },
+    };
+  }
+
+  it('advances the status when the supplied current status is still current', async () => {
+    const current = 'PENDING';
+    const tx = makeFakeTx(() => current);
+    const result = await recordTransition(
+      tx as never,
+      'fulfillment',
+      'f1',
+      'PENDING' as never,
+      'PROCESSING' as never,
+    );
+    expect(result).toEqual({ id: 'trx-1', from: 'PENDING', to: 'PROCESSING' });
+  });
+
+  it('throws ORDER_STATE_CONFLICT on a lost update: a stale current status must fail', async () => {
+    let current = 'PENDING';
+    const tx = makeFakeTx(() => current);
+
+    const first = await recordTransition(
+      tx as never,
+      'fulfillment',
+      'f1',
+      'PENDING' as never,
+      'PROCESSING' as never,
+    );
+    expect(first.to).toBe('PROCESSING');
+
+    // Simulate the first call having committed and advanced the aggregate before
+    // the second concurrent call runs its CAS with the same stale 'PENDING'
+    // current status (the lost-update window the CAS must reject).
+    current = 'PROCESSING';
+
+    let caught: unknown;
+    try {
+      await recordTransition(tx as never, 'fulfillment', 'f1', 'PENDING' as never, 'CANCELLED' as never);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    const body = (caught as { response?: { code: string } }).response;
+    expect(body?.code).toBe(ORDER_STATE_CONFLICT_ERROR);
+    expect((caught as { getStatus?: () => number }).getStatus?.()).toBe(409);
+    expect((caught as { message: string }).message).toContain('no longer');
   });
 });

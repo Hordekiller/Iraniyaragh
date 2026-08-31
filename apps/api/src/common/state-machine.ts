@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import {
   FulfillmentStatus,
   OrderStatus,
@@ -63,7 +63,7 @@ export function assertTransition<Status extends string>(
   message = `Illegal state transition: ${String(from)} -> ${String(to)}.`,
 ): void {
   if (!canTransition(from, to, map)) {
-    const error = new BadRequestException({
+    const error = new ConflictException({
       code: ORDER_STATE_CONFLICT_ERROR,
       message,
     });
@@ -137,12 +137,22 @@ export async function recordTransition<Status extends string>(
     },
   });
 
-  await (tx[target.statusModel] as never as {
-    update: (args: { where: { id: string }; data: { status: never } }) => Promise<unknown>;
-  }).update({
-    where: { id: parentId },
+  const advanced = await (tx[target.statusModel] as never as {
+    updateMany: (args: { where: Record<string, unknown>; data: { status: never } }) => Promise<{ count: number }>;
+  }).updateMany({
+    where: { id: parentId, status: currentStatus as never },
     data: { status: nextStatus as never },
   });
+
+  if (advanced.count !== 1) {
+    const message = `${machine} ${parentId} is no longer ${String(currentStatus)} - concurrent state change`;
+    const error = new ConflictException({
+      code: ORDER_STATE_CONFLICT_ERROR,
+      message,
+    });
+    error.message = message;
+    throw error;
+  }
 
   return { id: row.id, from: currentStatus, to: nextStatus };
 }

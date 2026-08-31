@@ -58,6 +58,9 @@ CREATE TABLE "FulfillmentTransition" (
 CREATE INDEX "OrderTransition_orderId_createdAt_idx" ON "OrderTransition"("orderId", "createdAt");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "OrderTransition_orderId_requestId_key" ON "OrderTransition"("orderId", "requestId");
+
+-- CreateIndex
 CREATE INDEX "OrderTransition_actorId_createdAt_idx" ON "OrderTransition"("actorId", "createdAt");
 
 -- CreateIndex
@@ -65,6 +68,9 @@ CREATE INDEX "OrderTransition_to_createdAt_idx" ON "OrderTransition"("to", "crea
 
 -- CreateIndex
 CREATE INDEX "PaymentTransition_paymentId_createdAt_idx" ON "PaymentTransition"("paymentId", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PaymentTransition_paymentId_requestId_key" ON "PaymentTransition"("paymentId", "requestId");
 
 -- CreateIndex
 CREATE INDEX "PaymentTransition_actorId_createdAt_idx" ON "PaymentTransition"("actorId", "createdAt");
@@ -82,6 +88,9 @@ CREATE INDEX "Fulfillment_status_updatedAt_idx" ON "Fulfillment"("status", "upda
 CREATE INDEX "FulfillmentTransition_fulfillmentId_createdAt_idx" ON "FulfillmentTransition"("fulfillmentId", "createdAt");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "FulfillmentTransition_fulfillmentId_requestId_key" ON "FulfillmentTransition"("fulfillmentId", "requestId");
+
+-- CreateIndex
 CREATE INDEX "FulfillmentTransition_actorId_createdAt_idx" ON "FulfillmentTransition"("actorId", "createdAt");
 
 -- CreateIndex
@@ -91,13 +100,13 @@ CREATE INDEX "FulfillmentTransition_to_createdAt_idx" ON "FulfillmentTransition"
 ALTER TABLE "OrderTransition" ADD CONSTRAINT "OrderTransition_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OrderTransition" ADD CONSTRAINT "OrderTransition_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "OrderTransition" ADD CONSTRAINT "OrderTransition_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PaymentTransition" ADD CONSTRAINT "PaymentTransition_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PaymentTransition" ADD CONSTRAINT "PaymentTransition_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "Payment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PaymentTransition" ADD CONSTRAINT "PaymentTransition_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "Payment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Fulfillment" ADD CONSTRAINT "Fulfillment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -106,7 +115,7 @@ ALTER TABLE "Fulfillment" ADD CONSTRAINT "Fulfillment_orderId_fkey" FOREIGN KEY 
 ALTER TABLE "FulfillmentTransition" ADD CONSTRAINT "FulfillmentTransition_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FulfillmentTransition" ADD CONSTRAINT "FulfillmentTransition_fulfillmentId_fkey" FOREIGN KEY ("fulfillmentId") REFERENCES "Fulfillment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "FulfillmentTransition" ADD CONSTRAINT "FulfillmentTransition_fulfillmentId_fkey" FOREIGN KEY ("fulfillmentId") REFERENCES "Fulfillment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- =====================================================================
 -- Align the OrderStatus enum with the separate-machine model (ADR-0006):
