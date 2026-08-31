@@ -29,6 +29,18 @@ Every pull request should run:
 4. Build
 5. Migration/schema validation where applicable
 
+`.github/workflows/ci.yml` runs two jobs per pull request:
+- `quality` — `pnpm install`, Prisma client generation, `pnpm lint`,
+  `pnpm typecheck`, `pnpm test`, `pnpm build`.
+- `e2e` — same setup, then `playwright install --with-deps chromium` and
+  `pnpm e2e` (builds both apps and runs the Playwright smoke suite over the
+  storefront and admin shells on desktop + mobile viewports). The Playwright
+  HTML report and test artifacts are uploaded on failure.
+
+The smoke suite enforces a **zero-external-asset gate**: any HTTP(S) request
+from `web` or `admin` to an origin other than the app itself fails the run. The
+storefront self-hosts its Vazirmatn variable font for this reason.
+
 Production deployments should be reproducible and Docker-based.
 
 ## Database migrations
