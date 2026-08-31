@@ -1,7 +1,9 @@
 # Operations, Reliability & Delivery
 
 ## Environments
+
 Maintain independent:
+
 - Development
 - Staging
 - Production
@@ -22,7 +24,9 @@ client-exposed variables. Update `.env.example`, deployment secrets and this mat
 together when a required key changes.
 
 ## CI/CD baseline
+
 Every pull request should run:
+
 1. Lint
 2. Type check
 3. Unit/integration tests as available
@@ -41,6 +45,25 @@ Every pull request should run:
   storefront and admin shells on desktop + mobile viewports). The Playwright
   HTML report and test artifacts are uploaded on failure.
 
+The public repository also has independent security gates:
+
+- GitHub CodeQL default setup runs the extended query suite for JavaScript/
+  TypeScript and GitHub Actions on pull requests, protected-branch pushes and a
+  weekly schedule.
+- `.github/workflows/dependency-review.yml` rejects newly introduced direct or
+  transitive dependencies with moderate-or-higher known vulnerabilities.
+- Dependabot alerts and security updates are enabled; `.github/dependabot.yml`
+  proposes bounded weekly npm-workspace and GitHub Actions update groups.
+- Secret scanning and push protection detect existing supported credentials and
+  block new supported secrets before they enter Git history.
+- Security researchers use the private reporting path documented in `/SECURITY.md`,
+  never a public issue containing exploit or credential details.
+
+All workflow actions are pinned to reviewed full commit SHAs. The adjacent version
+comment is documentation only; updating a tag does not update the executed code.
+Action upgrades require a reviewed SHA change and must retain the Node 24-compatible
+runtime baseline.
+
 The smoke suite enforces a **zero-external-asset gate**: any HTTP(S) request
 from `web` or `admin` to an origin other than the app itself fails the run. The
 storefront self-hosts its Vazirmatn variable font for this reason.
@@ -48,6 +71,7 @@ storefront self-hosts its Vazirmatn variable font for this reason.
 Production deployments should be reproducible and Docker-based.
 
 ## Database migrations
+
 - Schema changes use reviewed migrations.
 - Avoid manual production schema edits.
 - Destructive migrations require explicit data migration/backout consideration.
@@ -80,7 +104,9 @@ The test runner refuses to connect unless `NODE_ENV=test` and the database name 
 with `_test`. See `docs/TESTING.md` for creation, drift and cleanup commands.
 
 ## Observability
+
 Plan for:
+
 - Structured application logs
 - Request/correlation ID
 - Error tracking
@@ -96,9 +122,9 @@ Target stack can evolve toward OpenTelemetry + Prometheus/Grafana/Loki and/or Se
 The API exposes two versioned, unauthenticated and non-cacheable probes with distinct
 operational meanings:
 
-| Probe | Success | Failure behavior | Intended consumer |
-| --- | --- | --- | --- |
-| `GET /api/v1/health/live` | `200`, `status: ok` | Fails only when the API process cannot serve HTTP | Container/process restart policy |
+| Probe                      | Success                | Failure behavior                                                           | Intended consumer                                   |
+| -------------------------- | ---------------------- | -------------------------------------------------------------------------- | --------------------------------------------------- |
+| `GET /api/v1/health/live`  | `200`, `status: ok`    | Fails only when the API process cannot serve HTTP                          | Container/process restart policy                    |
 | `GET /api/v1/health/ready` | `200`, `status: ready` | `503`, `DATABASE_UNAVAILABLE` when PostgreSQL fails or exceeds 1.5 seconds | Load balancer traffic gate and deployment readiness |
 
 `GET /api/v1/health` remains a liveness alias for compatibility, but new
@@ -120,7 +146,9 @@ curl --fail http://127.0.0.1:4000/api/v1/health/ready
 ```
 
 ## Background jobs
+
 Use queues for work that should not slow synchronous user requests, such as:
+
 - SMS/email/push
 - Image processing
 - Search indexing
@@ -130,10 +158,13 @@ Use queues for work that should not slow synchronous user requests, such as:
 Jobs must be retry-safe and idempotent when side effects are possible.
 
 ## Feature flags
+
 Use feature flags for risky or staged product launches where appropriate. Flags must not become a permanent substitute for deleting obsolete code.
 
 ## Infrastructure principle
+
 Start cost-efficiently on Iranian VPS/cloud, but keep the application provider-portable:
+
 - Containers
 - Externalized configuration
 - Independent backups
