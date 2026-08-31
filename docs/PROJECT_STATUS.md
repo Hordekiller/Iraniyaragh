@@ -45,6 +45,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   response envelopes with machine-readable codes, redacted structured JSON logging
   (secrets/OTP/PII scrubbed), a global exception filter (validation/prisma/internal mapping),
   and OpenAPI/Swagger generation committed at `apps/api/openapi.json` with a CI drift check
+- Public-repository security baseline: enforced `main` protection (required CI,
+  non-author CODEOWNERS review, last-push separation, linear history and no force-push),
+  CodeQL extended analysis for TypeScript/JavaScript and Actions, secret scanning with
+  push protection, Dependabot security updates, dependency review and private
+  vulnerability reporting
 
 ### Partial
 
@@ -104,9 +109,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
 10. API response envelopes, stable error codes, correlation/request IDs and OpenAPI are now
     wired for the HTTP layer (see Implemented). Authentication controllers and the domain
     controllers that will exercise the codes per use case are not implemented yet.
-11. GitHub branch protection cannot be enabled for the private repository on the
-    current account plan. CODEOWNERS and the two-person PR/CI policy are present,
-    but enforcement is manual until plan capability changes.
+11. GitHub now enforces the two-person PR/CI policy on `main`. Maintainers must keep
+    required check names synchronized when workflows are renamed and must review
+    CodeQL/Dependabot/secret-scanning alerts rather than treating green CI as a
+    substitute for security triage.
 12. The `User`/`Customer` identity boundary is decided (ADR-0005 + ADR-0006): `User` is
     the sole security principal and `Customer` stays a commerce profile; code must not
     join them implicitly by mobile number. Explicit linkage/merge/anonymization rules
