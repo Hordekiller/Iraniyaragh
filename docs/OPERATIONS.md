@@ -61,6 +61,43 @@ Production deployments should be reproducible and Docker-based.
 - Never edit an already-shared migration. Preserve custom Auth `CHECK` constraints
   and add a forward migration for every later schema change.
 
+Deployment applies committed migrations without generating, resetting or seeding
+the database:
+
+```bash
+pnpm --filter @iranyaragh/api prisma:deploy
+```
+
+Run this command from an automated release phase with environment-managed
+credentials; do not copy a production `DATABASE_URL` into a developer shell.
+
+### Development/test seed
+
+The deterministic seed is deliberately separate from deployment. It creates the
+20 canonical permission definitions, a `system-admin` role, its active grants and
+one safe bootstrap audit marker. It never creates a user, password, session, OTP,
+customer or other PII-bearing fixture. A privileged user must later be created by a
+separate authenticated bootstrap workflow; default admin credentials are forbidden.
+
+Seeding requires `ALLOW_DATABASE_SEED=true` plus either:
+
+- `NODE_ENV=test` and a database name ending in `_test`; or
+- `NODE_ENV=development` and an approved local PostgreSQL host/database.
+
+Staging, production and remote development targets are rejected before Prisma
+connects. For an explicitly selected local development database:
+
+```bash
+ALLOW_DATABASE_SEED=true NODE_ENV=development \
+  pnpm --filter @iranyaragh/api prisma:seed
+```
+
+The seed is transactional and convergent: rerunning it updates/reactivates only the
+seed-owned RBAC baseline and creates no duplicate permissions, roles or grants. It
+does not delete unrelated operator data. CI migrates a fresh PostgreSQL database,
+runs the seed twice and verifies the durable result with
+`apps/api/prisma/tests/seed_baseline.sql`.
+
 For Auth persistence changes, verify on a clean PostgreSQL database:
 
 ```bash

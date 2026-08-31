@@ -38,6 +38,7 @@ Export only test endpoints in the shell running database checks:
 
 ```bash
 export NODE_ENV=test
+export ALLOW_DATABASE_SEED=true
 export DATABASE_URL='postgresql://app:app@127.0.0.1:5432/iraniyaragh_test?schema=public'
 export PSQL_DATABASE_URL='postgresql://app:app@127.0.0.1:5432/iraniyaragh_test'
 export SHADOW_DATABASE_URL='postgresql://app:app@127.0.0.1:5432/ci_shadow_test?schema=public'
@@ -57,13 +58,23 @@ pnpm --dir apps/api exec prisma migrate diff \
   --exit-code
 psql "$PSQL_DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f apps/api/prisma/tests/auth_constraints.sql
+psql "$PSQL_DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f apps/api/prisma/tests/state_transitions.sql
+psql "$PSQL_DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f apps/api/prisma/tests/money_migration.sql
+pnpm --filter @iranyaragh/api prisma:seed
+pnpm --filter @iranyaragh/api prisma:seed
+psql "$PSQL_DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f apps/api/prisma/tests/seed_baseline.sql
 pnpm test:integration
 ```
 
-The Auth SQL suite wraps fixtures in a transaction and rolls them back. Vitest
-integration fixtures use a unique run suffix and delete their own records. For a
-fully fresh local run, drop and recreate only the explicitly named `_test` databases;
-never automate a recursive or wildcard database deletion.
+The SQL constraint suites wrap fixtures in transactions and roll them back. Their
+fixture namespaces do not collide with the deterministic seed, so the suites remain
+repeatable before or after seeding. Vitest integration fixtures use a unique run
+suffix and delete their own records. For a fully fresh local run, drop and recreate
+only the explicitly named `_test` databases; never automate a recursive or wildcard
+database deletion.
 
 ## CI database gate
 
@@ -73,7 +84,10 @@ databases: `iraniyaragh_ci_test` and `ci_shadow_test`. It fails when:
 - Prisma schema validation or client generation fails;
 - a migration cannot deploy from an empty database;
 - committed migrations and `schema.prisma` drift;
-- a PostgreSQL Auth invariant accepts invalid data;
+- a PostgreSQL Auth, lifecycle-state or money-migration invariant accepts invalid
+  data;
+- either of two consecutive deterministic seed runs fails or their RBAC baseline
+  does not match the verified permission/role/grant contract;
 - an integration test violates transaction or idempotency expectations.
 
 The initial service-level database coverage proves sequential replay of an inventory
