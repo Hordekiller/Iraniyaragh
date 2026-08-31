@@ -69,6 +69,50 @@ test.describe('web: storefront shell', () => {
     await network.assertNone();
   });
 
+  test('category filter narrows the popular products carousel', async ({ page }) => {
+    const network = createExternalRequestsTracker(page);
+
+    await page.goto('/');
+
+    const cards = page.locator('section#popular div[class*="snap-start"]');
+    await expect(cards).toHaveCount(6);
+
+    await tap(page.getByRole('button', { name: 'ابزار برقی', exact: true }));
+    await expect(cards).toHaveCount(3);
+
+    await tap(page.getByRole('button', { name: 'باغبانی', exact: true }));
+    await expect(cards).toHaveCount(1);
+
+    await tap(page.getByRole('button', { name: 'ابزار دستی', exact: true }));
+    await expect(cards).toHaveCount(1);
+
+    await tap(page.getByRole('button', { name: 'همه', exact: true }));
+    await expect(cards).toHaveCount(6);
+
+    await network.assertNone();
+  });
+
+  test('desktop: search input binds the query and clears it', async ({ page }) => {
+    test.skip(isMobile(page), 'desktop-only input');
+
+    const network = createExternalRequestsTracker(page);
+
+    await page.goto('/');
+
+    const search = page.locator('header input[placeholder*="۲۵۰۰"]');
+    await expect(search).toBeVisible();
+
+    await search.fill('دریل رونیکس');
+    await expect(search).toHaveValue('دریل رونیکس');
+
+    await expect(page.getByRole('button', { name: 'پاک کردن جستجو' })).toBeVisible();
+    await tap(page.getByRole('button', { name: 'پاک کردن جستجو' }));
+    await expect(search).toHaveValue('');
+    await expect(page.getByRole('button', { name: 'پاک کردن جستجو' })).toBeHidden();
+
+    await network.assertNone();
+  });
+
   test('mobile: floating bottom navigation and search toggle work', async ({ page }) => {
     test.skip(!isMobile(page), 'mobile-only');
 

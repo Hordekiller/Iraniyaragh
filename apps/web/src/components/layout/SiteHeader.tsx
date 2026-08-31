@@ -49,7 +49,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
               />
               <Search size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               {searchQuery && (
-                <button onClick={() => onSearchChange('')} className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center"><X size={14} /></button>
+                <button onClick={() => onSearchChange('')} aria-label="پاک کردن جستجو" className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center"><X size={14} /></button>
               )}
             </div>
           </div>
