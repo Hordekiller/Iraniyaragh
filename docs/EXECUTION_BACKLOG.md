@@ -135,6 +135,7 @@ and transfer/reservation lifecycles reconcile exactly.
 | G5-05 | Idempotent checkout + reservation | double-submit/offline/retry E2E |
 | G5-06 | Historical order snapshots/totals | confirmation/detail display |
 | G5-07 | Separate order/payment/fulfillment machines | customer status/timeline language |
+| (G5-07 foundation landed) | ADR-0006 + transition tables + guarded `state-machine.ts` helper | n/a — services that drive the machines are the remaining work |
 | G5-08 | Cancel/timeout compensation and audit | cancel confirmation/result UX |
 | G5-09 | Admin order queue/detail/commands | admin operational workflow/E2E |
 | G5-10 | Transactional outbox for side effects | UI handles eventual notification state |

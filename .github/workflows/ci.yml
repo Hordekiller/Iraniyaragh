@@ -94,6 +94,11 @@ jobs:
           psql "$PSQL_DATABASE_URL"
           --set ON_ERROR_STOP=1
           --file apps/api/prisma/tests/auth_constraints.sql
+      - name: Verify state-machine database constraints
+        run: >-
+          psql "$PSQL_DATABASE_URL"
+          --set ON_ERROR_STOP=1
+          --file apps/api/prisma/tests/state_transitions.sql
       - name: Run database integration tests
         run: pnpm test:integration
 

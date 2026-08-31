@@ -188,7 +188,8 @@ order; stock/price changes are communicated before confirmation.
 
 Developer A:
 
-- Separate order, payment and fulfillment state machines.
+- Separate order, payment and fulfillment state machines (foundation landed via
+  ADR-0006: transition tables + guarded state-machine helper; drivers/services remain).
 - Controlled cancellation/confirmation transitions and reservation effects.
 - Order list/detail commands with permission and audit checks.
 - Transactional outbox foundation for reliable side effects.
