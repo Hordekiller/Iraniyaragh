@@ -33,8 +33,10 @@ describe.sequential('InventoryService database integration', () => {
 
     const actor = await prisma.user.create({
       data: {
-        mobile: `98${runId.slice(0, 10)}`,
+        mobile: `+989${runId.replace(/\D/g, '').padStart(9, '0').slice(0, 9)}`,
         status: 'ACTIVE',
+        isMobileVerified: true,
+        mobileVerifiedAt: new Date(),
       },
     });
     actorId = actor.id;
