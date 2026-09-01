@@ -42,7 +42,7 @@ describe.sequential('InventoryService database integration', () => {
     });
     actorId = actor.id;
     const role = await prisma.role.create({
-      data: { key: `INV-IT-${runId}`, name: `Inv integration ${runId}` },
+      data: { key: `inv-it-${runId}`, name: `Inv integration ${runId}` },
     });
     actorRoleId = role.id;
     await prisma.userRole.create({
