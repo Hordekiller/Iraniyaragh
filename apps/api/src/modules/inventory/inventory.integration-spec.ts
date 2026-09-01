@@ -36,6 +36,7 @@ describe.sequential('InventoryService database integration', () => {
         mobile: `+989${runId.replace(/\D/g, '').padStart(9, '0').slice(0, 9)}`,
         status: 'ACTIVE',
         isMobileVerified: true,
+        createdAt: new Date(Date.now() - 60_000),
         mobileVerifiedAt: new Date(),
       },
     });
