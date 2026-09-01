@@ -8,16 +8,24 @@ const SLIDE_INTERVAL_MS = 5000
 
 export function HeroSlider() {
   const [activeSlide, setActiveSlide] = useState(0)
+  const [interactionPaused, setInteractionPaused] = useState(false)
   const { show } = useToast()
 
   useEffect(() => {
+    if (interactionPaused) return
     const id = setInterval(() => setActiveSlide(s => (s + 1) % heroSlides.length), SLIDE_INTERVAL_MS)
     return () => clearInterval(id)
-  }, [])
+  }, [interactionPaused])
 
   return (
-    <section id="home" className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
-      <div className="relative overflow-hidden rounded-[24px] lg:rounded-[28px] bg-[#0F172A] h-[480px] lg:h-[520px]">
+    <section id="home" aria-label="اسلایدر پیشنهاد ویژه" className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
+      <div
+        onMouseEnter={() => setInteractionPaused(true)}
+        onMouseLeave={() => setInteractionPaused(false)}
+        onFocusCapture={() => setInteractionPaused(true)}
+        onBlurCapture={() => setInteractionPaused(false)}
+        className="relative overflow-hidden rounded-[24px] lg:rounded-[28px] bg-[#0F172A] h-[480px] lg:h-[520px]"
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={activeSlide}
@@ -71,12 +79,18 @@ export function HeroSlider() {
         {/* Slider Controls */}
         <div className="absolute bottom-6 right-6 lg:right-auto lg:left-6 flex items-center gap-3">
           <div className="hidden lg:flex items-center gap-2 bg-black/25 backdrop-blur-xl border border-white/15 rounded-full p-1.5">
-            <button onClick={() => setActiveSlide(s => (s - 1 + heroSlides.length) % heroSlides.length)} className="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronRight size={18} /></button>
-            <button onClick={() => setActiveSlide(s => (s + 1) % heroSlides.length)} className="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronLeft size={18} /></button>
+            <button onClick={() => setActiveSlide(s => (s - 1 + heroSlides.length) % heroSlides.length)} aria-label="اسلاید قبلی" className="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronRight size={18} /></button>
+            <button onClick={() => setActiveSlide(s => (s + 1) % heroSlides.length)} aria-label="اسلاید بعدی" className="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronLeft size={18} /></button>
           </div>
-          <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md rounded-full px-3 py-2">
+          <div role="group" aria-label="انتخاب اسلاید" className="flex items-center gap-2 bg-black/30 backdrop-blur-md rounded-full px-3 py-2">
             {heroSlides.map((_, i) => (
-              <button key={i} onClick={() => setActiveSlide(i)} className={`transition-all duration-300 ${activeSlide === i ? 'w-8 h-2.5 bg-[#FF4D00] rounded-full' : 'w-2.5 h-2.5 bg-white/50 rounded-full hover:bg-white'}`} />
+              <button
+                key={i}
+                onClick={() => setActiveSlide(i)}
+                aria-label={`اسلاید ${i + 1}`}
+                aria-current={activeSlide === i ? 'true' : undefined}
+                className={`transition-all duration-300 ${activeSlide === i ? 'w-8 h-2.5 bg-[#FF4D00] rounded-full' : 'w-2.5 h-2.5 bg-white/50 rounded-full hover:bg-white'}`}
+              />
             ))}
             <span className="mr-2 text-white/90 text-xs font-bold tabular-nums">۰{activeSlide + 1} / ۰۳</span>
           </div>
@@ -90,7 +104,7 @@ export function HeroSlider() {
               <span className="px-2.5 py-1 rounded-full bg-red-500 text-white text-[11px] font-black flex items-center gap-1"><Flame size={12} /> حراج</span>
             </div>
             <div className="flex gap-3 mt-3">
-              <img src="/images/tool2.jpg" className="w-20 h-20 rounded-2xl object-cover bg-slate-50" />
+              <img src="/images/tool2.jpg" alt="دریل بتن‌کن رونیکس 2701" className="w-20 h-20 rounded-2xl object-cover bg-slate-50" />
               <div className="flex-1">
                 <div className="text-[13px] font-bold leading-5 text-slate-900 line-clamp-2">دریل بتن‌کن رونیکس 2701 + هدیه</div>
                 <div className="flex items-center gap-1 mt-1"><Star size={12} className="fill-amber-400 text-amber-400" /><span className="text-xs font-bold">۴.۹</span><span className="text-xs text-slate-400">(۲۱۲)</span></div>
