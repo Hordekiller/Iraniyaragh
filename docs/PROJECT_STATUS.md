@@ -48,6 +48,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
   response envelopes with machine-readable codes, redacted structured JSON logging
   (secrets/OTP/PII scrubbed), a global exception filter (validation/prisma/internal mapping),
   and OpenAPI/Swagger generation committed at `apps/api/openapi.json` with a CI drift check
+- Initial Auth cryptographic foundation: fail-fast issuer/key configuration, strict
+  ten-minute HS256 access-token signing/verification, 256-bit opaque token generation,
+  constant-time CSRF comparison and versioned/domain-separated HKDF-HMAC hashing with a
+  bounded current/previous-key rotation window
 
 ### Partial
 
@@ -65,9 +69,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
   database integration currently covers only initial inventory transaction/idempotency
   behavior and Auth persistence constraints.
 - Auth storage and lifecycle constraints exist, but credential verification, token
-  issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
-  permission enforcement are not implemented yet. ADR-0007 and `AUTH_CONTRACT.md`
-  define their accepted runtime, HTTP, threat and client-state contract.
+  persistence/transactional refresh rotation, OTP delivery, rate limiting, password/TOTP
+  verification and server-side permission enforcement are not implemented yet. The
+  migration-independent token/hash primitives now exist; ADR-0007 and `AUTH_CONTRACT.md`
+  define the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 

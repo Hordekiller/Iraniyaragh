@@ -1,7 +1,9 @@
 # Operations, Reliability & Delivery
 
 ## Environments
+
 Maintain independent:
+
 - Development
 - Staging
 - Production
@@ -14,15 +16,26 @@ The API validates configuration before opening a listening socket. Development m
 default to the known local web/admin origins; staging and production must provide an
 explicit comma-separated `CORS_ORIGINS` allowlist. Wildcards are forbidden when
 credentialed requests are enabled. Staging and production must also provide an
-explicit `API_PORT`; their JWT/object-storage secrets must be non-placeholder values
-of at least 32 characters, and access/refresh secrets must differ.
+explicit `API_PORT`. Auth requires an exact `AUTH_JWT_ISSUER`, a minimum 32-byte
+`JWT_ACCESS_SECRET`, and a distinct minimum 32-byte `AUTH_HASH_SECRET` with a positive
+`AUTH_HASH_KEY_VERSION`. Surrounding whitespace is rejected rather than silently
+changing key material. Staging/production reject known placeholder values.
+
+Hash-key rotation is bounded to two keys: deploy the new current version/secret and
+temporarily retain the old pair as `AUTH_HASH_PREVIOUS_KEY_VERSION` and
+`AUTH_HASH_PREVIOUS_SECRET`. New hashes use only the current key; lookup/verification
+accepts both versions until active records are rotated or expire. Never reuse a key
+version with different material, and remove the previous key only after verifying no
+live record depends on it. JWT signing and Auth hashing secrets must remain distinct.
 
 Environment values are configuration only; business policy and secrets never use
 client-exposed variables. Update `.env.example`, deployment secrets and this matrix
 together when a required key changes.
 
 ## CI/CD baseline
+
 Every pull request should run:
+
 1. Lint
 2. Type check
 3. Unit/integration tests as available
@@ -48,6 +61,7 @@ storefront self-hosts its Vazirmatn variable font for this reason.
 Production deployments should be reproducible and Docker-based.
 
 ## Database migrations
+
 - Schema changes use reviewed migrations.
 - Avoid manual production schema edits.
 - Destructive migrations require explicit data migration/backout consideration.
@@ -117,7 +131,9 @@ The test runner refuses to connect unless `NODE_ENV=test` and the database name 
 with `_test`. See `docs/TESTING.md` for creation, drift and cleanup commands.
 
 ## Observability
+
 Plan for:
+
 - Structured application logs
 - Request/correlation ID
 - Error tracking
@@ -133,9 +149,9 @@ Target stack can evolve toward OpenTelemetry + Prometheus/Grafana/Loki and/or Se
 The API exposes two versioned, unauthenticated and non-cacheable probes with distinct
 operational meanings:
 
-| Probe | Success | Failure behavior | Intended consumer |
-| --- | --- | --- | --- |
-| `GET /api/v1/health/live` | `200`, `status: ok` | Fails only when the API process cannot serve HTTP | Container/process restart policy |
+| Probe                      | Success                | Failure behavior                                                           | Intended consumer                                   |
+| -------------------------- | ---------------------- | -------------------------------------------------------------------------- | --------------------------------------------------- |
+| `GET /api/v1/health/live`  | `200`, `status: ok`    | Fails only when the API process cannot serve HTTP                          | Container/process restart policy                    |
 | `GET /api/v1/health/ready` | `200`, `status: ready` | `503`, `DATABASE_UNAVAILABLE` when PostgreSQL fails or exceeds 1.5 seconds | Load balancer traffic gate and deployment readiness |
 
 `GET /api/v1/health` remains a liveness alias for compatibility, but new
@@ -157,7 +173,9 @@ curl --fail http://127.0.0.1:4000/api/v1/health/ready
 ```
 
 ## Background jobs
+
 Use queues for work that should not slow synchronous user requests, such as:
+
 - SMS/email/push
 - Image processing
 - Search indexing
@@ -167,10 +185,13 @@ Use queues for work that should not slow synchronous user requests, such as:
 Jobs must be retry-safe and idempotent when side effects are possible.
 
 ## Feature flags
+
 Use feature flags for risky or staged product launches where appropriate. Flags must not become a permanent substitute for deleting obsolete code.
 
 ## Infrastructure principle
+
 Start cost-efficiently on Iranian VPS/cloud, but keep the application provider-portable:
+
 - Containers
 - Externalized configuration
 - Independent backups

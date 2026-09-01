@@ -7,8 +7,10 @@ const validDevelopmentEnvironment = {
   DATABASE_URL: 'postgresql://app:app@localhost:5432/iraniyaragh',
   REDIS_URL: 'redis://localhost:6379',
   CORS_ORIGINS: 'http://localhost:5173,http://localhost:3001',
-  JWT_ACCESS_SECRET: 'development-access-secret',
-  JWT_REFRESH_SECRET: 'development-refresh-secret',
+  AUTH_JWT_ISSUER: 'iranyaragh-api-test',
+  JWT_ACCESS_SECRET: 'development-access-secret-0123456789',
+  AUTH_HASH_KEY_VERSION: '7',
+  AUTH_HASH_SECRET: 'development-hash-root-secret-0123456789',
   OBJECT_STORAGE_ENDPOINT: 'http://localhost:9000',
   OBJECT_STORAGE_ACCESS_KEY: 'minio',
   OBJECT_STORAGE_SECRET_KEY: 'development-object-secret',
@@ -26,9 +28,12 @@ describe('parseCorsOrigins', () => {
     ]);
   });
 
-  it.each(['*', 'example.com', 'https://example.com/path', 'file:///tmp/admin'])('rejects unsafe or invalid origin %s', value => {
-    expect(() => parseCorsOrigins(value, 'production')).toThrow();
-  });
+  it.each(['*', 'example.com', 'https://example.com/path', 'file:///tmp/admin'])(
+    'rejects unsafe or invalid origin %s',
+    value => {
+      expect(() => parseCorsOrigins(value, 'production')).toThrow();
+    },
+  );
 
   it('requires an explicit allowlist in production', () => {
     expect(() => parseCorsOrigins(undefined, 'production')).toThrow('CORS_ORIGINS is required');
@@ -52,11 +57,30 @@ describe('validateEnvironment', () => {
     expect(() => validateEnvironment({ ...validDevelopmentEnvironment, [key]: value })).toThrow();
   });
 
-  it('rejects identical access and refresh secrets', () => {
+  it('rejects short Auth secrets in every environment', () => {
     expect(() =>
       validateEnvironment({
         ...validDevelopmentEnvironment,
-        JWT_REFRESH_SECRET: validDevelopmentEnvironment.JWT_ACCESS_SECRET,
+        JWT_ACCESS_SECRET: 'too-short',
+      }),
+    ).toThrow('JWT_ACCESS_SECRET');
+  });
+
+  it('rejects surrounding whitespace instead of silently changing Auth key material', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validDevelopmentEnvironment,
+        AUTH_HASH_SECRET: ` ${validDevelopmentEnvironment.AUTH_HASH_SECRET}`,
+      }),
+    ).toThrow('surrounding whitespace');
+  });
+
+  it('rejects identical access and hashing secrets', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validDevelopmentEnvironment,
+        JWT_ACCESS_SECRET: 'development-access-secret-0123456789',
+        AUTH_HASH_SECRET: 'development-access-secret-0123456789',
       }),
     ).toThrow('must be different');
   });
@@ -68,6 +92,7 @@ describe('validateEnvironment', () => {
         NODE_ENV: 'production',
         CORS_ORIGINS: 'https://admin.example.com',
         JWT_ACCESS_SECRET: 'change-me-access',
+        AUTH_HASH_SECRET: 'hash-secret-with-at-least-32-characters',
       }),
     ).toThrow('JWT_ACCESS_SECRET');
   });
@@ -80,10 +105,24 @@ describe('validateEnvironment', () => {
         API_PORT: undefined,
         CORS_ORIGINS: 'https://admin.example.com',
         JWT_ACCESS_SECRET: 'access-secret-with-at-least-32-characters',
-        JWT_REFRESH_SECRET: 'refresh-secret-with-at-least-32-characters',
+        AUTH_HASH_SECRET: 'hash-secret-with-at-least-32-characters',
         OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
       }),
     ).toThrow('API_PORT is required');
+  });
+
+  it('requires an explicit Auth hash key version in staging and production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validDevelopmentEnvironment,
+        NODE_ENV: 'production',
+        CORS_ORIGINS: 'https://admin.example.com',
+        AUTH_HASH_KEY_VERSION: undefined,
+        JWT_ACCESS_SECRET: 'access-secret-with-at-least-32-characters',
+        AUTH_HASH_SECRET: 'hash-secret-with-at-least-32-characters',
+        OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
+      }),
+    ).toThrow('AUTH_HASH_KEY_VERSION');
   });
 
   it('rejects placeholder or short staging secrets', () => {
@@ -93,6 +132,7 @@ describe('validateEnvironment', () => {
         NODE_ENV: 'staging',
         CORS_ORIGINS: 'https://staging-admin.example.com',
         JWT_ACCESS_SECRET: 'change-me-access',
+        AUTH_HASH_SECRET: 'hash-secret-with-at-least-32-characters',
       }),
     ).toThrow('JWT_ACCESS_SECRET');
   });
@@ -103,9 +143,45 @@ describe('validateEnvironment', () => {
       NODE_ENV: 'production',
       CORS_ORIGINS: 'https://admin.example.com,https://shop.example.com',
       JWT_ACCESS_SECRET: 'access-secret-with-at-least-32-characters',
-      JWT_REFRESH_SECRET: 'refresh-secret-with-at-least-32-characters',
+      AUTH_HASH_SECRET: 'hash-secret-with-at-least-32-characters',
       OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
     });
     expect(result.NODE_ENV).toBe('production');
+  });
+
+  it('accepts a distinct current and previous Auth hashing key pair', () => {
+    const result = validateEnvironment({
+      ...validDevelopmentEnvironment,
+      JWT_ACCESS_SECRET: 'development-access-secret-0123456789',
+      AUTH_HASH_SECRET: 'development-current-hash-secret-012345',
+      AUTH_HASH_KEY_VERSION: '8',
+      AUTH_HASH_PREVIOUS_SECRET: 'development-previous-hash-secret-01234',
+      AUTH_HASH_PREVIOUS_KEY_VERSION: '7',
+    });
+
+    expect(result.AUTH_HASH_KEY_VERSION).toBe(8);
+    expect(result.AUTH_HASH_PREVIOUS_KEY_VERSION).toBe(7);
+  });
+
+  it('rejects incomplete or duplicate Auth hashing rotation keys', () => {
+    const strongBase = {
+      ...validDevelopmentEnvironment,
+      JWT_ACCESS_SECRET: 'development-access-secret-0123456789',
+      AUTH_HASH_SECRET: 'development-current-hash-secret-012345',
+    };
+
+    expect(() =>
+      validateEnvironment({
+        ...strongBase,
+        AUTH_HASH_PREVIOUS_KEY_VERSION: '6',
+      }),
+    ).toThrow('must be configured together');
+    expect(() =>
+      validateEnvironment({
+        ...strongBase,
+        AUTH_HASH_PREVIOUS_KEY_VERSION: '7',
+        AUTH_HASH_PREVIOUS_SECRET: strongBase.AUTH_HASH_SECRET,
+      }),
+    ).toThrow('distinct versions and secrets');
   });
 });
