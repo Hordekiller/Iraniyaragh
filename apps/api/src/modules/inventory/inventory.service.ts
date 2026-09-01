@@ -78,6 +78,7 @@ export type MovementQuery = {
 
 const SERIALIZABLE_RETRIES = 3;
 const EXPIRY_BATCH_SIZE = 100;
+const MAX_OFFSET = 50_000;
 const ADJUSTMENT_TYPES = new Set<InventoryMovementType>([
   'ADJUSTMENT_IN',
   'ADJUSTMENT_OUT',
@@ -106,7 +107,12 @@ export class InventoryService {
             const existing = await tx.inventoryMovement.findUnique({
               where: { idempotencyKey: command.idempotencyKey },
             });
-            if (existing) return existing;
+            if (existing) {
+              if (this.movementMatches(existing, command)) return existing;
+              throw new ConflictException(
+                `Idempotency conflict: key '${command.idempotencyKey}' was already used with a different payload.`,
+              );
+            }
           }
 
           await this.assertLocation(tx, command);
@@ -313,11 +319,33 @@ export class InventoryService {
             throw new ConflictException('Reservation balance is inconsistent.');
           }
 
+          const beforeOnHand = balance.onHand;
+          const afterReserved = balance.reserved - reservation.quantity;
+          const afterOnHand = balance.onHand - reservation.quantity;
+          const available = afterOnHand - afterReserved;
+
           await tx.inventoryBalance.update({
             where: { id: balance.id },
             data: {
-              reserved: { decrement: reservation.quantity },
+              onHand: afterOnHand,
+              reserved: afterReserved,
+              available,
               version: { increment: 1 },
+            },
+          });
+
+          await tx.inventoryMovement.create({
+            data: {
+              warehouseId: reservation.warehouseId,
+              locationId: reservation.locationId,
+              variantId: reservation.variantId,
+              type: InventoryMovementType.SALE,
+              quantity: -reservation.quantity,
+              beforeOnHand,
+              afterOnHand,
+              referenceType: reservation.orderId ? 'order' : 'stock-reservation',
+              referenceId: reservation.orderId ?? reservationId,
+              reason: 'Reservation consumed',
             },
           });
 
@@ -331,8 +359,8 @@ export class InventoryService {
               action: 'inventory.reservation.consumed',
               entityType: 'stock-reservation',
               entityId: reservationId,
-              before: { reserved: balance.reserved },
-              after: { reserved: balance.reserved - reservation.quantity },
+              before: { onHand: beforeOnHand, reserved: balance.reserved },
+              after: { onHand: afterOnHand, reserved: afterReserved, available },
               metadata: { orderId: reservation.orderId },
               actorId: context.actorId,
               requestId: context.requestId,
@@ -350,10 +378,11 @@ export class InventoryService {
   async expireReservations(context: ActorContext, options: { now?: Date; batchSize?: number } = {}) {
     this.assertTracked(context);
     const now = options.now ?? new Date();
+    const batchSize = clampInt(options.batchSize, 1, 100, EXPIRY_BATCH_SIZE);
     const reservations = await this.prisma.stockReservation.findMany({
       where: { status: 'ACTIVE', expiresAt: { lte: now } },
-      take: options.batchSize ?? EXPIRY_BATCH_SIZE,
-      orderBy: { expiresAt: 'asc' },
+      take: batchSize,
+      orderBy: [{ expiresAt: 'asc' }, { id: 'asc' }],
     });
 
     let expired = 0;
@@ -365,7 +394,7 @@ export class InventoryService {
 
   async getSnapshots(query: SnapshotQuery): Promise<{ items: InventorySnapshotDto[]; count: number }> {
     const limit = clampInt(query.limit, 1, 100, 50);
-    const offset = clampInt(query.offset, 0, Number.MAX_SAFE_INTEGER, 0);
+    const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
 
     const where: Prisma.InventoryBalanceWhereInput = {
       ...(query.warehouseId ? { warehouseId: query.warehouseId } : {}),
@@ -376,7 +405,7 @@ export class InventoryService {
     const [rows, count] = await Promise.all([
       this.prisma.inventoryBalance.findMany({
         where,
-        orderBy: [{ warehouseId: 'asc' }, { variantId: 'asc' }],
+        orderBy: [{ warehouseId: 'asc' }, { locationId: 'asc' }, { variantId: 'asc' }],
         take: limit,
         skip: offset,
       }),
@@ -399,7 +428,7 @@ export class InventoryService {
 
   async getMovements(query: MovementQuery): Promise<{ items: InventoryMovementDto[]; count: number }> {
     const limit = clampInt(query.limit, 1, 100, 50);
-    const offset = clampInt(query.offset, 0, Number.MAX_SAFE_INTEGER, 0);
+    const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
 
     const where: Prisma.InventoryMovementWhereInput = {
       ...(query.warehouseId ? { warehouseId: query.warehouseId } : {}),
@@ -411,7 +440,7 @@ export class InventoryService {
     const [rows, count] = await Promise.all([
       this.prisma.inventoryMovement.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
         take: limit,
         skip: offset,
       }),
@@ -463,59 +492,56 @@ export class InventoryService {
     quantity: number,
     context: ActorContext,
   ): Promise<number> {
-    try {
-      return await this.withSerializableRetry(() =>
-        this.prisma.$transaction(
-          async (tx) => {
-            const reservation = await tx.stockReservation.findUnique({ where: { id: reservationId } });
-            if (!reservation || reservation.status !== 'ACTIVE') return 0;
+    return this.withSerializableRetry(() =>
+      this.prisma.$transaction(
+        async (tx) => {
+          const reservation = await tx.stockReservation.findUnique({ where: { id: reservationId } });
+          if (!reservation) return 0;
+          if (reservation.status !== 'ACTIVE') return 0;
 
-            const balance = await tx.inventoryBalance.findUnique({
-              where: this.balanceKey({
-                warehouseId: reservation.warehouseId,
-                locationId: reservation.locationId,
-                variantId: reservation.variantId,
-              }),
-            });
-            if (!balance || balance.reserved < quantity) {
-              throw new ConflictException('Reservation balance is inconsistent.');
-            }
+          const balance = await tx.inventoryBalance.findUnique({
+            where: this.balanceKey({
+              warehouseId: reservation.warehouseId,
+              locationId: reservation.locationId,
+              variantId: reservation.variantId,
+            }),
+          });
+          if (!balance || balance.reserved < quantity) {
+            throw new ConflictException('Reservation balance is inconsistent.');
+          }
 
-            await tx.inventoryBalance.update({
-              where: { id: balance.id },
-              data: {
-                reserved: { decrement: quantity },
-                available: { increment: quantity },
-                version: { increment: 1 },
-              },
-            });
+          await tx.inventoryBalance.update({
+            where: { id: balance.id },
+            data: {
+              reserved: { decrement: quantity },
+              available: { increment: quantity },
+              version: { increment: 1 },
+            },
+          });
 
-            await tx.stockReservation.update({
-              where: { id: reservationId },
-              data: { status: 'EXPIRED' },
-            });
+          await tx.stockReservation.update({
+            where: { id: reservationId },
+            data: { status: 'EXPIRED' },
+          });
 
-            await this.auditLog.record(
-              {
-                action: 'inventory.reservation.expired',
-                entityType: 'stock-reservation',
-                entityId: reservationId,
-                before: { reserved: balance.reserved, available: balance.available },
-                after: { reserved: balance.reserved - quantity, available: balance.available + quantity },
-                actorId: context.actorId,
-                requestId: context.requestId,
-              },
-              tx,
-            );
+          await this.auditLog.record(
+            {
+              action: 'inventory.reservation.expired',
+              entityType: 'stock-reservation',
+              entityId: reservationId,
+              before: { reserved: balance.reserved, available: balance.available },
+              after: { reserved: balance.reserved - quantity, available: balance.available + quantity },
+              actorId: context.actorId,
+              requestId: context.requestId,
+            },
+            tx,
+          );
 
-            return 1;
-          },
-          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-        ),
-      );
-    } catch {
-      return 0;
-    }
+          return 1;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    );
   }
 
   private balanceKey(key: StockKey) {
@@ -540,6 +566,22 @@ export class InventoryService {
     if (expected !== undefined && actual !== expected) {
       throw new ConflictException('Inventory balance version conflict. Refresh and retry.');
     }
+  }
+
+  private movementMatches(
+    movement: { warehouseId: string; locationId: string; variantId: string; type: string; quantity: number; reason: string | null; referenceType: string | null; referenceId: string | null },
+    command: ChangeStockCommand,
+  ): boolean {
+    return (
+      movement.warehouseId === command.warehouseId &&
+      movement.locationId === command.locationId &&
+      movement.variantId === command.variantId &&
+      movement.type === command.type &&
+      movement.quantity === command.delta &&
+      (movement.reason ?? null) === (command.reason ?? null) &&
+      (movement.referenceType ?? null) === (command.referenceType ?? null) &&
+      (movement.referenceId ?? null) === (command.referenceId ?? null)
+    );
   }
 
   private async withSerializableRetry<T>(operation: () => Promise<T>): Promise<T> {

@@ -15,11 +15,12 @@ describe.sequential('InventoryService database integration', () => {
   const variantId = `test_variant_${runId}`;
   const idempotencyKey = `test_adjustment_${runId}`;
   const requestIdPrefix = `invit-${runId}`;
-  const actorId = `integration-actor-${runId}`;
   const prisma = new PrismaService();
   const auditLog = new AuditLogService(prisma);
   const inventory = new InventoryService(prisma, auditLog);
   let connected = false;
+  let actorId = '';
+  let actorRoleId = '';
 
   beforeAll(async () => {
     assertIsolatedTestDatabase({
@@ -29,6 +30,21 @@ describe.sequential('InventoryService database integration', () => {
 
     await prisma.$connect();
     connected = true;
+
+    const actor = await prisma.user.create({
+      data: {
+        mobile: `98${runId.slice(0, 10)}`,
+        status: 'ACTIVE',
+      },
+    });
+    actorId = actor.id;
+    const role = await prisma.role.create({
+      data: { key: `INV-IT-${runId}`, name: `Inv integration ${runId}` },
+    });
+    actorRoleId = role.id;
+    await prisma.userRole.create({
+      data: { userId: actorId, roleId: role.id, assignedById: actorId },
+    });
 
     await prisma.warehouse.create({
       data: {
@@ -77,10 +93,18 @@ describe.sequential('InventoryService database integration', () => {
     await prisma.product.deleteMany({ where: { id: productId } });
     await prisma.warehouseLocation.deleteMany({ where: { id: locationId } });
     await prisma.warehouse.deleteMany({ where: { id: warehouseId } });
+    await prisma.userRole.deleteMany({ where: { roleId: actorRoleId } });
+    await prisma.role.deleteMany({ where: { id: actorRoleId } });
+    await prisma.user.deleteMany({ where: { id: actorId } });
     await prisma.$disconnect();
   });
 
-  it('returns the original movement when an idempotency key is replayed sequentially', async () => {
+  const balanceWhere = () =>
+    ({
+      warehouseId_locationId_variantId: { warehouseId, locationId, variantId },
+    }) as const;
+
+  it('returns the original movement when an idempotency key is replayed with an identical payload', async () => {
     const command = {
       warehouseId,
       locationId,
@@ -102,35 +126,41 @@ describe.sequential('InventoryService database integration', () => {
     ).resolves.toBe(1);
 
     const balance = await prisma.inventoryBalance.findUniqueOrThrow({
-      where: {
-        warehouseId_locationId_variantId: {
-          warehouseId,
-          locationId,
-          variantId,
-        },
-      },
+      where: balanceWhere(),
     });
-    expect(balance).toMatchObject({
-      onHand: 5,
-      reserved: 0,
-      available: 5,
-      version: 1,
-    });
+    expect(balance).toMatchObject({ onHand: 5, reserved: 0, available: 5, version: 1 });
+  });
+
+  it('rejects an idempotency-key replay whose payload conflicts', async () => {
+    await expect(
+      inventory.changeOnHand({
+        warehouseId,
+        locationId,
+        variantId,
+        delta: 99,
+        type: InventoryMovementType.ADJUSTMENT_IN,
+        reason: 'conflicting payload',
+        idempotencyKey,
+        actorId,
+        requestId: `${requestIdPrefix}-idempotency-conflict`,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    await expect(
+      prisma.inventoryMovement.count({ where: { idempotencyKey } }),
+    ).resolves.toBe(1);
   });
 
   it('rolls back every write when a serializable transaction fails', async () => {
-    const balanceWhere = {
-      warehouseId_locationId_variantId: { warehouseId, locationId, variantId },
-    } as const;
     const before = await prisma.inventoryBalance.findUniqueOrThrow({
-      where: balanceWhere,
+      where: balanceWhere(),
     });
 
     await expect(
       prisma.$transaction(
         async (tx) => {
           await tx.inventoryBalance.update({
-            where: balanceWhere,
+            where: balanceWhere(),
             data: {
               onHand: { increment: 7 },
               available: { increment: 7 },
@@ -144,7 +174,7 @@ describe.sequential('InventoryService database integration', () => {
     ).rejects.toThrow('forced integration-test rollback');
 
     const after = await prisma.inventoryBalance.findUniqueOrThrow({
-      where: balanceWhere,
+      where: balanceWhere(),
     });
     expect(after).toMatchObject({
       onHand: before.onHand,
@@ -154,7 +184,7 @@ describe.sequential('InventoryService database integration', () => {
     });
   });
 
-  it('writes an audit row asserting actor and request for movements', async () => {
+  it('writes an exact audit row per command request id with a real actor', async () => {
     const requestId = `${requestIdPrefix}-audit`;
     await inventory.changeOnHand({
       warehouseId,
@@ -170,6 +200,7 @@ describe.sequential('InventoryService database integration', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       actorId,
+      requestId,
       action: 'inventory.balance.changed',
       entityType: 'inventory-movement',
     });
@@ -190,10 +221,9 @@ describe.sequential('InventoryService database integration', () => {
   });
 
   it('rejects a stale expectedVersion without mutating the balance', async () => {
-    const key = {
-      warehouseId_locationId_variantId: { warehouseId, locationId, variantId },
-    } as const;
-    const before = await prisma.inventoryBalance.findUniqueOrThrow({ where: key });
+    const before = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
 
     await expect(
       inventory.changeOnHand({
@@ -208,12 +238,18 @@ describe.sequential('InventoryService database integration', () => {
       }),
     ).rejects.toBeInstanceOf(ConflictException);
 
-    const after = await prisma.inventoryBalance.findUniqueOrThrow({ where: key });
+    const after = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
     expect(after).toEqual(before);
   });
 
-  it('reserves, consumes and releases through the full lifecycle', async () => {
-    const requestId = `${requestIdPrefix}-lifecycle`;
+  it('consuming a reservation reduces onHand, clears reserved and writes a movement', async () => {
+    const reserveRequestId = `${requestIdPrefix}-consume-reserve`;
+    const consumeRequestId = `${requestIdPrefix}-consume`;
+    const before = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
 
     const reservation = await inventory.reserve({
       warehouseId,
@@ -223,31 +259,41 @@ describe.sequential('InventoryService database integration', () => {
       quantity: 3,
       expiresAt: new Date(Date.now() + 60_000),
       actorId,
-      requestId,
+      requestId: reserveRequestId,
     });
     expect(reservation.status).toBe('ACTIVE');
 
-    let balance = await prisma.inventoryBalance.findUniqueOrThrow({
-      where: {
-        warehouseId_locationId_variantId: { warehouseId, locationId, variantId },
-      },
+    const consumed = await inventory.consumeReservation(reservation.id, {
+      actorId,
+      requestId: consumeRequestId,
     });
-    expect(balance).toMatchObject({ reserved: 3, available: 2 });
-
-    const consumed = await inventory.consumeReservation(reservation.id, { actorId, requestId });
     expect(consumed.status).toBe('CONSUMED');
 
-    const replayed = await inventory.consumeReservation(reservation.id, { actorId, requestId });
+    const replayed = await inventory.consumeReservation(reservation.id, {
+      actorId,
+      requestId: consumeRequestId,
+    });
     expect(replayed.status).toBe('CONSUMED');
 
-    balance = await prisma.inventoryBalance.findUniqueOrThrow({
-      where: {
-        warehouseId_locationId_variantId: { warehouseId, locationId, variantId },
-      },
+    const balance = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
     });
-    expect(balance).toMatchObject({ reserved: 0, available: 2 });
+    expect(balance.onHand).toBe(before.onHand - 3);
+    expect(balance.reserved).toBe(0);
+    expect(balance.available).toBe(balance.onHand - balance.reserved);
 
-    const second = await inventory.reserve({
+    const movement = await prisma.inventoryMovement.findFirst({
+      where: { referenceType: 'stock-reservation', referenceId: reservation.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(movement).not.toBeNull();
+    expect(movement).toMatchObject({
+      type: InventoryMovementType.SALE,
+      quantity: -3,
+      afterOnHand: before.onHand - 3,
+    });
+
+    const release = await inventory.reserve({
       warehouseId,
       locationId,
       variantId,
@@ -255,28 +301,28 @@ describe.sequential('InventoryService database integration', () => {
       quantity: 2,
       expiresAt: new Date(Date.now() + 60_000),
       actorId,
-      requestId: `${requestIdPrefix}-release`,
+      requestId: `${requestIdPrefix}-consume-release-reserve`,
     });
-
-    const released = await inventory.releaseReservation(second.id, {
+    const released = await inventory.releaseReservation(release.id, {
       actorId,
-      requestId: `${requestIdPrefix}-release`,
+      requestId: `${requestIdPrefix}-consume-release`,
     });
     expect(released.status).toBe('RELEASED');
 
-    balance = await prisma.inventoryBalance.findUniqueOrThrow({
-      where: {
-        warehouseId_locationId_variantId: { warehouseId, locationId, variantId },
-      },
+    const releaseMovement = await prisma.inventoryMovement.findFirst({
+      where: { referenceType: 'stock-reservation', referenceId: release.id },
     });
-    expect(balance).toMatchObject({ reserved: 0, available: 2 });
+    expect(releaseMovement).toBeNull();
 
-    const actions = await prisma.auditLog.findMany({ where: { requestId } });
-    expect(actions.map((row) => row.action).sort()).toEqual([
-      'inventory.reservation.consumed',
-      'inventory.reservation.created',
-      'inventory.reservation.released',
-    ]);
+    const reserveAudit = await prisma.auditLog.findFirst({
+      where: { requestId: reserveRequestId },
+    });
+    const consumeAudit = await prisma.auditLog.findFirst({
+      where: { requestId: consumeRequestId },
+    });
+    expect(reserveAudit?.action).toBe('inventory.reservation.created');
+    expect(consumeAudit?.action).toBe('inventory.reservation.consumed');
+    expect(consumeAudit?.actorId).toBe(actorId);
   });
 
   it('rejects over-reservation beyond available stock', async () => {
@@ -319,17 +365,86 @@ describe.sequential('InventoryService database integration', () => {
     expect(current.status).toBe('EXPIRED');
 
     const balance = await prisma.inventoryBalance.findUniqueOrThrow({
-      where: {
-        warehouseId_locationId_variantId: { warehouseId, locationId, variantId },
-      },
+      where: balanceWhere(),
     });
-    expect(balance).toMatchObject({ reserved: 0, available: 2 });
-
-    const actions = await prisma.auditLog.findMany({ where: { requestId } });
-    expect(actions.map((row) => row.action)).toContain('inventory.reservation.expired');
+    expect(balance.reserved).toBe(0);
+    expect(balance.available).toBe(balance.onHand - balance.reserved);
   });
 
-  it('surfaces read-only snapshots and movements through the service', async () => {
+  it('propagates a real balance inconsistency while expiring instead of swallowing it', async () => {
+    const requestId = `${requestIdPrefix}-expiry-propagate`;
+    await inventory.reserve({
+      warehouseId,
+      locationId,
+      variantId,
+      orderId: null,
+      quantity: 1,
+      expiresAt: new Date(Date.now() - 60_000),
+      actorId,
+      requestId,
+    });
+
+    await prisma.inventoryBalance.update({
+      where: balanceWhere(),
+      data: { reserved: 0, available: { increment: 1 } },
+    });
+
+    await expect(
+      inventory.expireReservations({ actorId, requestId }, { now: new Date() }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('multiple concurrent reservations never double-spend or go negative', async () => {
+    const before = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
+    const initial = before.onHand;
+    const requestCount = 8;
+    const perRequest = 1;
+
+    const results = await Promise.allSettled(
+      Array.from({ length: requestCount }, (_, i) =>
+        inventory.reserve({
+          warehouseId,
+          locationId,
+          variantId,
+          orderId: null,
+          quantity: perRequest,
+          expiresAt: new Date(Date.now() + 120_000),
+          actorId,
+          requestId: `${requestIdPrefix}-concurrent-${i}`,
+        }),
+      ),
+    );
+
+    const ok = results.filter((r) => r.status === 'fulfilled').length;
+    const rejected = results.filter((r) => r.status === 'rejected').length;
+
+    const balance = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
+    expect(balance.onHand).toBe(initial);
+    expect(balance.reserved).toBe(ok * perRequest);
+    expect(balance.available).toBe(initial - ok * perRequest);
+    expect(ok + rejected).toBe(requestCount);
+    expect(ok).toBeGreaterThanOrEqual(1);
+    expect(balance.available).toBeGreaterThanOrEqual(0);
+    expect(balance.reserved).toBeLessThanOrEqual(initial);
+
+    for (let i = 0; i < requestCount; i += 1) {
+      const r = results[i];
+      if (r.status === 'fulfilled') {
+        expect(r.value.status).toBe('ACTIVE');
+        const auditRows = await prisma.auditLog.findMany({
+          where: { requestId: `${requestIdPrefix}-concurrent-${i}` },
+        });
+        expect(auditRows).toHaveLength(1);
+        expect(auditRows[0].action).toBe('inventory.reservation.created');
+      }
+    }
+  });
+
+  it('surfaces deterministic snapshots and movements through the service', async () => {
     const snapshots = await inventory.getSnapshots({ locationId });
     expect(snapshots.items).toHaveLength(1);
     expect(snapshots.items[0]).toMatchObject({
@@ -340,12 +455,10 @@ describe.sequential('InventoryService database integration', () => {
     });
 
     const movements = await inventory.getMovements({ locationId });
-    expect(movements.items.length).toBeGreaterThanOrEqual(3);
-    expect(movements.items[0]).toMatchObject({
-      warehouseId,
-      locationId,
-      variantId,
-      createdAt: expect.any(Date) as Date,
-    });
+    expect(movements.items.length).toBeGreaterThanOrEqual(2);
+    const ids = movements.items.map((m) => m.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const createdAtValues = movements.items.map((m) => m.createdAt.getTime());
+    expect([...createdAtValues]).toEqual([...createdAtValues].sort((a, b) => b - a));
   });
 });

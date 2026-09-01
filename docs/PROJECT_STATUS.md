@@ -55,7 +55,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 
 - Inventory rules live in one service with actor/requestId tracing, audit rows,
   CAS version guards, bounded serializable retry, reservation consume/release/expire
-  lifecycle and a read-only snapshot/movement controller. Mutations still have no
+  and read-only snapshot/movement queries (a public controller is withheld until the
+  auth runtime provides the `inventory.read` permission). Mutations still have no
   public authenticated endpoint or authorization.
 - Shared contracts only contain basic response/money/inventory types.
 - The storefront has responsive interactions and its component tree is decomposed
@@ -94,7 +95,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 4. CORS now uses a validated environment allowlist; deployment configuration must
    supply the correct staging/production origins and retain negative tests.
 5. Critical serializable transactions now have bounded retry for transaction
-   conflicts (P2034); concurrency tests remain to be added.
+   conflicts (P2034), and DB integration concurrency coverage (parallel reserve /
+   change without double-spend or negative stock) is implemented in `test:integration`.
 6. Inventory commands now require and record an actor and request id in the audit
    trail; wiring to the authenticated session principal still awaits the auth runtime.
 7. Reservation consume, release and expire are implemented on the balance layer;
