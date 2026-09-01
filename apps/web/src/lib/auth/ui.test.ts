@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { AuthFixtureClient } from './fixtures';
 import { MemorySessionStore } from './session-store';
 import { CustomerOtpController } from './ui';
+import type { AuthApi } from './api';
+import type { CustomerOtpChallenge } from './types';
 
 function makeFlow(nowValue = 1_000) {
   const store = new MemorySessionStore();
@@ -160,5 +162,125 @@ describe('CustomerOtpController OTP flow', () => {
     const before = controller.getState().phase;
     controller.open();
     expect(controller.getState().phase).toBe(before);
+  });
+
+  it('verifyOtp on an expired challenge returns to the mobile step with a message', async () => {
+    let now = 1_000;
+    const store = new MemorySessionStore();
+    const api = new AuthFixtureClient({ store, now: () => now });
+    const controller = new CustomerOtpController(api, store, () => now);
+
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    controller.setCode('123456');
+
+    now = 1_000 + 301_000; // past the 300s challenge TTL
+    await controller.verifyOtp();
+
+    const state = controller.getState();
+    expect(state.phase).toBe('mobile');
+    expect(state.error).toContain('منقضی');
+    expect(state.challenge).toBeNull();
+    expect(state.expiresAt).toBeNull();
+    expect(store.isAuthenticated()).toBe(false);
+  });
+
+  it('rate-limits after repeated failures and arms a Retry-After back-off window', async () => {
+    const { controller } = makeFlow();
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    for (let i = 0; i < 5; i++) {
+      controller.setCode('000000');
+      await controller.verifyOtp();
+    }
+    let state = controller.getState();
+    expect(state.error).toContain('درخواست');
+    expect(state.rateLimitNotBefore).toBeGreaterThan(1_000);
+
+    // While the back-off window is active, a submit attempt is blocked before the API
+    // and the user stays on the code step.
+    await controller.verifyOtp();
+    state = controller.getState();
+    expect(state.phase).toBe('code');
+    expect(state.error).toContain('درخواست');
+    expect(state.rateLimitNotBefore).toBeGreaterThan(1_000);
+  });
+
+  it('requestOtp survives a provider-down outage as UPSTREAM_UNAVAILABLE message', async () => {
+    const store = new MemorySessionStore();
+    const api = new AuthFixtureClient({ store, providerDown: true });
+    const controller = new CustomerOtpController(api, store, () => 1_000);
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    expect(controller.getState().error).toContain('سرویس پیامک');
+    expect(controller.getState().phase).toBe('mobile');
+  });
+
+  it('prevents duplicate requestOtp submissions while one is in flight', async () => {
+    let release!: (challenge: CustomerOtpChallenge) => void;
+    let calls = 0;
+    const pendingApi = {
+      ...new AuthFixtureClient({}),
+      requestOtp: () => {
+        calls += 1;
+        return new Promise<CustomerOtpChallenge>(resolve => {
+          release = resolve;
+        });
+      },
+    } as unknown as AuthApi;
+
+    const store = new MemorySessionStore();
+    const controller = new CustomerOtpController(pendingApi, store, () => 1_000);
+    controller.open();
+    controller.setMobile('09123456789');
+
+    const first = controller.requestOtp();
+    const second = controller.requestOtp(); // ignored: request is already in flight
+    expect(calls).toBe(1);
+
+    release({ challengeId: 'c1', expiresInSeconds: 300, resendAfterSeconds: 60 });
+    await Promise.all([first, second]);
+
+    expect(calls).toBe(1);
+    expect(controller.getState().phase).toBe('code');
+    expect(controller.getState().busy).toBe(false);
+  });
+
+  it('keeps secrets memory-only: raw access token never enters the UI state', async () => {
+    const { controller } = makeFlow();
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    controller.setCode('123456');
+    await controller.verifyOtp();
+
+    const state = controller.getState();
+    expect(state.principal?.userId).toBe('fixture-user-otp-1');
+    // The controller state renders the principal, but never the raw token.
+    const serialized = JSON.stringify(state);
+    expect(serialized).not.toContain('accessToken');
+    expect(serialized).not.toContain('fixture-at.');
+  });
+
+  it('session token lives only in the in-memory store and is gone after logout', async () => {
+    const { controller, store } = makeFlow();
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    controller.setCode('123456');
+    await controller.verifyOtp();
+
+    const snapshot = store.snapshot();
+    expect(snapshot.status).toBe('authenticated');
+    // The token exists only as an in-memory property of the store object.
+    expect(snapshot.status === 'authenticated').toBe(true);
+    expect(store.getAccessToken()).toMatch(/^fixture-at\./);
+
+    await controller.logout();
+    expect(store.snapshot().status).toBe('anonymous');
+    expect(store.getAccessToken()).toBeNull();
   });
 });

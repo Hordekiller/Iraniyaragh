@@ -23,14 +23,19 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
 
   const resendWaitMs = Math.max(0, state.resendNotBefore - nowMs)
   const resendLocked = resendWaitMs > 0
-  const canSubmitMobile = /^[0-9۰-۹٠-٩]{10,15}$/.test(state.mobile.trim())
-  const canSubmitCode = state.code.length === 6
+  const rateLimitWaitMs = Math.max(0, state.rateLimitNotBefore - nowMs)
+  const rateLimitLocked = rateLimitWaitMs > 0
+  const cooldownMs = rateLimitLocked ? rateLimitWaitMs : resendLocked ? resendWaitMs : 0
+  const canSubmitMobile =
+    !rateLimitLocked && /^[0-9۰-۹٠-٩]{10,15}$/.test(state.mobile.trim())
+  const canSubmitCode = !rateLimitLocked && state.code.length === 6
+  const lockedLabel = cooldownMs > 0 ? ` (${formatCountdown(cooldownMs)})` : ''
 
   useEffect(() => {
-    if (!resendLocked) return
+    if (!resendLocked && !rateLimitLocked) return
     const timer = setInterval(() => setNowMs(Date.now()), RESEND_TICK_MS)
     return () => clearInterval(timer)
-  }, [resendLocked])
+  }, [resendLocked, rateLimitLocked])
 
   useEffect(() => {
     if (!open) return
@@ -78,6 +83,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
             onClick={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
+            aria-labelledby="login-dialog-title"
           >
             <div className="flex items-center justify-between px-6 pt-5">
               <button
@@ -96,7 +102,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                 <div className="w-14 h-14 rounded-2xl bg-[#FF4D00]/10 flex items-center justify-center text-[#FF4D00] mb-3">
                   {state.phase === 'code' ? <KeyRound size={26} /> : <Smartphone size={26} />}
                 </div>
-                <h2 className="text-lg font-black text-[#0F172A]">
+                <h2 id="login-dialog-title" className="text-lg font-black text-[#0F172A]">
                   {state.phase === 'code' ? 'کد تایید را وارد کنید' : 'ورود با شماره موبایل'}
                 </h2>
                 <p className="text-[13px] text-slate-500 mt-1 leading-6">
@@ -109,10 +115,23 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
               </div>
 
               {state.error && (
-                <div className="mb-4 px-4 py-2.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[12.5px] font-bold text-center">
+                <div
+                  id="login-dialog-error"
+                  role="alert"
+                  className="mb-4 px-4 py-2.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[12.5px] font-bold text-center"
+                >
                   {state.error}
                 </div>
               )}
+
+              <span aria-live="polite" role="status" className="sr-only">
+                {state.phase === 'code'
+                  ? 'مرحله ۲ از ۲: درج کد تایید'
+                  : 'مرحله ۱ از ۲: درج شماره موبایل'}
+                {resendLocked || rateLimitLocked
+                  ? `، ارسال مجدد در ${formatCountdown(cooldownMs)}`
+                  : ''}
+              </span>
 
               <AnimatePresence mode="wait">
                 {state.phase !== 'code' ? (
@@ -128,6 +147,9 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                         autoFocus
                         dir="ltr"
                         inputMode="tel"
+                        aria-label="شماره موبایل"
+                        aria-invalid={Boolean(state.error)}
+                        aria-describedby={state.error ? 'login-dialog-error' : undefined}
                         value={state.mobile}
                         onChange={e => controller.setMobile(e.target.value)}
                         placeholder="۰۹۱۲ ۳۴۵ ۶۷۸۹"
@@ -143,7 +165,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                         <Loader2 size={18} className="animate-spin" />
                       ) : (
                         <>
-                          دریافت کد تایید <ArrowLeft size={18} />
+                          {rateLimitLocked ? `تلاش مجدد${lockedLabel}` : 'دریافت کد تایید'} <ArrowLeft size={18} />
                         </>
                       )}
                     </button>
@@ -161,6 +183,9 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                       dir="ltr"
                       inputMode="numeric"
                       autoComplete="one-time-code"
+                      aria-label="کد تایید"
+                      aria-invalid={Boolean(state.error)}
+                      aria-describedby={state.error ? 'login-dialog-error' : undefined}
                       value={state.code}
                       onChange={e => controller.setCode(e.target.value)}
                       placeholder="••••••"
@@ -175,7 +200,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                         <Loader2 size={18} className="animate-spin" />
                       ) : (
                         <>
-                          ورود به حساب <ArrowLeft size={18} />
+                          {rateLimitLocked ? `تلاش مجدد${lockedLabel}` : 'ورود به حساب'} <ArrowLeft size={18} />
                         </>
                       )}
                     </button>
@@ -191,10 +216,10 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                       <button
                         type="button"
                         onClick={() => void controller.resend()}
-                        disabled={resendLocked || state.busy}
+                        disabled={resendLocked || rateLimitLocked || state.busy}
                         className="text-[12.5px] font-bold text-[#FF4D00] hover:underline disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed transition"
                       >
-                        {resendLocked ? `ارسال مجدد (${formatCountdown(resendWaitMs)})` : 'ارسال مجدد کد'}
+                        {resendLocked || rateLimitLocked ? `ارسال مجدد (${formatCountdown(cooldownMs)})` : 'ارسال مجدد کد'}
                       </button>
                     </div>
                   </motion.form>

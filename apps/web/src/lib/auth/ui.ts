@@ -30,6 +30,8 @@ export type CustomerOtpUiState = {
   error: string | null;
   /** Resend is disabled until this epoch (ms). */
   resendNotBefore: number;
+  /** Rate-limit back-off: submit attempts are locked until this epoch (ms). */
+  rateLimitNotBefore: number;
   /** Challenge expires at this epoch (ms); null when none is active. */
   expiresAt: number | null;
   challenge: CustomerOtpChallenge | null;
@@ -43,6 +45,7 @@ const initialState: CustomerOtpUiState = {
   busy: false,
   error: null,
   resendNotBefore: 0,
+  rateLimitNotBefore: 0,
   expiresAt: null,
   challenge: null,
   principal: null,
@@ -153,7 +156,7 @@ export class CustomerOtpController {
 
   close(): void {
     if (this.state.phase === 'authenticated') return;
-    this.patch({ phase: 'idle', code: '', error: null, challenge: null, expiresAt: null });
+    this.patch({ phase: 'idle', code: '', error: null, challenge: null, expiresAt: null, rateLimitNotBefore: 0 });
   }
 
   setMobile(mobile: string): void {
@@ -170,6 +173,10 @@ export class CustomerOtpController {
 
   async requestOtp(): Promise<void> {
     if (this.state.phase === 'authenticated') return;
+    if (this.isRateLimited()) {
+      this.patch({ error: 'درخواست‌های زیادی ثبت شده است. کمی بعد دوباره تلاش کنید.' });
+      return;
+    }
     if (!this.begin('request')) return;
 
     const wasOpen = this.state.phase;
@@ -194,6 +201,7 @@ export class CustomerOtpController {
         expiresAt: this.now() + challenge.expiresInSeconds * 1000,
       });
     } catch (error) {
+      this.applyRateLimit(error);
       this.patch({ error: farsiError(error, mobile) });
     } finally {
       this.end('request');
@@ -209,6 +217,10 @@ export class CustomerOtpController {
 
   async verifyOtp(): Promise<void> {
     if (this.state.phase !== 'code' || !this.state.challenge) return;
+    if (this.isRateLimited()) {
+      this.patch({ error: 'درخواست‌های زیادی ثبت شده است. کمی بعد دوباره تلاش کنید.' });
+      return;
+    }
     if (!this.begin('verify')) return;
 
     const code = this.state.code;
@@ -232,9 +244,35 @@ export class CustomerOtpController {
         error: null,
       });
     } catch (error) {
+      if (isApiError(error) && error.code === 'AUTH_CHALLENGE_EXPIRED') {
+        // The challenge is gone; return to the mobile step to request a fresh one.
+        this.patch({
+          phase: 'mobile',
+          mobile: '',
+          code: '',
+          challenge: null,
+          expiresAt: null,
+          error: 'کد منقضی شده است. کد جدید درخواست کنید.',
+        });
+        return;
+      }
+      this.applyRateLimit(error);
       this.patch({ error: farsiError(error, this.state.mobile) });
     } finally {
       this.end('verify');
+    }
+  }
+
+  /** True while a rate-limit back-off window is still active. */
+  private isRateLimited(): boolean {
+    return this.now() < this.state.rateLimitNotBefore;
+  }
+
+  /** If the error is a rate-limit response, arm the back-off window. */
+  private applyRateLimit(error: unknown): void {
+    if (isApiError(error) && error.code === 'RATE_LIMITED') {
+      const waitSeconds = error.retryAfterSeconds ?? 5;
+      this.patch({ rateLimitNotBefore: this.now() + waitSeconds * 1000 });
     }
   }
 
