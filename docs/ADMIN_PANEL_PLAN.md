@@ -100,6 +100,10 @@ authorization boundary. Forbidden deep links render a stable `403` experience an
 the API remains authoritative. Sensitive fields and actions require distinct
 capabilities, not broad role-name checks.
 
+Secret rotation, provider credentials, webhook signing keys and other secret-manager
+operations stay in controlled operations runbooks; the admin panel only exposes
+validated non-secret configuration and safe metadata about secret health/rotation.
+
 ## 5. Information architecture and required modules
 
 ### 5.1 Operations dashboard and task inbox
@@ -138,6 +142,9 @@ capabilities, not broad role-name checks.
 - transfer request/approve/dispatch/receive/cancel timeline;
 - stocktake create/scope/count/review/approve and variance reconciliation;
 - low-stock thresholds, reorder report and barcode/scanner-friendly input boundary;
+- damaged, unavailable and quarantine quantities must use the accepted inventory
+  ledger/state model; a child domain decision must pin that model before UI work and
+  the admin must never expose a parallel editable quantity;
 - never provide a generic editable quantity field that bypasses the ledger.
 
 ### 5.4 Orders and fulfillment
@@ -269,6 +276,9 @@ from generic dashboard tooling. Status meaning is never color-only.
 - row selection and bulk actions with explicit scope (`selected` versus `all matching`);
 - loading skeleton, initial empty, filtered empty, partial error, retry and stale-data states;
 - saved views/column visibility only when persisted behavior is specified;
+- sticky pinning for operational identity/status columns may be added as an
+  enhancement only after keyboard, focus, RTL, narrow-viewport and grid-license
+  behavior is verified; it is not a baseline requirement;
 - export uses the same authorization/filter contract but executes asynchronously;
 - grid cells follow one managed tab sequence and documented arrow-key behavior.
 
