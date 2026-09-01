@@ -12,11 +12,11 @@ business source of truth.
 Use tracks, not permanent silos. Swap reviewer/implementer roles periodically so
 both developers understand critical paths.
 
-| Area | Developer A — Platform track | Developer B — Product track |
-| --- | --- | --- |
-| Primary | API, domain services, Prisma, migrations, queues, infrastructure | Web/admin UX, routing, state, forms, API integration, E2E |
-| Secondary | Review UI architecture and API consumption | Review contracts, acceptance tests and migration effects |
-| Shared | Contracts, security-sensitive flows, release, incident response | Contracts, security-sensitive flows, release, incident response |
+| Area      | Developer A — Platform track                                     | Developer B — Product track                                     |
+| --------- | ---------------------------------------------------------------- | --------------------------------------------------------------- |
+| Primary   | API, domain services, Prisma, migrations, queues, infrastructure | Web/admin UX, routing, state, forms, API integration, E2E       |
+| Secondary | Review UI architecture and API consumption                       | Review contracts, acceptance tests and migration effects        |
+| Shared    | Contracts, security-sensitive flows, release, incident response  | Contracts, security-sensitive flows, release, incident response |
 
 Current proposed mapping is `Developer A = @Hordekiller` and
 `Developer B = @Maddyrampant`. It is provisional until both developers complete
@@ -58,10 +58,11 @@ public types, but the OpenAPI document is the externally testable API contract.
 
 ## GitHub flow
 
-- Target protected branch: `main`. GitHub rejected protection for this private
-  repository on the current account plan (requires GitHub Pro or public visibility).
-  Until the plan supports it, both developers manually enforce no direct pushes,
-  green CI, one non-author approval and resolved review conversations.
+- Protected branch: `main`. The public repository enforces a current branch, green
+  required checks, one non-author CODEOWNERS approval, last-push separation and
+  resolved review conversations. Administrators are included; force-push, deletion
+  and non-linear history are rejected. The developers still own the quality of the
+  review and must not treat automation as approval of business behavior.
 - Short-lived branches from current `main`.
 - Naming: `feat/123-product-crud`, `fix/245-reservation-race`,
   `docs/88-payment-flow`, `chore/31-ci-cache`.

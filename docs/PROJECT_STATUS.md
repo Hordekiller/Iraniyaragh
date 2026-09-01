@@ -60,6 +60,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   Persian/mobile normalization, valid login/logout, localized invalid-code and Retry-After states,
   resend countdown gating, dialog focus trapping/Escape/restoration and keyboard account-menu
   behavior — all under the strict zero-external-asset network gate
+- Public-repository security baseline: enforced `main` protection (required CI,
+  non-author CODEOWNERS review, last-push separation, linear history and no force-push),
+  CodeQL extended analysis for TypeScript/JavaScript and Actions, secret scanning with
+  push protection, Dependabot security updates, dependency review and private
+  vulnerability reporting
 
 ### Partial
 
