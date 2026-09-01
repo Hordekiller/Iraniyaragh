@@ -40,6 +40,11 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  // Auto-close the dialog as soon as login succeeds.
+  useEffect(() => {
+    if (open && state.phase === 'authenticated') onClose()
+  }, [open, state.phase, onClose])
+
   function handleSubmitMobile(e: React.FormEvent) {
     e.preventDefault()
     void controller.requestOtp()

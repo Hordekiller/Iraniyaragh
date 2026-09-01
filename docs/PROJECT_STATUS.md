@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-01
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -45,6 +45,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
   response envelopes with machine-readable codes, redacted structured JSON logging
   (secrets/OTP/PII scrubbed), a global exception filter (validation/prisma/internal mapping),
   and OpenAPI/Swagger generation committed at `apps/api/openapi.json` with a CI drift check
+- Customer OTP login UX (#50, parallel-work model): typed `AuthApi` contract + `AuthFixtureClient`
+  (deterministic, contract-validated; no real delivery/rate-limiting), a React-agnostic
+  `CustomerOtpController` state machine (`idle/mobile/code/authenticated/session-expired`) with
+  resend/expiry gating and Farsi error mapping, Persian/Arabic-Indic digit transliteration in
+  `normalizeIranianMobile`, plus the React shell (`AuthProvider`/`AuthContext`, `LoginDialog`
+  two-step mobile→code flow with countdown resend, `AccountMenu` with logout) wired into the
+  storefront header and mobile nav. The runtime defaults to the fixture client so the flow can be
+  demoed before the auth backend lands on `main` (AUTH_CONTRACT §17)
+- Fixture-backed customer OTP auth Playwright E2E (`e2e/tests/web-auth.spec.ts`, desktop + mobile):
+  valid login/logout via the account menu, localized invalid-code error, and resend countdown
+  gating — all under the strict zero-external-asset network gate
 
 ### Partial
 
@@ -63,7 +74,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
   behavior and Auth persistence constraints.
 - Auth storage and lifecycle constraints exist, but credential verification, token
   issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
-  permission enforcement are not implemented yet.
+  permission enforcement are not implemented yet. The customer OTP login UI (#50) currently
+  runs against the contract `AuthFixtureClient`; it will switch to the real `AuthHttpClient`
+  once the backend endpoints land on `main` (AUTH_CONTRACT §17).
 
 ### Not implemented
 
@@ -111,6 +124,35 @@ The repository is in **foundation/prototype**, before release `0.1`.
     the sole security principal and `Customer` stays a commerce profile; code must not
     join them implicitly by mobile number. Explicit linkage/merge/anonymization rules
     still require a forward migration when the product needs them.
+
+## Status update
+
+Sprint: #50 customer OTP auth UX + fixture-backed E2E (slice 2, UI + e2e).
+
+Completed:
+- Customer OTP login UI (LoginDialog two-step mobile→code with countdown resend, AccountMenu
+  logout) wired into the storefront header and mobile nav, on a typed `AuthApi` contract with the
+  `AuthFixtureClient` as the runtime default (parallel-work model, AUTH_CONTRACT §17).
+- LoginDialog auto-closes on a successful authentication.
+- `normalizeIranianMobile` now transliterates Persian/Arabic-Indic digits to ASCII.
+- Fixture-driven customer OTP auth Playwright E2E (valid login/logout, invalid-code error, resend
+  gating) green on web-desktop and web-mobile.
+- Web checks green: typecheck, lint (incl. runtime-asset gate), 75 Vitest tests, production build,
+  monorepo typecheck; full `e2e/` Playwright suite green (web + admin, desktop + mobile).
+
+Deferred (with reason):
+- Real backend auth endpoints / `AuthHttpClient` wiring — blocked on H's auth backend branches
+  landing on `main`; UI/E2E build against the fixture per the parallel-work model.
+
+New risks/debt:
+- Storefront now has two login entry points on mobile (header AccountMenu + bottom-nav profile);
+  acceptable but redundant once auth UX is finalized.
+
+Metrics/tests:
+- `apps/web`: 75 tests / 6 files; `e2e`: 20 passed / 4 skipped (viewport-specific).
+- Added `e2e/tests/web-auth.spec.ts` (6 tests across web-desktop/web-mobile).
+
+Next release confidence: green
 
 ## Status update template
 
