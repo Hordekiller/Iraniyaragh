@@ -1,5 +1,11 @@
 import { MOBILE_PATTERN, OTP_CODE_PATTERN } from './types';
 
+function transliterateDigits(input: string): string {
+  return input
+    .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+}
+
 /**
  * Normalize an Iranian mobile number to canonical E.164 (`+989XXXXXXXXX`) for
  * sending to the API. Accepts documented Iranian input forms only long enough to
@@ -16,7 +22,7 @@ import { MOBILE_PATTERN, OTP_CODE_PATTERN } from './types';
 export function normalizeIranianMobile(input: string): string | null {
   // Iranian keypads frequently produce Persian/Arabic-Indic digits; transliterate
   // them to ASCII before stripping separators so validation is unambiguous.
-  const ascii = input.replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const ascii = transliterateDigits(input);
   const digits = ascii.replace(/[\s\-()]/g, '');
 
   let candidate: string;
@@ -44,6 +50,11 @@ export function normalizeIranianMobile(input: string): string | null {
  */
 export function isValidOtpCode(code: string): boolean {
   return OTP_CODE_PATTERN.test(code);
+}
+
+/** Normalize keypad/pasted OTP digits to the six-character ASCII API contract. */
+export function normalizeOtpCodeInput(input: string): string {
+  return transliterateDigits(input).replace(/\D/g, '').slice(0, 6);
 }
 
 /** True only when the six-digit code is incomplete but otherwise valid. */

@@ -101,11 +101,11 @@ describe('CustomerOtpController OTP flow', () => {
     expect(controller.getState().phase).toBe('code');
   });
 
-  it('setCode strips non-digits and caps at 6 characters', () => {
+  it('setCode transliterates Persian/Arabic digits, strips noise and caps at 6 characters', () => {
     const { controller } = makeFlow();
     controller.setCode('12a34-56');
     expect(controller.getState().code).toBe('123456');
-    controller.setCode('1234567890');
+    controller.setCode('۱۲٣۴۵۶7890');
     expect(controller.getState().code).toBe('123456');
   });
 
@@ -186,6 +186,25 @@ describe('CustomerOtpController OTP flow', () => {
     expect(store.isAuthenticated()).toBe(false);
   });
 
+  it('expires a challenge locally at its deadline without waiting for a verify request', async () => {
+    const { controller, setNow } = makeFlow();
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+
+    setNow(301_001);
+    controller.expireChallenge();
+
+    expect(controller.getState()).toMatchObject({
+      phase: 'mobile',
+      mobile: '+989123456789',
+      code: '',
+      challenge: null,
+      expiresAt: null,
+    });
+    expect(controller.getState().error).toContain('منقضی');
+  });
+
   it('rate-limits after repeated failures and arms a Retry-After back-off window', async () => {
     const { controller } = makeFlow();
     controller.open();
@@ -247,6 +266,84 @@ describe('CustomerOtpController OTP flow', () => {
     expect(calls).toBe(1);
     expect(controller.getState().phase).toBe('code');
     expect(controller.getState().busy).toBe(false);
+  });
+
+  it('discards a request result that resolves after the flow is closed', async () => {
+    let release!: (challenge: CustomerOtpChallenge) => void;
+    const pendingApi = {
+      ...new AuthFixtureClient({}),
+      requestOtp: () =>
+        new Promise<CustomerOtpChallenge>(resolve => {
+          release = resolve;
+        }),
+    } as unknown as AuthApi;
+    const controller = new CustomerOtpController(pendingApi, new MemorySessionStore(), () => 1_000);
+    controller.open();
+    controller.setMobile('09123456789');
+
+    const pending = controller.requestOtp();
+    controller.close();
+    release({ challengeId: 'stale', expiresInSeconds: 300, resendAfterSeconds: 60 });
+    await pending;
+
+    expect(controller.getState()).toMatchObject({
+      phase: 'idle',
+      busy: false,
+      challenge: null,
+      expiresAt: null,
+    });
+  });
+
+  it('revokes a session result that resolves after the flow is closed', async () => {
+    let release!: () => void;
+    const store = new MemorySessionStore();
+    const fixture = new AuthFixtureClient({ store });
+    const api: AuthApi = {
+      requestOtp: fixture.requestOtp.bind(fixture),
+      verifyOtp: async payload => {
+        await new Promise<void>(resolve => {
+          release = resolve;
+        });
+        return fixture.verifyOtp(payload);
+      },
+      refresh: fixture.refresh.bind(fixture),
+      me: fixture.me.bind(fixture),
+      listSessions: fixture.listSessions.bind(fixture),
+      logout: fixture.logout.bind(fixture),
+    };
+    const controller = new CustomerOtpController(api, store, () => 1_000);
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    controller.setCode('123456');
+
+    const pending = controller.verifyOtp();
+    controller.close();
+    release();
+    await pending;
+
+    expect(controller.getState().phase).toBe('idle');
+    expect(store.isAuthenticated()).toBe(false);
+  });
+
+  it('preserves a Retry-After lock when the dialog closes and reopens', async () => {
+    const { controller } = makeFlow();
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    for (let attempt = 0; attempt < 5; attempt++) {
+      controller.setCode('000000');
+      await controller.verifyOtp();
+    }
+    const deadline = controller.getState().rateLimitNotBefore;
+
+    controller.close();
+    controller.open();
+    await controller.requestOtp();
+
+    expect(controller.getState().rateLimitNotBefore).toBe(deadline);
+    expect(controller.getState().phase).toBe('mobile');
+    expect(controller.getState().error).toContain('درخواست');
   });
 
   it('keeps secrets memory-only: raw access token never enters the UI state', async () => {

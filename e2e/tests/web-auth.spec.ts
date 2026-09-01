@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createExternalRequestsTracker, isMobile, tap } from './helpers';
 
-const VALID_CODE = '123456';
 const INVALID_CODE = '000000';
 
 async function openLogin(page: import('@playwright/test').Page) {
@@ -15,17 +14,17 @@ async function openLogin(page: import('@playwright/test').Page) {
 }
 
 test.describe('web: customer OTP auth flow (fixture client)', () => {
-  test('logs in with a valid mobile + code and logs out via the account menu', async ({ page }) => {
+  test('normalizes Persian mobile/code input, logs in, and supports keyboard account-menu logout', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
     await page.goto('/');
     await openLogin(page);
 
-    await page.locator('input[inputmode="tel"]').fill('09123456789');
+    await page.locator('input[inputmode="tel"]').fill('۰۹۱۲ ۳۴۵ ۶۷۸۹');
     await tap(page.getByRole('button', { name: 'دریافت کد تایید', exact: true }));
 
     await expect(page.getByRole('heading', { name: 'کد تایید را وارد کنید' })).toBeVisible();
-    await page.locator('input[inputmode="numeric"]').fill(VALID_CODE);
+    await page.locator('input[inputmode="numeric"]').fill('۱۲۳۴۵۶');
     await tap(page.getByRole('button', { name: 'ورود به حساب', exact: true }));
 
     await expect(page.getByRole('dialog')).toBeHidden();
@@ -44,11 +43,45 @@ test.describe('web: customer OTP auth flow (fixture client)', () => {
     await tap(accountButton);
     await expect(page.getByText('خروج از حساب')).toBeVisible();
     await expect(page.locator('text=fixture-user-otp-1').first()).toBeVisible();
+    await expect(accountButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('menuitem', { name: 'خروج از حساب' })).toBeFocused();
 
-    await tap(page.getByRole('button', { name: 'خروج از حساب' }));
+    await page.keyboard.press('Escape');
+    await expect(page.getByText('خروج از حساب')).toBeHidden();
+    await expect(accountButton).toHaveAttribute('aria-expanded', 'false');
+    await expect(accountButton).toBeFocused();
+
+    await tap(accountButton);
+    await tap(page.getByRole('menuitem', { name: 'خروج از حساب' }));
     await expect(page.getByText('خروج از حساب')).toBeHidden();
     await expect(page.getByRole('button', { name: 'ورود به حساب کاربری' })).toBeVisible();
 
+    await network.assertNone();
+  });
+
+  test('traps dialog focus, closes with Escape, and restores the opener focus', async ({ page }) => {
+    const network = createExternalRequestsTracker(page);
+
+    await page.goto('/');
+    const opener = isMobile(page)
+      ? page.getByRole('button', { name: 'پروفایل' })
+      : page.getByRole('button', { name: 'ورود به حساب کاربری' });
+    await opener.focus();
+    await page.keyboard.press('Enter');
+
+    const mobileInput = page.getByRole('textbox', { name: 'شماره موبایل', exact: true });
+    const closeButton = page.getByRole('button', { name: 'بستن' });
+    await expect(mobileInput).toBeFocused();
+
+    await closeButton.focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(mobileInput).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(closeButton).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(opener).toBeFocused();
     await network.assertNone();
   });
 

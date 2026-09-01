@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, KeyRound, Loader2, Smartphone, X } from 'lucide-react'
+import { normalizeIranianMobile } from '../../lib/auth/normalize'
 import { useAuth } from '../../state/auth-context'
 
 type LoginDialogProps = {
@@ -9,6 +10,8 @@ type LoginDialogProps = {
 }
 
 const RESEND_TICK_MS = 1000
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 function formatCountdown(msLeft: number): string {
   const totalSeconds = Math.max(0, Math.ceil(msLeft / 1000))
@@ -20,30 +23,91 @@ function formatCountdown(msLeft: number): string {
 export function LoginDialog({ open, onClose }: LoginDialogProps) {
   const { state, controller } = useAuth()
   const [nowMs, setNowMs] = useState(() => Date.now())
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const reduceMotion = useReducedMotion()
 
   const resendWaitMs = Math.max(0, state.resendNotBefore - nowMs)
   const resendLocked = resendWaitMs > 0
   const rateLimitWaitMs = Math.max(0, state.rateLimitNotBefore - nowMs)
   const rateLimitLocked = rateLimitWaitMs > 0
+  const expiryWaitMs =
+    state.phase === 'code' && state.expiresAt !== null
+      ? Math.max(0, state.expiresAt - nowMs)
+      : 0
+  const expiryPending = expiryWaitMs > 0
   const cooldownMs = rateLimitLocked ? rateLimitWaitMs : resendLocked ? resendWaitMs : 0
-  const canSubmitMobile =
-    !rateLimitLocked && /^[0-9۰-۹٠-٩]{10,15}$/.test(state.mobile.trim())
+  const canSubmitMobile = !rateLimitLocked && normalizeIranianMobile(state.mobile) !== null
   const canSubmitCode = !rateLimitLocked && state.code.length === 6
   const lockedLabel = cooldownMs > 0 ? ` (${formatCountdown(cooldownMs)})` : ''
 
   useEffect(() => {
-    if (!resendLocked && !rateLimitLocked) return
+    if (!open || (!resendLocked && !rateLimitLocked && !expiryPending)) return
     const timer = setInterval(() => setNowMs(Date.now()), RESEND_TICK_MS)
     return () => clearInterval(timer)
-  }, [resendLocked, rateLimitLocked])
+  }, [expiryPending, open, rateLimitLocked, resendLocked])
+
+  useEffect(() => {
+    if (
+      open &&
+      state.phase === 'code' &&
+      state.expiresAt !== null &&
+      nowMs >= state.expiresAt
+    ) {
+      controller.expireChallenge()
+    }
+  }, [controller, nowMs, open, state.expiresAt, state.phase])
 
   useEffect(() => {
     if (!open) return
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     controller.open()
-    return () => controller.close()
-    // Synchronize dialog visibility with the controller phase exactly once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+        return
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      )
+      if (focusable.length === 0) {
+        event.preventDefault()
+        dialogRef.current.focus()
+        return
+      }
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+      controller.close()
+      previouslyFocused?.focus()
+    }
+  }, [controller, onClose, open])
+
+  useEffect(() => {
+    if (!open) return
+    const focusFrame = requestAnimationFrame(() => {
+      setNowMs(Date.now())
+      const inputId = state.phase === 'code' ? 'login-otp-code' : 'login-mobile'
+      dialogRef.current?.querySelector<HTMLElement>(`#${inputId}`)?.focus()
+    })
+    return () => cancelAnimationFrame(focusFrame)
+  }, [open, state.phase])
 
   // Auto-close the dialog as soon as login succeeds.
   useEffect(() => {
@@ -61,35 +125,38 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
   }
 
   function handleClose() {
-    controller.close()
     onClose()
   }
 
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={!reduceMotion}>
       {open && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.16 }}
           className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
           onClick={handleClose}
         >
           <motion.div
+            ref={dialogRef}
             initial={{ opacity: 0, y: 24, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.97 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
             onClick={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="login-dialog-title"
+            tabIndex={-1}
           >
             <div className="flex items-center justify-between px-6 pt-5">
               <button
                 onClick={handleClose}
                 aria-label="بستن"
-                className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition"
+                className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
               >
                 <X size={17} />
               </button>
@@ -118,6 +185,8 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                 <div
                   id="login-dialog-error"
                   role="alert"
+                  aria-live="assertive"
+                  aria-atomic="true"
                   className="mb-4 px-4 py-2.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[12.5px] font-bold text-center"
                 >
                   {state.error}
@@ -140,14 +209,17 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                     initial={{ opacity: 0, x: 16 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -16 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.16 }}
                     onSubmit={handleSubmitMobile}
                   >
                     <div className="relative">
+                      <label htmlFor="login-mobile" className="sr-only">
+                        شماره موبایل
+                      </label>
                       <input
-                        autoFocus
+                        id="login-mobile"
                         dir="ltr"
                         inputMode="tel"
-                        aria-label="شماره موبایل"
                         aria-invalid={Boolean(state.error)}
                         aria-describedby={state.error ? 'login-dialog-error' : undefined}
                         value={state.mobile}
@@ -162,7 +234,10 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                       className="mt-4 w-full h-12 rounded-2xl bg-[#FF4D00] text-white font-black text-[15px] flex items-center justify-center gap-2 hover:bg-[#e84600] disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
                       {state.busy ? (
-                        <Loader2 size={18} className="animate-spin" />
+                        <>
+                          <Loader2 size={18} className="animate-spin motion-reduce:animate-none" />
+                          <span className="sr-only">در حال درخواست کد تایید</span>
+                        </>
                       ) : (
                         <>
                           {rateLimitLocked ? `تلاش مجدد${lockedLabel}` : 'دریافت کد تایید'} <ArrowLeft size={18} />
@@ -176,14 +251,17 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                     initial={{ opacity: 0, x: 16 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -16 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.16 }}
                     onSubmit={handleSubmitCode}
                   >
+                    <label htmlFor="login-otp-code" className="sr-only">
+                      کد تایید
+                    </label>
                     <input
-                      autoFocus
+                      id="login-otp-code"
                       dir="ltr"
                       inputMode="numeric"
                       autoComplete="one-time-code"
-                      aria-label="کد تایید"
                       aria-invalid={Boolean(state.error)}
                       aria-describedby={state.error ? 'login-dialog-error' : undefined}
                       value={state.code}
@@ -197,7 +275,10 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                       className="mt-4 w-full h-12 rounded-2xl bg-[#FF4D00] text-white font-black text-[15px] flex items-center justify-center gap-2 hover:bg-[#e84600] disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
                       {state.busy ? (
-                        <Loader2 size={18} className="animate-spin" />
+                        <>
+                          <Loader2 size={18} className="animate-spin motion-reduce:animate-none" />
+                          <span className="sr-only">در حال بررسی کد تایید</span>
+                        </>
                       ) : (
                         <>
                           {rateLimitLocked ? `تلاش مجدد${lockedLabel}` : 'ورود به حساب'} <ArrowLeft size={18} />
@@ -208,8 +289,8 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                     <div className="mt-4 flex items-center justify-between">
                       <button
                         type="button"
-                        onClick={handleClose}
-                        className="flex items-center gap-1 text-[12.5px] font-bold text-slate-500 hover:text-[#FF4D00] transition"
+                        onClick={() => controller.resetChallenge()}
+                        className="flex items-center gap-1 text-[12.5px] font-bold text-slate-500 hover:text-[#FF4D00] transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 rounded-md"
                       >
                         <ArrowRight size={15} /> تغییر شماره
                       </button>

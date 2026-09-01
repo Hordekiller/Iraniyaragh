@@ -1,4 +1,4 @@
-import { normalizeIranianMobile, isValidOtpCode } from './normalize';
+import { isValidOtpCode, normalizeIranianMobile, normalizeOtpCodeInput } from './normalize';
 import type { AuthApi } from './api';
 import type { MemorySessionStore } from './session-store';
 import type { AuthApiError } from './errors';
@@ -97,7 +97,7 @@ export class CustomerOtpController {
   private readonly api: AuthApi;
   private readonly store: MemorySessionStore;
   private readonly inflight = new Set<string>();
-  /** Generation guard: bumped on logout/reset to discard stale async results. */
+  /** Generation guard: bumped on close/logout/reset to discard stale async results. */
   private generation = 0;
 
   constructor(
@@ -156,7 +156,39 @@ export class CustomerOtpController {
 
   close(): void {
     if (this.state.phase === 'authenticated') return;
-    this.patch({ phase: 'idle', code: '', error: null, challenge: null, expiresAt: null, rateLimitNotBefore: 0 });
+    this.generation += 1;
+    this.patch({
+      phase: 'idle',
+      code: '',
+      error: null,
+      challenge: null,
+      expiresAt: null,
+      resendNotBefore: 0,
+    });
+  }
+
+  resetChallenge(error: string | null = null): void {
+    if (this.state.phase === 'authenticated') return;
+    this.generation += 1;
+    this.patch({
+      phase: 'mobile',
+      code: '',
+      error,
+      challenge: null,
+      expiresAt: null,
+      resendNotBefore: 0,
+    });
+  }
+
+  expireChallenge(): void {
+    if (
+      this.state.phase !== 'code' ||
+      this.state.expiresAt === null ||
+      this.now() < this.state.expiresAt
+    ) {
+      return;
+    }
+    this.resetChallenge('کد منقضی شده است. کد جدید درخواست کنید.');
   }
 
   setMobile(mobile: string): void {
@@ -164,7 +196,7 @@ export class CustomerOtpController {
   }
 
   setCode(code: string): void {
-    this.patch({ code: code.replace(/\D/g, '').slice(0, 6), error: null });
+    this.patch({ code: normalizeOtpCodeInput(code), error: null });
   }
 
   clearError(): void {
@@ -187,10 +219,10 @@ export class CustomerOtpController {
       return;
     }
 
+    const generation = this.generation;
     try {
-      const generation = this.generation;
       const challenge = await this.api.requestOtp({ mobile, client: 'CUSTOMER_WEB' });
-      if (generation !== this.generation) return; // superseded by logout/reset
+      if (generation !== this.generation) return;
       this.patch({
         phase: 'code',
         challenge,
@@ -201,6 +233,7 @@ export class CustomerOtpController {
         expiresAt: this.now() + challenge.expiresInSeconds * 1000,
       });
     } catch (error) {
+      if (generation !== this.generation) return;
       this.applyRateLimit(error);
       this.patch({ error: farsiError(error, mobile) });
     } finally {
@@ -230,11 +263,15 @@ export class CustomerOtpController {
       return;
     }
 
+    const generation = this.generation;
     try {
-      const generation = this.generation;
       const challengeId = this.state.challenge.challengeId;
       const result = await this.api.verifyOtp({ challengeId, code });
-      if (generation !== this.generation) return; // superseded by logout/reset
+      if (generation !== this.generation) {
+        await this.api.logout().catch(() => undefined);
+        this.store.clear();
+        return;
+      }
       this.patch({
         phase: 'authenticated',
         principal: result.principal,
@@ -244,16 +281,9 @@ export class CustomerOtpController {
         error: null,
       });
     } catch (error) {
+      if (generation !== this.generation) return;
       if (isApiError(error) && error.code === 'AUTH_CHALLENGE_EXPIRED') {
-        // The challenge is gone; return to the mobile step to request a fresh one.
-        this.patch({
-          phase: 'mobile',
-          mobile: '',
-          code: '',
-          challenge: null,
-          expiresAt: null,
-          error: 'کد منقضی شده است. کد جدید درخواست کنید.',
-        });
+        this.resetChallenge('کد منقضی شده است. کد جدید درخواست کنید.');
         return;
       }
       this.applyRateLimit(error);
