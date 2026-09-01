@@ -72,6 +72,13 @@ Production deployments should be reproducible and Docker-based.
   proof that this migration ran. Back up any needed data, then recreate disposable
   development databases from migrations. Never mark a production migration as
   applied merely to suppress drift; use a separately reviewed baselining/runbook.
+- `20260901043500_auth_mfa_persistence` is the forward Auth prerequisite for runtime
+  sessions and privileged MFA. It adds required authentication evidence to `Session`
+  plus hashed one-time challenges/recovery codes and encrypted/versioned TOTP
+  credential storage. It deliberately aborts before DDL if `Session` contains rows:
+  stop and investigate/revoke that unmanaged pre-runtime data rather than inventing
+  an authentication level or timestamp. Exercise deploy, status, drift and
+  `auth_constraints.sql` on an isolated copy before release.
 - Never edit an already-shared migration. Preserve custom Auth `CHECK` constraints
   and add a forward migration for every later schema change.
 

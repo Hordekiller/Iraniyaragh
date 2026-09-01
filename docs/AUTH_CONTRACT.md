@@ -592,17 +592,24 @@ The implementation issues are incomplete without:
 
 ## 17. Data and rollout impact
 
-ADR-0005 persistence supports customer OTP and rotating sessions. Staff MFA needs a
-new reviewed forward migration for pending MFA challenges, encrypted/versioned TOTP
-credentials, last accepted step, one-time recovery-code hashes and durable Session
-authentication-level/authenticated-at evidence. The migration must add SQL
-invariants and rollback-only verification; it must not edit the shared baseline
-migration.
+ADR-0005 persistence supports customer OTP and rotating sessions. Forward migration
+`20260901043500_auth_mfa_persistence` adds purpose-bound pending MFA challenges,
+encrypted/versioned TOTP credentials, last-accepted-step evidence, one-time
+recovery-code hashes and durable Session authentication-level/authenticated-at
+evidence. SQL checks enforce hash/envelope length, attempt limits, timestamp ordering
+and mutually exclusive terminal states; `auth_constraints.sql` verifies the failure
+paths on PostgreSQL. The migration leaves the shared baseline immutable.
+
+There is no truthful way to infer authentication level or time for an old Session.
+Because no Auth runtime has shipped, the migration therefore fails before any DDL
+when `Session` is non-empty. Operators MUST investigate and explicitly revoke/remove
+unmanaged pre-runtime rows before retrying; they MUST NOT fabricate `STAFF_MFA`
+evidence or silently choose a fallback level.
 
 Rollout order:
 
 1. merge deterministic RBAC seed and this contract;
-2. land the staff-MFA forward contract/migration;
+2. land the staff-MFA forward contract/migration (defined above);
 3. implement shared session/permission/audit core;
 4. implement OTP and staff flows while clients use accepted mocks;
 5. run integrated abuse/revocation E2E before enabling Auth routes in staging.

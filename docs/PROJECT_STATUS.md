@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-01
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -52,6 +52,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   ten-minute HS256 access-token signing/verification, 256-bit opaque token generation,
   constant-time CSRF comparison and versioned/domain-separated HKDF-HMAC hashing with a
   bounded current/previous-key rotation window
+- Forward Auth MFA persistence contract: Sessions retain mandatory authentication
+  level/time evidence; purpose-bound MFA challenges store only keyed hashes; TOTP
+  credentials store encrypted/versioned secret envelopes and replay steps; recovery
+  codes remain one-way and single-terminal-state, with PostgreSQL constraints and a
+  fail-fast preflight for unmanaged legacy Session rows
 
 ### Partial
 
@@ -68,11 +73,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
   database integration currently covers only initial inventory transaction/idempotency
   behavior and Auth persistence constraints.
-- Auth storage and lifecycle constraints exist, but credential verification, token
-  persistence/transactional refresh rotation, OTP delivery, rate limiting, password/TOTP
-  verification and server-side permission enforcement are not implemented yet. The
-  migration-independent token/hash primitives now exist; ADR-0007 and `AUTH_CONTRACT.md`
-  define the remaining runtime, HTTP, threat and client-state contract.
+- Auth storage and lifecycle constraints now include the runtime Session/MFA evidence,
+  but credential verification, transactional refresh rotation, OTP delivery, rate
+  limiting, password/TOTP verification and server-side permission enforcement are not
+  implemented yet. The migration-independent token/hash primitives exist; ADR-0007 and
+  `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 
