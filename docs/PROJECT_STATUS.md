@@ -50,6 +50,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   CodeQL extended analysis for TypeScript/JavaScript and Actions, secret scanning with
   push protection, Dependabot security updates, dependency review and private
   vulnerability reporting
+- Production dependency remediation (#54): admin runtime upgraded from vulnerable
+  Next.js 16.1.1 to 16.3.3 with patched PostCSS/Sharp, plus a narrowly scoped
+  `@prisma/config` deepmerge-ts 8.0.2 override verified against clean migrations,
+  drift, SQL constraints and integration tests; production audit reports no known
+  vulnerabilities at the recorded review point
 
 ### Partial
 

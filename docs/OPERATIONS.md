@@ -64,6 +64,15 @@ comment is documentation only; updating a tag does not update the executed code.
 Action upgrades require a reviewed SHA change and must retain the Node 24-compatible
 runtime baseline.
 
+Run `pnpm audit --prod --audit-level=moderate` during dependency triage; a green
+Dependency Review only evaluates a PR delta and is not proof that the existing tree
+has no newly published advisory. The admin runtime is pinned to Next.js `16.3.3`,
+which brings patched PostCSS/Sharp versions. Prisma 6.19.3 still pins vulnerable
+`deepmerge-ts` 7.x through `@prisma/config`, so `pnpm-workspace.yaml` contains one
+narrow override to 8.0.2. Do not broaden or remove it until the production audit,
+Prisma generate/validate, clean migration+drift, SQL constraints and integration
+tests all pass with the replacement.
+
 The smoke suite enforces a **zero-external-asset gate**: any HTTP(S) request
 from `web` or `admin` to an origin other than the app itself fails the run. The
 storefront self-hosts its Vazirmatn variable font for this reason.
