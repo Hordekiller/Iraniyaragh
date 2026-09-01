@@ -28,6 +28,18 @@ describe('ToastProvider', () => {
     })
   }, 12000)
 
+  it('keeps the checkmark and message as one readable text block (e2e regression)', async () => {
+    render(
+      <ToastProvider>
+        <Trigger />
+      </ToastProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'نمایش' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('پیام تست')
+    expect(screen.getByText('✓ پیام تست', { exact: true })).toBeInTheDocument()
+  })
+
   it('dismisses immediately via the focusable close control', async () => {
     render(
       <ToastProvider>

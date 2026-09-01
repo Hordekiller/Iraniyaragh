@@ -49,8 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role="status"
             aria-live="polite"
           >
-            <span className="w-7 h-7 rounded-full bg-[#FF4D00] flex items-center justify-center">✓</span>
-            <span>{toast}</span>
+            <span className="flex items-center gap-2 min-w-0">✓ {toast}</span>
             <button
               type="button"
               onClick={() => {
