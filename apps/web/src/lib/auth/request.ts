@@ -9,6 +9,7 @@ export type RequestOptions = {
   baseUrl?: string;
   accessToken?: string;
   json?: unknown;
+  method?: 'DELETE' | 'GET' | 'POST';
   timeoutMs?: number;
   /** Send credentialed (cookies) so refresh/CSRF cookies and CORS apply. */
   credentials?: RequestCredentials;
@@ -34,6 +35,7 @@ export async function jsonRequest<T>(
     baseUrl = '',
     accessToken,
     json,
+    method = json === undefined ? 'GET' : 'POST',
     timeoutMs = DEFAULT_TIMEOUT_MS,
     credentials = 'same-origin',
     headers,
@@ -45,7 +47,7 @@ export async function jsonRequest<T>(
   let response: Response;
   try {
     response = await fetch(`${baseUrl}${path}`, {
-      method: json === undefined ? 'GET' : 'POST',
+      method,
       credentials,
       signal: controller.signal,
       headers: {

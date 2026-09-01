@@ -1,4 +1,5 @@
 import { jsonRequest } from './request';
+import { AuthApiError } from './errors';
 import { MemorySessionStore } from './session-store';
 import type {
   AccessTokenData,
@@ -30,6 +31,12 @@ export interface AuthApi {
 export type AuthHttpClientOptions = {
   baseUrl?: string;
   store: MemorySessionStore;
+  /**
+   * Returns the script-readable double-submit CSRF cookie value. Production
+   * callers read `__Host-iranyaragh_csrf`; localhost deployments inject their
+   * explicitly suffixed development cookie name.
+   */
+  getCsrfToken: () => string | null;
   /** Used for mocked/fixture implementations; ignored by the HTTP client. */
   fetch?: typeof fetch;
 };
@@ -45,10 +52,12 @@ const AUTH_BASE = '/api/v1/auth';
 export class AuthHttpClient implements AuthApi {
   private readonly baseUrl: string;
   private readonly store: MemorySessionStore;
+  private readonly getCsrfToken: () => string | null;
 
   constructor(options: AuthHttpClientOptions) {
     this.baseUrl = options.baseUrl ?? '';
     this.store = options.store;
+    this.getCsrfToken = options.getCsrfToken;
   }
 
   async requestOtp(payload: CustomerOtpRequestPayload): Promise<CustomerOtpChallenge> {
@@ -62,15 +71,19 @@ export class AuthHttpClient implements AuthApi {
   async verifyOtp(payload: CustomerOtpVerifyPayload): Promise<AccessTokenData> {
     const { data } = await jsonRequest<AccessTokenData>(
       `${AUTH_BASE}/customer/otp/verify`,
-      { baseUrl: this.baseUrl, json: payload },
+      { baseUrl: this.baseUrl, credentials: 'include', json: payload },
     );
     this.store.setAuthenticated(data);
     return data;
   }
 
   async refresh(): Promise<AccessTokenData> {
+    const csrfToken = this.requireCsrfToken();
     const { data } = await jsonRequest<AccessTokenData>(`${AUTH_BASE}/refresh`, {
       baseUrl: this.baseUrl,
+      credentials: 'include',
+      headers: { 'X-CSRF-Token': csrfToken },
+      method: 'POST',
     });
     this.store.setAuthenticated(data);
     return data;
@@ -95,8 +108,12 @@ export class AuthHttpClient implements AuthApi {
   }
 
   async logout(): Promise<void> {
+    const csrfToken = this.requireCsrfToken();
     await jsonRequest<Record<string, never>>(`${AUTH_BASE}/logout`, {
       baseUrl: this.baseUrl,
+      credentials: 'include',
+      headers: { 'X-CSRF-Token': csrfToken },
+      method: 'POST',
     });
     this.store.clear();
   }
@@ -105,6 +122,18 @@ export class AuthHttpClient implements AuthApi {
     const token = this.store.getAccessToken();
     if (!token) {
       throw new Error('Authenticated request requires an in-memory access token.');
+    }
+    return token;
+  }
+
+  private requireCsrfToken(): string {
+    const token = this.getCsrfToken();
+    if (!token) {
+      throw new AuthApiError({
+        code: 'AUTH_CSRF_INVALID',
+        message: 'The browser session is missing its CSRF proof.',
+        statusCode: 403,
+      });
     }
     return token;
   }
