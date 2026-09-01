@@ -24,7 +24,25 @@ describe('ToastProvider', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('پیام تست')
 
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), {
-      timeout: 5000,
+      timeout: 8000,
+    })
+  }, 12000)
+
+  it('dismisses immediately via the focusable close control', async () => {
+    render(
+      <ToastProvider>
+        <Trigger />
+      </ToastProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'نمایش' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('پیام تست')
+
+    const close = screen.getByRole('button', { name: 'بستن اعلان' })
+    fireEvent.click(close)
+
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), {
+      timeout: 2000,
     })
   })
 

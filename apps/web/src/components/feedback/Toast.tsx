@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { ToastContext } from './toast-context'
 
-const TOAST_DURATION_MS = 2500
+const TOAST_DURATION_MS = 5000
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<string | null>(null)
@@ -49,7 +49,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role="status"
             aria-live="polite"
           >
-            <span className="w-7 h-7 rounded-full bg-[#FF4D00] flex items-center justify-center">✓</span> {toast}
+            <span className="w-7 h-7 rounded-full bg-[#FF4D00] flex items-center justify-center">✓</span>
+            <span>{toast}</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (dismissTimer.current !== null) clearTimeout(dismissTimer.current)
+                setToast(null)
+              }}
+              aria-label="بستن اعلان"
+              className="w-7 h-7 ml-1 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white transition"
+            >
+              ✕
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

@@ -62,6 +62,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront search box filters the prototype catalog by title, brand and
   category (token match) and opens matches in the product modal; the results band
   is covered by the Playwright suite.
+- Hero slider and toast expose explicit pause/play and close controls, honour
+  `prefers-reduced-motion` (slider), and the toast's base duration is 5s — all
+  covered in the Vitest component suite.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
   database integration currently covers only initial inventory transaction/idempotency

@@ -1,21 +1,30 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Play, Star } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Pause, Play, Star } from 'lucide-react'
 import { heroSlides, heroTrustPoints, quickStats } from '../../data/prototype'
 import { useToast } from '../feedback/toast-context'
 
 const SLIDE_INTERVAL_MS = 5000
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 export function HeroSlider() {
   const [activeSlide, setActiveSlide] = useState(0)
   const [interactionPaused, setInteractionPaused] = useState(false)
+  const [manuallyPaused, setManuallyPaused] = useState(false)
+  const [reducedMotion] = useState(prefersReducedMotion)
   const { show } = useToast()
 
+  const autoplayStopped = reducedMotion || manuallyPaused || interactionPaused
+
   useEffect(() => {
-    if (interactionPaused) return
+    if (autoplayStopped) return
     const id = setInterval(() => setActiveSlide(s => (s + 1) % heroSlides.length), SLIDE_INTERVAL_MS)
     return () => clearInterval(id)
-  }, [interactionPaused])
+  }, [autoplayStopped])
 
   return (
     <section id="home" aria-label="اسلایدر پیشنهاد ویژه" className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
@@ -27,27 +36,35 @@ export function HeroSlider() {
         className="relative overflow-hidden rounded-[24px] lg:rounded-[28px] bg-[#0F172A] h-[480px] lg:h-[520px]"
       >
         <AnimatePresence mode="wait">
-          <motion.div
-            key={activeSlide}
-            initial={{ opacity: 0, scale: 1.02 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.7, ease: 'easeOut' }}
-            className="absolute inset-0"
-          >
-            <img src={heroSlides[activeSlide].image} alt="" className="absolute inset-0 w-full h-full object-cover" />
-            <div className={`absolute inset-0 bg-gradient-to-l ${heroSlides[activeSlide].gradient}`} />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent lg:from-black/30" />
-          </motion.div>
+          {reducedMotion ? (
+            <div key={activeSlide} className="absolute inset-0">
+              <img src={heroSlides[activeSlide].image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <div className={`absolute inset-0 bg-gradient-to-l ${heroSlides[activeSlide].gradient}`} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent lg:from-black/30" />
+            </div>
+          ) : (
+            <motion.div
+              key={activeSlide}
+              initial={{ opacity: 0, scale: 1.02 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              className="absolute inset-0"
+            >
+              <img src={heroSlides[activeSlide].image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <div className={`absolute inset-0 bg-gradient-to-l ${heroSlides[activeSlide].gradient}`} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent lg:from-black/30" />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Hero Content */}
         <div className="relative h-full flex flex-col justify-center px-6 lg:px-14 py-10 lg:py-0">
           <motion.div
             key={'content-' + activeSlide}
-            initial={{ opacity: 0, y: 20 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.6 }}
+            transition={{ delay: reducedMotion ? 0 : 0.25, duration: reducedMotion ? 0 : 0.6 }}
             className="max-w-[620px]"
           >
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs font-bold">
@@ -81,6 +98,15 @@ export function HeroSlider() {
           <div className="hidden lg:flex items-center gap-2 bg-black/25 backdrop-blur-xl border border-white/15 rounded-full p-1.5">
             <button onClick={() => setActiveSlide(s => (s - 1 + heroSlides.length) % heroSlides.length)} aria-label="اسلاید قبلی" className="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronRight size={18} /></button>
             <button onClick={() => setActiveSlide(s => (s + 1) % heroSlides.length)} aria-label="اسلاید بعدی" className="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronLeft size={18} /></button>
+            <button
+              onClick={() => setManuallyPaused(p => !p)}
+              aria-pressed={autoplayStopped}
+              aria-label={autoplayStopped ? 'ادامه چرخش خودکار' : 'توقف چرخش خودکار'}
+              disabled={reducedMotion}
+              className="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"
+            >
+              {autoplayStopped ? <Play size={18} /> : <Pause size={18} />}
+            </button>
           </div>
           <div role="group" aria-label="انتخاب اسلاید" className="flex items-center gap-2 bg-black/30 backdrop-blur-md rounded-full px-3 py-2">
             {heroSlides.map((_, i) => (
