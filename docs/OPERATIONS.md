@@ -52,6 +52,10 @@ The public repository also has independent security gates:
   weekly schedule.
 - `.github/workflows/dependency-review.yml` rejects newly introduced direct or
   transitive dependencies with moderate-or-higher known vulnerabilities.
+- `.github/workflows/production-audit.yml` rejects moderate-or-higher known
+  vulnerabilities across the complete production lockfile on every pull request,
+  protected-branch push, manual run and a weekly schedule. This catches advisories
+  published after the dependency originally entered the repository.
 - Dependabot alerts and security updates are enabled; `.github/dependabot.yml`
   proposes bounded weekly npm-workspace and GitHub Actions update groups.
 - Secret scanning and push protection detect existing supported credentials and
@@ -64,9 +68,11 @@ comment is documentation only; updating a tag does not update the executed code.
 Action upgrades require a reviewed SHA change and must retain the Node 24-compatible
 runtime baseline.
 
-Run `pnpm audit --prod --audit-level=moderate` during dependency triage; a green
-Dependency Review only evaluates a PR delta and is not proof that the existing tree
-has no newly published advisory. The admin runtime is pinned to Next.js `16.3.3`,
+Run `pnpm audit --prod --audit-level=moderate` locally during dependency triage too;
+a green Dependency Review only evaluates a PR delta and is not proof that the existing
+tree has no newly published advisory. The scheduled production-audit workflow is the
+continuous baseline check, but local evidence is still required before review. The
+admin runtime is pinned to Next.js `16.3.3`,
 which brings patched PostCSS/Sharp versions. Prisma 6.19.3 still pins vulnerable
 `deepmerge-ts` 7.x through `@prisma/config`, so `pnpm-workspace.yaml` contains one
 narrow override to 8.0.2. Do not broaden or remove it until the production audit,
