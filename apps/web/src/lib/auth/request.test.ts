@@ -55,7 +55,7 @@ describe('jsonRequest', () => {
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer at-secret');
   });
 
-  it('uses POST + JSON body for payload requests and GET otherwise', async () => {
+  it('uses POST + JSON body for payload requests, GET by default, and honors an explicit method', async () => {
     const fetchMock = vi.fn(() => okJson({ done: true }));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -70,6 +70,11 @@ describe('jsonRequest', () => {
     await jsonRequest('/api/v1/auth/me');
     const noBody = fetchInit(fetchMock.mock.calls[1])!;
     expect(noBody.method).toBe('GET');
+
+    await jsonRequest('/api/v1/auth/refresh', { method: 'POST' });
+    const explicitPost = fetchInit(fetchMock.mock.calls[2])!;
+    expect(explicitPost.method).toBe('POST');
+    expect(explicitPost.body).toBeUndefined();
   });
 
   it('sends credentials same-origin by default', async () => {
