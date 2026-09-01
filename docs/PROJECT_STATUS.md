@@ -53,9 +53,13 @@ The repository is in **foundation/prototype**, before release `0.1`.
   two-step mobile→code flow with countdown resend, `AccountMenu` with logout) wired into the
   storefront header and mobile nav. The runtime defaults to the fixture client so the flow can be
   demoed before the auth backend lands on `main` (AUTH_CONTRACT §17)
+- Browser Auth transport now represents bodyless commands explicitly: refresh/logout use
+  credentialed `POST` requests with mandatory double-submit `X-CSRF-Token` proof and fail closed
+  before network access when that proof is unavailable
 - Fixture-backed customer OTP auth Playwright E2E (`e2e/tests/web-auth.spec.ts`, desktop + mobile):
-  valid login/logout via the account menu, localized invalid-code error, and resend countdown
-  gating — all under the strict zero-external-asset network gate
+  Persian/mobile normalization, valid login/logout, localized invalid-code and Retry-After states,
+  resend countdown gating, dialog focus trapping/Escape/restoration and keyboard account-menu
+  behavior — all under the strict zero-external-asset network gate
 
 ### Partial
 
@@ -117,9 +121,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
 10. API response envelopes, stable error codes, correlation/request IDs and OpenAPI are now
     wired for the HTTP layer (see Implemented). Authentication controllers and the domain
     controllers that will exercise the codes per use case are not implemented yet.
-11. GitHub branch protection cannot be enabled for the private repository on the
-    current account plan. CODEOWNERS and the two-person PR/CI policy are present,
-    but enforcement is manual until plan capability changes.
+11. GitHub now enforces the two-person PR/CI policy on `main`. Maintainers must keep
+    required check names synchronized when workflows are renamed and must review
+    CodeQL/Dependabot/secret-scanning alerts rather than treating green CI as a
+    substitute for security triage.
 12. The `User`/`Customer` identity boundary is decided (ADR-0005 + ADR-0006): `User` is
     the sole security principal and `Customer` stays a commerce profile; code must not
     join them implicitly by mobile number. Explicit linkage/merge/anonymization rules
@@ -130,27 +135,35 @@ The repository is in **foundation/prototype**, before release `0.1`.
 Sprint: #50 customer OTP auth UX + fixture-backed E2E (slice 2, UI + e2e).
 
 Completed:
+
 - Customer OTP login UI (LoginDialog two-step mobile→code with countdown resend, AccountMenu
   logout) wired into the storefront header and mobile nav, on a typed `AuthApi` contract with the
   `AuthFixtureClient` as the runtime default (parallel-work model, AUTH_CONTRACT §17).
 - LoginDialog auto-closes on a successful authentication.
-- `normalizeIranianMobile` now transliterates Persian/Arabic-Indic digits to ASCII.
-- Fixture-driven customer OTP auth Playwright E2E (valid login/logout, invalid-code error, resend
-  gating) green on web-desktop and web-mobile.
-- Web checks green: typecheck, lint (incl. runtime-asset gate), 75 Vitest tests, production build,
+- Mobile and OTP inputs transliterate Persian/Arabic-Indic digits to ASCII; all documented mobile
+  formats, including spaces and `+98`, use the same canonical validator in UI and controller.
+- Local challenge expiry, close/reset generation guards and post-close session cleanup prevent
+  expired or stale async results from resurrecting the flow; Retry-After survives close/reopen.
+- Dialog focus trap, Escape close, opener-focus restoration, reduced-motion handling and accessible
+  account-menu keyboard/ARIA behavior are covered on desktop and mobile.
+- `AuthHttpClient` sends refresh/logout as credentialed POST commands with required CSRF proof.
+- Web checks green: typecheck, lint (incl. runtime-asset gate), 97 Vitest tests, production build,
   monorepo typecheck; full `e2e/` Playwright suite green (web + admin, desktop + mobile).
 
 Deferred (with reason):
+
 - Real backend auth endpoints / `AuthHttpClient` wiring — blocked on H's auth backend branches
   landing on `main`; UI/E2E build against the fixture per the parallel-work model.
 
 New risks/debt:
+
 - Storefront now has two login entry points on mobile (header AccountMenu + bottom-nav profile);
   acceptable but redundant once auth UX is finalized.
 
 Metrics/tests:
-- `apps/web`: 75 tests / 6 files; `e2e`: 20 passed / 4 skipped (viewport-specific).
-- Added `e2e/tests/web-auth.spec.ts` (6 tests across web-desktop/web-mobile).
+
+- `apps/web`: 97 tests / 7 files; `e2e`: 24 passed / 4 skipped (viewport-specific).
+- `e2e/tests/web-auth.spec.ts`: 10 passing cases across web-desktop/web-mobile.
 
 Next release confidence: green
 
