@@ -42,6 +42,36 @@
           "Health"
         ]
       }
+    },
+    "/inventory/movements": {
+      "get": {
+        "operationId": "InventoryController_movements",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List inventory movements (read-only)",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/inventory": {
+      "get": {
+        "operationId": "InventoryController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List inventory snapshots (read-only)",
+        "tags": [
+          "inventory"
+        ]
+      }
     }
   },
   "info": {

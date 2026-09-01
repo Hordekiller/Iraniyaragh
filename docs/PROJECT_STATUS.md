@@ -53,8 +53,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
 
 ### Partial
 
-- Inventory rules exist in one service but have no public controller, authorization,
-  audit actor, retry policy, tests or complete reservation lifecycle.
+- Inventory rules live in one service with actor/requestId tracing, audit rows,
+  CAS version guards, bounded serializable retry, reservation consume/release/expire
+  lifecycle and a read-only snapshot/movement controller. Mutations still have no
+  public authenticated endpoint or authorization.
 - Shared contracts only contain basic response/money/inventory types.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
@@ -91,10 +93,12 @@ The repository is in **foundation/prototype**, before release `0.1`.
    typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.
 4. CORS now uses a validated environment allowlist; deployment configuration must
    supply the correct staging/production origins and retain negative tests.
-5. Critical serializable transactions need bounded retry behavior for transaction
-   conflicts and concurrency tests.
-6. Inventory commands do not yet capture authenticated actor/audit metadata.
-7. Reservation consume/expire and transfer flows are not implemented.
+5. Critical serializable transactions now have bounded retry for transaction
+   conflicts (P2034); concurrency tests remain to be added.
+6. Inventory commands now require and record an actor and request id in the audit
+   trail; wiring to the authenticated session principal still awaits the auth runtime.
+7. Reservation consume, release and expire are implemented on the balance layer;
+   transfer flows and order integration are not implemented.
 8. Money convention is decided and landed: the ADR-0003 extension (#13) specifies
    canonical integer-Rial `BIGINT` storage with Toman presentation-only, and the forward
    migration converts all ten `Decimal(18,2)` money columns with a fractional-preflight
