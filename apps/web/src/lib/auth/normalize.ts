@@ -14,7 +14,10 @@ import { MOBILE_PATTERN, OTP_CODE_PATTERN } from './types';
  * Returns `null` when the input cannot be normalized unambiguously.
  */
 export function normalizeIranianMobile(input: string): string | null {
-  const digits = input.replace(/[\s\-()]/g, '');
+  // Iranian keypads frequently produce Persian/Arabic-Indic digits; transliterate
+  // them to ASCII before stripping separators so validation is unambiguous.
+  const ascii = input.replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const digits = ascii.replace(/[\s\-()]/g, '');
 
   let candidate: string;
   if (digits.startsWith('+98')) {
