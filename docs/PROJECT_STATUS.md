@@ -67,8 +67,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
   is covered by the Playwright suite.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
-  database integration currently covers only initial inventory transaction/idempotency
-  behavior and Auth persistence constraints.
+  database integration covers the hardened inventory ledger (parallel reserve without
+  double-spend or negative stock, consume/release/expire, read-only snapshot/movement,
+  audit actor+request-id verification) plus Auth persistence constraints.
 - Auth storage and lifecycle constraints exist, but credential verification, token
   issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
   permission enforcement are not implemented yet.
