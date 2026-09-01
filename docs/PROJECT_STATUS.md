@@ -57,6 +57,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   credentials store encrypted/versioned secret envelopes and replay steps; recovery
   codes remain one-way and single-terminal-state, with PostgreSQL constraints and a
   fail-fast preflight for unmanaged legacy Session rows
+- Transactional Auth Session core: active-principal session creation, absolute and
+  inactivity deadlines by authentication level, current/previous refresh-hash lookup,
+  single-use rotation with compare-and-swap, bounded serializable retry, token-family
+  revocation on sequential/concurrent replay and safe created/rotated/replayed/revoked
+  audit evidence; real PostgreSQL tests prove exactly one concurrent refresh winner
 
 ### Partial
 
@@ -71,17 +76,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
   is covered by the Playwright suite.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
-  database integration currently covers only initial inventory transaction/idempotency
-  behavior and Auth persistence constraints.
+  database integration covers initial inventory transaction/idempotency behavior,
+  Auth persistence constraints and Session rotation/replay concurrency.
 - Auth storage and lifecycle constraints now include the runtime Session/MFA evidence,
-  but credential verification, transactional refresh rotation, OTP delivery, rate
-  limiting, password/TOTP verification and server-side permission enforcement are not
-  implemented yet. The migration-independent token/hash primitives exist; ADR-0007 and
-  `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
+  and the Session core rotates/revokes refresh families transactionally. HTTP Auth
+  endpoints, credential verification, OTP delivery, rate limiting, password/TOTP
+  verification and server-side permission enforcement are not implemented yet. ADR-0007
+  and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 
-- Authentication controllers/services, OTP delivery, 2FA and RBAC enforcement
+- Authentication controllers, OTP delivery, 2FA and RBAC enforcement
 - Catalog, customer, order, payment, supplier and audit use cases/controllers
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
