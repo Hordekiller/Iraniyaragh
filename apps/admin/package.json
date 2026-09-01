@@ -23,14 +23,14 @@
     "stylis-plugin-rtl": "2.1.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.4.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/stylis": "^4.2.7",
-    "eslint": "^9.39.1",
-    "globals": "^16.5.0",
-    "typescript": "~5.9.3",
+    "eslint": "^10.9.1",
+    "globals": "^17.11.0",
+    "typescript": "~7.0.2",
     "typescript-eslint": "^8.48.0"
   }
 }
