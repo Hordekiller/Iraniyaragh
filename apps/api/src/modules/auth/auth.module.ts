@@ -16,6 +16,11 @@ import { AuthTokenService } from './auth-token.service';
     AuthSessionService,
     AuthTokenService,
   ],
-  exports: [AUTH_RUNTIME_CONFIG, AuthHashService, AuthSessionService, AuthTokenService],
+  exports: [
+    AUTH_RUNTIME_CONFIG,
+    AuthHashService,
+    AuthSessionService,
+    AuthTokenService,
+  ],
 })
 export class AuthModule {}
