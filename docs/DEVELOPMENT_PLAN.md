@@ -337,7 +337,8 @@ planned work; P3 improvement. Only one P1 set should fit current capacity.
 
 Resolve via issue/ADR before dependent implementation:
 
-1. Canonical money unit: IRR integer vs decimal convention and toman presentation.
+1. **Resolved by ADR-0003/#13:** canonical integer-Rial persistence and transport;
+   Toman is exact presentation-only conversion.
 2. Initial payment and SMS providers and sandbox availability.
 3. Shipping methods, pricing owner and supported geography.
 4. Reservation duration and allocation across warehouses/locations.
