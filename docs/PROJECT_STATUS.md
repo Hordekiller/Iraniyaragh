@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-01
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -52,6 +52,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   ten-minute HS256 access-token signing/verification, 256-bit opaque token generation,
   constant-time CSRF comparison and versioned/domain-separated HKDF-HMAC hashing with a
   bounded current/previous-key rotation window
+- Forward Auth MFA persistence contract: Sessions retain mandatory authentication
+  level/time evidence; purpose-bound MFA challenges store only keyed hashes; TOTP
+  credentials store encrypted/versioned secret envelopes and replay steps; recovery
+  codes remain one-way and single-terminal-state, with PostgreSQL constraints and a
+  fail-fast preflight for unmanaged legacy Session rows
 - Public-repository security baseline: enforced `main` protection (required CI,
   non-author CODEOWNERS review, last-push separation, linear history and no force-push),
   CodeQL extended analysis for TypeScript/JavaScript and Actions, secret scanning with
@@ -81,6 +86,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Hero slider and toast expose explicit pause/play and close controls, honour
   `prefers-reduced-motion` (slider), and the toast's base duration is 5s — all
   covered in the Vitest component suite.
+- Unit/HTTP tests cover environment/CORS validation, database URL safety and
+  liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
   database integration covers the hardened inventory ledger (parallel reserve and
