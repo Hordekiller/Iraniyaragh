@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AuthPermissionService } from './auth-permission.service';
+import { AuthGuard, CurrentPrincipal, RequireAuthentication, RequirePermission } from './auth.guard';
 import { AuthHashService } from './auth-hash.service';
+import { AuthPrincipalService } from './auth-principal.service';
 import { AUTH_RUNTIME_CONFIG, createAuthRuntimeConfig } from './auth.config';
 import { AuthSessionService } from './auth-session.service';
 import { AuthTokenService } from './auth-token.service';
@@ -13,9 +16,23 @@ import { AuthTokenService } from './auth-token.service';
       useFactory: createAuthRuntimeConfig,
     },
     AuthHashService,
-    AuthSessionService,
     AuthTokenService,
+    AuthPermissionService,
+    AuthPrincipalService,
+    AuthSessionService,
+    AuthGuard,
   ],
-  exports: [AUTH_RUNTIME_CONFIG, AuthHashService, AuthSessionService, AuthTokenService],
+  exports: [
+    AUTH_RUNTIME_CONFIG,
+    AuthHashService,
+    AuthTokenService,
+    AuthPermissionService,
+    AuthPrincipalService,
+    AuthSessionService,
+    AuthGuard,
+    RequireAuthentication,
+    RequirePermission,
+    CurrentPrincipal,
+  ],
 })
 export class AuthModule {}
