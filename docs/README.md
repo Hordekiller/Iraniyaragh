@@ -16,6 +16,8 @@ Read these documents before implementing business-critical features.
 12. `PRODUCT_SPEC.md` — end-to-end functional and non-functional product specification.
 13. `EXECUTION_BACKLOG.md` — zero-to-production work breakdown, dependencies and owners.
 14. `TEAM.md` — team identities, proposed ownership and onboarding agreement.
-15. `adr/` — architecture decisions that intentionally change or extend the foundation.
+15. `ADMIN_PANEL_PLAN.md` — production admin information architecture, shared UX,
+    security, verification and phased completion gates.
+16. `adr/` — architecture decisions that intentionally change or extend the foundation.
 
 When code and documentation disagree, stop and resolve the discrepancy. Do not silently bypass a documented invariant.

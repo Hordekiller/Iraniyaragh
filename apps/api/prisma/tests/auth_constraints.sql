@@ -14,7 +14,7 @@ INSERT INTO "Role" ("id", "key", "name", "updatedAt")
 VALUES ('auth_test_role', 'admin', 'Administrator', CURRENT_TIMESTAMP);
 
 INSERT INTO "Permission" ("id", "key", "name", "group", "updatedAt")
-VALUES ('auth_test_permission', 'users.manage', 'Manage users', 'users', CURRENT_TIMESTAMP);
+VALUES ('auth_test_permission', 'auth-test.manage-users', 'Auth constraint fixture', 'auth-test', CURRENT_TIMESTAMP);
 
 INSERT INTO "RolePermission" ("id", "roleId", "permissionId", "grantedById")
 VALUES ('auth_test_role_permission', 'auth_test_role', 'auth_test_permission', 'auth_test_user');

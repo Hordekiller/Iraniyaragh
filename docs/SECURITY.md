@@ -1,18 +1,40 @@
 # Security Baseline
 
 ## Identity
+
 ### Customers
+
 - Mobile-number OTP is the primary planned customer authentication flow.
 - OTP must expire, be rate-limited and have attempt limits.
 - Never log OTP values.
 
 ### Admin/Staff
+
 - Strong password policy.
 - TOTP/2FA for privileged accounts.
 - Device/session management and revocation.
 - Sensitive roles should require elevated controls.
 
+### Runtime Auth contract
+
+- ADR-0007 and `AUTH_CONTRACT.md` are authoritative for token transport, cookie/
+  CSRF behavior, OTP/password/TOTP policy, rate limits, state semantics and stable
+  public errors.
+- Browser access JWTs live only in memory for ten minutes and contain no PII, role
+  or permission snapshot. Every protected request rechecks the backing session,
+  current user state and effective permissions server-side.
+- Browser refresh tokens are opaque, rotated and stored raw only in host-only
+  Secure/HttpOnly/SameSite cookies; PostgreSQL stores a domain-separated keyed hash.
+  Replay, including a losing concurrent refresh, revokes the token family.
+- Cookie-authenticated Auth mutations require exact-origin credentialed CORS and a
+  matching CSRF cookie/header. `SameSite` alone is not sufficient.
+- Customer SMS OTP is short-lived, single-use and distributed-rate-limited. It never
+  grants staff permissions. Privileged staff require password plus TOTP.
+- Seed never creates a privileged user. First-admin bootstrap is an explicit,
+  TTY-only, audited operation with no default or command-line credential.
+
 ### Auth persistence invariants
+
 - `User` is the security principal. Its ID is an opaque string/CUID; API clients
   must never infer identity from sequential IDs.
 - At least one canonical identifier is required. Iranian mobile numbers are stored
@@ -34,9 +56,11 @@
   regenerating Prisma artifacts.
 
 ## Authorization
+
 Use permissions, not scattered role-name comparisons.
 
 Example permission groups:
+
 - `catalog.read`, `catalog.write`
 - `pricing.read`, `pricing.write`
 - `inventory.read`, `inventory.adjust`, `inventory.transfer`
@@ -55,7 +79,9 @@ reactivated or updated deliberately rather than duplicated, and every privilege
 change must also emit an audit event.
 
 ## Audit
+
 Audit security- and business-sensitive actions, including:
+
 - Login/security changes
 - User/role/permission changes
 - Price changes
@@ -67,16 +93,20 @@ Audit security- and business-sensitive actions, including:
 Capture actor, action, entity, timestamp, request ID, and safe request metadata. Avoid storing secrets in audit payloads.
 
 ## API controls
+
 - Validation at every external boundary
 - Global request size limits
 - Rate limits, especially OTP/auth/search/public write endpoints
 - CORS allowlist per environment
+- CSRF proof on cookie-authenticated Auth endpoints
 - Security headers
 - No stack traces in production responses
 - Request correlation IDs
 
 ## Secrets
+
 Never commit:
+
 - Database passwords
 - JWT secrets/private keys
 - SMS credentials
@@ -86,12 +116,14 @@ Never commit:
 `.env.example` contains names/placeholders only.
 
 ## Payment safety
+
 - Verify gateway callbacks with the provider.
 - Never trust amount/order status from browser/mobile clients.
 - Use idempotency and transaction-safe verification.
 - Store enough gateway references for reconciliation.
 
 ## Backups
+
 - Database backups stored separately from the application server.
 - Object storage recovery strategy documented.
 - Periodic restore tests are mandatory; an untested backup is not considered reliable.
