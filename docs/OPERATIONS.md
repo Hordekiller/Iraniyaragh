@@ -16,8 +16,17 @@ The API validates configuration before opening a listening socket. Development m
 default to the known local web/admin origins; staging and production must provide an
 explicit comma-separated `CORS_ORIGINS` allowlist. Wildcards are forbidden when
 credentialed requests are enabled. Staging and production must also provide an
-explicit `API_PORT`; their JWT/object-storage secrets must be non-placeholder values
-of at least 32 characters, and access/refresh secrets must differ.
+explicit `API_PORT`. Auth requires an exact `AUTH_JWT_ISSUER`, a minimum 32-byte
+`JWT_ACCESS_SECRET`, and a distinct minimum 32-byte `AUTH_HASH_SECRET` with a positive
+`AUTH_HASH_KEY_VERSION`. Surrounding whitespace is rejected rather than silently
+changing key material. Staging/production reject known placeholder values.
+
+Hash-key rotation is bounded to two keys: deploy the new current version/secret and
+temporarily retain the old pair as `AUTH_HASH_PREVIOUS_KEY_VERSION` and
+`AUTH_HASH_PREVIOUS_SECRET`. New hashes use only the current key; lookup/verification
+accepts both versions until active records are rotated or expire. Never reuse a key
+version with different material, and remove the previous key only after verifying no
+live record depends on it. JWT signing and Auth hashing secrets must remain distinct.
 
 Environment values are configuration only; business policy and secrets never use
 client-exposed variables. Update `.env.example`, deployment secrets and this matrix

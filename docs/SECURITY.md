@@ -32,6 +32,10 @@
   grants staff permissions. Privileged staff require password plus TOTP.
 - Seed never creates a privileged user. First-admin bootstrap is an explicit,
   TTY-only, audited operation with no default or command-line credential.
+- Auth startup rejects weak, missing, shared or whitespace-mutated key material.
+  Access signing uses a distinct key; HKDF-derived, domain-separated HMAC keys protect
+  refresh, OTP, MFA-challenge, identifier, IP and device lookup values. Persisted hashes
+  carry their key version and verification accepts at most current/previous versions.
 
 ### Auth persistence invariants
 
@@ -114,6 +118,10 @@ Never commit:
 - S3 credentials
 
 `.env.example` contains names/placeholders only.
+
+Auth key names and the bounded current/previous rotation procedure are documented in
+`OPERATIONS.md`. Raw key material must never appear in a ticket, command argument, log
+or CI artifact.
 
 ## Payment safety
 
