@@ -80,6 +80,38 @@ describe('HeroSlider', () => {
     expect(screen.getByRole('button', { name: 'اسلاید 3' })).toHaveAttribute('aria-current', 'true')
   })
 
+  it('keeps the pause/play control available on every breakpoint', () => {
+    vi.useFakeTimers()
+    render(<Harness />)
+
+    const pause = screen.getByRole('button', { name: /توقف چرخش خودکار|ادامه چرخش خودکار/ })
+    expect(pause).toBeInTheDocument()
+    expect(pause.closest('[class~="hidden"]')).toBeNull()
+    expect(pause).not.toBeDisabled()
+  })
+
+  it('does not flip the pause control semantics from hover or focus alone', () => {
+    vi.useFakeTimers()
+    render(<Harness />)
+
+    const pause = screen.getByRole('button', { name: 'توقف چرخش خودکار' })
+    expect(pause).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.mouseEnter(screen.getByRole('group', { name: 'انتخاب اسلاید' }))
+    fireEvent.focus(pause)
+    expect(screen.getByRole('button', { name: 'توقف چرخش خودکار' })).toBe(pause)
+    expect(pause).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.mouseLeave(screen.getByRole('group', { name: 'انتخاب اسلاید' }))
+    fireEvent.click(pause)
+    const resume = screen.getByRole('button', { name: 'ادامه چرخش خودکار' })
+    expect(resume).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.focus(resume)
+    expect(screen.getByRole('button', { name: 'ادامه چرخش خودکار' })).toBe(resume)
+    expect(resume).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('stops auto-advance from a permanent pause/play control and resumes it', () => {
     vi.useFakeTimers()
     render(<Harness />)
