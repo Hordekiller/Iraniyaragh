@@ -59,7 +59,15 @@ export function clientErrorCodeFromCause(
   timedOut = false,
 ): ClientErrorCode {
   if (timedOut) return 'TIMEOUT';
-  const name = cause instanceof Error ? cause.name : '';
+  const name =
+    cause instanceof Error
+      ? cause.name
+      : typeof cause === 'object' &&
+          cause !== null &&
+          'name' in cause &&
+          typeof cause.name === 'string'
+        ? cause.name
+        : '';
   if (NETWORK_CODE_BY_CAUSE[name]) return NETWORK_CODE_BY_CAUSE[name];
   return 'NETWORK_ERROR';
 }

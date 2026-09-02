@@ -1,6 +1,6 @@
 # ADR-0003: Money and Time Representation
 
-Status: Accepted (extended 2026-08-31 — extension proposed by decision #13, pending acceptance)
+Status: Accepted (extended 2026-08-31 by decision #13)
 
 ## Decision
 

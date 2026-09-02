@@ -41,6 +41,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Forward BIGINT money migration: all ten money columns now store canonical integer Rial
   (ADR-0003 extension #13), guarded by a fractional-preflight check and a rollback-only
   money verification script
+- Deterministic, transactional development/test RBAC seed with 20 canonical
+  permissions, a non-user `system-admin` role, explicit target safety policy, two-run
+  CI verification and a separate `prisma:deploy` release command
 - API foundation (#21): per-request IDs via middleware + AsyncLocalStorage, stable error
   response envelopes with machine-readable codes, redacted structured JSON logging
   (secrets/OTP/PII scrubbed), a global exception filter (validation/prisma/internal mapping),
@@ -60,16 +63,34 @@ The repository is in **foundation/prototype**, before release `0.1`.
   Persian/mobile normalization, valid login/logout, localized invalid-code and Retry-After states,
   resend countdown gating, dialog focus trapping/Escape/restoration and keyboard account-menu
   behavior — all under the strict zero-external-asset network gate
+- Initial Auth cryptographic foundation: fail-fast issuer/key configuration, strict
+  ten-minute HS256 access-token signing/verification, 256-bit opaque token generation,
+  constant-time CSRF comparison and versioned/domain-separated HKDF-HMAC hashing with a
+  bounded current/previous-key rotation window
+- Forward Auth MFA persistence contract: Sessions retain mandatory authentication
+  level/time evidence; purpose-bound MFA challenges store only keyed hashes; TOTP
+  credentials store encrypted/versioned secret envelopes and replay steps; recovery
+  codes remain one-way and single-terminal-state, with PostgreSQL constraints and a
+  fail-fast preflight for unmanaged legacy Session rows
 - Public-repository security baseline: enforced `main` protection (required CI,
   non-author CODEOWNERS review, last-push separation, linear history and no force-push),
   CodeQL extended analysis for TypeScript/JavaScript and Actions, secret scanning with
   push protection, Dependabot security updates, dependency review and private
   vulnerability reporting
+- Production dependency remediation (#54): admin runtime upgraded from vulnerable
+  Next.js 16.1.1 to 16.3.3 with patched PostCSS/Sharp, plus a narrowly scoped
+  `@prisma/config` deepmerge-ts 8.0.2 override verified against clean migrations,
+  drift, SQL constraints and integration tests; an independent production-lockfile
+  audit now runs on every PR/main push, weekly and on demand, and reports no known
+  vulnerabilities at the recorded review point
 
 ### Partial
 
-- Inventory rules exist in one service but have no public controller, authorization,
-  audit actor, retry policy, tests or complete reservation lifecycle.
+- Inventory rules live in one service with actor/requestId tracing, audit rows,
+  CAS version guards, bounded serializable retry, reservation consume/release/expire
+  and read-only snapshot/movement queries (a public controller is withheld until the
+  auth runtime provides the `inventory.read` permission). Mutations still have no
+  public authenticated endpoint or authorization.
 - Shared contracts only contain basic response/money/inventory types.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
@@ -77,15 +98,24 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront search box filters the prototype catalog by title, brand and
   category (token match) and opens matches in the product modal; the results band
   is covered by the Playwright suite.
+- Hero slider and toast expose explicit pause/play and close controls, honour
+  `prefers-reduced-motion` (slider), and the toast's base duration is 5s — all
+  covered in the Vitest component suite.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
-  database integration currently covers only initial inventory transaction/idempotency
-  behavior and Auth persistence constraints.
+- Unit/HTTP tests cover environment/CORS validation, database URL safety and
+  liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
+  database integration covers the hardened inventory ledger (parallel reserve and
+  parallel reserve-versus-stock-change races without double-spend or negative stock,
+  consume/release/expire, read-only snapshot/movement, audit actor+request-id
+  verification) plus Auth persistence constraints.
 - Auth storage and lifecycle constraints exist, but credential verification, token
-  issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
-  permission enforcement are not implemented yet. The customer OTP login UI (#50) currently
-  runs against the contract `AuthFixtureClient`; it will switch to the real `AuthHttpClient`
-  once the backend endpoints land on `main` (AUTH_CONTRACT §17).
+  issuance/rotation, OTP delivery, rate limiting, password/TOTP and server-side permission
+  enforcement are not implemented yet. Migration-independent token/hash primitives now
+  exist (ADR-0007 and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and
+  client-state contract); the customer OTP login UI (#50) currently runs against the
+  contract `AuthFixtureClient` and will switch to the real `AuthHttpClient` once the
+  backend endpoints land on `main` (AUTH_CONTRACT §17).
 
 ### Not implemented
 
@@ -94,13 +124,14 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
-- Broader domain integration and API E2E tests, seed script, observability and
-  deployment pipeline
+- Broader domain integration and API E2E tests, observability and deployment pipeline
 
 ## Known engineering gaps
 
-1. The initial database migration and automated CI migration/constraint checks are
-   committed, but no deterministic development seed exists.
+1. Reviewed forward migrations, automated CI migration/constraint checks, an explicit
+   deploy command and a deterministic development/test RBAC seed exist. Production
+   release orchestration, backup/restore evidence and a secure first-admin bootstrap
+   command remain.
 2. Configuration/guard unit tests, a Playwright shell suite and initial database
    integration coverage exist; broader domain, concurrency and coverage thresholds remain.
 3. The storefront prototype is decomposed into typed single-purpose components.
@@ -108,10 +139,13 @@ The repository is in **foundation/prototype**, before release `0.1`.
    typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.
 4. CORS now uses a validated environment allowlist; deployment configuration must
    supply the correct staging/production origins and retain negative tests.
-5. Critical serializable transactions need bounded retry behavior for transaction
-   conflicts and concurrency tests.
-6. Inventory commands do not yet capture authenticated actor/audit metadata.
-7. Reservation consume/expire and transfer flows are not implemented.
+5. Critical serializable transactions now have bounded retry for transaction
+   conflicts (P2034), and DB integration concurrency coverage (parallel reserve /
+   change without double-spend or negative stock) is implemented in `test:integration`.
+6. Inventory commands now require and record an actor and request id in the audit
+   trail; wiring to the authenticated session principal still awaits the auth runtime.
+7. Reservation consume, release and expire are implemented on the balance layer;
+   transfer flows and order integration are not implemented.
 8. Money convention is decided and landed: the ADR-0003 extension (#13) specifies
    canonical integer-Rial `BIGINT` storage with Toman presentation-only, and the forward
    migration converts all ten `Decimal(18,2)` money columns with a fractional-preflight
@@ -120,9 +154,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
    transition tables (ADR-0006, G5-07 foundation); the contract and shared
    compare-and-swap helper are approved in #38 and CI-verified. Services that drive those
    machines, reconciliation and the customer-facing status/timeline language remain to be
-   built. The draft #28 commerce-customer-journey rebuild (cart/checkout/orders/payments/
-   notifications/stock-alerts) was blocked on the #40 money migration (now merged) and must
-   be rebased off the approved #38 contract on `main` before it can land.
+   built. Draft #28 was closed as superseded because its alternative baseline migration
+   and cross-cutting foundations conflicted with the approved #30/#38/#40/#43 contracts.
+   Its cart/checkout/order/payment/notification ideas remain backlog input and must be
+   rebuilt as small contract-first changes on current `main`.
 10. API response envelopes, stable error codes, correlation/request IDs and OpenAPI are now
     wired for the HTTP layer (see Implemented). Authentication controllers and the domain
     controllers that will exercise the codes per use case are not implemented yet.

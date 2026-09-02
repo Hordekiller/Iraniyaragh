@@ -14,7 +14,7 @@ INSERT INTO "Role" ("id", "key", "name", "updatedAt")
 VALUES ('auth_test_role', 'admin', 'Administrator', CURRENT_TIMESTAMP);
 
 INSERT INTO "Permission" ("id", "key", "name", "group", "updatedAt")
-VALUES ('auth_test_permission', 'users.manage', 'Manage users', 'users', CURRENT_TIMESTAMP);
+VALUES ('auth_test_permission', 'auth-test.manage-users', 'Auth constraint fixture', 'auth-test', CURRENT_TIMESTAMP);
 
 INSERT INTO "RolePermission" ("id", "roleId", "permissionId", "grantedById")
 VALUES ('auth_test_role_permission', 'auth_test_role', 'auth_test_permission', 'auth_test_user');
@@ -23,11 +23,29 @@ INSERT INTO "UserRole" ("id", "userId", "roleId", "assignedById")
 VALUES ('auth_test_user_role', 'auth_test_user', 'auth_test_role', 'auth_test_user');
 
 INSERT INTO "Session" (
-  "id", "userId", "refreshTokenHash", "tokenFamilyId", "expiresAt", "updatedAt"
+  "id", "userId", "refreshTokenHash", "tokenFamilyId", "authenticationLevel",
+  "authenticatedAt", "expiresAt", "updatedAt"
 ) VALUES (
-  'auth_test_session', 'auth_test_user', repeat('r', 64), 'auth_test_family',
-  CURRENT_TIMESTAMP + INTERVAL '1 day', CURRENT_TIMESTAMP
+  'auth_test_session', 'auth_test_user', repeat('r', 64), 'auth_test_family', 'STAFF_MFA',
+  CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '12 hours', CURRENT_TIMESTAMP
 );
+
+INSERT INTO "MfaChallenge" (
+  "id", "userId", "challengeTokenHash", "purpose", "expiresAt", "requestId"
+) VALUES (
+  'auth_test_mfa_challenge', 'auth_test_user', repeat('m', 64), 'STAFF_SIGN_IN',
+  CURRENT_TIMESTAMP + INTERVAL '5 minutes', 'auth-test-request'
+);
+
+INSERT INTO "TotpCredential" (
+  "id", "userId", "encryptedSecret", "encryptionKeyVersion", "confirmedAt", "updatedAt"
+) VALUES (
+  'auth_test_totp', 'auth_test_user', repeat('e', 64), 'v1', CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+);
+
+INSERT INTO "RecoveryCode" ("id", "totpCredentialId", "codeHash")
+VALUES ('auth_test_recovery', 'auth_test_totp', repeat('q', 64));
 
 INSERT INTO "OtpCode" (
   "id", "userId", "destinationHash", "codeHash", "purpose", "channel", "expiresAt"
@@ -48,8 +66,14 @@ BEGIN
     SELECT 1
     FROM information_schema.columns
     WHERE table_schema = 'public'
-      AND table_name IN ('User', 'Session', 'OtpCode', 'LoginAttempt', 'AuditLog')
-      AND column_name IN ('password', 'refreshToken', 'accessToken', 'token', 'code', 'otp', 'ip')
+      AND table_name IN (
+        'User', 'Session', 'OtpCode', 'MfaChallenge', 'TotpCredential',
+        'RecoveryCode', 'LoginAttempt', 'AuditLog'
+      )
+      AND column_name IN (
+        'password', 'refreshToken', 'accessToken', 'challengeToken', 'token',
+        'code', 'otp', 'totpSecret', 'recoveryCode', 'ip'
+      )
   ) THEN
     RAISE EXCEPTION 'A raw credential, token, OTP, or IP column exists';
   END IF;
@@ -141,12 +165,28 @@ BEGIN
 
   BEGIN
     INSERT INTO "Session" (
-      "id", "userId", "refreshTokenHash", "tokenFamilyId", "expiresAt", "updatedAt"
+      "id", "userId", "refreshTokenHash", "tokenFamilyId", "authenticationLevel",
+      "authenticatedAt", "expiresAt", "updatedAt"
     ) VALUES (
       'auth_invalid_session', 'auth_test_user', repeat('x', 64), 'auth_test_family',
-      CURRENT_TIMESTAMP - INTERVAL '1 minute', CURRENT_TIMESTAMP
+      'CUSTOMER_OTP', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP - INTERVAL '1 minute',
+      CURRENT_TIMESTAMP
     );
     RAISE EXCEPTION 'Expected session expiry constraint to reject the row';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    INSERT INTO "Session" (
+      "id", "userId", "refreshTokenHash", "tokenFamilyId", "authenticationLevel",
+      "authenticatedAt", "expiresAt", "updatedAt"
+    ) VALUES (
+      'auth_invalid_session_evidence', 'auth_test_user', repeat('y', 64),
+      'auth_test_family_evidence', 'STAFF_MFA', CURRENT_TIMESTAMP + INTERVAL '6 minutes',
+      CURRENT_TIMESTAMP + INTERVAL '12 hours', CURRENT_TIMESTAMP
+    );
+    RAISE EXCEPTION 'Expected future session authentication evidence to be rejected';
   EXCEPTION WHEN check_violation THEN
     NULL;
   END;
@@ -178,6 +218,86 @@ BEGIN
     SET "consumedAt" = CURRENT_TIMESTAMP, "invalidatedAt" = CURRENT_TIMESTAMP
     WHERE "id" = 'auth_test_otp';
     RAISE EXCEPTION 'Expected mutually exclusive OTP terminal state constraint to reject the row';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    INSERT INTO "MfaChallenge" (
+      "id", "userId", "challengeTokenHash", "purpose", "attempts", "expiresAt"
+    ) VALUES (
+      'auth_invalid_mfa_attempts', 'auth_test_user', repeat('a', 64), 'STAFF_SIGN_IN',
+      6, CURRENT_TIMESTAMP + INTERVAL '5 minutes'
+    );
+    RAISE EXCEPTION 'Expected MFA challenge attempt constraint to reject the row';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    UPDATE "MfaChallenge"
+    SET "consumedAt" = CURRENT_TIMESTAMP, "invalidatedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = 'auth_test_mfa_challenge';
+    RAISE EXCEPTION 'Expected mutually exclusive MFA challenge terminal state';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    UPDATE "TotpCredential"
+    SET "encryptedSecret" = 'raw-secret', "encryptionKeyVersion" = 'bad version'
+    WHERE "id" = 'auth_test_totp';
+    RAISE EXCEPTION 'Expected encrypted TOTP envelope constraint to reject the row';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    UPDATE "TotpCredential"
+    SET "lastAcceptedStep" = -1
+    WHERE "id" = 'auth_test_totp';
+    RAISE EXCEPTION 'Expected negative TOTP step to be rejected';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    UPDATE "TotpCredential"
+    SET "lastAcceptedStep" = 1, "confirmedAt" = NULL
+    WHERE "id" = 'auth_test_totp';
+    RAISE EXCEPTION 'Expected TOTP replay step without confirmation to be rejected';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    INSERT INTO "User" ("id", "email", "updatedAt")
+    VALUES ('auth_test_pending_totp_user', 'pending-totp@example.com', CURRENT_TIMESTAMP);
+
+    INSERT INTO "TotpCredential" (
+      "id", "userId", "encryptedSecret", "encryptionKeyVersion", "disabledAt", "updatedAt"
+    ) VALUES (
+      'auth_invalid_unconfirmed_disabled_totp', 'auth_test_pending_totp_user',
+      repeat('z', 64), 'v1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    );
+    RAISE EXCEPTION 'Expected disabled unconfirmed TOTP credential to be rejected';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    UPDATE "RecoveryCode"
+    SET "consumedAt" = CURRENT_TIMESTAMP, "invalidatedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = 'auth_test_recovery';
+    RAISE EXCEPTION 'Expected mutually exclusive recovery-code terminal state';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    INSERT INTO "RecoveryCode" ("id", "totpCredentialId", "codeHash")
+    VALUES ('auth_invalid_recovery_hash', 'auth_test_totp', 'raw-code');
+    RAISE EXCEPTION 'Expected recovery-code hash constraint to reject the row';
   EXCEPTION WHEN check_violation THEN
     NULL;
   END;

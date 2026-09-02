@@ -66,9 +66,10 @@ describe('CrossTabSessionBus', () => {
     const unsubscribe = bus.subscribe(listener);
 
     // Simulate a signal from another tab via the underlying channel.
-    (bus as unknown as { channel: BroadcastChannel | null }).channel?.dispatchEvent(
-      new MessageEvent('message', { data: { type: 'refresh-started' } }),
-    );
+    const channel = (bus as unknown as { channel: BroadcastChannel | null }).channel;
+    channel?.onmessage?.({ data: { type: 'refresh-started' } } as MessageEvent<{
+      type: 'refresh-started';
+    }>);
     expect(listener).toHaveBeenCalledWith({ type: 'refresh-started' });
 
     unsubscribe();
