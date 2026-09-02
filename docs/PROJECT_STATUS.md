@@ -41,6 +41,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Forward BIGINT money migration: all ten money columns now store canonical integer Rial
   (ADR-0003 extension #13), guarded by a fractional-preflight check and a rollback-only
   money verification script
+- Deterministic, transactional development/test RBAC seed with 20 canonical
+  permissions, a non-user `system-admin` role, explicit target safety policy, two-run
+  CI verification and a separate `prisma:deploy` release command
 - API foundation (#21): per-request IDs via middleware + AsyncLocalStorage, stable error
   response envelopes with machine-readable codes, redacted structured JSON logging
   (secrets/OTP/PII scrubbed), a global exception filter (validation/prisma/internal mapping),
@@ -83,13 +86,14 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
-- Broader domain integration and API E2E tests, seed script, observability and
-  deployment pipeline
+- Broader domain integration and API E2E tests, observability and deployment pipeline
 
 ## Known engineering gaps
 
-1. The initial database migration and automated CI migration/constraint checks are
-   committed, but no deterministic development seed exists.
+1. Reviewed forward migrations, automated CI migration/constraint checks, an explicit
+   deploy command and a deterministic development/test RBAC seed exist. Production
+   release orchestration, backup/restore evidence and a secure first-admin bootstrap
+   command remain.
 2. Configuration/guard unit tests, a Playwright shell suite and initial database
    integration coverage exist; broader domain, concurrency and coverage thresholds remain.
 3. The storefront prototype is decomposed into typed single-purpose components.
