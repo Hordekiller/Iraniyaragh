@@ -28,7 +28,7 @@ databases once:
 docker compose -f infrastructure/docker/docker-compose.yml up -d postgres
 docker compose -f infrastructure/docker/docker-compose.yml exec -T postgres \
   psql -U app -d postgres -v ON_ERROR_STOP=1 \
-  -c 'CREATE DATABASE iranyaragh_test'
+  -c 'CREATE DATABASE iraniyaragh_test'
 docker compose -f infrastructure/docker/docker-compose.yml exec -T postgres \
   psql -U app -d postgres -v ON_ERROR_STOP=1 \
   -c 'CREATE DATABASE ci_shadow_test'
