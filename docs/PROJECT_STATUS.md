@@ -52,6 +52,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
   ten-minute HS256 access-token signing/verification, 256-bit opaque token generation,
   constant-time CSRF comparison and versioned/domain-separated HKDF-HMAC hashing with a
   bounded current/previous-key rotation window
+- Public-repository security baseline: enforced `main` protection (required CI,
+  non-author CODEOWNERS review, last-push separation, linear history and no force-push),
+  CodeQL extended analysis for TypeScript/JavaScript and Actions, secret scanning with
+  push protection, Dependabot security updates, dependency review and private
+  vulnerability reporting
+- Production dependency remediation (#54): admin runtime upgraded from vulnerable
+  Next.js 16.1.1 to 16.3.3 with patched PostCSS/Sharp, plus a narrowly scoped
+  `@prisma/config` deepmerge-ts 8.0.2 override verified against clean migrations,
+  drift, SQL constraints and integration tests; an independent production-lockfile
+  audit now runs on every PR/main push, weekly and on demand, and reports no known
+  vulnerabilities at the recorded review point
 
 ### Partial
 
@@ -108,15 +119,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
    transition tables (ADR-0006, G5-07 foundation); the contract and shared
    compare-and-swap helper are approved in #38 and CI-verified. Services that drive those
    machines, reconciliation and the customer-facing status/timeline language remain to be
-   built. The draft #28 commerce-customer-journey rebuild (cart/checkout/orders/payments/
-   notifications/stock-alerts) was blocked on the #40 money migration (now merged) and must
-   be rebased off the approved #38 contract on `main` before it can land.
+   built. Draft #28 was closed as superseded because its alternative baseline migration
+   and cross-cutting foundations conflicted with the approved #30/#38/#40/#43 contracts.
+   Its cart/checkout/order/payment/notification ideas remain backlog input and must be
+   rebuilt as small contract-first changes on current `main`.
 10. API response envelopes, stable error codes, correlation/request IDs and OpenAPI are now
     wired for the HTTP layer (see Implemented). Authentication controllers and the domain
     controllers that will exercise the codes per use case are not implemented yet.
-11. GitHub branch protection cannot be enabled for the private repository on the
-    current account plan. CODEOWNERS and the two-person PR/CI policy are present,
-    but enforcement is manual until plan capability changes.
+11. GitHub now enforces the two-person PR/CI policy on `main`. Maintainers must keep
+    required check names synchronized when workflows are renamed and must review
+    CodeQL/Dependabot/secret-scanning alerts rather than treating green CI as a
+    substitute for security triage.
 12. The `User`/`Customer` identity boundary is decided (ADR-0005 + ADR-0006): `User` is
     the sole security principal and `Customer` stays a commerce profile; code must not
     join them implicitly by mobile number. Explicit linkage/merge/anonymization rules
