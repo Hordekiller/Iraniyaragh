@@ -376,7 +376,7 @@ describe.sequential('InventoryService database integration', () => {
 
   it('propagates a real balance inconsistency while expiring instead of swallowing it', async () => {
     const requestId = `${requestIdPrefix}-expiry-propagate`;
-    await inventory.reserve({
+    const reservation = await inventory.reserve({
       warehouseId,
       locationId,
       variantId,
@@ -395,6 +395,17 @@ describe.sequential('InventoryService database integration', () => {
     await expect(
       inventory.expireReservations({ actorId, requestId }, { now: new Date() }),
     ).rejects.toBeInstanceOf(ConflictException);
+
+    await prisma.stockReservation.delete({ where: { id: reservation.id } });
+
+    const balance = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
+    const activeQuantity = await prisma.stockReservation.aggregate({
+      where: { variantId, status: 'ACTIVE' },
+      _sum: { quantity: true },
+    });
+    expect(activeQuantity._sum.quantity ?? 0).toBe(balance.reserved);
   });
 
   it('multiple concurrent reservations never double-spend or go negative', async () => {
@@ -404,6 +415,11 @@ describe.sequential('InventoryService database integration', () => {
     const initial = before.onHand;
     const requestCount = 8;
     const perRequest = 1;
+    const capacity = before.available;
+
+    const reservationsBefore = await prisma.stockReservation.count({
+      where: { variantId },
+    });
 
     const results = await Promise.allSettled(
       Array.from({ length: requestCount }, (_, i) =>
@@ -420,8 +436,15 @@ describe.sequential('InventoryService database integration', () => {
       ),
     );
 
-    const ok = results.filter((r) => r.status === 'fulfilled').length;
-    const rejected = results.filter((r) => r.status === 'rejected').length;
+    const rejected = results.filter((r) => r.status === 'rejected');
+    const ok = results.length - rejected.length;
+
+    expect(ok).toBe(capacity);
+    expect(ok + rejected.length).toBe(requestCount);
+
+    for (const r of rejected) {
+      expect(r.reason).toBeInstanceOf(ConflictException);
+    }
 
     const balance = await prisma.inventoryBalance.findUniqueOrThrow({
       where: balanceWhere(),
@@ -429,22 +452,131 @@ describe.sequential('InventoryService database integration', () => {
     expect(balance.onHand).toBe(initial);
     expect(balance.reserved).toBe(ok * perRequest);
     expect(balance.available).toBe(initial - ok * perRequest);
-    expect(ok + rejected).toBe(requestCount);
-    expect(ok).toBeGreaterThanOrEqual(1);
     expect(balance.available).toBeGreaterThanOrEqual(0);
     expect(balance.reserved).toBeLessThanOrEqual(initial);
 
-    for (let i = 0; i < requestCount; i += 1) {
-      const r = results[i];
-      if (r.status === 'fulfilled') {
-        expect(r.value.status).toBe('ACTIVE');
-        const auditRows = await prisma.auditLog.findMany({
-          where: { requestId: `${requestIdPrefix}-concurrent-${i}` },
-        });
-        expect(auditRows).toHaveLength(1);
-        expect(auditRows[0].action).toBe('inventory.reservation.created');
+    expect(
+      await prisma.stockReservation.count({ where: { variantId } }),
+    ).toBe(reservationsBefore + ok);
+
+    const auditRows = await prisma.auditLog.findMany({
+      where: { requestId: { startsWith: `${requestIdPrefix}-concurrent-` } },
+    });
+    expect(auditRows).toHaveLength(ok);
+    for (const row of auditRows) {
+      expect(row.action).toBe('inventory.reservation.created');
+    }
+
+    const activeQuantity = await prisma.stockReservation.aggregate({
+      where: { variantId, status: 'ACTIVE' },
+      _sum: { quantity: true },
+    });
+    expect(activeQuantity._sum.quantity ?? 0).toBe(balance.reserved);
+  });
+
+  it('keeps parallel reservations and stock changes consistent under serializable contention', async () => {
+    const seedRequestId = `${requestIdPrefix}-race-seed`;
+    await inventory.changeOnHand({
+      warehouseId,
+      locationId,
+      variantId,
+      delta: 6,
+      type: InventoryMovementType.RECEIPT,
+      actorId,
+      requestId: seedRequestId,
+    });
+
+    const reservationsBefore = await prisma.stockReservation.count({
+      where: { variantId },
+    });
+    const movementsBefore = await prisma.inventoryMovement.count({
+      where: { variantId },
+    });
+    const auditBefore = await prisma.auditLog.count({
+      where: { requestId: { startsWith: `${requestIdPrefix}-race-` } },
+    });
+
+    const reserveOps = Array.from({ length: 4 }, (_, i) =>
+      inventory.reserve({
+        warehouseId,
+        locationId,
+        variantId,
+        orderId: null,
+        quantity: 1,
+        expiresAt: new Date(Date.now() + 120_000),
+        actorId,
+        requestId: `${requestIdPrefix}-race-reserve-${i}`,
+      }),
+    );
+    const addOps = Array.from({ length: 4 }, (_, i) =>
+      inventory.changeOnHand({
+        warehouseId,
+        locationId,
+        variantId,
+        delta: 2,
+        type: InventoryMovementType.RECEIPT,
+        actorId,
+        requestId: `${requestIdPrefix}-race-add-${i}`,
+      }),
+    );
+    const subOps = Array.from({ length: 2 }, (_, i) =>
+      inventory.changeOnHand({
+        warehouseId,
+        locationId,
+        variantId,
+        delta: -1,
+        type: InventoryMovementType.ADJUSTMENT_OUT,
+        reason: 'Parallel race integration test',
+        actorId,
+        requestId: `${requestIdPrefix}-race-sub-${i}`,
+      }),
+    );
+
+    const [reserves, adds, subs] = await Promise.all([
+      Promise.allSettled(reserveOps),
+      Promise.allSettled(addOps),
+      Promise.allSettled(subOps),
+    ]);
+
+    const all = [...reserves, ...adds, ...subs];
+    for (const r of all) {
+      if (r.status === 'rejected') {
+        expect(r.reason).toBeInstanceOf(ConflictException);
       }
     }
+    const ok = all.filter((r) => r.status === 'fulfilled').length;
+
+    const movementDrift =
+      (await prisma.inventoryMovement.count({ where: { variantId } })) -
+      movementsBefore;
+    const fulfilledAdds = adds.filter((r) => r.status === 'fulfilled').length;
+    const fulfilledSubs = subs.filter((r) => r.status === 'fulfilled').length;
+    expect(movementDrift).toBe(fulfilledAdds + fulfilledSubs);
+
+    const auditDrift =
+      (await prisma.auditLog.count({
+        where: { requestId: { startsWith: `${requestIdPrefix}-race-` } },
+      })) - auditBefore;
+    expect(auditDrift).toBe(ok);
+
+    const after = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
+    expect(after.available).toBeGreaterThanOrEqual(0);
+    expect(after.available).toBe(after.onHand - after.reserved);
+
+    const activeQuantity = await prisma.stockReservation.aggregate({
+      where: { variantId, status: 'ACTIVE' },
+      _sum: { quantity: true },
+    });
+    expect(activeQuantity._sum.quantity ?? 0).toBe(after.reserved);
+
+    const fulfilledReserves = reserves.filter(
+      (r) => r.status === 'fulfilled',
+    ).length;
+    expect(
+      await prisma.stockReservation.count({ where: { variantId } }),
+    ).toBe(reservationsBefore + fulfilledReserves);
   });
 
   it('surfaces deterministic snapshots and movements through the service', async () => {
