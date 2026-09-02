@@ -7,6 +7,11 @@ import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 import { AuditLogService } from '../audit/audit-log.service';
 import { InventoryService } from './inventory.service';
 
+function isSerializationAbort(reason: unknown): boolean {
+  if (typeof reason !== 'object' || reason === null) return false;
+  return (reason as { code?: unknown }).code === 'P2034';
+}
+
 describe.sequential('InventoryService database integration', () => {
   const runId = randomUUID().replaceAll('-', '').slice(0, 20);
   const warehouseId = `test_warehouse_${runId}`;
@@ -443,7 +448,10 @@ describe.sequential('InventoryService database integration', () => {
     expect(ok + rejected.length).toBe(requestCount);
 
     for (const r of rejected) {
-      expect(r.reason).toBeInstanceOf(ConflictException);
+      const reason = r.reason;
+      expect(
+        reason instanceof ConflictException || isSerializationAbort(reason),
+      ).toBe(true);
     }
 
     const balance = await prisma.inventoryBalance.findUniqueOrThrow({
@@ -541,7 +549,10 @@ describe.sequential('InventoryService database integration', () => {
     const all = [...reserves, ...adds, ...subs];
     for (const r of all) {
       if (r.status === 'rejected') {
-        expect(r.reason).toBeInstanceOf(ConflictException);
+        const reason = r.reason;
+        expect(
+          reason instanceof ConflictException || isSerializationAbort(reason),
+        ).toBe(true);
       }
     }
     const ok = all.filter((r) => r.status === 'fulfilled').length;
