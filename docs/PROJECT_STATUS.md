@@ -77,7 +77,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
   behavior and Auth persistence constraints.
 - Auth storage and lifecycle constraints exist, but credential verification, token
   issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
-  permission enforcement are not implemented yet.
+  permission enforcement are not implemented yet. ADR-0007 and `AUTH_CONTRACT.md`
+  define their accepted runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 
