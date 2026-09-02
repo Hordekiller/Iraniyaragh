@@ -49,6 +49,17 @@ enum LoginAttemptOutcome {
   ACCOUNT_DELETED
 }
 
+enum AuthenticationLevel {
+  CUSTOMER_OTP
+  STAFF_MFA
+}
+
+enum MfaChallengePurpose {
+  STAFF_SIGN_IN
+  TOTP_ENROLLMENT
+  SENSITIVE_ACTION
+}
+
 enum ProductStatus {
   DRAFT
   ACTIVE
@@ -160,6 +171,8 @@ model User {
   roleAssignmentsRevoked UserRole[]              @relation("UserRoleRevoker")
   permissionGrants       RolePermission[]        @relation("RolePermissionGrantor")
   permissionRevocations  RolePermission[]        @relation("RolePermissionRevoker")
+  mfaChallenges          MfaChallenge[]
+  totpCredential         TotpCredential?
 
   @@index([status, createdAt])
   @@index([lockedUntil])
@@ -239,28 +252,77 @@ model RolePermission {
 }
 
 model Session {
-  id                  String    @id @default(cuid())
+  id                  String              @id @default(cuid())
   userId              String
-  refreshTokenHash    String    @unique @db.VarChar(255)
-  tokenFamilyId       String    @db.VarChar(30)
-  replacedBySessionId String?   @unique
-  deviceIdHash        String?   @db.VarChar(255)
-  deviceName          String?   @db.VarChar(150)
-  userAgent           String?   @db.Text
-  ipHash              String?   @db.VarChar(255)
+  refreshTokenHash    String              @unique @db.VarChar(255)
+  tokenFamilyId       String              @db.VarChar(30)
+  authenticationLevel AuthenticationLevel
+  authenticatedAt     DateTime
+  replacedBySessionId String?             @unique
+  deviceIdHash        String?             @db.VarChar(255)
+  deviceName          String?             @db.VarChar(150)
+  userAgent           String?             @db.Text
+  ipHash              String?             @db.VarChar(255)
   lastUsedAt          DateTime?
   expiresAt           DateTime
   revokedAt           DateTime?
-  revokeReason        String?   @db.VarChar(500)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  replacedBy          Session?  @relation("SessionRotation", fields: [replacedBySessionId], references: [id], onDelete: SetNull)
-  replaces            Session?  @relation("SessionRotation")
+  revokeReason        String?             @db.VarChar(500)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy          Session?            @relation("SessionRotation", fields: [replacedBySessionId], references: [id], onDelete: SetNull)
+  replaces            Session?            @relation("SessionRotation")
 
   @@index([userId, revokedAt, expiresAt])
   @@index([tokenFamilyId, createdAt])
+  @@index([tokenFamilyId, revokedAt])
   @@index([expiresAt])
+}
+
+model MfaChallenge {
+  id                 String              @id @default(cuid())
+  userId             String
+  challengeTokenHash String              @unique @db.VarChar(255)
+  purpose            MfaChallengePurpose
+  attempts           Int                 @default(0)
+  maxAttempts        Int                 @default(5)
+  expiresAt          DateTime
+  consumedAt         DateTime?
+  invalidatedAt      DateTime?
+  requestId          String?             @db.VarChar(100)
+  createdAt          DateTime            @default(now())
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, createdAt])
+  @@index([expiresAt, consumedAt, invalidatedAt])
+}
+
+model TotpCredential {
+  id                   String         @id @default(cuid())
+  userId               String         @unique
+  encryptedSecret      String         @db.Text
+  encryptionKeyVersion String         @db.VarChar(50)
+  lastAcceptedStep     Int?
+  confirmedAt          DateTime?
+  disabledAt           DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  user                 User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recoveryCodes        RecoveryCode[]
+
+  @@index([confirmedAt, disabledAt])
+}
+
+model RecoveryCode {
+  id               String         @id @default(cuid())
+  totpCredentialId String
+  codeHash         String         @unique @db.VarChar(255)
+  consumedAt       DateTime?
+  invalidatedAt    DateTime?
+  createdAt        DateTime       @default(now())
+  totpCredential   TotpCredential @relation(fields: [totpCredentialId], references: [id], onDelete: Cascade)
+
+  @@index([totpCredentialId, consumedAt, invalidatedAt])
 }
 
 model OtpCode {
@@ -579,8 +641,8 @@ model Order {
   customer     Customer           @relation(fields: [customerId], references: [id])
   status       OrderStatus        @default(PENDING_PAYMENT)
   subtotal     BigInt
-  discount     BigInt            @default(0)
-  shipping     BigInt            @default(0)
+  discount     BigInt             @default(0)
+  shipping     BigInt             @default(0)
   grandTotal   BigInt
   items        OrderItem[]
   payments     Payment[]

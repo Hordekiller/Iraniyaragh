@@ -1,10 +1,15 @@
-import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  plugins: [react()],
   test: {
-    include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
-    exclude: ['node_modules/**', 'dist/**'],
+    environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}', 'src/**/*.spec.{ts,tsx}'],
+    exclude: ['dist/**', 'node_modules/**'],
+    setupFiles: ['src/test/setup.ts'],
+    passWithNoTests: false,
     clearMocks: true,
     restoreMocks: true,
   },
-});
+})
