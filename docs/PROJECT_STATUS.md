@@ -41,6 +41,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Forward BIGINT money migration: all ten money columns now store canonical integer Rial
   (ADR-0003 extension #13), guarded by a fractional-preflight check and a rollback-only
   money verification script
+- Deterministic, transactional development/test RBAC seed with 20 canonical
+  permissions, a non-user `system-admin` role, explicit target safety policy, two-run
+  CI verification and a separate `prisma:deploy` release command
 - API foundation (#21): per-request IDs via middleware + AsyncLocalStorage, stable error
   response envelopes with machine-readable codes, redacted structured JSON logging
   (secrets/OTP/PII scrubbed), a global exception filter (validation/prisma/internal mapping),
@@ -50,6 +53,12 @@ The repository is in **foundation/prototype**, before release `0.1`.
   CodeQL extended analysis for TypeScript/JavaScript and Actions, secret scanning with
   push protection, Dependabot security updates, dependency review and private
   vulnerability reporting
+- Production dependency remediation (#54): admin runtime upgraded from vulnerable
+  Next.js 16.1.1 to 16.3.3 with patched PostCSS/Sharp, plus a narrowly scoped
+  `@prisma/config` deepmerge-ts 8.0.2 override verified against clean migrations,
+  drift, SQL constraints and integration tests; an independent production-lockfile
+  audit now runs on every PR/main push, weekly and on demand, and reports no known
+  vulnerabilities at the recorded review point
 
 ### Partial
 
@@ -73,7 +82,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
   verification) plus Auth persistence constraints.
 - Auth storage and lifecycle constraints exist, but credential verification, token
   issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
-  permission enforcement are not implemented yet.
+  permission enforcement are not implemented yet. ADR-0007 and `AUTH_CONTRACT.md`
+  define their accepted runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 
@@ -82,13 +92,14 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration
-- Broader domain integration and API E2E tests, seed script, observability and
-  deployment pipeline
+- Broader domain integration and API E2E tests, observability and deployment pipeline
 
 ## Known engineering gaps
 
-1. The initial database migration and automated CI migration/constraint checks are
-   committed, but no deterministic development seed exists.
+1. Reviewed forward migrations, automated CI migration/constraint checks, an explicit
+   deploy command and a deterministic development/test RBAC seed exist. Production
+   release orchestration, backup/restore evidence and a secure first-admin bootstrap
+   command remain.
 2. Configuration/guard unit tests, a Playwright shell suite and initial database
    integration coverage exist; broader domain, concurrency and coverage thresholds remain.
 3. The storefront prototype is decomposed into typed single-purpose components.
@@ -111,9 +122,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
    transition tables (ADR-0006, G5-07 foundation); the contract and shared
    compare-and-swap helper are approved in #38 and CI-verified. Services that drive those
    machines, reconciliation and the customer-facing status/timeline language remain to be
-   built. The draft #28 commerce-customer-journey rebuild (cart/checkout/orders/payments/
-   notifications/stock-alerts) was blocked on the #40 money migration (now merged) and must
-   be rebased off the approved #38 contract on `main` before it can land.
+   built. Draft #28 was closed as superseded because its alternative baseline migration
+   and cross-cutting foundations conflicted with the approved #30/#38/#40/#43 contracts.
+   Its cart/checkout/order/payment/notification ideas remain backlog input and must be
+   rebuilt as small contract-first changes on current `main`.
 10. API response envelopes, stable error codes, correlation/request IDs and OpenAPI are now
     wired for the HTTP layer (see Implemented). Authentication controllers and the domain
     controllers that will exercise the codes per use case are not implemented yet.

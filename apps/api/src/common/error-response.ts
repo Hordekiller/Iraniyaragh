@@ -1,22 +1,6 @@
-export type AppErrorCode =
-  | 'INVALID_REQUEST'
-  | 'VALIDATION_ERROR'
-  | 'UNAUTHORIZED'
-  | 'FORBIDDEN'
-  | 'NOT_FOUND'
-  | 'CONFLICT'
-  | 'ORDER_STATE_CONFLICT'
-  | 'PAYMENT_STATE_CONFLICT'
-  | 'FULFILLMENT_STATE_CONFLICT'
-  | 'HEALTH_NOT_READY'
-  | 'RATE_LIMITED'
-  | 'UNPROCESSABLE'
-  | 'UPSTREAM_UNAVAILABLE'
-  | 'METHOD_NOT_ALLOWED'
-  | 'NOT_ACCEPTABLE'
-  | 'REQUEST_TIMEOUT'
-  | 'PAYLOAD_TOO_LARGE'
-  | 'INTERNAL_ERROR';
+import type { ApiErrorCode } from '@iranyaragh/contracts';
+
+export type AppErrorCode = ApiErrorCode;
 
 export type ErrorEnvelope = {
   code: AppErrorCode;

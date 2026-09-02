@@ -3,7 +3,9 @@
 This document is the default engineering contract for all future Iraniyaragh development. A feature that violates these rules must be discussed and documented with an Architecture Decision Record (ADR) before implementation.
 
 ## 1. Product boundaries
+
 Iraniyaragh is a commerce and warehouse platform with a shared business backend serving:
+
 - Customer Web
 - Customer Mobile App
 - Admin/Operations Panel
@@ -12,6 +14,7 @@ Iraniyaragh is a commerce and warehouse platform with a shared business backend 
 The backend is the source of business truth. UI clients must not own business rules.
 
 ## 2. Architecture baseline
+
 - Monorepo: pnpm + Turborepo
 - Backend: NestJS modular monolith
 - Database: PostgreSQL
@@ -27,18 +30,22 @@ The backend is the source of business truth. UI clients must not own business ru
 Do not introduce microservices until profiling and operational evidence justify the split.
 
 ## 3. Domain rules that must not be bypassed
+
 ### Money
+
 - Never use JavaScript floating-point numbers for accounting calculations.
 - Persist money as integer minor/base units according to the project's chosen currency convention.
 - Currency and display conversion are presentation concerns.
 - Price changes must be auditable.
 
 ### Time
+
 - Persist timestamps in UTC.
 - Convert to Iran/local timezone only at presentation boundaries.
 - Jalali dates are a UI/reporting format, not the database time model.
 
 ### Inventory
+
 - SKU is the atomic sellable inventory unit.
 - Inventory is warehouse/location aware.
 - Physical stock changes always create immutable ledger movements.
@@ -48,17 +55,20 @@ Do not introduce microservices until profiling and operational evidence justify 
 - Manual corrections require reason, actor and audit trail.
 
 ### Orders
+
 - Order state is controlled by a state machine.
 - Clients may request commands; they may not freely assign arbitrary states.
 - Financial state and fulfillment state must not be collapsed into one field.
 
 ### Payments
+
 - Payment attempts are separate from orders.
 - External callbacks are verified server-side.
 - Payment verification and refunds are idempotent.
 - Duplicate callbacks must never create duplicate financial effects.
 
 ## 4. Cross-cutting platform capabilities required from the beginning
+
 - Authentication
 - Fine-grained RBAC/permissions
 - Audit log
@@ -77,36 +87,41 @@ Do not introduce microservices until profiling and operational evidence justify 
 - Feature flags for staged rollout where useful
 
 ## 5. Data lifecycle
+
 Important business entities should prefer explicit lifecycle states and/or soft deletion over destructive deletion when historical integrity matters.
 
 Examples:
+
 - Product/SKU: archive instead of deleting historical references.
 - Supplier: deactivate if referenced by purchases.
 - Customer: privacy-sensitive anonymization must be handled separately from deleting order history.
 - Orders/payments/inventory ledger: never hard-delete through normal application flows.
 
 ## 6. Shared contracts
+
 `packages/contracts` is the boundary for reusable API/domain contracts where appropriate.
+
 - Avoid duplicating enums/error codes across web/admin/mobile/api.
 - Do not expose Prisma/database models directly as public API contracts.
 - Public contracts may evolve independently from persistence models.
 
 ## 7. Error model
+
 Errors returned to clients should be stable and machine-readable.
 
 Example:
+
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "INSUFFICIENT_STOCK",
-    "message": "موجودی کافی نیست",
-    "requestId": "..."
-  }
+  "code": "INSUFFICIENT_STOCK",
+  "message": "موجودی کافی نیست",
+  "requestId": "...",
+  "statusCode": 409
 }
 ```
 
 Representative codes:
+
 - `VALIDATION_ERROR`
 - `UNAUTHORIZED`
 - `FORBIDDEN`
@@ -118,7 +133,9 @@ Representative codes:
 - `IDEMPOTENCY_CONFLICT`
 
 ## 8. Definition of Done for critical features
+
 A business-critical feature is not complete until applicable items are done:
+
 - Business rule implemented in service/domain layer
 - Input validation
 - Permission check
@@ -133,7 +150,9 @@ A business-critical feature is not complete until applicable items are done:
 - Security/privacy impact reviewed
 
 ## 9. Change policy
+
 If a future requirement contradicts this foundation, create an ADR under `docs/adr/` explaining:
+
 1. Context
 2. Decision
 3. Alternatives

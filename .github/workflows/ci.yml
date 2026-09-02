@@ -36,13 +36,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
+      ALLOW_DATABASE_SEED: "true"
       NODE_ENV: test
       DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/iraniyaragh_ci_test?schema=public
       PSQL_DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/iraniyaragh_ci_test
       SHADOW_DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/ci_shadow_test?schema=public
     services:
       postgres:
-        image: postgres:18-alpine
+        image: postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
         env:
           POSTGRES_DB: iranyaragh_ci_test
           POSTGRES_USER: app_test
@@ -104,6 +105,15 @@ jobs:
           psql "$PSQL_DATABASE_URL"
           --set ON_ERROR_STOP=1
           --file apps/api/prisma/tests/money_migration.sql
+      - name: Seed deterministic RBAC baseline twice
+        run: |
+          pnpm --filter @iranyaragh/api prisma:seed
+          pnpm --filter @iranyaragh/api prisma:seed
+      - name: Verify deterministic seed baseline
+        run: >-
+          psql "$PSQL_DATABASE_URL"
+          --set ON_ERROR_STOP=1
+          --file apps/api/prisma/tests/seed_baseline.sql
       - name: Run database integration tests
         run: pnpm test:integration
 

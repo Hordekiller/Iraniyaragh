@@ -52,6 +52,10 @@ The public repository also has independent security gates:
   weekly schedule.
 - `.github/workflows/dependency-review.yml` rejects newly introduced direct or
   transitive dependencies with moderate-or-higher known vulnerabilities.
+- `.github/workflows/production-audit.yml` rejects moderate-or-higher known
+  vulnerabilities across the complete production lockfile on every pull request,
+  protected-branch push, manual run and a weekly schedule. This catches advisories
+  published after the dependency originally entered the repository.
 - Dependabot alerts and security updates are enabled; `.github/dependabot.yml`
   proposes bounded weekly npm-workspace and GitHub Actions update groups.
 - Secret scanning and push protection detect existing supported credentials and
@@ -63,6 +67,17 @@ All workflow actions are pinned to reviewed full commit SHAs. The adjacent versi
 comment is documentation only; updating a tag does not update the executed code.
 Action upgrades require a reviewed SHA change and must retain the Node 24-compatible
 runtime baseline.
+
+Run `pnpm audit --prod --audit-level=moderate` locally during dependency triage too;
+a green Dependency Review only evaluates a PR delta and is not proof that the existing
+tree has no newly published advisory. The scheduled production-audit workflow is the
+continuous baseline check, but local evidence is still required before review. The
+admin runtime is pinned to Next.js `16.3.3`,
+which brings patched PostCSS/Sharp versions. Prisma 6.19.3 still pins vulnerable
+`deepmerge-ts` 7.x through `@prisma/config`, so `pnpm-workspace.yaml` contains one
+narrow override to 8.0.2. Do not broaden or remove it until the production audit,
+Prisma generate/validate, clean migration+drift, SQL constraints and integration
+tests all pass with the replacement.
 
 The smoke suite enforces a **zero-external-asset gate**: any HTTP(S) request
 from `web` or `admin` to an origin other than the app itself fails the run. The
@@ -84,6 +99,43 @@ Production deployments should be reproducible and Docker-based.
   applied merely to suppress drift; use a separately reviewed baselining/runbook.
 - Never edit an already-shared migration. Preserve custom Auth `CHECK` constraints
   and add a forward migration for every later schema change.
+
+Deployment applies committed migrations without generating, resetting or seeding
+the database:
+
+```bash
+pnpm --filter @iranyaragh/api prisma:deploy
+```
+
+Run this command from an automated release phase with environment-managed
+credentials; do not copy a production `DATABASE_URL` into a developer shell.
+
+### Development/test seed
+
+The deterministic seed is deliberately separate from deployment. It creates the
+20 canonical permission definitions, a `system-admin` role, its active grants and
+one safe bootstrap audit marker. It never creates a user, password, session, OTP,
+customer or other PII-bearing fixture. A privileged user must later be created by a
+separate authenticated bootstrap workflow; default admin credentials are forbidden.
+
+Seeding requires `ALLOW_DATABASE_SEED=true` plus either:
+
+- `NODE_ENV=test` and a database name ending in `_test`; or
+- `NODE_ENV=development` and an approved local PostgreSQL host/database.
+
+Staging, production and remote development targets are rejected before Prisma
+connects. For an explicitly selected local development database:
+
+```bash
+ALLOW_DATABASE_SEED=true NODE_ENV=development \
+  pnpm --filter @iranyaragh/api prisma:seed
+```
+
+The seed is transactional and convergent: rerunning it updates/reactivates only the
+seed-owned RBAC baseline and creates no duplicate permissions, roles or grants. It
+does not delete unrelated operator data. CI migrates a fresh PostgreSQL database,
+runs the seed twice and verifies the durable result with
+`apps/api/prisma/tests/seed_baseline.sql`.
 
 For Auth persistence changes, verify on a clean PostgreSQL database:
 
