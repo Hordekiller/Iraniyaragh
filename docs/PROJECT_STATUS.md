@@ -88,21 +88,22 @@ The repository is in **foundation/prototype**, before release `0.1`.
   covered in the Vitest component suite.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
-- Unit/HTTP tests cover environment/CORS validation, database URL safety and
-  liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
   database integration covers the hardened inventory ledger (parallel reserve and
   parallel reserve-versus-stock-change races without double-spend or negative stock,
   consume/release/expire, read-only snapshot/movement, audit actor+request-id
   verification) plus Auth persistence constraints.
-- Auth storage and lifecycle constraints exist, but credential verification, token
-  persistence/transactional refresh rotation, OTP delivery, rate limiting, password/TOTP
-  verification and server-side permission enforcement are not implemented yet. The
-  migration-independent token/hash primitives now exist; ADR-0007 and `AUTH_CONTRACT.md`
-  define the remaining runtime, HTTP, threat and client-state contract.
+- Auth storage and lifecycle constraints exist, but credential verification, OTP
+  delivery, rate limiting and password/TOTP verification are not implemented yet. The
+  migration-independent token/hash primitives exist; ADR-0007 and `AUTH_CONTRACT.md`
+  define the remaining runtime, HTTP, threat and client-state contract. A live
+  bearer-principal resolver and permission guard (per-request JWT verification plus live
+  session/user/RBAC evaluation, with `RequireAuthentication`/`RequirePermission`
+  metadata and stable 401/403 envelopes) are implemented behind #85 and await the
+  session-rotation and auth-client PR queue (#61/#65/#83) before they reach `main`.
 
 ### Not implemented
 
-- Authentication controllers/services, OTP delivery, 2FA and RBAC enforcement
+- Authentication controllers/services, OTP delivery and 2FA
 - Catalog, customer, order, payment, supplier and audit use cases/controllers
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
@@ -126,7 +127,8 @@ The repository is in **foundation/prototype**, before release `0.1`.
    conflicts (P2034), and DB integration concurrency coverage (parallel reserve /
    change without double-spend or negative stock) is implemented in `test:integration`.
 6. Inventory commands now require and record an actor and request id in the audit
-   trail; wiring to the authenticated session principal still awaits the auth runtime.
+   trail; the live bearer-principal guard (#85) provides the `inventory.read`
+   permission evaluation foundation, but no inventory controller is authorized yet.
 7. Reservation consume, release and expire are implemented on the balance layer;
    transfer flows and order integration are not implemented.
 8. Money convention is decided and landed: the ADR-0003 extension (#13) specifies
