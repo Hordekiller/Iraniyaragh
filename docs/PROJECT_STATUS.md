@@ -66,8 +66,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
 
 ### Partial
 
-- Inventory rules exist in one service but have no public controller, authorization,
-  audit actor, retry policy, tests or complete reservation lifecycle.
+- Inventory rules live in one service with actor/requestId tracing, audit rows,
+  CAS version guards, bounded serializable retry, reservation consume/release/expire
+  and read-only snapshot/movement queries (a public controller is withheld until the
+  auth runtime provides the `inventory.read` permission). Mutations still have no
+  public authenticated endpoint or authorization.
 - Shared contracts only contain basic response/money/inventory types.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
@@ -75,10 +78,15 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront search box filters the prototype catalog by title, brand and
   category (token match) and opens matches in the product modal; the results band
   is covered by the Playwright suite.
+- Hero slider and toast expose explicit pause/play and close controls, honour
+  `prefers-reduced-motion` (slider), and the toast's base duration is 5s — all
+  covered in the Vitest component suite.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
-  database integration currently covers only initial inventory transaction/idempotency
-  behavior and Auth persistence constraints.
+  database integration covers the hardened inventory ledger (parallel reserve and
+  parallel reserve-versus-stock-change races without double-spend or negative stock,
+  consume/release/expire, read-only snapshot/movement, audit actor+request-id
+  verification) plus Auth persistence constraints.
 - Auth storage and lifecycle constraints exist, but credential verification, token
   persistence/transactional refresh rotation, OTP delivery, rate limiting, password/TOTP
   verification and server-side permission enforcement are not implemented yet. The
@@ -107,10 +115,13 @@ The repository is in **foundation/prototype**, before release `0.1`.
    typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.
 4. CORS now uses a validated environment allowlist; deployment configuration must
    supply the correct staging/production origins and retain negative tests.
-5. Critical serializable transactions need bounded retry behavior for transaction
-   conflicts and concurrency tests.
-6. Inventory commands do not yet capture authenticated actor/audit metadata.
-7. Reservation consume/expire and transfer flows are not implemented.
+5. Critical serializable transactions now have bounded retry for transaction
+   conflicts (P2034), and DB integration concurrency coverage (parallel reserve /
+   change without double-spend or negative stock) is implemented in `test:integration`.
+6. Inventory commands now require and record an actor and request id in the audit
+   trail; wiring to the authenticated session principal still awaits the auth runtime.
+7. Reservation consume, release and expire are implemented on the balance layer;
+   transfer flows and order integration are not implemented.
 8. Money convention is decided and landed: the ADR-0003 extension (#13) specifies
    canonical integer-Rial `BIGINT` storage with Toman presentation-only, and the forward
    migration converts all ten `Decimal(18,2)` money columns with a fractional-preflight
