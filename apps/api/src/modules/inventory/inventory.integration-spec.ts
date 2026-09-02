@@ -7,11 +7,6 @@ import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 import { AuditLogService } from '../audit/audit-log.service';
 import { InventoryService } from './inventory.service';
 
-function isSerializationAbort(reason: unknown): boolean {
-  if (typeof reason !== 'object' || reason === null) return false;
-  return (reason as { code?: unknown }).code === 'P2034';
-}
-
 describe.sequential('InventoryService database integration', () => {
   const runId = randomUUID().replaceAll('-', '').slice(0, 20);
   const warehouseId = `test_warehouse_${runId}`;
@@ -157,6 +152,137 @@ describe.sequential('InventoryService database integration', () => {
     await expect(
       prisma.inventoryMovement.count({ where: { idempotencyKey } }),
     ).resolves.toBe(1);
+  });
+
+  it('applies exactly one effect when identical idempotent commands race', async () => {
+    const key = `${idempotencyKey}-race-identical`;
+    const before = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
+    const suffix = `${requestIdPrefix}-idem-race-same-`;
+
+    const results = await Promise.allSettled(
+      Array.from({ length: 4 }, (_, i) =>
+        inventory.changeOnHand({
+          warehouseId,
+          locationId,
+          variantId,
+          delta: 2,
+          type: InventoryMovementType.RECEIPT,
+          idempotencyKey: key,
+          actorId,
+          requestId: `${suffix}${i}`,
+        }),
+      ),
+    );
+
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        expect(r.reason).toBeInstanceOf(ConflictException);
+      }
+    }
+
+    const movements = await prisma.inventoryMovement.findMany({
+      where: { idempotencyKey: key },
+    });
+    expect(movements).toHaveLength(1);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+    for (const r of fulfilled) {
+      expect(r.value.id).toBe(movements[0].id);
+    }
+
+    const balance = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
+    expect(balance.onHand).toBe(before.onHand + movements[0].quantity);
+    expect(balance.version).toBe(before.version + 1);
+
+    const audits = await prisma.auditLog.findMany({
+      where: { requestId: { startsWith: suffix } },
+    });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      action: 'inventory.balance.changed',
+      entityType: 'inventory-movement',
+    });
+
+    const replay = await inventory.changeOnHand({
+      warehouseId,
+      locationId,
+      variantId,
+      delta: 2,
+      type: InventoryMovementType.RECEIPT,
+      idempotencyKey: key,
+      actorId,
+      requestId: `${requestIdPrefix}-idem-race-replay`,
+    });
+    expect(replay.id).toBe(movements[0].id);
+  });
+
+  it('keeps a single effect and conflicts the loser of a same-key, different-payload race', async () => {
+    const key = `${idempotencyKey}-race-conflict`;
+    const before = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
+
+    const payloads = [
+      {
+        delta: 3,
+        type: InventoryMovementType.RECEIPT,
+        reason: undefined,
+      },
+      {
+        delta: 99,
+        type: InventoryMovementType.ADJUSTMENT_IN,
+        reason: 'conflicting payload race',
+      },
+    ];
+
+    const results = await Promise.allSettled(
+      payloads.map((p, i) =>
+        inventory.changeOnHand({
+          warehouseId,
+          locationId,
+          variantId,
+          delta: p.delta,
+          type: p.type,
+          reason: p.reason,
+          idempotencyKey: key,
+          actorId,
+          requestId: `${requestIdPrefix}-idem-race-payload-${i}`,
+        }),
+      ),
+    );
+
+    const accepted = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+    expect(accepted).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toBeInstanceOf(ConflictException);
+
+    const movements = await prisma.inventoryMovement.findMany({
+      where: { idempotencyKey: key },
+    });
+    expect(movements).toHaveLength(1);
+
+    const balance = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
+    expect(balance.onHand).toBe(before.onHand + movements[0].quantity);
+    expect(balance.version).toBe(before.version + 1);
+
+    const audits = await prisma.auditLog.findMany({
+      where: {
+        requestId: { startsWith: `${requestIdPrefix}-idem-race-payload-` },
+      },
+    });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      action: 'inventory.balance.changed',
+      entityType: 'inventory-movement',
+    });
   });
 
   it('rolls back every write when a serializable transaction fails', async () => {
@@ -448,10 +574,7 @@ describe.sequential('InventoryService database integration', () => {
     expect(ok + rejected.length).toBe(requestCount);
 
     for (const r of rejected) {
-      const reason = r.reason;
-      expect(
-        reason instanceof ConflictException || isSerializationAbort(reason),
-      ).toBe(true);
+      expect(r.reason).toBeInstanceOf(ConflictException);
     }
 
     const balance = await prisma.inventoryBalance.findUniqueOrThrow({
@@ -549,10 +672,7 @@ describe.sequential('InventoryService database integration', () => {
     const all = [...reserves, ...adds, ...subs];
     for (const r of all) {
       if (r.status === 'rejected') {
-        const reason = r.reason;
-        expect(
-          reason instanceof ConflictException || isSerializationAbort(reason),
-        ).toBe(true);
+        expect(r.reason).toBeInstanceOf(ConflictException);
       }
     }
     const ok = all.filter((r) => r.status === 'fulfilled').length;

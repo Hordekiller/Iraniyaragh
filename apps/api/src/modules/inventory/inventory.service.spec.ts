@@ -178,6 +178,43 @@ describe('InventoryService guards and queries', () => {
     );
   });
 
+  it('translates exhausted serialization aborts into a stable conflict', async () => {
+    const abort = (code: string) =>
+      Object.assign(new Error('Serialization abort'), {
+        name: 'PrismaClientKnownRequestError',
+        code,
+      });
+    ctx.prisma.$transaction = vi
+      .fn()
+      .mockRejectedValue(abort('P2034')) as never;
+
+    await expect(
+      ctx.service.changeOnHand({
+        ...base,
+        delta: 3,
+        reason: 'serialization retry test',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(ctx.prisma.$transaction).toHaveBeenCalledTimes(3);
+  });
+
+  it('rethrows non-serializable errors immediately without extra retries', async () => {
+    ctx.prisma.$transaction = vi
+      .fn()
+      .mockRejectedValue(new ConflictException('version conflict')) as never;
+
+    await expect(
+      ctx.service.changeOnHand({
+        ...base,
+        delta: 3,
+        reason: 'non retryable test',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(ctx.prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
   it('maps snapshots with filtered records, count and default paging', async () => {
     ctx.prisma.inventoryBalance.findMany.mockResolvedValue([{ onHand: 3, reserved: 1 }]);
     ctx.prisma.inventoryBalance.count.mockResolvedValue(1);

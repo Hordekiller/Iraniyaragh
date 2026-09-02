@@ -585,25 +585,29 @@ export class InventoryService {
   }
 
   private async withSerializableRetry<T>(operation: () => Promise<T>): Promise<T> {
-    let lastError: unknown;
     for (let attempt = 0; attempt < SERIALIZABLE_RETRIES; attempt += 1) {
       try {
         return await operation();
       } catch (error) {
-        lastError = error;
-        if (
-          attempt < SERIALIZABLE_RETRIES - 1 &&
+        const isSerializationAbort =
           typeof error === 'object' &&
           error !== null &&
           'code' in error &&
-          (error as { code?: unknown }).code === 'P2034'
-        ) {
+          (error as { code?: unknown }).code === 'P2034';
+        if (isSerializationAbort && attempt < SERIALIZABLE_RETRIES - 1) {
           continue;
+        }
+        if (isSerializationAbort) {
+          throw new ConflictException(
+            'Stock operation could not be applied because of concurrent updates. Refresh the current state and retry.',
+          );
         }
         throw error;
       }
     }
-    throw lastError;
+    throw new ConflictException(
+      'Stock operation could not be applied because of concurrent updates. Refresh the current state and retry.',
+    );
   }
 }
 
