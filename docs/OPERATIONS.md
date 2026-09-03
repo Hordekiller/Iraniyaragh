@@ -16,8 +16,17 @@ The API validates configuration before opening a listening socket. Development m
 default to the known local web/admin origins; staging and production must provide an
 explicit comma-separated `CORS_ORIGINS` allowlist. Wildcards are forbidden when
 credentialed requests are enabled. Staging and production must also provide an
-explicit `API_PORT`; their JWT/object-storage secrets must be non-placeholder values
-of at least 32 characters, and access/refresh secrets must differ.
+explicit `API_PORT`. Auth requires an exact `AUTH_JWT_ISSUER`, a minimum 32-byte
+`JWT_ACCESS_SECRET`, and a distinct minimum 32-byte `AUTH_HASH_SECRET` with a positive
+`AUTH_HASH_KEY_VERSION`. Surrounding whitespace is rejected rather than silently
+changing key material. Staging/production reject known placeholder values.
+
+Hash-key rotation is bounded to two keys: deploy the new current version/secret and
+temporarily retain the old pair as `AUTH_HASH_PREVIOUS_KEY_VERSION` and
+`AUTH_HASH_PREVIOUS_SECRET`. New hashes use only the current key; lookup/verification
+accepts both versions until active records are rotated or expire. Never reuse a key
+version with different material, and remove the previous key only after verifying no
+live record depends on it. JWT signing and Auth hashing secrets must remain distinct.
 
 Environment values are configuration only; business policy and secrets never use
 client-exposed variables. Update `.env.example`, deployment secrets and this matrix
@@ -97,6 +106,13 @@ Production deployments should be reproducible and Docker-based.
   proof that this migration ran. Back up any needed data, then recreate disposable
   development databases from migrations. Never mark a production migration as
   applied merely to suppress drift; use a separately reviewed baselining/runbook.
+- `20260901043500_auth_mfa_persistence` is the forward Auth prerequisite for runtime
+  sessions and privileged MFA. It adds required authentication evidence to `Session`
+  plus hashed one-time challenges/recovery codes and encrypted/versioned TOTP
+  credential storage. It deliberately aborts before DDL if `Session` contains rows:
+  stop and investigate/revoke that unmanaged pre-runtime data rather than inventing
+  an authentication level or timestamp. Exercise deploy, status, drift and
+  `auth_constraints.sql` on an isolated copy before release.
 - Never edit an already-shared migration. Preserve custom Auth `CHECK` constraints
   and add a forward migration for every later schema change.
 

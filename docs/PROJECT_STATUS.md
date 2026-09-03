@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-01
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -48,6 +48,15 @@ The repository is in **foundation/prototype**, before release `0.1`.
   response envelopes with machine-readable codes, redacted structured JSON logging
   (secrets/OTP/PII scrubbed), a global exception filter (validation/prisma/internal mapping),
   and OpenAPI/Swagger generation committed at `apps/api/openapi.json` with a CI drift check
+- Initial Auth cryptographic foundation: fail-fast issuer/key configuration, strict
+  ten-minute HS256 access-token signing/verification, 256-bit opaque token generation,
+  constant-time CSRF comparison and versioned/domain-separated HKDF-HMAC hashing with a
+  bounded current/previous-key rotation window
+- Forward Auth MFA persistence contract: Sessions retain mandatory authentication
+  level/time evidence; purpose-bound MFA challenges store only keyed hashes; TOTP
+  credentials store encrypted/versioned secret envelopes and replay steps; recovery
+  codes remain one-way and single-terminal-state, with PostgreSQL constraints and a
+  fail-fast preflight for unmanaged legacy Session rows
 - Public-repository security baseline: enforced `main` protection (required CI,
   non-author CODEOWNERS review, last-push separation, linear history and no force-push),
   CodeQL extended analysis for TypeScript/JavaScript and Actions, secret scanning with
@@ -59,11 +68,19 @@ The repository is in **foundation/prototype**, before release `0.1`.
   drift, SQL constraints and integration tests; an independent production-lockfile
   audit now runs on every PR/main push, weekly and on demand, and reports no known
   vulnerabilities at the recorded review point
+- Transactional Auth Session core: active-principal session creation, absolute and
+  inactivity deadlines by authentication level, current/previous refresh-hash lookup,
+  single-use rotation with compare-and-swap, bounded serializable retry, token-family
+  revocation on sequential/concurrent replay and safe created/rotated/replayed/revoked
+  audit evidence; real PostgreSQL tests prove exactly one concurrent refresh winner
 
 ### Partial
 
-- Inventory rules exist in one service but have no public controller, authorization,
-  audit actor, retry policy, tests or complete reservation lifecycle.
+- Inventory rules live in one service with actor/requestId tracing, audit rows,
+  CAS version guards, bounded serializable retry, reservation consume/release/expire
+  and read-only snapshot/movement queries (a public controller is withheld until the
+  auth runtime provides the `inventory.read` permission). Mutations still have no
+  public authenticated endpoint or authorization.
 - Shared contracts only contain basic response/money/inventory types.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
@@ -71,17 +88,24 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - The storefront search box filters the prototype catalog by title, brand and
   category (token match) and opens matches in the product modal; the results band
   is covered by the Playwright suite.
+- Hero slider and toast expose explicit pause/play and close controls, honour
+  `prefers-reduced-motion` (slider), and the toast's base duration is 5s — all
+  covered in the Vitest component suite.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
-  database integration currently covers only initial inventory transaction/idempotency
-  behavior and Auth persistence constraints.
-- Auth storage and lifecycle constraints exist, but credential verification, token
-  issuance/rotation services, OTP delivery, rate limiting, TOTP and server-side
-  permission enforcement are not implemented yet.
+  database integration covers the hardened inventory ledger (parallel reserve and
+  parallel reserve-versus-stock-change races without double-spend or negative stock,
+  consume/release/expire, read-only snapshot/movement, audit actor+request-id
+  verification) plus Auth persistence constraints and Session rotation/replay concurrency.
+- Auth storage and lifecycle constraints now include the runtime Session/MFA evidence,
+  and the Session core rotates/revokes refresh families transactionally. HTTP Auth
+  endpoints, credential verification, OTP delivery, rate limiting, password/TOTP
+  verification and server-side permission enforcement are not implemented yet. ADR-0007
+  and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 
-- Authentication controllers/services, OTP delivery, 2FA and RBAC enforcement
+- Authentication controllers, OTP delivery, 2FA and RBAC enforcement
 - Catalog, customer, order, payment, supplier and audit use cases/controllers
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
@@ -101,10 +125,13 @@ The repository is in **foundation/prototype**, before release `0.1`.
    typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.
 4. CORS now uses a validated environment allowlist; deployment configuration must
    supply the correct staging/production origins and retain negative tests.
-5. Critical serializable transactions need bounded retry behavior for transaction
-   conflicts and concurrency tests.
-6. Inventory commands do not yet capture authenticated actor/audit metadata.
-7. Reservation consume/expire and transfer flows are not implemented.
+5. Critical serializable transactions now have bounded retry for transaction
+   conflicts (P2034), and DB integration concurrency coverage (parallel reserve /
+   change without double-spend or negative stock) is implemented in `test:integration`.
+6. Inventory commands now require and record an actor and request id in the audit
+   trail; wiring to the authenticated session principal still awaits the auth runtime.
+7. Reservation consume, release and expire are implemented on the balance layer;
+   transfer flows and order integration are not implemented.
 8. Money convention is decided and landed: the ADR-0003 extension (#13) specifies
    canonical integer-Rial `BIGINT` storage with Toman presentation-only, and the forward
    migration converts all ten `Decimal(18,2)` money columns with a fractional-preflight
