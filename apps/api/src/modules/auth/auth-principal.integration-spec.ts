@@ -198,6 +198,53 @@ describe.sequential('AuthPrincipalService database integration', () => {
     expect([...principal.permissions]).toEqual([]);
   });
 
+  it('does not activate future-dated role assignments or role-permission grants', async () => {
+    const futureRole = await prisma.role.create({
+      data: { key: `future_role_${runId}`, name: `future_role_${runId}` },
+    });
+    const futurePermission = await prisma.permission.create({
+      data: {
+        key: `future.spec${runId}`,
+        name: `future.spec${runId}`,
+        group: 'future',
+      },
+    });
+    await prisma.rolePermission.create({
+      data: {
+        roleId: activeRole.id,
+        permissionId: futurePermission.id,
+        grantedAt: new Date(Date.now() + 60 * 60 * 1_000),
+      },
+    });
+    await prisma.userRole.create({
+      data: {
+        userId: staffUser.id,
+        roleId: futureRole.id,
+        assignedAt: new Date(Date.now() + 60 * 60 * 1_000),
+      },
+    });
+    await prisma.rolePermission.create({
+      data: { roleId: futureRole.id, permissionId: grantedPermission.id },
+    });
+
+    const issued = await sessions.createSession({
+      userId: staffUser.id,
+      authenticationLevel: AuthenticationLevel.STAFF_MFA,
+      authenticatedAt: new Date(Date.now() - 1_000),
+    });
+    sessionIds.push(issued.sessionId);
+
+    const principal = await principals.resolveBearerToken(`Bearer ${issued.accessToken}`);
+
+    expect([...principal.permissions].sort()).toEqual([grantedPermission.key]);
+
+    await prisma.userRole.deleteMany({ where: { role: { key: `future_role_${runId}` } } });
+    await prisma.rolePermission.deleteMany({ where: { role: { key: `future_role_${runId}` } } });
+    await prisma.rolePermission.deleteMany({ where: { permissionId: futurePermission.id } });
+    await prisma.role.deleteMany({ where: { key: `future_role_${runId}` } });
+    await prisma.permission.deleteMany({ where: { key: `future.spec${runId}` } });
+  });
+
   it('fails closed after the session is revoked', async () => {
     await sessions.revokeSession(staffUser.id, sessionIds[0]);
 

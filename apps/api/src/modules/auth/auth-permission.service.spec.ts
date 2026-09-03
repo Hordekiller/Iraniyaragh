@@ -46,7 +46,10 @@ describe('AuthPermissionService effectivePermissionKeys', () => {
         where: expect.objectContaining({
           userId: 'user-1',
           revokedAt: null,
-          role: { isActive: true },
+          assignedAt: { lte: expect.any(Date) },
+          role: {
+            isActive: true,
+          },
         }),
       }),
     );
@@ -70,5 +73,26 @@ describe('AuthPermissionService effectivePermissionKeys', () => {
     ]);
 
     await expect(service.effectivePermissionKeys('user-1')).resolves.toEqual(new Set(['catalog.read']));
+  });
+
+  it('passes assignedAt <= now bound to exclude future-dated role assignments', async () => {
+    const { service, findMany } = createService([]);
+    await service.effectivePermissionKeys('user-1', new Date('2026-06-15T00:00:00Z'));
+
+    const where = findMany.mock.calls[0][0].where;
+    expect(where.assignedAt).toEqual({ lte: new Date('2026-06-15T00:00:00Z') });
+  });
+
+  it('passes grantedAt <= now bound to exclude future-dated role-permission grants', async () => {
+    const { service, findMany } = createService([
+      { role: { permissions: [{ permission: { key: 'admin.write', isActive: true } }] } },
+    ]);
+    await service.effectivePermissionKeys('user-1', new Date('2026-06-15T00:00:00Z'));
+
+    const rolePermsSelect = findMany.mock.calls[0][0].select.role.select.permissions;
+    expect(rolePermsSelect.where).toEqual({
+      revokedAt: null,
+      grantedAt: { lte: new Date('2026-06-15T00:00:00Z') },
+    });
   });
 });
