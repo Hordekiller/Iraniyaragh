@@ -68,6 +68,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   drift, SQL constraints and integration tests; an independent production-lockfile
   audit now runs on every PR/main push, weekly and on demand, and reports no known
   vulnerabilities at the recorded review point
+- Transactional Auth Session core: active-principal session creation, absolute and
+  inactivity deadlines by authentication level, current/previous refresh-hash lookup,
+  single-use rotation with compare-and-swap, bounded serializable retry, token-family
+  revocation on sequential/concurrent replay and safe created/rotated/replayed/revoked
+  audit evidence; real PostgreSQL tests prove exactly one concurrent refresh winner
 
 ### Partial
 
@@ -88,21 +93,19 @@ The repository is in **foundation/prototype**, before release `0.1`.
   covered in the Vitest component suite.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
-- Unit/HTTP tests cover environment/CORS validation, database URL safety and
-  liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
   database integration covers the hardened inventory ledger (parallel reserve and
   parallel reserve-versus-stock-change races without double-spend or negative stock,
   consume/release/expire, read-only snapshot/movement, audit actor+request-id
-  verification) plus Auth persistence constraints.
-- Auth storage and lifecycle constraints exist, but credential verification, token
-  persistence/transactional refresh rotation, OTP delivery, rate limiting, password/TOTP
-  verification and server-side permission enforcement are not implemented yet. The
-  migration-independent token/hash primitives now exist; ADR-0007 and `AUTH_CONTRACT.md`
-  define the remaining runtime, HTTP, threat and client-state contract.
+  verification) plus Auth persistence constraints and Session rotation/replay concurrency.
+- Auth storage and lifecycle constraints now include the runtime Session/MFA evidence,
+  and the Session core rotates/revokes refresh families transactionally. HTTP Auth
+  endpoints, credential verification, OTP delivery, rate limiting, password/TOTP
+  verification and server-side permission enforcement are not implemented yet. ADR-0007
+  and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 
-- Authentication controllers/services, OTP delivery, 2FA and RBAC enforcement
+- Authentication controllers, OTP delivery, 2FA and RBAC enforcement
 - Catalog, customer, order, payment, supplier and audit use cases/controllers
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
