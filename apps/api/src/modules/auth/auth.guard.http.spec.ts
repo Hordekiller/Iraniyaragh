@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiFoundationModule } from '../../common/api-foundation.module';
 import { AuthSessionException } from './auth-session.service';
+import { AuthModule } from './auth.module';
 import {
   AuthGuard,
   CurrentPrincipal,
@@ -167,5 +168,33 @@ describe('AuthGuard HTTP behavior', () => {
       code: 'FORBIDDEN',
       statusCode: 403,
     });
+  });
+});
+
+describe('AuthModule global guard wiring', () => {
+  it('registers AuthGuard as the global APP_GUARD using the same provider instance', () => {
+    const providers = Reflect.getMetadata('providers', AuthModule) as unknown[];
+    const globalGuardProvider = providers.find(
+      value =>
+        typeof value === 'object' &&
+        value !== null &&
+        (value as { provide?: unknown }).provide === APP_GUARD,
+    );
+
+    expect(globalGuardProvider).toBeDefined();
+    expect(globalGuardProvider).toMatchObject({
+      provide: APP_GUARD,
+      useExisting: AuthGuard,
+    });
+  });
+
+  it('keeps the guard decorators and AuthGuard as ordinary exports, not Nest runtime exports', () => {
+    expect(typeof CurrentPrincipal).toBe('function');
+    expect(typeof RequireAuthentication).toBe('function');
+    expect(typeof RequirePermission).toBe('function');
+
+    const exportsMetadata = Reflect.getMetadata('exports', AuthModule) as unknown[];
+    const exportedTokens = exportsMetadata.filter(value => typeof value !== 'string' && value === AuthGuard);
+    expect(exportedTokens).toHaveLength(1);
   });
 });

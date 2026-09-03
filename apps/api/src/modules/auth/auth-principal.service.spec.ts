@@ -185,10 +185,34 @@ describe('AuthPrincipalService.resolveBearerToken', () => {
     expect(customer.effective).not.toHaveBeenCalled();
   });
 
-  it('normalizes a stale-context authentication level through the live session value', async () => {
+  it('fails closed when the JWT authentication level does not match the live session', async () => {
     const { service } = createService({
       session: makeSession({ authenticationLevel: 'CUSTOMER_OTP' }),
-      token: makeToken(),
+      token: makeToken({ authenticationLevel: 'STAFF_MFA' }),
+    });
+
+    await expectInvalid(service.resolveBearerToken('Bearer valid-token'));
+  });
+
+  it('fails closed when the JWT auth_time does not match the persisted authenticatedAt', async () => {
+    const mismatchedAuthTime = createService({
+      session: makeSession({ authenticatedAt: nowIso(-60_000) }),
+      token: makeToken({ authenticatedAtSeconds: Math.floor((Date.now() - 120_000) / 1_000) }),
+    });
+    await expectInvalid(mismatchedAuthTime.service.resolveBearerToken('Bearer valid-token'));
+
+    const matchingAuthTime = createService({
+      session: makeSession({ authenticatedAt: nowIso(-60_000) }),
+      token: makeToken({ authenticatedAtSeconds: Math.floor((Date.now() - 60_000) / 1_000) }),
+    });
+    const principal = await matchingAuthTime.service.resolveBearerToken('Bearer valid-token');
+    expect(principal.authenticationLevel).toBe('STAFF_MFA');
+  });
+
+  it('keeps matching JWT/session evidence out of the success path untouched', async () => {
+    const { service } = createService({
+      session: makeSession({ authenticationLevel: 'CUSTOMER_OTP' }),
+      token: makeToken({ authenticationLevel: 'CUSTOMER_OTP', authenticationMethods: ['sms'] }),
     });
 
     const principal = await service.resolveBearerToken('Bearer valid-token');

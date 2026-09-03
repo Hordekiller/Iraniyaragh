@@ -10,6 +10,7 @@ export class AuthPermissionService {
       where: {
         userId,
         revokedAt: null,
+        assignedAt: { lte: now },
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
         role: { isActive: true },
       },
@@ -17,7 +18,7 @@ export class AuthPermissionService {
         role: {
           select: {
             permissions: {
-              where: { revokedAt: null },
+              where: { revokedAt: null, grantedAt: { lte: now } },
               select: {
                 permission: { select: { key: true, isActive: true } },
               },

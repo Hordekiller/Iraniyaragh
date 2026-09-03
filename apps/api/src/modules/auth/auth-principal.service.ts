@@ -70,7 +70,15 @@ export class AuthPrincipalService {
     const inactivityDeadline = new Date(lastActivity.getTime() + this.inactivityTtlMs(session.authenticationLevel));
     if (inactivityDeadline <= now) throw new AuthSessionException('AUTH_SESSION_INVALID');
 
-    const authenticationLevel = session.authenticationLevel;
+    const sessionAuthTimeSeconds = Math.floor(session.authenticatedAt.getTime() / 1_000);
+    if (
+      verified.authenticationLevel !== session.authenticationLevel ||
+      verified.authenticatedAtSeconds !== sessionAuthTimeSeconds
+    ) {
+      throw new AuthSessionException('AUTH_SESSION_INVALID');
+    }
+
+    const authenticationLevel = verified.authenticationLevel;
     const permissionKeys =
       authenticationLevel === 'STAFF_MFA'
         ? await this.permissions.effectivePermissionKeys(verified.userId, now)
@@ -81,7 +89,7 @@ export class AuthPrincipalService {
       sessionId: verified.sessionId,
       tokenId: verified.tokenId,
       authenticationLevel,
-      authenticatedAt: session.authenticatedAt,
+      authenticatedAt: new Date(sessionAuthTimeSeconds * 1_000),
       accessExpiresAt: new Date(verified.expiresAtSeconds * 1_000),
       permissions: permissionKeys,
     });
