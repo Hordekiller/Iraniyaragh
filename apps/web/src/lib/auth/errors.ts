@@ -14,6 +14,8 @@ export class AuthApiError extends Error {
   readonly statusCode?: number;
   readonly requestId?: string;
   readonly details?: unknown;
+  /** Rate-limit hint (seconds): when set, callers should back off before retrying. */
+  readonly retryAfterSeconds?: number;
 
   constructor(input: {
     code: AuthApiErrorCode | ClientErrorCode;
@@ -21,6 +23,7 @@ export class AuthApiError extends Error {
     statusCode?: number;
     requestId?: string;
     details?: unknown;
+    retryAfterSeconds?: number;
   }) {
     super(input.message);
     this.name = 'AuthApiError';
@@ -28,7 +31,22 @@ export class AuthApiError extends Error {
     this.statusCode = input.statusCode;
     this.requestId = input.requestId;
     this.details = input.details;
+    this.retryAfterSeconds = input.retryAfterSeconds;
   }
+}
+
+/** Parse an HTTP `Retry-After` header into whole seconds, or undefined. */
+export function retryAfterSecondsFromHeader(
+  header: string | null | undefined,
+): number | undefined {
+  if (!header) return undefined;
+  const trimmed = header.trim();
+  if (/^\d+$/.test(trimmed)) return Number.parseInt(trimmed, 10);
+  const seconds = Date.parse(trimmed);
+  if (!Number.isNaN(seconds)) {
+    return Math.max(1, Math.round((seconds - Date.now()) / 1000));
+  }
+  return undefined;
 }
 
 const NETWORK_CODE_BY_CAUSE: Record<string, ClientErrorCode> = {
@@ -98,6 +116,19 @@ export async function authApiErrorFromResponse(
     // Ignore parse failures; fall through to a generic error.
   }
 
+  let retryAfterSeconds: number | undefined;
+  const header = response.headers.get('Retry-After');
+  if (header) {
+    retryAfterSeconds = retryAfterSecondsFromHeader(header);
+  } else if (
+    envelope.details &&
+    typeof envelope.details === 'object' &&
+    typeof (envelope.details as Record<string, unknown>).retryAfterSeconds === 'number'
+  ) {
+    retryAfterSeconds = (envelope.details as Record<string, unknown>)
+      .retryAfterSeconds as number;
+  }
+
   return new AuthApiError({
     code: envelope.code ?? 'INTERNAL_ERROR',
     message:
@@ -106,5 +137,6 @@ export async function authApiErrorFromResponse(
     statusCode: envelope.statusCode ?? response.status,
     requestId: envelope.requestId,
     details: envelope.details,
+    retryAfterSeconds,
   });
 }
