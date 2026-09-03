@@ -21,6 +21,23 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Docker Compose services for PostgreSQL, Redis and MinIO
 - Architecture, API, security, operations and domain principles
 - Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
+- Admin UI primitives on branch `feat/admin-form-and-table-primitives` (typecheck/lint/
+  test/build green): `StatCard`, `PageHeader`, `EmptyState`, `DialogCloseButton`,
+  `OpenDialogOnElementClick`, `ConfirmationDialog`, `FormField`, `SelectableCardInput`
+  (radio semantics + arrow-key navigation), `FormWizard`, `DataTable`
+  (search/sort/pagination/row-selection, loading/empty/error), `FeedbackProvider` +
+  `useFeedback`, and an in-house validation layer (`useInHouseForm`). Built with MUI 7
+  only — no new runtime dependency — because the npm registry is currently unreachable.
+  The full Vitest component suite runs offline (`@testing-library/react` via
+  `fireEvent`); `FeedbackProvider`, `useInHouseForm`, `ConfirmationDialog`,
+  `FormField`, `SelectableCardInput` and `DataTable` are covered, including a real
+  a11y fix (search-box `aria-label` now lands on the input via `inputProps`).
+  Standalone showcase routes live under `app/(showcase)/showcase/**` and do not touch
+  the shared `AdminShell`/navigation. ADR-0008 records the grid decision (in-house MUI
+  `Table` now, explicit upgrade path to MUI X Data Grid Community) and ADR-0009 records
+  the form-validation decision (in-house `useInHouseForm` now, react-hook-form + zod
+  on registry restore). Not yet wired into shared navigation (requires the
+  @Maddyrampant auth/shell checkpoint per ADMIN_PANEL_PLAN §12).
 - Typed API startup configuration, explicit CORS allowlist and initial Vitest unit tests
 - Auth/RBAC persistence foundation: canonical users, roles, permissions, assignments,
   sessions, hashed OTP records, login attempts and safe audit metadata
