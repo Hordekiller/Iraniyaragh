@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MobileBottomNav } from './MobileBottomNav'
 import { ToastProvider } from '../feedback/Toast'
 
-function Harness({ onOpenSearch = vi.fn() }: { onOpenSearch?: () => void }) {
+function Harness({ onOpenSearch = vi.fn(), onOpenLogin = vi.fn() }: { onOpenSearch?: () => void, onOpenLogin?: () => void }) {
   return (
     <ToastProvider>
       <section id="home" />
       <section id="categories" />
-      <MobileBottomNav onOpenSearch={onOpenSearch} />
+      <MobileBottomNav onOpenSearch={onOpenSearch} onOpenLogin={onOpenLogin} />
     </ToastProvider>
   )
 }
@@ -42,5 +42,14 @@ describe('MobileBottomNav', () => {
     fireEvent.click(screen.getByRole('button', { name: /جستجو/ }))
 
     expect(onOpenSearch).toHaveBeenCalledTimes(1)
+  })
+
+  it('triggers the login opener from the profile button', () => {
+    const onOpenLogin = vi.fn()
+    render(<Harness onOpenLogin={onOpenLogin} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /پروفایل/ }))
+
+    expect(onOpenLogin).toHaveBeenCalledTimes(1)
   })
 })

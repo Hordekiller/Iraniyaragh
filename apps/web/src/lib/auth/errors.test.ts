@@ -4,6 +4,7 @@ import {
   authApiErrorFromEnvelope,
   authApiErrorFromResponse,
   clientErrorCodeFromCause,
+  retryAfterSecondsFromHeader,
 } from './errors';
 import type { ApiFailure } from './types';
 
@@ -90,5 +91,59 @@ describe('authApiErrorFromResponse', () => {
     const error = await authApiErrorFromResponse(response);
     expect(error.code).toBe('INTERNAL_ERROR');
     expect(error.statusCode).toBe(502);
+  });
+});
+
+describe('retryAfterSecondsFromHeader', () => {
+  it('parses integer seconds', () => {
+    expect(retryAfterSecondsFromHeader('7')).toBe(7);
+    expect(retryAfterSecondsFromHeader(' 60 ')).toBe(60);
+  });
+
+  it('parses an HTTP-date to whole seconds', () => {
+    const future = new Date(Date.now() + 5_000).toUTCString();
+    const parsed = retryAfterSecondsFromHeader(future);
+    expect(parsed).toBeGreaterThanOrEqual(1);
+    expect(parsed).toBeLessThanOrEqual(5);
+  });
+
+  it('returns undefined for malformed values', () => {
+    expect(retryAfterSecondsFromHeader(null)).toBeUndefined();
+    expect(retryAfterSecondsFromHeader('soon')).toBeUndefined();
+  });
+});
+
+describe('authApiErrorFromResponse Retry-After', () => {
+  function rateLimitedResponse(
+    retryAfter?: number | string | null,
+    details?: unknown,
+  ): Response {
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (retryAfter != null) headers['Retry-After'] = String(retryAfter);
+    const body: Record<string, unknown> = {
+      code: 'RATE_LIMITED',
+      message: 'try later',
+      requestId: 'req-x',
+      statusCode: 429,
+    };
+    if (details !== undefined) body.details = details;
+    return new Response(JSON.stringify(body), { status: 429, headers });
+  }
+
+  it('reads Retry-After from the HTTP header', async () => {
+    const error = await authApiErrorFromResponse(rateLimitedResponse(30));
+    expect(error.retryAfterSeconds).toBe(30);
+  });
+
+  it('reads retryAfterSeconds from details when the header is absent', async () => {
+    const error = await authApiErrorFromResponse(
+      rateLimitedResponse(null, { retryAfterSeconds: 12 }),
+    );
+    expect(error.retryAfterSeconds).toBe(12);
+  });
+
+  it('stays undefined when neither source provides it', async () => {
+    const error = await authApiErrorFromResponse(rateLimitedResponse(null));
+    expect(error.retryAfterSeconds).toBeUndefined();
   });
 });

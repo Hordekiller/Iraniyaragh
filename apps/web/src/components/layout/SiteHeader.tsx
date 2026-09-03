@@ -1,15 +1,17 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Menu, Phone, Search, User, X } from 'lucide-react'
+import { Menu, Phone, Search, X } from 'lucide-react'
 import { useToast } from '../feedback/toast-context'
+import { AccountMenu } from '../auth/AccountMenu'
 
 type SiteHeaderProps = {
   searchQuery: string
   onSearchChange: (value: string) => void
   showSearch: boolean
   onToggleSearch: () => void
+  onOpenLogin: () => void
 }
 
-export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSearch }: SiteHeaderProps) {
+export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSearch, onOpenLogin }: SiteHeaderProps) {
   const { show } = useToast()
 
   return (
@@ -60,9 +62,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
             <button onClick={() => show('تماس: ۰۲۱-۸۸۸۸۸۸۸۸')} className="hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-[#0F172A] text-white text-[13px] font-bold hover:bg-black transition">
               <Phone size={16} /> مشاوره خرید
             </button>
-            <button onClick={() => show('ورود به حساب کاربری')} className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center hover:bg-white hover:border-[#FF4D00]/30 hover:text-[#FF4D00] transition">
-              <User size={18} />
-            </button>
+            <AccountMenu onOpenLogin={onOpenLogin} />
             <button className="lg:hidden w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center" onClick={() => show('منو')}>
               <Menu size={18} />
             </button>

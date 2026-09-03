@@ -3,6 +3,7 @@ import {
   isPartialOtpCode,
   isValidOtpCode,
   normalizeIranianMobile,
+  normalizeOtpCodeInput,
 } from './normalize';
 
 describe('normalizeIranianMobile', () => {
@@ -44,6 +45,16 @@ describe('isValidOtpCode', () => {
       expect(isValidOtpCode(code)).toBe(false);
     },
   );
+});
+
+describe('normalizeOtpCodeInput', () => {
+  it.each([
+    ['۱۲۳۴۵۶', '123456'],
+    ['١٢٣٤٥٦', '123456'],
+    ['۱۲a۳-۴۵۶۷', '123456'],
+  ])('transliterates and bounds %j to the ASCII API shape', (input, expected) => {
+    expect(normalizeOtpCodeInput(input)).toBe(expected);
+  });
 });
 
 describe('isPartialOtpCode', () => {

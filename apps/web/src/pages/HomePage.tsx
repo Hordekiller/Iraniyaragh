@@ -15,7 +15,11 @@ import { ServicesSection } from '../components/content/ServicesSection'
 import { NewsletterBrands } from '../components/content/NewsletterBrands'
 import { ProductModal } from '../components/feedback/ProductModal'
 
-export function HomePage() {
+type HomePageProps = {
+  onOpenLogin: () => void
+}
+
+export function HomePage({ onOpenLogin }: HomePageProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearch, setShowSearch] = useState(false)
@@ -28,6 +32,7 @@ export function HomePage() {
         onSearchChange={setSearchQuery}
         showSearch={showSearch}
         onToggleSearch={() => setShowSearch(s => !s)}
+        onOpenLogin={onOpenLogin}
       />
       <main>
         <HeroSlider />
@@ -46,7 +51,7 @@ export function HomePage() {
       </main>
       <SiteFooter />
 
-      <MobileBottomNav onOpenSearch={() => setShowSearch(true)} />
+      <MobileBottomNav onOpenSearch={() => setShowSearch(true)} onOpenLogin={onOpenLogin} />
       <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
     </>
   )

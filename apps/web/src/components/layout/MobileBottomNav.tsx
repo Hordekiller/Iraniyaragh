@@ -4,9 +4,10 @@ import { useToast } from '../feedback/toast-context'
 
 type MobileBottomNavProps = {
   onOpenSearch: () => void
+  onOpenLogin: () => void
 }
 
-export function MobileBottomNav({ onOpenSearch }: MobileBottomNavProps) {
+export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavProps) {
   const [mobileNav, setMobileNav] = useState('home')
   const { show } = useToast()
 
@@ -48,7 +49,7 @@ export function MobileBottomNav({ onOpenSearch }: MobileBottomNavProps) {
               <span className={`text-[11px] font-medium leading-none ${mobileNav === 'inbox' ? 'text-[#6842ff] font-bold' : 'text-slate-500'}`}>پشتیبانی</span>
             </button>
 
-            <button onClick={() => { setMobileNav('profile'); show('حساب کاربری') }} aria-current={mobileNav === 'profile' ? 'true' : undefined} className={`flex flex-col items-center gap-1 min-w-[64px] py-1.5 transition ${mobileNav === 'profile' ? 'text-[#6842ff]' : 'text-slate-400'}`}>
+            <button onClick={() => { setMobileNav('profile'); onOpenLogin() }} aria-current={mobileNav === 'profile' ? 'true' : undefined} className={`flex flex-col items-center gap-1 min-w-[64px] py-1.5 transition ${mobileNav === 'profile' ? 'text-[#6842ff]' : 'text-slate-400'}`}>
               <User size={22} strokeWidth={mobileNav === 'profile' ? 2.3 : 1.9} />
               <span className={`text-[11px] font-medium leading-none ${mobileNav === 'profile' ? 'text-[#6842ff] font-bold' : 'text-slate-500'}`}>پروفایل</span>
             </button>
