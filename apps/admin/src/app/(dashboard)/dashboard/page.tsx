@@ -1,5 +1,13 @@
 import { AlertTriangle, ArrowUpLeft, Boxes, PackageCheck, ReceiptText, ShoppingBag } from 'lucide-react';
+import { StatusChip, type StatusTone } from '@/components/ui/StatusChip';
 import styles from './page.module.css';
+
+const statusTone: Record<string, StatusTone> = {
+  'در انتظار قرارداد': 'info',
+  'برنامه‌ریزی‌شده': 'neutral',
+  'فعال': 'success',
+  'متوقف': 'error',
+};
 
 const metrics = [
   {
@@ -95,7 +103,7 @@ export default function DashboardPage() {
                 <span className={styles.moduleMarker} aria-hidden="true" />
                 <strong>{name}</strong>
                 <span>{sprint}</span>
-                <small>{status}</small>
+                <StatusChip label={status} tone={statusTone[status] ?? 'neutral'} />
               </div>
             ))}
           </div>
