@@ -491,6 +491,15 @@ one vertical journey must be fully accepted before multiplying similar screens.
 Do not open implementation PRs for items 2–5 while the Auth/admin-session slice owns
 the shell/navigation without an explicit checkpoint from `@Maddyrampant`.
 
+> **Branch note (2026-09-03):** a development-only staff sign-in slice (ADR-0010)
+> now exists on the admin-primitives branch — `/auth/dev/signin`, `/auth/me`,
+> `/auth/logout` plus an admin `/login` page, memory-only token store and shell
+> logout. It is gated to development/test (startup fails in staging/production) and
+> exists specifically to unblock operational/testing work. It does NOT satisfy item 1
+> (full staff password+TOTP/session/forbidden contract), which remains required and
+> still requires the §12 checkpoint from `@Maddyrampant` before the shared
+> shell/navigation is considered owned.
+
 ## 13. Definition of Done for an admin module
 
 A module is done only when all applicable evidence exists:

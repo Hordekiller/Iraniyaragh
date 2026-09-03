@@ -38,6 +38,8 @@ const PERMISSIONS = [
   name,
 }));
 
+const DEV_ADMIN_EMAIL = "dev-admin@iranyaragh.local";
+
 const prisma = new PrismaClient();
 
 async function seedRbacBaseline() {
@@ -130,11 +132,99 @@ async function seedRbacBaseline() {
   });
 }
 
+async function seedDevAdmin() {
+  return prisma.$transaction(async (transaction) => {
+    const role = await transaction.role.findUnique({
+      where: { key: SYSTEM_ADMIN_ROLE.key },
+      select: { id: true },
+    });
+    if (!role) {
+      throw new Error("System admin role is missing before dev-admin seeding.");
+    }
+
+    const user = await transaction.user.upsert({
+      where: { email: DEV_ADMIN_EMAIL },
+      update: {
+        status: "ACTIVE",
+        firstName: "Dev",
+        lastName: "Administrator",
+        isEmailVerified: true,
+        emailVerifiedAt: new Date("2024-01-01T00:00:00.000Z"),
+      },
+      create: {
+        id: "seed_dev_admin",
+        email: DEV_ADMIN_EMAIL,
+        firstName: "Dev",
+        lastName: "Administrator",
+        status: "ACTIVE",
+        isEmailVerified: true,
+        emailVerifiedAt: new Date("2024-01-01T00:00:00.000Z"),
+        passwordHash: null,
+      },
+    });
+
+    await transaction.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId: user.id,
+          roleId: role.id,
+        },
+      },
+      update: {
+        revokedAt: null,
+        revokedById: null,
+        revokeReason: null,
+      },
+      create: {
+        id: "seed_dev_admin_role",
+        userId: user.id,
+        roleId: role.id,
+        assignedById: null,
+      },
+    });
+
+    await transaction.auditLog.upsert({
+      where: { id: "seed_audit_dev_admin" },
+      update: {
+        action: "seed.dev.admin",
+        entityId: user.id,
+        entityType: "User",
+        metadata: {
+          email: DEV_ADMIN_EMAIL,
+          roleKey: SYSTEM_ADMIN_ROLE.key,
+          source: "deterministic-development-seed",
+        },
+      },
+      create: {
+        id: "seed_audit_dev_admin",
+        action: "seed.dev.admin",
+        entityId: user.id,
+        entityType: "User",
+        metadata: {
+          email: DEV_ADMIN_EMAIL,
+          roleKey: SYSTEM_ADMIN_ROLE.key,
+          source: "deterministic-development-seed",
+        },
+      },
+    });
+
+    return { userId: user.id, roleId: role.id };
+  });
+}
+
 try {
   const result = await seedRbacBaseline();
   console.log(
     `Seeded RBAC baseline: ${result.permissionCount} permissions, ${result.roleCount} role, ${result.rolePermissionCount} grants.`,
   );
+  const configuredDevCode =
+    typeof process.env.AUTH_DEV_CODE === "string" && process.env.AUTH_DEV_CODE.trim().length > 0;
+  if (configuredDevCode) {
+    const devAdmin = await seedDevAdmin();
+    console.log(`Seeded dev admin user (${devAdmin.userId}) with ${SYSTEM_ADMIN_ROLE.key} role.`);
+  } else {
+    console.log("AUTH_DEV_CODE not set; skipping the development admin user.");
+  }
 } catch {
   console.error(
     "Database seed failed. Review the seed safety policy and database state.",

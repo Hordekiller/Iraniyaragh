@@ -30,6 +30,8 @@ const runtimeConfig: AuthRuntimeConfig = Object.freeze({
     version: 1,
     secret: 'integration-previous-hash-secret-32-bytes-minimum',
   }),
+  devLoginEnabled: false,
+  devCode: '',
 });
 
 describe.sequential('AuthPrincipalService database integration', () => {

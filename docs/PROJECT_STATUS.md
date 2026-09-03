@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-01
+Last reviewed: 2026-09-03
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -90,6 +90,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
   single-use rotation with compare-and-swap, bounded serializable retry, token-family
   revocation on sequential/concurrent replay and safe created/rotated/replayed/revoked
   audit evidence; real PostgreSQL tests prove exactly one concurrent refresh winner
+- Development-enabled staff sign-in (ADR-0010, dev/test only): a `StaffAuthController`
+  at `/api/v1/auth` provides `POST /auth/dev/signin` (a special `AUTH_DEV_CODE`,
+  constant-time via `AuthHashService`, issuing a real `STAFF_MFA` session plus
+  dev-suffixed non-`__Host-` cookies), `GET /auth/me` (bearer-guarded live principal)
+  and `POST /auth/logout` (bearer-guarded `revokeSession`, idempotent). `AUTH_DEV_CODE`
+  fails startup in staging/production. A deterministic dev admin
+  (`dev-admin@iranyaragh.local`, `system-admin`, no stored credential) is seeded only
+  when `AUTH_DEV_CODE` is set. The admin app adds `/login` (MUI), a memory-only token
+  store, `AuthProvider`, a dashboard guard and a logout action via a new thin
+  `src/lib/api/client`. All gates (typecheck/lint/test/build) green on both packages;
+  `openapi.json` regenerated with the new auth paths.
 
 ### Partial
 
@@ -115,14 +126,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
   consume/release/expire, read-only snapshot/movement, audit actor+request-id
   verification) plus Auth persistence constraints and Session rotation/replay concurrency.
 - Auth storage and lifecycle constraints now include the runtime Session/MFA evidence,
-  and the Session core rotates/revokes refresh families transactionally. HTTP Auth
-  endpoints, credential verification, OTP delivery, rate limiting, password/TOTP
-  verification and server-side permission enforcement are not implemented yet. ADR-0007
-  and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
+  and the Session core rotates/revokes refresh families transactionally. Only the
+  development-enabled staff sign-in controller (`/auth/dev/signin`, `/auth/me`,
+  `/auth/logout`) is implemented. Staff password+TOTP, OTP delivery, refresh rotation,
+  CSRF logout, rate limiting, credential verification and server-side permission
+  enforcement are not implemented yet. ADR-0007, ADR-0010 and `AUTH_CONTRACT.md` define
+  the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 
-- Authentication controllers, OTP delivery, 2FA and RBAC enforcement
+- Full authentication controllers (staff password+TOTP, OTP delivery, refresh/CSRF
+  logout), 2FA and RBAC enforcement across domains
 - Catalog, customer, order, payment, supplier and audit use cases/controllers
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications

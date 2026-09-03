@@ -42,6 +42,48 @@
           "Health"
         ]
       }
+    },
+    "/auth/dev/signin": {
+      "post": {
+        "operationId": "StaffAuthController_devSignIn",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "StaffAuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "StaffAuthController_logout",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
     }
   },
   "info": {
