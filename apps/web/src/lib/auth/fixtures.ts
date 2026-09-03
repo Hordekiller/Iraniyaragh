@@ -15,6 +15,8 @@ import type {
 const DEFAULT_EXPIRES_IN = 300;
 const DEFAULT_RESEND_AFTER = 60;
 const ACCESS_TOKEN_TTL_SECONDS = 600;
+/** Retry-After for the fixture's rate-limit (5 failed attempts). */
+const DEFAULT_RATE_LIMIT_RETRY_AFTER_SECONDS = 5;
 
 export type AuthFixtureOptions = {
   store?: MemorySessionStore;
@@ -121,6 +123,7 @@ export class AuthFixtureClient implements AuthApi {
           code: 'RATE_LIMITED',
           message: 'Too many attempts. Request a new code and try again later.',
           statusCode: 429,
+          retryAfterSeconds: DEFAULT_RATE_LIMIT_RETRY_AFTER_SECONDS,
         });
       }
       throw new AuthApiError({
