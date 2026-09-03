@@ -77,4 +77,34 @@ describe('FormField', () => {
     const formControl = container.querySelector('.MuiFormControl-root');
     expect(formControl).toHaveClass('MuiFormControl-fullWidth');
   });
+
+  it('propagates required and aria-required via the FormLabel', () => {
+    const { container } = render(
+      <FormField label="نام" required>
+        <TextField />
+      </FormField>,
+    );
+    const label = container.querySelector('label') as HTMLLabelElement;
+    expect(label).toHaveAttribute('aria-required', 'true');
+  });
+
+  it('does not set aria-required when not required', () => {
+    const { container } = render(
+      <FormField label="نام">
+        <TextField />
+      </FormField>,
+    );
+    const label = container.querySelector('label') as HTMLLabelElement;
+    expect(label).not.toHaveAttribute('aria-required');
+  });
+
+  it('propagates disabled to the child control', () => {
+    const { container } = render(
+      <FormField label="نام" disabled>
+        <TextField />
+      </FormField>,
+    );
+    const input = container.querySelector('input') as HTMLInputElement;
+    expect(input).toBeDisabled();
+  });
 });

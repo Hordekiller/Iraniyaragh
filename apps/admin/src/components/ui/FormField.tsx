@@ -1,8 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { cloneElement, isValidElement, useId, type ReactNode } from 'react';
 import { FormControl, FormHelperText, FormLabel } from '@mui/material';
-import { useId } from 'react';
 
 export type FormFieldProps = {
   label: string;
@@ -17,8 +16,10 @@ export type FormFieldProps = {
 
 /**
  * Consistent label + control + helper/error block for MUI form controls, built on
- * MUI `FormControl`. Error/disabled state flows to the control and the helper
- * text is linked to it, so validation and required state are announced correctly.
+ * MUI `FormControl`. `required` renders the `*` marker and an `aria-required` on
+ * the `FormLabel`; `error` links the helper text with `role="alert"`; `disabled`
+ * is propagated onto the child control. All state is announced to assistive tech
+ * as well as shown visually.
  */
 export function FormField({
   label,
@@ -32,12 +33,21 @@ export function FormField({
 }: FormFieldProps) {
   const helperId = useId();
 
+  const control = isValidElement<Record<string, unknown>>(children)
+    ? cloneElement(children, { disabled } as Record<string, unknown>)
+    : children;
+
   return (
     <FormControl required={required} error={error} disabled={disabled} fullWidth>
-      <FormLabel htmlFor={htmlFor} sx={{ mb: 1, fontWeight: 600 }}>
+      <FormLabel
+        htmlFor={htmlFor}
+        required={required}
+        aria-required={required || undefined}
+        sx={{ mb: 1, fontWeight: 600 }}
+      >
         {label}
       </FormLabel>
-      {children}
+      {control}
       {error && errorText ? (
         <FormHelperText id={helperId} role="alert">
           {errorText}
