@@ -104,6 +104,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
   `src/lib/api/client`. Authenticated-shell behavior is covered by new
   `AdminShell` unit tests (sidebar/dashboard link, profile, notifications, sign-out
   redirect) since the backend-less Playwright harness cannot reach the shell.
+  The dev-admin seed uses a shared `seededNow` timestamp so the
+  `User_timestamp_order_check` (`emailVerifiedAt >= createdAt`) constraint always
+  holds and the admin is actually created for real API sign-in.
   All gates (typecheck/lint/test/build/e2e) green on both packages;
   `openapi.json` regenerated with the new auth paths.
 
