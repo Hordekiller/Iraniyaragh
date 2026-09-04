@@ -10,11 +10,13 @@
     "test": "turbo test",
     "test:integration": "turbo test:integration",
     "typecheck": "turbo typecheck",
-    "e2e": "pnpm --filter @iranyaragh/web build && pnpm --filter @iranyaragh/admin build && pnpm --filter @iranyaragh/e2e smoke",
+    "e2e": "pnpm --filter @iranyaragh/web build --mode fixture-e2e && pnpm --filter @iranyaragh/admin build && pnpm --filter @iranyaragh/e2e smoke",
     "e2e:install": "pnpm --filter @iranyaragh/e2e exec playwright install chromium",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "knip": "knip --include dependencies,unlisted,unresolved,files"
   },
   "devDependencies": {
+    "knip": "^5.88.1",
     "prettier": "^3.6.2",
     "turbo": "^2.5.6",
     "typescript": "~5.9.3"

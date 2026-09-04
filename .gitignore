@@ -6,6 +6,7 @@ dist
 .env
 .env.*
 !.env.example
+!.env.fixture-e2e
 coverage
 *.log
 *.tsbuildinfo
