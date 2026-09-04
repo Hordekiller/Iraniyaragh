@@ -11,6 +11,7 @@ const CUSTOMER_INACTIVITY_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
 const STAFF_ABSOLUTE_TTL_MS = 12 * 60 * 60 * 1_000;
 const STAFF_INACTIVITY_TTL_MS = 30 * 60 * 1_000;
 const MAX_SERIALIZABLE_ATTEMPTS = 5;
+const SERIALIZABLE_RETRY_DELAY_MS = 25;
 const MAX_DEVICE_NAME_LENGTH = 150;
 const MAX_USER_AGENT_LENGTH = 1_000;
 
@@ -386,9 +387,16 @@ export class AuthSessionService {
         });
       } catch (error) {
         if (attempt === MAX_SERIALIZABLE_ATTEMPTS || !this.isRetryableTransactionError(error)) throw error;
+        await this.delay(SERIALIZABLE_RETRY_DELAY_MS * attempt);
       }
     }
     throw new Error('Unreachable serializable transaction state.');
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
   }
 
   private isRetryableTransactionError(error: unknown): boolean {
