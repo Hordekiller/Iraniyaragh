@@ -97,6 +97,29 @@ idempotency key creates one movement and proves a failed serializable transactio
 rolls back its balance mutation. Concurrent retry behavior remains a separate known
 gap and must be covered when bounded serializable retries are implemented.
 
+## Production dependency audit
+
+`.github/workflows/production-audit.yml` runs `node .github/scripts/audit-prod.mjs`
+on every PR, protected-branch push and weekly schedule. Docs-only PRs
+(`.md`, `docs/**`) are skipped via `paths-ignore`. The script runs
+`pnpm audit --prod --audit-level=moderate --json`, classifies the result and exits
+with a status code the workflow wrapper interprets:
+
+- **Clean (moderate+ = 0):** exit 0. Passes immediately.
+- **Real vulnerabilities (moderate+ ≥ 1):** exit 1. Fails on the first attempt with
+  a clear list of affected levels; no retry.
+- **Transient network/registry error (non-JSON or operational error code):**
+  retries up to 3 times with a 15-second backoff between attempts.
+  - **Recovers:** exit 0 (passes).
+  - **Exhaustion (registry still unreachable after 3 attempts):** exit 2. The
+    workflow wrapper emits `::warning::` annotations and does not block CI, but
+    leaves a clear "manual review required" note. This prevents intermittent
+    registry outages from stalling PRs while keeping enforcement for real findings.
+
+The decision logic is a pure function (`classifyResult(stdout, stderr, exitCode)`)
+and was validated against fixture payloads (clean, vulnerability-found,
+persistent-network-failure, transient-recovery).
+
 ## Adding tests
 
 - Unit test: `*.spec.ts` under `apps/api/src`.

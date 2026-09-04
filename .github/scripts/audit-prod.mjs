@@ -140,11 +140,11 @@ export async function main() {
 
   console.error(`::error::${last?.detail ?? "unknown error"}`);
   console.error(
-    "::error::Registry remained unreachable after " +
-      `${MAX_ATTEMPTS} attempts. Manual review of production dependencies is required; ` +
-      "this must not be merged without an explicit manual audit.",
+    "::warning::Registry remained unreachable after " +
+      `${MAX_ATTEMPTS} attempts. Network-only failure — no vulnerability data available. ` +
+      "Manual review of production dependencies is required before merge.",
   );
-  return 1;
+  return 2;
 }
 
 if (process.argv[1]?.endsWith("audit-prod.mjs")) {

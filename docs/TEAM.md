@@ -1,6 +1,6 @@
 # Team, Ownership and Onboarding
 
-Last updated: 2026-08-30
+Last updated: 2026-09-04
 
 ## Members
 
@@ -57,10 +57,10 @@ are joint ownership. Developer A leads API generation and persistence correctnes
 Developer B verifies consumer fixtures and integration behavior against the accepted
 contract.
 
-## Onboarding response required from Maddyrampant
+## Onboarding response from Maddyrampant — complete
 
-Maddyrampant has accepted the repository invitation and should now reply to the
-GitHub onboarding issue with a complete independent assessment. Copy this structure:
+Onboarding review is complete. The template below is retained as a reference
+for future contributors.
 
 ```markdown
 ## My understanding of the product
