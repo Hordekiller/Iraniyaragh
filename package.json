@@ -10,9 +10,10 @@
     "test": "turbo test",
     "test:integration": "turbo test:integration",
     "typecheck": "turbo typecheck",
-    "e2e": "pnpm --filter @iranyaragh/web build && pnpm --filter @iranyaragh/admin build && pnpm --filter @iranyaragh/e2e smoke",
+    "e2e": "pnpm --filter @iranyaragh/web build --mode fixture-e2e && pnpm --filter @iranyaragh/admin build && pnpm --filter @iranyaragh/e2e smoke",
     "e2e:install": "pnpm --filter @iranyaragh/e2e exec playwright install chromium",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "knip": "pnpm dlx knip --include dependencies,unlisted,unresolved,files"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
