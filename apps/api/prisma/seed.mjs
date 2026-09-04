@@ -142,6 +142,7 @@ async function seedDevAdmin() {
       throw new Error("System admin role is missing before dev-admin seeding.");
     }
 
+    const seededNow = new Date();
     const user = await transaction.user.upsert({
       where: { email: DEV_ADMIN_EMAIL },
       update: {
@@ -149,7 +150,8 @@ async function seedDevAdmin() {
         firstName: "Dev",
         lastName: "Administrator",
         isEmailVerified: true,
-        emailVerifiedAt: new Date("2024-01-01T00:00:00.000Z"),
+        emailVerifiedAt: seededNow,
+        updatedAt: seededNow,
       },
       create: {
         id: "seed_dev_admin",
@@ -158,7 +160,9 @@ async function seedDevAdmin() {
         lastName: "Administrator",
         status: "ACTIVE",
         isEmailVerified: true,
-        emailVerifiedAt: new Date("2024-01-01T00:00:00.000Z"),
+        emailVerifiedAt: seededNow,
+        createdAt: seededNow,
+        updatedAt: seededNow,
         passwordHash: null,
       },
     });
