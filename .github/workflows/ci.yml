@@ -120,7 +120,38 @@ jobs:
   e2e:
     needs: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    env:
+      NODE_ENV: test
+      ALLOW_DATABASE_SEED: "true"
+      API_PORT: "4000"
+      DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/iraniyaragh_ci_test?schema=public
+      REDIS_URL: redis://placeholder:6379
+      JWT_ACCESS_SECRET: development-only-access-secret-replace-me
+      AUTH_JWT_ISSUER: iranyaragh-api
+      AUTH_HASH_KEY_VERSION: "1"
+      AUTH_HASH_SECRET: development-only-hash-root-secret-replace-me
+      AUTH_DEV_CODE: dev-e2e-access-code
+      CORS_ORIGINS: http://127.0.0.1:3001
+      OBJECT_STORAGE_ENDPOINT: http://127.0.0.1:9000
+      OBJECT_STORAGE_ACCESS_KEY: minio
+      OBJECT_STORAGE_SECRET_KEY: change-me
+      OBJECT_STORAGE_BUCKET: products
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4000
+    services:
+      postgres:
+        image: postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_DB: iranyaragh_ci_test
+          POSTGRES_USER: app_test
+          POSTGRES_PASSWORD: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app_test -d iranyaragh_ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
@@ -131,10 +162,27 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client and apply migrations
+        run: |
+          pnpm --filter @iranyaragh/api prisma:generate
+          pnpm --filter @iranyaragh/api exec prisma migrate deploy
+      - name: Seed the dev admin for real sign-in
+        run: pnpm --filter @iranyaragh/api prisma:seed
       - name: Install Chromium and system dependencies
         run: pnpm --filter @iranyaragh/e2e exec playwright install --with-deps chromium
-      - name: Run web and admin smoke suite
-        run: pnpm e2e
+      - name: Build API, start it, build and smoke web and admin
+        run: |
+          pnpm --filter @iranyaragh/api build
+          node apps/api/dist/src/main.js > api.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:4000/api/v1/health/ready >/dev/null 2>&1 && break
+            kill -0 "$API_PID" 2>/dev/null || { echo "::error ::API crashed during startup"; tail -n 60 api.log; exit 1; }
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4000/api/v1/health/ready >/dev/null 2>&1 || { echo "::error ::API not ready after 60s"; tail -n 60 api.log; exit 1; }
+          pnpm e2e
       - name: Upload Playwright failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

@@ -271,12 +271,17 @@
 
 @media (max-width: 980px) {
   .sidebar {
+    visibility: hidden;
+    pointer-events: none;
     transform: translateX(105%);
-    transition: transform 220ms ease;
+    transition: visibility 0s 220ms, transform 220ms ease;
   }
 
   .sidebarOpen {
+    visibility: visible;
+    pointer-events: auto;
     transform: translateX(0);
+    transition: visibility 0s, transform 220ms ease;
   }
 
   .closeMenu,
