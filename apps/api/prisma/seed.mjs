@@ -190,7 +190,7 @@ async function seedDevAdmin() {
         entityId: user.id,
         entityType: "User",
         metadata: {
-          email: DEV_ADMIN_EMAIL,
+          subject: "seed-dev-admin",
           roleKey: SYSTEM_ADMIN_ROLE.key,
           source: "deterministic-development-seed",
         },
@@ -201,7 +201,7 @@ async function seedDevAdmin() {
         entityId: user.id,
         entityType: "User",
         metadata: {
-          email: DEV_ADMIN_EMAIL,
+          subject: "seed-dev-admin",
           roleKey: SYSTEM_ADMIN_ROLE.key,
           source: "deterministic-development-seed",
         },
