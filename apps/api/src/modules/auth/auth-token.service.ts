@@ -1,7 +1,8 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { AuthenticationLevel } from '@iranyaragh/contracts';
-import jwt, { type JwtHeader, type JwtPayload } from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
+import type { JwtHeader, JwtPayload } from 'jsonwebtoken';
 import { AUTH_ACCESS_TOKEN_TYPE, AUTH_RUNTIME_CONFIG, type AuthRuntimeConfig } from './auth.config';
 
 const ACCESS_TOKEN_MAX_LENGTH = 4096;
