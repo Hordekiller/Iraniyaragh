@@ -44,7 +44,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Initial reviewed Prisma migration with PostgreSQL Auth constraints and a rollback-only
   database verification script
 - Playwright smoke suite (`e2e/`) covering the storefront and admin shells
-  on desktop + mobile viewports, with a strict zero-external-asset network gate
+  on desktop + mobile viewports, with a strict zero-external-asset network gate;
+  the admin smoke spec now covers the auth-gated shell (anonymous `/` and
+  `/dashboard` redirect to `/login`, dev-only sign-in notice, no external assets)
 - Self-hosted Vazirmatn variable font in the storefront (no Google Fonts at runtime)
 - Isolated PostgreSQL integration runner and CI database gate covering migration
   deployment/drift, Auth constraints and initial inventory transaction/idempotency behavior
@@ -99,7 +101,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
   (`dev-admin@iranyaragh.local`, `system-admin`, no stored credential) is seeded only
   when `AUTH_DEV_CODE` is set. The admin app adds `/login` (MUI), a memory-only token
   store, `AuthProvider`, a dashboard guard and a logout action via a new thin
-  `src/lib/api/client`. All gates (typecheck/lint/test/build) green on both packages;
+  `src/lib/api/client`. Authenticated-shell behavior is covered by new
+  `AdminShell` unit tests (sidebar/dashboard link, profile, notifications, sign-out
+  redirect) since the backend-less Playwright harness cannot reach the shell.
+  All gates (typecheck/lint/test/build/e2e) green on both packages;
   `openapi.json` regenerated with the new auth paths.
 
 ### Partial

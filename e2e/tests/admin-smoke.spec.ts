@@ -1,60 +1,37 @@
 import { expect, test } from '@playwright/test';
-import { createExternalRequestsTracker, isMobile, tap } from './helpers';
+import { createExternalRequestsTracker } from './helpers';
 
-test.describe('admin: operations shell', () => {
-  test('redirects / to /dashboard with RTL, landmarks and no third-party assets', async ({ page }) => {
+test.describe('admin: authentication gate', () => {
+  test('redirects anonymous / to /login with RTL, title and no third-party assets', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
     await page.goto('/');
 
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/login$/);
     await expect(page).toHaveTitle('پنل عملیات ایران یراق');
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 
-    const sidebar = page.getByRole('complementary', { name: 'منوی اصلی' });
-    await expect(sidebar).toBeVisible();
-    await expect(sidebar.getByRole('link', { name: /داشبورد/ })).toBeVisible();
-    await expect(page.getByRole('main')).toBeVisible();
-
-    if (!isMobile(page)) {
-      await expect(page.getByText('نسخهٔ پایه')).toBeVisible();
-      await expect(page.getByText('v0.1.0')).toBeVisible();
-    }
+    await expect(page.getByRole('heading', { name: 'ورود به پنل عملیات' })).toBeVisible();
+    await expect(page.getByLabel('کد دسترسی توسعه‌دهنده')).toBeVisible();
 
     await network.assertNone();
   });
 
-  test('desktop: top bar shows developer profile and disabled notification', async ({ page }) => {
-    test.skip(isMobile(page), 'desktop-only');
-
-    await page.goto('/');
-
-    await expect(page.getByText('مدیر سیستم')).toBeVisible();
-    await expect(page.getByText('حساب آزمایشی')).toBeVisible();
-    await expect(page.getByRole('button', { name: /اعلان‌ها/ })).toBeDisabled();
+  test('redirects anonymous /dashboard to /login', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/\/login$/);
   });
 
-  test('mobile: drawer opens with focus trap and closes on Escape', async ({ page }) => {
-    test.skip(!isMobile(page), 'mobile-only');
+  test('renders the dev-only sign-in notice and no external assets on /login', async ({ page }) => {
+    const network = createExternalRequestsTracker(page);
 
-    await page.goto('/');
+    await page.goto('/login');
 
-    await tap(page.getByRole('button', { name: 'باز کردن منو' }));
+    await expect(page.getByText(/صرفاً برای محیط توسعه و آزمایش فعال است/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'ورود' })).toBeVisible();
 
-    const dialog = page.getByRole('dialog', { name: 'منوی اصلی' });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('link', { name: /داشبورد/ })).toBeVisible();
-
-    const overflowWhileOpen = await dialog.evaluate(() => getComputedStyle(document.body).overflow);
-    expect(overflowWhileOpen).toBe('hidden');
-
-    await expect(page.locator(':focus')).toHaveAttribute('aria-label', 'بستن منو');
-
-    await page.keyboard.press('Escape');
-    await expect(dialog).toBeHidden();
-    const overflowAfterClose = await page.evaluate(() => getComputedStyle(document.body).overflow);
-    expect(overflowAfterClose).not.toBe('hidden');
+    await network.assertNone();
   });
 });
