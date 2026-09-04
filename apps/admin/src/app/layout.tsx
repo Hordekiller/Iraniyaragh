@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { AdminThemeProvider } from '@/theme/AdminThemeProvider';
+import { AuthProvider } from '@/lib/auth/AuthProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -16,7 +17,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="fa" dir="rtl">
       <body>
-        <AdminThemeProvider>{children}</AdminThemeProvider>
+        <AdminThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </AdminThemeProvider>
       </body>
     </html>
   );

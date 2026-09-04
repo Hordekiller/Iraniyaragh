@@ -12,6 +12,7 @@ export type EnvironmentVariables = {
   AUTH_HASH_SECRET: string;
   AUTH_JWT_ISSUER: string;
   JWT_ACCESS_SECRET: string;
+  AUTH_DEV_CODE?: string;
   OBJECT_STORAGE_ENDPOINT: string;
   OBJECT_STORAGE_ACCESS_KEY: string;
   OBJECT_STORAGE_SECRET_KEY: string;
@@ -218,6 +219,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     AUTH_HASH_SECRET: hashSecret,
     AUTH_JWT_ISSUER: parseAuthIssuer(config.AUTH_JWT_ISSUER),
     JWT_ACCESS_SECRET: accessSecret,
+    AUTH_DEV_CODE: optionalSecretString(config.AUTH_DEV_CODE, 'AUTH_DEV_CODE'),
     OBJECT_STORAGE_ENDPOINT: objectStorageEndpoint,
     OBJECT_STORAGE_ACCESS_KEY: requiredString(config, 'OBJECT_STORAGE_ACCESS_KEY'),
     OBJECT_STORAGE_SECRET_KEY: objectStorageSecret,

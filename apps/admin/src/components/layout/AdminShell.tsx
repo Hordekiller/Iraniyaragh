@@ -1,18 +1,33 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, ChevronLeft, Menu, Search, X } from 'lucide-react';
+import { Bell, ChevronLeft, LogOut, Menu, Search, X } from 'lucide-react';
 import { navigation } from '@/config/navigation';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import styles from './AdminShell.module.css';
 
 export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const closeMenuRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  async function handleSignOut() {
+    await signOut();
+    router.replace('/login');
+    router.refresh();
+  }
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -54,6 +69,10 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
       previouslyFocused?.focus();
     };
   }, [mobileMenuOpen]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className={styles.shell}>
@@ -155,6 +174,9 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
                 <span>حساب آزمایشی</span>
               </div>
             </div>
+            <button className={styles.logoutButton} type="button" onClick={handleSignOut} aria-label="خروج از حساب">
+              <LogOut size={19} />
+            </button>
           </div>
         </header>
 

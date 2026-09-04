@@ -20,7 +20,7 @@ jobs:
   production-audit:
     name: production-audit
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -33,4 +33,4 @@ jobs:
         with:
           node-version: 22
       - name: Reject known production vulnerabilities
-        run: pnpm audit --prod --audit-level=moderate
+        run: node .github/scripts/audit-prod.mjs

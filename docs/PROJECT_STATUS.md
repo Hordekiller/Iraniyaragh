@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-01
+Last reviewed: 2026-09-03
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -21,13 +21,32 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Docker Compose services for PostgreSQL, Redis and MinIO
 - Architecture, API, security, operations and domain principles
 - Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
+- Admin UI primitives on branch `feat/admin-form-and-table-primitives` (typecheck/lint/
+  test/build green): `StatCard`, `PageHeader`, `EmptyState`, `DialogCloseButton`,
+  `OpenDialogOnElementClick`, `ConfirmationDialog`, `FormField`, `SelectableCardInput`
+  (radio semantics + arrow-key navigation), `FormWizard`, `DataTable`
+  (search/sort/pagination/row-selection, loading/empty/error), `FeedbackProvider` +
+  `useFeedback`, and an in-house validation layer (`useInHouseForm`). Built with MUI 7
+  only — no new runtime dependency — because the npm registry is currently unreachable.
+  The full Vitest component suite runs offline (`@testing-library/react` via
+  `fireEvent`); `FeedbackProvider`, `useInHouseForm`, `ConfirmationDialog`,
+  `FormField`, `SelectableCardInput` and `DataTable` are covered, including a real
+  a11y fix (search-box `aria-label` now lands on the input via `inputProps`).
+  Standalone showcase routes live under `app/(showcase)/showcase/**` and do not touch
+  the shared `AdminShell`/navigation. ADR-0008 records the grid decision (in-house MUI
+  `Table` now, explicit upgrade path to MUI X Data Grid Community) and ADR-0009 records
+  the form-validation decision (in-house `useInHouseForm` now, react-hook-form + zod
+  on registry restore). Not yet wired into shared navigation (requires the
+  @Maddyrampant auth/shell checkpoint per ADMIN_PANEL_PLAN §12).
 - Typed API startup configuration, explicit CORS allowlist and initial Vitest unit tests
 - Auth/RBAC persistence foundation: canonical users, roles, permissions, assignments,
   sessions, hashed OTP records, login attempts and safe audit metadata
 - Initial reviewed Prisma migration with PostgreSQL Auth constraints and a rollback-only
   database verification script
 - Playwright smoke suite (`e2e/`) covering the storefront and admin shells
-  on desktop + mobile viewports, with a strict zero-external-asset network gate
+  on desktop + mobile viewports, with a strict zero-external-asset network gate;
+  the admin smoke spec now covers the auth-gated shell (anonymous `/` and
+  `/dashboard` redirect to `/login`, dev-only sign-in notice, no external assets)
 - Self-hosted Vazirmatn variable font in the storefront (no Google Fonts at runtime)
 - Isolated PostgreSQL integration runner and CI database gate covering migration
   deployment/drift, Auth constraints and initial inventory transaction/idempotency behavior
@@ -73,6 +92,27 @@ The repository is in **foundation/prototype**, before release `0.1`.
   single-use rotation with compare-and-swap, bounded serializable retry, token-family
   revocation on sequential/concurrent replay and safe created/rotated/replayed/revoked
   audit evidence; real PostgreSQL tests prove exactly one concurrent refresh winner
+- Development-enabled staff sign-in (ADR-0010, dev/test only): a `StaffAuthController`
+  at `/api/v1/auth` provides `POST /auth/dev/signin` (a special `AUTH_DEV_CODE`,
+  constant-time via `AuthHashService`, issuing a real `STAFF_MFA` session plus
+  dev-suffixed non-`__Host-` cookies), `GET /auth/me` (bearer-guarded live principal)
+  and `POST /auth/logout` (bearer-guarded `revokeSession`, idempotent). `AUTH_DEV_CODE`
+  fails startup in staging/production. A deterministic dev admin
+  (`dev-admin@iranyaragh.local`, `system-admin`, no stored credential) is seeded only
+  when `AUTH_DEV_CODE` is set. The admin app adds `/login` (MUI), a memory-only token
+  store, `AuthProvider`, a dashboard guard and a logout action via a new thin
+  `src/lib/api/client`. The dev-admin seed uses a shared `seededNow` timestamp so
+  the `User_timestamp_order_check` (`emailVerifiedAt >= createdAt`) constraint always
+  holds and the admin is actually created for real API sign-in. A CommonJS build
+  interop bug (`import jwt from 'jsonwebtoken'` resolving to an undefined `.default`)
+  that returned 500 on `/auth/dev/signin` is fixed by using a namespace import;
+  sign-in now issues a real `STAFF_MFA` token and `GET /auth/me` resolves the
+  principal live. The Playwright e2e job now boots the API against a Postgres
+  service, applies migrations and seeds the dev admin, and drives the real login
+  UI into the authenticated shell (desktop drawer sidebar and mobile drawer
+  toggle/focus-trap) via `signInDiAsAdmin`.
+  All gates (typecheck/lint/test/build/e2e) green on both packages;
+  `openapi.json` regenerated with the new auth paths.
 
 ### Partial
 
@@ -98,14 +138,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
   consume/release/expire, read-only snapshot/movement, audit actor+request-id
   verification) plus Auth persistence constraints and Session rotation/replay concurrency.
 - Auth storage and lifecycle constraints now include the runtime Session/MFA evidence,
-  and the Session core rotates/revokes refresh families transactionally. HTTP Auth
-  endpoints, credential verification, OTP delivery, rate limiting, password/TOTP
-  verification and server-side permission enforcement are not implemented yet. ADR-0007
-  and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
+  and the Session core rotates/revokes refresh families transactionally. Only the
+  development-enabled staff sign-in controller (`/auth/dev/signin`, `/auth/me`,
+  `/auth/logout`) is implemented. Staff password+TOTP, OTP delivery, refresh rotation,
+  CSRF logout, rate limiting, credential verification and server-side permission
+  enforcement are not implemented yet. ADR-0007, ADR-0010 and `AUTH_CONTRACT.md` define
+  the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 
-- Authentication controllers, OTP delivery, 2FA and RBAC enforcement
+- Full authentication controllers (staff password+TOTP, OTP delivery, refresh/CSRF
+  logout), 2FA and RBAC enforcement across domains
 - Catalog, customer, order, payment, supplier and audit use cases/controllers
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications

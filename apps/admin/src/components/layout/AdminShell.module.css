@@ -250,6 +250,17 @@
   font-size: 0.62rem;
 }
 
+.logoutButton {
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.headerActions > .logoutButton:hover {
+  color: #c0392b;
+  background: #fdeeea;
+  border-color: #f4cfc6;
+}
+
 .main {
   padding: 30px;
 }
@@ -260,12 +271,17 @@
 
 @media (max-width: 980px) {
   .sidebar {
+    visibility: hidden;
+    pointer-events: none;
     transform: translateX(105%);
-    transition: transform 220ms ease;
+    transition: visibility 0s 220ms, transform 220ms ease;
   }
 
   .sidebarOpen {
+    visibility: visible;
+    pointer-events: auto;
     transform: translateX(0);
+    transition: visibility 0s, transform 220ms ease;
   }
 
   .closeMenu,

@@ -8,8 +8,10 @@ import { AuthPrincipalService } from './auth-principal.service';
 import { AUTH_RUNTIME_CONFIG, createAuthRuntimeConfig } from './auth.config';
 import { AuthSessionService } from './auth-session.service';
 import { AuthTokenService } from './auth-token.service';
+import { StaffAuthController } from './staff-auth.controller';
 
 @Module({
+  controllers: [StaffAuthController],
   providers: [
     {
       provide: AUTH_RUNTIME_CONFIG,

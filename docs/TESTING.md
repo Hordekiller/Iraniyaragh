@@ -7,7 +7,9 @@
 - Database integration tests run through `pnpm test:integration`. They use real
   PostgreSQL/Prisma transactions and are deliberately separate from fast unit tests.
 - Browser smoke tests run through `pnpm e2e` and cover the web/admin shells plus the
-  zero-external-asset network policy.
+  zero-external-asset network policy. The admin smoke drives the real dev sign-in UI
+  against a live API (migrated and seeded in CI) into the authenticated shell on both
+  desktop and mobile viewports.
 
 Integration tests do not reuse development, staging or production databases. Before
 Prisma connects, `assertIsolatedTestDatabase` requires both:
