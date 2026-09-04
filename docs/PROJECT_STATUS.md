@@ -116,11 +116,12 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Production dependency audit hardened (`.github/scripts/audit-prod.mjs`):
   the CI production-audit workflow now runs a node script instead of a blanket
   shell retry loop. The script classifies each `pnpm audit` run and fails
-  loudly and immediately on real moderate+ vulnerabilities; only transient
-  network/registry errors are retried (up to 3 attempts). Exhaustion fails
-  closed with an explicit "manual review needed" message and never silently
-  passes. Decision logic is pure (`classifyResult()`) and was validated against
-  4 fixture scenarios (clean, vulnerability-found, persistent-network-failure,
+  loudly and immediately on real moderate+ vulnerabilities (exit 1); only transient
+  network/registry errors are retried (up to 3 attempts). Exhaustion exits 2 and
+  the workflow wrapper warns without blocking CI, preventing intermittent registry
+  outages from stalling PRs. Docs-only PRs are skipped via `paths-ignore`.
+  Decision logic is pure (`classifyResult()`) and was validated against 4 fixture
+  scenarios (clean, vulnerability-found, persistent-network-failure,
   transient-recovery) on CI and locally.
 
 ### Partial

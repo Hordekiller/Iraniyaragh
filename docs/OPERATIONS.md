@@ -66,8 +66,9 @@ The public repository also has independent security gates:
   protected-branch push, manual run and a weekly schedule. This catches advisories
   published after the dependency originally entered the repository. It runs the
   surgical `audit-prod.mjs` script: real vulnerabilities fail immediately;
-  transient network errors are retried up to 3 times; exhaustion fails closed
-  with an explicit "manual review needed" message.
+  transient network errors are retried up to 3 times; exhaustion warns without
+  blocking CI (exit 2 → warning, not failure). Docs-only PRs are skipped via
+  `paths-ignore`.
 - Dependabot alerts and security updates are enabled; `.github/dependabot.yml`
   proposes bounded weekly npm-workspace and GitHub Actions update groups.
 - Secret scanning and push protection detect existing supported credentials and
