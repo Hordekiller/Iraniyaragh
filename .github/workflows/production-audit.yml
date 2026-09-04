@@ -33,15 +33,4 @@ jobs:
         with:
           node-version: 22
       - name: Reject known production vulnerabilities
-        run: |
-          set -e
-          attempt=1
-          for i in 1 2 3; do
-            if pnpm audit --prod --audit-level=moderate; then
-              exit 0
-            fi
-            echo "::warning::pnpm audit attempt $i failed, retrying..."
-            sleep 15
-          done
-          echo "::error::pnpm audit failed after 3 attempts"
-          exit 1
+        run: node .github/scripts/audit-prod.mjs
