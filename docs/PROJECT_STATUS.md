@@ -89,9 +89,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   vulnerabilities at the recorded review point
 - Transactional Auth Session core: active-principal session creation, absolute and
   inactivity deadlines by authentication level, current/previous refresh-hash lookup,
-  single-use rotation with compare-and-swap, bounded serializable retry, token-family
-  revocation on sequential/concurrent replay and safe created/rotated/replayed/revoked
-  audit evidence; real PostgreSQL tests prove exactly one concurrent refresh winner
+  single-use rotation with compare-and-swap, bounded serializable retry with backoff,
+  token-family revocation on sequential/concurrent replay and safe
+  created/rotated/replayed/revoked audit evidence; real PostgreSQL tests prove exactly
+  one concurrent refresh winner and the loser resolves to `AUTH_SESSION_REPLAYED` even
+  under serializable write conflicts (linear `25ms * attempt` retry backoff)
 - Development-enabled staff sign-in (ADR-0010, dev/test only): a `StaffAuthController`
   at `/api/v1/auth` provides `POST /auth/dev/signin` (a special `AUTH_DEV_CODE`,
   constant-time via `AuthHashService`, issuing a real `STAFF_MFA` session plus
