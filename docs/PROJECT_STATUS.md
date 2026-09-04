@@ -101,12 +101,16 @@ The repository is in **foundation/prototype**, before release `0.1`.
   (`dev-admin@iranyaragh.local`, `system-admin`, no stored credential) is seeded only
   when `AUTH_DEV_CODE` is set. The admin app adds `/login` (MUI), a memory-only token
   store, `AuthProvider`, a dashboard guard and a logout action via a new thin
-  `src/lib/api/client`. Authenticated-shell behavior is covered by new
-  `AdminShell` unit tests (sidebar/dashboard link, profile, notifications, sign-out
-  redirect) since the backend-less Playwright harness cannot reach the shell.
-  The dev-admin seed uses a shared `seededNow` timestamp so the
-  `User_timestamp_order_check` (`emailVerifiedAt >= createdAt`) constraint always
-  holds and the admin is actually created for real API sign-in.
+  `src/lib/api/client`. The dev-admin seed uses a shared `seededNow` timestamp so
+  the `User_timestamp_order_check` (`emailVerifiedAt >= createdAt`) constraint always
+  holds and the admin is actually created for real API sign-in. A CommonJS build
+  interop bug (`import jwt from 'jsonwebtoken'` resolving to an undefined `.default`)
+  that returned 500 on `/auth/dev/signin` is fixed by using a namespace import;
+  sign-in now issues a real `STAFF_MFA` token and `GET /auth/me` resolves the
+  principal live. The Playwright e2e job now boots the API against a Postgres
+  service, applies migrations and seeds the dev admin, and drives the real login
+  UI into the authenticated shell (desktop drawer sidebar and mobile drawer
+  toggle/focus-trap) via `signInDiAsAdmin`.
   All gates (typecheck/lint/test/build/e2e) green on both packages;
   `openapi.json` regenerated with the new auth paths.
 
