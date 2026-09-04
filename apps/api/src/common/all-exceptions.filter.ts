@@ -67,6 +67,15 @@ export class AllExceptionsFilter {
 
     if (exception instanceof HttpException) {
       const { statusCode, code, message, details } = normalizeHttpError(exception);
+
+      const retryAfterSeconds =
+        statusCode === HttpStatus.TOO_MANY_REQUESTS
+          ? this.rateLimitRetryAfter(exception)
+          : undefined;
+      if (retryAfterSeconds !== undefined) {
+        response.setHeader('Retry-After', String(retryAfterSeconds));
+      }
+
       response.status(statusCode).json(
         buildErrorEnvelope({
           code,
@@ -99,5 +108,11 @@ export class AllExceptionsFilter {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       }),
     );
+  }
+
+  private rateLimitRetryAfter(exception: HttpException): number | undefined {
+    const value = (exception as { retryAfterSeconds?: unknown }).retryAfterSeconds;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return undefined;
+    return Math.max(1, Math.floor(value));
   }
 }

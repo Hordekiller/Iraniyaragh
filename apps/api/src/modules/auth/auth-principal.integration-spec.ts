@@ -32,6 +32,13 @@ const runtimeConfig: AuthRuntimeConfig = Object.freeze({
   }),
   devLoginEnabled: false,
   devCode: '',
+  cookies: Object.freeze({
+    refreshName: '__Host-iranyaragh_refresh',
+    csrfName: '__Host-iranyaragh_csrf',
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+  }),
 });
 
 describe.sequential('AuthPrincipalService database integration', () => {

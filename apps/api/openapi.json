@@ -84,6 +84,34 @@
           "StaffAuth"
         ]
       }
+    },
+    "/auth/customer/otp/request": {
+      "post": {
+        "operationId": "CustomerAuthController_requestOtp",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "CustomerAuth"
+        ]
+      }
+    },
+    "/auth/customer/otp/verify": {
+      "post": {
+        "operationId": "CustomerAuthController_verifyOtp",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "CustomerAuth"
+        ]
+      }
     }
   },
   "info": {

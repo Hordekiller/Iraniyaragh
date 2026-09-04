@@ -8,10 +8,13 @@ import { AuthPrincipalService } from './auth-principal.service';
 import { AUTH_RUNTIME_CONFIG, createAuthRuntimeConfig } from './auth.config';
 import { AuthSessionService } from './auth-session.service';
 import { AuthTokenService } from './auth-token.service';
+import { CustomerAuthController } from './customer-otp.controller';
+import { CustomerOtpService } from './customer-otp.service';
+import { RateLimitService } from './rate-limit.service';
 import { StaffAuthController } from './staff-auth.controller';
 
 @Module({
-  controllers: [StaffAuthController],
+  controllers: [StaffAuthController, CustomerAuthController],
   providers: [
     {
       provide: AUTH_RUNTIME_CONFIG,
@@ -23,6 +26,8 @@ import { StaffAuthController } from './staff-auth.controller';
     AuthPermissionService,
     AuthPrincipalService,
     AuthSessionService,
+    CustomerOtpService,
+    RateLimitService,
     AuthGuard,
     { provide: APP_GUARD, useExisting: AuthGuard },
   ],
@@ -33,6 +38,8 @@ import { StaffAuthController } from './staff-auth.controller';
     AuthPermissionService,
     AuthPrincipalService,
     AuthSessionService,
+    CustomerOtpService,
+    RateLimitService,
     AuthGuard,
   ],
 })
