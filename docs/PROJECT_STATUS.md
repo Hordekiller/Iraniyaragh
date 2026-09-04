@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-03
+Last reviewed: 2026-09-04
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -113,6 +113,15 @@ The repository is in **foundation/prototype**, before release `0.1`.
   toggle/focus-trap) via `signInDiAsAdmin`.
   All gates (typecheck/lint/test/build/e2e) green on both packages;
   `openapi.json` regenerated with the new auth paths.
+- Production dependency audit hardened (`.github/scripts/audit-prod.mjs`):
+  the CI production-audit workflow now runs a node script instead of a blanket
+  shell retry loop. The script classifies each `pnpm audit` run and fails
+  loudly and immediately on real moderate+ vulnerabilities; only transient
+  network/registry errors are retried (up to 3 attempts). Exhaustion fails
+  closed with an explicit "manual review needed" message and never silently
+  passes. Decision logic is pure (`classifyResult()`) and was validated against
+  4 fixture scenarios (clean, vulnerability-found, persistent-network-failure,
+  transient-recovery) on CI and locally.
 
 ### Partial
 

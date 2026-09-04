@@ -64,7 +64,10 @@ The public repository also has independent security gates:
 - `.github/workflows/production-audit.yml` rejects moderate-or-higher known
   vulnerabilities across the complete production lockfile on every pull request,
   protected-branch push, manual run and a weekly schedule. This catches advisories
-  published after the dependency originally entered the repository.
+  published after the dependency originally entered the repository. It runs the
+  surgical `audit-prod.mjs` script: real vulnerabilities fail immediately;
+  transient network errors are retried up to 3 times; exhaustion fails closed
+  with an explicit "manual review needed" message.
 - Dependabot alerts and security updates are enabled; `.github/dependabot.yml`
   proposes bounded weekly npm-workspace and GitHub Actions update groups.
 - Secret scanning and push protection detect existing supported credentials and
@@ -77,7 +80,8 @@ comment is documentation only; updating a tag does not update the executed code.
 Action upgrades require a reviewed SHA change and must retain the Node 24-compatible
 runtime baseline.
 
-Run `pnpm audit --prod --audit-level=moderate` locally during dependency triage too;
+Run `pnpm audit --prod --audit-level=moderate` locally during dependency triage too,
+or use `node .github/scripts/audit-prod.mjs` for the same classification used in CI;
 a green Dependency Review only evaluates a PR delta and is not proof that the existing
 tree has no newly published advisory. The scheduled production-audit workflow is the
 continuous baseline check, but local evidence is still required before review. The
