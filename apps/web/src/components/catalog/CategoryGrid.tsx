@@ -26,7 +26,7 @@ export function CategoryGrid() {
                 <Icon size={22} />
               </div>
               <div className="mt-3 lg:mt-4 font-black text-slate-900 text-[14px] lg:text-[15px] leading-none">{cat.title}</div>
-              <div className="text-[11px] text-slate-400 font-bold tracking-widest mt-1">{cat.en}</div>
+              <div className="text-[11px] text-slate-500 font-bold tracking-widest mt-1">{cat.en}</div>
               <div className="inline-flex mt-3 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[11px] font-bold">{cat.count}</div>
               <div className="absolute bottom-3 left-3 w-8 h-8 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:bg-[#FF4D00] group-hover:text-white group-hover:border-[#FF4D00] transition">
                 <ArrowUpLeft size={16} />

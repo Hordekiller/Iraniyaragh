@@ -79,7 +79,7 @@ export function HeroSlider() {
               {heroSlides[activeSlide].desc}
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
-              <button onClick={() => show('رفتن به جشنواره')} className="h-12 px-7 rounded-full bg-[#FF4D00] text-white font-extrabold text-sm hover:bg-[#e64500] transition flex items-center gap-2 shadow-lg shadow-[#FF4D00]/25">
+              <button onClick={() => show('رفتن به جشنواره')} className="h-12 px-7 rounded-full bg-[#C2410C] text-white font-extrabold text-sm hover:bg-[#A83509] transition flex items-center gap-2 shadow-lg shadow-[#C2410C]/25">
                 {heroSlides[activeSlide].cta} <ArrowLeft size={18} className="bg-white/20 rounded-full p-0.5" />
               </button>
               <button onClick={() => show('دانلود کاتالوگ')} className="h-12 px-6 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold text-sm hover:bg-white hover:text-slate-900 transition flex items-center gap-2">
@@ -128,15 +128,15 @@ export function HeroSlider() {
           <div className="rounded-[20px] bg-white p-4 shadow-2xl">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-500">پیشنهاد امروز</span>
-              <span className="px-2.5 py-1 rounded-full bg-red-500 text-white text-[11px] font-black flex items-center gap-1"><Flame size={12} /> حراج</span>
+              <span className="px-2.5 py-1 rounded-full bg-red-600 text-white text-[11px] font-black flex items-center gap-1"><Flame size={12} /> حراج</span>
             </div>
             <div className="flex gap-3 mt-3">
               <img src="/images/tool2.jpg" alt="دریل بتن‌کن رونیکس 2701" className="w-20 h-20 rounded-2xl object-cover bg-slate-50" />
               <div className="flex-1">
                 <div className="text-[13px] font-bold leading-5 text-slate-900 line-clamp-2">دریل بتن‌کن رونیکس 2701 + هدیه</div>
-                <div className="flex items-center gap-1 mt-1"><Star size={12} className="fill-amber-400 text-amber-400" /><span className="text-xs font-bold">۴.۹</span><span className="text-xs text-slate-400">(۲۱۲)</span></div>
+                <div className="flex items-center gap-1 mt-1"><Star size={12} className="fill-amber-400 text-amber-400" /><span className="text-xs font-bold">۴.۹</span><span className="text-xs text-slate-500">(۲۱۲)</span></div>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-[#FF4D00] font-black text-[15px]">۵,۱۲۰,۰۰۰</span><span className="text-xs text-slate-400 line-through">۶,۴۰۰,۰۰۰</span>
+                  <span className="text-[#C2410C] font-black text-[15px]">۵,۱۲۰,۰۰۰</span><span className="text-xs text-slate-500 line-through">۶,۴۰۰,۰۰۰</span>
                 </div>
               </div>
             </div>

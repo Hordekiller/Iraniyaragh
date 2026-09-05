@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-04
+Last reviewed: 2026-09-05
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -160,6 +160,18 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Hero slider and toast expose explicit pause/play and close controls, honour
   `prefers-reduced-motion` (slider), and the toast's base duration is 5s — all
   covered in the Vitest component suite.
+- Storefront accessibility baseline (#82): every click-only product/blog card is a
+  native `<button>`, decorative images carry `alt=""`, carousel arrows and the search
+  toggle/menu have Persian `aria-label`s, search inputs bind labels, footer placeholder
+  links became real fragment targets or toast-backed buttons, a visible-on-focus skip
+  link jumps to `#main-content`, and section headings follow an h1 → h2 → h3 hierarchy.
+  WCAG AA color contrast is met by darkening brand orange (`#FF4D00` → `#C2410C`)
+  where it carries text, slate-500/600 for secondary text and emerald-700/red-600/
+  amber-700 for small badges; the scrollable brand strip is keyboard-focusable.
+  Enforced by a new Playwright `web-a11y` spec (axe-core wcag2a/aa/21a/21aa with zero
+  critical/serious violations on desktop + mobile, skip link, real fragment targets,
+  cards-as-buttons) and a `storefront-a11y` Vitest suite; the smoke spec was updated
+  for the new card buttons.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
   database integration covers the hardened inventory ledger (parallel reserve and
