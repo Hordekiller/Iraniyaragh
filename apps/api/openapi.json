@@ -104,7 +104,7 @@
         "operationId": "CustomerAuthController_verifyOtp",
         "parameters": [],
         "responses": {
-          "201": {
+          "200": {
             "description": ""
           }
         },

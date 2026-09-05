@@ -228,13 +228,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
     the sole security principal and `Customer` stays a commerce profile; code must not
     join them implicitly by mobile number. Explicit linkage/merge/anonymization rules
     still require a forward migration when the product needs them.
-13. Customer OTP and rate limiting (auth branch): the Redis limiter, OTP service and
-    controller paths are covered by the unit suite (mock Redis client), customer OTP
-    flows by DB integration tests (fresh `_test` Postgres), and the real Redis provider,
-    Lua window and `reset` behavior by a live-Redis integration spec that self-skips when
-    no Redis is reachable. CI's database job now provisions a Redis service so the live
-    suite runs there. The 429-oververify failure path is covered by unit tests but does
-    not yet have a dedicated DB/live end-to-end case.
+13. Customer OTP and rate limiting (auth branch): the Redis limiter, OTP service,
+    controller MVP and rate-limit provider are covered by the unit suite (mock Redis
+    client + controller contract tests covering status codes, cookie attributes and
+    401 shapes), customer OTP flows by DB integration tests (fresh `_test` Postgres),
+    and the real Redis provider, Lua window and `reset` behavior by a live-Redis
+    integration spec that self-skips when no Redis is reachable. CI's database job now
+    provisions a Redis service so the live suite runs there. The 429-oververify failure
+    path is covered by unit tests but does not yet have a dedicated DB/live end-to-end
+    case. `request.ip` has no `trust proxy` enabled, so the Safe-IP rate-limit dimension
+    resolves the direct socket address; a reverse-proxy deployment must enable a
+    bounded `trust proxy` and document the spoofing trade-off before rollout.
 
 ## Status update template
 
