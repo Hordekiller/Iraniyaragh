@@ -142,6 +142,14 @@ The repository is in **foundation/prototype**, before release `0.1`.
   with env-aware cookies (`__Host-` + Secure in staging/production, suffixed
   non-`__Host-` without Secure in development only, per ADR-0007).
   Mobile normalization is E.164 (`+989XXXXXXXXX`) with strict validation.
+- Vitest coverage gates enforced in CI (`chore/ci-hardening`): each package's
+  `vitest.config.ts` runs the v8 provider with global thresholds under
+  `test.coverage` (nested, not top-level — top-level `enabled: true` is ignored
+  by Vitest 4) and coverage is enabled only when `CI=true`, so local test runs
+  stay fast. Imported-code methodology (spec files excluded, no
+  `coverage.include`) keeps baselines stable: api 65/65 lines/statements,
+  web 80/78, admin 80/75 with function/branch thresholds per package.
+  `AGENTS.md` documents the exact CI/local command set.
 
 ### Partial
 
@@ -192,7 +200,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
    release orchestration, backup/restore evidence and a secure first-admin bootstrap
    command remain.
 2. Configuration/guard unit tests, a Playwright shell suite and initial database
-   integration coverage exist; broader domain, concurrency and coverage thresholds remain.
+   integration coverage exist; broader domain, concurrency and CI-enforced coverage
+   thresholds are in place for imported code (api/web/admin vitest gates) and
+   remain to widen as domains grow.
 3. The storefront prototype is decomposed into typed single-purpose components.
    Static fixture data in `apps/web/src/data/prototype.ts` must be replaced by a
    typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.
