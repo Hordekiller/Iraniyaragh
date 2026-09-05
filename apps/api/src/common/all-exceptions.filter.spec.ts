@@ -2,6 +2,7 @@ import { BadRequestException, HttpStatus, ServiceUnavailableException } from '@n
 import type { ArgumentsHost } from '@nestjs/common';
 import type { Response } from 'express';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { RateLimitException } from '../modules/auth/rate-limit.service';
 import type { ErrorEnvelope } from './error-response';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 import { runWithRequestContext } from './request-context';
@@ -10,10 +11,15 @@ const requestId = 'req-filter-1';
 
 function createFilter() {
   const replied: Array<{ status: number; body: unknown }> = [];
+  const headers: Record<string, string> = {};
   const response = {
     statusCode: 200,
     status(code: number) {
       this.statusCode = code;
+      return this;
+    },
+    setHeader(name: string, value: string | number | string[]) {
+      headers[name.toLowerCase()] = String(value);
       return this;
     },
     json(body: unknown) {
@@ -22,7 +28,7 @@ function createFilter() {
     },
   } as unknown as Response;
 
-  return { filter: new AllExceptionsFilter(), response, replied };
+  return { filter: new AllExceptionsFilter(), response, replied, headers };
 }
 
 describe('AllExceptionsFilter', () => {
@@ -112,6 +118,15 @@ describe('AllExceptionsFilter', () => {
       expect(status).toBe(500);
       expect(body.code).toBe('INTERNAL_ERROR');
       expect(JSON.stringify(body)).not.toContain('topsecret');
+    });
+  });
+
+  it('emits a bounded Retry-After header on 429 rate-limit responses', () => {
+    createContext(() => {
+      const { filter, response, headers } = createFilter();
+      const error = new RateLimitException(45.7);
+      filter.catch(error, { switchToHttp: () => ({ getResponse: () => response }) } as unknown as ArgumentsHost);
+      expect(headers['retry-after']).toBe('45');
     });
   });
 

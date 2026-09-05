@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Inject,
   NotFoundException,
   Post,
@@ -44,6 +45,8 @@ export class StaffAuthController {
   ) {}
 
   @Post('dev/signin')
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
   async devSignIn(
     @Body() body: StaffDevSignInDto,
     @Req() request: Request,
@@ -90,12 +93,16 @@ export class StaffAuthController {
   }
 
   @Get('me')
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
   @RequireAuthentication(STAFF_LEVEL)
   async me(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<CurrentPrincipalResponse> {
     return { data: { principal: this.toAuthPrincipal(principal) } };
   }
 
   @Post('logout')
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
   @RequireAuthentication(STAFF_LEVEL)
   async logout(
     @CurrentPrincipal() principal: AuthPrincipalContext,
