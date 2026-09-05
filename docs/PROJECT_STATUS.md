@@ -125,6 +125,25 @@ The repository is in **foundation/prototype**, before release `0.1`.
   Decision logic is pure (`classifyResult()`) and was validated against 4 fixture
   scenarios (clean, vulnerability-found, persistent-network-failure,
   transient-recovery) on CI and locally.
+- Redis-backed distributed rate limiting (auth branch): a dedicated `@Global`
+  Redis module (lazy-connect client, offline-queue disabled, bounded retry, redacted
+  error logging) plus a fixed-window atomic Lua limiter keyed by versioned
+  identifier/IP hashes. Request and verification limits follow AUTH_CONTRACT §9
+  (destination 1/60s, 3/15m, 10/24h; IP 20/h, 100/24h; verify failures 50/h/IP).
+  Enforcement is fail-closed: Redis unavailability returns `503 UPSTREAM_UNAVAILABLE`
+  and never fails open; over-limit returns `429 RATE_LIMITED` with a bounded
+  `Retry-After` header (emitted centrally in the exception filter).
+- Customer OTP sign-in (auth branch): `POST /api/v1/auth/customer/otp/request`
+  (public, `202` challenge, `Cache-Control: no-store`/`Pragma: no-cache`) and
+  `POST /api/v1/auth/customer/otp/verify` (five-attempt single-use challenge,
+  serializable single-use consume, resend invalidates the prior challenge). Only
+  keyed hashes are persisted; raw codes, mobiles and IPs never touch the database
+  or audit trail. Verification activates a `PENDING` user, refreshes an `ACTIVE`
+  user, and generically refuses `SUSPENDED`/`LOCKED`/`DELETED`/transiently-throttled
+  users without revealing state. On success it issues a real `CUSTOMER_OTP` session
+  with env-aware cookies (`__Host-` + Secure in staging/production, suffixed
+  non-`__Host-` without Secure in development only, per ADR-0007).
+  Mobile normalization is E.164 (`+989XXXXXXXXX`) with strict validation.
 
 ### Partial
 
@@ -150,12 +169,13 @@ The repository is in **foundation/prototype**, before release `0.1`.
   consume/release/expire, read-only snapshot/movement, audit actor+request-id
   verification) plus Auth persistence constraints and Session rotation/replay concurrency.
 - Auth storage and lifecycle constraints now include the runtime Session/MFA evidence,
-  and the Session core rotates/revokes refresh families transactionally. Only the
-  development-enabled staff sign-in controller (`/auth/dev/signin`, `/auth/me`,
-  `/auth/logout`) is implemented. Staff password+TOTP, OTP delivery, refresh rotation,
-  CSRF logout, rate limiting, credential verification and server-side permission
-  enforcement are not implemented yet. ADR-0007, ADR-0010 and `AUTH_CONTRACT.md` define
-  the remaining runtime, HTTP, threat and client-state contract.
+  and the Session core rotates/revokes refresh families transactionally. Staff sign-in
+  through the development-enabled controller (`/auth/dev/signin`, `/auth/me`,
+  `/auth/logout`) and customer OTP sign-in (`/auth/customer/otp/request`, `/auth/customer/otp/verify`)
+  with Redis-backed rate limiting (auth branch) are implemented. Staff password+TOTP,
+  OTP delivery (SMS provider), refresh rotation, CSRF logout, credential verification
+  and server-side permission enforcement are not implemented yet. ADR-0007, ADR-0010
+  and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
 
@@ -210,6 +230,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
     the sole security principal and `Customer` stays a commerce profile; code must not
     join them implicitly by mobile number. Explicit linkage/merge/anonymization rules
     still require a forward migration when the product needs them.
+13. Customer OTP and rate limiting (auth branch): the Redis limiter, OTP service,
+    controller MVP and rate-limit provider are covered by the unit suite (mock Redis
+    client + controller contract tests covering status codes, cookie attributes and
+    401 shapes), customer OTP flows by DB integration tests (fresh `_test` Postgres),
+    and the real Redis provider, Lua window and `reset` behavior by a live-Redis
+    integration spec that self-skips when no Redis is reachable. CI's database job now
+    provisions a Redis service so the live suite runs there. The 429-oververify failure
+    path is covered by unit tests but does not yet have a dedicated DB/live end-to-end
+    case. `request.ip` has no `trust proxy` enabled, so the Safe-IP rate-limit dimension
+    resolves the direct socket address; a reverse-proxy deployment must enable a
+    bounded `trust proxy` and document the spoofing trade-off before rollout.
 
 ## Status update template
 
