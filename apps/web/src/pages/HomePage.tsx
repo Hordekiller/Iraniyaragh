@@ -26,6 +26,12 @@ export function HomePage({ onOpenLogin }: HomePageProps) {
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:right-3 focus:z-[100] focus:rounded-full focus:bg-slate-900 focus:px-5 focus:py-2.5 focus:text-white focus:font-bold"
+      >
+        پرش به محتوای اصلی
+      </a>
       <TopBar />
       <SiteHeader
         searchQuery={searchQuery}
@@ -34,7 +40,7 @@ export function HomePage({ onOpenLogin }: HomePageProps) {
         onToggleSearch={() => setShowSearch(s => !s)}
         onOpenLogin={onOpenLogin}
       />
-      <main>
+      <main id="main-content">
         <HeroSlider />
         <SearchResults query={searchQuery.trim()} onSelectProduct={setSelectedProduct} />
         <CategoryGrid />

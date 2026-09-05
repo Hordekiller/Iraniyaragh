@@ -231,7 +231,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                     <button
                       type="submit"
                       disabled={!canSubmitMobile || state.busy}
-                      className="mt-4 w-full h-12 rounded-2xl bg-[#FF4D00] text-white font-black text-[15px] flex items-center justify-center gap-2 hover:bg-[#e84600] disabled:opacity-40 disabled:cursor-not-allowed transition"
+                      className="mt-4 w-full h-12 rounded-2xl bg-[#C2410C] text-white font-black text-[15px] flex items-center justify-center gap-2 hover:bg-[#A83509] disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
                       {state.busy ? (
                         <>
@@ -272,7 +272,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                     <button
                       type="submit"
                       disabled={!canSubmitCode || state.busy}
-                      className="mt-4 w-full h-12 rounded-2xl bg-[#FF4D00] text-white font-black text-[15px] flex items-center justify-center gap-2 hover:bg-[#e84600] disabled:opacity-40 disabled:cursor-not-allowed transition"
+                      className="mt-4 w-full h-12 rounded-2xl bg-[#C2410C] text-white font-black text-[15px] flex items-center justify-center gap-2 hover:bg-[#A83509] disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
                       {state.busy ? (
                         <>
@@ -290,7 +290,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                       <button
                         type="button"
                         onClick={() => controller.resetChallenge()}
-                        className="flex items-center gap-1 text-[12.5px] font-bold text-slate-500 hover:text-[#FF4D00] transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 rounded-md"
+                        className="flex items-center gap-1 text-[12.5px] font-bold text-slate-500 hover:text-[#C2410C] transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C2410C] focus-visible:ring-offset-2 rounded-md"
                       >
                         <ArrowRight size={15} /> تغییر شماره
                       </button>
@@ -298,7 +298,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                         type="button"
                         onClick={() => void controller.resend()}
                         disabled={resendLocked || rateLimitLocked || state.busy}
-                        className="text-[12.5px] font-bold text-[#FF4D00] hover:underline disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed transition"
+                        className="text-[12.5px] font-bold text-[#C2410C] hover:underline disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed transition"
                       >
                         {resendLocked || rateLimitLocked ? `ارسال مجدد (${formatCountdown(cooldownMs)})` : 'ارسال مجدد کد'}
                       </button>

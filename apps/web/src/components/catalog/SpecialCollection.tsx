@@ -22,7 +22,7 @@ export function SpecialCollection({ onSelectProduct }: SpecialCollectionProps) {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#FF4D00] flex items-center justify-center font-black">R</div>
             <div>
-              <div className="font-black text-[15px] leading-none">سری مشکی رونیکس</div>
+              <h2 className="font-black text-[15px] leading-none">سری مشکی رونیکس</h2>
               <div className="text-white/60 text-xs font-medium">RONIX PRO • ابزار دسته‌بندی خاص</div>
             </div>
           </div>
@@ -32,27 +32,27 @@ export function SpecialCollection({ onSelectProduct }: SpecialCollectionProps) {
 
         <div ref={specialRef} className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory mt-5 pb-2 -mx-1 px-1">
           {specialProducts.map(p => (
-            <div key={p.id} onClick={() => onSelectProduct(p)} className="snap-start shrink-0 w-[170px] bg-white rounded-[20px] p-2.5 text-slate-900 cursor-pointer hover:shadow-xl transition">
+            <button key={p.id} type="button" onClick={() => onSelectProduct(p)} className="snap-start shrink-0 w-[170px] bg-white rounded-[20px] p-2.5 text-slate-900 cursor-pointer hover:shadow-xl transition text-right">
               <div className="relative rounded-2xl overflow-hidden bg-slate-50 h-[120px]">
-                <img src={p.image} className="w-full h-full object-cover" />
+                <img src={p.image} alt="" className="w-full h-full object-cover" />
                 <span className="absolute top-2 right-2 px-2 py-1 rounded-full bg-[#0F172A] text-white text-[10px] font-bold">{p.badge || 'PRO'}</span>
               </div>
               <div className="mt-2.5 px-1">
                 <div className="text-[12.5px] font-bold leading-5 line-clamp-2 min-h-[40px]">{p.title}</div>
-                <div className="flex items-center gap-1 mt-1"><Star size={11} className="fill-amber-400 text-amber-400" /><span className="text-xs font-bold">{p.rating}</span></div>
+                <div className="flex items-center gap-1 mt-1"><Star size={11} aria-hidden="true" className="fill-amber-400 text-amber-400" /><span className="text-xs font-bold">{p.rating}</span></div>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="font-black text-sm">{(p.price / 1000000).toFixed(1)}<span className="text-[10px] mr-1">م تومن</span></span>
                   <span className="w-7 h-7 rounded-full bg-[#FF4D00] text-white flex items-center justify-center"><ArrowLeft size={14} /></span>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
         <div className="flex gap-2 mt-4">
-          <button onClick={() => scrollCarousel(specialRef, 'right')} className="flex-1 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center hover:bg-white hover:text-slate-900 transition"><ChevronRight size={18} /></button>
-          <button onClick={() => scrollCarousel(specialRef, 'left')} className="flex-1 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center hover:bg-white hover:text-slate-900 transition"><ChevronLeft size={18} /></button>
-          <button onClick={() => show('کلکسیون رونیکس')} className="flex-[2] h-10 rounded-full bg-[#FF4D00] font-black text-sm hover:bg-[#e64500] transition">نمایش کلکسیون</button>
+          <button onClick={() => scrollCarousel(specialRef, 'right')} aria-label="پیمایش به راست" className="flex-1 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center hover:bg-white hover:text-slate-900 transition"><ChevronRight size={18} /></button>
+          <button onClick={() => scrollCarousel(specialRef, 'left')} aria-label="پیمایش به چپ" className="flex-1 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center hover:bg-white hover:text-slate-900 transition"><ChevronLeft size={18} /></button>
+          <button onClick={() => show('کلکسیون رونیکس')} className="flex-[2] h-10 rounded-full bg-[#C2410C] font-black text-sm hover:bg-[#A83509] transition">نمایش کلکسیون</button>
         </div>
       </div>
     </div>

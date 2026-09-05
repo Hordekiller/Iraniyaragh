@@ -58,7 +58,7 @@ test.describe('web: storefront shell', () => {
 
     await page.goto('/');
 
-    await tap(page.locator('section#popular div[class*="snap-start"]').first());
+    await tap(page.locator('section#popular button[class*="snap-start"]').first());
 
     await expect(page.getByText('افزودن به سبد خرید')).toBeVisible();
     await expect(page.getByText('موجود در انبار')).toBeVisible();
@@ -74,7 +74,7 @@ test.describe('web: storefront shell', () => {
 
     await page.goto('/');
 
-    const cards = page.locator('section#popular div[class*="snap-start"]');
+    const cards = page.locator('section#popular button[class*="snap-start"]');
     await expect(cards).toHaveCount(6);
 
     await tap(page.getByRole('button', { name: 'ابزار برقی', exact: true }));
