@@ -58,6 +58,13 @@ function createController(overrides: Partial<{
     currentHashKey: Object.freeze({ version: 1, secret: 'secret'.repeat(8) }),
     devLoginEnabled: overrides.devLoginEnabled ?? true,
     devCode: overrides.devCode ?? 'dev-code',
+    cookies: Object.freeze({
+      refreshName: 'iranyaragh_dev_refresh',
+      csrfName: 'iranyaragh_dev_csrf',
+      secure: false,
+      sameSite: 'strict',
+      path: '/',
+    }),
   });
   return new StaffAuthController(
     config,

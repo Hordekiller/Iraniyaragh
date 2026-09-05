@@ -12,6 +12,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { validateEnvironment } from './config/environment';
+import { RedisModule } from './modules/redis/redis.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { validateEnvironment } from './config/environment';
       validate: validateEnvironment,
     }),
     ApiFoundationModule,
+    RedisModule,
     DatabaseModule,
     HealthModule,
     AuthModule,

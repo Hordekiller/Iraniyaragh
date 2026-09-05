@@ -13,6 +13,30 @@ export type AuthHashKey = Readonly<{
   secret: string;
 }>;
 
+export type AuthCookieSpec = Readonly<{
+  refreshName: string;
+  csrfName: string;
+  secure: boolean;
+  sameSite: 'strict';
+  path: '/';
+}>;
+
+const PRODUCTION_COOKIES: AuthCookieSpec = Object.freeze({
+  refreshName: '__Host-iranyaragh_refresh',
+  csrfName: '__Host-iranyaragh_csrf',
+  secure: true,
+  sameSite: 'strict',
+  path: '/',
+});
+
+const DEVELOPMENT_COOKIES: AuthCookieSpec = Object.freeze({
+  refreshName: 'iranyaragh_customer_refresh',
+  csrfName: 'iranyaragh_customer_csrf',
+  secure: false,
+  sameSite: 'strict',
+  path: '/',
+});
+
 export type AuthRuntimeConfig = Readonly<{
   accessSigningSecret: string;
   issuer: string;
@@ -23,7 +47,13 @@ export type AuthRuntimeConfig = Readonly<{
   previousHashKey?: AuthHashKey;
   devLoginEnabled: boolean;
   devCode: string;
+  cookies: AuthCookieSpec;
 }>;
+
+function cookieSpecFor(environment: 'development' | 'test' | 'staging' | 'production'): AuthCookieSpec {
+  if (environment === 'staging' || environment === 'production') return PRODUCTION_COOKIES;
+  return DEVELOPMENT_COOKIES;
+}
 
 export function createAuthRuntimeConfig(config: ConfigService<EnvironmentVariables, true>): AuthRuntimeConfig {
   const previousVersion = config.get('AUTH_HASH_PREVIOUS_KEY_VERSION', {
@@ -62,5 +92,6 @@ export function createAuthRuntimeConfig(config: ConfigService<EnvironmentVariabl
         : Object.freeze({ version: previousVersion, secret: previousSecret }),
     devLoginEnabled: hasDevCode,
     devCode: hasDevCode ? (devCode as string) : '',
+    cookies: cookieSpecFor(environment),
   });
 }
