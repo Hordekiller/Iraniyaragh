@@ -13,11 +13,12 @@ The repository is in **foundation/prototype**, before release `0.1`.
 
 Coordination point: GitHub issue #91. The reusable Auth core is landed (`#83` session
 rotation, `#85` live principal + permission guard, `#88` dev-gated staff sign-in,
-`#89` contracts dedup). The remaining runtime surface — customer OTP (`#48`), staff
-password + TOTP + first-admin bootstrap (`#49`), refresh/CSRF + own-session HTTP (`#74`),
-and the product-track UX/E2E (`#50`) — is sequenced under #91 with a contract-first
-A/B split (contract PR before parallel UI). Redis rate limiting is the prerequisite for
-all auth endpoints. Working-agreement decisions are tracked in #78.
+`#89` contracts dedup). Customer OTP (`#48`) and its Redis-backed rate limiting have
+merged (`#95`), including a dedicated DB/live end-to-end 429-oververify case (`#100`).
+The remaining runtime surface — staff password + TOTP + first-admin bootstrap (`#49`),
+refresh/CSRF + own-session HTTP (`#74`), and the product-track UX/E2E (`#50`) — is
+sequenced under #91 with a contract-first A/B split (contract PR before parallel UI).
+Working-agreement decisions are tracked in #78.
 
 ### Implemented
 
