@@ -235,8 +235,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
     and the real Redis provider, Lua window and `reset` behavior by a live-Redis
     integration spec that self-skips when no Redis is reachable. CI's database job now
     provisions a Redis service so the live suite runs there. The 429-oververify failure
-    path is covered by unit tests but does not yet have a dedicated DB/live end-to-end
-    case. `request.ip` has no `trust proxy` enabled, so the Safe-IP rate-limit dimension
+    path now has a dedicated DB/live end-to-end case: a real challenge is requested and
+    its per-IP verification-failure window is driven through the configured limit
+    against live Redis until a `429 RATE_LIMITED` surfaces, with DB evidence of the
+    in-window `INVALID_CODE` attempts and the `resetIpVerificationFailures` recovery.
+    `request.ip` has no `trust proxy` enabled, so the Safe-IP rate-limit dimension
     resolves the direct socket address; a reverse-proxy deployment must enable a
     bounded `trust proxy` and document the spoofing trade-off before rollout.
 
