@@ -123,7 +123,7 @@ The repository is in **foundation/prototype**, before release `0.1`.
   Decision logic is pure (`classifyResult()`) and was validated against 4 fixture
   scenarios (clean, vulnerability-found, persistent-network-failure,
   transient-recovery) on CI and locally.
-- Redis-backed distributed rate limiting (auth branch): a dedicated `@Global`
+- Redis-backed distributed rate limiting: a dedicated `@Global`
   Redis module (lazy-connect client, offline-queue disabled, bounded retry, redacted
   error logging) plus a fixed-window atomic Lua limiter keyed by versioned
   identifier/IP hashes. Request and verification limits follow AUTH_CONTRACT §9
@@ -131,7 +131,7 @@ The repository is in **foundation/prototype**, before release `0.1`.
   Enforcement is fail-closed: Redis unavailability returns `503 UPSTREAM_UNAVAILABLE`
   and never fails open; over-limit returns `429 RATE_LIMITED` with a bounded
   `Retry-After` header (emitted centrally in the exception filter).
-- Customer OTP sign-in (auth branch): `POST /api/v1/auth/customer/otp/request`
+- Customer OTP sign-in: `POST /api/v1/auth/customer/otp/request`
   (public, `202` challenge, `Cache-Control: no-store`/`Pragma: no-cache`) and
   `POST /api/v1/auth/customer/otp/verify` (five-attempt single-use challenge,
   serializable single-use consume, resend invalidates the prior challenge). Only
@@ -170,9 +170,10 @@ The repository is in **foundation/prototype**, before release `0.1`.
   and the Session core rotates/revokes refresh families transactionally. Staff sign-in
   through the development-enabled controller (`/auth/dev/signin`, `/auth/me`,
   `/auth/logout`) and customer OTP sign-in (`/auth/customer/otp/request`, `/auth/customer/otp/verify`)
-  with Redis-backed rate limiting (auth branch) are implemented. Staff password+TOTP,
-  OTP delivery (SMS provider), refresh rotation, CSRF logout, credential verification
-  and server-side permission enforcement are not implemented yet. ADR-0007, ADR-0010
+  with Redis-backed rate limiting are implemented (main branch since PR #95). Staff
+  password+TOTP, OTP delivery (SMS provider), refresh rotation, CSRF logout,
+  credential verification and server-side permission enforcement are not implemented
+  yet. ADR-0007, ADR-0010
   and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
@@ -228,7 +229,7 @@ The repository is in **foundation/prototype**, before release `0.1`.
     the sole security principal and `Customer` stays a commerce profile; code must not
     join them implicitly by mobile number. Explicit linkage/merge/anonymization rules
     still require a forward migration when the product needs them.
-13. Customer OTP and rate limiting (auth branch): the Redis limiter, OTP service,
+13. Customer OTP and rate limiting: the Redis limiter, OTP service,
     controller MVP and rate-limit provider are covered by the unit suite (mock Redis
     client + controller contract tests covering status codes, cookie attributes and
     401 shapes), customer OTP flows by DB integration tests (fresh `_test` Postgres),
