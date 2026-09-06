@@ -34,6 +34,16 @@ test.describe('admin: authentication gate', () => {
 
     await network.assertNone();
   });
+
+  test('staff fixture login route fails closed in a ship build (no sign-in form)', async ({ page }) => {
+    // The CI/ship build is compiled without NEXT_PUBLIC_FIXTURE_AUTH=true, so
+    // /login/staff must fail closed per decision B: no fixture form is rendered.
+    await page.goto('/login/staff');
+
+    await expect(page.getByText(/فعال نیست/)).toBeVisible();
+    await expect(page.getByLabel('شناسه کارکن')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'ادامه' })).toHaveCount(0);
+  });
 });
 
 test.describe('admin: authenticated shell', () => {
