@@ -101,12 +101,33 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
 
   useEffect(() => {
     if (!open) return
-    const focusFrame = requestAnimationFrame(() => {
+    let cancelled = false
+    let frame = 0
+
+    // AnimatePresence (mode="wait") mounts the next step's form only after the
+    // previous one finishes its exit animation, so the freshly rendered step may
+    // not contain its input on the very first frame. Retry for a bounded window
+    // instead of dropping keyboard focus on the step transition.
+    const tryFocus = () => {
+      if (cancelled) return
       setNowMs(Date.now())
       const inputId = state.phase === 'code' ? 'login-otp-code' : 'login-mobile'
-      dialogRef.current?.querySelector<HTMLElement>(`#${inputId}`)?.focus()
-    })
-    return () => cancelAnimationFrame(focusFrame)
+      const target = dialogRef.current?.querySelector<HTMLElement>(`#${inputId}`)
+      if (target) {
+        target.focus()
+        return
+      }
+      if (frame < 30) {
+        frame += 1
+        requestAnimationFrame(tryFocus)
+      }
+    }
+
+    const focusFrame = requestAnimationFrame(tryFocus)
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(focusFrame)
+    }
   }, [open, state.phase])
 
   // Auto-close the dialog as soon as login succeeds.
