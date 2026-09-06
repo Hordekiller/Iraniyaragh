@@ -67,7 +67,7 @@ export function AccountMenu({ onOpenLogin }: AccountMenuProps) {
         aria-controls={authenticated ? 'account-menu' : undefined}
         className={`w-10 h-10 lg:w-11 lg:h-11 rounded-full border flex items-center justify-center transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 ${
           authenticated
-            ? 'bg-[#FF4D00] text-white border-[#FF4D00] hover:bg-[#e84600]'
+            ? 'bg-[#C2410C] text-white border-[#C2410C] hover:bg-[#A83509]'
             : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-white hover:border-[#FF4D00]/30 hover:text-[#FF4D00]'
         }`}
       >
