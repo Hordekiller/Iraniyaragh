@@ -108,7 +108,7 @@ export class StaffAuthFixtureClient {
 
     // A new challenge replaces and invalidates any previous one.
     this.passwordFailures = 0;
-    this.challengeToken = `fixture-staff-challenge-${Math.floor(Math.random() * 1e9)}`;
+    this.challengeToken = `fixture-staff-challenge-${globalThis.crypto.randomUUID()}`;
     this.challengeIssuedAt = this.now();
     return {
       challengeToken: this.challengeToken,
@@ -141,7 +141,7 @@ export class StaffAuthFixtureClient {
     const issuedAt = this.now();
     const principal: AuthPrincipal = {
       userId: this.identifier,
-      sessionId: `fixture-staff-session-${Math.floor(Math.random() * 1e9)}`,
+      sessionId: `fixture-staff-session-${globalThis.crypto.randomUUID()}`,
       authenticationLevel: 'STAFF_MFA',
       permissions: ['admin.dashboard.read'],
       authenticatedAt: new Date(issuedAt).toISOString(),
