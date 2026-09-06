@@ -8,7 +8,7 @@ export function ServicesSection() {
       <div className="bg-white rounded-[24px] lg:rounded-[28px] p-4 lg:p-8">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h3 className="font-black text-[20px] lg:text-[22px] text-slate-900">چرا ۴۸ هزار استادکار، ایران یراق را انتخاب کرده‌اند؟</h3>
+            <h2 className="font-black text-[20px] lg:text-[22px] text-slate-900">چرا ۴۸ هزار استادکار، ایران یراق را انتخاب کرده‌اند؟</h2>
             <p className="text-slate-500 text-[13px] mt-1">خدماتی که کار شما را آسان‌تر می‌کند، نه سخت‌تر</p>
           </div>
           <div className="hidden lg:flex items-center gap-2 text-xs font-bold text-slate-500">

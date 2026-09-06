@@ -27,10 +27,10 @@ export function PopularTools({ onSelectProduct }: PopularToolsProps) {
           <div className="flex items-center gap-4">
             <div className="w-11 h-11 rounded-2xl bg-[#FF4D00] text-white flex items-center justify-center"><Flame size={22} /></div>
             <div>
-              <h3 className="font-black text-[18px] lg:text-[20px] leading-none text-slate-900">ابزار محبوب هفته</h3>
+              <h2 className="font-black text-[18px] lg:text-[20px] leading-none text-slate-900">ابزار محبوب هفته</h2>
               <p className="text-slate-500 text-xs lg:text-[13px] mt-1">منتخب استادکاران بر اساس خرید واقعی</p>
             </div>
-            <span className="hidden lg:inline-flex mr-4 px-3 py-1.5 rounded-full bg-amber-50 text-amber-600 text-xs font-black border border-amber-200">🔥 داغ‌ترین‌ها</span>
+            <span className="hidden lg:inline-flex mr-4 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-xs font-black border border-amber-200">🔥 داغ‌ترین‌ها</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden lg:flex items-center gap-1.5 p-1 bg-slate-100 rounded-full">
@@ -39,8 +39,8 @@ export function PopularTools({ onSelectProduct }: PopularToolsProps) {
               ))}
             </div>
             <div className="flex gap-1.5">
-              <button onClick={() => scrollCarousel(popularRef, 'right')} className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-900 hover:text-white hover:border-slate-900 transition"><ChevronRight size={18} /></button>
-              <button onClick={() => scrollCarousel(popularRef, 'left')} className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-900 hover:text-white hover:border-slate-900 transition"><ChevronLeft size={18} /></button>
+              <button onClick={() => scrollCarousel(popularRef, 'right')} aria-label="پیمایش به راست" className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-900 hover:text-white hover:border-slate-900 transition"><ChevronRight size={18} /></button>
+              <button onClick={() => scrollCarousel(popularRef, 'left')} aria-label="پیمایش به چپ" className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-900 hover:text-white hover:border-slate-900 transition"><ChevronLeft size={18} /></button>
             </div>
           </div>
         </div>
@@ -54,28 +54,28 @@ export function PopularTools({ onSelectProduct }: PopularToolsProps) {
 
         <div ref={popularRef} className="flex gap-3 lg:gap-4 overflow-x-auto scrollbar-none scroll-smooth snap-x snap-mandatory mt-5 pb-2 -mx-1 px-1">
           {filteredPopular.map(p => (
-            <div key={p.id} onClick={() => onSelectProduct(p)} className="snap-start shrink-0 w-[172px] lg:w-[210px] bg-slate-50 rounded-[20px] lg:rounded-[24px] p-3 lg:p-3.5 border border-slate-100 hover:border-[#FF4D00]/20 hover:shadow-lg hover:shadow-[#FF4D00]/5 transition cursor-pointer group">
+            <button key={p.id} type="button" onClick={() => onSelectProduct(p)} className="snap-start shrink-0 w-[172px] lg:w-[210px] bg-slate-50 rounded-[20px] lg:rounded-[24px] p-3 lg:p-3.5 border border-slate-100 hover:border-[#FF4D00]/20 hover:shadow-lg hover:shadow-[#FF4D00]/5 transition cursor-pointer group text-right">
               <div className="relative rounded-2xl overflow-hidden bg-white h-[148px] lg:h-[168px] flex items-center justify-center">
-                <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                {p.badge && <span className="absolute top-2 right-2 px-2 py-1 rounded-full bg-[#FF4D00] text-white text-[10px] font-black">{p.badge}</span>}
-                <span className="absolute bottom-2 left-2 w-7 h-7 rounded-full bg-white shadow flex items-center justify-center text-slate-600"><Zap size={14} className="text-amber-500" /></span>
+                <img src={p.image} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                {p.badge && <span className="absolute top-2 right-2 px-2 py-1 rounded-full bg-[#C2410C] text-white text-[10px] font-black">{p.badge}</span>}
+                <span className="absolute bottom-2 left-2 w-7 h-7 rounded-full bg-white shadow flex items-center justify-center text-slate-600"><Zap size={14} aria-hidden="true" className="text-amber-500" /></span>
               </div>
               <div className="mt-3">
-                <div className="text-[11px] font-bold text-slate-400 tracking-widest">{p.brand}</div>
+                <div className="text-[11px] font-bold text-slate-500 tracking-widest">{p.brand}</div>
                 <div className="text-[13px] font-bold leading-5 text-slate-900 line-clamp-2 min-h-[40px]">{p.title}</div>
                 <div className="flex items-center gap-1 mt-1.5">
-                  <div className="flex"><Star size={12} className="fill-amber-400 text-amber-400" /><Star size={12} className="fill-amber-400 text-amber-400" /><Star size={12} className="fill-amber-400 text-amber-400" /><Star size={12} className="fill-amber-400 text-amber-400" /><Star size={12} className="fill-slate-200 text-slate-200" /></div>
-                  <span className="text-xs font-bold">{p.rating}</span><span className="text-xs text-slate-400">({p.reviews})</span>
+                  <div className="flex" aria-hidden="true"><Star size={12} className="fill-amber-400 text-amber-400" /><Star size={12} className="fill-amber-400 text-amber-400" /><Star size={12} className="fill-amber-400 text-amber-400" /><Star size={12} className="fill-amber-400 text-amber-400" /><Star size={12} className="fill-slate-200 text-slate-200" /></div>
+                  <span className="text-xs font-bold">{p.rating}</span><span className="text-xs text-slate-500">({p.reviews})</span>
                 </div>
                 <div className="mt-2.5 flex items-end justify-between">
                   <div>
                     <div className="text-[#0F172A] font-black text-[15px] leading-none">{formatToman(p.price)} <span className="text-[10px] font-bold">تومان</span></div>
-                    {p.oldPrice && <div className="text-xs text-slate-400 line-through">{formatToman(p.oldPrice)}</div>}
+                    {p.oldPrice && <div className="text-xs text-slate-500 line-through">{formatToman(p.oldPrice)}</div>}
                   </div>
-                  <button className="w-9 h-9 rounded-full bg-[#0F172A] text-white flex items-center justify-center group-hover:bg-[#FF4D00] transition"><ArrowLeft size={16} /></button>
+                  <span className="w-9 h-9 rounded-full bg-[#0F172A] text-white flex items-center justify-center group-hover:bg-[#FF4D00] transition"><ArrowLeft size={16} /></span>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 

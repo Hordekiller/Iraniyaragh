@@ -77,7 +77,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
             <div className="relative h-[280px] lg:h-[360px] bg-slate-50">
               <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
               <button ref={closeButtonRef} onClick={onClose} aria-label="بستن" className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white shadow flex items-center justify-center"><X size={18} /></button>
-              {product.badge && <span className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-[#FF4D00] text-white text-xs font-black">{product.badge}</span>}
+              {product.badge && <span className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-[#C2410C] text-white text-xs font-black">{product.badge}</span>}
             </div>
             <div className="p-6">
               <div className="text-xs font-black tracking-widest text-slate-400">{product.brand} • {product.cat}</div>
@@ -100,7 +100,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                 ))}
               </div>
               <div className="flex gap-3 mt-6">
-                <button onClick={() => { show('به سبد افزوده شد'); onClose() }} className="flex-1 h-12 rounded-full bg-[#FF4D00] text-white font-black hover:bg-[#e64500] transition">افزودن به سبد خرید</button>
+                <button onClick={() => { show('به سبد افزوده شد'); onClose() }} className="flex-1 h-12 rounded-full bg-[#C2410C] text-white font-black hover:bg-[#A83509] transition">افزودن به سبد خرید</button>
                 <button onClick={() => show('مشاوره: ۰۲۱-۸۸۸۸۸۸۸۸')} className="h-12 px-6 rounded-full border-2 border-slate-900 font-black">مشاوره</button>
               </div>
               <div className="flex items-center justify-center gap-4 mt-4 text-xs text-slate-400">

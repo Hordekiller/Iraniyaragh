@@ -35,27 +35,27 @@ export function SearchResults({ query, onSelectProduct }: SearchResultsProps) {
           <div className="mt-6 py-10 flex flex-col items-center gap-3 text-center">
             <SearchX size={32} className="text-slate-300" />
             <p className="font-bold text-slate-700">کالایی مطابق با «{query}» پیدا نشد</p>
-            <p className="text-xs text-slate-400">عبارت دیگری را امتحان کنید؛ نمونه: دریل، فرز، رونیکس</p>
+            <p className="text-xs text-slate-500">عبارت دیگری را امتحان کنید؛ نمونه: دریل، فرز، رونیکس</p>
           </div>
         ) : (
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {results.map(p => (
-              <div key={`search-${p.id}`} onClick={() => onSelectProduct(p)} className="bg-slate-50 rounded-[20px] border border-slate-100 hover:border-[#FF4D00]/20 hover:shadow-lg hover:shadow-[#FF4D00]/5 transition cursor-pointer group overflow-hidden">
+              <button key={`search-${p.id}`} type="button" onClick={() => onSelectProduct(p)} className="bg-slate-50 rounded-[20px] border border-slate-100 hover:border-[#FF4D00]/20 hover:shadow-lg hover:shadow-[#FF4D00]/5 transition cursor-pointer group overflow-hidden text-right">
                 <div className="relative h-[120px] lg:h-[140px] bg-white flex items-center justify-center overflow-hidden">
-                  <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                  {p.badge && <span className="absolute top-2 right-2 px-2 py-1 rounded-full bg-[#FF4D00] text-white text-[10px] font-black">{p.badge}</span>}
+                  <img src={p.image} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                  {p.badge && <span className="absolute top-2 right-2 px-2 py-1 rounded-full bg-[#C2410C] text-white text-[10px] font-black">{p.badge}</span>}
                 </div>
                 <div className="p-3">
-                  <div className="text-[11px] font-bold text-slate-400 tracking-widest">{p.brand}</div>
+                  <div className="text-[11px] font-bold text-slate-500 tracking-widest">{p.brand}</div>
                   <div className="text-[13px] font-bold leading-5 text-slate-900 line-clamp-2 min-h-[40px]">{p.title}</div>
                   <div className="mt-2 flex items-end justify-between">
                     <div>
                       <div className="text-[#0F172A] font-black text-[15px] leading-none">{formatToman(p.price)} <span className="text-[10px] font-bold">تومان</span></div>
-                      {p.oldPrice && <div className="text-xs text-slate-400 line-through mt-0.5">{formatToman(p.oldPrice)}</div>}
+                      {p.oldPrice && <div className="text-xs text-slate-500 line-through mt-0.5">{formatToman(p.oldPrice)}</div>}
                     </div>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
