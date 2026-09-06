@@ -112,6 +112,34 @@
           "CustomerAuth"
         ]
       }
+    },
+    "/auth/sessions": {
+      "get": {
+        "operationId": "SessionManagementController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SessionManagement"
+        ]
+      }
+    },
+    "/auth/sessions/{sessionId}": {
+      "delete": {
+        "operationId": "SessionManagementController_remove",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SessionManagement"
+        ]
+      }
     }
   },
   "info": {

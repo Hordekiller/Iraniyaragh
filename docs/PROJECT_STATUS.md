@@ -144,8 +144,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
   with env-aware cookies (`__Host-` + Secure in staging/production, suffixed
   non-`__Host-` without Secure in development only, per ADR-0007).
   Mobile normalization is E.164 (`+989XXXXXXXXX`) with strict validation.
-
-### Partial
+- Session management: `GET /api/v1/auth/sessions` and `DELETE /api/v1/auth/sessions/:sessionId`
+  on branch `feat/session-management`, bearer-guarded at any authentication level via a
+  new `RequireLiveSession()` guard decorator. Listing returns only the caller's active
+  sessions as the safe `SessionSummary` projection (newest-first, `current` flag, no
+  hashes/user-agent/IP/token-family/owner id) and revoke targets the owned session with a
+  dedicated `REVOKED` audit reason, returns a generic `404 NOT_FOUND` for missing or
+  foreign ids, is idempotent for the caller's already-revoked sessions and clears the
+  auth cookies (configured and dev-suffixed names) when the current session is deleted.
+  Covered by controller unit specs, guard HTTP specs and DB integration
+  (ownership/idempotency/audit); `openapi.json` regenerated; lint/typecheck/test/build/
+  integration green.
 
 - Inventory rules live in one service with actor/requestId tracing, audit rows,
   CAS version guards, bounded serializable retry, reservation consume/release/expire
@@ -175,7 +184,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
   with Redis-backed rate limiting are implemented (main branch since PR #95). Staff
   password+TOTP, OTP delivery (SMS provider), refresh rotation, CSRF logout,
   credential verification and server-side permission enforcement are not implemented
-  yet. ADR-0007, ADR-0010
+  yet. Session list/revoke endpoints (`GET`/`DELETE /api/v1/auth/sessions`) and the
+  any-level `RequireLiveSession()` guard are implemented; the browser refresh
+  (`/refresh`) and cookie/CSRF-protected logout remain pending. ADR-0007, ADR-0010
   and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented

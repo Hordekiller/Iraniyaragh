@@ -40,6 +40,7 @@ const runtimeConfig: AuthRuntimeConfig = Object.freeze({
 describe.sequential('AuthSessionService database integration', () => {
   const runId = randomUUID().replaceAll('-', '').slice(0, 20);
   const userId = `auth_session_user_${runId}`;
+  const otherUserId = `auth_session_other_${runId}`;
   const prisma = new PrismaService();
   const hashes = new AuthHashService(runtimeConfig);
   const tokens = new AuthTokenService(runtimeConfig);
@@ -60,14 +61,28 @@ describe.sequential('AuthSessionService database integration', () => {
         status: UserStatus.ACTIVE,
       },
     });
+    await prisma.user.create({
+      data: {
+        id: otherUserId,
+        email: `auth-session-other-${runId}@example.com`,
+        status: UserStatus.ACTIVE,
+      },
+    });
   });
 
   afterAll(async () => {
     if (!connected) return;
     await prisma.auditLog.deleteMany({
-      where: { OR: [{ actorId: userId }, { entityId: userId }] },
+      where: {
+        OR: [
+          { actorId: userId },
+          { entityId: userId },
+          { actorId: otherUserId },
+          { entityId: otherUserId },
+        ],
+      },
     });
-    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
     await prisma.$disconnect();
   });
 
@@ -288,6 +303,143 @@ describe.sequential('AuthSessionService database integration', () => {
   it('returns the same generic invalid-session code for malformed and unknown refresh values', async () => {
     await expectAuthError(sessions.rotateSession(''), 'AUTH_SESSION_INVALID');
     await expectAuthError(sessions.rotateSession(tokens.generateRefreshToken()), 'AUTH_SESSION_INVALID');
+  });
+
+  it('cannot revoke another user session and logout-all is scoped to the caller', async () => {
+    const now = new Date();
+    const foreign = await sessions.createSession({
+      userId: otherUserId,
+      authenticationLevel: AuthenticationLevel.CUSTOMER_OTP,
+      authenticatedAt: new Date(now.getTime() - 1_000),
+    });
+    const own = await sessions.createSession({
+      userId,
+      authenticationLevel: AuthenticationLevel.CUSTOMER_OTP,
+      authenticatedAt: new Date(now.getTime() - 1_000),
+    });
+
+    await expect(sessions.revokeSession(userId, foreign.sessionId)).resolves.toBe(false);
+    const untouchedForeign = await prisma.session.findUniqueOrThrow({ where: { id: foreign.sessionId } });
+    expect(untouchedForeign.revokedAt).toBeNull();
+    await expect(
+      prisma.auditLog.count({
+        where: { action: 'auth.session.revoked', actorId: userId, entityId: foreign.sessionId },
+      }),
+    ).resolves.toBe(0);
+
+    const revokedCount = await sessions.revokeAllSessions(userId);
+    expect(revokedCount).toBeGreaterThanOrEqual(1);
+    const storedOwn = await prisma.session.findUniqueOrThrow({ where: { id: own.sessionId } });
+    expect(storedOwn.revokeReason).toBe(AUTH_SESSION_REVOKE_REASON.logoutAll);
+    await expect(
+      prisma.session.count({ where: { userId, revokedAt: null } }),
+    ).resolves.toBe(0);
+
+    const foreignAfterLogoutAll = await prisma.session.findUniqueOrThrow({ where: { id: foreign.sessionId } });
+    expect(foreignAfterLogoutAll.revokedAt).toBeNull();
+    await expect(
+      prisma.auditLog.count({
+        where: { action: 'auth.session.revoked', actorId: userId, entityId: foreign.sessionId },
+      }),
+    ).resolves.toBe(0);
+
+    const audit = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'auth.session.all_revoked', actorId: userId },
+    });
+    expect(audit.metadata).toMatchObject({ reason: AUTH_SESSION_REVOKE_REASON.logoutAll });
+
+    await expect(sessions.revokeAllSessions(userId)).resolves.toBe(0);
+    await expect(sessions.revokeSession(userId, foreign.sessionId)).resolves.toBe(false);
+  });
+
+  it('lists only the caller\'s active sessions with safe fields and the current flag', async () => {
+    const now = new Date();
+    const older = await sessions.createSession({
+      userId,
+      authenticationLevel: AuthenticationLevel.CUSTOMER_OTP,
+      authenticatedAt: new Date(now.getTime() - 2_000),
+      deviceName: 'Older phone',
+    });
+    const newer = await sessions.createSession({
+      userId,
+      authenticationLevel: AuthenticationLevel.STAFF_MFA,
+      authenticatedAt: new Date(now.getTime() - 1_000),
+      deviceName: 'Operations laptop',
+    });
+
+    const listed = await sessions.listSessions(userId, newer.sessionId);
+
+    expect(listed.map(session => session.sessionId).sort()).toEqual(
+      [newer.sessionId, older.sessionId].sort(),
+    );
+    const byId = new Map(listed.map(session => [session.sessionId, session]));
+    expect(byId.get(newer.sessionId)).toMatchObject({
+      current: true,
+      authenticationLevel: AuthenticationLevel.STAFF_MFA,
+      deviceName: 'Operations laptop',
+      lastUsedAt: expect.any(Date),
+      expiresAt: expect.any(Date),
+      createdAt: expect.any(Date),
+    });
+    expect(byId.get(older.sessionId)).toMatchObject({
+      current: false,
+      deviceName: 'Older phone',
+    });
+    expect(Object.keys(listed[0] ?? {}).sort()).toEqual([
+      'authenticationLevel',
+      'createdAt',
+      'current',
+      'deviceName',
+      'expiresAt',
+      'lastUsedAt',
+      'sessionId',
+    ]);
+    expect(JSON.stringify(listed)).not.toContain(userId);
+
+    await expect(sessions.revokeSession(userId, older.sessionId)).resolves.toBe(true);
+    const afterRevoke = await sessions.listSessions(userId, newer.sessionId);
+    expect(afterRevoke.map(session => session.sessionId)).toEqual([newer.sessionId]);
+    await expect(sessions.revokeAllSessions(userId)).resolves.toBeGreaterThanOrEqual(1);
+  });
+
+  it('revokes exactly the caller\'s session once, idempotently, with one audit row and a generic miss for others', async () => {
+    const now = new Date();
+    const own = await sessions.createSession({
+      userId,
+      authenticationLevel: AuthenticationLevel.CUSTOMER_OTP,
+      authenticatedAt: new Date(now.getTime() - 1_000),
+    });
+    const foreign = await sessions.createSession({
+      userId: otherUserId,
+      authenticationLevel: AuthenticationLevel.CUSTOMER_OTP,
+      authenticatedAt: new Date(now.getTime() - 1_000),
+    });
+
+    await expect(sessions.revokeUserSession(userId, foreign.sessionId)).resolves.toBe('notFound');
+    await expect(sessions.revokeUserSession(userId, randomUUID())).resolves.toBe('notFound');
+    const untouchedForeign = await prisma.session.findUniqueOrThrow({ where: { id: foreign.sessionId } });
+    expect(untouchedForeign.revokedAt).toBeNull();
+    await expect(
+      prisma.auditLog.count({
+        where: { action: 'auth.session.revoked', actorId: userId, entityId: foreign.sessionId },
+      }),
+    ).resolves.toBe(0);
+
+    await expect(sessions.revokeUserSession(userId, own.sessionId)).resolves.toBe('revoked');
+    const storedOwn = await prisma.session.findUniqueOrThrow({ where: { id: own.sessionId } });
+    expect(storedOwn.revokeReason).toBe(AUTH_SESSION_REVOKE_REASON.revoked);
+    await expect(
+      prisma.auditLog.count({
+        where: { action: 'auth.session.revoked', actorId: userId, entityId: own.sessionId },
+      }),
+    ).resolves.toBe(1);
+
+    await expect(sessions.revokeUserSession(userId, own.sessionId)).resolves.toBe('alreadyRevoked');
+    await expect(
+      prisma.auditLog.count({
+        where: { action: 'auth.session.revoked', actorId: userId, entityId: own.sessionId },
+      }),
+    ).resolves.toBe(1);
   });
 });
 

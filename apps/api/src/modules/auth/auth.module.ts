@@ -11,10 +11,11 @@ import { AuthTokenService } from './auth-token.service';
 import { CustomerAuthController } from './customer-otp.controller';
 import { CustomerOtpService } from './customer-otp.service';
 import { RateLimitService } from './rate-limit.service';
+import { SessionManagementController } from './session.controller';
 import { StaffAuthController } from './staff-auth.controller';
 
 @Module({
-  controllers: [StaffAuthController, CustomerAuthController],
+  controllers: [StaffAuthController, CustomerAuthController, SessionManagementController],
   providers: [
     {
       provide: AUTH_RUNTIME_CONFIG,
