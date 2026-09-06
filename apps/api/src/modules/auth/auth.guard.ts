@@ -11,10 +11,13 @@ import { AuthPrincipalService, type AuthPrincipalContext } from './auth-principa
 
 export const REQUIRE_AUTH_LEVEL = 'auth:require-level';
 export const REQUIRE_PERMISSION = 'auth:require-permission';
+export const REQUIRE_SESSION = 'auth:require-session';
 
 export const RequireAuthentication = (level: AuthenticationLevel) => SetMetadata(REQUIRE_AUTH_LEVEL, level);
 
 export const RequirePermission = (permission: string) => SetMetadata(REQUIRE_PERMISSION, permission);
+
+export const RequireLiveSession = () => SetMetadata(REQUIRE_SESSION, true);
 
 export const CurrentPrincipal = createParamDecorator(
   (_data: unknown, context: ExecutionContext): AuthPrincipalContext => {
@@ -29,6 +32,7 @@ export const CurrentPrincipal = createParamDecorator(
 
 type ProtectedRouteMetadata = Readonly<{
   authenticationLevel: AuthenticationLevel | undefined;
+  liveSession: boolean | undefined;
   permission: string | undefined;
 }>;
 
@@ -39,8 +43,11 @@ function readProtectedRouteMetadata(context: ExecutionContext): ProtectedRouteMe
   const classLevel = Reflect.getMetadata(REQUIRE_AUTH_LEVEL, target) as AuthenticationLevel | undefined;
   const handlerPermission = Reflect.getMetadata(REQUIRE_PERMISSION, handler) as string | undefined;
   const classPermission = Reflect.getMetadata(REQUIRE_PERMISSION, target) as string | undefined;
+  const handlerLiveSession = Reflect.getMetadata(REQUIRE_SESSION, handler) as boolean | undefined;
+  const classLiveSession = Reflect.getMetadata(REQUIRE_SESSION, target) as boolean | undefined;
   return Object.freeze({
     authenticationLevel: handlerLevel ?? classLevel,
+    liveSession: handlerLiveSession ?? classLiveSession,
     permission: handlerPermission ?? classPermission,
   });
 }
@@ -51,7 +58,13 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const metadata = readProtectedRouteMetadata(context);
-    if (metadata.authenticationLevel === undefined && metadata.permission === undefined) return true;
+    if (
+      !metadata.liveSession &&
+      metadata.authenticationLevel === undefined &&
+      metadata.permission === undefined
+    ) {
+      return true;
+    }
 
     const request = context.switchToHttp().getRequest<{
       headers: { authorization?: string };

@@ -22,11 +22,12 @@ export const AUTH_SESSION_REVOKE_REASON = Object.freeze({
   logout: 'LOGOUT',
   logoutAll: 'LOGOUT_ALL',
   replayDetected: 'REPLAY_DETECTED',
+  revoked: 'REVOKED',
   rotated: 'ROTATED',
   userInactive: 'USER_INACTIVE',
 } as const);
 
-type AuthSessionRevokeReason = (typeof AUTH_SESSION_REVOKE_REASON)[keyof typeof AUTH_SESSION_REVOKE_REASON];
+export type AuthSessionRevokeReason = (typeof AUTH_SESSION_REVOKE_REASON)[keyof typeof AUTH_SESSION_REVOKE_REASON];
 
 export type CreateAuthSessionInput = Readonly<{
   userId: string;
@@ -46,6 +47,18 @@ export type IssuedAuthSession = Readonly<{
   sessionId: string;
   tokenFamilyId: string;
 }>;
+
+export type AuthSessionSummary = Readonly<{
+  sessionId: string;
+  current: boolean;
+  deviceName: string | null;
+  authenticationLevel: AuthenticationLevel;
+  createdAt: Date;
+  lastUsedAt: Date | null;
+  expiresAt: Date;
+}>;
+
+export type RevokeUserSessionOutcome = 'revoked' | 'alreadyRevoked' | 'notFound';
 
 export type AuthSessionErrorCode = 'AUTH_SESSION_INVALID' | 'AUTH_SESSION_REPLAYED';
 
@@ -275,9 +288,38 @@ export class AuthSessionService {
     });
   }
 
-  async revokeSession(userId: string, sessionId: string): Promise<boolean> {
+  async listSessions(userId: string, currentSessionId: string): Promise<readonly AuthSessionSummary[]> {
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, revokedAt: null },
+      select: {
+        id: true,
+        deviceName: true,
+        authenticationLevel: true,
+        createdAt: true,
+        lastUsedAt: true,
+        expiresAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return sessions.map(session =>
+      Object.freeze({
+        sessionId: session.id,
+        current: session.id === currentSessionId,
+        deviceName: session.deviceName,
+        authenticationLevel: session.authenticationLevel,
+        createdAt: session.createdAt,
+        lastUsedAt: session.lastUsedAt,
+        expiresAt: session.expiresAt,
+      }),
+    );
+  }
+
+  async revokeSession(
+    userId: string,
+    sessionId: string,
+    reason: AuthSessionRevokeReason = AUTH_SESSION_REVOKE_REASON.logout,
+  ): Promise<boolean> {
     const requestId = getRequestId();
-    const reason = AUTH_SESSION_REVOKE_REASON.logout;
     return this.runSerializable(async tx => {
       const revoked = await tx.session.updateMany({
         where: { id: sessionId, userId, revokedAt: null },
@@ -296,6 +338,40 @@ export class AuthSessionService {
         },
       });
       return true;
+    });
+  }
+
+  async revokeUserSession(
+    userId: string,
+    sessionId: string,
+    reason: AuthSessionRevokeReason = AUTH_SESSION_REVOKE_REASON.revoked,
+  ): Promise<RevokeUserSessionOutcome> {
+    const requestId = getRequestId();
+    return this.runSerializable(async tx => {
+      const owned = await tx.session.findUnique({
+        where: { id: sessionId },
+        select: { userId: true, revokedAt: true },
+      });
+      if (!owned || owned.userId !== userId) return 'notFound' as const;
+      if (owned.revokedAt !== null) return 'alreadyRevoked' as const;
+
+      const revoked = await tx.session.updateMany({
+        where: { id: sessionId, userId, revokedAt: null },
+        data: { revokedAt: new Date(), revokeReason: reason },
+      });
+      if (revoked.count !== 1) return 'alreadyRevoked' as const;
+
+      await tx.auditLog.create({
+        data: {
+          actorId: userId,
+          action: 'auth.session.revoked',
+          entityType: 'Session',
+          entityId: sessionId,
+          requestId,
+          metadata: { reason },
+        },
+      });
+      return 'revoked' as const;
     });
   }
 
