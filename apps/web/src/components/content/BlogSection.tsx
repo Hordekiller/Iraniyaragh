@@ -18,19 +18,19 @@ export function BlogSection() {
 
       <div className="grid md:grid-cols-3 gap-4 lg:gap-5 mt-6">
         {blogPosts.map(post => (
-          <article key={post.id} onClick={() => show(`مقاله: ${post.title}`)} className="group bg-white rounded-[22px] overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+          <button key={post.id} type="button" onClick={() => show(`مقاله: ${post.title}`)} className="group bg-white rounded-[22px] overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer text-right">
             <div className="relative h-[184px] overflow-hidden">
-              <img src={post.image} className="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
+              <img src={post.image} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
               <span className="absolute top-3 right-3 px-3 py-1 rounded-full bg-[#0F172A] text-white text-xs font-bold">{post.tag}</span>
               <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur text-slate-900 text-xs font-bold flex items-center gap-1"><Clock3 size={12} /> {post.read}</span>
             </div>
             <div className="p-4 lg:p-5">
-              <div className="text-xs text-slate-400 font-medium">{post.date} • {post.read} مطالعه</div>
-              <h4 className="font-black text-[15px] leading-6 text-slate-900 mt-1.5 line-clamp-2 group-hover:text-[#FF4D00] transition">{post.title}</h4>
+              <div className="text-xs text-slate-500 font-medium">{post.date} • {post.read} مطالعه</div>
+              <h3 className="font-black text-[15px] leading-6 text-slate-900 mt-1.5 line-clamp-2 group-hover:text-[#FF4D00] transition">{post.title}</h3>
               <p className="text-[13px] leading-6 text-slate-500 mt-2 line-clamp-2">{post.excerpt}</p>
               <div className="mt-4 inline-flex items-center gap-1.5 text-sm font-black text-[#0F172A] group-hover:gap-2.5 transition-all">ادامه مطلب <ArrowLeft size={16} className="bg-slate-900 text-white rounded-full p-0.5" /></div>
             </div>
-          </article>
+          </button>
         ))}
       </div>
     </section>

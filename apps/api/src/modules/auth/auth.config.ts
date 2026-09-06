@@ -37,6 +37,14 @@ const DEVELOPMENT_COOKIES: AuthCookieSpec = Object.freeze({
   path: '/',
 });
 
+export const DEV_SIGNIN_COOKIE_SPEC: Readonly<{
+  refreshName: string;
+  csrfName: string;
+}> = Object.freeze({
+  refreshName: 'iranyaragh_dev_refresh',
+  csrfName: 'iranyaragh_dev_csrf',
+});
+
 export type AuthRuntimeConfig = Readonly<{
   accessSigningSecret: string;
   issuer: string;

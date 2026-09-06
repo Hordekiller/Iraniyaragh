@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-04
+Last reviewed: 2026-09-05
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -8,6 +8,17 @@ whenever a major capability changes state.
 ## Current stage
 
 The repository is in **foundation/prototype**, before release `0.1`.
+
+## Current sprint focus — Sprint 1: Auth runtime
+
+Coordination point: GitHub issue #91. The reusable Auth core is landed (`#83` session
+rotation, `#85` live principal + permission guard, `#88` dev-gated staff sign-in,
+`#89` contracts dedup). Customer OTP (`#48`) and its Redis-backed rate limiting have
+merged (`#95`), including a dedicated DB/live end-to-end 429-oververify case (`#100`).
+The remaining runtime surface — staff password + TOTP + first-admin bootstrap (`#49`),
+refresh/CSRF + own-session HTTP (`#74`), and the product-track UX/E2E (`#50`) — is
+sequenced under #91 with a contract-first A/B split (contract PR before parallel UI).
+Working-agreement decisions are tracked in #78.
 
 ### Implemented
 
@@ -89,9 +100,11 @@ The repository is in **foundation/prototype**, before release `0.1`.
   vulnerabilities at the recorded review point
 - Transactional Auth Session core: active-principal session creation, absolute and
   inactivity deadlines by authentication level, current/previous refresh-hash lookup,
-  single-use rotation with compare-and-swap, bounded serializable retry, token-family
-  revocation on sequential/concurrent replay and safe created/rotated/replayed/revoked
-  audit evidence; real PostgreSQL tests prove exactly one concurrent refresh winner
+  single-use rotation with compare-and-swap, bounded serializable retry with backoff,
+  token-family revocation on sequential/concurrent replay and safe
+  created/rotated/replayed/revoked audit evidence; real PostgreSQL tests prove exactly
+  one concurrent refresh winner and the loser resolves to `AUTH_SESSION_REPLAYED` even
+  under serializable write conflicts (linear `25ms * attempt` retry backoff)
 - Development-enabled staff sign-in (ADR-0010, dev/test only): a `StaffAuthController`
   at `/api/v1/auth` provides `POST /auth/dev/signin` (a special `AUTH_DEV_CODE`,
   constant-time via `AuthHashService`, issuing a real `STAFF_MFA` session plus
@@ -158,8 +171,17 @@ The repository is in **foundation/prototype**, before release `0.1`.
   with env-aware cookies (`__Host-` + Secure in staging/production, suffixed
   non-`__Host-` without Secure in development only, per ADR-0007).
   Mobile normalization is E.164 (`+989XXXXXXXXX`) with strict validation.
-
-### Partial
+- Session management: `GET /api/v1/auth/sessions` and `DELETE /api/v1/auth/sessions/:sessionId`
+  on branch `feat/session-management`, bearer-guarded at any authentication level via a
+  new `RequireLiveSession()` guard decorator. Listing returns only the caller's active
+  sessions as the safe `SessionSummary` projection (newest-first, `current` flag, no
+  hashes/user-agent/IP/token-family/owner id) and revoke targets the owned session with a
+  dedicated `REVOKED` audit reason, returns a generic `404 NOT_FOUND` for missing or
+  foreign ids, is idempotent for the caller's already-revoked sessions and clears the
+  auth cookies (configured and dev-suffixed names) when the current session is deleted.
+  Covered by controller unit specs, guard HTTP specs and DB integration
+  (ownership/idempotency/audit); `openapi.json` regenerated; lint/typecheck/test/build/
+  integration green.
 
 - Inventory rules live in one service with actor/requestId tracing, audit rows,
   CAS version guards, bounded serializable retry, reservation consume/release/expire
@@ -176,6 +198,18 @@ The repository is in **foundation/prototype**, before release `0.1`.
 - Hero slider and toast expose explicit pause/play and close controls, honour
   `prefers-reduced-motion` (slider), and the toast's base duration is 5s — all
   covered in the Vitest component suite.
+- Storefront accessibility baseline (#82): every click-only product/blog card is a
+  native `<button>`, decorative images carry `alt=""`, carousel arrows and the search
+  toggle/menu have Persian `aria-label`s, search inputs bind labels, footer placeholder
+  links became real fragment targets or toast-backed buttons, a visible-on-focus skip
+  link jumps to `#main-content`, and section headings follow an h1 → h2 → h3 hierarchy.
+  WCAG AA color contrast is met by darkening brand orange (`#FF4D00` → `#C2410C`)
+  where it carries text, slate-500/600 for secondary text and emerald-700/red-600/
+  amber-700 for small badges; the scrollable brand strip is keyboard-focusable.
+  Enforced by a new Playwright `web-a11y` spec (axe-core wcag2a/aa/21a/21aa with zero
+  critical/serious violations on desktop + mobile, skip link, real fragment targets,
+  cards-as-buttons) and a `storefront-a11y` Vitest suite; the smoke spec was updated
+  for the new card buttons.
 - Unit/HTTP tests cover environment/CORS validation, database URL safety and
   liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
   database integration covers the hardened inventory ledger (parallel reserve and
@@ -189,7 +223,9 @@ The repository is in **foundation/prototype**, before release `0.1`.
   with Redis-backed rate limiting are implemented (main branch since PR #95). Staff
   password+TOTP, OTP delivery (SMS provider), refresh rotation, CSRF logout,
   credential verification and server-side permission enforcement are not implemented
-  yet. ADR-0007, ADR-0010
+  yet. Session list/revoke endpoints (`GET`/`DELETE /api/v1/auth/sessions`) and the
+  any-level `RequireLiveSession()` guard are implemented; the browser refresh
+  (`/refresh`) and cookie/CSRF-protected logout remain pending. ADR-0007, ADR-0010
   and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
 
 ### Not implemented
