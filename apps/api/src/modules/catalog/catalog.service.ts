@@ -13,6 +13,8 @@ const statusToDb = (status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined): Pro
   status === 'PUBLISHED' ? ProductStatus.ACTIVE : status;
 const statusToApi = (status: ProductStatus): 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' =>
   status === ProductStatus.ACTIVE ? 'PUBLISHED' : status === ProductStatus.ARCHIVED ? 'ARCHIVED' : 'DRAFT';
+const PRODUCT_SORT_FIELDS = { name: 'name', createdAt: 'createdAt', updatedAt: 'updatedAt' } as const;
+const ORDER_DIRECTIONS = { asc: 'asc', desc: 'desc' } as const;
 
 type CategoryTreeNode = { id: string; name: string; slug: string; parentId: string | null; children: CategoryTreeNode[]; createdAt: string; updatedAt: string };
 type CategoryInput = { id: string; name: string; slug: string; parentId: string | null; createdAt: Date | string; updatedAt: Date | string; children?: CategoryInput[] };
@@ -43,8 +45,10 @@ export class CatalogService {
       ...(query.categoryId ? { categoryId: query.categoryId } : {}),
       ...(query.search ? { OR: [{ name: { contains: query.search, mode: 'insensitive' } }, { slug: { contains: query.search, mode: 'insensitive' } }] } : {}),
     };
+    const sortBy = query.sortBy && query.sortBy in PRODUCT_SORT_FIELDS ? query.sortBy : 'createdAt';
+    const sortDir = query.sortDir && query.sortDir in ORDER_DIRECTIONS ? query.sortDir : 'desc';
     const [rows, total] = await Promise.all([
-      this.prisma.product.findMany({ where, orderBy: { [query.sortBy ?? 'createdAt']: query.sortDir ?? 'desc' }, skip: (page - 1) * perPage, take: perPage }),
+      this.prisma.product.findMany({ where, orderBy: { [sortBy]: sortDir }, skip: (page - 1) * perPage, take: perPage }),
       this.prisma.product.count({ where }),
     ]);
     return { data: { items: rows.map(row => this.productListItem(row)), meta: { page, perPage, total, pages: Math.ceil(total / perPage) } } };
