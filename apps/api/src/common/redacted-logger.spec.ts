@@ -55,6 +55,18 @@ describe('RedactedLogger', () => {
     expect(line).not.toContain('abcdef0123456789');
   });
 
+  it('redacts sensitive values embedded in Error messages', () => {
+    runWithRequestContext(
+      { requestId, correlationId: requestId, startedAt: 'x' },
+      () => logger.error(new Error('refresh token abcdefghijklmnopqrstuvwxyz012345 was rejected for user@example.com')),
+    );
+
+    const line = stderr.mock.calls[0]?.[0] as string;
+    expect(line).toContain('[REDACTED]');
+    expect(line).not.toContain('abcdefghijklmnopqrstuvwxyz012345');
+    expect(line).not.toContain('user@example.com');
+  });
+
   it('routes fatal and error levels to stderr', () => {
     runWithRequestContext(
       { requestId, correlationId: requestId, startedAt: 'x' },

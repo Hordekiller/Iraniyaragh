@@ -17,6 +17,7 @@ import { AuthSessionService } from './auth-session.service';
 import { CustomerOtpRequestDto, CustomerOtpVerifyDto } from './customer-otp.dto';
 import { CustomerOtpService } from './customer-otp.service';
 import { ExpiredOtpChallengeException, InvalidOtpChallengeException } from './customer-otp.exceptions';
+import { setAuthCookies } from './auth-http';
 
 const ACCESS_TOKEN_TYPE = 'Bearer';
 const ACCESS_TOKEN_TTL_SECONDS = 600;
@@ -74,7 +75,7 @@ export class CustomerAuthController {
       ipAddress: ip,
     });
 
-    this.setAuthCookies(response, issued.refreshToken, issued.csrfToken, issued.expiresAt);
+    setAuthCookies(response, this.config.cookies, issued.refreshToken, issued.csrfToken, issued.expiresAt);
 
     const principal = await this.principals.resolveBearerToken(`${ACCESS_TOKEN_TYPE} ${issued.accessToken}`);
     return {
@@ -102,11 +103,4 @@ export class CustomerAuthController {
     return typeof request.ip === 'string' && request.ip.trim() !== '' ? request.ip : undefined;
   }
 
-  private setAuthCookies(response: Response, refreshToken: string, csrfToken: string, expiresAt: Date): void {
-    const maxAge = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1_000));
-    const { refreshName, csrfName, secure, sameSite, path } = this.config.cookies;
-    const base = { sameSite, path, secure, maxAge };
-    response.cookie(refreshName, refreshToken, { ...base, httpOnly: true });
-    response.cookie(csrfName, csrfToken, { ...base, httpOnly: false });
-  }
 }

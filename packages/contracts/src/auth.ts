@@ -59,6 +59,19 @@ export type StaffTotpVerifyRequest = {
   code: string;
 };
 
+export type StaffRecoveryVerifyRequest = {
+  challengeToken: string;
+  code: string;
+};
+
+export type StaffRecoveryCodesResponse = ApiSuccess<{ recoveryCodes: string[] }>;
+
+export type StaffTotpEnrollmentResponse = ApiSuccess<{
+  secret: string;
+  provisioningUri: string;
+  expiresInSeconds: 300;
+}>;
+
 export type SessionSummary = {
   sessionId: string;
   current: boolean;

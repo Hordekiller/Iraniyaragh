@@ -341,6 +341,36 @@ export class AuthSessionService {
     });
   }
 
+  async revokeByRefreshToken(rawRefreshToken: string): Promise<boolean> {
+    const candidateHashes = this.candidateRefreshHashes(rawRefreshToken);
+    const requestId = getRequestId();
+    return this.runSerializable(async tx => {
+      const session = await tx.session.findFirst({
+        where: { refreshTokenHash: { in: [...candidateHashes] }, revokedAt: null },
+        select: { id: true, userId: true },
+      });
+      if (!session) return false;
+
+      const revoked = await tx.session.updateMany({
+        where: { id: session.id, revokedAt: null },
+        data: { revokedAt: new Date(), revokeReason: AUTH_SESSION_REVOKE_REASON.logout },
+      });
+      if (revoked.count !== 1) return false;
+
+      await tx.auditLog.create({
+        data: {
+          actorId: session.userId,
+          action: 'auth.session.revoked',
+          entityType: 'Session',
+          entityId: session.id,
+          requestId,
+          metadata: { reason: AUTH_SESSION_REVOKE_REASON.logout },
+        },
+      });
+      return true;
+    });
+  }
+
   async revokeUserSession(
     userId: string,
     sessionId: string,

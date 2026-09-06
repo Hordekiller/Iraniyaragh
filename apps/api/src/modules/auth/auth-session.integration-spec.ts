@@ -127,6 +127,28 @@ describe.sequential('AuthSessionService database integration', () => {
     expect(serializedAudit).not.toContain('integration-device-id');
   });
 
+  it('revokes the session represented by a refresh cookie and is idempotent', async () => {
+    const issued = await sessions.createSession({
+      userId,
+      authenticationLevel: AuthenticationLevel.CUSTOMER_OTP,
+      authenticatedAt: new Date(Date.now() - 1_000),
+    });
+
+    await expect(sessions.revokeByRefreshToken(issued.refreshToken)).resolves.toBe(true);
+    await expect(sessions.revokeByRefreshToken(issued.refreshToken)).resolves.toBe(false);
+
+    const stored = await prisma.session.findUniqueOrThrow({ where: { id: issued.sessionId } });
+    expect(stored).toMatchObject({
+      revokedAt: expect.any(Date),
+      revokeReason: AUTH_SESSION_REVOKE_REASON.logout,
+    });
+    await expect(
+      prisma.auditLog.count({
+        where: { action: 'auth.session.revoked', entityId: issued.sessionId, actorId: userId },
+      }),
+    ).resolves.toBe(1);
+  });
+
   it('accepts only the configured previous refresh-hash version and rotates it to the current key', async () => {
     const previousHashes = new AuthHashService(
       Object.freeze({

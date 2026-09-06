@@ -1,10 +1,11 @@
 import { Controller, Delete, Get, Header, Inject, NotFoundException, Param, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import type { EmptyResponse, SessionListResponse, SessionSummary } from '@iranyaragh/contracts';
-import { AUTH_RUNTIME_CONFIG, DEV_SIGNIN_COOKIE_SPEC, type AuthRuntimeConfig } from './auth.config';
+import { AUTH_RUNTIME_CONFIG, type AuthRuntimeConfig } from './auth.config';
 import { AuthSessionService, type AuthSessionSummary } from './auth-session.service';
 import { CurrentPrincipal, RequireLiveSession } from './auth.guard';
 import type { AuthPrincipalContext } from './auth-principal.service';
+import { clearAuthCookies } from './auth-http';
 
 const MAX_SESSION_ID_LENGTH = 128;
 
@@ -61,14 +62,6 @@ export class SessionManagementController {
   }
 
   private clearAuthCookies(response: Response): void {
-    const { refreshName, csrfName, secure, sameSite, path } = this.config.cookies;
-    const base = { sameSite, path, secure, maxAge: 0 };
-    response.cookie(refreshName, '', { ...base, httpOnly: true });
-    response.cookie(csrfName, '', { ...base, httpOnly: false });
-    if (!secure) {
-      const { refreshName: devRefreshName, csrfName: devCsrfName } = DEV_SIGNIN_COOKIE_SPEC;
-      response.cookie(devRefreshName, '', { ...base, httpOnly: true });
-      response.cookie(devCsrfName, '', { ...base, httpOnly: false });
-    }
+    clearAuthCookies(response, this.config.cookies);
   }
 }

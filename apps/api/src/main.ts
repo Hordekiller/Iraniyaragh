@@ -20,7 +20,15 @@ async function bootstrap() {
     origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Accept', 'Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-ID', 'X-Correlation-ID'],
+    allowedHeaders: [
+      'Accept',
+      'Authorization',
+      'Content-Type',
+      'Idempotency-Key',
+      'X-Request-ID',
+      'X-Correlation-ID',
+      'X-CSRF-Token',
+    ],
     exposedHeaders: ['X-Request-ID', 'X-Correlation-ID'],
   });
   app.setGlobalPrefix('api');

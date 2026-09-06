@@ -2,7 +2,7 @@ import { createHmac, hkdfSync, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { AUTH_RUNTIME_CONFIG, type AuthHashKey, type AuthRuntimeConfig } from './auth.config';
 
-export type AuthHashContext = 'device' | 'identifier' | 'ip' | 'mfa-challenge' | 'otp' | 'refresh';
+export type AuthHashContext = 'device' | 'identifier' | 'ip' | 'mfa-challenge' | 'otp' | 'refresh' | 'recovery-code';
 
 const HASH_PREFIX_PATTERN = /^v([1-9]\d*):([A-Za-z0-9_-]{43})$/u;
 const DERIVED_KEY_BYTES = 32;

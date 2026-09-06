@@ -17,6 +17,7 @@ function fakeConfigService(values: EnvRecord): ConfigService<EnvironmentVariable
 
 const baseEnv: EnvRecord = {
   NODE_ENV: 'development',
+  CORS_ORIGINS: 'http://localhost:3001',
   JWT_ACCESS_SECRET: 'access-secret-at-least-thirty-two-bytes',
   AUTH_JWT_ISSUER: 'iranyaragh-test',
   AUTH_HASH_KEY_VERSION: 1,

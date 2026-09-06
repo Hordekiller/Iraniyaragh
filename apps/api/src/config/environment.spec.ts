@@ -11,6 +11,7 @@ const validDevelopmentEnvironment = {
   JWT_ACCESS_SECRET: 'development-access-secret-0123456789',
   AUTH_HASH_KEY_VERSION: '7',
   AUTH_HASH_SECRET: 'development-hash-root-secret-0123456789',
+  AUTH_TOTP_ENCRYPTION_KEY: 'development-totp-encryption-key-0123456789',
   OBJECT_STORAGE_ENDPOINT: 'http://localhost:9000',
   OBJECT_STORAGE_ACCESS_KEY: 'minio',
   OBJECT_STORAGE_SECRET_KEY: 'development-object-secret',

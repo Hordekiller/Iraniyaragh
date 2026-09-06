@@ -55,7 +55,9 @@ export type AuthRuntimeConfig = Readonly<{
   previousHashKey?: AuthHashKey;
   devLoginEnabled: boolean;
   devCode: string;
+  totpEncryptionKey?: string;
   cookies: AuthCookieSpec;
+  corsOrigins?: readonly string[];
 }>;
 
 function cookieSpecFor(environment: 'development' | 'test' | 'staging' | 'production'): AuthCookieSpec {
@@ -100,6 +102,8 @@ export function createAuthRuntimeConfig(config: ConfigService<EnvironmentVariabl
         : Object.freeze({ version: previousVersion, secret: previousSecret }),
     devLoginEnabled: hasDevCode,
     devCode: hasDevCode ? (devCode as string) : '',
+    totpEncryptionKey: config.get('AUTH_TOTP_ENCRYPTION_KEY', { infer: true }),
     cookies: cookieSpecFor(environment),
+    corsOrigins: Object.freeze(config.getOrThrow('CORS_ORIGINS', { infer: true }).split(',')),
   });
 }
