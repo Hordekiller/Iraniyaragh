@@ -20,5 +20,17 @@ export default defineConfig({
     passWithNoTests: false,
     clearMocks: true,
     restoreMocks: true,
+    coverage: {
+      enabled: process.env.CI === 'true',
+      provider: 'v8',
+      reporter: ['text', 'json-summary'],
+      exclude: ['**/*.test.{ts,tsx}'],
+      thresholds: {
+        lines: 80,
+        statements: 75,
+        functions: 72,
+        branches: 60,
+      },
+    },
   },
 })

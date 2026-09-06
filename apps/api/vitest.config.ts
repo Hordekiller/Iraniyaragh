@@ -22,5 +22,25 @@ export default defineConfig({
       OBJECT_STORAGE_SECRET_KEY: 'test-object-secret-key-0123456789abcdefgh',
       OBJECT_STORAGE_BUCKET: 'test-assets',
     },
+    coverage: {
+      enabled: process.env.CI === 'true',
+      provider: 'v8',
+      reporter: ['text', 'json-summary'],
+      exclude: [
+        '**/__tests__/**',
+        '**/*.spec.ts',
+        '**/*.integration-spec.ts',
+        'src/config/env.validation.ts',
+        'src/main.ts',
+        'src/app.module.ts',
+        'src/database/**',
+      ],
+      thresholds: {
+        lines: 65,
+        statements: 65,
+        functions: 70,
+        branches: 60,
+      },
+    },
   },
 });

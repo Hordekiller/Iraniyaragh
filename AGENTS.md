@@ -39,5 +39,35 @@ Run the narrowest relevant checks during development and the full affected packa
 checks before completion. Critical inventory/order/payment/auth changes require
 failure-path, authorization, idempotency and concurrency coverage as applicable.
 
+CI (GitHub Actions) runs the same commands below with `CI=true`, which also enables
+Vitest coverage gates (imported-code baselines; thresholds live in each package's
+`vitest.config.ts`). Keep local runs fast: run without `CI=true` for plain unit
+tests, and use `CI=true` exactly like the pipeline when you need the coverage gate.
+
+```bash
+# All packages: lint + build + typecheck (mirrors the CI "check" job)
+pnpm lint
+pnpm build
+
+# Per-package unit + integration tests (mirrors the CI "test" job)
+pnpm --filter @iranyaragh/api test        # requires the test Postgres (see below)
+pnpm --filter @iranyaragh/web test
+pnpm --filter @iranyaragh/admin test
+
+# CI-equivalent: enforce coverage thresholds within a single package
+CI=true pnpm --filter @iranyaragh/web test
+
+# Agents: run the narrowest package test for the package you touched first,
+# then the full affected package checks before finishing.
+```
+
+Locally, the API integration tests need the test database and matching env:
+`NODE_ENV=test` and `DATABASE_URL` ending in `_test`. Bring up the containers with:
+
+```bash
+docker compose -f infrastructure/docker/docker-compose.yml \
+  -f infrastructure/docker/docker-compose.override.yml up -d postgres
+```
+
 Update docs and `docs/PROJECT_STATUS.md` when actual capabilities or known gaps
 change. State clearly what was verified and what could not be verified.

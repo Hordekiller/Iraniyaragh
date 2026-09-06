@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { jsonRequest } from './request';
+import { isApiFailure, isApiSuccess, jsonRequest } from './request';
 
 function stubFetch(impl: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> | Response) {
   vi.stubGlobal('fetch', vi.fn(impl));
@@ -115,5 +115,23 @@ describe('jsonRequest', () => {
       code: 'PARSE_ERROR',
       statusCode: 200,
     });
+  });
+});
+
+describe('response type guards', () => {
+  it('isApiSuccess() distinguishes a { data } envelope from other payloads', () => {
+    expect(isApiSuccess({ data: { token: 't' } })).toBe(true);
+    expect(isApiSuccess({ status: 200, data: { token: 't' } })).toBe(true);
+    expect(isApiSuccess({ hello: 'world' })).toBe(false);
+    expect(isApiSuccess(null)).toBe(false);
+    expect(isApiSuccess('text')).toBe(false);
+  });
+
+  it('isApiFailure() recognizes the error envelope', () => {
+    expect(
+      isApiFailure({ code: 'AUTH_CHALLENGE_INVALID', message: 'bad', statusCode: 401 }),
+    ).toBe(true);
+    expect(isApiFailure({ error: { code: 'X' } })).toBe(false);
+    expect(isApiFailure(null)).toBe(false);
   });
 });
