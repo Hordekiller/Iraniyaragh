@@ -170,6 +170,10 @@ describe.sequential('CatalogService database integration', () => {
     const viaSlug = await catalog.getPublicProduct(`publishable-${runId}`);
     expect(viaSlug.data.product.status).toBe('PUBLISHED');
     expect(viaSlug.data.product.variants).toHaveLength(1);
+    expect(viaSlug.data.product.variants[0]).toMatchObject({
+      salePrice: { amount: '60000', currency: 'IRR' },
+    });
+    expect(viaSlug.data.product.variants[0]).not.toHaveProperty('costPrice');
 
     await prisma.auditLog.deleteMany({
       where: { requestId: { startsWith: requestIdPrefix } },
@@ -243,5 +247,55 @@ describe.sequential('CatalogService database integration', () => {
       where: { requestId: { startsWith: requestIdPrefix } },
     });
     await prisma.category.delete({ where: { id: created.data.category.id } });
+  });
+
+  it('maps a missing brand id on update to NotFound instead of a 500', async () => {
+    await expect(
+      catalog.updateBrand(actorId, 'does-not-exist', { name: 'Ghost Brand' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    await prisma.auditLog.deleteMany({
+      where: { requestId: { startsWith: requestIdPrefix } },
+    });
+  });
+
+  it('maps a missing category id on update to NotFound instead of a 500', async () => {
+    await expect(
+      catalog.updateCategory(actorId, 'does-not-exist', { name: 'Ghost Category' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    await prisma.auditLog.deleteMany({
+      where: { requestId: { startsWith: requestIdPrefix } },
+    });
+  });
+
+  it('maps a duplicate brand slug on create to Conflict', async () => {
+    await expect(
+      catalog.createBrand(actorId, { name: 'Duplicate Brand', slug: brandSlug }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    await prisma.auditLog.deleteMany({
+      where: { requestId: { startsWith: requestIdPrefix } },
+    });
+  });
+
+  it('maps a duplicate category slug on create to Conflict', async () => {
+    await expect(
+      catalog.createCategory(actorId, { name: 'Duplicate Category', slug: categorySlug }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    await prisma.auditLog.deleteMany({
+      where: { requestId: { startsWith: requestIdPrefix } },
+    });
+  });
+
+  it('maps a duplicate product slug on create to Conflict', async () => {
+    await expect(
+      catalog.createProduct(actorId, { name: 'Duplicate Product', slug: productSlug }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    await prisma.auditLog.deleteMany({
+      where: { requestId: { startsWith: requestIdPrefix } },
+    });
   });
 });

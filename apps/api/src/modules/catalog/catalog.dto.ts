@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
-const AMOUNT = /^\d+$/u;
+const AMOUNT = /^\d{1,15}$/u;
 const CURRENCY = /^[A-Z]{3}$/u;
 
 export class MoneyDto {

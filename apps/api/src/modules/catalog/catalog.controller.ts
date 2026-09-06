@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Header, Param, Patch, Post, Query } from '@nestjs/common';
-import type { BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse } from '@iranyaragh/contracts';
+import type { BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse } from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { CatalogService } from './catalog.service';
@@ -14,7 +14,7 @@ export class CatalogController {
   async publicProducts(@Query() query: ProductListQueryDto): Promise<ProductListResponse> { return this.catalog.listPublicProducts(query); }
 
   @Get('products/:idOrSlug')
-  async publicProduct(@Param('idOrSlug') idOrSlug: string): Promise<ProductDetailResponse> { return this.catalog.getPublicProduct(idOrSlug); }
+  async publicProduct(@Param('idOrSlug') idOrSlug: string): Promise<ProductDetailPublicResponse> { return this.catalog.getPublicProduct(idOrSlug); }
 
   @Get('categories')
   async categories(): Promise<CategoryListResponse> { return this.catalog.listCategories(); }
