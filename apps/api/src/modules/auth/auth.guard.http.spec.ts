@@ -9,6 +9,7 @@ import {
   AuthGuard,
   CurrentPrincipal,
   RequireAuthentication,
+  RequireLiveSession,
   RequirePermission,
 } from './auth.guard';
 import { type AuthPrincipalContext, AuthPrincipalService } from './auth-principal.service';
@@ -34,6 +35,10 @@ const principalService = {
   resolveBearerToken: vi.fn(async (authorization?: string): Promise<AuthPrincipalContext> => {
     if (authorization === 'Bearer staff-token') return staffPrincipal;
     if (authorization === 'Bearer customer-token') return constituentPrincipal;
+    if (authorization === 'Bearer replayed-token') throw new AuthSessionException('AUTH_SESSION_REPLAYED');
+    if (authorization === 'Bearer revoked-token' || authorization === 'Bearer expired-token') {
+      throw new AuthSessionException('AUTH_SESSION_INVALID');
+    }
     throw new AuthSessionException('AUTH_SESSION_INVALID');
   }),
 };
@@ -61,6 +66,12 @@ class PrincipalTestController {
   @Get('permission')
   permission(@CurrentPrincipal() principal: AuthPrincipalContext): { granted: boolean } {
     return { granted: principal.permissions.has('catalog.write') };
+  }
+
+  @RequireLiveSession()
+  @Get('live-session')
+  liveSession(@CurrentPrincipal() principal: AuthPrincipalContext): { userId: string; level: string } {
+    return { userId: principal.userId, level: principal.authenticationLevel };
   }
 }
 
@@ -144,6 +155,18 @@ describe('AuthGuard HTTP behavior', () => {
     });
   });
 
+  it('denies a higher authentication level on a customer-level route with the same stable 403', async () => {
+    const response = await fetch(`${baseUrl}/api/v1/principal-test/customer`, {
+      headers: { authorization: 'Bearer staff-token' },
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'FORBIDDEN',
+      statusCode: 403,
+    });
+  });
+
   it('admits a matching customer authentication level', async () => {
     const response = await fetch(`${baseUrl}/api/v1/principal-test/customer`, {
       headers: { authorization: 'Bearer customer-token' },
@@ -167,6 +190,56 @@ describe('AuthGuard HTTP behavior', () => {
     await expect(denied.json()).resolves.toMatchObject({
       code: 'FORBIDDEN',
       statusCode: 403,
+    });
+  });
+
+  it('returns the stable AUTH_SESSION_REPLAYED envelope for a replayed refresh family', async () => {
+    const response = await fetch(`${baseUrl}/api/v1/principal-test/staff`, {
+      headers: { authorization: 'Bearer replayed-token' },
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('x-request-id')).toBeTruthy();
+    const body = (await response.json()) as { code: string; requestId: string; statusCode: number };
+    expect(body).toMatchObject({
+      code: 'AUTH_SESSION_REPLAYED',
+      message: 'Session replay was detected. Reauthentication is required.',
+      statusCode: 401,
+    });
+    expect(body.requestId).toBe(response.headers.get('x-request-id'));
+  });
+
+  it('keeps the same AUTH_SESSION_INVALID envelope for revoked and expired sessions', async () => {
+    for (const token of ['Bearer revoked-token', 'Bearer expired-token']) {
+      const response = await fetch(`${baseUrl}/api/v1/principal-test/staff`, {
+        headers: { authorization: token },
+      });
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toMatchObject({
+        code: 'AUTH_SESSION_INVALID',
+        statusCode: 401,
+      });
+    }
+  });
+
+  it('admits any live session level on a session-management route and rejects anonymous callers', async () => {
+    const staff = await fetch(`${baseUrl}/api/v1/principal-test/live-session`, {
+      headers: { authorization: 'Bearer staff-token' },
+    });
+    expect(staff.status).toBe(200);
+    await expect(staff.json()).resolves.toEqual({ userId: 'user-1', level: 'STAFF_MFA' });
+
+    const customer = await fetch(`${baseUrl}/api/v1/principal-test/live-session`, {
+      headers: { authorization: 'Bearer customer-token' },
+    });
+    expect(customer.status).toBe(200);
+    await expect(customer.json()).resolves.toEqual({ userId: 'user-2', level: 'CUSTOMER_OTP' });
+
+    const anonymous = await fetch(`${baseUrl}/api/v1/principal-test/live-session`);
+    expect(anonymous.status).toBe(401);
+    await expect(anonymous.json()).resolves.toMatchObject({
+      code: 'AUTH_SESSION_INVALID',
+      statusCode: 401,
     });
   });
 });
