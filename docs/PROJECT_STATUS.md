@@ -113,6 +113,22 @@ The repository is in **foundation/prototype**, before release `0.1`.
   toggle/focus-trap) via `signInDiAsAdmin`.
   All gates (typecheck/lint/test/build/e2e) green on both packages;
   `openapi.json` regenerated with the new auth paths.
+- Fixture-first admin staff-login slice (#50, parallel-work model, not yet wired to a
+  real backend): a separate `/login/staff` route in the admin app implements the
+  contract staff password → TOTP → authenticated state machine with a deterministic,
+  fail-closed `StaffLoginFixtureClient`. It covers enumeration-proof identical invalid
+  credentials, 5-attempt lock-out (`RATE_LIMITED` with back-off), single-use + 300 s
+  expired challenges (contract literal TTL), and `AUTH_SESSION_INVALID`/`REPLAYED`/
+  `REAUTHENTICATION_REQUIRED`/`FORBIDDEN` presentation states via a typed
+  `StaffLoginController` (React-agnostic, generation-guarded, memory-only). The
+  controller/types/api are aligned to `@iranyaragh/contracts` staff shapes (added as an
+  admin workspace dep). The route is gated by `NEXT_PUBLIC_FIXTURE_AUTH=true`
+  (decision B, fail-closed in ship builds — an absent/other value renders a stable
+  disabled notice, never a form, and never breaks `next build`). Real endpoint wiring
+  and refresh/cross-tab recovery are deferred to the #49 contract/runtime PR and #74.
+  Covered by guard, component and full-flow unit tests (130 admin tests) including
+  storage-empty assertions, plus an e2e assert that `/login/staff` fails closed in the
+  ship build; typecheck/lint/build green with and without the opt-in.
 - Production dependency audit hardened (`.github/scripts/audit-prod.mjs`):
   the CI production-audit workflow now runs a node script instead of a blanket
   shell retry loop. The script classifies each `pnpm audit` run and fails
