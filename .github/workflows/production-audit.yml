@@ -2,12 +2,6 @@ name: Production Dependency Audit
 
 on:
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.github/CODEOWNERS'
-      - '.github/PULL_REQUEST_TEMPLATE.md'
-      - 'LICENSE'
   push:
     branches: [main]
   schedule:
