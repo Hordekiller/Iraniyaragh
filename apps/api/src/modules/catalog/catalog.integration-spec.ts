@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
@@ -146,6 +146,11 @@ describe.sequential('CatalogService database integration', () => {
     await expect(catalog.getPublicProduct(productSlug)).rejects.toBeInstanceOf(
       NotFoundException,
     );
+
+    const brands = await catalog.listBrands();
+    expect(brands.data.items.find((brand) => brand.id === brandId)?.productCount).toBe(0);
+    const categories = await catalog.listCategories();
+    expect(categories.data.items.find((category) => category.id === categoryId)?.productCount).toBe(0);
   });
 
   it('publishes a product and surfaces it through the public catalog', async () => {
@@ -297,5 +302,15 @@ describe.sequential('CatalogService database integration', () => {
     await prisma.auditLog.deleteMany({
       where: { requestId: { startsWith: requestIdPrefix } },
     });
+  });
+
+  it('maps a missing category parent to a stable invalid-reference error', async () => {
+    await expect(
+      catalog.createCategory(actorId, {
+        name: 'Orphan Category',
+        slug: `orphan-${runId}`,
+        parentId: 'does-not-exist',
+      }),
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 });

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Prisma, ProductStatus } from '@prisma/client';
 import type {
   BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse,
@@ -91,36 +91,48 @@ export class CatalogService {
   }
 
   async createBrand(actorId: string, input: BrandCreateDto): Promise<BrandResponse> {
-    const brand = await this.mapPrismaError(this.prisma.brand.create({ data: { name: input.name.trim(), slug: input.slug }, include: { _count: { select: { products: true } } } }), 'Brand');
-    await this.audit.record({ actorId, action: 'catalog.brand.created', entityType: 'Brand', entityId: brand.id, requestId: getRequestId(), after: { name: brand.name, slug: brand.slug } });
+    const brand = await this.mapPrismaError(this.prisma.$transaction(async tx => {
+      const created = await tx.brand.create({ data: { name: input.name.trim(), slug: input.slug }, include: { _count: { select: { products: true } } } });
+      await this.audit.record({ actorId, action: 'catalog.brand.created', entityType: 'Brand', entityId: created.id, requestId: getRequestId(), after: { name: created.name, slug: created.slug } }, tx);
+      return created;
+    }), 'Brand');
     return { data: { brand: { id: brand.id, name: brand.name, slug: brand.slug, productCount: brand._count.products } } };
   }
 
   async updateBrand(actorId: string, id: string, input: BrandUpdateDto): Promise<BrandResponse> {
-    const brand = await this.mapPrismaError(this.prisma.brand.update({ where: { id }, data: { ...(input.name ? { name: input.name.trim() } : {}), ...(input.slug ? { slug: input.slug } : {}) }, include: { _count: { select: { products: true } } } }), 'Brand');
-    await this.audit.record({ actorId, action: 'catalog.brand.updated', entityType: 'Brand', entityId: id, requestId: getRequestId(), after: { name: brand.name, slug: brand.slug } });
+    const brand = await this.mapPrismaError(this.prisma.$transaction(async tx => {
+      const updated = await tx.brand.update({ where: { id }, data: { ...(input.name ? { name: input.name.trim() } : {}), ...(input.slug ? { slug: input.slug } : {}) }, include: { _count: { select: { products: true } } } });
+      await this.audit.record({ actorId, action: 'catalog.brand.updated', entityType: 'Brand', entityId: id, requestId: getRequestId(), after: { name: updated.name, slug: updated.slug } }, tx);
+      return updated;
+    }), 'Brand');
     return { data: { brand: { id: brand.id, name: brand.name, slug: brand.slug, productCount: brand._count.products } } };
   }
 
   async listBrands(): Promise<BrandListResponse> {
-    const brands = await this.prisma.brand.findMany({ orderBy: { name: 'asc' }, include: { _count: { select: { products: true } } } });
+    const brands = await this.prisma.brand.findMany({ orderBy: { name: 'asc' }, include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } });
     return { data: { items: brands.map(brand => ({ id: brand.id, name: brand.name, slug: brand.slug, productCount: brand._count.products })) } };
   }
 
   async createCategory(actorId: string, input: CategoryCreateDto): Promise<CategoryResponse> {
-    const category = await this.mapPrismaError(this.prisma.category.create({ data: { name: input.name.trim(), slug: input.slug, parentId: input.parentId }, include: this.categoryInclude() }), 'Category');
-    await this.audit.record({ actorId, action: 'catalog.category.created', entityType: 'Category', entityId: category.id, requestId: getRequestId(), after: { name: category.name, slug: category.slug } });
+    const category = await this.mapPrismaError(this.prisma.$transaction(async tx => {
+      const created = await tx.category.create({ data: { name: input.name.trim(), slug: input.slug, parentId: input.parentId }, include: this.categoryInclude() });
+      await this.audit.record({ actorId, action: 'catalog.category.created', entityType: 'Category', entityId: created.id, requestId: getRequestId(), after: { name: created.name, slug: created.slug } }, tx);
+      return created;
+    }), 'Category');
     return { data: { category: this.categoryNode(category) } };
   }
 
   async updateCategory(actorId: string, id: string, input: CategoryUpdateDto): Promise<CategoryResponse> {
-    const category = await this.mapPrismaError(this.prisma.category.update({ where: { id }, data: { ...(input.name ? { name: input.name.trim() } : {}), ...(input.slug ? { slug: input.slug } : {}), ...(input.parentId !== undefined ? { parentId: input.parentId } : {}) }, include: this.categoryInclude() }), 'Category');
-    await this.audit.record({ actorId, action: 'catalog.category.updated', entityType: 'Category', entityId: id, requestId: getRequestId(), after: { name: category.name, slug: category.slug } });
+    const category = await this.mapPrismaError(this.prisma.$transaction(async tx => {
+      const updated = await tx.category.update({ where: { id }, data: { ...(input.name ? { name: input.name.trim() } : {}), ...(input.slug ? { slug: input.slug } : {}), ...(input.parentId !== undefined ? { parentId: input.parentId } : {}) }, include: this.categoryInclude() });
+      await this.audit.record({ actorId, action: 'catalog.category.updated', entityType: 'Category', entityId: id, requestId: getRequestId(), after: { name: updated.name, slug: updated.slug } }, tx);
+      return updated;
+    }), 'Category');
     return { data: { category: this.categoryNode(category) } };
   }
 
   async listCategories(): Promise<CategoryListResponse> {
-    const categories = await this.prisma.category.findMany({ orderBy: { name: 'asc' }, include: { _count: { select: { products: true } } } });
+    const categories = await this.prisma.category.findMany({ orderBy: { name: 'asc' }, include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } });
     return { data: { items: categories.map(category => ({ id: category.id, name: category.name, slug: category.slug, parentId: category.parentId, productCount: category._count.products })) } };
   }
 
@@ -149,6 +161,9 @@ export class CatalogService {
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         throw new NotFoundException({ code: 'NOT_FOUND', message: `${resource} not found.` });
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new UnprocessableEntityException({ code: 'INVALID_REFERENCE', message: `${resource} references an invalid related resource.` });
       }
       throw error;
     }
