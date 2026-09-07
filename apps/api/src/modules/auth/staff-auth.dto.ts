@@ -1,7 +1,30 @@
-import { IsNotEmpty, IsOptional, IsString, Length, MaxLength, Matches } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Matches,
+  Validate,
+  ValidatorConstraint,
+  type ValidatorConstraintInterface,
+} from 'class-validator';
 import { STAFF_PASSWORD_MAX_LENGTH, STAFF_PASSWORD_MIN_LENGTH } from './password-hash.service';
 
 const DEV_CODE_PATTERN = /^[A-Za-z0-9._~-]{6,256}$/u;
+
+@ValidatorConstraint({ name: 'passwordPolicyLength', async: false })
+export class PasswordPolicyLengthConstraint implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    if (typeof value !== 'string') return false;
+    // Count Unicode code points for both bounds (matches PasswordHashService policy).
+    const length = Array.from(value).length;
+    return length >= STAFF_PASSWORD_MIN_LENGTH && length <= STAFF_PASSWORD_MAX_LENGTH;
+  }
+
+  defaultMessage(): string {
+    return `password must contain between ${STAFF_PASSWORD_MIN_LENGTH} and ${STAFF_PASSWORD_MAX_LENGTH} characters.`;
+  }
+}
 
 export class StaffDevSignInDto {
   @IsString()
@@ -25,13 +48,23 @@ export class StaffPasswordDto {
   identifier!: string;
 
   @IsString()
-  @Length(STAFF_PASSWORD_MIN_LENGTH, STAFF_PASSWORD_MAX_LENGTH)
+  @Validate(PasswordPolicyLengthConstraint)
   password!: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(150)
   deviceName?: string;
+}
+
+export class StaffPasswordChangeDto {
+  @IsString()
+  @Validate(PasswordPolicyLengthConstraint)
+  currentPassword!: string;
+
+  @IsString()
+  @Validate(PasswordPolicyLengthConstraint)
+  newPassword!: string;
 }
 
 export class StaffTotpVerifyDto {

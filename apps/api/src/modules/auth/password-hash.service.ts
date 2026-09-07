@@ -49,11 +49,11 @@ export class PasswordHashService {
   }
 
   assertPolicy(password: string): void {
-    if (
-      typeof password !== 'string' ||
-      password.length < PASSWORD_MIN_LENGTH ||
-      Array.from(password).length > PASSWORD_MAX_LENGTH
-    ) {
+    if (typeof password !== 'string') throw new PasswordPolicyError();
+    // Count Unicode code points (not UTF-16 code units) for both bounds so the
+    // runtime policy matches the bootstrap script and the DTO validator.
+    const length = Array.from(password).length;
+    if (length < PASSWORD_MIN_LENGTH || length > PASSWORD_MAX_LENGTH) {
       throw new PasswordPolicyError();
     }
   }

@@ -9,6 +9,7 @@ import {
   AuthGuard,
   CurrentPrincipal,
   RequireAuthentication,
+  RequireFreshAuth,
   RequireLiveSession,
   RequirePermission,
 } from './auth.guard';
@@ -24,6 +25,16 @@ const staffPrincipal: AuthPrincipalContext = Object.freeze({
   permissions: new Set(['catalog.read', 'catalog.write']),
 });
 
+const staleStaffPrincipal: AuthPrincipalContext = Object.freeze({
+  userId: 'user-stale',
+  sessionId: 'session-stale',
+  tokenId: 'jti-stale',
+  authenticationLevel: 'STAFF_MFA',
+  authenticatedAt: new Date(Date.now() - 600_000),
+  accessExpiresAt: new Date(Date.now() + 600_000),
+  permissions: new Set(['catalog.read']),
+});
+
 const constituentPrincipal: AuthPrincipalContext = Object.freeze({
   ...staffPrincipal,
   userId: 'user-2',
@@ -34,6 +45,7 @@ const constituentPrincipal: AuthPrincipalContext = Object.freeze({
 const principalService = {
   resolveBearerToken: vi.fn(async (authorization?: string): Promise<AuthPrincipalContext> => {
     if (authorization === 'Bearer staff-token') return staffPrincipal;
+    if (authorization === 'Bearer stale-token') return staleStaffPrincipal;
     if (authorization === 'Bearer customer-token') return constituentPrincipal;
     if (authorization === 'Bearer replayed-token') throw new AuthSessionException('AUTH_SESSION_REPLAYED');
     if (authorization === 'Bearer revoked-token' || authorization === 'Bearer expired-token') {
@@ -72,6 +84,13 @@ class PrincipalTestController {
   @Get('live-session')
   liveSession(@CurrentPrincipal() principal: AuthPrincipalContext): { userId: string; level: string } {
     return { userId: principal.userId, level: principal.authenticationLevel };
+  }
+
+  @RequireAuthentication('STAFF_MFA')
+  @RequireFreshAuth()
+  @Get('fresh-auth')
+  freshAuth(@CurrentPrincipal() principal: AuthPrincipalContext): { userId: string } {
+    return { userId: principal.userId };
   }
 }
 
@@ -239,6 +258,26 @@ describe('AuthGuard HTTP behavior', () => {
     expect(anonymous.status).toBe(401);
     await expect(anonymous.json()).resolves.toMatchObject({
       code: 'AUTH_SESSION_INVALID',
+      statusCode: 401,
+    });
+  });
+
+  it('admits a recently authenticated principal on a fresh-auth route', async () => {
+    const response = await fetch(`${baseUrl}/api/v1/principal-test/fresh-auth`, {
+      headers: { authorization: 'Bearer staff-token' },
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ userId: 'user-1' });
+  });
+
+  it('returns AUTH_REAUTHENTICATION_REQUIRED when the principal authenticated too long ago', async () => {
+    const response = await fetch(`${baseUrl}/api/v1/principal-test/fresh-auth`, {
+      headers: { authorization: 'Bearer stale-token' },
+    });
+    expect(response.status).toBe(401);
+    const body = (await response.json()) as { code: string; message: string; statusCode: number };
+    expect(body).toMatchObject({
+      code: 'AUTH_REAUTHENTICATION_REQUIRED',
       statusCode: 401,
     });
   });

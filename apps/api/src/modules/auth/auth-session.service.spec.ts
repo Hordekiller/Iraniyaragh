@@ -5,6 +5,7 @@ import {
   AuthSessionException,
   AuthSessionService,
   AUTH_SESSION_REVOKE_REASON,
+  revokeOtherSessionFamilies,
 } from './auth-session.service';
 import type { AuthTokenService } from './auth-token.service';
 import type { PrismaService } from '../../database/prisma.service';
@@ -435,5 +436,87 @@ describe('AuthSessionService', () => {
         }),
       ).rejects.toThrow(TypeError);
     });
+  });
+});
+
+describe('revokeOtherSessionFamilies', () => {
+  it('revokes all active sessions of other token families and audits the revocation', async () => {
+    const tx = {
+      session: {
+        findUnique: vi.fn(async () => ({ tokenFamilyId: 'current-family' })),
+        updateMany: vi.fn(async () => ({ count: 3 })),
+      },
+      auditLog: { create: vi.fn(async () => ({})) },
+    } as unknown as MockTx;
+
+    const revokedCount = await revokeOtherSessionFamilies(tx as Parameters<typeof revokeOtherSessionFamilies>[0], {
+      userId: 'user-1',
+      currentSessionId: 'session-current',
+      reason: AUTH_SESSION_REVOKE_REASON.passwordChanged,
+      actorId: 'user-1',
+    });
+
+    expect(revokedCount).toBe(3);
+    expect(tx.session.findUnique).toHaveBeenCalledWith({
+      where: { id: 'session-current' },
+      select: { tokenFamilyId: true },
+    });
+    expect(tx.session.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tokenFamilyId: { not: 'current-family' },
+        }),
+        data: expect.objectContaining({
+          revokeReason: 'PASSWORD_CHANGED',
+        }),
+      }),
+    );
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'auth.session.other_families_revoked',
+          metadata: expect.objectContaining({ revokedSessionCount: 3 }),
+        }),
+      }),
+    );
+  });
+
+  it('returns 0 and skips audit when the current session is not found', async () => {
+    const tx = {
+      session: {
+        findUnique: vi.fn(async () => null),
+        updateMany: vi.fn(async () => ({ count: 0 })),
+      },
+      auditLog: { create: vi.fn(async () => ({})) },
+    } as unknown as MockTx;
+
+    const revokedCount = await revokeOtherSessionFamilies(tx as Parameters<typeof revokeOtherSessionFamilies>[0], {
+      userId: 'user-1',
+      currentSessionId: 'session-gone',
+      reason: AUTH_SESSION_REVOKE_REASON.recoveryRegenerated,
+    });
+
+    expect(revokedCount).toBe(0);
+    expect(tx.session.updateMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it('skips audit when zero other families were active', async () => {
+    const tx = {
+      session: {
+        findUnique: vi.fn(async () => ({ tokenFamilyId: 'only-family' })),
+        updateMany: vi.fn(async () => ({ count: 0 })),
+      },
+      auditLog: { create: vi.fn(async () => ({})) },
+    } as unknown as MockTx;
+
+    const revokedCount = await revokeOtherSessionFamilies(tx as Parameters<typeof revokeOtherSessionFamilies>[0], {
+      userId: 'user-1',
+      currentSessionId: 'session-solo',
+      reason: AUTH_SESSION_REVOKE_REASON.mfaCredentialChanged,
+    });
+
+    expect(revokedCount).toBe(0);
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
 });

@@ -43,6 +43,104 @@
         ]
       }
     },
+    "/auth/staff/password": {
+      "post": {
+        "operationId": "StaffAuthController_staffPassword",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
+    "/auth/staff/totp/verify": {
+      "post": {
+        "operationId": "StaffAuthController_staffTotp",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
+    "/auth/staff/recovery/verify": {
+      "post": {
+        "operationId": "StaffAuthController_staffRecovery",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
+    "/auth/staff/password/change": {
+      "post": {
+        "operationId": "StaffAuthController_staffPasswordChange",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
+    "/auth/staff/totp/enroll": {
+      "post": {
+        "operationId": "StaffAuthController_totpEnroll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
+    "/auth/staff/totp/confirm": {
+      "post": {
+        "operationId": "StaffAuthController_totpConfirm",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
+    "/auth/staff/recovery/regenerate": {
+      "post": {
+        "operationId": "StaffAuthController_recoveryRegenerate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
     "/auth/dev/signin": {
       "post": {
         "operationId": "StaffAuthController_devSignIn",
@@ -152,90 +250,6 @@
         },
         "tags": [
           "SessionManagement"
-        ]
-      }
-    },
-    "/auth/staff/password": {
-      "post": {
-        "operationId": "StaffAuthController_staffPassword",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "StaffAuth"
-        ]
-      }
-    },
-    "/auth/staff/totp/verify": {
-      "post": {
-        "operationId": "StaffAuthController_staffTotp",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "StaffAuth"
-        ]
-      }
-    },
-    "/auth/staff/recovery/verify": {
-      "post": {
-        "operationId": "StaffAuthController_staffRecovery",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "StaffAuth"
-        ]
-      }
-    },
-    "/auth/staff/totp/enroll": {
-      "post": {
-        "operationId": "StaffAuthController_totpEnroll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "StaffAuth"
-        ]
-      }
-    },
-    "/auth/staff/totp/confirm": {
-      "post": {
-        "operationId": "StaffAuthController_totpConfirm",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "StaffAuth"
-        ]
-      }
-    },
-    "/auth/staff/recovery/regenerate": {
-      "post": {
-        "operationId": "StaffAuthController_recoveryRegenerate",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "StaffAuth"
         ]
       }
     }

@@ -42,6 +42,8 @@ jobs:
       PSQL_DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/iraniyaragh_ci_test
       SHADOW_DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/ci_shadow_test?schema=public
       REDIS_URL: redis://127.0.0.1:6379
+      AUTH_HASH_SECRET: development-only-hash-root-secret-replace-me
+      AUTH_TOTP_ENCRYPTION_KEY: CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk
     services:
       redis:
         image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99

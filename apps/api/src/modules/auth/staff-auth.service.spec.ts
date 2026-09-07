@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { LoginAttemptOutcome, LoginMethod, MfaChallengePurpose, UserStatus } from '@prisma/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthHashService } from './auth-hash.service';
@@ -5,12 +6,19 @@ import type { AuthTokenService } from './auth-token.service';
 import type { PasswordHashService } from './password-hash.service';
 import type { RateLimitService } from './rate-limit.service';
 import { StaffAuthException, StaffAuthService } from './staff-auth.service';
+import { PasswordPolicyError } from './password-hash.service';
 import type { PrismaService } from '../../database/prisma.service';
 
 type MockTransaction = {
   user: {
     findUnique: ReturnType<typeof vi.fn>;
+    findUniqueOrThrow: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
+    updateMany: ReturnType<typeof vi.fn>;
+  };
+  session: {
+    findUnique: ReturnType<typeof vi.fn>;
+    updateMany: ReturnType<typeof vi.fn>;
   };
   mfaChallenge: {
     updateMany: ReturnType<typeof vi.fn>;
@@ -28,7 +36,13 @@ function createTransaction(overrides: Partial<MockTransaction> = {}): MockTransa
   return {
     user: overrides.user ?? {
       findUnique: vi.fn(async () => ({ failedLoginCount: 0 })),
+      findUniqueOrThrow: vi.fn(async () => ({ ...ACTIVE_USER })),
       update: vi.fn(async () => ({})),
+      updateMany: vi.fn(async () => ({ count: 1 })),
+    },
+    session: overrides.session ?? {
+      findUnique: vi.fn(async () => ({ tokenFamilyId: 'family-current' })),
+      updateMany: vi.fn(async () => ({ count: 0 })),
     },
     mfaChallenge: overrides.mfaChallenge ?? {
       updateMany: vi.fn(async () => ({ count: 1 })),
@@ -69,6 +83,7 @@ function createService(overrides: {
     verify: vi.fn(async () => true),
     needsRehash: vi.fn(() => false),
     hash: vi.fn(async (value: string) => `argon2:${value}`),
+    assertPolicy: vi.fn(() => {}),
   };
   const rateLimits = {
     enforce: overrides.enforce ?? vi.fn(async () => undefined),
@@ -316,6 +331,160 @@ describe('StaffAuthService', () => {
         service.requestPasswordChallenge({ identifier: 'a'.repeat(321), password: 'a-password' }),
       ).rejects.toBeInstanceOf(StaffAuthException);
       expect(passwords.verify).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('changePassword', () => {
+    it('updates the hash, revokes other session families, and audits the change', async () => {
+      const tx = createTransaction();
+      const verify = vi.fn()
+        .mockResolvedValueOnce(true)   // currentPassword valid
+        .mockResolvedValueOnce(false);  // newPassword != current
+      const { service, passwords } = createService({
+        transaction: tx,
+        passwords: {
+          verify,
+          needsRehash: vi.fn(() => false),
+          hash: vi.fn(async (v: string) => `argon2:${v}`),
+          assertPolicy: vi.fn(() => {}),
+        },
+      });
+
+      await service.changePassword({
+        userId: 'user-1',
+        currentPassword: 'current-password',
+        newPassword: 'brand-new-secure-password',
+        currentSessionId: 'session-current',
+      });
+
+      expect(passwords.assertPolicy).toHaveBeenCalledWith('brand-new-secure-password');
+      expect(passwords.verify).toHaveBeenCalledWith('argon2:hash', 'current-password');
+      expect(passwords.hash).toHaveBeenCalledWith('brand-new-secure-password');
+      expect(tx.user.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ passwordHash: 'argon2:hash', status: UserStatus.ACTIVE }),
+          data: expect.objectContaining({ passwordHash: 'argon2:brand-new-secure-password' }),
+        }),
+      );
+      expect(tx.session.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ tokenFamilyId: { not: 'family-current' } }),
+          data: expect.objectContaining({ revokeReason: 'PASSWORD_CHANGED' }),
+        }),
+      );
+      expect(tx.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: 'auth.staff.password_changed',
+          }),
+        }),
+      );
+    });
+
+    it('rejects when the current password is wrong', async () => {
+      const tx = createTransaction();
+      const { service } = createService({
+        transaction: tx,
+        passwords: {
+          verify: vi.fn(async () => false),
+          needsRehash: vi.fn(() => false),
+          hash: vi.fn(async (v: string) => `argon2:${v}`),
+          assertPolicy: vi.fn(() => {}),
+        },
+      });
+
+      await expect(
+        service.changePassword({
+          userId: 'user-1',
+          currentPassword: 'wrong',
+          newPassword: 'brand-new-secure-password',
+          currentSessionId: 'session-current',
+        }),
+      ).rejects.toBeInstanceOf(StaffAuthException);
+
+      expect(tx.user.updateMany).not.toHaveBeenCalled();
+      expect(tx.session.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the new password is identical to the current one', async () => {
+      const tx = createTransaction();
+      const { service } = createService({
+        transaction: tx,
+        passwords: {
+          verify: vi.fn(async () => true),
+          needsRehash: vi.fn(() => false),
+          hash: vi.fn(async (v: string) => `argon2:${v}`),
+          assertPolicy: vi.fn(() => {}),
+        },
+      });
+
+      await expect(
+        service.changePassword({
+          userId: 'user-1',
+          currentPassword: 'same-password',
+          newPassword: 'same-password',
+          currentSessionId: 'session-current',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(tx.user.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects policy failures before touching the database', async () => {
+      const tx = createTransaction();
+      const { service } = createService({
+        transaction: tx,
+        passwords: {
+          verify: vi.fn(async () => true),
+          needsRehash: vi.fn(() => false),
+          hash: vi.fn(async (v: string) => `argon2:${v}`),
+          assertPolicy: vi.fn(() => { throw new PasswordPolicyError(); }),
+        },
+      });
+
+      await expect(
+        service.changePassword({
+          userId: 'user-1',
+          currentPassword: 'current',
+          newPassword: 'short',
+          currentSessionId: 'session-current',
+        }),
+      ).rejects.toThrow(PasswordPolicyError);
+
+      expect(tx.user.findUniqueOrThrow).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the compare-and-set update fails (concurrent password change)', async () => {
+      const tx = createTransaction({
+        user: {
+          findUnique: vi.fn(async () => ({ failedLoginCount: 0 })),
+          findUniqueOrThrow: vi.fn(async () => ({ ...ACTIVE_USER })),
+          update: vi.fn(async () => ({})),
+          updateMany: vi.fn(async () => ({ count: 0 })),
+        },
+      });
+      const { service } = createService({
+        transaction: tx,
+        passwords: {
+          verify: vi.fn()
+            .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(false),
+          needsRehash: vi.fn(() => false),
+          hash: vi.fn(async (v: string) => `argon2:${v}`),
+          assertPolicy: vi.fn(() => {}),
+        },
+      });
+
+      await expect(
+        service.changePassword({
+          userId: 'user-1',
+          currentPassword: 'current-password',
+          newPassword: 'brand-new-secure-password',
+          currentSessionId: 'session-current',
+        }),
+      ).rejects.toBeInstanceOf(StaffAuthException);
+
+      expect(tx.session.updateMany).not.toHaveBeenCalled();
     });
   });
 });

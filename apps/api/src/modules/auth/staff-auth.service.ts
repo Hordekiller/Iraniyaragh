@@ -1,10 +1,14 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { LoginAttemptOutcome, LoginMethod, MfaChallengePurpose, Prisma, UserStatus } from '@prisma/client';
 import type { StaffMfaChallengeResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthHashService } from './auth-hash.service';
 import { AuthTokenService } from './auth-token.service';
+import {
+  AUTH_SESSION_REVOKE_REASON,
+  revokeOtherSessionFamilies,
+} from './auth-session.service';
 import { PasswordHashService } from './password-hash.service';
 import { RateLimitService } from './rate-limit.service';
 
@@ -22,6 +26,13 @@ export type StaffPasswordCommand = Readonly<{
   identifier: string;
   password: string;
   ipAddress?: string;
+}>;
+
+export type StaffPasswordChangeCommand = Readonly<{
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+  currentSessionId: string;
 }>;
 
 @Injectable()
@@ -176,6 +187,61 @@ export class StaffAuthService {
           entityId: input.userId ?? null,
           requestId,
           metadata: { method: 'PASSWORD', outcome: 'INVALID_CREDENTIALS' },
+        },
+      });
+    });
+  }
+
+  async changePassword(command: StaffPasswordChangeCommand): Promise<void> {
+    this.passwords.assertPolicy(command.newPassword);
+    const requestId = getRequestId();
+
+    await this.prisma.$transaction(async tx => {
+      const user = await tx.user.findUniqueOrThrow({
+        where: { id: command.userId },
+        select: { id: true, passwordHash: true, status: true },
+      });
+      if (user.status !== UserStatus.ACTIVE) throw new StaffAuthException();
+
+      // Constant-work failure path: the current password is always verified with
+      // Argon2 before any error is raised, so a rejected attempt takes the same
+      // time as a successful one (guessing the current password stays hard).
+      const currentPasswordIsValid = await this.passwords.verify(user.passwordHash, command.currentPassword);
+      const matchesCurrent = currentPasswordIsValid
+        ? await this.passwords.verify(user.passwordHash, command.newPassword)
+        : false;
+      if (!currentPasswordIsValid) throw new StaffAuthException();
+      if (matchesCurrent) {
+        throw new BadRequestException({
+          code: 'AUTH_PASSWORD_UNCHANGED',
+          message: 'The new password must differ from the current password.',
+        });
+      }
+
+      const newPasswordHash = await this.passwords.hash(command.newPassword);
+      const updated = await tx.user.updateMany({
+        where: { id: command.userId, passwordHash: user.passwordHash, status: UserStatus.ACTIVE },
+        data: { passwordHash: newPasswordHash, passwordChangedAt: new Date() },
+      });
+      // Compare-and-set failed (another change landed first): reject so a stale
+      // "current password" cannot be replayed against the new hash.
+      if (updated.count !== 1) throw new StaffAuthException();
+
+      await revokeOtherSessionFamilies(tx, {
+        userId: command.userId,
+        currentSessionId: command.currentSessionId,
+        reason: AUTH_SESSION_REVOKE_REASON.passwordChanged,
+        actorId: command.userId,
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: command.userId,
+          action: 'auth.staff.password_changed',
+          entityType: 'User',
+          entityId: command.userId,
+          requestId,
+          metadata: { otherSessionFamiliesRevoked: true },
         },
       });
     });

@@ -25,6 +25,9 @@ export const AUTH_SESSION_REVOKE_REASON = Object.freeze({
   revoked: 'REVOKED',
   rotated: 'ROTATED',
   userInactive: 'USER_INACTIVE',
+  passwordChanged: 'PASSWORD_CHANGED',
+  mfaCredentialChanged: 'MFA_CREDENTIAL_CHANGED',
+  recoveryRegenerated: 'RECOVERY_REGENERATED',
 } as const);
 
 export type AuthSessionRevokeReason = (typeof AUTH_SESSION_REVOKE_REASON)[keyof typeof AUTH_SESSION_REVOKE_REASON];
@@ -61,6 +64,47 @@ export type AuthSessionSummary = Readonly<{
 export type RevokeUserSessionOutcome = 'revoked' | 'alreadyRevoked' | 'notFound';
 
 export type AuthSessionErrorCode = 'AUTH_SESSION_INVALID' | 'AUTH_SESSION_REPLAYED';
+
+/**
+ * Revokes every active session of the user whose token family is not the
+ * current session's family. Runs inside a caller-provided transaction so
+ * credential changes and the resulting revocation are atomic.
+ */
+export async function revokeOtherSessionFamilies(
+  tx: Prisma.TransactionClient,
+  input: Readonly<{
+    userId: string;
+    currentSessionId: string;
+    reason: AuthSessionRevokeReason;
+    now?: Date;
+    actorId?: string | null;
+  }>,
+): Promise<number> {
+  const now = input.now ?? new Date();
+  const current = await tx.session.findUnique({
+    where: { id: input.currentSessionId },
+    select: { tokenFamilyId: true },
+  });
+  if (!current) return 0;
+
+  const revoked = await tx.session.updateMany({
+    where: { userId: input.userId, revokedAt: null, tokenFamilyId: { not: current.tokenFamilyId } },
+    data: { revokedAt: now, revokeReason: input.reason },
+  });
+  if (revoked.count > 0) {
+    await tx.auditLog.create({
+      data: {
+        actorId: input.actorId ?? input.userId,
+        action: 'auth.session.other_families_revoked',
+        entityType: 'User',
+        entityId: input.userId,
+        requestId: getRequestId(),
+        metadata: { reason: input.reason, revokedSessionCount: revoked.count },
+      },
+    });
+  }
+  return revoked.count;
+}
 
 export class AuthSessionException extends UnauthorizedException {
   constructor(readonly authCode: AuthSessionErrorCode) {

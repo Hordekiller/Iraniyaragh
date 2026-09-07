@@ -85,6 +85,7 @@ function question(prompt) {
     stdout.write(prompt);
     const onData = chunk => { stdin.off('data', onData); resolve(String(chunk).replace(/[\r\n]+$/u, '')); };
     stdin.once('data', onData);
+    stdin.resume();
   });
 }
 

@@ -142,4 +142,71 @@ describe.sequential('StaffAuthService database integration', () => {
       mfa.verifyRecovery({ challengeToken: recoveryChallenge.data.challengeToken, code: recoveryCode, ipAddress: '192.0.2.47' }),
     ).rejects.toMatchObject({ response: { code: 'AUTH_CHALLENGE_INVALID' }, status: 401 });
   });
+
+  it('changes the password and revokes sessions from other token families', async () => {
+    const first = await sessions.createSession({
+      userId,
+      authenticationLevel: 'STAFF_MFA',
+      authenticatedAt: new Date(Date.now() - 5_000),
+      deviceName: 'Family A device',
+    });
+    const second = await sessions.createSession({
+      userId,
+      authenticationLevel: 'STAFF_MFA',
+      authenticatedAt: new Date(Date.now() - 5_000),
+      deviceName: 'Family B device',
+    });
+
+    await expect(
+      prisma.session.count({ where: { userId, revokedAt: null } }),
+    ).resolves.toBeGreaterThan(1);
+
+    await service.changePassword({
+      userId,
+      currentPassword: 'a secure staff password',
+      newPassword: 'a brand new secure password',
+      currentSessionId: first.sessionId,
+    });
+
+    const firstFamily = await prisma.session.findFirstOrThrow({ where: { id: first.sessionId } });
+    const secondFamily = await prisma.session.findFirstOrThrow({ where: { id: second.sessionId } });
+    expect(firstFamily.revokedAt).toBeNull();
+    expect(secondFamily.revokedAt).not.toBeNull();
+    expect(secondFamily.revokeReason).toBe('PASSWORD_CHANGED');
+    expect(secondFamily.tokenFamilyId).not.toBe(firstFamily.tokenFamilyId);
+
+    await expect(
+      service.requestPasswordChallenge({ identifier: email, password: 'a secure staff password', ipAddress: '192.0.2.48' }),
+    ).rejects.toMatchObject({ response: { code: 'AUTH_INVALID_CREDENTIALS' }, status: 401 });
+    const result = await service.requestPasswordChallenge({
+      identifier: email,
+      password: 'a brand new secure password',
+      ipAddress: '192.0.2.49',
+    });
+    expect(result.data.next).toBe('TOTP');
+  });
+
+  it('rejects a wrong current password without revoking sessions or changing the hash', async () => {
+    const before = await prisma.session.count({ where: { userId, revokedAt: null } });
+    await expect(
+      service.changePassword({
+        userId,
+        currentPassword: 'not the current password',
+        newPassword: 'yet another secure password',
+        currentSessionId: 'session-unknown',
+      }),
+    ).rejects.toMatchObject({ response: { code: 'AUTH_INVALID_CREDENTIALS' }, status: 401 });
+    await expect(prisma.session.count({ where: { userId, revokedAt: null } })).resolves.toBe(before);
+  });
+
+  it('rejects reusing the current password as the new one', async () => {
+    await expect(
+      service.changePassword({
+        userId,
+        currentPassword: 'a brand new secure password',
+        newPassword: 'a brand new secure password',
+        currentSessionId: 'session-unknown',
+      }),
+    ).rejects.toMatchObject({ response: { code: 'AUTH_PASSWORD_UNCHANGED' }, status: 400 });
+  });
 });
