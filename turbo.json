@@ -7,7 +7,7 @@
     "test": { "dependsOn": ["^test"] },
     "test:integration": {
       "cache": false,
-      "env": ["DATABASE_URL", "NODE_ENV"]
+      "env": ["DATABASE_URL", "NODE_ENV", "AUTH_HASH_SECRET", "AUTH_TOTP_ENCRYPTION_KEY"]
     },
     "typecheck": { "dependsOn": ["^typecheck"] }
   }
