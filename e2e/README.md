@@ -4,7 +4,9 @@ Playwright smoke coverage for the foundation shells:
 
 - `apps/web` — the storefront (React/Vite) with its self-hosted Vazirmatn font,
   covering the RTL shell, hero slider, product modal + cart toast, category
-  filtering and the responsive search interactions.
+  filtering, the responsive search interactions and the customer OTP login
+  states (valid/invalid code, rate-limit back-off, resend gating, memory-only
+  sessions).
 - `apps/admin` — the operations panel (Next.js 16 / MUI) with its strict CSP and
   self-hosted assets.
 
