@@ -153,7 +153,7 @@ export class StaffAuthController {
     @Body() body: StaffPasswordChangeDto,
     @Res({ passthrough: true }) response: Response,
   ): Promise<EmptyResponse> {
-    const issued = await this.staffAuth.changePasswordAndRotateSession({
+    const issued = await this.staffAuth.updateCredentialAndRotateSession({
       userId: principal.userId,
       currentSessionId: principal.sessionId,
       currentPassword: body.currentPassword,

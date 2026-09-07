@@ -31,7 +31,7 @@ function createController(overrides: Partial<{
   principals: Pick<AuthPrincipalService, 'resolveBearerToken'>;
   prisma: Pick<PrismaService, 'user'>;
   tokens: Pick<AuthTokenService, 'matchesCsrfToken'>;
-  staffAuth: Pick<StaffAuthService, 'requestPasswordChallenge' | 'changePasswordAndRotateSession'>;
+  staffAuth: Pick<StaffAuthService, 'requestPasswordChallenge' | 'updateCredentialAndRotateSession'>;
   staffMfa: Pick<StaffMfaService, 'verifyTotp' | 'regenerateRecoveryCodes'>;
   devLoginEnabled: boolean;
   devCode: string;
@@ -333,7 +333,7 @@ describe('StaffAuthController (change password)', () => {
   }
 
   it('delegates to the change service, rotates cookies and returns an empty envelope', async () => {
-    const changePasswordAndRotateSession = vi.fn(async () => ({
+    const updateCredentialAndRotateSession = vi.fn(async () => ({
       accessToken: 'new-at-1',
       csrfToken: 'new-csrf-1',
       expiresAt: new Date(Date.now() + 600_000),
@@ -344,7 +344,7 @@ describe('StaffAuthController (change password)', () => {
     const controller = createController({
       staffAuth: {
         requestPasswordChallenge: vi.fn(),
-        changePasswordAndRotateSession,
+        updateCredentialAndRotateSession,
       },
     });
     const response = mockResponseWithOptions();
@@ -352,7 +352,7 @@ describe('StaffAuthController (change password)', () => {
 
     const result = await controller.staffPasswordChange(principal, body as never, response);
 
-    expect(changePasswordAndRotateSession).toHaveBeenCalledWith({
+    expect(updateCredentialAndRotateSession).toHaveBeenCalledWith({
       userId: 'seed_dev_admin',
       currentSessionId: 'session-1',
       currentPassword: 'the-current-password',
@@ -366,11 +366,11 @@ describe('StaffAuthController (change password)', () => {
   });
 
   it('propagates a rejected current-password failure from the change service unchanged', async () => {
-    const changePasswordAndRotateSession = vi.fn(async () => {
+    const updateCredentialAndRotateSession = vi.fn(async () => {
       throw new UnauthorizedException({ code: 'AUTH_INVALID_CREDENTIALS', message: 'dummy' });
     });
     const controller = createController({
-      staffAuth: { requestPasswordChallenge: vi.fn(), changePasswordAndRotateSession },
+      staffAuth: { requestPasswordChallenge: vi.fn(), updateCredentialAndRotateSession },
     });
     const response = mockResponseWithOptions();
 

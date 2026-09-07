@@ -342,7 +342,7 @@ describe('StaffAuthService', () => {
         rotateSessionAfterCredentialChange,
       });
 
-      await service.changePasswordAndRotateSession({
+      await service.updateCredentialAndRotateSession({
         userId: 'user-1',
         currentSessionId: 'session-current',
         currentPassword: 'the-current-password',
@@ -369,7 +369,7 @@ describe('StaffAuthService', () => {
       });
 
       await expect(
-        service.changePasswordAndRotateSession({
+        service.updateCredentialAndRotateSession({
           userId: 'user-1',
           currentSessionId: 'session-current',
           currentPassword: 'wrong-current-password',
@@ -394,7 +394,7 @@ describe('StaffAuthService', () => {
       });
 
       await expect(
-        service.changePasswordAndRotateSession({
+        service.updateCredentialAndRotateSession({
           userId: 'user-1',
           currentSessionId: 'session-current',
           currentPassword: 'the-current-password',
@@ -411,7 +411,7 @@ describe('StaffAuthService', () => {
       });
 
       await expect(
-        service.changePasswordAndRotateSession({
+        service.updateCredentialAndRotateSession({
           userId: 'user-1',
           currentSessionId: 'session-current',
           currentPassword: 'the-current-password',
