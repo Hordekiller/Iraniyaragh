@@ -59,9 +59,10 @@ export function setAuthCookies(
 ): void {
   const maxAge = Math.max(0, expiresAt.getTime() - Date.now());
   const base = { sameSite: cookieSpec.sameSite, path: cookieSpec.path, secure: cookieSpec.secure, maxAge };
-  // JWT refresh token rides the standard httpOnly/SameSite cookie; CSRF below is the double-submit token, intentionally client-readable to echo in x-csrf-token.
-  response.cookie(cookieSpec.refreshName, refreshToken, { ...base, httpOnly: true }); // codeql[js/clear-text-storage-of-sensitive-information]
-  response.cookie(cookieSpec.csrfName, csrfToken, { ...base, httpOnly: false }); // codeql[js/clear-text-storage-of-sensitive-information]
+  const base = { sameSite: cookieSpec.sameSite, path: cookieSpec.path, secure: cookieSpec.secure, maxAge };
+  // Refresh JWT rides a httpOnly+SameSite cookie; the CSRF cookie below is the double-submit token, intentionally client-readable to echo in x-csrf-token.
+  response.cookie(cookieSpec.refreshName, refreshToken, { ...base, httpOnly: true });
+  response.cookie(cookieSpec.csrfName, csrfToken, { ...base, httpOnly: false });
 }
 
 export function clearAuthCookies(response: Response, cookieSpec: AuthCookieSpec): void {
