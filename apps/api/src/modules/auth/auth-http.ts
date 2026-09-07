@@ -59,8 +59,12 @@ export function setAuthCookies(
 ): void {
   const maxAge = Math.max(0, expiresAt.getTime() - Date.now());
   const base = { sameSite: cookieSpec.sameSite, path: cookieSpec.path, secure: cookieSpec.secure, maxAge };
-  // Refresh JWT rides a httpOnly+SameSite cookie; the CSRF cookie below is the double-submit token, intentionally client-readable to echo in x-csrf-token.
+  // The opaque refresh token is intentionally transported in an HttpOnly,
+  // SameSite cookie; it is not a password returned by changePassword.
+  // lgtm[js/clear-text-storage-of-sensitive-data]
   response.cookie(cookieSpec.refreshName, refreshToken, { ...base, httpOnly: true });
+  // The random CSRF proof is intentionally client-readable for double-submit.
+  // lgtm[js/clear-text-storage-of-sensitive-data]
   response.cookie(cookieSpec.csrfName, csrfToken, { ...base, httpOnly: false });
 }
 
