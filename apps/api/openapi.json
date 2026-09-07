@@ -169,6 +169,20 @@
         ]
       }
     },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "StaffAuthController_refresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StaffAuth"
+        ]
+      }
+    },
     "/auth/logout": {
       "post": {
         "operationId": "StaffAuthController_logout",
