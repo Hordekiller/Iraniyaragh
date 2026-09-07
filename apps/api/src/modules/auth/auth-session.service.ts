@@ -16,6 +16,7 @@ const MAX_DEVICE_NAME_LENGTH = 150;
 const MAX_USER_AGENT_LENGTH = 1_000;
 
 export const AUTH_SESSION_REVOKE_REASON = Object.freeze({
+  credentialChanged: 'CREDENTIAL_CHANGED',
   expired: 'EXPIRED',
   inactivity: 'INACTIVITY',
   invalidEvidence: 'AUTHENTICATION_EVIDENCE_INVALID',
@@ -424,6 +425,213 @@ export class AuthSessionService {
         },
       });
       return revoked.count;
+    });
+  }
+
+  /**
+   * Revokes every live session family of the user except the current session's
+   * family while keeping the current session valid and leaving its family
+   * untouched. The current session must exist, be unrevoked and not expired;
+   * otherwise the whole family is treated as invalid. Used for sensitive
+   * operations that need to evict other devices but must not drop this one.
+   */
+  async revokeOtherSessionFamilies(command: {
+    userId: string;
+    currentSessionId: string;
+    reason?: AuthSessionRevokeReason;
+  }): Promise<number> {
+    const requestId = getRequestId();
+    const reason = command.reason ?? AUTH_SESSION_REVOKE_REASON.credentialChanged;
+    return this.runSerializable(async tx => {
+      const now = new Date();
+      const session = await tx.session.findFirst({
+        where: { id: command.currentSessionId, userId: command.userId },
+        include: { user: { select: { status: true } } },
+      });
+      if (!session || session.revokedAt !== null) throw new AuthSessionException('AUTH_SESSION_INVALID');
+
+      const invalidReason = this.invalidReason(session, session.user.status, now);
+      if (invalidReason) {
+        await tx.session.updateMany({
+          where: { tokenFamilyId: session.tokenFamilyId, revokedAt: null },
+          data: { revokedAt: now, revokeReason: invalidReason },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: session.userId,
+            action: 'auth.session.revoked',
+            entityType: 'Session',
+            entityId: session.id,
+            requestId,
+            metadata: { reason: invalidReason },
+          },
+        });
+        throw new AuthSessionException('AUTH_SESSION_INVALID');
+      }
+
+      const otherRevoked = await tx.session.updateMany({
+        where: {
+          userId: command.userId,
+          tokenFamilyId: { not: session.tokenFamilyId },
+          revokedAt: null,
+        },
+        data: { revokedAt: now, revokeReason: reason },
+      });
+      if (otherRevoked.count > 0) {
+        await tx.auditLog.create({
+          data: {
+            actorId: session.userId,
+            action: 'auth.session.all_revoked',
+            entityType: 'User',
+            entityId: session.userId,
+            requestId,
+            metadata: {
+              reason,
+              revokedSessionCount: otherRevoked.count,
+            },
+          },
+        });
+      }
+      return otherRevoked.count;
+    });
+  }
+
+  async rotateSessionAfterCredentialChange(command: {
+    userId: string;
+    currentSessionId: string;
+    passwordHash: string;
+    passwordChangedAt: Date;
+  }): Promise<IssuedAuthSession> {
+    const replacementId = randomUUID();
+    const replacementRefreshToken = this.tokens.generateRefreshToken();
+    const replacementRefreshHash = this.hashes.hash(replacementRefreshToken, 'refresh');
+    const csrfToken = this.tokens.generateCsrfToken();
+    const requestId = getRequestId();
+
+    const result = await this.runSerializable<SessionTransactionResult>(async tx => {
+      const now = new Date();
+      const session = await tx.session.findFirst({
+        where: { id: command.currentSessionId, userId: command.userId },
+        include: { user: { select: { status: true } } },
+      });
+      if (!session || session.revokedAt !== null) return { kind: 'invalid' };
+
+      const invalidReason = this.invalidReason(session, session.user.status, now);
+      if (invalidReason) {
+        await tx.session.updateMany({
+          where: { tokenFamilyId: session.tokenFamilyId, revokedAt: null },
+          data: { revokedAt: now, revokeReason: invalidReason },
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: session.userId,
+            action: 'auth.session.revoked',
+            entityType: 'Session',
+            entityId: session.id,
+            requestId,
+            metadata: { reason: invalidReason },
+          },
+        });
+        return { kind: 'invalid' };
+      }
+
+      const otherRevoked = await tx.session.updateMany({
+        where: {
+          userId: command.userId,
+          tokenFamilyId: { not: session.tokenFamilyId },
+          revokedAt: null,
+        },
+        data: { revokedAt: now, revokeReason: AUTH_SESSION_REVOKE_REASON.credentialChanged },
+      });
+      if (otherRevoked.count > 0) {
+        await tx.auditLog.create({
+          data: {
+            actorId: session.userId,
+            action: 'auth.session.all_revoked',
+            entityType: 'User',
+            entityId: session.userId,
+            requestId,
+            metadata: {
+              reason: AUTH_SESSION_REVOKE_REASON.credentialChanged,
+              revokedSessionCount: otherRevoked.count,
+            },
+          },
+        });
+      }
+
+      const accessToken = this.tokens.signAccessToken({
+        userId: session.userId,
+        sessionId: replacementId,
+        authenticationLevel: session.authenticationLevel,
+        authenticatedAt: session.authenticatedAt,
+      });
+      const replacement = await tx.session.create({
+        data: {
+          id: replacementId,
+          userId: session.userId,
+          refreshTokenHash: replacementRefreshHash,
+          tokenFamilyId: session.tokenFamilyId,
+          authenticationLevel: session.authenticationLevel,
+          authenticatedAt: session.authenticatedAt,
+          deviceIdHash: session.deviceIdHash,
+          deviceName: session.deviceName,
+          userAgent: session.userAgent,
+          ipHash: session.ipHash,
+          lastUsedAt: now,
+          expiresAt: session.expiresAt,
+          createdAt: now,
+        },
+        select: { expiresAt: true, id: true, tokenFamilyId: true },
+      });
+
+      const rotated = await tx.session.updateMany({
+        where: { id: session.id, replacedBySessionId: null, revokedAt: null },
+        data: {
+          replacedBySessionId: replacement.id,
+          revokedAt: now,
+          revokeReason: AUTH_SESSION_REVOKE_REASON.rotated,
+        },
+      });
+      if (rotated.count !== 1) throw new SessionRotationRaceError();
+
+      await tx.user.update({
+        where: { id: command.userId },
+        data: { passwordHash: command.passwordHash, passwordChangedAt: command.passwordChangedAt },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: session.userId,
+          action: 'auth.password.changed',
+          entityType: 'User',
+          entityId: session.userId,
+          requestId,
+          metadata: {
+            authenticationLevel: session.authenticationLevel,
+            rotatedSessionId: replacement.id,
+          },
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: session.userId,
+          action: 'auth.session.rotated',
+          entityType: 'Session',
+          entityId: session.id,
+          requestId,
+          metadata: { newSessionId: replacement.id, tokenFamilyId: session.tokenFamilyId },
+        },
+      });
+      return { kind: 'success', accessToken, session: replacement };
+    });
+
+    if (result.kind !== 'success') throw new AuthSessionException('AUTH_SESSION_INVALID');
+    return Object.freeze({
+      accessToken: result.accessToken,
+      csrfToken,
+      expiresAt: result.session.expiresAt,
+      refreshToken: replacementRefreshToken,
+      sessionId: result.session.id,
+      tokenFamilyId: result.session.tokenFamilyId,
     });
   }
 

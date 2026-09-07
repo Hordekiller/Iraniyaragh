@@ -1,8 +1,9 @@
-import { createCipheriv, createHmac, hkdfSync, randomBytes } from 'node:crypto';
+import { createCipheriv, randomBytes } from 'node:crypto';
 import { stdin, stdout } from 'node:process';
 import { PrismaClient } from '@prisma/client';
 import argon2 from 'argon2';
 import { generateSecret, generateURI, verify } from 'otplib';
+import { createFirstAdministrator } from './bootstrap-admin-core.mjs';
 
 const PASSWORD_MIN_LENGTH = 15;
 const PASSWORD_MAX_LENGTH = 128;
@@ -43,37 +44,19 @@ try {
   const encrypted = encrypt(secret, encryptionKey);
   const recoveryCodes = Array.from({ length: RECOVERY_COUNT }, () => `RECOVERY-${randomBytes(10).toString('base64url').toUpperCase()}`);
 
-  await prisma.$transaction(async tx => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended('iranyaragh:first-admin-bootstrap:v1', 0))`;
-    const role = await tx.role.findUnique({ where: { key: 'system-admin' }, select: { id: true } });
-    if (!role) throw new Error('The system-admin role is missing. Run the approved seed first.');
-    if (await tx.userRole.findFirst({ where: { roleId: role.id, revokedAt: null }, select: { id: true } })) {
-      throw new Error('An active system-admin already exists; bootstrap refuses replacement.');
-    }
-    const user = await tx.user.create({
-      data: {
-        email,
-        passwordHash,
-        status: 'ACTIVE',
-        isEmailVerified: true,
-        emailVerifiedAt: now,
-        passwordChangedAt: now,
-        createdAt: new Date(now.getTime() - 1_000),
-      },
-    });
-    const credential = await tx.totpCredential.create({
-      data: {
-        userId: user.id,
-        encryptedSecret: encrypted,
-        encryptionKeyVersion: 'v1',
-        confirmedAt: now,
-        createdAt: new Date(now.getTime() - 1_000),
-      },
-    });
-    await tx.recoveryCode.createMany({ data: recoveryCodes.map(code => ({ totpCredentialId: credential.id, codeHash: hashValue(code, 'recovery-code', hashSecret) })) });
-    await tx.userRole.create({ data: { userId: user.id, roleId: role.id } });
-    await tx.auditLog.create({ data: { actorId: null, action: 'auth.admin.bootstrapped', entityType: 'User', entityId: user.id, metadata: { roleId: role.id, operator: 'tty', recoveryCodeCount: RECOVERY_COUNT } } });
+  const outcome = await createFirstAdministrator({
+    prisma,
+    email,
+    passwordHash,
+    encryptedSecret: encrypted,
+    encryptionKeyVersion: 'v1',
+    recoveryCodes,
+    hashSecret,
+    operator: 'tty',
   });
+  if (outcome.status !== 'CREATED') {
+    throw new Error('An active system-admin already exists; bootstrap refuses replacement.');
+  }
 
   stdout.write(`\nBootstrap complete. Store these recovery codes securely; they will not be shown again:\n${recoveryCodes.join('\n')}\n`);
 } finally {
@@ -115,9 +98,4 @@ function encrypt(secret, key) {
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const ciphertext = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
   return ['v1', iv.toString('base64url'), cipher.getAuthTag().toString('base64url'), ciphertext.toString('base64url')].join(':');
-}
-
-function hashValue(value, context, rootSecret) {
-  const derived = Buffer.from(hkdfSync('sha256', Buffer.from(rootSecret), Buffer.from('iranyaragh:auth:hkdf:v1'), Buffer.from(`iranyaragh:auth:${context}`), 32));
-  return `v1:${createHmac('sha256', derived).update(value, 'utf8').digest('base64url')}`;
 }

@@ -1,10 +1,12 @@
 import { LoginAttemptOutcome, LoginMethod, MfaChallengePurpose, UserStatus } from '@prisma/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthHashService } from './auth-hash.service';
+import type { AuthSessionService } from './auth-session.service';
 import type { AuthTokenService } from './auth-token.service';
 import type { PasswordHashService } from './password-hash.service';
 import type { RateLimitService } from './rate-limit.service';
 import { StaffAuthException, StaffAuthService } from './staff-auth.service';
+import { PasswordPolicyError } from './password-hash.service';
 import type { PrismaService } from '../../database/prisma.service';
 
 type MockTransaction = {
@@ -50,6 +52,7 @@ function createService(overrides: {
   tokens?: Pick<AuthTokenService, 'generateMfaChallengeToken'>;
   passwords?: Pick<PasswordHashService, 'verify' | 'needsRehash' | 'hash'>;
   enforce?: ReturnType<typeof vi.fn>;
+  rotateSessionAfterCredentialChange?: ReturnType<typeof vi.fn>;
 } = {}) {
   const transaction = overrides.transaction ?? createTransaction();
   const prisma = {
@@ -73,6 +76,10 @@ function createService(overrides: {
   const rateLimits = {
     enforce: overrides.enforce ?? vi.fn(async () => undefined),
   } as unknown as RateLimitService;
+  const sessions = {
+    rotateSessionAfterCredentialChange:
+      overrides.rotateSessionAfterCredentialChange ?? vi.fn(async () => Object.freeze({ sessionId: 'rotated-1' })),
+  } as unknown as AuthSessionService;
 
   const service = new StaffAuthService(
     prisma,
@@ -80,8 +87,9 @@ function createService(overrides: {
     tokens as AuthTokenService,
     passwords as PasswordHashService,
     rateLimits,
+    sessions,
   );
-  return { service, prisma, hashes, tokens, passwords, rateLimits, transaction };
+  return { service, prisma, hashes, tokens, passwords, rateLimits, transaction, sessions };
 }
 
 const ACTIVE_USER = {
@@ -316,6 +324,101 @@ describe('StaffAuthService', () => {
         service.requestPasswordChallenge({ identifier: 'a'.repeat(321), password: 'a-password' }),
       ).rejects.toBeInstanceOf(StaffAuthException);
       expect(passwords.verify).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('changePassword', () => {
+    it('verifies the current password and delegates the atomic credential rotation to the session service', async () => {
+      const rotateSessionAfterCredentialChange = vi.fn(async () =>
+        Object.freeze({ sessionId: 'rotated-1', accessToken: 'at', refreshToken: 'rt', csrfToken: 'ct', expiresAt: new Date(), tokenFamilyId: 'family-1' }),
+      );
+      const { service, passwords, sessions } = createService({
+        user: vi.fn(async () => ({ id: 'user-1', passwordHash: 'argon2:stored', status: UserStatus.ACTIVE })),
+        passwords: {
+          verify: vi.fn(async () => true),
+          needsRehash: vi.fn(() => false),
+          hash: vi.fn(async () => 'argon2:new-hash'),
+        },
+        rotateSessionAfterCredentialChange,
+      });
+
+      await service.changePassword({
+        userId: 'user-1',
+        currentSessionId: 'session-current',
+        currentPassword: 'the-current-password',
+        newPassword: 'a-new-strong-password',
+      });
+
+      expect(passwords.verify).toHaveBeenCalledWith('argon2:stored', 'the-current-password');
+      expect(passwords.hash).toHaveBeenCalledWith('a-new-strong-password');
+      expect(rotateSessionAfterCredentialChange).toHaveBeenCalledWith({
+        userId: 'user-1',
+        currentSessionId: 'session-current',
+        passwordHash: 'argon2:new-hash',
+        passwordChangedAt: expect.any(Date),
+      });
+      expect(sessions.rotateSessionAfterCredentialChange).toHaveBeenCalled();
+    });
+
+    it('rejects a wrong current password without touching the credential rotation', async () => {
+      const rotateSessionAfterCredentialChange = vi.fn();
+      const { service, passwords } = createService({
+        user: vi.fn(async () => ({ id: 'user-1', passwordHash: 'argon2:stored', status: UserStatus.ACTIVE })),
+        passwords: { verify: vi.fn(async () => false) },
+        rotateSessionAfterCredentialChange,
+      });
+
+      await expect(
+        service.changePassword({
+          userId: 'user-1',
+          currentSessionId: 'session-current',
+          currentPassword: 'wrong-current-password',
+          newPassword: 'a-new-strong-password',
+        }),
+      ).rejects.toBeInstanceOf(StaffAuthException);
+
+      expect(passwords.verify).toHaveBeenCalled();
+      expect(rotateSessionAfterCredentialChange).not.toHaveBeenCalled();
+    });
+
+    it('rejects a new password that violates the policy with the stable AUTH_PASSWORD_POLICY envelope', async () => {
+      const { service } = createService({
+        user: vi.fn(async () => ({ id: 'user-1', passwordHash: 'argon2:stored', status: UserStatus.ACTIVE })),
+        passwords: {
+          verify: vi.fn(async () => true),
+          needsRehash: vi.fn(() => false),
+          hash: vi.fn(async () => {
+            throw new PasswordPolicyError();
+          }),
+        },
+      });
+
+      await expect(
+        service.changePassword({
+          userId: 'user-1',
+          currentSessionId: 'session-current',
+          currentPassword: 'the-current-password',
+          newPassword: 'too-short',
+        }),
+      ).rejects.toMatchObject({ response: { code: 'AUTH_PASSWORD_POLICY' }, status: 400 });
+    });
+
+    it('rejects an inactive or missing user with the generic authentication failure', async () => {
+      const rotateSessionAfterCredentialChange = vi.fn();
+      const { service } = createService({
+        user: vi.fn(async () => ({ id: 'user-1', passwordHash: 'argon2:stored', status: UserStatus.SUSPENDED })),
+        rotateSessionAfterCredentialChange,
+      });
+
+      await expect(
+        service.changePassword({
+          userId: 'user-1',
+          currentSessionId: 'session-current',
+          currentPassword: 'the-current-password',
+          newPassword: 'a-new-strong-password',
+        }),
+      ).rejects.toBeInstanceOf(StaffAuthException);
+      expect(rotateSessionAfterCredentialChange).not.toHaveBeenCalled();
     });
   });
 });

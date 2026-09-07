@@ -29,8 +29,8 @@ import { AUTH_RUNTIME_CONFIG, DEV_SIGNIN_COOKIE_SPEC, type AuthRuntimeConfig } f
 import { AuthHashService } from './auth-hash.service';
 import { AuthSessionService } from './auth-session.service';
 import { AuthPrincipalService, type AuthPrincipalContext } from './auth-principal.service';
-import { CurrentPrincipal, RequireAuthentication } from './auth.guard';
-import { StaffDevSignInDto, StaffPasswordDto, StaffRecoveryVerifyDto, StaffTotpConfirmDto, StaffTotpVerifyDto } from './staff-auth.dto';
+import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication } from './auth.guard';
+import { StaffDevSignInDto, StaffPasswordChangeDto, StaffPasswordDto, StaffRecoveryVerifyDto, StaffTotpConfirmDto, StaffTotpVerifyDto } from './staff-auth.dto';
 import {
   cookieSpecForRequest,
   clearAuthCookies,
@@ -117,7 +117,7 @@ export class StaffAuthController {
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
   @Header('Pragma', 'no-cache')
-  @RequireAuthentication(STAFF_LEVEL)
+  @RequireFreshAuthentication(STAFF_LEVEL)
   async totpEnroll(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<StaffTotpEnrollmentResponse> {
     return this.staffMfa.beginTotpEnrollment(principal.userId);
   }
@@ -138,9 +138,29 @@ export class StaffAuthController {
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
   @Header('Pragma', 'no-cache')
-  @RequireAuthentication(STAFF_LEVEL)
+  @RequireFreshAuthentication(STAFF_LEVEL)
   async recoveryRegenerate(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<StaffRecoveryCodesResponse> {
-    return this.staffMfa.regenerateRecoveryCodes(principal.userId);
+    return this.staffMfa.regenerateRecoveryCodes(principal.userId, principal.sessionId);
+  }
+
+  @Post('staff/password/change')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  @RequireFreshAuthentication(STAFF_LEVEL)
+  async staffPasswordChange(
+    @CurrentPrincipal() principal: AuthPrincipalContext,
+    @Body() body: StaffPasswordChangeDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<EmptyResponse> {
+    const issued = await this.staffAuth.changePassword({
+      userId: principal.userId,
+      currentSessionId: principal.sessionId,
+      currentPassword: body.currentPassword,
+      newPassword: body.newPassword,
+    });
+    setAuthCookies(response, this.config.cookies, issued.refreshToken, issued.csrfToken, issued.expiresAt);
+    return { data: {} };
   }
 
   @Post('dev/signin')

@@ -436,4 +436,155 @@ describe('AuthSessionService', () => {
       ).rejects.toThrow(TypeError);
     });
   });
+
+  describe('rotateSessionAfterCredentialChange', () => {
+    const command = {
+      userId: 'user-1',
+      currentSessionId: 'session-1',
+      passwordHash: 'argon2:new',
+      passwordChangedAt: new Date(),
+    };
+
+    it('updates the password, revokes other families, rotates the current family and audits', async () => {
+      const { service, tx, hashes } = createService({ tx: createTx() });
+
+      const result = await service.rotateSessionAfterCredentialChange(command);
+
+      expect(tx.session.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'session-1', userId: 'user-1' } }),
+      );
+      expect(tx.session.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: 'user-1',
+            tokenFamilyId: { not: 'tf-1' },
+            revokedAt: null,
+          },
+          data: expect.objectContaining({ revokeReason: AUTH_SESSION_REVOKE_REASON.credentialChanged }),
+        }),
+      );
+      expect(tx.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { passwordHash: 'argon2:new', passwordChangedAt: command.passwordChangedAt },
+      });
+      expect(tx.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ action: 'auth.password.changed' }),
+        }),
+      );
+      expect(tx.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ action: 'auth.session.all_revoked' }),
+        }),
+      );
+      expect(tx.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ action: 'auth.session.rotated' }),
+        }),
+      );
+      expect(result.sessionId).toBe('session-new');
+      expect(result.accessToken).toBe('access-token');
+      expect(result.refreshToken).toBe('refresh-token');
+      expect(hashes.hash).toHaveBeenNthCalledWith(1, 'refresh-token', 'refresh');
+    });
+
+    it('skips the family-wide revocation audit when no other families are live', async () => {
+      const tx = createTx();
+      tx.session.updateMany.mockImplementation(async (args: { where: { tokenFamilyId?: unknown; id?: string } }) =>
+        args.where.tokenFamilyId !== undefined && args.where.id === undefined ? { count: 0 } : { count: 1 },
+      );
+      const { service } = createService({ tx });
+
+      await service.rotateSessionAfterCredentialChange(command);
+
+      const auditCalls = tx.auditLog.create.mock.calls.map(
+        call => (call[0] as { data: { action: string } }).data.action,
+      );
+      expect(auditCalls).not.toContain('auth.session.all_revoked');
+      expect(auditCalls).toContain('auth.password.changed');
+      expect(auditCalls).toContain('auth.session.rotated');
+    });
+
+    it('rejects a revoked or missing current session with AUTH_SESSION_INVALID', async () => {
+      const tx = createTx({ session: { revokedAt: new Date(), revokeReason: AUTH_SESSION_REVOKE_REASON.logout, replacedBySessionId: null } });
+      const { service } = createService({ tx });
+
+      await expect(service.rotateSessionAfterCredentialChange(command)).rejects.toBeInstanceOf(AuthSessionException);
+    });
+  });
+
+  describe('revokeOtherSessionFamilies', () => {
+    const command = { userId: 'user-1', currentSessionId: 'session-1' };
+
+    it('revokes every family except the current one and audits the revocation', async () => {
+      const { service, tx } = createService({ tx: createTx() });
+
+      const count = await service.revokeOtherSessionFamilies(command);
+
+      expect(tx.session.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'session-1', userId: 'user-1' } }),
+      );
+      expect(tx.session.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: 'user-1',
+            tokenFamilyId: { not: 'tf-1' },
+            revokedAt: null,
+          },
+          data: expect.objectContaining({ revokeReason: AUTH_SESSION_REVOKE_REASON.credentialChanged }),
+        }),
+      );
+      expect(tx.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: 'auth.session.all_revoked',
+            entityType: 'User',
+            entityId: 'user-1',
+          }),
+        }),
+      );
+      expect(count).toBe(1);
+    });
+
+    it('skips the family-wide audit when no other families are live and keeps the current session', async () => {
+      const tx = createTx();
+      tx.session.updateMany.mockImplementation(async (args: { where: { tokenFamilyId?: unknown; id?: string } }) =>
+        args.where.tokenFamilyId !== undefined && args.where.id === undefined ? { count: 0 } : { count: 1 },
+      );
+      const { service } = createService({ tx });
+
+      await expect(service.revokeOtherSessionFamilies(command)).resolves.toBe(0);
+
+      const auditCalls = tx.auditLog.create.mock.calls.map(
+        call => (call[0] as { data: { action: string } }).data.action,
+      );
+      expect(auditCalls).not.toContain('auth.session.all_revoked');
+      expect(tx.session.updateMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ id: 'session-1' }) }),
+      );
+    });
+
+    it('rejects an expired current session with AUTH_SESSION_INVALID and revokes its family', async () => {
+      const tx = createTx({ session: { expiresAt: new Date(Date.now() - 1_000) } });
+      const { service } = createService({ tx });
+
+      await expect(service.revokeOtherSessionFamilies(command)).rejects.toBeInstanceOf(AuthSessionException);
+      expect(tx.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ action: 'auth.session.revoked' }),
+        }),
+      );
+    });
+
+    it('rejects a revoked or missing current session without touching other families', async () => {
+      const tx = createTx({ session: { revokedAt: new Date(), revokeReason: AUTH_SESSION_REVOKE_REASON.logout, replacedBySessionId: null } });
+      const { service } = createService({ tx });
+
+      await expect(service.revokeOtherSessionFamilies(command)).rejects.toBeInstanceOf(AuthSessionException);
+      const auditCalls = tx.auditLog.create.mock.calls.map(
+        call => (call[0] as { data: { action: string } }).data.action,
+      );
+      expect(auditCalls).not.toContain('auth.session.all_revoked');
+    });
+  });
 });

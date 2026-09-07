@@ -23,6 +23,7 @@ function createController(
       userId: string,
       sessionId: string,
     ) => Promise<RevokeUserSessionOutcome>;
+    revokeAllSessions: (userId: string) => Promise<number>;
     cookies: AuthRuntimeConfig['cookies'];
   }> = {},
 ): {
@@ -30,6 +31,7 @@ function createController(
   sessions: {
     listSessions: ReturnType<typeof vi.fn>;
     revokeUserSession: ReturnType<typeof vi.fn>;
+    revokeAllSessions: ReturnType<typeof vi.fn>;
   };
 } {
   const now = Date.now();
@@ -58,6 +60,7 @@ function createController(
         ]),
     ),
     revokeUserSession: vi.fn(overrides.revokeUserSession ?? (async () => 'revoked' as const)),
+    revokeAllSessions: vi.fn(overrides.revokeAllSessions ?? (async () => 3)),
   };
   const config: AuthRuntimeConfig = Object.freeze({
     accessSigningSecret: 'x',
@@ -267,5 +270,41 @@ describe('SessionManagementController (controller-level error type)', () => {
     const failure = controller.remove(currentPrincipal, 'missing-session', mockResponse());
     await expect(failure).rejects.toBeInstanceOf(HttpException);
     await expect(failure).rejects.toHaveProperty('status', 404);
+  });
+});
+
+describe('SessionManagementController (logout all)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('revokes every session family atomically for the caller and clears all auth cookies', async () => {
+    const { controller, sessions } = createController({ revokeAllSessions: async () => 3 });
+    const response = mockResponse();
+
+    const result = await controller.logoutAll(currentPrincipal, response);
+
+    expect(sessions.revokeAllSessions).toHaveBeenCalledWith('user-1');
+    expect(result).toEqual({ data: {} });
+    const names = response.calls.map(call => call.name);
+    expect(names).toEqual([
+      'iranyaragh_customer_refresh',
+      'iranyaragh_customer_csrf',
+      'iranyaragh_dev_refresh',
+      'iranyaragh_dev_csrf',
+    ]);
+    for (const call of response.calls) {
+      expect(call.options).toMatchObject({ maxAge: 0 });
+    }
+  });
+
+  it('still clears cookies even when there are no live sessions to revoke', async () => {
+    const { controller, sessions } = createController({ revokeAllSessions: async () => 0 });
+    const response = mockResponse();
+
+    await controller.logoutAll(currentPrincipal, response);
+
+    expect(sessions.revokeAllSessions).toHaveBeenCalledWith('user-1');
+    expect(response.calls.length).toBeGreaterThan(0);
   });
 });
