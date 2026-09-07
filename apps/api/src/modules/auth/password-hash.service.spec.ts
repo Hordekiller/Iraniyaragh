@@ -6,6 +6,8 @@ describe('PasswordHashService', () => {
     const service = new PasswordHashService();
     expect(() => service.assertPolicy('short')).toThrow(PasswordPolicyError);
     expect(() => service.assertPolicy('x'.repeat(129))).toThrow(PasswordPolicyError);
+    expect(() => service.assertPolicy('😀'.repeat(14))).toThrow(PasswordPolicyError);
+    expect(() => service.assertPolicy('😀'.repeat(15))).not.toThrow();
     expect(() => service.assertPolicy('۱۲۳۴۵۶۷۸۹۰۱۲۳۴۵')).not.toThrow();
   });
 
