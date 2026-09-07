@@ -8,11 +8,15 @@ import { AuthPrincipalService } from './auth-principal.service';
 import { AUTH_RUNTIME_CONFIG, createAuthRuntimeConfig } from './auth.config';
 import { AuthSessionService } from './auth-session.service';
 import { AuthTokenService } from './auth-token.service';
+import { PasswordHashService } from './password-hash.service';
 import { CustomerAuthController } from './customer-otp.controller';
 import { CustomerOtpService } from './customer-otp.service';
 import { RateLimitService } from './rate-limit.service';
 import { SessionManagementController } from './session.controller';
 import { StaffAuthController } from './staff-auth.controller';
+import { StaffAuthService } from './staff-auth.service';
+import { StaffMfaService } from './staff-mfa.service';
+import { TotpCryptoService } from './totp-crypto.service';
 
 @Module({
   controllers: [StaffAuthController, CustomerAuthController, SessionManagementController],
@@ -24,6 +28,10 @@ import { StaffAuthController } from './staff-auth.controller';
     },
     AuthHashService,
     AuthTokenService,
+    PasswordHashService,
+    StaffAuthService,
+    StaffMfaService,
+    TotpCryptoService,
     AuthPermissionService,
     AuthPrincipalService,
     AuthSessionService,

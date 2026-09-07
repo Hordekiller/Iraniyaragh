@@ -17,8 +17,9 @@ default to the known local web/admin origins; staging and production must provid
 explicit comma-separated `CORS_ORIGINS` allowlist. Wildcards are forbidden when
 credentialed requests are enabled. Staging and production must also provide an
 explicit `API_PORT`. Auth requires an exact `AUTH_JWT_ISSUER`, a minimum 32-byte
-`JWT_ACCESS_SECRET`, and a distinct minimum 32-byte `AUTH_HASH_SECRET` with a positive
-`AUTH_HASH_KEY_VERSION`. Surrounding whitespace is rejected rather than silently
+`JWT_ACCESS_SECRET`, a distinct minimum 32-byte `AUTH_HASH_SECRET` with a positive
+`AUTH_HASH_KEY_VERSION`, and a minimum 32-byte `AUTH_TOTP_ENCRYPTION_KEY` in staging
+and production. Surrounding whitespace is rejected rather than silently
 changing key material. Staging/production reject known placeholder values.
 
 Hash-key rotation is bounded to two keys: deploy the new current version/secret and

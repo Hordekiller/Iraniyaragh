@@ -192,7 +192,6 @@ Working-agreement decisions are tracked in #78.
   `AGENTS.md` documents the exact CI/local command set.
 
 ### Partial
-
 - Inventory rules live in one service with actor/requestId tracing, audit rows,
   CAS version guards, bounded serializable retry, reservation consume/release/expire
   and read-only snapshot/movement queries (a public controller is withheld until the

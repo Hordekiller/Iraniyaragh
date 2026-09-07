@@ -21,6 +21,12 @@ export const RATE_LIMIT_DEFINITIONS = Object.freeze({
   'otp-request:ip-24h': Object.freeze({ limit: 100, windowSeconds: 86_400 }),
   /** Customer OTP verification — failed attempts per safe IP hash. */
   'otp-verify:ip-fail-hour': Object.freeze({ limit: 50, windowSeconds: 3_600 }),
+  /** Staff password failures per canonical identifier. */
+  'staff-password:identifier': Object.freeze({ limit: 5, windowSeconds: 900 }),
+  /** Staff password failures per safe IP hash. */
+  'staff-password:ip': Object.freeze({ limit: 30, windowSeconds: 900 }),
+  /** Staff MFA challenge failures per safe IP hash. */
+  'staff-mfa:ip': Object.freeze({ limit: 5, windowSeconds: 300 }),
 } as const);
 
 export type RateLimitDefinition = Readonly<{ limit: number; windowSeconds: number }>;

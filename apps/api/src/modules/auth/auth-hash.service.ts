@@ -2,7 +2,7 @@ import { createHmac, hkdfSync, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { AUTH_RUNTIME_CONFIG, type AuthHashKey, type AuthRuntimeConfig } from './auth.config';
 
-export type AuthHashContext = 'device' | 'identifier' | 'ip' | 'mfa-challenge' | 'otp' | 'refresh';
+export type AuthHashContext = 'device' | 'identifier' | 'ip' | 'mfa-challenge' | 'otp' | 'refresh' | 'recovery-code';
 
 const HASH_PREFIX_PATTERN = /^v([1-9]\d*):([A-Za-z0-9_-]{43})$/u;
 const DERIVED_KEY_BYTES = 32;
@@ -54,6 +54,12 @@ export class AuthHashService {
   }
 
   private digest(value: string, context: AuthHashContext, key: AuthHashKey): Buffer {
+    // This HMAC is a keyed commitment for high-entropy opaque tokens
+    // (refresh/challenge/recovery/OTP) and non-secret identifiers (device, IP,
+    // MFA identifier). It NEVER hashes a password: staff/customer passwords go
+    // through PasswordHashService (Argon2id). A slow KDF here would be wasteful
+    // and offer no benefit for these random inputs.
+    // codeql[js/insufficient-password-hash] false positive: no password reaches this HMAC.
     return createHmac('sha256', this.derivedKey(context, key)).update(value, 'utf8').digest();
   }
 

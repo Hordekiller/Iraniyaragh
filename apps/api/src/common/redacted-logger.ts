@@ -1,6 +1,6 @@
 import { Injectable, type LoggerService, LogLevel } from '@nestjs/common';
 import { getRequestId } from './request-context';
-import { redact } from './redaction';
+import { redact, safeErrorMessage } from './redaction';
 
 type LogPayload = Record<string, unknown> | string | Error | unknown;
 
@@ -18,7 +18,7 @@ export class RedactedLogger implements LoggerService {
 
     if (payload !== undefined) {
       if (payload instanceof Error) {
-        entry.message = payload.message;
+        entry.message = safeErrorMessage(payload.message);
         if (payload.stack) entry.stack = redact(payload.stack);
       } else if (typeof payload === 'string') {
         entry.payload = redact(payload);
@@ -68,6 +68,7 @@ export class RedactedLogger implements LoggerService {
   }
 
   private payload(message: string | object, optionalParams: unknown[]): LogPayload | undefined {
+    if (message instanceof Error) return message;
     if (typeof message === 'object' && message !== null) {
       return { ...this.asRecord(message), ...this.objectFromParams(optionalParams) };
     }

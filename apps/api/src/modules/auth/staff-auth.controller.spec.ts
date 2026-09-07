@@ -2,12 +2,16 @@ import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Response } from 'express';
 import { StaffAuthController } from './staff-auth.controller';
+import { AuthCsrfException } from './auth-http';
 import type { AuthRuntimeConfig } from './auth.config';
 import type { AuthHashService } from './auth-hash.service';
 import type { AuthSessionService } from './auth-session.service';
 import type { AuthPrincipalContext, AuthPrincipalService } from './auth-principal.service';
 import type { PrismaService } from '../../database/prisma.service';
 import type { StaffDevSignInDto } from './staff-auth.dto';
+import type { AuthTokenService } from './auth-token.service';
+import type { StaffAuthService } from './staff-auth.service';
+import type { StaffMfaService } from './staff-mfa.service';
 
 const DEV_ADMIN_EMAIL = 'dev-admin@iranyaragh.local';
 
@@ -23,9 +27,12 @@ const principal: AuthPrincipalContext = Object.freeze({
 
 function createController(overrides: Partial<{
   hashes: Pick<AuthHashService, 'hash'>;
-  sessions: Pick<AuthSessionService, 'createSession' | 'revokeSession'>;
+  sessions: Pick<AuthSessionService, 'createSession' | 'revokeByRefreshToken' | 'rotateSession'>;
   principals: Pick<AuthPrincipalService, 'resolveBearerToken'>;
   prisma: Pick<PrismaService, 'user'>;
+  tokens: Pick<AuthTokenService, 'matchesCsrfToken'>;
+  staffAuth: Pick<StaffAuthService, 'requestPasswordChallenge'>;
+  staffMfa: Pick<StaffMfaService, 'verifyTotp'>;
   devLoginEnabled: boolean;
   devCode: string;
 }> = {}): StaffAuthController {
@@ -39,7 +46,15 @@ function createController(overrides: Partial<{
       sessionId: 'session-1',
       tokenFamilyId: 'tf-1',
     })),
-    revokeSession: vi.fn(async () => true),
+    revokeByRefreshToken: vi.fn(async () => true),
+    rotateSession: vi.fn(async () => ({
+      accessToken: 'refreshed-at-1',
+      csrfToken: 'refreshed-csrf-1',
+      expiresAt: new Date(Date.now() + 600_000),
+      refreshToken: 'refreshed-rt-1',
+      sessionId: 'refreshed-session-1',
+      tokenFamilyId: 'tf-1',
+    })),
   };
   const principals = overrides.principals ?? {
     resolveBearerToken: vi.fn(async () => principal),
@@ -48,6 +63,34 @@ function createController(overrides: Partial<{
     user: {
       findUnique: vi.fn(async () => ({ id: 'seed_dev_admin' })),
     },
+  };
+  const tokens = overrides.tokens ?? { matchesCsrfToken: vi.fn(() => true) };
+  const staffAuth = overrides.staffAuth ?? {
+    requestPasswordChallenge: vi.fn(async () => ({
+      data: { challengeToken: 'challenge-1', next: 'TOTP' as const, expiresInSeconds: 300 as const },
+    })),
+  };
+  const staffMfa = overrides.staffMfa ?? {
+    verifyTotp: vi.fn(async () => ({
+      response: {
+        data: {
+          accessToken: 'staff-mfa-at-1',
+          tokenType: 'Bearer' as const,
+          expiresInSeconds: 600 as const,
+          principal: {
+            userId: 'seed_dev_admin',
+            sessionId: 'staff-mfa-session-1',
+            authenticationLevel: 'STAFF_MFA' as const,
+            permissions: [],
+            authenticatedAt: new Date().toISOString(),
+            accessExpiresAt: new Date(Date.now() + 600_000).toISOString(),
+          },
+        },
+      },
+      refreshToken: 'staff-mfa-refresh-1',
+      csrfToken: 'staff-mfa-csrf-1',
+      expiresAt: new Date(Date.now() + 600_000),
+    })),
   };
   const config: AuthRuntimeConfig = Object.freeze({
     accessSigningSecret: 'x',
@@ -65,6 +108,7 @@ function createController(overrides: Partial<{
       sameSite: 'strict',
       path: '/',
     }),
+    corsOrigins: ['http://localhost:3001'],
   });
   return new StaffAuthController(
     config,
@@ -72,6 +116,9 @@ function createController(overrides: Partial<{
     sessions as AuthSessionService,
     principals as AuthPrincipalService,
     prisma as PrismaService,
+    tokens as AuthTokenService,
+    staffAuth as StaffAuthService,
+    staffMfa as StaffMfaService,
   );
 }
 
@@ -84,7 +131,14 @@ function mockResponse() {
 }
 
 function mockRequest() {
-  return { ip: '127.0.0.1', headers: {} };
+  return {
+    ip: '127.0.0.1',
+    headers: {
+      cookie: 'iranyaragh_dev_refresh=refresh-token; iranyaragh_dev_csrf=csrf-token',
+      origin: 'http://localhost:3001',
+      'x-csrf-token': 'csrf-token',
+    },
+  };
 }
 
 const body = (code: string): StaffDevSignInDto => ({ code });
@@ -143,6 +197,25 @@ describe('StaffAuthController (dev sign-in)', () => {
     await controller.devSignIn(body('dev-code'), mockRequest() as never, response);
     expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: DEV_ADMIN_EMAIL }, select: { id: true } });
   });
+
+  it('returns a password-only MFA challenge without issuing a session', async () => {
+    const requestPasswordChallenge = vi.fn(async () => ({
+      data: { challengeToken: 'challenge-1', next: 'TOTP' as const, expiresInSeconds: 300 as const },
+    }));
+    const controller = createController({ staffAuth: { requestPasswordChallenge } });
+
+    await expect(
+      controller.staffPassword(
+        { identifier: ' Staff@Example.com ', password: 'a secure password here' },
+        { ip: '192.0.2.10' } as never,
+      ),
+    ).resolves.toEqual({ data: { challengeToken: 'challenge-1', next: 'TOTP', expiresInSeconds: 300 } });
+    expect(requestPasswordChallenge).toHaveBeenCalledWith({
+      identifier: ' Staff@Example.com ',
+      password: 'a secure password here',
+      ipAddress: '192.0.2.10',
+    });
+  });
 });
 
 describe('StaffAuthController (me / logout)', () => {
@@ -157,14 +230,89 @@ describe('StaffAuthController (me / logout)', () => {
     expect(result.data.principal.permissions).toContain('catalog.write');
   });
 
-  it('revokes the session and clears cookies on logout', async () => {
-    const revokeSession = vi.fn(async () => true);
-    const controller = createController({ sessions: { createSession: vi.fn(), revokeSession } });
+  it('sets cookies only after the TOTP service returns a completed staff session', async () => {
+    const verifyTotp = vi.fn(async () => ({
+      response: {
+        data: {
+          accessToken: 'staff-mfa-at-1',
+          tokenType: 'Bearer' as const,
+          expiresInSeconds: 600 as const,
+          principal: {
+            userId: 'seed_dev_admin',
+            sessionId: 'staff-mfa-session-1',
+            authenticationLevel: 'STAFF_MFA' as const,
+            permissions: [],
+            authenticatedAt: new Date().toISOString(),
+            accessExpiresAt: new Date(Date.now() + 600_000).toISOString(),
+          },
+        },
+      },
+      refreshToken: 'staff-mfa-refresh-1',
+      csrfToken: 'staff-mfa-csrf-1',
+      expiresAt: new Date(Date.now() + 600_000),
+    }));
+    const controller = createController({ staffMfa: { verifyTotp } });
     const response = mockResponse();
-    const result = await controller.logout(principal, response);
-    expect(revokeSession).toHaveBeenCalledWith('seed_dev_admin', 'session-1');
+
+    const result = await controller.staffTotp(
+      { challengeToken: 'challenge-1', code: '123456' },
+      { ip: '192.0.2.10', headers: { 'user-agent': 'test-agent' } } as never,
+      response,
+    );
+
+    expect(result.data.accessToken).toBe('staff-mfa-at-1');
+    expect(verifyTotp).toHaveBeenCalledWith({
+      challengeToken: 'challenge-1',
+      code: '123456',
+      ipAddress: '192.0.2.10',
+      userAgent: 'test-agent',
+    });
+    expect(response.calls.map(call => call.name)).toEqual(['iranyaragh_dev_refresh', 'iranyaragh_dev_csrf']);
+  });
+
+  it('revokes the session and clears cookies on logout', async () => {
+    const revokeByRefreshToken = vi.fn(async () => true);
+    const controller = createController({
+      sessions: { createSession: vi.fn(), revokeByRefreshToken, rotateSession: vi.fn() },
+    });
+    const response = mockResponse();
+    const result = await controller.logout(mockRequest() as never, response);
+    expect(revokeByRefreshToken).toHaveBeenCalledWith('refresh-token');
     expect(result).toEqual({ data: {} });
     const cleared = response.calls.filter(call => call.name.endsWith('_refresh') || call.name.endsWith('_csrf'));
     expect(cleared.length).toBe(2);
+  });
+
+  it('rotates a cookie-authenticated session only after origin and CSRF validation', async () => {
+    const rotateSession = vi.fn(async () => ({
+      accessToken: 'refreshed-at-1',
+      csrfToken: 'refreshed-csrf-1',
+      expiresAt: new Date(Date.now() + 600_000),
+      refreshToken: 'refreshed-rt-1',
+      sessionId: 'refreshed-session-1',
+      tokenFamilyId: 'tf-1',
+    }));
+    const controller = createController({ sessions: { createSession: vi.fn(), revokeByRefreshToken: vi.fn(), rotateSession } });
+    const response = mockResponse();
+
+    const result = await controller.refresh(mockRequest() as never, response);
+
+    expect(rotateSession).toHaveBeenCalledWith('refresh-token');
+    expect(result.data.accessToken).toBe('refreshed-at-1');
+    expect(response.calls.map(call => call.name)).toEqual(['iranyaragh_dev_refresh', 'iranyaragh_dev_csrf']);
+  });
+
+  it('rejects missing origin or CSRF proof before rotating or revoking', async () => {
+    const rotateSession = vi.fn();
+    const revokeByRefreshToken = vi.fn();
+    const controller = createController({ sessions: { createSession: vi.fn(), revokeByRefreshToken, rotateSession } });
+    const response = mockResponse();
+    const request = { headers: { cookie: 'iranyaragh_dev_refresh=refresh-token' } };
+
+    await expect(controller.refresh(request as never, response)).rejects.toBeInstanceOf(AuthCsrfException);
+    await expect(controller.logout(request as never, response)).rejects.toBeInstanceOf(AuthCsrfException);
+    expect(rotateSession).not.toHaveBeenCalled();
+    expect(revokeByRefreshToken).not.toHaveBeenCalled();
+    expect(response.calls).toEqual([]);
   });
 });

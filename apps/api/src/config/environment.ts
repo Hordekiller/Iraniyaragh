@@ -13,6 +13,7 @@ export type EnvironmentVariables = {
   AUTH_JWT_ISSUER: string;
   JWT_ACCESS_SECRET: string;
   AUTH_DEV_CODE?: string;
+  AUTH_TOTP_ENCRYPTION_KEY?: string;
   OBJECT_STORAGE_ENDPOINT: string;
   OBJECT_STORAGE_ACCESS_KEY: string;
   OBJECT_STORAGE_SECRET_KEY: string;
@@ -198,6 +199,13 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     'OBJECT_STORAGE_SECRET_KEY',
     environment,
   );
+  const totpEncryptionKey = optionalSecretString(config.AUTH_TOTP_ENCRYPTION_KEY, 'AUTH_TOTP_ENCRYPTION_KEY');
+  if (
+    ['staging', 'production'].includes(environment) &&
+    (!totpEncryptionKey || Buffer.byteLength(totpEncryptionKey, 'utf8') < 32)
+  ) {
+    throw new Error('AUTH_TOTP_ENCRYPTION_KEY must contain at least 32 bytes in staging and production.');
+  }
 
   if (accessSecret === hashSecret || accessSecret === validatedPreviousHashSecret) {
     throw new Error('JWT_ACCESS_SECRET must be different from every Auth hashing secret.');
@@ -220,6 +228,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     AUTH_JWT_ISSUER: parseAuthIssuer(config.AUTH_JWT_ISSUER),
     JWT_ACCESS_SECRET: accessSecret,
     AUTH_DEV_CODE: optionalSecretString(config.AUTH_DEV_CODE, 'AUTH_DEV_CODE'),
+    AUTH_TOTP_ENCRYPTION_KEY: totpEncryptionKey,
     OBJECT_STORAGE_ENDPOINT: objectStorageEndpoint,
     OBJECT_STORAGE_ACCESS_KEY: requiredString(config, 'OBJECT_STORAGE_ACCESS_KEY'),
     OBJECT_STORAGE_SECRET_KEY: objectStorageSecret,

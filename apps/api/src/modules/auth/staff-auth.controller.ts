@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   Header,
+  HttpCode,
+  HttpStatus,
   Inject,
   NotFoundException,
   Post,
@@ -18,21 +20,32 @@ import type {
   AuthPrincipal,
   CurrentPrincipalResponse,
   EmptyResponse,
+  StaffMfaChallengeResponse,
+  StaffRecoveryCodesResponse,
+  StaffTotpEnrollmentResponse,
 } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
-import { AUTH_RUNTIME_CONFIG, type AuthRuntimeConfig } from './auth.config';
+import { AUTH_RUNTIME_CONFIG, DEV_SIGNIN_COOKIE_SPEC, type AuthRuntimeConfig } from './auth.config';
 import { AuthHashService } from './auth-hash.service';
 import { AuthSessionService } from './auth-session.service';
 import { AuthPrincipalService, type AuthPrincipalContext } from './auth-principal.service';
 import { CurrentPrincipal, RequireAuthentication } from './auth.guard';
-import { StaffDevSignInDto } from './staff-auth.dto';
+import { StaffDevSignInDto, StaffPasswordDto, StaffRecoveryVerifyDto, StaffTotpConfirmDto, StaffTotpVerifyDto } from './staff-auth.dto';
+import {
+  cookieSpecForRequest,
+  clearAuthCookies,
+  requireCookieProof,
+  setAuthCookies,
+} from './auth-http';
+import { AuthSessionException } from './auth-session.service';
+import { AuthTokenService } from './auth-token.service';
+import { StaffAuthService } from './staff-auth.service';
+import { StaffMfaService } from './staff-mfa.service';
 
 const DEV_ADMIN_EMAIL = 'dev-admin@iranyaragh.local';
 const STAFF_LEVEL: AuthenticationLevel = 'STAFF_MFA';
 const ACCESS_TOKEN_TYPE = 'Bearer';
 const ACCESS_TOKEN_TTL_SECONDS = 600;
-const DEV_REFRESH_COOKIE = 'iranyaragh_dev_refresh';
-const DEV_CSRF_COOKIE = 'iranyaragh_dev_csrf';
 
 @Controller({ path: 'auth', version: '1' })
 export class StaffAuthController {
@@ -42,7 +55,93 @@ export class StaffAuthController {
     private readonly sessions: AuthSessionService,
     private readonly principals: AuthPrincipalService,
     private readonly prisma: PrismaService,
+    private readonly tokens: AuthTokenService,
+    private readonly staffAuth: StaffAuthService,
+    private readonly staffMfa: StaffMfaService,
   ) {}
+
+  @Post('staff/password')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  async staffPassword(
+    @Body() body: StaffPasswordDto,
+    @Req() request: Request,
+  ): Promise<StaffMfaChallengeResponse> {
+    return this.staffAuth.requestPasswordChallenge({
+      identifier: body.identifier,
+      password: body.password,
+      ipAddress: typeof request.ip === 'string' ? request.ip : undefined,
+    });
+  }
+
+  @Post('staff/totp/verify')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  async staffTotp(
+    @Body() body: StaffTotpVerifyDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AccessTokenResponse> {
+    const result = await this.staffMfa.verifyTotp({
+      challengeToken: body.challengeToken,
+      code: body.code,
+      ipAddress: typeof request.ip === 'string' ? request.ip : undefined,
+      userAgent: typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : undefined,
+    });
+    setAuthCookies(response, this.config.cookies, result.refreshToken, result.csrfToken, result.expiresAt);
+    return result.response;
+  }
+
+  @Post('staff/recovery/verify')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  async staffRecovery(
+    @Body() body: StaffRecoveryVerifyDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AccessTokenResponse> {
+    const result = await this.staffMfa.verifyRecovery({
+      challengeToken: body.challengeToken,
+      code: body.code,
+      ipAddress: typeof request.ip === 'string' ? request.ip : undefined,
+      userAgent: typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : undefined,
+    });
+    setAuthCookies(response, this.config.cookies, result.refreshToken, result.csrfToken, result.expiresAt);
+    return result.response;
+  }
+
+  @Post('staff/totp/enroll')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  @RequireAuthentication(STAFF_LEVEL)
+  async totpEnroll(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<StaffTotpEnrollmentResponse> {
+    return this.staffMfa.beginTotpEnrollment(principal.userId);
+  }
+
+  @Post('staff/totp/confirm')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  @RequireAuthentication(STAFF_LEVEL)
+  async totpConfirm(
+    @CurrentPrincipal() principal: AuthPrincipalContext,
+    @Body() body: StaffTotpConfirmDto,
+  ): Promise<StaffRecoveryCodesResponse> {
+    return this.staffMfa.confirmTotp(principal.userId, body.code);
+  }
+
+  @Post('staff/recovery/regenerate')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  @RequireAuthentication(STAFF_LEVEL)
+  async recoveryRegenerate(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<StaffRecoveryCodesResponse> {
+    return this.staffMfa.regenerateRecoveryCodes(principal.userId);
+  }
 
   @Post('dev/signin')
   @Header('Cache-Control', 'no-store')
@@ -79,7 +178,10 @@ export class StaffAuthController {
         typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'].slice(0, 2048) : undefined,
     });
 
-    this.setAuthCookies(response, issued.refreshToken, issued.csrfToken, issued.expiresAt);
+    const cookieSpec = this.config.devLoginEnabled
+      ? Object.freeze({ ...this.config.cookies, ...DEV_SIGNIN_COOKIE_SPEC })
+      : this.config.cookies;
+    setAuthCookies(response, cookieSpec, issued.refreshToken, issued.csrfToken, issued.expiresAt);
 
     const principal = await this.principals.resolveBearerToken(`${ACCESS_TOKEN_TYPE} ${issued.accessToken}`);
     return {
@@ -101,16 +203,57 @@ export class StaffAuthController {
   }
 
   @Post('logout')
+  @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
   @Header('Pragma', 'no-cache')
-  @RequireAuthentication(STAFF_LEVEL)
   async logout(
-    @CurrentPrincipal() principal: AuthPrincipalContext,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<EmptyResponse> {
-    await this.sessions.revokeSession(principal.userId, principal.sessionId);
-    this.clearAuthCookies(response);
+    const cookieSpec = cookieSpecForRequest(request, this.config.cookies);
+    const refreshToken = requireCookieProof(
+      request,
+      this.tokens,
+      cookieSpec,
+      this.config.corsOrigins ?? [],
+    );
+    await this.sessions.revokeByRefreshToken(refreshToken);
+    clearAuthCookies(response, this.config.cookies);
     return { data: {} };
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  async refresh(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AccessTokenResponse> {
+    const cookieSpec = cookieSpecForRequest(request, this.config.cookies);
+    const refreshToken = requireCookieProof(
+      request,
+      this.tokens,
+      cookieSpec,
+      this.config.corsOrigins ?? [],
+    );
+
+    try {
+      const issued = await this.sessions.rotateSession(refreshToken);
+      setAuthCookies(response, cookieSpec, issued.refreshToken, issued.csrfToken, issued.expiresAt);
+      const principal = await this.principals.resolveBearerToken(`${ACCESS_TOKEN_TYPE} ${issued.accessToken}`);
+      return {
+        data: {
+          accessToken: issued.accessToken,
+          tokenType: ACCESS_TOKEN_TYPE,
+          expiresInSeconds: ACCESS_TOKEN_TTL_SECONDS,
+          principal: this.toAuthPrincipal(principal),
+        },
+      };
+    } catch (error) {
+      if (error instanceof AuthSessionException) clearAuthCookies(response, this.config.cookies);
+      throw error;
+    }
   }
 
   private devCodesMatch(submitted: string, expected: string): boolean {
@@ -128,18 +271,5 @@ export class StaffAuthController {
       authenticatedAt: principal.authenticatedAt.toISOString(),
       accessExpiresAt: principal.accessExpiresAt.toISOString(),
     };
-  }
-
-  private setAuthCookies(response: Response, refreshToken: string, csrfToken: string, expiresAt: Date): void {
-    const maxAge = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1_000));
-    const base = { sameSite: 'strict' as const, path: '/', secure: false, maxAge };
-    response.cookie(DEV_REFRESH_COOKIE, refreshToken, { ...base, httpOnly: true });
-    response.cookie(DEV_CSRF_COOKIE, csrfToken, { ...base, httpOnly: false });
-  }
-
-  private clearAuthCookies(response: Response): void {
-    const base = { sameSite: 'strict' as const, path: '/', secure: false, maxAge: 0 };
-    response.cookie(DEV_REFRESH_COOKIE, '', { ...base, httpOnly: true });
-    response.cookie(DEV_CSRF_COOKIE, '', { ...base, httpOnly: false });
   }
 }
