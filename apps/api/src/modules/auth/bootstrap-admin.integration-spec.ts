@@ -9,7 +9,7 @@ import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 const API_ROOT = join(__dirname, '..', '..', '..');
 const BOOT_SCRIPT = join(API_ROOT, 'scripts', 'bootstrap-admin.mjs');
 const BOOT_PASSWORD = 'bootstrap-S3cret-2026!';
-const DEV_ADMIN_EMAIL = 'dev-admin@iranyaragh.local';
+const BASELINE_ADMIN_EMAIL = 'baseline-system-admin@iranyaragh.local';
 
 const bootstrapEnvReady =
   Boolean(process.env.DATABASE_URL) &&
@@ -130,11 +130,19 @@ describe.sequential('bootstrap-admin.mjs provisioning', () => {
     connected = true;
     const role = await prisma.role.findUnique({ where: { key: 'system-admin' }, select: { id: true } });
     systemAdminRoleId = role?.id ?? null;
+    if (systemAdminRoleId) await assureBaselineAdmin();
   });
 
   afterAll(async () => {
     if (!connected) return;
-    await restoreDevAdminRole();
+    const baselineId = await baselineAdminId();
+    if (baselineId) {
+      await prisma.auditLog.deleteMany({ where: { entityId: baselineId } });
+      await prisma.recoveryCode.deleteMany({ where: { totpCredential: { userId: baselineId } } });
+      await prisma.totpCredential.deleteMany({ where: { userId: baselineId } });
+      await prisma.userRole.deleteMany({ where: { userId: baselineId } });
+      await prisma.user.deleteMany({ where: { id: baselineId } });
+    }
     for (const email of bootstrappedEmails) {
       const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
       if (!user) continue;
@@ -148,28 +156,53 @@ describe.sequential('bootstrap-admin.mjs provisioning', () => {
     await prisma.$disconnect();
   });
 
-  async function devAdminUserId(): Promise<string | null> {
-    const devAdmin = await prisma.user.findUnique({ where: { email: DEV_ADMIN_EMAIL }, select: { id: true } });
-    return devAdmin?.id ?? null;
+  async function baselineAdminId(): Promise<string | null> {
+    const baseline = await prisma.user.findUnique({ where: { email: BASELINE_ADMIN_EMAIL }, select: { id: true } });
+    return baseline?.id ?? null;
   }
 
-  async function setDevAdminRole(active: boolean): Promise<void> {
-    const userId = await devAdminUserId();
-    if (!userId || !systemAdminRoleId) throw new Error('Seeded dev-admin or system-admin role is missing.');
+  async function assureBaselineAdmin(): Promise<void> {
+    const user = await prisma.user.upsert({
+      where: { email: BASELINE_ADMIN_EMAIL },
+      update: { status: 'ACTIVE', isEmailVerified: true, emailVerifiedAt: new Date() },
+      create: {
+        email: BASELINE_ADMIN_EMAIL,
+        firstName: 'Baseline',
+        lastName: 'System Admin',
+        status: 'ACTIVE',
+        isEmailVerified: true,
+        emailVerifiedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        passwordHash: null,
+      },
+    });
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: user.id, roleId: systemAdminRoleId! } },
+      update: { revokedAt: null, revokedById: null, revokeReason: null },
+      create: { userId: user.id, roleId: systemAdminRoleId!, assignedById: null },
+    });
+    await prisma.userRole.updateMany({
+      where: { roleId: systemAdminRoleId!, userId: { not: user.id } },
+      data: { revokedAt: new Date(), revokedById: null, revokeReason: 'integration-test' },
+    });
+  }
+
+  async function setBaselineAdminRole(active: boolean): Promise<void> {
+    const userId = await baselineAdminId();
+    if (!userId || !systemAdminRoleId) throw new Error('Baseline admin or system-admin role is missing.');
     await prisma.userRole.updateMany({
       where: { userId, roleId: systemAdminRoleId },
       data: active
         ? { revokedAt: null, revokedById: null, revokeReason: null }
         : { revokedAt: new Date(), revokedById: null, revokeReason: 'integration-test' },
     });
-  }
-
-  async function restoreDevAdminRole(): Promise<void> {
-    try {
-      await setDevAdminRole(true);
-    } catch {
-      // dev-admin may not exist in this environment; nothing to restore.
-    }
+    // Revoke every other system-admin assignment so pre-existing seed roles
+    // (e.g. dev-admin in dev/test databases) cannot inflate the active count.
+    await prisma.userRole.updateMany({
+      where: { roleId: systemAdminRoleId, userId: { not: userId } },
+      data: { revokedAt: new Date(), revokedById: null, revokeReason: 'integration-test' },
+    });
   }
 
   async function clearLeftoverBootstraps(): Promise<void> {
@@ -209,7 +242,7 @@ describe.sequential('bootstrap-admin.mjs provisioning', () => {
   });
 
   it.skipIf(!bootstrapEnvReady)('refuses when an active system-admin already exists', async () => {
-    await setDevAdminRole(true);
+    await setBaselineAdminRole(true);
     expect(await countActiveSystemAdmins()).toBeGreaterThan(0);
     const removedEmail = `bootstrap-refuse-${randomUUID().slice(0, 8)}@example.com`;
     const { code, output } = await runTtyBoot(removedEmail);
@@ -219,7 +252,7 @@ describe.sequential('bootstrap-admin.mjs provisioning', () => {
   });
 
   it.skipIf(!bootstrapEnvReady)('bootstraps a new system-admin when none is active', async () => {
-    await setDevAdminRole(false);
+    await setBaselineAdminRole(false);
     try {
       expect(await countActiveSystemAdmins()).toBe(0);
       const bootEmail = `bootstrap-new-${randomUUID().slice(0, 8)}@example.com`;
@@ -244,14 +277,14 @@ describe.sequential('bootstrap-admin.mjs provisioning', () => {
         data: { revokedAt: new Date(), revokeReason: 'integration-test' },
       });
     } finally {
-      // Leave dev-admin (and the just-created admin) revoked so the next test
-      // starts with zero active system-admins; afterAll restores dev-admin.
-      await setDevAdminRole(false).catch(() => undefined);
+      // Leave the baseline (and the just-created admin) revoked so the next
+      // test starts with zero active system-admins; afterAll removes them.
+      await setBaselineAdminRole(false).catch(() => undefined);
     }
   });
 
   it.skipIf(!bootstrapEnvReady)('allows exactly one concurrent bootstrap under the advisory lock', async () => {
-    await setDevAdminRole(false);
+    await setBaselineAdminRole(false);
     const candidateEmails = [
       `bootstrap-a-${randomUUID().slice(0, 8)}@example.com`,
       `bootstrap-b-${randomUUID().slice(0, 8)}@example.com`,
@@ -275,9 +308,9 @@ describe.sequential('bootstrap-admin.mjs provisioning', () => {
         }
       }
     } finally {
-      // Leave dev-admin (and any winning bootstrap user) revoked so later runs
-      // start clean; afterAll restores dev-admin.
-      await setDevAdminRole(false).catch(() => undefined);
+      // Leave the baseline (and any winning bootstrap user) revoked so later
+      // runs start clean; afterAll removes them.
+      await setBaselineAdminRole(false).catch(() => undefined);
     }
   });
 });
