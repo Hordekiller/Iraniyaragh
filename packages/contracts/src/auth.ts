@@ -46,6 +46,12 @@ export type StaffPasswordRequest = {
   deviceName?: string;
 };
 
+/** `POST /auth/v1/staff/password/change`: STAFF_MFA + fresh auth; verifies the current password and revokes other session families. */
+export type StaffPasswordChangeRequest = {
+  currentPassword: string;
+  newPassword: string;
+};
+
 export type StaffMfaChallenge = {
   challengeToken: string;
   next: 'TOTP';
