@@ -139,7 +139,7 @@ export class StaffAuthService {
     };
   }
 
-  async changePassword(command: {
+  async changePasswordAndRotateSession(command: {
     userId: string;
     currentSessionId: string;
     currentPassword: string;

@@ -160,7 +160,7 @@ describe.sequential('StaffAuthService database integration', () => {
     const knownSessions = await prisma.session.findMany({ where: { userId, revokedAt: null }, select: { tokenFamilyId: true } });
 
     await expect(
-      service.changePassword({
+      service.changePasswordAndRotateSession({
         userId,
         currentSessionId,
         currentPassword: 'not-the-password',
@@ -168,7 +168,7 @@ describe.sequential('StaffAuthService database integration', () => {
       }),
     ).rejects.toMatchObject({ response: { code: 'AUTH_INVALID_CREDENTIALS' }, status: 401 });
 
-    const issued = await service.changePassword({
+    const issued = await service.changePasswordAndRotateSession({
       userId,
       currentSessionId,
       currentPassword: 'a secure staff password',
