@@ -132,3 +132,9 @@ persistent-network-failure, transient-recovery).
 Tests must assert failure paths and durable state, not only returned values. Critical
 Auth, inventory, order and payment changes also need authorization, idempotency and
 concurrency coverage when those behaviors are in scope.
+
+Discovery-contract changes must cover dynamic sitemap limits/escaping/deduplication,
+publish/archive/slug invalidation, canonical/noindex consistency, structured-data and
+visible-data parity, production-origin safety and failure behavior. The repository's
+`Discovery Audit` workflow self-tests its auditor on relevant pull requests and runs
+against production only after `PRODUCTION_WEB_ORIGIN` is configured.

@@ -156,6 +156,8 @@ security/query review, OpenAPI drift confirmation and merge.
 - Production deploy/rollback, monitoring/alerts, backup/restore, load budgets, UAT
   and launch data import.
 - Native mobile application.
+- Dynamic sitemap/robots contract, server-rendered public discovery pages,
+  structured commerce data/feed, SEO/GEO observability and governed on-site AI.
 
 ## Decisions and blockers
 
