@@ -1,6 +1,6 @@
 # ADR-0011: SMS.ir Provider Adapter and Secure Admin Settings
 
-Status: Proposed for joint review
+Status: Accepted (PR #116, commit `9b4ba32`, 2026-09-08)
 
 Date: 2026-09-08
 
