@@ -85,6 +85,7 @@ describe("SmsIrProvider", () => {
     [101, "sender"],
     [102, "credit"],
     [104, "destination"],
+    [115, "destination"],
     [114, "content"],
     [113, "template"],
     [109, "invalid_request"],
@@ -153,6 +154,16 @@ describe("SmsIrProvider", () => {
     expect(
       await new SmsIrProvider({ apiKey: "secret", timeoutMs: 100 }, async () =>
         response(200, { status: 1, data: {} }),
+      ).send(request),
+    ).toEqual({ status: "unknown_result" });
+  });
+
+  it("rejects an oversized provider response without parsing it", async () => {
+    const oversized = new Response("x".repeat(32 * 1024 + 1), { status: 200 });
+    expect(
+      await new SmsIrProvider(
+        { apiKey: "secret", timeoutMs: 100 },
+        async () => oversized,
       ).send(request),
     ).toEqual({ status: "unknown_result" });
   });

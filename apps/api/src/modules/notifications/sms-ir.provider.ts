@@ -10,6 +10,7 @@ const CANONICAL_IRANIAN_MOBILE = /^\+989\d{9}$/u;
 const PARAMETER_NAME = /^[A-Za-z][A-Za-z0-9_]{0,63}$/u;
 const MAX_PARAMETER_COUNT = 20;
 const MAX_PARAMETER_VALUE_LENGTH = 25;
+const MAX_RESPONSE_BYTES = 32 * 1024;
 
 type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
@@ -28,7 +29,8 @@ function rejectionReason(status: number): SmsRejectionReason {
   if (status === 13 || status === 14) return "account";
   if (status === 101 || status === 123) return "sender";
   if (status === 102) return "credit";
-  if (status === 104 || status === 105 || status === 107) return "destination";
+  if (status === 104 || status === 105 || status === 107 || status === 115)
+    return "destination";
   if (
     status === 103 ||
     status === 106 ||
@@ -58,6 +60,49 @@ function parseAcceptedMessageId(data: unknown): string | null {
   )
     return String(messageId);
   return null;
+}
+
+async function readBoundedEnvelope(
+  response: Response,
+): Promise<SmsIrEnvelope | null> {
+  const declaredLength = response.headers.get("content-length");
+  if (
+    declaredLength !== null &&
+    /^\d+$/u.test(declaredLength) &&
+    Number(declaredLength) > MAX_RESPONSE_BYTES
+  )
+    return null;
+  if (response.body === null) return null;
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      if (received > MAX_RESPONSE_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return JSON.parse(new TextDecoder().decode(body)) as SmsIrEnvelope;
+  } catch {
+    return null;
+  }
 }
 
 export function toSmsIrMobile(destination: string): string {
@@ -126,10 +171,8 @@ export class SmsIrProvider implements SmsProvider {
       });
       if (response.status === 429) return { status: "rate_limited" };
       if (response.status >= 500) return { status: "unavailable" };
-      let envelope: SmsIrEnvelope;
-      try {
-        envelope = (await response.json()) as SmsIrEnvelope;
-      } catch {
+      const envelope = await readBoundedEnvelope(response);
+      if (envelope === null) {
         if (response.status === 401)
           return { status: "rejected", reason: "authentication" };
         if (response.status >= 400 && response.status < 500)
