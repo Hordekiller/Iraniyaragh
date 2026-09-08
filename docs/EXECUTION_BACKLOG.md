@@ -41,7 +41,7 @@ the agreed scope in `PRODUCT_SPEC.md`.
 | --- | --- | --- | --- | --- |
 | G0-01 | Both members accept invitation/onboarding and weekly capacity | Joint | — | `TEAM.md` agreement and onboarding issue response |
 | G0-02 | Confirm MVP/non-MVP and critical user journeys | B | G0-01 | Product-spec review comments resolved |
-| G0-03 | Decide money unit/rounding/tax/invoice policy | A | Business input | Accepted ADR and examples |
+| G0-03 | Decide money unit/rounding/tax/invoice policy | A | Decided (#44) | Accepted ADR-0003 extension (#13): canonical integer-Rial `BIGINT` with Toman presentation-only; percentage rounding/VAT still await service-layer work |
 | G0-04 | Select SMS/payment/shipping/deployment providers | Joint | Business input | Decision issue with sandbox/access/contingency |
 | G0-05 | Configure labels, milestones, issue/PR templates and main protection | A | Repo access | GitHub settings and sample issue/PR validated |
 | G0-06 | Verify clean-clone setup on second machine | B | Lockfile/docs | Timed setup notes; corrections merged |

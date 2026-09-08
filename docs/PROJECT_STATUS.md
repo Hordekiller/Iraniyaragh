@@ -20,6 +20,11 @@ refresh/CSRF + own-session HTTP (`#74`), and the product-track UX/E2E (`#50`) �
 sequenced under #91 with a contract-first A/B split (contract PR before parallel UI).
 Working-agreement decisions are tracked in #78.
 
+The Auth Runtime line is complete: `#49` and `#74` closed on 2026-09-08 (`#101` session
+management, `#109` password change / logout-all / fresh guard / family revocation /
+bootstrap). `#50` was superseded by the real ADR-0010 development sign-in. Current
+focus: catalog hardening (`#111`) then the inventory HTTP track (`#81`, G4).
+
 ### Implemented
 
 - pnpm/Turborepo monorepo boundaries
@@ -29,24 +34,25 @@ Working-agreement decisions are tracked in #78.
 - Database service plus distinct database-independent liveness and bounded PostgreSQL
   readiness endpoints with safe failure responses
 - Initial inventory service for on-hand mutation, reservation and release
-- Catalog vertical slice (`feat/catalog-api`, not yet merged): backend-only
-  Category/Brand/Product/SKU services on branch `feat/catalog-api` with
+- Catalog vertical slice (merged 2026-09-08, `65ade33`): backend-only
+  Category/Brand/Product/SKU services with
   `RequirePermission('catalog.read')`/`catalog.write` guarded admin mutations
   (`POST /api/v1/catalog/admin/products`, `/brands`, `/categories`, status
   publish/unpublish/archive), a public read-only catalog (`GET /catalog/products`,
   `/categories`, `/categories/tree`, `/brands`) that never leaks drafts or pricing,
-  integer-Rial (`BigInt`) money persisted from `Money` request payloads, product
-  listing with pagination/search/filter/sort, an unpublish guard (a product needs a
-  SKU before publishing) and actor-scoped audit rows. Covered by DB integration
-  tests (tree, brand list, BigInt money, draft opacity, publish, no-SKU conflict,
-  non-sensitive public projection, audit). `openapi.json` regenerated with the new
-  catalog paths; api typecheck/lint/unit (205)/integration (54) and root
-  typecheck/lint/build all green.
+  integer-Rial (`BigInt`) money persisted from validated `Money` payloads with a
+  restricted `IRR` currency, product listing with pagination/search/filter/sort and
+  a bounded sort allowlist, an unpublish guard (a product needs a SKU before
+  publishing), hierarchy-cycle rejection on reparent, P2003 foreign-key mapping to a
+  stable `INVALID_REFERENCE`, transaction-wrapped audit rows and ACTIVE-only public
+  brand/category product counts. Covered by DB integration tests (tree, brand list,
+  BigInt money, draft opacity, publish, no-SKU conflict, non-sensitive public
+  projection, audit). `openapi.json` regenerated with catalog + auth surface; api
+  unit 327 / integration 70, typecheck/lint and root build all green.
 - Docker Compose services for PostgreSQL, Redis and MinIO
 - Architecture, API, security, operations and domain principles
 - Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
-- Admin UI primitives on branch `feat/admin-form-and-table-primitives` (typecheck/lint/
-  test/build green): `StatCard`, `PageHeader`, `EmptyState`, `DialogCloseButton`,
+- Admin UI primitives (merged): `StatCard`, `PageHeader`, `EmptyState`, `DialogCloseButton`,
   `OpenDialogOnElementClick`, `ConfirmationDialog`, `FormField`, `SelectableCardInput`
   (radio semantics + arrow-key navigation), `FormWizard`, `DataTable`
   (search/sort/pagination/row-selection, loading/empty/error), `FeedbackProvider` +
@@ -139,8 +145,8 @@ Working-agreement decisions are tracked in #78.
   toggle/focus-trap) via `signInDiAsAdmin`.
   All gates (typecheck/lint/test/build/e2e) green on both packages;
   `openapi.json` regenerated with the new auth paths.
-- Fixture-first admin staff-login slice (#50, parallel-work model, not yet wired to a
-  real backend): a separate `/login/staff` route in the admin app implements the
+- Fixture-first admin staff-login slice (`#50`, merged; fixture gate is dev/test only
+  and not wired to the real backend): a separate `/login/staff` route in the admin app implements the
   contract staff password → TOTP → authenticated state machine with a deterministic,
   fail-closed `StaffLoginFixtureClient`. It covers enumeration-proof identical invalid
   credentials, 5-attempt lock-out (`RATE_LIMITED` with back-off), single-use + 300 s
@@ -185,7 +191,7 @@ Working-agreement decisions are tracked in #78.
   non-`__Host-` without Secure in development only, per ADR-0007).
   Mobile normalization is E.164 (`+989XXXXXXXXX`) with strict validation.
 - Session management: `GET /api/v1/auth/sessions` and `DELETE /api/v1/auth/sessions/:sessionId`
-  on branch `feat/session-management`, bearer-guarded at any authentication level via a
+  (merged via #101), bearer-guarded at any authentication level via a
   new `RequireLiveSession()` guard decorator. Listing returns only the caller's active
   sessions as the safe `SessionSummary` projection (newest-first, `current` flag, no
   hashes/user-agent/IP/token-family/owner id) and revoke targets the owned session with a
@@ -241,18 +247,18 @@ Working-agreement decisions are tracked in #78.
   consume/release/expire, read-only snapshot/movement, audit actor+request-id
   verification) plus Auth persistence constraints and Session rotation/replay concurrency.
 - Auth storage and lifecycle constraints now include the runtime Session/MFA evidence,
-  and the Session core rotates/revokes refresh families transactionally. Staff sign-in
-  through the development-enabled controller (`/auth/dev/signin`, `/auth/me`,
-  `/auth/logout`) and customer OTP sign-in (`/auth/customer/otp/request`, `/auth/customer/otp/verify`)
-  with Redis-backed rate limiting are implemented (main branch since PR #95). Staff
-  password+TOTP, OTP delivery (SMS provider), refresh rotation, CSRF logout,
-  credential verification and server-side permission enforcement are not implemented
-  yet. Session list/revoke endpoints (`GET`/`DELETE /api/v1/auth/sessions`) and the
-  any-level `RequireLiveSession()` guard are implemented; the browser refresh
-  (`/refresh`) and cookie/CSRF-protected logout remain pending. ADR-0007, ADR-0010
-  and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
-- Staff password change + fresh-auth lifecycle (on branch `feat/49-auth-privileged-lifecycle`,
-  not yet merged): `POST /staff/password/change` verifies the live current password and
+  and the Session core rotates/revokes refresh families transactionally. The full auth
+  runtime line is implemented on `main` (PRs #101/#109): development-enabled staff
+  sign-in (`/auth/dev/signin`, `/auth/me`, `/auth/logout`), customer OTP sign-in
+  (`/auth/customer/otp/request`, `/auth/customer/otp/verify`) with Redis-backed rate
+  limiting, own-session list/revoke, `/auth/refresh` rotation, staff password change
+  and logout-all. What remains for production rollout is OTP delivery (SMS provider),
+  verified production cookie/CSRF behavior behind a real reverse proxy and the
+  client-side refresh path — tracked with release hardening, not as missing runtime
+  scope. ADR-0007, ADR-0010 and `AUTH_CONTRACT.md` define the runtime, HTTP, threat
+  and client-state contract.
+- Staff password change + fresh-auth lifecycle (merged 2026-09-08 via #109, `9097614`):
+  `POST /staff/password/change` verifies the live current password and
   maps policy-violating new passwords to a 400 `AUTH_PASSWORD_POLICY`, then atomically
   revokes every other session family (`CREDENTIAL_CHANGED`), rotates the current family
   in place with a CAS guard, updates the password and writes
@@ -268,15 +274,16 @@ Working-agreement decisions are tracked in #78.
   by a database integration test that proves exactly one of two concurrent runners wins
   and a later replacement is refused, plus an artifact-scan spec asserting the
   bootstrap/seed/core artifacts carry no default credential and keep the dev admin
-  credential-less. Unit (300), DB integration (53), typecheck, lint, build, OpenAPI
-  drift and `CI=true` coverage (above the 65/65/70/60 gates) are green. Not yet merged
-  (awaiting review of the #49 PR).
+  credential-less. Unit 327, DB integration 70, typecheck, lint, build, OpenAPI
+  drift and `CI=true` coverage (above the 65/65/70/60 gates) are green on `main`.
 
 ### Not implemented
 
-- Full authentication controllers (staff password+TOTP, OTP delivery, refresh/CSRF
-  logout), 2FA and RBAC enforcement across domains
-- Catalog, customer, order, payment, supplier and audit use cases/controllers
+- Full authentication controllers are implemented; remaining production items:
+  OTP delivery via a real SMS provider, verified production cookie/CSRF behavior,
+  and domain-wide RBAC enforcement beyond catalog and auth domains
+- Catalog API slice is merged; customer, order, payment, supplier and audit use
+  cases/controllers beyond catalog are not implemented
 - Operational admin modules and mobile application
 - Cart, checkout, shipping, payment gateway and notifications
 - Workers/queues, object upload flow, search and cache integration

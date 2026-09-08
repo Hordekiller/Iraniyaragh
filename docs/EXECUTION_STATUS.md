@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-07
+Last reviewed: 2026-09-08
 
 This is the short-term delivery board for the two-contributor team. The long-term
 scope remains in `DEVELOPMENT_PLAN.md`; GitHub issue #66 remains the coordination
@@ -24,16 +24,25 @@ before an item is considered complete.
 | Web, admin, accessibility, E2E, product UX | Maddyrampant | Hordekiller |
 | Shared contracts and public behavior | Slice author | Other contributor, mandatory |
 
-## Merge Train
+## Merge Train (completed 2026-09-08)
 
-| Order | Item | Owner | State | Exit action |
-| ---: | --- | --- | --- | --- |
-| 1 | PR #93 refresh serializable backoff | Maddyrampant | Review/CI | Merge after current-head checks |
-| 2 | PR #101 session list/revoke | Hordekiller | Approved/CI | Merge after current-main checks |
-| 3 | PR #98 storefront accessibility | Maddyrampant | Approved/CI | Merge and close #82 |
-| 4 | PR #94 coverage gates | Maddyrampant | Approved/CI | Merge committed changes; workflow hardening is separate |
-| 5 | PR #97 catalog contracts | Maddyrampant | Approved/CI | Merge with agreed sort, pagination and media decisions |
-| 6 | PR #92 Sprint 1 status | Hordekiller | Approved/CI | Merge after status is reconciled with the preceding items |
+All previously scheduled train items merged on 2026-09-06. The two auth/catalog
+checkpoint PRs merged on 2026-09-08, closing the Auth Runtime line (#49, #74).
+
+| Order | Item | Owner | Merged |
+| ---: | --- | --- | --- |
+| 1 | PR #93 refresh serializable backoff | Maddyrampant | 2026-09-06 |
+| 2 | PR #101 session list/revoke | Hordekiller | 2026-09-06 |
+| 3 | PR #98 storefront accessibility | Maddyrampant | 2026-09-06 |
+| 4 | PR #94 coverage gates | Maddyrampant | 2026-09-06 |
+| 5 | PR #97 catalog contracts | Maddyrampant | 2026-09-06 |
+| 6 | PR #92 Sprint 1 status | Hordekiller | 2026-09-06 |
+| 7 | PR #109 auth lifecycle: password change, logout-all, fresh guard, family revocation, bootstrap tests | Hordekiller | 2026-09-08 (`9097614`) |
+| 8 | PR #103 catalog vertical slice | Hordekiller | 2026-09-08 (`65ade33`) |
+
+The Auth merge checkpoint is complete: #49 and #74 are closed. Remaining auth
+follow-ups are production hardening (cookie attributes, CSRF/CORS negatives,
+browser single-flight refresh) tracked with the admin shell and release work.
 
 ## Auth Runtime
 
@@ -80,36 +89,42 @@ Evidence currently available:
 - OpenAPI drift passing; `openapi.json` includes the new `/logout-all` and
   `/staff/password/change` paths.
 
-Remaining before closing #49:
+Remaining before closing #49 (all resolved 2026-09-08):
 
-- Independent review and merged PR evidence.
+- Independent review completed on PR #109, which merged as `9097614`; issue #49 closed.
+- The implementation (including the `assertPolicy` code-point fix, bootstrap
+  extraction, recovery regeneration and the safe artifact scan) is on `main` with
+  unit 327, integration 70 passing and OpenAPI drift green.
+- `openapi.json` includes `/logout-all`, `/staff/password/change`, `/auth/refresh`
+  and the recovery/TOTP endpoints.
 
 ### #74 Refresh and Session HTTP
 
-The approved PR #101 covers own-session list/revoke. The remaining local Auth slice
-covers refresh rotation, CSRF/Origin proof, cookie logout and replay cookie clearing,
-plus the accepted `logout-all` HTTP contract.
+Own-session list/revoke merged (#101). Refresh rotation, fresh-guard lifecycle,
+`logout-all` and password change merged via #109; the browser/CSRF cookie surface
+is configured by ADR-0007/ADR-0010. Issue #74 closed 2026-09-08.
 
-Remaining before closing #74:
+Production rollout follow-ups tracked separately (not blocking scope closure):
 
-- Merge the session slice and open the remaining HTTP implementation as a focused PR.
-- `logout-all` is implemented on the feature branch; verify production cookie
-  attributes, CSRF/CORS negative paths and client single-flight behavior.
-- Regenerate OpenAPI and obtain independent review.
+- Verify production cookie attributes (`__Host-` + Secure) behind the real reverse proxy.
+- CSRF/CORS negative-path coverage and bounded `trust proxy` documentation.
+- Client single-flight refresh and cross-tab recovery in the admin/web apps.
 
-## Product Handoff: #50
+## Product Handoff: #50 (merged, superseded by real sign-in)
 
-Maddyrampant may start the fixture-first admin slice from `feat/50-admin-staff-login`.
-The decisions are:
+The fixture-first admin handoff (separate `/login/staff`, `NEXT_PUBLIC_FIXTURE_AUTH`)
+is superseded by the ADR-0010 development-enabled sign-in (`/auth/dev/signin`), which
+the admin app now drives through the real API (PRs #101/#102/#104). Options decided:
 
-- Use a separate `/login/staff` route; keep development `/login` unchanged.
-- Use `NEXT_PUBLIC_FIXTURE_AUTH=true` as the only fixture opt-in; absent/false fails closed.
-- Keep access tokens and MFA challenge state in memory only.
-- Cover password, TOTP, invalid credentials, challenge expiry/replay, rate limit, forbidden, session invalid and replay states.
-- Defer live endpoint wiring until reviewed #49/#74 API changes land.
-- Do not change Prisma, migrations, root config or existing development auth.
+- Development TLS/fixture decisions (decision B) remain documented but are no longer
+  the integration path; production/staging use the ADR-0010 gate.
+- Access tokens and MFA challenge state stay in memory (no storage).
+- Password, TOTP, invalid credentials, challenge expiry/replay, rate limit, forbidden,
+  session-invalid and replay states are covered by the admin suite and the API specs.
 
-Required evidence for the admin PR:
+Remaining admin work is tracked as catalog UI (G3-04/G3-05), administrative UX and
+deferred `/login/staff` fixture removal once real password+TOTP login ships
+(production credential delivery). Required evidence for future admin PRs is unchanged:
 
 - Desktop/mobile keyboard and screen-reader coverage.
 - Empty storage assertions for localStorage and sessionStorage.
@@ -118,26 +133,34 @@ Required evidence for the admin PR:
 
 ## Next Product Vertical Slices
 
-After the Auth merge checkpoint:
+Post #109/#103 checkpoint, in dependency order:
 
-1. Catalog contract PR #97 and catalog API child issue.
-2. Category/brand/product/SKU services with permission and audit boundaries.
-3. Presigned media upload contract as a separate storage slice.
-4. Public published-catalog endpoints and storefront integration.
-5. Inventory HTTP authorization, transfers, stocktake and reservation expiry worker.
-6. Server-priced cart, checkout and order draft idempotency.
+1. Catalog hardening (`#111`): retry-safe mutation idempotency and public
+   cache-control/ETag/projection policy (review the #103 follow-up; owner-made).
+2. Media/storage slice: presigned upload contract, validation and object-storage service.
+3. Storefront API integration (G3-07) against the merged public catalog endpoints.
+4. Inventory HTTP authorization, transfers, stocktake and reservation expiry worker (G4).
+5. Server-priced cart, checkout and order draft idempotency (G5).
 
 No order, payment or storefront production claim is valid while catalog data remains
 static or while the API lacks the corresponding server-side command.
 
 ## Backlog Reconciliation
 
-- #48 customer OTP is implemented and needs acceptance checkoff/reconciliation.
-- #73 live principal/permission guard is implemented through the Auth merge train and needs final acceptance closure.
-- #76 must be narrowed to coverage baseline/ratcheting after PR #94.
+- #48 (customer OTP) closed; implementation lives on `main` with live-Redis rate-limit
+  and 429-oververify evidence.
+- #73 (live principal/permission guard) closed; the guard is used by sessions, session
+  management and the catalog slice.
+- #76 closed after #94; coverage thresholds now live in each package's `vitest.config.ts`.
 - #81 is a valid inventory performance follow-up before production workers.
-- #77, #78 and #79 remain decision blockers.
-- #91 must receive an accountable owner and updated dependencies.
+- #77, #78 and #79 remain decision blockers (dependency train, capacity/release
+  authority and SMS provider policy).
+- #91 is the open coordination record; the auth runtime scope it sequenced is merged
+  and the issue should be closed or narrowed to Sprint 2.
+- #111 (catalog hardening) is the current follow-up slice (owner: Hordekiller,
+  reviewer: Maddyrampant).
+- `docs/SHOPBUILDER_GAP.md` is referenced by draft shop-builder notes but does not
+  exist on any branch; the author should commit it or the reference must be removed.
 - Epics #2 through #8 remain long-range scope; they are not substitutes for issue-sized implementation slices.
 
 ## Release Blockers
