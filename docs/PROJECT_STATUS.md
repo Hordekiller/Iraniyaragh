@@ -124,6 +124,26 @@ merged and #49 is closed.
 Still outside the merged Catalog foundation: media upload, price history/effective-price policy, complete
 product detail, admin screens and live storefront integration.
 
+### PR #121 — SEO/GEO/AI discovery foundation
+
+- Dynamic sitemap/indexability contract, server-rendered discovery-page requirement,
+  commerce structured data/feed, GEO/AEO citation guidance and governed on-site AI.
+- `Discovery Audit` workflow self-tests on pull requests and only audits production
+  after the `PRODUCTION_WEB_ORIGIN` repository variable exists (intentionally inert
+  until then); sanitized daily evidence artifact.
+- Roadmap, development plan, backlog (G3-09/G8-06), operations, testing and README
+  index reconciled to the same contract.
+
+### PR #119/#120 — SMS provider boundary (approved; merge pending)
+
+- Vendor-neutral `SmsProvider` port, SMS.ir verify adapter (validated outcome
+  mapping, bounded reads, sandbox-gated runbook) and fake provider.
+- Read-only environment secret store with stable `unsupported_operation` for
+  rotate/clear, matching the accepted capability model.
+- Reviewer approval in place; merge currently pauses only on the author's re-approval
+  after a base-sync push (last-pusher rule). Once merged these land ahead of the #118
+  admin contract re-review.
+
 Delivery gate: current-main reconciliation, current-head CI, independent contract/
 security/query review, OpenAPI drift confirmation and merge.
 
@@ -132,7 +152,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Capability    | What exists                                                | What prevents completion                                                        |
 | ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | RBAC          | Roles, seed and guard machinery                            | Every domain route still needs explicit allow/deny policy tests                 |
-| Customer Auth | API runtime and fixture UX                                 | Production SMS adapter/outage policy and live client integration                |
+| Customer Auth | API runtime and fixture UX; SMS.ir adapter core and secret boundary approved (#119/#120, merge pending) | Outage policy, production wiring via #114 and live admin/client integration (#115) |
 | Staff Auth    | Runtime and privileged lifecycle merged; fixture UX exists | Live MFA/session UX and production acceptance                                   |
 | Catalog       | Contracts and API foundation merged via #103               | Media/pricing, admin UI and storefront integration                              |
 | Inventory     | Correct service core                                       | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI |
@@ -191,6 +211,9 @@ Release `0.1` closes only after:
 2. Reconcile remaining acceptance across #50 and #91.
 3. Implement and verify the accepted SMS boundary through #114 and #115;
    provision the production account, line and secret through private operations.
+   The adapter core (#119) and secret boundary (#120) are reviewed and only wait on
+   the author's squash-merge re-approval; the #118 admin contract re-review is the
+   remaining open contract gate.
 4. #78 records capacity, review SLA and release authority.
 5. Clean `main` passes lint, typecheck, tests, integration, build, OpenAPI drift and
    browser smoke.

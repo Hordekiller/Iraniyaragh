@@ -33,12 +33,18 @@ day-to-day assignments.
 |        1 | Issue #91 — Sprint 1 coordination | In progress   | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                |
 |        2 | Issue #50 — Auth UX/E2E           | In progress   | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up |
 |        3 | Issue #78                         | Decision work | capacity, review SLA, private coordination and release authority              | Accepted written agreement with owner and effective date      |
-|        4 | Issues #114/#115                  | Ready/blocked | provider contract first; then authorization, secret boundary and admin states | Backend contract accepted, then integrated admin evidence     |
+|        4 | PR #119 — SMS adapter core        | Approved/paused | last pusher changed after base sync; author re-approval required              | Hordekiller re-approves current green head, then squash-merge |
+|        5 | PR #118 — admin SMS contract      | Re-review pending | CHANGES_REQUESTED was on the pre-rework head; new head 6d6fdda is green        | Hordekiller re-reviews the rework, then squash-merge          |
+|        6 | Issues #114/#115                  | Ready/blocked | adapter/secret/wiring accepted, then integrated admin states                  | Backend wiring merged, then admin UI evidence via #115        |
 
 ## Team disposition ledger — 2026-09-08
 
 | Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                    | Closure condition                                                           |
 | --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| PR #121   | Complete/merged               | Hordekiller / Maddyrampant | Discovery audit workflow is self-test only until PRODUCTION_WEB_ORIGIN exists                   | Clean merge; production job intentionally inert until configured            |
+| PR #119   | Approved, merge pending       | Hordekiller / Maddyrampant | Author re-approves green head after reviewer base sync (last-pusher rule)                      | Squash-merge; content also carries the reviewed #120 secret boundary        |
+| PR #120   | Complete/merged (into #119 branch) | Hordekiller / Maddyrampant | Content travels to `main` with the #119 squash; keep the ledger row until that merge recorded | Seen on `main` in the #119 merge commit                                      |
+| PR #118   | Re-review pending             | Maddyrampant / Hordekiller | Hordekiller reviews rework head 6d6fdda (9-point reply posted; CI green)                        | Squash-merge after re-approval; then #115 typoed-client/admin UI starts      |
 | PR #112   | Complete/merged               | Hordekiller / Maddyrampant | Use the merged status/roadmap baseline                                                         | Independent approval and protected merge completed                          |
 | Issue #79 | Complete/closed               | Hordekiller / Maddyrampant | Implement #114, then #115; provision account/line/key privately                                | ADR-0011 accepted via merged #116                                           |
 | Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity |
@@ -68,6 +74,10 @@ Exit: remaining #50/#91 gaps are closed or split into owned follow-ups.
 - Map #50 and #91 acceptance checkboxes to a commit/test/PR; retain #49 as closed evidence.
 - Run clean-main quality, database and E2E gates.
 - Confirm customer OTP fixture tests and live API tests are described separately.
+- Land and record PRs #119/#120 (SMS adapter core and secret boundary) and the
+  re-reviewed PR #118 (admin SMS contract) so #114/#115 become the addressable
+  remaining work; the sandbox gate from `SMS_PROVIDER_OPERATIONS.md` is private,
+  operator-owned evidence.
 - Decide #78; treat accepted ADR-0011 and closed #79 as the provider baseline,
   with implementation explicitly owned by #114/#115.
 - Update Auth/API/security/operations docs only where merged behavior changed.
