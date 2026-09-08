@@ -15,8 +15,8 @@ const statusesToDb = (status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined): P
   status === 'DRAFT' ? [ProductStatus.DRAFT, ProductStatus.INACTIVE] : status === 'PUBLISHED' ? [ProductStatus.ACTIVE] : status === 'ARCHIVED' ? [ProductStatus.ARCHIVED] : [];
 const statusToApi = (status: ProductStatus): 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' =>
   status === ProductStatus.ACTIVE ? 'PUBLISHED' : status === ProductStatus.ARCHIVED ? 'ARCHIVED' : 'DRAFT';
-const PRODUCT_SORT_FIELDS = { name: 'name', createdAt: 'createdAt', updatedAt: 'updatedAt' } as const;
-const ORDER_DIRECTIONS = { asc: 'asc', desc: 'desc' } as const;
+const PRODUCT_SORT_FIELDS = new Set(['name', 'createdAt', 'updatedAt'] as const);
+const ORDER_DIRECTIONS = new Set(['asc', 'desc'] as const);
 
 type CategoryTreeNode = { id: string; name: string; slug: string; parentId: string | null; children: CategoryTreeNode[]; createdAt: string; updatedAt: string };
 type CategoryInput = { id: string; name: string; slug: string; parentId: string | null; createdAt: Date | string; updatedAt: Date | string; children?: CategoryInput[] };
@@ -47,8 +47,8 @@ export class CatalogService {
       ...(query.categoryId ? { categoryId: query.categoryId } : {}),
       ...(query.search ? { OR: [{ name: { contains: query.search, mode: 'insensitive' } }, { slug: { contains: query.search, mode: 'insensitive' } }] } : {}),
     };
-    const sortBy = query.sortBy && query.sortBy in PRODUCT_SORT_FIELDS ? query.sortBy : 'createdAt';
-    const sortDir = query.sortDir && query.sortDir in ORDER_DIRECTIONS ? query.sortDir : 'desc';
+    const sortBy = query.sortBy && PRODUCT_SORT_FIELDS.has(query.sortBy) ? query.sortBy : 'createdAt';
+    const sortDir = query.sortDir && ORDER_DIRECTIONS.has(query.sortDir) ? query.sortDir : 'desc';
     const [rows, total] = await Promise.all([
       this.prisma.product.findMany({ where, orderBy: { [sortBy]: sortDir }, skip: (page - 1) * perPage, take: perPage }),
       this.prisma.product.count({ where }),
@@ -57,12 +57,15 @@ export class CatalogService {
   }
 
   async getPublicProduct(idOrSlug: string): Promise<ProductDetailPublicResponse> {
-    const product = await this.prisma.product.findFirst({ where: { status: ProductStatus.ACTIVE, OR: [{ id: idOrSlug }, { slug: idOrSlug }] }, include: this.productInclude() });
+    const product = await this.prisma.product.findFirst({ where: { status: ProductStatus.ACTIVE, OR: [{ id: idOrSlug }, { slug: idOrSlug }] }, include: this.publicProductInclude() });
     if (!product) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
     return { data: { product: this.productDetailPublic(product) } };
   }
 
   async createProduct(actorId: string, input: ProductCreateDto): Promise<ProductDetailResponse> {
+    if (input.status === 'PUBLISHED' && (!input.variants || input.variants.length === 0)) {
+      throw new ConflictException({ code: 'CONFLICT', message: 'A product must have a SKU before publishing.' });
+    }
     const product = await this.mapPrismaError(this.prisma.$transaction(async tx => {
       const created = await tx.product.create({
         data: {
@@ -144,6 +147,7 @@ export class CatalogService {
   }
 
   private productInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, variants: true } as const; }
+  private publicProductInclude() { return { brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, variants: { where: { isActive: true } } } as const; }
   private categoryInclude() { return { children: true } as const; }
   private productListItem(row: { id: string; name: string; slug: string; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date }) { return { id: row.id, name: row.name, slug: row.slug, status: statusToApi(row.status), brandId: row.brandId, categoryId: row.categoryId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() }; }
   private categoryNode(row: CategoryInput): CategoryTreeNode { return { id: row.id, name: row.name, slug: row.slug, parentId: row.parentId, children: (row.children ?? []).map(child => this.categoryNode(child)), createdAt: new Date(row.createdAt).toISOString(), updatedAt: new Date(row.updatedAt).toISOString() }; }

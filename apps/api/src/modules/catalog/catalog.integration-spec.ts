@@ -206,6 +206,16 @@ describe.sequential('CatalogService database integration', () => {
     await prisma.product.delete({ where: { id } });
   });
 
+  it('rejects creating an already-published product that has no SKU', async () => {
+    await expect(
+      catalog.createProduct(actorId, {
+        name: 'Create Published Without SKU',
+        slug: `create-published-no-sku-${runId}`,
+        status: 'PUBLISHED',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
   it('lists products without sensitive pricing for non-staff queries', async () => {
     const list = await catalog.listPublicProducts({ status: 'PUBLISHED' });
     for (const item of list.data.items) {

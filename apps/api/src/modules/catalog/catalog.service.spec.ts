@@ -76,6 +76,15 @@ describe('CatalogService', () => {
     it('returns a published product with public variant shape that omits costPrice but keeps salePrice', async () => {
       (ctx.prisma.product.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(productRow);
       const detail = await ctx.service.getPublicProduct('product-one');
+      expect(ctx.prisma.product.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } },
+            category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } },
+            variants: { where: { isActive: true } },
+          }),
+        }),
+      );
       expect(detail.data.product.status).toBe('PUBLISHED');
       expect(detail.data.product.variants[0]).toMatchObject({
         sku: 'SKU-1',
@@ -110,6 +119,15 @@ describe('CatalogService', () => {
         expect.objectContaining({ where: expect.objectContaining({ status: { in: [ProductStatus.DRAFT, ProductStatus.INACTIVE] } }) }),
       );
     });
+
+    it('falls back safely for inherited-property sort values at the service boundary', async () => {
+      (ctx.prisma.product.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (ctx.prisma.product.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
+      await ctx.service.listAdminProducts({ sortBy: 'constructor' as never, sortDir: 'toString' as never });
+      expect(ctx.prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: { createdAt: 'desc' } }),
+      );
+    });
   });
 
   describe('product creation', () => {
@@ -130,6 +148,13 @@ describe('CatalogService', () => {
         ctx.service.createProduct('actor-1', { name: 'Product One', slug: 'product-one' }),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(ctx.tx.auditLog.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects creating an already-published product without a SKU', async () => {
+      await expect(
+        ctx.service.createProduct('actor-1', { name: 'Product One', slug: 'product-one', status: 'PUBLISHED' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
     });
   });
 
