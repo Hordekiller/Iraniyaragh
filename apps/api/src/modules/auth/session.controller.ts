@@ -1,9 +1,9 @@
-import { Controller, Delete, Get, Header, Inject, NotFoundException, Param, Res } from '@nestjs/common';
+import { Controller, Delete, Get, Header, HttpCode, HttpStatus, Inject, NotFoundException, Param, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import type { EmptyResponse, SessionListResponse, SessionSummary } from '@iranyaragh/contracts';
 import { AUTH_RUNTIME_CONFIG, type AuthRuntimeConfig } from './auth.config';
 import { AuthSessionService, type AuthSessionSummary } from './auth-session.service';
-import { CurrentPrincipal, RequireLiveSession } from './auth.guard';
+import { CurrentPrincipal, RequireFreshAuthentication, RequireLiveSession } from './auth.guard';
 import type { AuthPrincipalContext } from './auth-principal.service';
 import { clearAuthCookies } from './auth-http';
 
@@ -46,6 +46,20 @@ export class SessionManagementController {
     if (sessionId === principal.sessionId) {
       this.clearAuthCookies(response);
     }
+    return { data: {} };
+  }
+
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  @RequireFreshAuthentication(undefined)
+  async logoutAll(
+    @CurrentPrincipal() principal: AuthPrincipalContext,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<EmptyResponse> {
+    await this.sessions.revokeAllSessions(principal.userId);
+    this.clearAuthCookies(response);
     return { data: {} };
   }
 

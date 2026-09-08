@@ -31,8 +31,8 @@ function createController(overrides: Partial<{
   principals: Pick<AuthPrincipalService, 'resolveBearerToken'>;
   prisma: Pick<PrismaService, 'user'>;
   tokens: Pick<AuthTokenService, 'matchesCsrfToken'>;
-  staffAuth: Pick<StaffAuthService, 'requestPasswordChallenge'>;
-  staffMfa: Pick<StaffMfaService, 'verifyTotp'>;
+  staffAuth: Pick<StaffAuthService, 'requestPasswordChallenge' | 'updateCredentialAndRotateSession'>;
+  staffMfa: Pick<StaffMfaService, 'verifyTotp' | 'regenerateRecoveryCodes'>;
   devLoginEnabled: boolean;
   devCode: string;
 }> = {}): StaffAuthController {
@@ -314,5 +314,87 @@ describe('StaffAuthController (me / logout)', () => {
     expect(rotateSession).not.toHaveBeenCalled();
     expect(revokeByRefreshToken).not.toHaveBeenCalled();
     expect(response.calls).toEqual([]);
+  });
+});
+
+describe('StaffAuthController (change password)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function mockResponseWithOptions() {
+    const calls: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+    const cookie = vi.fn((name: string, value: string, options: Record<string, unknown>) => {
+      calls.push({ name, value, options });
+    });
+    return { cookie, calls } as unknown as Response & {
+      calls: Array<{ name: string; value: string; options: Record<string, unknown> }>;
+    };
+  }
+
+  it('delegates to the change service, rotates cookies and returns an empty envelope', async () => {
+    const updateCredentialAndRotateSession = vi.fn(async () => ({
+      accessToken: 'new-at-1',
+      csrfToken: 'new-csrf-1',
+      expiresAt: new Date(Date.now() + 600_000),
+      refreshToken: 'new-rt-1',
+      sessionId: 'new-session-1',
+      tokenFamilyId: 'tf-1',
+    }));
+    const controller = createController({
+      staffAuth: {
+        requestPasswordChallenge: vi.fn(),
+        updateCredentialAndRotateSession,
+      },
+    });
+    const response = mockResponseWithOptions();
+    const body = { currentPassword: 'the-current-password', newPassword: 'a-new-strong-password' };
+
+    const result = await controller.staffPasswordChange(principal, body as never, response);
+
+    expect(updateCredentialAndRotateSession).toHaveBeenCalledWith({
+      userId: 'seed_dev_admin',
+      currentSessionId: 'session-1',
+      currentPassword: 'the-current-password',
+      newPassword: 'a-new-strong-password',
+    });
+    expect(result).toEqual({ data: {} });
+    expect(response.calls.map(call => call.name)).toEqual(['iranyaragh_dev_refresh', 'iranyaragh_dev_csrf']);
+    expect(response.calls[0]).toMatchObject({ value: 'new-rt-1' });
+    expect(response.calls[0].options).toMatchObject({ httpOnly: true });
+    expect(response.calls[1]).toMatchObject({ value: 'new-csrf-1', options: { httpOnly: false } });
+  });
+
+  it('propagates a rejected current-password failure from the change service unchanged', async () => {
+    const updateCredentialAndRotateSession = vi.fn(async () => {
+      throw new UnauthorizedException({ code: 'AUTH_INVALID_CREDENTIALS', message: 'dummy' });
+    });
+    const controller = createController({
+      staffAuth: { requestPasswordChallenge: vi.fn(), updateCredentialAndRotateSession },
+    });
+    const response = mockResponseWithOptions();
+
+    await expect(
+      controller.staffPasswordChange(principal, { currentPassword: 'wrong', newPassword: 'a-new-strong-password' } as never, response),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(response.calls).toEqual([]);
+  });
+});
+
+describe('StaffAuthController (recovery regeneration)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('passes the current session when regenerating recovery codes', async () => {
+    const regenerateRecoveryCodes = vi.fn(async () => ({
+      data: { recoveryCodes: ['RECOVERY-1'] },
+    }));
+    const controller = createController({ staffMfa: { verifyTotp: vi.fn(), regenerateRecoveryCodes } });
+
+    const result = await controller.recoveryRegenerate(principal);
+
+    expect(regenerateRecoveryCodes).toHaveBeenCalledWith('seed_dev_admin', 'session-1');
+    expect(result.data.recoveryCodes).toEqual(['RECOVERY-1']);
   });
 });

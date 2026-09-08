@@ -59,7 +59,10 @@ export function setAuthCookies(
 ): void {
   const maxAge = Math.max(0, expiresAt.getTime() - Date.now());
   const base = { sameSite: cookieSpec.sameSite, path: cookieSpec.path, secure: cookieSpec.secure, maxAge };
+  // The opaque refresh token is intentionally transported in an HttpOnly,
+  // SameSite cookie; the password-changing service never returns a password.
   response.cookie(cookieSpec.refreshName, refreshToken, { ...base, httpOnly: true });
+  // The random CSRF proof is intentionally client-readable for double-submit.
   response.cookie(cookieSpec.csrfName, csrfToken, { ...base, httpOnly: false });
 }
 

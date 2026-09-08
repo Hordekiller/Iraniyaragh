@@ -91,7 +91,7 @@ export class StaffMfaService {
     return { data: { recoveryCodes } };
   }
 
-  async regenerateRecoveryCodes(userId: string): Promise<StaffRecoveryCodesResponse> {
+  async regenerateRecoveryCodes(userId: string, currentSessionId: string): Promise<StaffRecoveryCodesResponse> {
     const credential = await this.prisma.totpCredential.findUnique({ where: { userId }, select: { id: true, confirmedAt: true, disabledAt: true } });
     if (!credential?.confirmedAt || credential.disabledAt) throw new StaffMfaException();
     const recoveryCodes = Array.from({ length: 10 }, () => `RECOVERY-${randomBytes(10).toString('base64url').toUpperCase()}`);
@@ -100,6 +100,7 @@ export class StaffMfaService {
       await tx.recoveryCode.createMany({ data: recoveryCodes.map(codeValue => ({ totpCredentialId: credential.id, codeHash: this.hashes.hash(codeValue, 'recovery-code') })) });
       await tx.auditLog.create({ data: { actorId: userId, action: 'auth.recovery_regenerated', entityType: 'TotpCredential', entityId: credential.id, requestId: getRequestId(), metadata: { recoveryCodeCount: 10 } } });
     });
+    await this.sessions.revokeOtherSessionFamilies({ userId, currentSessionId });
     return { data: { recoveryCodes } };
   }
 

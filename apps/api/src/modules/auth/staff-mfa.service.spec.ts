@@ -81,6 +81,7 @@ function serviceWith(overrides: {
   hashes?: Pick<AuthHashService, 'hash' | 'candidateHashes'>;
   crypto?: Pick<TotpCryptoService, 'encrypt' | 'decrypt'>;
   createSession?: ReturnType<typeof vi.fn>;
+  revokeOtherSessionFamilies?: ReturnType<typeof vi.fn>;
   reset?: ReturnType<typeof vi.fn>;
   enforce?: ReturnType<typeof vi.fn>;
   resolveBearerToken?: ReturnType<typeof vi.fn>;
@@ -108,6 +109,7 @@ function serviceWith(overrides: {
       sessionId: 'session-1',
       tokenFamilyId: 'tf-1',
     })),
+    revokeOtherSessionFamilies: overrides.revokeOtherSessionFamilies ?? vi.fn(async () => 2),
   } as unknown as AuthSessionService;
   const principals = {
     resolveBearerToken: overrides.resolveBearerToken ?? vi.fn(async () => ({
@@ -242,26 +244,37 @@ describe('StaffMfaService', () => {
   });
 
   describe('regenerateRecoveryCodes', () => {
-    it('regenerates recovery codes for a confirmed credential', async () => {
+    it('regenerates recovery codes for a confirmed credential and revokes other session families', async () => {
       const tx = createTx();
-      const { service } = serviceWith({
+      const revokeOtherSessionFamilies = vi.fn(async () => 2);
+      const { service, sessions } = serviceWith({
         totpCredential: vi.fn(async () => ({ id: 'cred-1', confirmedAt: new Date(), disabledAt: null })),
         tx,
+        revokeOtherSessionFamilies,
       });
 
-      const result = await service.regenerateRecoveryCodes('user-1');
+      const result = await service.regenerateRecoveryCodes('user-1', 'session-1');
       expect(result.data.recoveryCodes).toHaveLength(10);
       expect(tx.recoveryCode.updateMany).toHaveBeenCalledWith({
         where: { totpCredentialId: 'cred-1', consumedAt: null, invalidatedAt: null },
         data: { invalidatedAt: expect.any(Date) },
       });
+      expect(revokeOtherSessionFamilies).toHaveBeenCalledWith({
+        userId: 'user-1',
+        currentSessionId: 'session-1',
+      });
+      expect(sessions.revokeOtherSessionFamilies).toHaveBeenCalledTimes(1);
     });
 
-    it('throws for an unconfirmed or disabled credential', async () => {
-      const { service } = serviceWith({
+    it('throws for an unconfirmed or disabled credential and never revokes sessions', async () => {
+      const revokeOtherSessionFamilies = vi.fn();
+      const { service, sessions } = serviceWith({
         totpCredential: vi.fn(async () => ({ id: 'cred-1', confirmedAt: null, disabledAt: null })),
+        revokeOtherSessionFamilies,
       });
-      await expect(service.regenerateRecoveryCodes('user-1')).rejects.toBeInstanceOf(StaffMfaException);
+      await expect(service.regenerateRecoveryCodes('user-1', 'session-1')).rejects.toBeInstanceOf(StaffMfaException);
+      expect(revokeOtherSessionFamilies).not.toHaveBeenCalled();
+      expect(sessions.revokeOtherSessionFamilies).not.toHaveBeenCalled();
     });
   });
 

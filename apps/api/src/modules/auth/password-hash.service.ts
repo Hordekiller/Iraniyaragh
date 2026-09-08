@@ -49,11 +49,11 @@ export class PasswordHashService {
   }
 
   assertPolicy(password: string): void {
-    if (
-      typeof password !== 'string' ||
-      password.length < PASSWORD_MIN_LENGTH ||
-      Array.from(password).length > PASSWORD_MAX_LENGTH
-    ) {
+    if (typeof password !== 'string') {
+      throw new PasswordPolicyError();
+    }
+    const length = Array.from(password).length;
+    if (length < PASSWORD_MIN_LENGTH || length > PASSWORD_MAX_LENGTH) {
       throw new PasswordPolicyError();
     }
   }

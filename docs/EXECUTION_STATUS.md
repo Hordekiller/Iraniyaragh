@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-06
+Last reviewed: 2026-09-07
 
 This is the short-term delivery board for the two-contributor team. The long-term
 scope remains in `DEVELOPMENT_PLAN.md`; GitHub issue #66 remains the coordination
@@ -47,33 +47,54 @@ Implemented locally on the Auth runtime branch:
 - TOTP verification with atomic challenge consumption and one-accepted-step replay protection.
 - Recovery-code verification and atomic consumption.
 - TOTP enrollment/confirmation and recovery-code regeneration.
-- TTY-only first-admin bootstrap with hidden password input, TOTP confirmation, advisory lock, existing-admin refusal and actor-null audit.
+- Password change (`POST /staff/password/change`): verifies the live current password,
+  hashes the new one, maps `PasswordPolicyError` violations to a 400
+  `AUTH_PASSWORD_POLICY`, then atomically revokes every other session family
+  (`CREDENTIAL_CHANGED`), rotates the current family in place (CAS guard) and writes
+  `auth.password.changed`/`auth.session.rotated` evidence without hash metadata.
+- Recovery-code regeneration (`POST /staff/recovery/regenerate`) now invalidates all
+  previous codes and atomically revokes every other session family (`CREDENTIAL_CHANGED`)
+  while keeping the current family valid and unrotated, with
+  `auth.recovery_regenerated` + `auth.session.all_revoked` evidence.
+- Fresh-auth enforcement (300 s `AUTH_REAUTHENTICATION_REQUIRED`) via a level-optional
+  `RequireFreshAuthentication` guard on `staff/totp/enroll`, `staff/recovery/regenerate`
+  and `staff/password/change`; level checks still precede freshness (403 before 401).
+- `POST /logout-all`: fresh-auth at any level, atomically revokes every session family
+  for the caller and clears the auth cookies.
+- TTY-only first-admin bootstrap with hidden password input, TOTP confirmation,
+  advisory lock, existing-admin refusal and actor-null audit. The transaction is now a
+  testable `createFirstAdministrator` core (`scripts/bootstrap-admin-core.mjs`), with a
+  guarded integration test proving exactly one concurrent runner wins and a later
+  replacement is refused, plus a committed-artifact scan spec asserting the bootstrap,
+  core and seed carry no default credential, resolve connection keys only from required
+  environment variables and keep the dev admin credential-less (`passwordHash: null`);
+  the scan runs in the regular unit suite so CI enforces it.
 
 Evidence currently available:
 
-- API unit tests: 214 passing.
-- PostgreSQL integration tests: 49 passing.
-- Root typecheck, lint and build passing.
-- OpenAPI drift passing.
+- API unit tests: 300 passing (coverage under `CI=true`: statements 87.7 / branches
+  78.3 / functions 89.6 / lines 89.3, above the 65/65/70/60 gates).
+- PostgreSQL integration tests: 53 passing (incl. password-change family revocation,
+  recovery-regeneration family revocation and concurrent bootstrap).
+- Root typecheck, lint and build passing (contracts typecheck included).
+- OpenAPI drift passing; `openapi.json` includes the new `/logout-all` and
+  `/staff/password/change` paths.
 
 Remaining before closing #49:
 
-- Password change/reset endpoint and policy.
-- Fresh-auth enforcement for enrollment and recovery regeneration.
-- Session-family revocation after password/TOTP/recovery changes.
-- Bootstrap concurrency and artifact-scan tests in CI.
 - Independent review and merged PR evidence.
 
 ### #74 Refresh and Session HTTP
 
 The approved PR #101 covers own-session list/revoke. The remaining local Auth slice
-covers refresh rotation, CSRF/Origin proof, cookie logout and replay cookie clearing.
+covers refresh rotation, CSRF/Origin proof, cookie logout and replay cookie clearing,
+plus the accepted `logout-all` HTTP contract.
 
 Remaining before closing #74:
 
 - Merge the session slice and open the remaining HTTP implementation as a focused PR.
-- Add and expose `logout-all` over the accepted HTTP contract.
-- Verify production cookie attributes, CSRF/CORS negative paths and client single-flight behavior.
+- `logout-all` is implemented on the feature branch; verify production cookie
+  attributes, CSRF/CORS negative paths and client single-flight behavior.
 - Regenerate OpenAPI and obtain independent review.
 
 ## Product Handoff: #50

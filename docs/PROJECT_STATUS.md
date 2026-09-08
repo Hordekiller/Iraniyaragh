@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-05
+Last reviewed: 2026-09-07
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -236,6 +236,26 @@ Working-agreement decisions are tracked in #78.
   any-level `RequireLiveSession()` guard are implemented; the browser refresh
   (`/refresh`) and cookie/CSRF-protected logout remain pending. ADR-0007, ADR-0010
   and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
+- Staff password change + fresh-auth lifecycle (on branch `feat/49-auth-privileged-lifecycle`,
+  not yet merged): `POST /staff/password/change` verifies the live current password and
+  maps policy-violating new passwords to a 400 `AUTH_PASSWORD_POLICY`, then atomically
+  revokes every other session family (`CREDENTIAL_CHANGED`), rotates the current family
+  in place with a CAS guard, updates the password and writes
+  `auth.password.changed`/`auth.session.rotated` audit evidence without hash metadata.
+  Recovery-code regeneration (`POST /staff/recovery/regenerate`) invalidates all
+  previous codes and revokes every other session family while keeping the current
+  family valid. `POST /logout-all` revokes every session family for the caller over a
+  fresh, any-level bearer session. A level-optional `RequireFreshAuthentication` guard
+  enforces the 300 s window (`AUTH_REAUTHENTICATION_REQUIRED`) on `staff/totp/enroll`,
+  `staff/recovery/regenerate` and `staff/password/change`, with level checks running
+  before freshness (403 precedes 401). The first-admin bootstrap transaction was
+  extracted from the TTY script into a testable `createFirstAdministrator` core, verified
+  by a database integration test that proves exactly one of two concurrent runners wins
+  and a later replacement is refused, plus an artifact-scan spec asserting the
+  bootstrap/seed/core artifacts carry no default credential and keep the dev admin
+  credential-less. Unit (300), DB integration (53), typecheck, lint, build, OpenAPI
+  drift and `CI=true` coverage (above the 65/65/70/60 gates) are green. Not yet merged
+  (awaiting review of the #49 PR).
 
 ### Not implemented
 

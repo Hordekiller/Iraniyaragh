@@ -1,11 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { LoginAttemptOutcome, LoginMethod, MfaChallengePurpose, Prisma, UserStatus } from '@prisma/client';
 import type { StaffMfaChallengeResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthHashService } from './auth-hash.service';
+import { AuthSessionService, type IssuedAuthSession } from './auth-session.service';
 import { AuthTokenService } from './auth-token.service';
-import { PasswordHashService } from './password-hash.service';
+import { PasswordHashService, PasswordPolicyError } from './password-hash.service';
 import { RateLimitService } from './rate-limit.service';
 
 const MFA_CHALLENGE_TTL_MS = 5 * 60 * 1_000;
@@ -32,6 +33,7 @@ export class StaffAuthService {
     private readonly tokens: AuthTokenService,
     private readonly passwords: PasswordHashService,
     private readonly rateLimits: RateLimitService,
+    private readonly sessions: AuthSessionService,
   ) {}
 
   async requestPasswordChallenge(command: StaffPasswordCommand): Promise<StaffMfaChallengeResponse> {
@@ -135,6 +137,41 @@ export class StaffAuthService {
         expiresInSeconds: 300,
       },
     };
+  }
+
+  async updateCredentialAndRotateSession(command: {
+    userId: string;
+    currentSessionId: string;
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<IssuedAuthSession> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: command.userId },
+      select: { id: true, passwordHash: true, status: true },
+    });
+    if (!user || user.status !== UserStatus.ACTIVE) throw new StaffAuthException();
+    const currentPasswordMatches = await this.passwords.verify(user.passwordHash, command.currentPassword);
+    if (!currentPasswordMatches) throw new StaffAuthException();
+
+    const passwordChangedAt = new Date();
+    let newPasswordHash: string;
+    try {
+      newPasswordHash = await this.passwords.hash(command.newPassword);
+    } catch (error) {
+      if (error instanceof PasswordPolicyError) {
+        throw new BadRequestException({
+          code: 'AUTH_PASSWORD_POLICY',
+          message: 'The new password does not satisfy the authentication policy.',
+        });
+      }
+      throw error;
+    }
+    return this.sessions.rotateSessionAfterCredentialChange({
+      userId: command.userId,
+      currentSessionId: command.currentSessionId,
+      passwordHash: newPasswordHash,
+      passwordChangedAt,
+    });
   }
 
   private async recordFailure(input: {

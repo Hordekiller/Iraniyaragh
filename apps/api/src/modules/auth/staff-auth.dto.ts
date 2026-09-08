@@ -34,6 +34,16 @@ export class StaffPasswordDto {
   deviceName?: string;
 }
 
+export class StaffPasswordChangeDto {
+  @IsString()
+  @Length(STAFF_PASSWORD_MIN_LENGTH, STAFF_PASSWORD_MAX_LENGTH)
+  currentPassword!: string;
+
+  @IsString()
+  @Length(STAFF_PASSWORD_MIN_LENGTH, STAFF_PASSWORD_MAX_LENGTH)
+  newPassword!: string;
+}
+
 export class StaffTotpVerifyDto {
   @IsString()
   @Matches(/^[0-9]{6}$/u)

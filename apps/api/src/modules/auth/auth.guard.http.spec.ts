@@ -9,6 +9,7 @@ import {
   AuthGuard,
   CurrentPrincipal,
   RequireAuthentication,
+  RequireFreshAuthentication,
   RequireLiveSession,
   RequirePermission,
 } from './auth.guard';
@@ -31,10 +32,17 @@ const constituentPrincipal: AuthPrincipalContext = Object.freeze({
   permissions: new Set<string>(),
 });
 
+const staleStaffPrincipal: AuthPrincipalContext = Object.freeze({
+  ...staffPrincipal,
+  userId: 'user-3',
+  authenticatedAt: new Date(Date.now() - 6 * 60 * 1_000),
+});
+
 const principalService = {
   resolveBearerToken: vi.fn(async (authorization?: string): Promise<AuthPrincipalContext> => {
     if (authorization === 'Bearer staff-token') return staffPrincipal;
     if (authorization === 'Bearer customer-token') return constituentPrincipal;
+    if (authorization === 'Bearer stale-token') return staleStaffPrincipal;
     if (authorization === 'Bearer replayed-token') throw new AuthSessionException('AUTH_SESSION_REPLAYED');
     if (authorization === 'Bearer revoked-token' || authorization === 'Bearer expired-token') {
       throw new AuthSessionException('AUTH_SESSION_INVALID');
@@ -71,6 +79,18 @@ class PrincipalTestController {
   @RequireLiveSession()
   @Get('live-session')
   liveSession(@CurrentPrincipal() principal: AuthPrincipalContext): { userId: string; level: string } {
+    return { userId: principal.userId, level: principal.authenticationLevel };
+  }
+
+  @RequireFreshAuthentication('STAFF_MFA')
+  @Get('fresh-staff')
+  freshStaff(@CurrentPrincipal() principal: AuthPrincipalContext): { userId: string } {
+    return { userId: principal.userId };
+  }
+
+  @RequireFreshAuthentication(undefined)
+  @Get('fresh-any')
+  freshAny(@CurrentPrincipal() principal: AuthPrincipalContext): { userId: string; level: string } {
     return { userId: principal.userId, level: principal.authenticationLevel };
   }
 }
@@ -240,6 +260,54 @@ describe('AuthGuard HTTP behavior', () => {
     await expect(anonymous.json()).resolves.toMatchObject({
       code: 'AUTH_SESSION_INVALID',
       statusCode: 401,
+    });
+  });
+
+  it('admits recently authenticated staff and rejects stale-session proof with the reauthentication envelope', async () => {
+    const fresh = await fetch(`${baseUrl}/api/v1/principal-test/fresh-staff`, {
+      headers: { authorization: 'Bearer staff-token' },
+    });
+    expect(fresh.status).toBe(200);
+    await expect(fresh.json()).resolves.toEqual({ userId: 'user-1' });
+
+    const stale = await fetch(`${baseUrl}/api/v1/principal-test/fresh-staff`, {
+      headers: { authorization: 'Bearer stale-token' },
+    });
+    expect(stale.status).toBe(401);
+    const body = (await stale.json()) as { code: string; message: string; statusCode: number };
+    expect(body).toMatchObject({
+      code: 'AUTH_REAUTHENTICATION_REQUIRED',
+      statusCode: 401,
+    });
+    expect(body.message).toMatch(/Re-authentication is required/u);
+  });
+
+  it('requires fresh proof on a level-less fresh route and rejects stale sessions', async () => {
+    const fresh = await fetch(`${baseUrl}/api/v1/principal-test/fresh-any`, {
+      headers: { authorization: 'Bearer staff-token' },
+    });
+    expect(fresh.status).toBe(200);
+    await expect(fresh.json()).resolves.toEqual({ userId: 'user-1', level: 'STAFF_MFA' });
+
+    const stale = await fetch(`${baseUrl}/api/v1/principal-test/fresh-any`, {
+      headers: { authorization: 'Bearer stale-token' },
+    });
+    expect(stale.status).toBe(401);
+    await expect(stale.json()).resolves.toMatchObject({
+      code: 'AUTH_REAUTHENTICATION_REQUIRED',
+      statusCode: 401,
+    });
+  });
+
+  it('keeps level checks ahead of the freshness check on fresh-auth routes', async () => {
+    const response = await fetch(`${baseUrl}/api/v1/principal-test/fresh-staff`, {
+      headers: { authorization: 'Bearer customer-token' },
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'FORBIDDEN',
+      statusCode: 403,
     });
   });
 });
