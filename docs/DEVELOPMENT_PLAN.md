@@ -147,6 +147,8 @@ Developer B:
 - Replace static homepage/category/product data with API data.
 - Product listing/detail, search, filtering, pagination and empty/error states.
 - SEO metadata, structured product basics and image performance.
+- Implement the server-rendering, dynamic-sitemap and indexability foundations from
+  `SEO_GEO_AI_DISCOVERY_PLAN.md`; a client-only metadata pass does not satisfy this item.
 - Responsive and accessibility pass on purchase discovery flows.
 
 Exit: no hardcoded sellable product/pricing data remains in production paths;
@@ -275,6 +277,8 @@ Developer B:
 - Web performance budgets and catalog/checkout optimization.
 - UAT scripts, admin help text and operational training material.
 - Production content/SEO checklist.
+- Production discovery audit, commerce-feed parity and GEO/AEO citation evidence
+  according to `SEO_GEO_AI_DISCOVERY_PLAN.md`.
 
 Exit: restore and rollback demonstrated; alerts tested; critical UAT paths pass;
 no severity-1/2 bugs or unresolved high-risk security findings.
