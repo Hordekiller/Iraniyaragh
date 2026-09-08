@@ -19,9 +19,9 @@ both developers understand critical paths.
 | Shared    | Contracts, security-sensitive flows, release, incident response  | Contracts, security-sensitive flows, release, incident response |
 
 Current proposed mapping is `Developer A = @Hordekiller` and
-`Developer B = @Maddyrampant`. It is provisional until both developers complete
-the onboarding agreement in `TEAM.md`. GitHub issue assignees remain the source of
-truth for each specific task.
+`Developer B = @Maddyrampant`. Maddyrampant's onboarding is complete; Hordekiller's
+weekly capacity and the final release-authority agreement remain open in #78. GitHub
+issue assignees remain the source of truth for each specific task.
 
 ## One issue, one owner, one reviewer
 

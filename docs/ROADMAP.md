@@ -1,5 +1,7 @@
 # Delivery Roadmap
 
+Last reviewed: 2026-09-08
+
 This is the executive view of delivery. The executable sprint backlog, owners,
 acceptance gates and dependencies live in `DEVELOPMENT_PLAN.md`.
 
@@ -12,15 +14,30 @@ store. Native mobile and advanced growth features are intentionally later.
 
 ## Release sequence
 
-| Release | Target | Outcome |
-| --- | --- | --- |
-| `0.1` | Foundation | Reproducible local setup, CI, conventions, auth/RBAC skeleton |
-| `0.2` | Catalog | Admin product/SKU management and public catalog API |
-| `0.3` | Inventory | Warehouses, ledger, receipts, adjustments, reservations, transfers |
-| `0.4` | Selling | Cart, checkout, order state machine and admin order operations |
-| `0.5` | Payment | Gateway adapter, verification, shipping and notification workflow |
-| `0.6` | Warehouse+ | Purchasing, stocktake, returns and operational reporting |
-| `1.0` | MVP launch | Hardened, monitored, backed-up production release |
+| Release | Target     | Outcome                                                            |
+| ------- | ---------- | ------------------------------------------------------------------ |
+| `0.1`   | Foundation | Reproducible local setup, CI, conventions, auth/RBAC skeleton      |
+| `0.2`   | Catalog    | Admin product/SKU management and public catalog API                |
+| `0.3`   | Inventory  | Warehouses, ledger, receipts, adjustments, reservations, transfers |
+| `0.4`   | Selling    | Cart, checkout, order state machine and admin order operations     |
+| `0.5`   | Payment    | Gateway adapter, verification, shipping and notification workflow  |
+| `0.6`   | Warehouse+ | Purchasing, stocktake, returns and operational reporting           |
+| `1.0`   | MVP launch | Hardened, monitored, backed-up production release                  |
+
+## Current checkpoint
+
+- `0.1`: closing. Auth runtime, privileged lifecycle and test infrastructure are on
+  `main`; #49 is closed and the #50/#91 acceptance records need reconciliation.
+- `0.2`: started. Shared catalog contracts are merged and the initial catalog API is
+  merged via #103; admin CRUD, media/pricing completion and storefront integration remain.
+- `0.3`: service foundation only. Inventory mutation/reservation/concurrency logic is
+  implemented behind the application boundary, but protected HTTP and operator flows
+  are not.
+- `0.4`–`1.0`: planned. Persistence scaffolding is not counted as an integrated
+  selling, payment, fulfillment or production capability.
+
+The detailed, dependency-ordered checklist is in `V1_MASTER_PLAN.md`. Factual code
+status is in `PROJECT_STATUS.md`.
 
 ## Phase 0 — Repository and foundation
 

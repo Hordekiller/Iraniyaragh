@@ -2,355 +2,206 @@
 
 Last reviewed: 2026-09-08
 
-This file is the factual starting point. Update it at the end of every sprint and
-whenever a major capability changes state.
+This document is the factual entry point for the repository. It distinguishes
+merged capability, open pull-request work, local/uncommitted material and planned
+scope. A feature is not called complete merely because code exists on a branch.
 
-## Current stage
+## Executive summary
 
-The repository is in **foundation/prototype**, before release `0.1`.
+Iraniyaragh is in **pre-release foundation/auth completion**, before release `0.1`.
+The repository has a credible platform baseline and substantial authentication,
+security and test infrastructure. It is not yet a usable commerce product: the
+storefront still sells from fixtures, the operational admin has no business modules,
+and cart, checkout, order-driving services, payment, shipping and production
+operations are absent.
 
-## Current sprint focus — Sprint 1: Auth runtime
+Current delivery confidence:
 
-Coordination point: GitHub issue #91. The reusable Auth core is landed (`#83` session
-rotation, `#85` live principal + permission guard, `#88` dev-gated staff sign-in,
-`#89` contracts dedup). Customer OTP (`#48`) and its Redis-backed rate limiting have
-merged (`#95`), including a dedicated DB/live end-to-end 429-oververify case (`#100`).
-The remaining runtime surface — staff password + TOTP + first-admin bootstrap (`#49`),
-refresh/CSRF + own-session HTTP (`#74`), and the product-track UX/E2E (`#50`) — is
-sequenced under #91 with a contract-first A/B split (contract PR before parallel UI).
-Working-agreement decisions are tracked in #78.
+| Area                           | State             | Evidence-based assessment                                                                   |
+| ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------- |
+| Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist           |
+| Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                           |
+| Customer/auth UX               | Partial           | Fixture-backed customer and staff journeys exist; live production wiring is incomplete      |
+| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice                  |
+| Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not          |
+| Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                  |
+| Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not |
 
-### Implemented
+Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
+G2 is at acceptance reconciliation, G3 has a merged API foundation, G4 has a reusable service
+foundation, and G5–G10 have not reached integrated completion.
 
-- pnpm/Turborepo monorepo boundaries
-- React/Vite Persian storefront visual prototype
-- NestJS application bootstrap, validation, URI versioning and security headers
-- PostgreSQL/Prisma schema covering core commerce and warehouse concepts
-- Database service plus distinct database-independent liveness and bounded PostgreSQL
-  readiness endpoints with safe failure responses
-- Initial inventory service for on-hand mutation, reservation and release
-- Catalog vertical slice (`feat/catalog-api`, not yet merged): backend-only
-  Category/Brand/Product/SKU services on branch `feat/catalog-api` with
-  `RequirePermission('catalog.read')`/`catalog.write` guarded admin mutations
-  (`POST /api/v1/catalog/admin/products`, `/brands`, `/categories`, status
-  publish/unpublish/archive), a public read-only catalog (`GET /catalog/products`,
-  `/categories`, `/categories/tree`, `/brands`) that never leaks drafts or pricing,
-  integer-Rial (`BigInt`) money persisted from `Money` request payloads, product
-  listing with pagination/search/filter/sort, an unpublish guard (a product needs a
-  SKU before publishing) and actor-scoped audit rows. Covered by DB integration
-  tests (tree, brand list, BigInt money, draft opacity, publish, no-SKU conflict,
-  non-sensitive public projection, audit). `openapi.json` regenerated with the new
-  catalog paths; api typecheck/lint/unit (205)/integration (54) and root
-  typecheck/lint/build all green.
-- Docker Compose services for PostgreSQL, Redis and MinIO
-- Architecture, API, security, operations and domain principles
-- Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
-- Admin UI primitives on branch `feat/admin-form-and-table-primitives` (typecheck/lint/
-  test/build green): `StatCard`, `PageHeader`, `EmptyState`, `DialogCloseButton`,
-  `OpenDialogOnElementClick`, `ConfirmationDialog`, `FormField`, `SelectableCardInput`
-  (radio semantics + arrow-key navigation), `FormWizard`, `DataTable`
-  (search/sort/pagination/row-selection, loading/empty/error), `FeedbackProvider` +
-  `useFeedback`, and an in-house validation layer (`useInHouseForm`). Built with MUI 7
-  only — no new runtime dependency — because the npm registry is currently unreachable.
-  The full Vitest component suite runs offline (`@testing-library/react` via
-  `fireEvent`); `FeedbackProvider`, `useInHouseForm`, `ConfirmationDialog`,
-  `FormField`, `SelectableCardInput` and `DataTable` are covered, including a real
-  a11y fix (search-box `aria-label` now lands on the input via `inputProps`).
-  Standalone showcase routes live under `app/(showcase)/showcase/**` and do not touch
-  the shared `AdminShell`/navigation. ADR-0008 records the grid decision (in-house MUI
-  `Table` now, explicit upgrade path to MUI X Data Grid Community) and ADR-0009 records
-  the form-validation decision (in-house `useInHouseForm` now, react-hook-form + zod
-  on registry restore). Not yet wired into shared navigation (requires the
-  @Maddyrampant auth/shell checkpoint per ADMIN_PANEL_PLAN §12).
-- Typed API startup configuration, explicit CORS allowlist and initial Vitest unit tests
-- Auth/RBAC persistence foundation: canonical users, roles, permissions, assignments,
-  sessions, hashed OTP records, login attempts and safe audit metadata
-- Initial reviewed Prisma migration with PostgreSQL Auth constraints and a rollback-only
-  database verification script
-- Playwright smoke suite (`e2e/`) covering the storefront and admin shells
-  on desktop + mobile viewports, with a strict zero-external-asset network gate;
-  the admin smoke spec now covers the auth-gated shell (anonymous `/` and
-  `/dashboard` redirect to `/login`, dev-only sign-in notice, no external assets)
-- Self-hosted Vazirmatn variable font in the storefront (no Google Fonts at runtime)
-- Isolated PostgreSQL integration runner and CI database gate covering migration
-  deployment/drift, Auth constraints and initial inventory transaction/idempotency behavior
-- Decision #14 accepted: `User` is the sole security principal and `Customer` remains a
-  commerce profile; separate Order, Payment and Fulfillment state machines with
-  append-only transition tables and an approved contract PR (#38): lean `OrderStatus`,
-  `ON DELETE RESTRICT` on append-only audit transitions, `(parentId, requestId)` idempotency
-  unique indexes, a compare-and-swap `recordTransition` (409 on lost updates) plus database
-  CHECK constraints, guarded by ADR-0005/ADR-0006 and verified in CI
-  (`migrate deploy`, `migrate diff --exit-code`, `auth_constraints.sql`, `state_transitions.sql`)
-- Forward BIGINT money migration: all ten money columns now store canonical integer Rial
-  (ADR-0003 extension #13), guarded by a fractional-preflight check and a rollback-only
-  money verification script
-- Deterministic, transactional development/test RBAC seed with 20 canonical
-  permissions, a non-user `system-admin` role, explicit target safety policy, two-run
-  CI verification and a separate `prisma:deploy` release command
-- API foundation (#21): per-request IDs via middleware + AsyncLocalStorage, stable error
-  response envelopes with machine-readable codes, redacted structured JSON logging
-  (secrets/OTP/PII scrubbed), a global exception filter (validation/prisma/internal mapping),
-  and OpenAPI/Swagger generation committed at `apps/api/openapi.json` with a CI drift check
-- Initial Auth cryptographic foundation: fail-fast issuer/key configuration, strict
-  ten-minute HS256 access-token signing/verification, 256-bit opaque token generation,
-  constant-time CSRF comparison and versioned/domain-separated HKDF-HMAC hashing with a
-  bounded current/previous-key rotation window
-- Forward Auth MFA persistence contract: Sessions retain mandatory authentication
-  level/time evidence; purpose-bound MFA challenges store only keyed hashes; TOTP
-  credentials store encrypted/versioned secret envelopes and replay steps; recovery
-  codes remain one-way and single-terminal-state, with PostgreSQL constraints and a
-  fail-fast preflight for unmanaged legacy Session rows
-- Public-repository security baseline: enforced `main` protection (required CI,
-  non-author CODEOWNERS review, last-push separation, linear history and no force-push),
-  CodeQL extended analysis for TypeScript/JavaScript and Actions, secret scanning with
-  push protection, Dependabot security updates, dependency review and private
-  vulnerability reporting
-- Production dependency remediation (#54): admin runtime upgraded from vulnerable
-  Next.js 16.1.1 to 16.3.3 with patched PostCSS/Sharp, plus a narrowly scoped
-  `@prisma/config` deepmerge-ts 8.0.2 override verified against clean migrations,
-  drift, SQL constraints and integration tests; an independent production-lockfile
-  audit now runs on every PR/main push, weekly and on demand, and reports no known
-  vulnerabilities at the recorded review point
-- Transactional Auth Session core: active-principal session creation, absolute and
-  inactivity deadlines by authentication level, current/previous refresh-hash lookup,
-  single-use rotation with compare-and-swap, bounded serializable retry with backoff,
-  token-family revocation on sequential/concurrent replay and safe
-  created/rotated/replayed/revoked audit evidence; real PostgreSQL tests prove exactly
-  one concurrent refresh winner and the loser resolves to `AUTH_SESSION_REPLAYED` even
-  under serializable write conflicts (linear `25ms * attempt` retry backoff)
-- Development-enabled staff sign-in (ADR-0010, dev/test only): a `StaffAuthController`
-  at `/api/v1/auth` provides `POST /auth/dev/signin` (a special `AUTH_DEV_CODE`,
-  constant-time via `AuthHashService`, issuing a real `STAFF_MFA` session plus
-  dev-suffixed non-`__Host-` cookies), `GET /auth/me` (bearer-guarded live principal)
-  and `POST /auth/logout` (bearer-guarded `revokeSession`, idempotent). `AUTH_DEV_CODE`
-  fails startup in staging/production. A deterministic dev admin
-  (`dev-admin@iranyaragh.local`, `system-admin`, no stored credential) is seeded only
-  when `AUTH_DEV_CODE` is set. The admin app adds `/login` (MUI), a memory-only token
-  store, `AuthProvider`, a dashboard guard and a logout action via a new thin
-  `src/lib/api/client`. The dev-admin seed uses a shared `seededNow` timestamp so
-  the `User_timestamp_order_check` (`emailVerifiedAt >= createdAt`) constraint always
-  holds and the admin is actually created for real API sign-in. A CommonJS build
-  interop bug (`import jwt from 'jsonwebtoken'` resolving to an undefined `.default`)
-  that returned 500 on `/auth/dev/signin` is fixed by using a namespace import;
-  sign-in now issues a real `STAFF_MFA` token and `GET /auth/me` resolves the
-  principal live. The Playwright e2e job now boots the API against a Postgres
-  service, applies migrations and seeds the dev admin, and drives the real login
-  UI into the authenticated shell (desktop drawer sidebar and mobile drawer
-  toggle/focus-trap) via `signInDiAsAdmin`.
-  All gates (typecheck/lint/test/build/e2e) green on both packages;
-  `openapi.json` regenerated with the new auth paths.
-- Fixture-first admin staff-login slice (#50, parallel-work model, not yet wired to a
-  real backend): a separate `/login/staff` route in the admin app implements the
-  contract staff password → TOTP → authenticated state machine with a deterministic,
-  fail-closed `StaffLoginFixtureClient`. It covers enumeration-proof identical invalid
-  credentials, 5-attempt lock-out (`RATE_LIMITED` with back-off), single-use + 300 s
-  expired challenges (contract literal TTL), and `AUTH_SESSION_INVALID`/`REPLAYED`/
-  `REAUTHENTICATION_REQUIRED`/`FORBIDDEN` presentation states via a typed
-  `StaffLoginController` (React-agnostic, generation-guarded, memory-only). The
-  controller/types/api are aligned to `@iranyaragh/contracts` staff shapes (added as an
-  admin workspace dep). The route is gated by `NEXT_PUBLIC_FIXTURE_AUTH=true`
-  (decision B, fail-closed in ship builds — an absent/other value renders a stable
-  disabled notice, never a form, and never breaks `next build`). Real endpoint wiring
-  and refresh/cross-tab recovery are deferred to the #49 contract/runtime PR and #74.
-  Covered by guard, component and full-flow unit tests (130 admin tests) including
-  storage-empty assertions, plus an e2e assert that `/login/staff` fails closed in the
-  ship build; typecheck/lint/build green with and without the opt-in.
-- Production dependency audit hardened (`.github/scripts/audit-prod.mjs`):
-  the CI production-audit workflow now runs a node script instead of a blanket
-  shell retry loop. The script classifies each `pnpm audit` run and fails
-  loudly and immediately on real moderate+ vulnerabilities (exit 1); only transient
-  network/registry errors are retried (up to 3 attempts). Exhaustion exits 2 and
-  the workflow wrapper warns without blocking CI, preventing intermittent registry
-  outages from stalling PRs. Docs-only PRs are skipped via `paths-ignore`.
-  Decision logic is pure (`classifyResult()`) and was validated against 4 fixture
-  scenarios (clean, vulnerability-found, persistent-network-failure,
-  transient-recovery) on CI and locally.
-- Redis-backed distributed rate limiting: a dedicated `@Global`
-  Redis module (lazy-connect client, offline-queue disabled, bounded retry, redacted
-  error logging) plus a fixed-window atomic Lua limiter keyed by versioned
-  identifier/IP hashes. Request and verification limits follow AUTH_CONTRACT §9
-  (destination 1/60s, 3/15m, 10/24h; IP 20/h, 100/24h; verify failures 50/h/IP).
-  Enforcement is fail-closed: Redis unavailability returns `503 UPSTREAM_UNAVAILABLE`
-  and never fails open; over-limit returns `429 RATE_LIMITED` with a bounded
-  `Retry-After` header (emitted centrally in the exception filter).
-- Customer OTP sign-in: `POST /api/v1/auth/customer/otp/request`
-  (public, `202` challenge, `Cache-Control: no-store`/`Pragma: no-cache`) and
-  `POST /api/v1/auth/customer/otp/verify` (five-attempt single-use challenge,
-  serializable single-use consume, resend invalidates the prior challenge). Only
-  keyed hashes are persisted; raw codes, mobiles and IPs never touch the database
-  or audit trail. Verification activates a `PENDING` user, refreshes an `ACTIVE`
-  user, and generically refuses `SUSPENDED`/`LOCKED`/`DELETED`/transiently-throttled
-  users without revealing state. On success it issues a real `CUSTOMER_OTP` session
-  with env-aware cookies (`__Host-` + Secure in staging/production, suffixed
-  non-`__Host-` without Secure in development only, per ADR-0007).
-  Mobile normalization is E.164 (`+989XXXXXXXXX`) with strict validation.
-- Session management: `GET /api/v1/auth/sessions` and `DELETE /api/v1/auth/sessions/:sessionId`
-  on branch `feat/session-management`, bearer-guarded at any authentication level via a
-  new `RequireLiveSession()` guard decorator. Listing returns only the caller's active
-  sessions as the safe `SessionSummary` projection (newest-first, `current` flag, no
-  hashes/user-agent/IP/token-family/owner id) and revoke targets the owned session with a
-  dedicated `REVOKED` audit reason, returns a generic `404 NOT_FOUND` for missing or
-  foreign ids, is idempotent for the caller's already-revoked sessions and clears the
-  auth cookies (configured and dev-suffixed names) when the current session is deleted.
-  Covered by controller unit specs, guard HTTP specs and DB integration
-  (ownership/idempotency/audit); `openapi.json` regenerated; lint/typecheck/test/build/
-  integration green.
-- Vitest coverage gates enforced in CI (`chore/ci-hardening`): each package's
-  `vitest.config.ts` runs the v8 provider with global thresholds under
-  `test.coverage` (nested, not top-level — top-level `enabled: true` is ignored
-  by Vitest 4) and coverage is enabled only when `CI=true`, so local test runs
-  stay fast. Imported-code methodology (spec files excluded, no
-  `coverage.include`) keeps baselines stable: api 65/65 lines/statements,
-  web 80/78, admin 80/75 with function/branch thresholds per package.
-  `AGENTS.md` documents the exact CI/local command set.
+## Repository snapshot
 
-### Partial
-- Inventory rules live in one service with actor/requestId tracing, audit rows,
-  CAS version guards, bounded serializable retry, reservation consume/release/expire
-  and read-only snapshot/movement queries (a public controller is withheld until the
-  auth runtime provides the `inventory.read` permission). Mutations still have no
-  public authenticated endpoint or authorization.
-- Shared contracts only contain basic response/money/inventory types (now also
-  catalog types from #97) but not the full commerce surface; the catalog slice has
-  no live storefront/admin UI wiring yet and no pricing/promotion/media endpoints.
-- The storefront has responsive interactions and its component tree is decomposed
-  (see #19), but actions are simulated and all data comes from static prototype
-  fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
-- The storefront search box filters the prototype catalog by title, brand and
-  category (token match) and opens matches in the product modal; the results band
-  is covered by the Playwright suite.
-- Hero slider and toast expose explicit pause/play and close controls, honour
-  `prefers-reduced-motion` (slider), and the toast's base duration is 5s — all
-  covered in the Vitest component suite.
-- Storefront accessibility baseline (#82): every click-only product/blog card is a
-  native `<button>`, decorative images carry `alt=""`, carousel arrows and the search
-  toggle/menu have Persian `aria-label`s, search inputs bind labels, footer placeholder
-  links became real fragment targets or toast-backed buttons, a visible-on-focus skip
-  link jumps to `#main-content`, and section headings follow an h1 → h2 → h3 hierarchy.
-  WCAG AA color contrast is met by darkening brand orange (`#FF4D00` → `#C2410C`)
-  where it carries text, slate-500/600 for secondary text and emerald-700/red-600/
-  amber-700 for small badges; the scrollable brand strip is keyboard-focusable.
-  Enforced by a new Playwright `web-a11y` spec (axe-core wcag2a/aa/21a/21aa with zero
-  critical/serious violations on desktop + mobile, skip link, real fragment targets,
-  cards-as-buttons) and a `storefront-a11y` Vitest suite; the smoke spec was updated
-  for the new card buttons.
-- Unit/HTTP tests cover environment/CORS validation, database URL safety and
-  liveness/readiness behavior; a Playwright smoke suite covers web/admin shells, while
-  database integration covers the hardened inventory ledger (parallel reserve and
-  parallel reserve-versus-stock-change races without double-spend or negative stock,
-  consume/release/expire, read-only snapshot/movement, audit actor+request-id
-  verification) plus Auth persistence constraints and Session rotation/replay concurrency.
-- Auth storage and lifecycle constraints now include the runtime Session/MFA evidence,
-  and the Session core rotates/revokes refresh families transactionally. Staff sign-in
-  through the development-enabled controller (`/auth/dev/signin`, `/auth/me`,
-  `/auth/logout`) and customer OTP sign-in (`/auth/customer/otp/request`, `/auth/customer/otp/verify`)
-  with Redis-backed rate limiting are implemented (main branch since PR #95). Staff
-  password+TOTP, OTP delivery (SMS provider), refresh rotation, CSRF logout,
-  credential verification and server-side permission enforcement are not implemented
-  yet. Session list/revoke endpoints (`GET`/`DELETE /api/v1/auth/sessions`) and the
-  any-level `RequireLiveSession()` guard are implemented; the browser refresh
-  (`/refresh`) and cookie/CSRF-protected logout remain pending. ADR-0007, ADR-0010
-  and `AUTH_CONTRACT.md` define the remaining runtime, HTTP, threat and client-state contract.
-- Staff password change + fresh-auth lifecycle (on branch `feat/49-auth-privileged-lifecycle`,
-  not yet merged): `POST /staff/password/change` verifies the live current password and
-  maps policy-violating new passwords to a 400 `AUTH_PASSWORD_POLICY`, then atomically
-  revokes every other session family (`CREDENTIAL_CHANGED`), rotates the current family
-  in place with a CAS guard, updates the password and writes
-  `auth.password.changed`/`auth.session.rotated` audit evidence without hash metadata.
-  Recovery-code regeneration (`POST /staff/recovery/regenerate`) invalidates all
-  previous codes and revokes every other session family while keeping the current
-  family valid. `POST /logout-all` revokes every session family for the caller over a
-  fresh, any-level bearer session. A level-optional `RequireFreshAuthentication` guard
-  enforces the 300 s window (`AUTH_REAUTHENTICATION_REQUIRED`) on `staff/totp/enroll`,
-  `staff/recovery/regenerate` and `staff/password/change`, with level checks running
-  before freshness (403 precedes 401). The first-admin bootstrap transaction was
-  extracted from the TTY script into a testable `createFirstAdministrator` core, verified
-  by a database integration test that proves exactly one of two concurrent runners wins
-  and a later replacement is refused, plus an artifact-scan spec asserting the
-  bootstrap/seed/core artifacts carry no default credential and keep the dev admin
-  credential-less. Unit (300), DB integration (53), typecheck, lint, build, OpenAPI
-  drift and `CI=true` coverage (above the 65/65/70/60 gates) are green. Not yet merged
-  (awaiting review of the #49 PR).
+- Default branch: `main`.
+- Baseline at review: `main` commit `65ade33`, containing merged #109 and #103.
+- #49 is closed; active coordination includes #66, #91, #50, #78, #79 and #81.
+- Local-only or untracked material is never counted as delivered product capability.
 
-### Not implemented
+## Delivered on `main`
 
-- Full authentication controllers (staff password+TOTP, OTP delivery, refresh/CSRF
-  logout), 2FA and RBAC enforcement across domains
-- Catalog, customer, order, payment, supplier and audit use cases/controllers
-- Operational admin modules and mobile application
-- Cart, checkout, shipping, payment gateway and notifications
-- Workers/queues, object upload flow, search and cache integration
-- Broader domain integration and API E2E tests, observability and deployment pipeline
+### Engineering and delivery foundation
 
-## Known engineering gaps
+- pnpm/Turborepo workspace with API, web, admin, contracts and Playwright packages.
+- NestJS modular-monolith bootstrap, strict validation, URI versioning under
+  `/api/v1`, Helmet and explicit environment-aware CORS validation.
+- PostgreSQL/Prisma with reviewed forward migrations and deterministic, safety-gated
+  development/test RBAC seed.
+- Docker Compose baseline for PostgreSQL, Redis and MinIO.
+- Database-independent liveness and bounded database readiness endpoints.
+- Request IDs, async context, stable error envelopes, redacted structured logging
+  and global exception mapping.
+- Generated OpenAPI artifact plus drift test.
+- CI quality, database and browser E2E jobs; migration/drift and database constraint
+  checks; CI-only Vitest coverage gates.
+- Dependency/security automation and protected `main` review policy.
+- Self-hosted runtime assets and external-asset checks.
 
-1. Reviewed forward migrations, automated CI migration/constraint checks, an explicit
-   deploy command and a deterministic development/test RBAC seed exist. Production
-   release orchestration, backup/restore evidence and a secure first-admin bootstrap
-   command remain.
-2. Configuration/guard unit tests, a Playwright shell suite and initial database
-   integration coverage exist; broader domain, concurrency and CI-enforced coverage
-   thresholds are in place for imported code (api/web/admin vitest gates) and
-   remain to widen as domains grow.
-3. The storefront prototype is decomposed into typed single-purpose components.
-   Static fixture data in `apps/web/src/data/prototype.ts` must be replaced by a
-   typed API client (TEMP::G3-07), and new work must use explicit route/API boundaries.
-4. CORS now uses a validated environment allowlist; deployment configuration must
-   supply the correct staging/production origins and retain negative tests.
-5. Critical serializable transactions now have bounded retry for transaction
-   conflicts (P2034), and DB integration concurrency coverage (parallel reserve /
-   change without double-spend or negative stock) is implemented in `test:integration`.
-6. Inventory commands now require and record an actor and request id in the audit
-   trail; wiring to the authenticated session principal still awaits the auth runtime.
-7. Reservation consume, release and expire are implemented on the balance layer;
-   transfer flows and order integration are not implemented.
-8. Money convention is decided and landed: the ADR-0003 extension (#13) specifies
-   canonical integer-Rial `BIGINT` storage with Toman presentation-only, and the forward
-   migration converts all ten `Decimal(18,2)` money columns with a fractional-preflight
-   guard. Percentage rounding, invoice and VAT policies still await service-layer work.
-9. Order, payment and fulfillment now use separate state machines with append-only
-   transition tables (ADR-0006, G5-07 foundation); the contract and shared
-   compare-and-swap helper are approved in #38 and CI-verified. Services that drive those
-   machines, reconciliation and the customer-facing status/timeline language remain to be
-   built. Draft #28 was closed as superseded because its alternative baseline migration
-   and cross-cutting foundations conflicted with the approved #30/#38/#40/#43 contracts.
-   Its cart/checkout/order/payment/notification ideas remain backlog input and must be
-   rebuilt as small contract-first changes on current `main`.
-10. API response envelopes, stable error codes, correlation/request IDs and OpenAPI are now
-    wired for the HTTP layer (see Implemented). Authentication controllers and the domain
-    controllers that will exercise the codes per use case are not implemented yet.
-11. GitHub now enforces the two-person PR/CI policy on `main`. Maintainers must keep
-    required check names synchronized when workflows are renamed and must review
-    CodeQL/Dependabot/secret-scanning alerts rather than treating green CI as a
-    substitute for security triage.
-12. The `User`/`Customer` identity boundary is decided (ADR-0005 + ADR-0006): `User` is
-    the sole security principal and `Customer` stays a commerce profile; code must not
-    join them implicitly by mobile number. Explicit linkage/merge/anonymization rules
-    still require a forward migration when the product needs them.
-13. Customer OTP and rate limiting: the Redis limiter, OTP service,
-    controller MVP and rate-limit provider are covered by the unit suite (mock Redis
-    client + controller contract tests covering status codes, cookie attributes and
-    401 shapes), customer OTP flows by DB integration tests (fresh `_test` Postgres),
-    and the real Redis provider, Lua window and `reset` behavior by a live-Redis
-    integration spec that self-skips when no Redis is reachable. CI's database job now
-    provisions a Redis service so the live suite runs there. The 429-oververify failure
-    path now has a dedicated DB/live end-to-end case: a real challenge is requested and
-    its per-IP verification-failure window is driven through the configured limit
-    against live Redis until a `429 RATE_LIMITED` surfaces, with DB evidence of the
-    in-window `INVALID_CODE` attempts and the `resetIpVerificationFailures` recovery.
-    `request.ip` has no `trust proxy` enabled, so the Safe-IP rate-limit dimension
-    resolves the direct socket address; a reverse-proxy deployment must enable a
-    bounded `trust proxy` and document the spoofing trade-off before rollout.
+### Persistence and shared contracts
 
-## Status update template
+- Canonical `User` principal, Customer commerce boundary, roles, permissions,
+  assignments, sessions, OTP challenges and safe audit data.
+- Integer-Rial `BIGINT` persistence; Toman is display-only.
+- Separate order, payment and fulfillment states with append-only transition tables,
+  constraints and a compare-and-swap helper.
+- Shared API/error/money/Auth/catalog contract types without Prisma exposure.
 
-At sprint close, replace the relevant sections and append:
+### Authentication and authorization
+
+- Access/refresh token cryptography, versioned hashing and CSRF comparison.
+- Transactional session deadlines, rotation and replay-driven family revocation.
+- Live-principal global guard, authentication-level and permission checks.
+- Customer OTP request/verify with Iranian normalization, Redis limits, safe
+  persistence, eligibility protection and environment-aware cookies.
+- Staff password + TOTP/recovery runtime, enrollment/confirmation, encrypted secrets,
+  replay protection and one-way recovery codes.
+- Refresh with Origin/CSRF proof, logout, own-session list/revoke and safe cookies.
+- Development-only staff sign-in and credential-less seeded dev admin.
+- TTY-only first-admin bootstrap command with merged concurrency/rerun verification.
+
+### Inventory foundation
+
+- Transactional on-hand mutation and reservation create/consume/release/expire.
+- Immutable movements, actor/request-ID audit evidence, reason requirements,
+  idempotency payload matching and optimistic balance versions.
+- Bounded serializable retry and real PostgreSQL concurrency coverage.
+- Service-level balance snapshot and movement queries.
+
+### Product clients and accessibility
+
+- Responsive Persian RTL storefront prototype split into typed components.
+- Fixture-backed customer OTP UX and fixture-only staff password/TOTP journey.
+- Storefront accessibility baseline with automated desktop/mobile checks.
+- Persian RTL Next.js/MUI admin shell, dashboard guard and real development sign-in.
+- Reusable admin table/form/wizard/confirmation/feedback primitives. Showcase routes
+  are not production operational modules.
+
+## Recently merged capability
+
+### PR #109 — Auth privileged lifecycle
+
+- password change with current-password verification and policy errors;
+- fresh-authentication guard with a 300-second window;
+- other-family revocation after credential changes;
+- recovery-code regeneration and `logout-all`;
+- concurrent first-admin bootstrap verification and credential artifact scan;
+- related unit, integration, OpenAPI and coverage evidence.
+
+Delivery evidence: independent security review and all required CI passed; #109 is
+merged and #49 is closed.
+
+### PR #103 — Catalog API vertical slice
+
+- Category, Brand, Product and SKU services and admin mutations;
+- `catalog.read`/`catalog.write` permission boundaries and audit rows;
+- public category tree, brand and product listing;
+- draft opacity and publish guard requiring a SKU;
+- integer-Rial prices and non-sensitive public projections;
+- pagination, search, filter, allowlisted sorting and Prisma error mapping.
+
+Still outside the merged Catalog foundation: media upload, price history/effective-price policy, complete
+product detail, admin screens and live storefront integration.
+
+Delivery gate: current-main reconciliation, current-head CI, independent contract/
+security/query review, OpenAPI drift confirmation and merge.
+
+## Partial capabilities and exact boundaries
+
+| Capability    | What exists                                                | What prevents completion                                                        |
+| ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| RBAC          | Roles, seed and guard machinery                            | Every domain route still needs explicit allow/deny policy tests                 |
+| Customer Auth | API runtime and fixture UX                                 | Production SMS adapter/outage policy and live client integration                |
+| Staff Auth    | Runtime and privileged lifecycle merged; fixture UX exists | Live MFA/session UX and production acceptance                                   |
+| Catalog       | Contracts and API foundation merged via #103               | Media/pricing, admin UI and storefront integration                              |
+| Inventory     | Correct service core                                       | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI |
+| Orders        | Schema and generic state helper                            | Aggregate/services, snapshots, compensation, API and UI                         |
+| Payments      | Schema/state foundation                                    | Provider/adapter, verification, idempotency, refund and reconciliation          |
+| Web           | Accessible prototype                                       | Static `prototype.ts` data and simulated commerce actions                       |
+| Admin         | Shell, Auth and UI primitives                              | No operational domain modules                                                   |
+| Operations    | CI and local Compose                                       | Deploy/staging, observability, recovery and rollback proof                      |
+
+## Not implemented
+
+- Production SMS delivery and provider outage behavior.
+- Full live client refresh/cross-tab recovery and production permission navigation.
+- Media upload and S3 presigned flow; price history/effective pricing/VAT policy.
+- Inventory HTTP CRUD/commands, transfers, expiry worker and operator modules.
+- Server-priced cart, address, checkout and idempotent order creation.
+- Order application lifecycle and customer/admin order experiences.
+- Payment gateway, verified callback, refunds and reconciliation.
+- Shipment/tracking, outbox, workers and notifications.
+- Purchasing, stocktake, returns and operational reporting.
+- Production deploy/rollback, monitoring/alerts, backup/restore, load budgets, UAT
+  and launch data import.
+- Native mobile application.
+
+## Decisions and blockers
+
+1. Production SMS provider, sandbox and outage policy (#79).
+2. Payment provider and verification/refund contract.
+3. Shipping geography, methods and pricing authority.
+4. Reservation TTL and multi-location allocation policy.
+5. Guest checkout, identity linkage/merge and anonymization.
+6. Product variants/attributes and import format.
+7. Staff role matrix, approval thresholds and four-eyes actions.
+8. Return/refund/damaged-stock policy.
+9. Deployment target, RPO/RTO, retention, monitoring and budget.
+10. Team capacity, review SLA and release authority (#78).
+
+## Known engineering risks
+
+- Reverse-proxy trust must be bounded before IP rate limits are production evidence.
+- Reservation expiry needs batching/performance work (#81) before worker rollout.
+- Fixture Auth UX must not be confused with live production integration.
+- Coverage thresholds protect imported-code baselines, not domain completeness.
+- Persistence state machines do not prove workflow correctness without services and
+  compensation tests.
+- Production recovery is unproven until restore and rollback drills are recorded.
+
+## Immediate next checkpoint
+
+Release `0.1` closes only after:
+
+1. Treat merged #109 and closed #49 as the Auth runtime evidence baseline.
+2. Reconcile remaining acceptance across #50 and #91.
+3. #79 is decided or recorded as an explicit release-blocking dependency.
+4. #78 records capacity, review SLA and release authority.
+5. Clean `main` passes lint, typecheck, tests, integration, build, OpenAPI drift and
+   browser smoke.
+6. Auth docs and OpenAPI match merged behavior.
+
+Merged PR #103 starts `0.2`; it does not alone close catalog delivery.
+
+## Status update protocol
 
 ```text
-Sprint:
-Completed:
-Deferred (with reason):
-New risks/debt:
-Metrics/tests:
-Next release confidence: green | amber | red
+Date / main SHA / sprint or release gate:
+Merged outcomes:
+Open PR outcomes (not counted as delivered):
+Deferred work and reason:
+New security/data/contract risks:
+Verification commands and results:
+Decision blockers and owner:
+Next integrated outcome:
+Confidence: green | amber | red
 ```

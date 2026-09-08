@@ -4,7 +4,8 @@
 
 ### Customers
 
-- Mobile-number OTP is the primary planned customer authentication flow.
+- Mobile-number OTP is the implemented customer authentication flow; production SMS
+  delivery/provider selection remains pending.
 - OTP must expire, be rate-limited and have attempt limits.
 - Never log OTP values.
 

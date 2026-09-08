@@ -18,6 +18,9 @@ Read these documents before implementing business-critical features.
 14. `TEAM.md` — team identities, proposed ownership and onboarding agreement.
 15. `ADMIN_PANEL_PLAN.md` — production admin information architecture, shared UX,
     security, verification and phased completion gates.
-16. `adr/` — architecture decisions that intentionally change or extend the foundation.
+16. `V1_MASTER_PLAN.md` — detailed dependency-ordered V1 checklist, acceptance gates
+    and open decision register.
+17. `EXECUTION_STATUS.md` — current review queue, next ten working days and handoffs.
+18. `adr/` — architecture decisions that intentionally change or extend the foundation.
 
 When code and documentation disagree, stop and resolve the discrepancy. Do not silently bypass a documented invariant.

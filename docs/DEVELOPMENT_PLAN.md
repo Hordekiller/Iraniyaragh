@@ -1,5 +1,24 @@
 # Detailed Development Plan
 
+Last reviewed: 2026-09-08
+
+## 0. Current planning baseline
+
+The sprint sequence below remains the intended dependency order, but delivery has
+not followed clean sprint boundaries. At this review:
+
+- Sprint 0 foundations are substantially present, with production operations still
+  deferred to hardening.
+- Sprint 1/Auth is at its closing checkpoint; PR #109 is merged, #49 is closed, and acceptance reconciliation
+  remain.
+- Sprint 2/Catalog has started through merged contracts and the merged API foundation in #103.
+- Sprint 4 inventory service foundations exist early, without the HTTP/admin outcome.
+- Sprints 3 and 5–11 have not reached their integrated exit criteria.
+
+Do not infer completion from sprint number or schema presence. Use
+`PROJECT_STATUS.md` for facts, `EXECUTION_STATUS.md` for the next ten working days,
+and `V1_MASTER_PLAN.md` for the detailed gate checklist.
+
 ## 1. Planning assumptions
 
 - Team: two developers, working in parallel on Platform and Product tracks.
@@ -11,7 +30,10 @@
   mobile dependency.
 - Quality: inventory and financial correctness outrank feature count.
 
-Expected MVP is 10–12 two-week sprints for two consistently available developers.
+Expected remaining MVP work is roughly 10–14 two-week sprints after the current
+Auth/catalog checkpoint for two consistently available developers. This estimate
+must be recalculated after #78 records actual capacity and after provider/policy
+decisions remove the largest unknowns.
 Part-time availability, external gateway/SMS delays, content/data cleanup and
 business-policy uncertainty can extend it.
 
@@ -272,20 +294,20 @@ post-launch backlog is triaged separately from defects.
 
 Every epic must answer these before completion:
 
-| Concern | Required evidence |
-| --- | --- |
-| Behavior | Acceptance scenario/demo linked in issue |
-| Authorization | Permission test for allow and deny |
-| Validation | Invalid and boundary inputs covered |
-| Data | Migration/rollback/data impact reviewed |
-| Concurrency | Race/idempotency test for critical mutation |
-| Audit | Actor/action/entity/reference recorded safely |
-| Contract | DTO/OpenAPI/shared contract and stable errors updated |
-| Observability | Useful log/metric/error context without secrets |
-| Tests | Unit plus appropriate integration/E2E coverage |
-| UX | Loading/empty/error/success and responsive states |
-| Accessibility | Keyboard, labels, focus and contrast checked |
-| Docs | Runbook/domain/status docs updated where changed |
+| Concern       | Required evidence                                     |
+| ------------- | ----------------------------------------------------- |
+| Behavior      | Acceptance scenario/demo linked in issue              |
+| Authorization | Permission test for allow and deny                    |
+| Validation    | Invalid and boundary inputs covered                   |
+| Data          | Migration/rollback/data impact reviewed               |
+| Concurrency   | Race/idempotency test for critical mutation           |
+| Audit         | Actor/action/entity/reference recorded safely         |
+| Contract      | DTO/OpenAPI/shared contract and stable errors updated |
+| Observability | Useful log/metric/error context without secrets       |
+| Tests         | Unit plus appropriate integration/E2E coverage        |
+| UX            | Loading/empty/error/success and responsive states     |
+| Accessibility | Keyboard, labels, focus and contrast checked          |
+| Docs          | Runbook/domain/status docs updated where changed      |
 
 ## 5. Test strategy
 
@@ -350,16 +372,16 @@ Resolve via issue/ADR before dependent implementation:
 
 ## 9. Main risks and mitigations
 
-| Risk | Mitigation |
-| --- | --- |
-| Two people become sequentially blocked | Contract-first issues, fixtures and small PRs |
-| Prototype dictates poor production structure | Decompose in Sprint 0; preserve visuals with E2E/screenshots |
-| Overselling under concurrency | DB constraints/serializable transactions, bounded retry, race tests |
-| Payment duplication/fraud | Verified server callback, idempotency, reconciliation, immutable evidence |
-| Scope expansion | Explicit MVP exclusions and sprint goal; new scope requires trade-off |
-| Production data loss | External backups, retention, restore drills and migration review |
-| Provider outage | Adapter boundaries, safe retries, observable queues and manual recovery |
-| Knowledge concentration | Rotating review/release roles, ADRs, runbooks and paired critical changes |
+| Risk                                         | Mitigation                                                                |
+| -------------------------------------------- | ------------------------------------------------------------------------- |
+| Two people become sequentially blocked       | Contract-first issues, fixtures and small PRs                             |
+| Prototype dictates poor production structure | Decompose in Sprint 0; preserve visuals with E2E/screenshots              |
+| Overselling under concurrency                | DB constraints/serializable transactions, bounded retry, race tests       |
+| Payment duplication/fraud                    | Verified server callback, idempotency, reconciliation, immutable evidence |
+| Scope expansion                              | Explicit MVP exclusions and sprint goal; new scope requires trade-off     |
+| Production data loss                         | External backups, retention, restore drills and migration review          |
+| Provider outage                              | Adapter boundaries, safe retries, observable queues and manual recovery   |
+| Knowledge concentration                      | Rotating review/release roles, ADRs, runbooks and paired critical changes |
 
 ## 10. Measuring progress
 

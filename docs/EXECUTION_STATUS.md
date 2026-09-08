@@ -1,152 +1,148 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-07
+Last reviewed: 2026-09-08
 
-This is the short-term delivery board for the two-contributor team. The long-term
-scope remains in `DEVELOPMENT_PLAN.md`; GitHub issue #66 remains the coordination
-record. This document records the implementation order and the evidence required
-before an item is considered complete.
+This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
+`V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
+day-to-day assignments.
 
-## Operating Rules
+## Operating rules
 
-- One accountable owner and one independent reviewer per implementation slice.
-- API contracts and migrations land before parallel UI implementation.
-- The backend remains authoritative; navigation and client state are never security evidence.
-- A critical mutation is incomplete without authorization, audit, idempotency where applicable, failure-path tests and OpenAPI evidence.
-- Shared schema, migrations, contracts, navigation and workflow files require explicit coordination before editing.
-- Existing user changes, including untracked files, must not be folded into unrelated PRs.
+- One integrated outcome at a time per release gate.
+- Contract/policy first, then API and fixture-backed UI in parallel, then integration.
+- `main` is delivered truth; open PRs and local files are reported separately.
+- Shared contracts, schema/migrations, root configuration and navigation require
+  explicit ownership before editing.
+- Critical work requires failure, authorization, idempotency/concurrency, audit and
+  contract evidence as applicable.
+- Limit each contributor to one primary implementation plus one review/unblock task.
 
-## Current Owners
+## Current position
 
-| Track | Owner | Reviewer |
-| --- | --- | --- |
-| Auth, API, database, inventory, CI, release | Hordekiller | Maddyrampant |
-| Web, admin, accessibility, E2E, product UX | Maddyrampant | Hordekiller |
-| Shared contracts and public behavior | Slice author | Other contributor, mandatory |
+| Gate                  | State                              | Current evidence                                             | Exit blocker                                               |
+| --------------------- | ---------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| `0.1` Foundation/Auth | Closing                            | Core Auth and privileged lifecycle are merged; #49 is closed | #50/#91 reconciliation; #78/#79 decisions                  |
+| `0.2` Catalog         | Started                            | Contracts and Catalog API foundation are merged via #103     | Media/pricing, admin CRUD, storefront live integration     |
+| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                     | HTTP/RBAC, warehouse/location, transfers, worker and admin |
+| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                     | Policies and all application/client workflows              |
 
-## Merge Train
+## Active merge/review queue
 
-| Order | Item | Owner | State | Exit action |
-| ---: | --- | --- | --- | --- |
-| 1 | PR #93 refresh serializable backoff | Maddyrampant | Review/CI | Merge after current-head checks |
-| 2 | PR #101 session list/revoke | Hordekiller | Approved/CI | Merge after current-main checks |
-| 3 | PR #98 storefront accessibility | Maddyrampant | Approved/CI | Merge and close #82 |
-| 4 | PR #94 coverage gates | Maddyrampant | Approved/CI | Merge committed changes; workflow hardening is separate |
-| 5 | PR #97 catalog contracts | Maddyrampant | Approved/CI | Merge with agreed sort, pagination and media decisions |
-| 6 | PR #92 Sprint 1 status | Hordekiller | Approved/CI | Merge after status is reconciled with the preceding items |
+| Priority | Work                              | State         | Required reviewer focus                                                       | Exit action                                                   |
+| -------: | --------------------------------- | ------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------- |
+|        1 | Issue #91 — Sprint 1 coordination | In progress   | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                |
+|        2 | Issue #50 — Auth UX/E2E           | In progress   | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up |
+|        3 | Issues #78/#79                    | Decision work | capacity/review/release authority; SMS provider/outage contract               | Accepted written decision with owner and effective date       |
 
-## Auth Runtime
+## Team disposition ledger — 2026-09-08
 
-### #49 Staff Authentication
+| Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                                | Closure condition                                                              |
+| --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| PR #112   | In review                     | Hordekiller / Maddyrampant | Verify the two factual review fixes, current-head CI and formatting                                        | Independent approval and protected merge                                       |
+| Issue #79 | Blocked on business input     | Hordekiller / Maddyrampant | Confirm budget, traffic, sender-line, privacy, sandbox and outage constraints; then write the provider ADR | Accepted vendor-neutral adapter/fallback decision with primary-source evidence |
+| Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation             | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity    |
+| Issue #51 | Complete/closed               | Hordekiller / Maddyrampant | Routine dependency maintenance only                                                                        | Already satisfied by merged #52 and protected supply-chain gates               |
+| Issue #91 | Open coordination             | Hordekiller / Maddyrampant | Finish or explicitly split #50; resolve/defer #78 and #79                                                  | Remaining Sprint 1 outcomes have merged evidence or named follow-ups           |
+| PR #11    | Complete/merged               | Hordekiller / Maddyrampant | Continue residual admin hardening only in its assigned later gates                                         | #9/#10 review and ADR-0004 acceptance already provide closure evidence         |
 
-Implemented locally on the Auth runtime branch:
+Blocked decision issues do not authorize guessed business choices. They block the
+related release/production gate while deterministic local implementation may proceed.
 
-- Argon2id password hashing, policy enforcement, dummy verification and rehash.
-- Staff password challenge with generic failures, Redis throttles, temporary lockout, LoginAttempt and audit evidence.
-- AES-256-GCM encrypted TOTP secret envelope using external `AUTH_TOTP_ENCRYPTION_KEY`.
-- TOTP verification with atomic challenge consumption and one-accepted-step replay protection.
-- Recovery-code verification and atomic consumption.
-- TOTP enrollment/confirmation and recovery-code regeneration.
-- Password change (`POST /staff/password/change`): verifies the live current password,
-  hashes the new one, maps `PasswordPolicyError` violations to a 400
-  `AUTH_PASSWORD_POLICY`, then atomically revokes every other session family
-  (`CREDENTIAL_CHANGED`), rotates the current family in place (CAS guard) and writes
-  `auth.password.changed`/`auth.session.rotated` evidence without hash metadata.
-- Recovery-code regeneration (`POST /staff/recovery/regenerate`) now invalidates all
-  previous codes and atomically revokes every other session family (`CREDENTIAL_CHANGED`)
-  while keeping the current family valid and unrotated, with
-  `auth.recovery_regenerated` + `auth.session.all_revoked` evidence.
-- Fresh-auth enforcement (300 s `AUTH_REAUTHENTICATION_REQUIRED`) via a level-optional
-  `RequireFreshAuthentication` guard on `staff/totp/enroll`, `staff/recovery/regenerate`
-  and `staff/password/change`; level checks still precede freshness (403 before 401).
-- `POST /logout-all`: fresh-auth at any level, atomically revokes every session family
-  for the caller and clears the auth cookies.
-- TTY-only first-admin bootstrap with hidden password input, TOTP confirmation,
-  advisory lock, existing-admin refusal and actor-null audit. The transaction is now a
-  testable `createFirstAdministrator` core (`scripts/bootstrap-admin-core.mjs`), with a
-  guarded integration test proving exactly one concurrent runner wins and a later
-  replacement is refused, plus a committed-artifact scan spec asserting the bootstrap,
-  core and seed carry no default credential, resolve connection keys only from required
-  environment variables and keep the dev admin credential-less (`passwordHash: null`);
-  the scan runs in the regular unit suite so CI enforces it.
+## Next 10 working-day plan
 
-Evidence currently available:
+### Days 1–2 — close Auth acceptance and coordination
 
-- API unit tests: 300 passing (coverage under `CI=true`: statements 87.7 / branches
-  78.3 / functions 89.6 / lines 89.3, above the 65/65/70/60 gates).
-- PostgreSQL integration tests: 53 passing (incl. password-change family revocation,
-  recovery-regeneration family revocation and concurrent bootstrap).
-- Root typecheck, lint and build passing (contracts typecheck included).
-- OpenAPI drift passing; `openapi.json` includes the new `/logout-all` and
-  `/staff/password/change` paths.
+- Treat merged PR #109 and closed #49 as the privileged-Auth evidence baseline.
+- Verify password change never logs/persists raw credentials.
+- Verify fresh-auth denial order, current-family rotation and other-family revocation.
+- Verify two concurrent bootstrap attempts yield one administrator.
+- Reconcile OpenAPI and `AUTH_CONTRACT.md` against actual endpoint behavior.
+- Keep any work beyond closed #49 in separate, sized issues; do not reopen its
+  completed scope implicitly under a broad “Auth complete” statement.
 
-Remaining before closing #49:
+Exit: remaining #50/#91 gaps are closed or split into owned follow-ups.
 
-- Independent review and merged PR evidence.
+### Days 2–4 — close Sprint 1 acceptance
 
-### #74 Refresh and Session HTTP
+- Map #50 and #91 acceptance checkboxes to a commit/test/PR; retain #49 as closed evidence.
+- Run clean-main quality, database and E2E gates.
+- Confirm customer OTP fixture tests and live API tests are described separately.
+- Decide #78 and #79, or assign an owner/date and declare which later gate they block.
+- Update Auth/API/security/operations docs only where merged behavior changed.
 
-The approved PR #101 covers own-session list/revoke. The remaining local Auth slice
-covers refresh rotation, CSRF/Origin proof, cookie logout and replay cookie clearing,
-plus the accepted `logout-all` HTTP contract.
+Exit: `0.1` either closes with evidence or has a short explicit carry-over list.
 
-Remaining before closing #74:
+### Days 3–5 — build on the merged catalog backend foundation
 
-- Merge the session slice and open the remaining HTTP implementation as a focused PR.
-- `logout-all` is implemented on the feature branch; verify production cookie
-  attributes, CSRF/CORS negative paths and client single-flight behavior.
-- Regenerate OpenAPI and obtain independent review.
+- Use merged PR #103 as the baseline for permission boundaries, draft opacity,
+  public projection, conflict mapping, category cycles and BigInt money.
+- Confirm no cost/internal inventory data appears in public DTOs/OpenAPI.
+- Verify migration impact is absent or reviewed; do not alter shared migrations.
+- Confirm clean-main checks and turn remaining Catalog scope into bounded issues.
 
-## Product Handoff: #50
+Exit: remaining `0.2` scope is re-estimated from the merged Catalog API baseline.
 
-Maddyrampant may start the fixture-first admin slice from `feat/50-admin-staff-login`.
-The decisions are:
+### Days 5–7 — contract/policy closure for remaining catalog work
 
-- Use a separate `/login/staff` route; keep development `/login` unchanged.
-- Use `NEXT_PUBLIC_FIXTURE_AUTH=true` as the only fixture opt-in; absent/false fails closed.
-- Keep access tokens and MFA challenge state in memory only.
-- Cover password, TOTP, invalid credentials, challenge expiry/replay, rate limit, forbidden, session invalid and replay states.
-- Defer live endpoint wiring until reviewed #49/#74 API changes land.
-- Do not change Prisma, migrations, root config or existing development auth.
+- Decide product attribute/variant rules and import columns.
+- Specify price history/effective-price rules and rounding examples.
+- Specify media metadata, file validation, size/type limits and presigned lifecycle.
+- Specify public product detail, availability summary and SEO fields.
+- Split API/admin/web work into `S`/`M` issues with dependencies.
 
-Required evidence for the admin PR:
+Exit: no UI or storage work relies on an invented contract.
 
-- Desktop/mobile keyboard and screen-reader coverage.
-- Empty storage assertions for localStorage and sessionStorage.
-- Direct-route forbidden behavior; hidden navigation is not authorization.
-- Unit, typecheck, lint, build, Playwright and zero-external-asset gates.
+### Days 7–10 — first integrated catalog journey
 
-## Next Product Vertical Slices
+- Platform: complete the smallest missing API slice selected above.
+- Product: build category/brand/product admin screens against accepted fixtures.
+- Integration: wire one real end-to-end journey—create draft → add SKU/price →
+  publish → discover publicly—without static sellable data for that journey.
+- Add allow/deny, failure, audit, accessibility and browser evidence.
 
-After the Auth merge checkpoint:
+Exit: one thin vertical journey is demonstrable; broad CRUD breadth is secondary.
 
-1. Catalog contract PR #97 and catalog API child issue.
-2. Category/brand/product/SKU services with permission and audit boundaries.
-3. Presigned media upload contract as a separate storage slice.
-4. Public published-catalog endpoints and storefront integration.
-5. Inventory HTTP authorization, transfers, stocktake and reservation expiry worker.
-6. Server-priced cart, checkout and order draft idempotency.
+## Ready queue after the checkpoint
 
-No order, payment or storefront production claim is valid while catalog data remains
-static or while the API lacks the corresponding server-side command.
+1. Catalog media/price contract and API.
+2. Catalog admin draft-to-publish flow.
+3. Public product detail and storefront integration.
+4. Inventory HTTP contract with authenticated actor mapping.
+5. Warehouse/location CRUD and read-only balances/movements.
+6. Reservation expiry batching (#81), then worker design.
+7. Transfer policy/state contract.
+8. Cart/guest/merge and reservation-allocation decisions before `0.4` coding.
 
-## Backlog Reconciliation
+## Explicitly not ready
 
-- #48 customer OTP is implemented and needs acceptance checkoff/reconciliation.
-- #73 live principal/permission guard is implemented through the Auth merge train and needs final acceptance closure.
-- #76 must be narrowed to coverage baseline/ratcheting after PR #94.
-- #81 is a valid inventory performance follow-up before production workers.
-- #77, #78 and #79 remain decision blockers.
-- #91 must receive an accountable owner and updated dependencies.
-- Epics #2 through #8 remain long-range scope; they are not substitutes for issue-sized implementation slices.
+- Payment implementation before provider/verification/refund decisions.
+- Checkout before server pricing, availability and reservation contracts.
+- Shipping/notifications before outbox/job retry policy.
+- Returns before refund and stock-outcome policy.
+- Production launch claims before deploy, monitoring and recovery drills.
 
-## Release Blockers
+## Handoff template
 
-The system is not production-commerce ready until all of these have evidence:
+Every branch handoff must include:
 
-- Staff production authentication and secure bootstrap.
-- Server-side permission enforcement on every domain command.
-- Catalog, inventory, cart, checkout, order and payment APIs.
-- Payment callback verification, idempotency, refund and reconciliation.
-- Workers, outbox, notifications and reservation expiry.
-- Backup freshness, restore drill, deployment, rollback, monitoring and RPO/RTO.
+```text
+Issue / branch / base SHA:
+Owned files and shared hotspots:
+Contract or decision used:
+Implemented and intentionally excluded:
+Migration/data impact:
+Security/authorization/audit impact:
+Commands run and exact result:
+Manual scenarios checked:
+Known failures or follow-ups:
+Reviewer focus:
+```
+
+## Release blockers
+
+- Live production staff/customer Auth acceptance and SMS provider decision.
+- Server-side permission enforcement for every business command.
+- Integrated catalog, inventory, cart, checkout, order and payment journeys.
+- Verified/idempotent payment and reconciliation.
+- Outbox/workers and reservation expiry.
+- Production deploy/rollback, monitoring/alerts, backup/restore and RPO/RTO evidence.
