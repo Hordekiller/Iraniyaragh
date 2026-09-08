@@ -100,6 +100,34 @@ APIs must not be misused for ordinary commerce pages.
 - Core Web Vitals budgets: LCP ≤2.5s, INP ≤200ms, CLS ≤0.1 at p75 by page type;
   responsive images, declared dimensions, local fonts and minimal hydration.
 
+### Link relationship and robots rules
+
+- Normal internal editorial/navigation links remain followable; adding `nofollow`
+  site-wide is prohibited.
+- `rel="sponsored"` marks paid/affiliate links and `rel="ugc"` marks untrusted
+  user-generated links. `nofollow` is reserved for relationships that cannot
+  otherwise be endorsed; values may be combined when accurate.
+- `nofollow` is a link hint, not an indexing directive. Page exclusion uses an
+  accessible `noindex` meta/X-Robots-Tag, canonical/redirect, or `404`/`410` according
+  to lifecycle. Do not robots-block a page merely to hide its `noindex` directive.
+- New-tab links use safe browser relationship values in addition to the semantic
+  relationship. Staff cannot override these semantics ad hoc.
+
+### Store tags, facets and pagination
+
+Product tags are governed landing-page entities, not an unlimited byproduct of data
+entry. A tag becomes indexable only with a unique slug, approved title/summary,
+meaningful product set, internal-link purpose, canonical URL and no substantial
+overlap with a category/brand. Empty, thin, duplicate, typo, single-use and purely
+operational tags are `noindex,follow` and absent from sitemaps; obsolete tags merge
+with a one-hop redirect or return the lifecycle-approved status.
+
+Filter combinations, sort order, page size, internal search and tracking parameters
+are non-indexable and excluded from sitemaps. Crawlable curated facets require an
+explicit allowlist and content owner. Pagination has stable self-canonicals and
+crawlable links; page 2+ is not automatically canonicalized to page 1 when its
+product set is distinct. Query-parameter rules are tested to prevent crawl traps.
+
 ## 6. Structured data and commerce feeds
 
 JSON-LD is rendered from the same public projection as visible HTML. It is schema
@@ -144,6 +172,30 @@ content, disclose no extra facts, carry freshness provenance, and are monitored 
 experiment. Success is measured by crawl logs, indexed/cited landing pages, assisted
 sessions and conversion—not file existence.
 
+### Article, guide and landing-page editor
+
+The content system supports `draft → in_review → approved/scheduled → published →
+archived` with author, independent reviewer, timestamps, immutable revision history,
+preview tokens, autosave recovery and audited publish/unpublish/redirect operations.
+AI may create a labeled draft but cannot approve or publish it.
+
+Editor fields are structured rather than one opaque HTML blob: content type, Persian
+title, slug, excerpt/answer summary, semantic blocks, headings, tables, media/alt text,
+product/category relations, author/reviewer, primary sources with access date,
+fact-review date, canonical override (privileged), robots policy (bounded choices),
+social metadata and structured-data eligibility. Output uses an allowlisted sanitizer;
+scripts, event handlers, unsafe embeds and arbitrary JSON-LD are rejected.
+
+Article tags and store product tags have separate taxonomies and ownership. Synonyms
+and aliases map to one entity; Unicode/Persian normalization and collision checks are
+server-side. Editors receive duplicate-title/slug, orphan, broken-link, missing-alt,
+heading-order, thin-content, stale-source and schema/visible-content parity warnings.
+Keyword density is not a quality score.
+
+Publication invalidates page/navigation/sitemap/feed caches and emits a versioned
+outbox event. Scheduled publication uses UTC internally and Iran time only in UI.
+Unpublish requires redirect/retention choice and prevents orphaned internal links.
+
 ## 8. On-site AI foundation
 
 AI features start behind a provider-neutral application port and feature flags.
@@ -173,6 +225,25 @@ Baselines are segmented by page type and branded/non-branded intent:
   latency, token/cost per successful task and human acceptance rate;
 - organic/AI-assisted add-to-cart and conversion without storing query-level PII.
 
+### Performance test workflow
+
+Performance has three complementary gates:
+
+1. PR laboratory tests run repeatable Lighthouse/browser measurements on home,
+   category, product, guide, cart and checkout fixtures. Budgets cover LCP/CLS/TBT as
+   a lab proxy, accessibility/SEO failures, JavaScript/CSS/image/font bytes, request
+   count and server-rendered HTML size. Compare medians, not one noisy run.
+2. Post-deploy synthetic tests use representative mobile network profiles, verify
+   TTFB/cache/compression/image behavior and store trend artifacts. Severe regression
+   blocks promotion or triggers rollback; transient noise has bounded visible retry.
+3. Privacy-reviewed RUM reports p75 LCP/INP/CLS by page type, device and geography.
+   It requires sufficient samples and never stores full URLs containing private data.
+
+Initial budgets are the Core Web Vitals targets above plus repository-owned bundle
+and request baselines recorded when server rendering lands. Raising a threshold only
+to make CI green is prohibited. Third-party scripts require an owner, purpose,
+consent classification, performance budget, expiry review and kill switch.
+
 Search Console, Bing Webmaster and merchant access uses least privilege and named
 owners. Exported query data follows retention and privacy policy.
 
@@ -186,6 +257,11 @@ JSON-LD schemas, HTML/structured-data parity and secret/PII absence.
 index, sample every shard/page type, verify status/canonical/robots/rendered content,
 schema, feed parity, freshness and latency; preserve a sanitized report and alert on
 regression. It must never crawl admin/account/cart/checkout.
+
+`Performance Budget` runs on relevant web pull requests and after deployment:
+exercises the representative template matrix, compares checked-in budgets/baselines,
+uploads reports and publishes a concise regression summary. Production RUM alerts
+remain separate from flaky laboratory thresholds.
 
 `URL Change Publisher` consumes transactional outbox events: deduplicate and batch
 IndexNow submissions, invalidate caches, retry known-safe failures with backoff and DLQ,
@@ -221,6 +297,10 @@ webmaster verification; on-site AI does not block MVP commerce.
 - Dynamic sitemap is correct under publish, update, archive, slug change, empty shard,
   large dataset, concurrent regeneration and upstream failure.
 - Visible facts, API projection, JSON-LD and merchant feed are consistent.
+- Product/article tags obey their separate governance; facet/query crawl traps and
+  misuse of nofollow/noindex are covered by tests.
+- Editor publication is revisioned, permissioned, sanitized, independently reviewed
+  and connected to cache/sitemap/feed invalidation.
 - No private/duplicate/faceted URL leaks into crawl surfaces.
 - Performance/accessibility/security budgets pass on representative devices.
 - Search/AI crawler policy and training decision are explicit and reversible.
@@ -233,6 +313,9 @@ webmaster verification; on-site AI does not block MVP commerce.
 - Google sitemaps and limits: <https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap>, <https://developers.google.com/search/docs/crawling-indexing/sitemaps/large-sitemaps>
 - Google Product data: <https://developers.google.com/search/docs/appearance/structured-data/product>
 - Google crawler controls: <https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers>
+- Google link relationship guidance: <https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links>
+- Google robots meta guidance: <https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag>
+- Google Core Web Vitals: <https://developers.google.com/search/docs/appearance/core-web-vitals>
 - Schema.org Product: <https://schema.org/Product>
 - IndexNow protocol: <https://www.indexnow.org/documentation>
 - OpenAI crawlers: <https://platform.openai.com/docs/bots>
