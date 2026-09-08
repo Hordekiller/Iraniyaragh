@@ -34,8 +34,10 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `65ade33`, containing merged #109 and #103.
-- #49 is closed; active coordination includes #66, #91, #50, #78, #79 and #81.
+- Baseline at review: `main` commit `9b4ba32`, containing merged #109, #103, #112
+  and accepted ADR-0011 via #116.
+- #49 and #79 are closed; active coordination includes #66, #91, #50, #78,
+  #81, #114 and #115.
 - Local-only or untracked material is never counted as delivered product capability.
 
 ## Delivered on `main`
@@ -157,7 +159,8 @@ security/query review, OpenAPI drift confirmation and merge.
 
 ## Decisions and blockers
 
-1. Production SMS provider, sandbox and outage policy (#79).
+1. **Resolved by ADR-0011/#79:** SMS.ir is the initial provider behind the
+   vendor-neutral `SmsProvider` boundary; #114/#115 own implementation.
 2. Payment provider and verification/refund contract.
 3. Shipping geography, methods and pricing authority.
 4. Reservation TTL and multi-location allocation policy.
@@ -184,7 +187,8 @@ Release `0.1` closes only after:
 
 1. Treat merged #109 and closed #49 as the Auth runtime evidence baseline.
 2. Reconcile remaining acceptance across #50 and #91.
-3. #79 is decided or recorded as an explicit release-blocking dependency.
+3. Implement and verify the accepted SMS boundary through #114 and #115;
+   provision the production account, line and secret through private operations.
 4. #78 records capacity, review SLA and release authority.
 5. Clean `main` passes lint, typecheck, tests, integration, build, OpenAPI drift and
    browser smoke.

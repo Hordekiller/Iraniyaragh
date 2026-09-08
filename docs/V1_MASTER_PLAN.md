@@ -80,7 +80,8 @@ team/provider decisions
 #### Policy and coordination
 
 - [ ] Accept #78: weekly capacity, review SLA, decision owner and release authority.
-- [ ] Accept ADR-0011 for the SMS.ir provider boundary; implement backend #114 and admin settings #115.
+- [x] Accept ADR-0011 for the SMS.ir provider boundary via merged PR #116.
+- [ ] Implement backend #114, then the contract-dependent admin settings #115.
 - [x] Close #49 against merged privileged-Auth evidence; reconcile #50/#91 so every remaining criterion has evidence or a named
       follow-up; close obsolete coordination text.
 

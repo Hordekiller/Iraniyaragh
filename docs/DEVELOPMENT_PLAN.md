@@ -361,7 +361,9 @@ Resolve via issue/ADR before dependent implementation:
 
 1. **Resolved by ADR-0003/#13:** canonical integer-Rial persistence and transport;
    Toman is exact presentation-only conversion.
-2. Initial payment and SMS providers and sandbox availability.
+2. **SMS resolved by ADR-0011/#79:** SMS.ir behind a vendor-neutral provider
+   boundary, with implementation in #114/#115. Initial payment provider and its
+   sandbox remain undecided.
 3. Shipping methods, pricing owner and supported geography.
 4. Reservation duration and allocation across warehouses/locations.
 5. Guest checkout and account-merging policy.
