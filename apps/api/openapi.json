@@ -433,9 +433,9 @@
         ]
       }
     },
-    "/admin/sms-settings": {
+    "/notifications/admin/sms-settings": {
       "get": {
-        "operationId": "SmsSettingsController_getSettings",
+        "operationId": "NotificationsAdminController_getSettings",
         "parameters": [],
         "responses": {
           "200": {
@@ -443,11 +443,11 @@
           }
         },
         "tags": [
-          "SmsSettings"
+          "NotificationsAdmin"
         ]
       },
-      "patch": {
-        "operationId": "SmsSettingsController_updateSettings",
+      "put": {
+        "operationId": "NotificationsAdminController_updateSettings",
         "parameters": [],
         "responses": {
           "200": {
@@ -455,13 +455,13 @@
           }
         },
         "tags": [
-          "SmsSettings"
+          "NotificationsAdmin"
         ]
       }
     },
-    "/admin/sms-settings/secret": {
+    "/notifications/admin/sms-settings/secret": {
       "post": {
-        "operationId": "SmsSettingsController_rotateSecret",
+        "operationId": "NotificationsAdminController_rotateSecret",
         "parameters": [],
         "responses": {
           "201": {
@@ -469,11 +469,11 @@
           }
         },
         "tags": [
-          "SmsSettings"
+          "NotificationsAdmin"
         ]
       },
       "delete": {
-        "operationId": "SmsSettingsController_clearSecret",
+        "operationId": "NotificationsAdminController_clearSecret",
         "parameters": [],
         "responses": {
           "200": {
@@ -481,13 +481,13 @@
           }
         },
         "tags": [
-          "SmsSettings"
+          "NotificationsAdmin"
         ]
       }
     },
-    "/admin/sms-settings/test-send": {
+    "/notifications/admin/sms-settings/validate": {
       "post": {
-        "operationId": "SmsSettingsController_testSend",
+        "operationId": "NotificationsAdminController_validateConfiguration",
         "parameters": [],
         "responses": {
           "201": {
@@ -495,13 +495,27 @@
           }
         },
         "tags": [
-          "SmsSettings"
+          "NotificationsAdmin"
         ]
       }
     },
-    "/admin/sms-settings/diagnostics": {
+    "/notifications/admin/sms-settings/test-send": {
+      "post": {
+        "operationId": "NotificationsAdminController_sendControlledTest",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "NotificationsAdmin"
+        ]
+      }
+    },
+    "/notifications/admin/sms-settings/diagnostics": {
       "get": {
-        "operationId": "SmsSettingsController_diagnostics",
+        "operationId": "NotificationsAdminController_getDiagnostics",
         "parameters": [],
         "responses": {
           "200": {
@@ -509,7 +523,7 @@
           }
         },
         "tags": [
-          "SmsSettings"
+          "NotificationsAdmin"
         ]
       }
     }
@@ -558,7 +572,7 @@
       "description": "Audit trail"
     },
     {
-      "name": "sms-settings",
+      "name": "notifications",
       "description": "SMS provider operational settings and diagnostics"
     }
   ],

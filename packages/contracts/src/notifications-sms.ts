@@ -1,22 +1,29 @@
 import type { ApiSuccess } from './api';
 
-export type SmsProviderEnvironment = 'development' | 'production';
+export type SmsProviderEnvironment = 'development' | 'production' | 'unknown';
 
-export type SmsSendStatus = 'accepted' | 'rejected' | 'rate_limited' | 'unavailable' | 'unknown';
+export type SmsSendStatus = 'accepted' | 'rejected' | 'rate_limited' | 'unavailable' | 'unknown_result';
 
-export type SmsSettingsFields = {
+export type SmsSecretBackendCapability = 'writable' | 'read_only';
+
+export type SmsAlertThresholds = {
+  failureWindowMinutes: number;
+  failureCount: number;
+};
+
+export type SmsSettingsEditableFields = {
   enabled: boolean;
-  environment: SmsProviderEnvironment;
-  templateId: string | null;
+  templateId: number | null;
   senderLine: string | null;
   timeoutMs: number;
   deliveryStatusEnabled: boolean;
   outageMode: boolean;
   maintenanceMessage: string | null;
-  alertThresholds: {
-    failureWindowMinutes: number;
-    failureCount: number;
-  } | null;
+  alertThresholds: SmsAlertThresholds | null;
+};
+
+export type SmsSettingsFields = SmsSettingsEditableFields & {
+  environment: SmsProviderEnvironment;
 };
 
 export type SmsSecretStatus = {
@@ -31,28 +38,47 @@ export type SmsSettingsSnapshot = {
   updatedAt: string | null;
   settings: SmsSettingsFields;
   secret: SmsSecretStatus;
+  secretBackend: SmsSecretBackendCapability;
 };
 
 export type SmsSettingsResponse = ApiSuccess<{ snapshot: SmsSettingsSnapshot }>;
 
-export type SmsSettingsUpdatePayload = Partial<SmsSettingsFields>;
+export type SmsSettingsUpdatePayload = {
+  expectedVersion: number;
+  patch: Partial<SmsSettingsEditableFields>;
+};
 
 export type SmsSettingsRotateSecretPayload = {
-  apiKey: string;
+  secret: string;
   confirm: boolean;
+  idempotencyKey: string;
+};
+
+export type SmsSettingsClearSecretPayload = {
+  confirm: boolean;
+  idempotencyKey: string;
 };
 
 export type SmsSettingsTestSendPayload = {
-  parameters?: Record<string, string>;
+  confirm: boolean;
+  idempotencyKey: string;
 };
 
 export type SmsSendOutcome = {
   messageId: string | null;
-  accepted: boolean;
   status: SmsSendStatus;
 };
 
 export type SmsTestSendResponse = ApiSuccess<{ outcome: SmsSendOutcome }>;
+
+export type SmsValidation = {
+  checked: boolean;
+  providerHealth: SmsProviderHealth;
+  lastCheckedAt: string | null;
+  errorClass: SmsErrorClass | null;
+};
+
+export type SmsValidateResponse = ApiSuccess<{ validation: SmsValidation }>;
 
 export type SmsProviderHealth = 'ok' | 'degraded' | 'down' | 'not_configured' | 'unknown';
 

@@ -10,7 +10,7 @@ import { HealthModule } from './modules/health/health.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
-import { SmsSettingsModule } from './modules/sms-settings/sms-settings.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { validateEnvironment } from './config/environment';
 import { RedisModule } from './modules/redis/redis.module';
@@ -33,7 +33,7 @@ import { RedisModule } from './modules/redis/redis.module';
     OrdersModule,
     PaymentsModule,
     CustomersModule,
-    SmsSettingsModule,
+    NotificationsModule,
     SuppliersModule,
     AuditModule,
   ],

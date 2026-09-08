@@ -1,8 +1,9 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { ServiceUnavailableException, UnprocessableEntityException } from '@nestjs/common';
 import type {
   SmsDiagnostics,
   SmsSendOutcome,
   SmsSettingsSnapshot,
+  SmsValidation,
 } from '@iranyaragh/contracts';
 import type { SmsSettingsStore } from './sms-settings.port';
 
@@ -11,7 +12,7 @@ const UNCONFIGURED_SNAPSHOT: SmsSettingsSnapshot = Object.freeze({
   updatedAt: null,
   settings: {
     enabled: false,
-    environment: 'production' as const,
+    environment: 'unknown' as const,
     templateId: null,
     senderLine: null,
     timeoutMs: 5_000,
@@ -21,6 +22,7 @@ const UNCONFIGURED_SNAPSHOT: SmsSettingsSnapshot = Object.freeze({
     alertThresholds: null,
   },
   secret: { configured: false, masked: null, validated: false, lastRotatedAt: null },
+  secretBackend: 'read_only' as const,
 });
 
 const UNCONFIGURED_DIAGNOSTICS: SmsDiagnostics = Object.freeze({
@@ -37,6 +39,13 @@ function unavailable(): never {
   });
 }
 
+function unsupportedOnReadOnly(): never {
+  throw new UnprocessableEntityException({
+    code: 'OPERATION_UNSUPPORTED',
+    message: 'Secret rotation and clearing are unavailable for the read-only environment-backed secret store.',
+  });
+}
+
 export class DisconnectedSmsSettingsStore implements SmsSettingsStore {
   async read(): Promise<SmsSettingsSnapshot> {
     return UNCONFIGURED_SNAPSHOT;
@@ -47,14 +56,18 @@ export class DisconnectedSmsSettingsStore implements SmsSettingsStore {
   }
 
   async rotateSecret(): Promise<{ lastRotatedAt: string }> {
-    return unavailable();
+    return unsupportedOnReadOnly();
   }
 
   async clearSecret(): Promise<{ clearedAt: string }> {
-    return unavailable();
+    return unsupportedOnReadOnly();
   }
 
   async submitTestSend(): Promise<SmsSendOutcome> {
+    return unavailable();
+  }
+
+  async validateConfiguration(): Promise<SmsValidation> {
     return unavailable();
   }
 

@@ -30,7 +30,6 @@ const PERMISSIONS = [
   ["reports.read", "Read reports", "reports"],
   ["audit.read", "Read audit history", "audit"],
   ["settings.manage", "Manage settings", "settings"],
-  ["sms-settings.manage", "Manage SMS provider settings and diagnostics", "settings"],
 ].map(([key, name, group]) => ({
   description: `Canonical ${key} permission.`,
   group,

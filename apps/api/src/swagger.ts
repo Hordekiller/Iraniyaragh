@@ -21,7 +21,7 @@ export function createApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('customers', 'Customer records')
     .addTag('suppliers', 'Supplier records')
     .addTag('audit', 'Audit trail')
-    .addTag('sms-settings', 'SMS provider operational settings and diagnostics')
+    .addTag('notifications', 'SMS provider operational settings and diagnostics')
     .build();
 
   return SwaggerModule.createDocument(app, config);

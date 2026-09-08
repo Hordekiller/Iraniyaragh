@@ -1,10 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
-  IsEnum,
   IsInt,
-  IsNotEmptyObject,
-  IsObject,
   IsOptional,
   IsString,
   Matches,
@@ -15,8 +12,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-const TEMPLATE_ID = /^(?:|[A-Za-z0-9_-]{1,64})$/u;
 const SENDER_LINE = /^(?:|\d{1,16})$/u;
+const IDEMPOTENCY_KEY = /^[\w-]{8,96}$/u;
 
 export class SmsAlertThresholdsDto {
   @Type(() => Number)
@@ -32,24 +29,22 @@ export class SmsAlertThresholdsDto {
   failureCount!: number;
 }
 
-export class SmsSettingsUpdateDto {
+export class SmsSettingsPatchDto {
   @IsOptional()
   @IsBoolean()
   enabled?: boolean;
 
   @IsOptional()
-  @IsEnum(['development', 'production'])
-  environment?: 'development' | 'production';
-
-  @IsOptional()
-  @IsString()
-  @Matches(TEMPLATE_ID)
-  templateId?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(9_999_999_999)
+  templateId?: number | null;
 
   @IsOptional()
   @IsString()
   @Matches(SENDER_LINE)
-  senderLine?: string;
+  senderLine?: string | null;
 
   @IsOptional()
   @Type(() => Number)
@@ -69,7 +64,7 @@ export class SmsSettingsUpdateDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  maintenanceMessage?: string;
+  maintenanceMessage?: string | null;
 
   @IsOptional()
   @ValidateNested()
@@ -77,20 +72,45 @@ export class SmsSettingsUpdateDto {
   alertThresholds?: SmsAlertThresholdsDto | null;
 }
 
+export class SmsSettingsUpdateDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  expectedVersion!: number;
+
+  @ValidateNested()
+  @Type(() => SmsSettingsPatchDto)
+  patch!: SmsSettingsPatchDto;
+}
+
 export class SmsSettingsRotateSecretDto {
   @IsString()
   @MinLength(16)
   @MaxLength(512)
-  apiKey!: string;
+  secret!: string;
 
   @IsBoolean()
   confirm!: boolean;
+
+  @IsString()
+  @Matches(IDEMPOTENCY_KEY)
+  idempotencyKey!: string;
+}
+
+export class SmsSettingsClearSecretDto {
+  @IsBoolean()
+  confirm!: boolean;
+
+  @IsString()
+  @Matches(IDEMPOTENCY_KEY)
+  idempotencyKey!: string;
 }
 
 export class SmsSettingsTestSendDto {
-  @IsOptional()
-  @IsObject()
-  @IsNotEmptyObject()
-  @IsObject({ message: 'Each template parameter must be a string value.' })
-  parameters?: Record<string, string>;
+  @IsBoolean()
+  confirm!: boolean;
+
+  @IsString()
+  @Matches(IDEMPOTENCY_KEY)
+  idempotencyKey!: string;
 }

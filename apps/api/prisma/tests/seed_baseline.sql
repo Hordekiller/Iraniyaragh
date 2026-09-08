@@ -24,7 +24,6 @@ DECLARE
     'settings.manage',
     'shipments.manage',
     'shipments.read',
-    'sms-settings.manage',
     'users.manage'
   ];
   system_role_id text;
