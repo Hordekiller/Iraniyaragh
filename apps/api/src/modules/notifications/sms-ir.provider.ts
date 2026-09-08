@@ -7,6 +7,9 @@ import type {
 
 const SMS_IR_VERIFY_URL = "https://api.sms.ir/v1/send/verify";
 const CANONICAL_IRANIAN_MOBILE = /^\+989\d{9}$/u;
+const PARAMETER_NAME = /^[A-Za-z][A-Za-z0-9_]{0,63}$/u;
+const MAX_PARAMETER_COUNT = 20;
+const MAX_PARAMETER_VALUE_LENGTH = 25;
 
 type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
@@ -67,9 +70,43 @@ export class SmsIrProvider implements SmsProvider {
   constructor(
     private readonly config: SmsIrProviderConfig,
     private readonly fetcher: FetchLike = fetch,
-  ) {}
+  ) {
+    if (
+      config.apiKey.length === 0 ||
+      config.apiKey.trim() !== config.apiKey ||
+      !Number.isInteger(config.timeoutMs) ||
+      config.timeoutMs < 1 ||
+      config.timeoutMs > 10_000
+    ) {
+      throw new Error("SMS.ir provider configuration is invalid.");
+    }
+  }
 
   async send(request: SmsSendRequest): Promise<SmsSendResult> {
+    let mobile: string;
+    try {
+      mobile = toSmsIrMobile(request.destination);
+    } catch {
+      return { status: "rejected", reason: "destination" };
+    }
+    const parameters = Object.entries(request.parameters);
+    if (
+      !Number.isSafeInteger(request.templateId) ||
+      request.templateId <= 0 ||
+      request.correlationId.length === 0 ||
+      request.correlationId.length > 128 ||
+      parameters.length === 0 ||
+      parameters.length > MAX_PARAMETER_COUNT ||
+      parameters.some(
+        ([name, value]) =>
+          !PARAMETER_NAME.test(name) ||
+          typeof value !== "string" ||
+          value.length === 0 ||
+          value.length > MAX_PARAMETER_VALUE_LENGTH,
+      )
+    ) {
+      return { status: "rejected", reason: "invalid_request" };
+    }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
@@ -81,11 +118,9 @@ export class SmsIrProvider implements SmsProvider {
           "x-api-key": this.config.apiKey,
         },
         body: JSON.stringify({
-          mobile: toSmsIrMobile(request.destination),
+          mobile,
           templateId: request.templateId,
-          parameters: Object.entries(request.parameters).map(
-            ([name, value]) => ({ name, value }),
-          ),
+          parameters: parameters.map(([name, value]) => ({ name, value })),
         }),
         signal: controller.signal,
       });

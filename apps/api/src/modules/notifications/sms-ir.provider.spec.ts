@@ -15,6 +15,40 @@ const response = (status: number, body: unknown) =>
   });
 
 describe("SmsIrProvider", () => {
+  it("rejects invalid configuration before any request can be sent", () => {
+    const fetcher = vi.fn();
+    expect(
+      () => new SmsIrProvider({ apiKey: "", timeoutMs: 100 }, fetcher),
+    ).toThrow();
+    expect(
+      () => new SmsIrProvider({ apiKey: " secret ", timeoutMs: 100 }, fetcher),
+    ).toThrow();
+    expect(
+      () => new SmsIrProvider({ apiKey: "secret", timeoutMs: 0 }, fetcher),
+    ).toThrow();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ destination: "09121234567" }, "destination"],
+    [{ templateId: 0 }, "invalid_request"],
+    [{ correlationId: "" }, "invalid_request"],
+    [{ parameters: {} }, "invalid_request"],
+    [{ parameters: { "bad name": "123456" } }, "invalid_request"],
+    [{ parameters: { Code: "x".repeat(26) } }, "invalid_request"],
+  ])(
+    "rejects invalid outbound input without network I/O",
+    async (change, reason) => {
+      const fetcher = vi.fn();
+      const result = await new SmsIrProvider(
+        { apiKey: "secret", timeoutMs: 100 },
+        fetcher,
+      ).send({ ...request, ...change });
+      expect(result).toEqual({ status: "rejected", reason });
+      expect(fetcher).not.toHaveBeenCalled();
+    },
+  );
+
   it("normalizes the canonical destination and accepts only a proven message id", async () => {
     const fetcher = vi.fn(async () =>
       response(200, { status: 1, data: { messageId: 42, cost: 1.5 } }),
