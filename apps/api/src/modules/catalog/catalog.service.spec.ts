@@ -33,6 +33,7 @@ function createFakeClient(overrides: Record<string, unknown> = {}) {
       create: vi.fn(),
       update: vi.fn(),
       findMany: vi.fn(),
+      findUnique: vi.fn(),
     },
     auditLog: { create: vi.fn() },
     ...overrides,
@@ -53,6 +54,7 @@ function buildService() {
       create: vi.fn(),
       update: vi.fn(),
       findMany: vi.fn(),
+      findUnique: vi.fn(),
     },
     $transaction: vi.fn().mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(tx as never)),
   } as never;
@@ -229,6 +231,22 @@ describe('CatalogService', () => {
     it('maps a duplicate category slug to Conflict on update', async () => {
       (ctx.tx.category.update as ReturnType<typeof vi.fn>).mockRejectedValue(knownError('P2002', { target: ['slug'] }));
       await expect(ctx.service.updateCategory('actor-1', 'cat-1', { slug: 'taken' })).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('rejects moving a category under itself or one of its descendants', async () => {
+      (ctx.tx.category.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ parentId: 'cat-1' });
+      await expect(
+        ctx.service.updateCategory('actor-1', 'cat-1', { parentId: 'child-1' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(ctx.tx.category.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a missing parent before updating the hierarchy', async () => {
+      (ctx.tx.category.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+      await expect(
+        ctx.service.updateCategory('actor-1', 'cat-1', { parentId: 'missing' }),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+      expect(ctx.tx.category.update).not.toHaveBeenCalled();
     });
 
     it('maps an invalid parent reference to a stable unprocessable response', async () => {

@@ -127,6 +127,9 @@ export class CatalogService {
 
   async updateCategory(actorId: string, id: string, input: CategoryUpdateDto): Promise<CategoryResponse> {
     const category = await this.mapPrismaError(this.prisma.$transaction(async tx => {
+      if (input.parentId !== undefined && input.parentId !== null) {
+        await this.assertCategoryParentDoesNotCreateCycle(tx, id, input.parentId);
+      }
       const updated = await tx.category.update({ where: { id }, data: { ...(input.name ? { name: input.name.trim() } : {}), ...(input.slug ? { slug: input.slug } : {}), ...(input.parentId !== undefined ? { parentId: input.parentId } : {}) }, include: this.categoryInclude() });
       await this.audit.record({ actorId, action: 'catalog.category.updated', entityType: 'Category', entityId: id, requestId: getRequestId(), after: { name: updated.name, slug: updated.slug } }, tx);
       return updated;
@@ -155,6 +158,21 @@ export class CatalogService {
   private productDetailPublic(row: ProductDetailRow) { return { ...this.productListItem(row), description: row.description, brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantBase(variant)) }; }
   private productVariantBase(variant: VariantRow) { return { id: variant.id, sku: variant.sku, barcode: variant.barcode ?? undefined, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }
   private productVariantPrivateDetail(variant: VariantRow) { return { ...this.productVariantBase(variant), costPrice: { amount: variant.costPrice.toString(), currency: 'IRR' as const } }; }
+  private async assertCategoryParentDoesNotCreateCycle(tx: Prisma.TransactionClient, categoryId: string, parentId: string): Promise<void> {
+    const visited = new Set<string>();
+    let cursor: string | null = parentId;
+    while (cursor) {
+      if (cursor === categoryId || visited.has(cursor)) {
+        throw new ConflictException({ code: 'CONFLICT', message: 'A category parent cannot create a hierarchy cycle.' });
+      }
+      visited.add(cursor);
+      const parent: { parentId: string | null } | null = await tx.category.findUnique({ where: { id: cursor }, select: { parentId: true } });
+      if (!parent) {
+        throw new UnprocessableEntityException({ code: 'INVALID_REFERENCE', message: 'Category references an invalid parent.' });
+      }
+      cursor = parent.parentId;
+    }
+  }
   private async mapPrismaError<T>(operation: Promise<T>, resource: 'Brand' | 'Category' | 'Product'): Promise<T> {
     try {
       return await operation;

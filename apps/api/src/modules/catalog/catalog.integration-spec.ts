@@ -98,6 +98,13 @@ describe.sequential('CatalogService database integration', () => {
     expect(root!.createdAt).toBeTruthy();
   });
 
+  it('rejects moving a category beneath its descendant', async () => {
+    await expect(
+      catalog.updateCategory(actorId, categoryId, { parentId: childCategoryId }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(prisma.category.findUniqueOrThrow({ where: { id: categoryId } })).resolves.toMatchObject({ parentId: null });
+  });
+
   it('lists brand summaries with a product count', async () => {
     const list = await catalog.listBrands();
     expect(list.data.items.find((b) => b.id === brandId)).toMatchObject({
