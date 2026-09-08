@@ -34,6 +34,20 @@ day-to-day assignments.
 |        2 | Issue #50 — Auth UX/E2E           | In progress   | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up |
 |        3 | Issues #78/#79                    | Decision work | capacity/review/release authority; SMS provider/outage contract               | Accepted written decision with owner and effective date       |
 
+## Team disposition ledger — 2026-09-08
+
+| Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                                | Closure condition                                                              |
+| --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| PR #112   | In review                     | Hordekiller / Maddyrampant | Verify the two factual review fixes, current-head CI and formatting                                        | Independent approval and protected merge                                       |
+| Issue #79 | Blocked on business input     | Hordekiller / Maddyrampant | Confirm budget, traffic, sender-line, privacy, sandbox and outage constraints; then write the provider ADR | Accepted vendor-neutral adapter/fallback decision with primary-source evidence |
+| Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation             | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity    |
+| Issue #51 | Complete/closed               | Hordekiller / Maddyrampant | Routine dependency maintenance only                                                                        | Already satisfied by merged #52 and protected supply-chain gates               |
+| Issue #91 | Open coordination             | Hordekiller / Maddyrampant | Finish or explicitly split #50; resolve/defer #78 and #79                                                  | Remaining Sprint 1 outcomes have merged evidence or named follow-ups           |
+| PR #11    | Complete/merged               | Hordekiller / Maddyrampant | Continue residual admin hardening only in its assigned later gates                                         | #9/#10 review and ADR-0004 acceptance already provide closure evidence         |
+
+Blocked decision issues do not authorize guessed business choices. They block the
+related release/production gate while deterministic local implementation may proceed.
+
 ## Next 10 working-day plan
 
 ### Days 1–2 — close Auth acceptance and coordination
