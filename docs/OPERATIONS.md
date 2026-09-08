@@ -239,6 +239,16 @@ diagnostics, failure handling and rollback procedure are defined in
 
 Use feature flags for risky or staged product launches where appropriate. Flags must not become a permanent substitute for deleting obsolete code.
 
+## Search and AI discovery operations
+
+The crawler, dynamic-sitemap, structured-data, commerce-feed and AI-answer operating
+contract is defined in [`SEO_GEO_AI_DISCOVERY_PLAN.md`](./SEO_GEO_AI_DISCOVERY_PLAN.md).
+After the canonical production domain exists, configure the repository variable
+`PRODUCTION_WEB_ORIGIN` as an HTTPS origin without a path. The scheduled
+`Discovery Audit` workflow then records a sanitized daily verification artifact.
+Until that variable exists, the workflow reports that production auditing is
+inactive and does not claim discovery readiness.
+
 ## Infrastructure principle
 
 Start cost-efficiently on Iranian VPS/cloud, but keep the application provider-portable:
