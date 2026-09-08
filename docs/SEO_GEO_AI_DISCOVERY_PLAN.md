@@ -17,12 +17,12 @@ robots.txt, sitemaps, feeds or structured data.
 
 ## 2. Architecture decisions required before UI implementation
 
-The current customer web is a client-rendered Vite SPA. Public product, category,
-brand, guide and policy URLs require useful HTML, title, canonical, language and
-structured data in the initial response. Select SSR, SSG with safe revalidation, or
-another server-rendered discovery surface in an accepted ADR; do not bolt critical
-metadata onto client-only rendering. Admin, account, cart, checkout and search-result
-pages remain non-indexable.
+The current customer web is a client-rendered Vite SPA. ADR-0012 selects a
+route-by-route migration to Next.js App Router with Server Components by default and
+governed static/revalidation behavior. Public product, category, brand, guide and
+policy URLs require useful HTML, title, canonical, language and structured data in
+the initial response. Admin, account, cart, checkout and search-result pages remain
+non-indexable.
 
 Canonical production origin, host policy (`www` or apex), trailing-slash policy,
 Persian slug/transliteration rules and future locale URL strategy are configuration,
