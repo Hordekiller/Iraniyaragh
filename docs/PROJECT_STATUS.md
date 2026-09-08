@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-07
+Last reviewed: 2026-09-08
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
