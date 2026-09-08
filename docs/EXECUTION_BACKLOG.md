@@ -52,16 +52,16 @@ until each row has accepted exit evidence.
 
 ### G0 — Alignment and repository (0–5%)
 
-| ID    | Deliverable                                                          | Owner | Depends on       | Acceptance evidence                               |
-| ----- | -------------------------------------------------------------------- | ----- | ---------------- | ------------------------------------------------- |
-| G0-01 | Both members accept invitation/onboarding and weekly capacity        | Joint | —                | `TEAM.md` agreement and onboarding issue response |
-| G0-02 | Confirm MVP/non-MVP and critical user journeys                       | B     | G0-01            | Product-spec review comments resolved             |
-| G0-03 | Decide money unit/rounding/tax/invoice policy                        | A     | Business input   | Accepted ADR and examples                         |
-| G0-04 | Select SMS/payment/shipping/deployment providers                     | Joint | Business input   | Decision issue with sandbox/access/contingency    |
-| G0-05 | Configure labels, milestones, issue/PR templates and main protection | A     | Repo access      | GitHub settings and sample issue/PR validated     |
-| G0-06 | Verify clean-clone setup on second machine                           | B     | Lockfile/docs    | Timed setup notes; corrections merged             |
-| G0-07 | Threat/PII/data classification workshop                              | Joint | Product journeys | Threat model and data inventory issues            |
-| G0-08 | Define launch traffic, catalog size, RPO/RTO and support hours       | B     | Business input   | Measurable non-functional targets                 |
+| ID    | Deliverable                                                          | Owner | Depends on       | Acceptance evidence                                                                                           |
+| ----- | -------------------------------------------------------------------- | ----- | ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| G0-01 | Both members accept invitation/onboarding and weekly capacity        | Joint | —                | `TEAM.md` agreement and onboarding issue response                                                             |
+| G0-02 | Confirm MVP/non-MVP and critical user journeys                       | B     | G0-01            | Product-spec review comments resolved                                                                         |
+| G0-03 | Decide money unit/rounding/tax/invoice policy                        | A     | Decided (#44)    | ADR-0003 extension (#13): integer-Rial BIGINT, Toman display-only; percentage rounding/VAT await service work |
+| G0-04 | Select SMS/payment/shipping/deployment providers                     | Joint | Business input   | Decision issue with sandbox/access/contingency                                                                |
+| G0-05 | Configure labels, milestones, issue/PR templates and main protection | A     | Repo access      | GitHub settings and sample issue/PR validated                                                                 |
+| G0-06 | Verify clean-clone setup on second machine                           | B     | Lockfile/docs    | Timed setup notes; corrections merged                                                                         |
+| G0-07 | Threat/PII/data classification workshop                              | Joint | Product journeys | Threat model and data inventory issues                                                                        |
+| G0-08 | Define launch traffic, catalog size, RPO/RTO and support hours       | B     | Business input   | Measurable non-functional targets                                                                             |
 
 Exit: both members can build the repo, understand scope and have no unresolved
 decision blocking Sprint 0/1.

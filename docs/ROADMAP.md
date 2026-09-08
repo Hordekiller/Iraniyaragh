@@ -1,6 +1,6 @@
 # Delivery Roadmap
 
-Last reviewed: 2026-09-07
+Last reviewed: 2026-09-08
 
 This is the executive view of delivery. The executable sprint backlog, owners,
 acceptance gates and dependencies live in `DEVELOPMENT_PLAN.md`.

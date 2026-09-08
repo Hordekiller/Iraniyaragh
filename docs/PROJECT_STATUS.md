@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-07
+Last reviewed: 2026-09-08
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned

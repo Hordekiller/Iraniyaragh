@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-07
+Last reviewed: 2026-09-08
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
@@ -32,9 +32,7 @@ day-to-day assignments.
 | -------: | --------------------------------- | ------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------- |
 |        1 | Issue #91 — Sprint 1 coordination | In progress   | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                |
 |        2 | Issue #50 — Auth UX/E2E           | In progress   | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up |
-|        3 | Issue #91 — Sprint 1 coordination | In progress   | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                |
-|        4 | Issue #50 — Auth UX/E2E           | In progress   | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up |
-|        5 | Issues #78/#79                    | Decision work | capacity/review/release authority; SMS provider/outage contract               | Accepted written decision with owner and effective date       |
+|        3 | Issues #78/#79                    | Decision work | capacity/review/release authority; SMS provider/outage contract               | Accepted written decision with owner and effective date       |
 
 ## Next 10 working-day plan
 
