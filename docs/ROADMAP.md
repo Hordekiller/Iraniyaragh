@@ -92,6 +92,9 @@ return scenarios pass with financial and inventory reconciliation.
 - Automated deployment, monitoring, alerts, backup and restore drill
 - UAT, operator runbooks, support procedure and rollback rehearsal
 - SEO essentials and production content/data import
+- Dynamic sitemap, server-rendered discovery pages, commerce structured data/feed,
+  GEO/AEO citation readiness and production discovery monitoring, governed by
+  `SEO_GEO_AI_DISCOVERY_PLAN.md`
 
 Exit gate: all gates in `DEVELOPMENT_PLAN.md` are signed off; no open severity-1
 or severity-2 defect; restore and rollback have been demonstrated.

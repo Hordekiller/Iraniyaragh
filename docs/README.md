@@ -22,5 +22,7 @@ Read these documents before implementing business-critical features.
     and open decision register.
 17. `EXECUTION_STATUS.md` — current review queue, next ten working days and handoffs.
 18. `adr/` — architecture decisions that intentionally change or extend the foundation.
+19. `SEO_GEO_AI_DISCOVERY_PLAN.md` — dynamic sitemap, technical SEO, commerce
+    structured data, AI-answer discovery, on-site AI controls and delivery workflows.
 
 When code and documentation disagree, stop and resolve the discrepancy. Do not silently bypass a documented invariant.

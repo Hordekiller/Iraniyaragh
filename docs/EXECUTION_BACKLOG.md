@@ -104,18 +104,18 @@ and revocation tests pass; audit contains safe actor/action evidence.
 
 ### G3 — Catalog, pricing and public discovery (20–30%)
 
-| ID    | Deliverable                                        | Owner | Key dependency/acceptance                |
-| ----- | -------------------------------------------------- | ----- | ---------------------------------------- |
-| G3-01 | Category/brand/product/SKU domain services         | A     | G0-03; lifecycle/unique conflicts tested |
-| G3-02 | Price service/history/effective rules              | A     | ADR examples and snapshot tests          |
-| G3-03 | Media model/presigned upload/validation            | A     | Object storage and malicious-file cases  |
-| G3-04 | Admin category/brand management                    | B     | Permission/forms/table E2E               |
-| G3-05 | Admin product/SKU/price/media workflow             | B     | Draft-to-publish demo and audit          |
-| G3-06 | Public listing/detail/category/search APIs         | A     | Publication/data-leak/query tests        |
-| G3-07 | Storefront API integration and route decomposition | B     | No static sellable data in prod path     |
-| G3-08 | Search/filter/pagination/empty/error UI            | B     | URL-restorable responsive behavior       |
-| G3-09 | SEO metadata/sitemap/structured product data       | B     | Validation and crawl policy              |
-| G3-10 | Validated catalog import with dry-run report       | A     | B verifies sample/error report           |
+| ID    | Deliverable                                         | Owner | Key dependency/acceptance                |
+| ----- | --------------------------------------------------- | ----- | ---------------------------------------- |
+| G3-01 | Category/brand/product/SKU domain services          | A     | G0-03; lifecycle/unique conflicts tested |
+| G3-02 | Price service/history/effective rules               | A     | ADR examples and snapshot tests          |
+| G3-03 | Media model/presigned upload/validation             | A     | Object storage and malicious-file cases  |
+| G3-04 | Admin category/brand management                     | B     | Permission/forms/table E2E               |
+| G3-05 | Admin product/SKU/price/media workflow              | B     | Draft-to-publish demo and audit          |
+| G3-06 | Public listing/detail/category/search APIs          | A     | Publication/data-leak/query tests        |
+| G3-07 | Storefront API integration and route decomposition  | B     | No static sellable data in prod path     |
+| G3-08 | Search/filter/pagination/empty/error UI             | B     | URL-restorable responsive behavior       |
+| G3-09 | SEO/GEO metadata, dynamic sitemap and commerce data | B     | Render, parity and crawl-policy evidence |
+| G3-10 | Validated catalog import with dry-run report        | A     | B verifies sample/error report           |
 
 Exit: an authorized operator publishes/imports a SKU and a customer discovers the
 real content/price through API-backed responsive pages.
@@ -193,17 +193,17 @@ financial references; operator reports expose discrepancies.
 
 ### G8 — Experience completion and launch data (74–84%)
 
-| ID    | Deliverable                                        | Owner | Verifier                    |
-| ----- | -------------------------------------------------- | ----- | --------------------------- |
-| G8-01 | Customer profile/address/order/return completeness | B     | A contract/security review  |
-| G8-02 | Admin role/permission/user/audit/config UX         | B     | A authorization review      |
-| G8-03 | All critical loading/empty/error/success states    | B     | A smoke/UAT review          |
-| G8-04 | WCAG 2.2 AA audit and fixes                        | B     | automated + manual evidence |
-| G8-05 | Responsive/cross-browser/RTL/Jalali/currency pass  | B     | device/browser matrix       |
-| G8-06 | SEO/content/image/performance optimization         | B     | budgets and validators      |
-| G8-07 | Catalog/customer/stock import tools and validation | A     | B dry-run/UAT               |
-| G8-08 | Operator/customer help and support scripts         | B     | A operational review        |
-| G8-09 | Production feature flags/config inventory          | A     | B verifies behavior         |
+| ID    | Deliverable                                        | Owner | Verifier                                              |
+| ----- | -------------------------------------------------- | ----- | ----------------------------------------------------- |
+| G8-01 | Customer profile/address/order/return completeness | B     | A contract/security review                            |
+| G8-02 | Admin role/permission/user/audit/config UX         | B     | A authorization review                                |
+| G8-03 | All critical loading/empty/error/success states    | B     | A smoke/UAT review                                    |
+| G8-04 | WCAG 2.2 AA audit and fixes                        | B     | automated + manual evidence                           |
+| G8-05 | Responsive/cross-browser/RTL/Jalali/currency pass  | B     | device/browser matrix                                 |
+| G8-06 | SEO/GEO/content/image/performance discovery system | B     | dynamic sitemap, parity, budgets and production audit |
+| G8-07 | Catalog/customer/stock import tools and validation | A     | B dry-run/UAT                                         |
+| G8-08 | Operator/customer help and support scripts         | B     | A operational review                                  |
+| G8-09 | Production feature flags/config inventory          | A     | B verifies behavior                                   |
 
 Exit: no critical journey relies on prototype behavior; approved production data can
 be imported with dry-run, reconciliation and rollback/forward-fix procedure.
