@@ -432,6 +432,86 @@
           "Catalog"
         ]
       }
+    },
+    "/admin/sms-settings": {
+      "get": {
+        "operationId": "SmsSettingsController_getSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SmsSettings"
+        ]
+      },
+      "patch": {
+        "operationId": "SmsSettingsController_updateSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SmsSettings"
+        ]
+      }
+    },
+    "/admin/sms-settings/secret": {
+      "post": {
+        "operationId": "SmsSettingsController_rotateSecret",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SmsSettings"
+        ]
+      },
+      "delete": {
+        "operationId": "SmsSettingsController_clearSecret",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SmsSettings"
+        ]
+      }
+    },
+    "/admin/sms-settings/test-send": {
+      "post": {
+        "operationId": "SmsSettingsController_testSend",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SmsSettings"
+        ]
+      }
+    },
+    "/admin/sms-settings/diagnostics": {
+      "get": {
+        "operationId": "SmsSettingsController_diagnostics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SmsSettings"
+        ]
+      }
     }
   },
   "info": {
@@ -476,6 +556,10 @@
     {
       "name": "audit",
       "description": "Audit trail"
+    },
+    {
+      "name": "sms-settings",
+      "description": "SMS provider operational settings and diagnostics"
     }
   ],
   "servers": [],

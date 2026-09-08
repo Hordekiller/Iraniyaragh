@@ -247,6 +247,37 @@ confirmation and audit, but no UI/API may return it. Display only configured sta
 fixed masking, last rotation and sanitized diagnostics. Provider settings cannot weaken
 OTP expiry, attempts, cooldowns, hashing or abuse limits.
 
+#### 5.13.1 SMS/OTP settings screen (contract 2026-09-08)
+
+Routes served by the `/admin/sms-settings` surface (API v1); all actions require
+`STAFF_MFA` and the `sms-settings.manage` capability; rotation, clearing, settings
+changes and test sends require a fresh (recent) MFA session.
+
+- **Overview card**: provider enabled/disabled switch, environment badge
+  (development/production), outage mode flag and the operator-facing maintenance
+  message preview. Edits are PATCH-style partial updates served from the bounded
+  settings DTO; empty-value clearing is expressed by sending an empty string.
+- **Secret card (write-only)**: shows configured/not-configured, a fixed mask of the
+  configured key, validated state, last rotation time. Rotation shows a masked input
+  plus an explicit confirmation checkbox and a "requires fresh MFA" notice; clearing
+  shows the same confirmation and a destructive-action warning. The rendered UI never
+  receives or displays the raw key, and neither rotation nor clearing allow readback.
+- **Template/transport card**: template ID, sender line identifier, request timeout
+  (bounded by server validation), delivery-status collection/retention switch and
+  sanitized alert thresholds (failure window + count).
+- **Diagnostics card**: provider health category, circuit-breaker state, last
+  successful send time and sanitized error class; response bodies and secrets are
+  never shown.
+- **Controlled test send**: targets only an approved operator destination reference
+  stored outside GitHub; the form only supplies template parameters (e.g. the OTP
+  `Code`), never a destination number typed into the browser.
+- **States**: loading, empty (provider not configured — after the disconnected/fail-closed
+  state), degraded/outage banner, and error surfaces that expose sanitized error classes
+  only. Every mutation shows success/error feedback with the changed fields; every
+  action is audited (`sms-settings.*`).
+- Shallow "stale settings" indicator: the panel re-reads the settings snapshot after
+  a mutation and renders the server-assigned `version` and `updatedAt`.
+
 - non-secret, typed, versioned configuration with validation and change audit;
 - feature flags show environment, owner and expiry; secrets never render in UI;
 - imports provide upload, validation, dry-run, confirmation, progress and result report;
