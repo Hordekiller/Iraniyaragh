@@ -27,5 +27,9 @@ export type SmsSendResult =
   | Readonly<{ status: "unknown_result" }>;
 
 export interface SmsProvider {
+  /**
+   * Providers dispatch at most once. Callers must never automatically retry an
+   * unknown_result because the upstream may have accepted the first request.
+   */
   send(request: SmsSendRequest): Promise<SmsSendResult>;
 }
