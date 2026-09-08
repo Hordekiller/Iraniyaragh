@@ -36,14 +36,14 @@ day-to-day assignments.
 
 ## Team disposition ledger — 2026-09-08
 
-| Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                                | Closure condition                                                              |
-| --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| PR #112   | In review                     | Hordekiller / Maddyrampant | Verify the two factual review fixes, current-head CI and formatting                                        | Independent approval and protected merge                                       |
-| Issue #79 | Blocked on business input     | Hordekiller / Maddyrampant | Confirm budget, traffic, sender-line, privacy, sandbox and outage constraints; then write the provider ADR | Accepted vendor-neutral adapter/fallback decision with primary-source evidence |
-| Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation             | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity    |
-| Issue #51 | Complete/closed               | Hordekiller / Maddyrampant | Routine dependency maintenance only                                                                        | Already satisfied by merged #52 and protected supply-chain gates               |
-| Issue #91 | Open coordination             | Hordekiller / Maddyrampant | Finish or explicitly split #50; resolve/defer #78 and #79                                                  | Remaining Sprint 1 outcomes have merged evidence or named follow-ups           |
-| PR #11    | Complete/merged               | Hordekiller / Maddyrampant | Continue residual admin hardening only in its assigned later gates                                         | #9/#10 review and ADR-0004 acceptance already provide closure evidence         |
+| Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                    | Closure condition                                                                       |
+| --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| PR #112   | In review                     | Hordekiller / Maddyrampant | Verify the two factual review fixes, current-head CI and formatting                            | Independent approval and protected merge                                                |
+| Issue #79 | Decision in review            | Hordekiller / Maddyrampant | Review ADR-0011; implement #114, then #115                                                     | Accepted provider boundary; private account/line/key provisioning tracked operationally |
+| Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity             |
+| Issue #51 | Complete/closed               | Hordekiller / Maddyrampant | Routine dependency maintenance only                                                            | Already satisfied by merged #52 and protected supply-chain gates                        |
+| Issue #91 | Open coordination             | Hordekiller / Maddyrampant | Finish or explicitly split #50; resolve/defer #78 and #79                                      | Remaining Sprint 1 outcomes have merged evidence or named follow-ups                    |
+| PR #11    | Complete/merged               | Hordekiller / Maddyrampant | Continue residual admin hardening only in its assigned later gates                             | #9/#10 review and ADR-0004 acceptance already provide closure evidence                  |
 
 Blocked decision issues do not authorize guessed business choices. They block the
 related release/production gate while deterministic local implementation may proceed.

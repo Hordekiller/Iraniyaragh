@@ -239,6 +239,14 @@ validated non-secret configuration and safe metadata about secret health/rotatio
 
 ### 5.13 Settings, imports, jobs and system health
 
+SMS/OTP provider settings follow ADR-0011 and issue #115. The panel may edit bounded
+non-secret settings (enabled state, environment, template ID, sender line, timeout,
+delivery-status policy, outage mode and alert thresholds). The SMS.ir API key is
+write-only: administrators may rotate or clear it with fresh MFA, dedicated permission,
+confirmation and audit, but no UI/API may return it. Display only configured state,
+fixed masking, last rotation and sanitized diagnostics. Provider settings cannot weaken
+OTP expiry, attempts, cooldowns, hashing or abuse limits.
+
 - non-secret, typed, versioned configuration with validation and change audit;
 - feature flags show environment, owner and expiry; secrets never render in UI;
 - imports provide upload, validation, dry-run, confirmation, progress and result report;

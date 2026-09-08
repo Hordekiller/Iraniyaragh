@@ -4,8 +4,8 @@
 
 ### Customers
 
-- Mobile-number OTP is the implemented customer authentication flow; production SMS
-  delivery/provider selection remains pending.
+- Mobile-number OTP is the implemented customer authentication flow; SMS.ir is the
+  selected initial production provider behind the vendor-neutral ADR-0011 boundary.
 - OTP must expire, be rate-limited and have attempt limits.
 - Never log OTP values.
 
