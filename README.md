@@ -2,8 +2,9 @@
 
 Startup-ready commerce and warehouse platform for Iranian hardware/fittings retail.
 
-> Status: foundation/prototype. The storefront is currently a static visual prototype;
-> most business APIs and the admin application are not implemented yet. See
+> Status: pre-release foundation/Auth completion. Core Auth and infrastructure are
+> substantial; catalog API work is in review, while the storefront remains fixture-
+> backed and operational commerce modules are not implemented. See
 > [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) before starting work.
 
 ## Workspace

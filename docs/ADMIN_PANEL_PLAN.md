@@ -1,11 +1,11 @@
 # Production Admin Panel Program
 
-Status: proposed for joint review in GitHub Issue #70
+Status: active design baseline; implementation remains partial
 
 Owners: product/UX lead `@Maddyrampant`; runtime/security/integration lead
 `@Hordekiller`
 
-Last researched: 2026-09-01
+Last reconciled with repository: 2026-09-07
 
 ## 1. Outcome and meaning of complete
 
@@ -45,17 +45,24 @@ Implemented today:
 - one honest dashboard shell with placeholder values instead of fabricated business data;
 - desktop/mobile Playwright smoke coverage and a zero-external-asset network gate;
 - a declarative navigation map whose permission keys are placeholders for the backend
-  permission registry.
+  permission registry;
+- development-only real sign-in, memory-only access token store, Auth provider,
+  dashboard guard and logout;
+- fixture-gated staff password/TOTP journey with rate-limit, expiry, replay,
+  invalid-session and forbidden states; the route fails closed by default;
+- shared table, form, wizard, confirmation, feedback, status, page-header/card and
+  selectable-input primitives with Vitest component coverage;
+- showcase routes for the primitives, deliberately outside operational navigation.
 
 Not implemented today:
 
-- staff sign-in, TOTP challenge, session refresh/revocation and permission-aware shell;
-- a real typed API client, generated/validated contracts and domain fixtures;
+- production staff Auth wiring for password/TOTP, refresh/recovery and permission-aware
+  navigation (the fixture journey is not production integration);
+- complete typed domain clients and live business-domain integration;
 - operational module routes, tables, forms, commands, notifications and audit timelines;
 - dashboard metrics, work queues, global search or operator task inbox;
-- reusable production primitives for grids, filters, forms, uploads, exports and
-  destructive/sensitive commands;
-- automated admin component/a11y/visual-regression suites;
+- upload, export, advanced filtering and domain-specific sensitive-command primitives;
+- complete admin a11y and visual-regression suites (component tests exist);
 - CSP nonce/hash enforcement for the final MUI/Next.js render path.
 
 The current admin is therefore a sound **foundation shell**, not an operational panel.

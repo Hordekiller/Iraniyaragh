@@ -92,10 +92,12 @@ databases: `iraniyaragh_ci_test` and `ci_shadow_test`. It fails when:
   does not match the verified permission/role/grant contract;
 - an integration test violates transaction or idempotency expectations.
 
-The initial service-level database coverage proves sequential replay of an inventory
-idempotency key creates one movement and proves a failed serializable transaction
-rolls back its balance mutation. Concurrent retry behavior remains a separate known
-gap and must be covered when bounded serializable retries are implemented.
+Inventory database coverage proves sequential and concurrent idempotency behavior,
+rollback, stale-version conflicts, reservation lifecycle, parallel reservations and
+reservation-versus-stock-change contention. Bounded serializable retries are
+implemented. The next inventory gaps are protected HTTP authorization, transfer
+semantics and batched expiry-worker behavior, each of which needs its own database
+and concurrency evidence.
 
 ## Production dependency audit
 
