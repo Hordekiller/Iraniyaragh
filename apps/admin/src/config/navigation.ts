@@ -8,6 +8,7 @@ import {
   PackageSearch,
   ChartNoAxesCombined,
   ReceiptText,
+  Send,
   Settings2,
   ShieldCheck,
   ShoppingBag,
@@ -88,6 +89,7 @@ export const navigation: NavigationGroup[] = [
     items: [
       { label: 'نقش‌ها و دسترسی', href: '/access', icon: ShieldCheck, permission: 'roles.manage', status: 'planned' },
       { label: 'گزارش ممیزی', href: '/audit', icon: FileClock, permission: 'audit.read', status: 'planned' },
+      { label: 'سرویس پیامک', href: '/settings/sms', icon: Send, permission: 'settings.manage' },
       { label: 'تنظیمات', href: '/settings', icon: Settings2, permission: 'settings.manage', status: 'planned' },
     ],
   },
