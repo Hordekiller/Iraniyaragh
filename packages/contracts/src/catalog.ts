@@ -129,6 +129,17 @@ export type ProductDetail = ProductListItem & {
 
 export type ProductDetailResponse = ApiSuccess<{ product: ProductDetail }>;
 
+export type ProductVariantPublic = Omit<ProductVariant, 'costPrice'>;
+
+export type ProductDetailPublic = ProductListItem & {
+  description: string | null;
+  brand: BrandSummary | null;
+  category: CategorySummary | null;
+  variants: ProductVariantPublic[];
+};
+
+export type ProductDetailPublicResponse = ApiSuccess<{ product: ProductDetailPublic }>;
+
 export type ProductStatusAction =
   | { action: 'publish' }
   | { action: 'unpublish' }

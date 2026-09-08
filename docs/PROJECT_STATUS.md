@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-07
+Last reviewed: 2026-09-08
 
 This file is the factual starting point. Update it at the end of every sprint and
 whenever a major capability changes state.
@@ -29,6 +29,19 @@ Working-agreement decisions are tracked in #78.
 - Database service plus distinct database-independent liveness and bounded PostgreSQL
   readiness endpoints with safe failure responses
 - Initial inventory service for on-hand mutation, reservation and release
+- Catalog vertical slice (`feat/catalog-api`, not yet merged): backend-only
+  Category/Brand/Product/SKU services on branch `feat/catalog-api` with
+  `RequirePermission('catalog.read')`/`catalog.write` guarded admin mutations
+  (`POST /api/v1/catalog/admin/products`, `/brands`, `/categories`, status
+  publish/unpublish/archive), a public read-only catalog (`GET /catalog/products`,
+  `/categories`, `/categories/tree`, `/brands`) that never leaks drafts or pricing,
+  integer-Rial (`BigInt`) money persisted from `Money` request payloads, product
+  listing with pagination/search/filter/sort, an unpublish guard (a product needs a
+  SKU before publishing) and actor-scoped audit rows. Covered by DB integration
+  tests (tree, brand list, BigInt money, draft opacity, publish, no-SKU conflict,
+  non-sensitive public projection, audit). `openapi.json` regenerated with the new
+  catalog paths; api typecheck/lint/unit (205)/integration (54) and root
+  typecheck/lint/build all green.
 - Docker Compose services for PostgreSQL, Redis and MinIO
 - Architecture, API, security, operations and domain principles
 - Initial custom Next.js/MUI Persian RTL admin shell with self-hosted font policy
@@ -197,7 +210,9 @@ Working-agreement decisions are tracked in #78.
   and read-only snapshot/movement queries (a public controller is withheld until the
   auth runtime provides the `inventory.read` permission). Mutations still have no
   public authenticated endpoint or authorization.
-- Shared contracts only contain basic response/money/inventory types.
+- Shared contracts only contain basic response/money/inventory types (now also
+  catalog types from #97) but not the full commerce surface; the catalog slice has
+  no live storefront/admin UI wiring yet and no pricing/promotion/media endpoints.
 - The storefront has responsive interactions and its component tree is decomposed
   (see #19), but actions are simulated and all data comes from static prototype
   fixtures isolated in `apps/web/src/data/prototype.ts` (TEMP::G3-07).
