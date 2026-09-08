@@ -19,12 +19,12 @@ day-to-day assignments.
 
 ## Current position
 
-| Gate                  | State                              | Current evidence                                             | Exit blocker                                               |
-| --------------------- | ---------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
-| `0.1` Foundation/Auth | Closing                            | Core Auth and privileged lifecycle are merged; #49 is closed | #50/#91 reconciliation; #78/#79 decisions                  |
-| `0.2` Catalog         | Started                            | Contracts and Catalog API foundation are merged via #103     | Media/pricing, admin CRUD, storefront live integration     |
-| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                     | HTTP/RBAC, warehouse/location, transfers, worker and admin |
-| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                     | Policies and all application/client workflows              |
+| Gate                  | State                              | Current evidence                                              | Exit blocker                                               |
+| --------------------- | ---------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| `0.1` Foundation/Auth | Closing                            | Core Auth is merged; #49/#79 are closed and ADR-0011 accepted | #50/#91 reconciliation; #78 agreement; #114/#115 delivery  |
+| `0.2` Catalog         | Started                            | Contracts and Catalog API foundation are merged via #103      | Media/pricing, admin CRUD, storefront live integration     |
+| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                      | HTTP/RBAC, warehouse/location, transfers, worker and admin |
+| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                      | Policies and all application/client workflows              |
 
 ## Active merge/review queue
 
@@ -32,18 +32,19 @@ day-to-day assignments.
 | -------: | --------------------------------- | ------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------- |
 |        1 | Issue #91 — Sprint 1 coordination | In progress   | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                |
 |        2 | Issue #50 — Auth UX/E2E           | In progress   | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up |
-|        3 | Issues #78/#79                    | Decision work | capacity/review/release authority; SMS provider/outage contract               | Accepted written decision with owner and effective date       |
+|        3 | Issue #78                         | Decision work | capacity, review SLA, private coordination and release authority              | Accepted written agreement with owner and effective date      |
+|        4 | Issues #114/#115                  | Ready/blocked | provider contract first; then authorization, secret boundary and admin states | Backend contract accepted, then integrated admin evidence     |
 
 ## Team disposition ledger — 2026-09-08
 
-| Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                    | Closure condition                                                                       |
-| --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| PR #112   | In review                     | Hordekiller / Maddyrampant | Verify the two factual review fixes, current-head CI and formatting                            | Independent approval and protected merge                                                |
-| Issue #79 | Decision in review            | Hordekiller / Maddyrampant | Review ADR-0011; implement #114, then #115                                                     | Accepted provider boundary; private account/line/key provisioning tracked operationally |
-| Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity             |
-| Issue #51 | Complete/closed               | Hordekiller / Maddyrampant | Routine dependency maintenance only                                                            | Already satisfied by merged #52 and protected supply-chain gates                        |
-| Issue #91 | Open coordination             | Hordekiller / Maddyrampant | Finish or explicitly split #50; resolve/defer #78 and #79                                      | Remaining Sprint 1 outcomes have merged evidence or named follow-ups                    |
-| PR #11    | Complete/merged               | Hordekiller / Maddyrampant | Continue residual admin hardening only in its assigned later gates                             | #9/#10 review and ADR-0004 acceptance already provide closure evidence                  |
+| Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                    | Closure condition                                                           |
+| --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| PR #112   | Complete/merged               | Hordekiller / Maddyrampant | Use the merged status/roadmap baseline                                                         | Independent approval and protected merge completed                          |
+| Issue #79 | Complete/closed               | Hordekiller / Maddyrampant | Implement #114, then #115; provision account/line/key privately                                | ADR-0011 accepted via merged #116                                           |
+| Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity |
+| Issue #51 | Complete/closed               | Hordekiller / Maddyrampant | Routine dependency maintenance only                                                            | Already satisfied by merged #52 and protected supply-chain gates            |
+| Issue #91 | Open coordination             | Hordekiller / Maddyrampant | Finish or explicitly split #50; resolve #78; track #114/#115 as named follow-ups               | Remaining Sprint 1 outcomes have merged evidence or named follow-ups        |
+| PR #11    | Complete/merged               | Hordekiller / Maddyrampant | Continue residual admin hardening only in its assigned later gates                             | #9/#10 review and ADR-0004 acceptance already provide closure evidence      |
 
 Blocked decision issues do not authorize guessed business choices. They block the
 related release/production gate while deterministic local implementation may proceed.
@@ -67,7 +68,8 @@ Exit: remaining #50/#91 gaps are closed or split into owned follow-ups.
 - Map #50 and #91 acceptance checkboxes to a commit/test/PR; retain #49 as closed evidence.
 - Run clean-main quality, database and E2E gates.
 - Confirm customer OTP fixture tests and live API tests are described separately.
-- Decide #78 and #79, or assign an owner/date and declare which later gate they block.
+- Decide #78; treat accepted ADR-0011 and closed #79 as the provider baseline,
+  with implementation explicitly owned by #114/#115.
 - Update Auth/API/security/operations docs only where merged behavior changed.
 
 Exit: `0.1` either closes with evidence or has a short explicit carry-over list.
@@ -140,7 +142,8 @@ Reviewer focus:
 
 ## Release blockers
 
-- Live production staff/customer Auth acceptance and SMS provider decision.
+- Live production staff/customer Auth acceptance and delivery of the accepted SMS
+  provider/admin boundary through #114/#115.
 - Server-side permission enforcement for every business command.
 - Integrated catalog, inventory, cart, checkout, order and payment journeys.
 - Verified/idempotent payment and reconciliation.
