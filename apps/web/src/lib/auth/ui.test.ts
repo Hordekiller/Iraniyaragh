@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AuthFixtureClient } from './fixtures';
-import { MemorySessionStore, CrossTabSessionBus } from './session-store';
+import {
+  MemorySessionStore,
+  CrossTabSessionBus,
+  LocalRefreshCoordinator,
+} from './session-store';
 import type { SessionSignal } from './session-store';
 import { CustomerOtpController } from './ui';
 import type { AuthApi } from './api';
@@ -557,5 +561,85 @@ describe('CustomerOtpController silent session restore (#50)', () => {
     // No session in this tab.
     bus.broadcast({ type: 'refresh-failed', reason: 'replayed' });
     expect(controller.getState().phase).toBe('idle');
+  });
+
+  it('serializes refreshes from two controllers so rotating cookies are never used concurrently', async () => {
+    const coordinator = new LocalRefreshCoordinator();
+    const firstStore = new MemorySessionStore();
+    const secondStore = new MemorySessionStore();
+    const firstApi = new AuthFixtureClient({ store: firstStore });
+    const secondApi = new AuthFixtureClient({ store: secondStore });
+    const firstController = new CustomerOtpController(firstApi, firstStore, () => Date.now(), undefined, coordinator);
+    const secondController = new CustomerOtpController(secondApi, secondStore, () => Date.now(), undefined, coordinator);
+    await authenticate(firstController);
+    await authenticate(secondController);
+
+    let active = 0;
+    let maximumActive = 0;
+    let calls = 0;
+    const releases: Array<() => void> = [];
+    for (const api of [firstApi, secondApi]) {
+      const originalRefresh = api.refresh.bind(api);
+      api.refresh = async () => {
+        calls += 1;
+        active += 1;
+        maximumActive = Math.max(maximumActive, active);
+        await new Promise<void>(resolve => releases.push(resolve));
+        const result = await originalRefresh();
+        active -= 1;
+        return result;
+      };
+    }
+
+    const first = firstController.restoreSession();
+    const second = secondController.restoreSession();
+    await vi.waitFor(() => expect(calls).toBe(1));
+    expect(maximumActive).toBe(1);
+
+    releases.shift()?.();
+    await vi.waitFor(() => expect(calls).toBe(2));
+    expect(maximumActive).toBe(1);
+    releases.shift()?.();
+
+    await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
+    expect(firstStore.isAuthenticated()).toBe(true);
+    expect(secondStore.isAuthenticated()).toBe(true);
+  });
+
+  it('propagates every terminal invalid refresh to other authenticated tabs', async () => {
+    const bus = new RecordingBus('test-channel');
+    const firstStore = new MemorySessionStore();
+    const secondStore = new MemorySessionStore();
+    const firstFixture = new AuthFixtureClient({ store: firstStore });
+    const secondFixture = new AuthFixtureClient({ store: secondStore });
+    const firstController = new CustomerOtpController(
+      makeFailingRefreshClient(firstFixture, 'AUTH_SESSION_INVALID'),
+      firstStore,
+      () => Date.now(),
+      bus,
+    );
+    const secondController = new CustomerOtpController(secondFixture, secondStore, () => Date.now(), bus);
+    await authenticate(firstController);
+    await authenticate(secondController);
+
+    await expect(firstController.restoreSession()).resolves.toBe(false);
+    expect(firstController.getState().phase).toBe('session-expired');
+    expect(secondController.getState().phase).toBe('session-expired');
+    expect(bus.signals).toContain('refresh-failed');
+  });
+
+  it('unsubscribes from cross-tab failures on dispose and can reconnect safely', async () => {
+    const bus = new RecordingBus('test-channel');
+    const store = new MemorySessionStore();
+    const controller = new CustomerOtpController(new AuthFixtureClient({ store }), store, () => Date.now(), bus);
+    await authenticate(controller);
+
+    controller.dispose();
+    bus.broadcast({ type: 'refresh-failed', reason: 'replayed' });
+    expect(controller.getState().phase).toBe('authenticated');
+
+    controller.connect();
+    bus.broadcast({ type: 'refresh-failed', reason: 'replayed' });
+    expect(controller.getState().phase).toBe('session-expired');
   });
 });

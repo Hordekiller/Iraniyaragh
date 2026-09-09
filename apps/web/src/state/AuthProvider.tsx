@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
-import { MemorySessionStore, CrossTabSessionBus } from "../lib/auth/session-store";
+import {
+  BrowserRefreshCoordinator,
+  MemorySessionStore,
+  CrossTabSessionBus,
+} from "../lib/auth/session-store";
 import { AuthFixtureClient } from "../lib/auth/fixtures";
 import { AuthHttpClient } from "../lib/auth/api";
 import { readCsrfCookie } from "../lib/auth/csrf";
 import { CustomerOtpController } from "../lib/auth/ui";
 import type { AuthApi } from "../lib/auth/api";
+import type { RefreshCoordinator } from "../lib/auth/session-store";
 import { AuthContext } from "./auth-context";
 
 /**
@@ -21,6 +26,7 @@ export type AuthProviderProps = {
   api?: AuthApi;
   store?: MemorySessionStore;
   bus?: CrossTabSessionBus;
+  refreshCoordinator?: RefreshCoordinator;
 };
 
 /**
@@ -39,7 +45,7 @@ const nowClock = (): number => Date.now();
  * caller-supplied `api` (for tests) always wins; a fixture is used only when
  * `VITE_FIXTURE_AUTH=true` is set.
  */
-export function AuthProvider({ children, api, store, bus }: AuthProviderProps) {
+export function AuthProvider({ children, api, store, bus, refreshCoordinator }: AuthProviderProps) {
   const value = useMemo(() => {
     const sessionStore = store ?? new MemorySessionStore();
     const sessionBus = bus ?? new CrossTabSessionBus();
@@ -51,14 +57,20 @@ export function AuthProvider({ children, api, store, bus }: AuthProviderProps) {
             store: sessionStore,
             getCsrfToken: () => readCsrfCookie(window.document),
           }));
-    const controller = new CustomerOtpController(client, sessionStore, nowClock, sessionBus);
+    const controller = new CustomerOtpController(
+      client,
+      sessionStore,
+      nowClock,
+      sessionBus,
+      refreshCoordinator ?? new BrowserRefreshCoordinator(),
+    );
     return {
       state: controller.getState(),
       controller,
       open: () => controller.open(),
       close: () => controller.close(),
     };
-    // api/store/bus are intentionally considered stable; components re-create
+    // api/store/bus/refreshCoordinator are intentionally considered stable; components re-create
     // the controller only when the provider remounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -72,10 +84,13 @@ export function AuthProvider({ children, api, store, bus }: AuthProviderProps) {
   const refreshRef = useRef(value.controller);
 
   useEffect(() => {
+    const controller = refreshRef.current;
     // Silent single-flight restore: refresh has a live in-memory session exactly
     // once per page lifetime; on SESSION_INVALID/REPLAYED it latches and never
     // auto-retries (AUTH_CONTRACT §7 / #50 no-retry).
-    void refreshRef.current.restoreSession();
+    controller.connect();
+    void controller.restoreSession();
+    return () => controller.dispose();
   }, []);
 
   const contextValue = useMemo(

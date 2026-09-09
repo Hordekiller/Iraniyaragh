@@ -169,9 +169,12 @@ Feature branch `feat/50-auth-ux-e2e` (not yet pushed):
   admin fixtures (#50 item A) — commit `b51aa51`.
 - `web(auth)`: the storefront AuthProvider now defaults to the real `AuthHttpClient`
   (fixture only when `VITE_FIXTURE_AUTH=true`), with CSRF cookie reader, silent
-  single-flight session restore, cross-tab refresh signals, no-retry latch after
-  session/CSRF failures, `session-expired` forced re-auth UI and memory-only tokens —
-  commit `1551348`. Verified: web 152 unit tests + CI coverage gates, contracts
+  Web-Locks-serialized cross-tab session restore, token-free refresh signals,
+  bounded lock acquisition, terminal-failure propagation, lifecycle cleanup,
+  no-retry latch after session/CSRF failures, `session-expired` forced re-auth UI
+  and memory-only tokens —
+  commits `1551348` plus the bounded cross-tab correction. Verified: web 158 unit
+  tests, contracts
   typecheck, API 366 integration tests + lint + build, admin 130 tests.
 - Admin split: Hordekiller owns the admin UI slice; this branch does not change
   admin client behavior beyond item A.
