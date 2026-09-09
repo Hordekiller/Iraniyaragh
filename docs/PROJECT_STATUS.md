@@ -81,6 +81,16 @@ foundation, and G5–G10 have not reached integrated completion.
 - Development-only staff sign-in and credential-less seeded dev admin.
 - TTY-only first-admin bootstrap command with merged concurrency/rerun verification.
 
+### Observability foundation
+
+- Structured JSON diagnostic event contract with service/environment/version and
+  request/correlation plus optional trace/span context.
+- Recursive bounded redaction for sensitive keys/values, raw HTTP containers and URL
+  query/fragment data; hostile getters, cycles and unserializable values fail safe.
+- Production stack suppression and non-blocking logger output failure behavior.
+- HTTP/dependency/worker instrumentation, telemetry export/storage, retention,
+  dashboards/alerts and admin diagnostics remain explicit #136 follow-up slices.
+
 ### Inventory foundation
 
 - Transactional on-hand mutation and reservation create/consume/release/expire.
