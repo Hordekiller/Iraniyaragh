@@ -1,4 +1,19 @@
-import { Body, Controller, Delete, Get, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Post,
+  Put,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type {
   SmsDiagnosticsResponse,
   SmsSettingsResponse,
@@ -20,15 +35,27 @@ import type {
   SmsSettingsTestSendDto,
   SmsSettingsUpdateDto,
 } from './sms-settings.dto';
+import { openApiSmsBodies, openApiSmsSchemas } from './sms-settings.dto';
 import { SmsSettingsService } from './sms-settings.service';
 
+@ApiTags('notifications')
+@ApiBearerAuth('access-token')
 @Controller({ path: 'notifications/admin/sms-settings', version: '1' })
 export class NotificationsAdminController {
-  constructor(private readonly settings: SmsSettingsService) {}
+  constructor(
+    @Inject(SmsSettingsService)
+    private readonly settings: SmsSettingsService,
+  ) {}
 
   @Get()
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('settings.manage')
+  @ApiOperation({ summary: 'Read current SMS provider settings and secret status.' })
+  @ApiResponse({
+    status: 200,
+    schema: openApiSmsSchemas.settingsResponse,
+    description: 'Sanitized settings snapshot with masked secret status; never the raw secret.',
+  })
   getSettings(): Promise<SmsSettingsResponse> {
     return this.settings.getSettings();
   }
@@ -37,6 +64,13 @@ export class NotificationsAdminController {
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('settings.manage')
   @RequireFreshAuthentication('STAFF_MFA')
+  @ApiOperation({ summary: 'Patch SMS provider settings with optimistic concurrency.' })
+  @ApiBody({ schema: openApiSmsBodies.update })
+  @ApiResponse({
+    status: 200,
+    schema: openApiSmsSchemas.settingsResponse,
+    description: 'Updated snapshot at the new version; conflicts return CONFLICT.',
+  })
   updateSettings(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Body() input: SmsSettingsUpdateDto,
@@ -49,6 +83,13 @@ export class NotificationsAdminController {
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('settings.manage')
   @RequireFreshAuthentication('STAFF_MFA')
+  @ApiOperation({ summary: 'Rotate the SMS provider secret (write-only, idempotent).' })
+  @ApiBody({ schema: openApiSmsBodies.rotateSecret })
+  @ApiResponse({
+    status: 201,
+    schema: openApiSmsSchemas.settingsResponse,
+    description: 'Secret rotated; only the masked status and last-rotated time are returned.',
+  })
   rotateSecret(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Body() input: SmsSettingsRotateSecretDto,
@@ -60,6 +101,13 @@ export class NotificationsAdminController {
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('settings.manage')
   @RequireFreshAuthentication('STAFF_MFA')
+  @ApiOperation({ summary: 'Clear the configured SMS provider secret.' })
+  @ApiBody({ schema: openApiSmsBodies.clearSecret })
+  @ApiResponse({
+    status: 200,
+    schema: openApiSmsSchemas.settingsResponse,
+    description: 'Secret cleared; only the masked status is returned.',
+  })
   clearSecret(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Body() input: SmsSettingsClearSecretDto,
@@ -71,6 +119,12 @@ export class NotificationsAdminController {
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('settings.manage')
   @RequireFreshAuthentication('STAFF_MFA')
+  @ApiOperation({ summary: 'Validate the provider connection without sending to arbitrary numbers.' })
+  @ApiResponse({
+    status: 201,
+    schema: openApiSmsSchemas.validateResponse,
+    description: 'Validation health report with sanitized error category.',
+  })
   validateConfiguration(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<SmsValidateResponse> {
     return this.settings.validateConfiguration({ actorUserId: principal.userId, requestId: getRequestId() });
   }
@@ -79,6 +133,13 @@ export class NotificationsAdminController {
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('settings.manage')
   @RequireFreshAuthentication('STAFF_MFA')
+  @ApiOperation({ summary: 'Send a controlled SMS test to the approved operator destination.' })
+  @ApiBody({ schema: openApiSmsBodies.testSend })
+  @ApiResponse({
+    status: 201,
+    schema: openApiSmsSchemas.testSendResponse,
+    description: 'Controlled send outcome; no destination, OTP body or API key in the response.',
+  })
   sendControlledTest(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Body() input: SmsSettingsTestSendDto,
@@ -89,6 +150,12 @@ export class NotificationsAdminController {
   @Get('diagnostics')
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('settings.manage')
+  @ApiOperation({ summary: 'Read provider health, circuit state and last successful send time.' })
+  @ApiResponse({
+    status: 200,
+    schema: openApiSmsSchemas.diagnosticsResponse,
+    description: 'Diagnostics with masked/sanitized values only.',
+  })
   getDiagnostics(): Promise<SmsDiagnosticsResponse> {
     return this.settings.getDiagnostics();
   }

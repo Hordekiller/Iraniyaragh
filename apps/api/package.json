@@ -10,6 +10,7 @@
     "test": "vitest run && node --test prisma/*.test.mjs",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc --noEmit",
+    "openapi:generate": "REGENERATE_OPENAPI=1 vitest run src/openapi.regenerate.spec.ts",
     "prisma:generate": "prisma generate",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:migrate": "prisma migrate dev",

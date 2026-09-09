@@ -107,6 +107,42 @@ describe('SmsSettingsRotateSecretDto', () => {
     const noKey = plainToInstance(SmsSettingsRotateSecretDto, { secret: '0123456789abcdef', confirm: true });
     expect(await errorsOf(noKey)).not.toHaveLength(0);
   });
+
+  it('rejects whitespace-only, padded and control-containing secrets without ever trimming silently', async () => {
+    const base = { confirm: true, idempotencyKey: 'rotate-2026-09-08-a1' };
+    const cases: Array<{ label: string; secret: string }> = [
+      { label: 'whitespace-only', secret: '               ' },
+      { label: 'leading whitespace', secret: '  0123456789abcdef' },
+      { label: 'trailing whitespace', secret: '0123456789abcdef  ' },
+      { label: 'internal whitespace', secret: '0123456789ab cdef' },
+      { label: 'tab', secret: '0123456789\tabcdef' },
+      { label: 'newline', secret: '0123456789\nabcdef' },
+      { label: 'NUL control character', secret: '0123456789\u0000abcdef' },
+      { label: 'escape/deletion control character', secret: '0123456789\u007Fabcdef' },
+    ];
+    for (const c of cases) {
+      expect(await errorsOf(plainToInstance(SmsSettingsRotateSecretDto, { ...base, secret: c.secret }))).not.toHaveLength(0);
+    }
+  });
+
+  it('rejects oversize secrets beyond the write-only length bound', async () => {
+    const oversized = plainToInstance(SmsSettingsRotateSecretDto, {
+      secret: 'a'.repeat(513),
+      confirm: true,
+      idempotencyKey: 'rotate-2026-09-08-a1',
+    });
+    expect(await errorsOf(oversized)).not.toHaveLength(0);
+  });
+
+  it('never accepts a secret that is only valid after trimming', async () => {
+    const padded = ' ' + '0123456789abcdef' + ' ';
+    const dto = plainToInstance(SmsSettingsRotateSecretDto, {
+      secret: padded,
+      confirm: true,
+      idempotencyKey: 'rotate-2026-09-08-a1',
+    });
+    expect(await errorsOf(dto)).not.toHaveLength(0);
+  });
 });
 
 describe('SmsSettingsClearSecretDto', () => {

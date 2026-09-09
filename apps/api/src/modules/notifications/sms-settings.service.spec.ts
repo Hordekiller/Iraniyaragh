@@ -68,9 +68,12 @@ function createFakeStore(snapshot: SmsSettingsSnapshot = DEFAULT_SNAPSHOT) {
   return { store: store as unknown as SmsSettingsStore, mutate: (next: SmsSettingsSnapshot) => (state = next) };
 }
 
-function build(snapshot?: SmsSettingsSnapshot) {
+function build(
+  snapshot?: SmsSettingsSnapshot,
+  auditRecord = vi.fn(async () => undefined),
+) {
   const { store, mutate } = createFakeStore(snapshot);
-  const audit = { record: vi.fn(async () => undefined) };
+  const audit = { record: auditRecord };
   const service = new SmsSettingsService(store as unknown as SmsSettingsStore, audit as never);
   const ctx = { actorUserId: 'actor-1', requestId: 'req-1' };
   return { service, store, audit, ctx, mutate };
@@ -116,17 +119,19 @@ describe('SmsSettingsService', () => {
     );
   });
 
-  it('records an audit entry with changed field names only', async () => {
+  it('records attempt-then-outcome audit entries with changed field names only', async () => {
     await b.service.updateSettings(b.ctx, { expectedVersion: 3, patch: { timeoutMs: 3_000 } });
-    expect(b.audit.record).toHaveBeenCalledWith(
+    const calls = b.audit.record.mock.calls.map(call => call[0] as { action: string; after?: unknown });
+    expect(calls).toEqual([
+      expect.objectContaining({ action: 'sms-settings.updated.attempt' }),
       expect.objectContaining({
+        action: 'sms-settings.updated.outcome',
         actorId: 'actor-1',
-        action: 'sms-settings.updated',
         entityType: 'SmsSettings',
         requestId: 'req-1',
         after: { fields: ['timeoutMs'], expectedVersion: 3 },
       }),
-    );
+    ]);
   });
 
   it('propagates a stable conflict envelope for stale optimistic updates', async () => {
@@ -149,7 +154,10 @@ describe('SmsSettingsService', () => {
       idempotencyKey: DELTA_KEY,
     });
     expect(b.store.rotateSecret).toHaveBeenCalledWith('0123456789abcdef', DELTA_KEY, 'req-1');
-    expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.secret.rotated' }));
+    expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.secret.rotated.attempt' }));
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'sms-settings.secret.rotated.outcome', after: { lastRotatedAt: '2026-09-08T10:00:00.000Z' } }),
+    );
     expect(JSON.stringify(response)).not.toContain('0123456789abcdef');
   });
 
@@ -168,14 +176,18 @@ describe('SmsSettingsService', () => {
   it('clears the secret with the idempotency key and records an audit event', async () => {
     await b.service.clearSecret(b.ctx, { confirm: true, idempotencyKey: 'clear-1' });
     expect(b.store.clearSecret).toHaveBeenCalledWith('clear-1', 'req-1');
-    expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.secret.cleared' }));
+    expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.secret.cleared.attempt' }));
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'sms-settings.secret.cleared.outcome', after: { clearedAt: '2026-09-08T10:00:00.000Z' } }),
+    );
   });
 
   it('validates configuration and audits attempt and outcome only', async () => {
     const response = await b.service.validateConfiguration(b.ctx);
     expect(b.store.validateConfiguration).toHaveBeenCalledWith('req-1', 'req-1');
+    expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.validated.attempt' }));
     expect(b.audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'sms-settings.validated', after: { checked: true, providerHealth: 'ok' } }),
+      expect.objectContaining({ action: 'sms-settings.validated.outcome', after: { checked: true, providerHealth: 'ok' } }),
     );
     expect(response.data.validation.checked).toBe(true);
   });
@@ -187,8 +199,9 @@ describe('SmsSettingsService', () => {
 
     const response = await b.service.sendControlledTest(b.ctx, { confirm: true, idempotencyKey: 'test-1' });
     expect(b.store.submitTestSend).toHaveBeenCalledWith('test-1', 'req-1');
+    expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.test-send.attempt' }));
     expect(b.audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'sms-settings.test-send', after: { status: 'accepted', messageId: 'msg-1' } }),
+      expect.objectContaining({ action: 'sms-settings.test-send.outcome', after: { status: 'accepted', messageId: 'msg-1' } }),
     );
     expect(response.data.outcome.status).toBe('accepted');
   });
@@ -228,5 +241,107 @@ describe('DisconnectedSmsSettingsStore', () => {
     const store = new DisconnectedSmsSettingsStore();
     const diagnostics = await store.diagnostics();
     expect(diagnostics.providerHealth).toBe('not_configured');
+  });
+});
+
+describe('Audit protocol', () => {
+  function buildIdempotentStore() {
+    const rotateResults = new Map<string, { lastRotatedAt: string }>();
+    const clearResults = new Map<string, { clearedAt: string }>();
+    const sendResults = new Map<string, { messageId: string; status: 'accepted' | 'rejected' }>();
+    return {
+      rotateSecret: vi.fn(async (secret: string, idempotencyKey: string) => {
+        if (!rotateResults.has(idempotencyKey)) rotateResults.set(idempotencyKey, { lastRotatedAt: `rotated-${rotateResults.size}` });
+        return rotateResults.get(idempotencyKey)!;
+      }),
+      clearSecret: vi.fn(async (idempotencyKey: string) => {
+        if (!clearResults.has(idempotencyKey)) clearResults.set(idempotencyKey, { clearedAt: `cleared-${clearResults.size}` });
+        return clearResults.get(idempotencyKey)!;
+      }),
+      submitTestSend: vi.fn(async (idempotencyKey: string) => {
+        if (!sendResults.has(idempotencyKey)) sendResults.set(idempotencyKey, { messageId: `msg-${sendResults.size}`, status: 'accepted' as const });
+        return sendResults.get(idempotencyKey)!;
+      }),
+      read: vi.fn(async () => DEFAULT_SNAPSHOT),
+      update: vi.fn(async (input: { expectedVersion: number; patch: Record<string, unknown> }) => ({
+        ...DEFAULT_SNAPSHOT,
+        version: DEFAULT_SNAPSHOT.version + 1,
+        settings: { ...DEFAULT_SNAPSHOT.settings, ...(input.patch as Partial<typeof DEFAULT_SNAPSHOT.settings>) },
+      })),
+      validateConfiguration: vi.fn(async () => ({ checked: true, providerHealth: 'ok' as const, lastCheckedAt: '', errorClass: null })),
+    } as unknown as SmsSettingsStore;
+  }
+
+  it('pre-attempt audit failure prevents the store dispatch', async () => {
+    const auditFailOnAttempt = vi.fn(async () => {
+      throw new Error('audit write failure');
+    });
+    const b = build(DEFAULT_SNAPSHOT, auditFailOnAttempt);
+    await expect(
+      b.service.rotateSecret(b.ctx, { secret: '0123456789abcdef', confirm: true, idempotencyKey: DELTA_KEY }),
+    ).rejects.toThrow('audit write failure');
+    expect(b.store.rotateSecret).not.toHaveBeenCalled();
+  });
+
+  it('pre-attempt audit failure on clear also prevents dispatch', async () => {
+    const auditFailOnAttempt = vi.fn(async () => {
+      throw new Error('audit clear failure');
+    });
+    const b = build(DEFAULT_SNAPSHOT, auditFailOnAttempt);
+    await expect(
+      b.service.clearSecret(b.ctx, { confirm: true, idempotencyKey: 'clear-2' }),
+    ).rejects.toThrow('audit clear failure');
+    expect(b.store.clearSecret).not.toHaveBeenCalled();
+  });
+
+  it('pre-attest failure on test-send prevents dispatch', async () => {
+    const auditFailOnAttempt = vi.fn(async () => {
+      throw new Error('audit send failure');
+    });
+    const b = build(DEFAULT_SNAPSHOT, auditFailOnAttempt);
+    await expect(
+      b.service.sendControlledTest(b.ctx, { confirm: true, idempotencyKey: 'test-2' }),
+    ).rejects.toThrow('audit send failure');
+    expect(b.store.submitTestSend).not.toHaveBeenCalled();
+  });
+
+  it('pre-attempt audit failure on settings update prevents the store update', async () => {
+    const auditFailOnAttempt = vi.fn(async () => {
+      throw new Error('audit settings failure');
+    });
+    const b = build(DEFAULT_SNAPSHOT, auditFailOnAttempt);
+    await expect(
+      b.service.updateSettings(b.ctx, { expectedVersion: 3, patch: { enabled: false } }),
+    ).rejects.toThrow('audit settings failure');
+    expect(b.store.update).not.toHaveBeenCalled();
+  });
+
+  it('pre-attempt audit failure on validate prevents the store call', async () => {
+    const auditFailOnAttempt = vi.fn(async () => {
+      throw new Error('audit validation failure');
+    });
+    const b = build(DEFAULT_SNAPSHOT, auditFailOnAttempt);
+    await expect(b.service.validateConfiguration(b.ctx)).rejects.toThrow('audit validation failure');
+    expect(b.store.validateConfiguration).not.toHaveBeenCalled();
+  });
+
+  it('post-effect audit failure is replay-safe via the same idempotency key', async () => {
+    const idempotentStore = buildIdempotentStore();
+    let callCount = 0;
+    const auditRecord = vi.fn(async () => {
+      callCount++;
+      if (callCount === 2) throw new Error('audit outcome write failure');
+    });
+    const service = new SmsSettingsService(idempotentStore, { record: auditRecord } as never);
+    const ctx = { actorUserId: 'actor-2', requestId: 'req-outcome-fail' };
+
+    await expect(
+      service.sendControlledTest(ctx, { confirm: true, idempotencyKey: 'replay-safe-1' }),
+    ).rejects.toThrow('audit outcome write failure');
+    expect(idempotentStore.submitTestSend).toHaveBeenCalledTimes(1);
+
+    const retryResponse = await service.sendControlledTest(ctx, { confirm: true, idempotencyKey: 'replay-safe-1' });
+    expect(idempotentStore.submitTestSend).toHaveBeenCalledTimes(2);
+    expect(retryResponse.data.outcome.status).toBe('accepted');
   });
 });

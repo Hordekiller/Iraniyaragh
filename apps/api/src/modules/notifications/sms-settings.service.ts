@@ -58,17 +58,27 @@ export class SmsSettingsService {
     input: SmsSettingsUpdatePayload,
   ): Promise<SmsSettingsResponse> {
     const patch = buildEditablePatch(input.patch as SmsSettingsPatchDto);
+    const attemptKey = `sms-settings.updated.attempt`;
+    const outcomeKey = `sms-settings.updated.outcome`;
+    const after = { fields: Object.keys(patch), expectedVersion: input.expectedVersion };
+    await this.audit.record({
+      actorId: ctx.actorUserId,
+      action: attemptKey,
+      entityType: 'SmsSettings',
+      entityId: null,
+      requestId: ctx.requestId,
+    });
     const snapshot = await this.store.update(
       { expectedVersion: input.expectedVersion, patch },
       ctx.requestId,
     );
     await this.audit.record({
       actorId: ctx.actorUserId,
-      action: 'sms-settings.updated',
+      action: outcomeKey,
       entityType: 'SmsSettings',
       entityId: null,
       requestId: ctx.requestId,
-      after: { fields: Object.keys(patch), expectedVersion: input.expectedVersion },
+      after,
     });
     return { data: { snapshot } };
   }
@@ -79,11 +89,18 @@ export class SmsSettingsService {
   ): Promise<SmsSettingsResponse> {
     this.assertConfirmed(input.confirm, 'rotate the SMS provider secret');
     await this.assertWritableSecretBackend();
+    await this.audit.record({
+      actorId: ctx.actorUserId,
+      action: 'sms-settings.secret.rotated.attempt',
+      entityType: 'SmsSettings',
+      entityId: null,
+      requestId: ctx.requestId,
+    });
     const { lastRotatedAt } = await this.store.rotateSecret(input.secret, input.idempotencyKey, ctx.requestId);
     const snapshot = await this.store.read();
     await this.audit.record({
       actorId: ctx.actorUserId,
-      action: 'sms-settings.secret.rotated',
+      action: 'sms-settings.secret.rotated.outcome',
       entityType: 'SmsSettings',
       entityId: null,
       requestId: ctx.requestId,
@@ -95,11 +112,18 @@ export class SmsSettingsService {
   async clearSecret(ctx: ActorAndRequest, input: SmsSettingsClearSecretDto): Promise<SmsSettingsResponse> {
     this.assertConfirmed(input.confirm, 'clear the SMS provider secret');
     await this.assertWritableSecretBackend();
+    await this.audit.record({
+      actorId: ctx.actorUserId,
+      action: 'sms-settings.secret.cleared.attempt',
+      entityType: 'SmsSettings',
+      entityId: null,
+      requestId: ctx.requestId,
+    });
     const { clearedAt } = await this.store.clearSecret(input.idempotencyKey, ctx.requestId);
     const snapshot = await this.store.read();
     await this.audit.record({
       actorId: ctx.actorUserId,
-      action: 'sms-settings.secret.cleared',
+      action: 'sms-settings.secret.cleared.outcome',
       entityType: 'SmsSettings',
       entityId: null,
       requestId: ctx.requestId,
@@ -109,10 +133,17 @@ export class SmsSettingsService {
   }
 
   async validateConfiguration(ctx: ActorAndRequest): Promise<SmsValidateResponse> {
+    await this.audit.record({
+      actorId: ctx.actorUserId,
+      action: 'sms-settings.validated.attempt',
+      entityType: 'SmsSettings',
+      entityId: null,
+      requestId: ctx.requestId,
+    });
     const validation = await this.store.validateConfiguration(ctx.requestId, ctx.requestId);
     await this.audit.record({
       actorId: ctx.actorUserId,
-      action: 'sms-settings.validated',
+      action: 'sms-settings.validated.outcome',
       entityType: 'SmsSettings',
       entityId: null,
       requestId: ctx.requestId,
@@ -123,10 +154,17 @@ export class SmsSettingsService {
 
   async sendControlledTest(ctx: ActorAndRequest, input: SmsSettingsTestSendDto): Promise<SmsTestSendResponse> {
     this.assertConfirmed(input.confirm, 'send a controlled SMS test');
+    await this.audit.record({
+      actorId: ctx.actorUserId,
+      action: 'sms-settings.test-send.attempt',
+      entityType: 'SmsSettings',
+      entityId: null,
+      requestId: ctx.requestId,
+    });
     const outcome = await this.store.submitTestSend(input.idempotencyKey, ctx.requestId);
     await this.audit.record({
       actorId: ctx.actorUserId,
-      action: 'sms-settings.test-send',
+      action: 'sms-settings.test-send.outcome',
       entityType: 'SmsSettings',
       entityId: null,
       requestId: ctx.requestId,
