@@ -169,10 +169,12 @@ Feature branch `feat/50-auth-ux-e2e` — **PR #139 open** (base `1d2292f`, all C
   admin fixtures (#50 item A) — commit `b51aa51`.
 - `web(auth)`: the storefront AuthProvider now defaults to the real `AuthHttpClient`
   (fixture only when `VITE_FIXTURE_AUTH=true`), with CSRF cookie reader, silent
-  single-flight session restore, cross-tab refresh signals, no-retry latch after
-  session/CSRF failures, `session-expired` forced re-auth UI and memory-only tokens —
-  commit `1551348`. Verified: web 152 unit tests + CI coverage gates, contracts
-  typecheck, API 366 tests + lint + build, admin 130 tests, 26 storefront E2E specs.
+  Web-Locks-serialized cross-tab session restore, token-free refresh signals,
+  bounded lock acquisition, terminal-failure propagation, lifecycle cleanup,
+  no-retry latch after session/CSRF failures, `session-expired` forced re-auth UI
+  and memory-only tokens — commits `1551348` plus the bounded cross-tab correction.
+  Verified: web 158 unit tests + CI coverage gates, contracts typecheck, API 366
+  tests + lint + build, admin 130 tests and 26 storefront E2E specs.
 - `e2e(api)`: integrated rotation/replay/revocation evidence against the real API
   (refresh cookie rotation, REPLAYED→family revoked→INVALID, logout/CSRF gating) —
   commit `08ae512`.

@@ -573,8 +573,10 @@ form state and never infer account status from timing.
 
 A `401` may trigger at most one refresh attempt for a request. A `403` never
 triggers refresh. Redirects have a bounded counter so expiry cannot produce a
-login/refresh loop. Multi-tab coordination uses a browser primitive such as
-`BroadcastChannel`; it transmits state/result signals, never raw tokens.
+login/refresh loop. Multi-tab coordination uses Web Locks as the refresh mutex
+with bounded acquisition; `BroadcastChannel` carries state/result signals only,
+never raw tokens. A client without the mutex fails closed to deliberate
+reauthentication instead of risking concurrent rotation/replay.
 
 ## 16. Mandatory verification
 
