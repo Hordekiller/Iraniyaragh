@@ -129,7 +129,7 @@ describe('SmsSettingsService', () => {
         actorId: 'actor-1',
         entityType: 'SmsSettings',
         requestId: 'req-1',
-        after: { fields: ['timeoutMs'], expectedVersion: 3 },
+        after: { outcome: 'success', fields: ['timeoutMs'], expectedVersion: 3 },
       }),
     ]);
   });
@@ -154,9 +154,18 @@ describe('SmsSettingsService', () => {
       idempotencyKey: DELTA_KEY,
     });
     expect(b.store.rotateSecret).toHaveBeenCalledWith('0123456789abcdef', DELTA_KEY, 'req-1');
-    expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.secret.rotated.attempt' }));
     expect(b.audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'sms-settings.secret.rotated.outcome', after: { lastRotatedAt: '2026-09-08T10:00:00.000Z' } }),
+      expect.objectContaining({
+        action: 'sms-settings.secret.rotated.attempt',
+        metadata: { idempotencyKey: DELTA_KEY },
+      }),
+    );
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.secret.rotated.outcome',
+        metadata: { idempotencyKey: DELTA_KEY },
+        after: { outcome: 'success', lastRotatedAt: '2026-09-08T10:00:00.000Z' },
+      }),
     );
     expect(JSON.stringify(response)).not.toContain('0123456789abcdef');
   });
@@ -176,9 +185,15 @@ describe('SmsSettingsService', () => {
   it('clears the secret with the idempotency key and records an audit event', async () => {
     await b.service.clearSecret(b.ctx, { confirm: true, idempotencyKey: 'clear-1' });
     expect(b.store.clearSecret).toHaveBeenCalledWith('clear-1', 'req-1');
-    expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.secret.cleared.attempt' }));
     expect(b.audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'sms-settings.secret.cleared.outcome', after: { clearedAt: '2026-09-08T10:00:00.000Z' } }),
+      expect.objectContaining({ action: 'sms-settings.secret.cleared.attempt', metadata: { idempotencyKey: 'clear-1' } }),
+    );
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.secret.cleared.outcome',
+        metadata: { idempotencyKey: 'clear-1' },
+        after: { outcome: 'success', clearedAt: '2026-09-08T10:00:00.000Z' },
+      }),
     );
   });
 
@@ -187,7 +202,7 @@ describe('SmsSettingsService', () => {
     expect(b.store.validateConfiguration).toHaveBeenCalledWith('req-1', 'req-1');
     expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.validated.attempt' }));
     expect(b.audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'sms-settings.validated.outcome', after: { checked: true, providerHealth: 'ok' } }),
+      expect.objectContaining({ action: 'sms-settings.validated.outcome', after: { outcome: 'success', checked: true, providerHealth: 'ok' } }),
     );
     expect(response.data.validation.checked).toBe(true);
   });
@@ -199,9 +214,15 @@ describe('SmsSettingsService', () => {
 
     const response = await b.service.sendControlledTest(b.ctx, { confirm: true, idempotencyKey: 'test-1' });
     expect(b.store.submitTestSend).toHaveBeenCalledWith('test-1', 'req-1');
-    expect(b.audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'sms-settings.test-send.attempt' }));
     expect(b.audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'sms-settings.test-send.outcome', after: { status: 'accepted', messageId: 'msg-1' } }),
+      expect.objectContaining({ action: 'sms-settings.test-send.attempt', metadata: { idempotencyKey: 'test-1' } }),
+    );
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.test-send.outcome',
+        metadata: { idempotencyKey: 'test-1' },
+        after: { outcome: 'success', sendStatus: 'accepted', messageId: 'msg-1' },
+      }),
     );
     expect(response.data.outcome.status).toBe('accepted');
   });
@@ -249,17 +270,28 @@ describe('Audit protocol', () => {
     const rotateResults = new Map<string, { lastRotatedAt: string }>();
     const clearResults = new Map<string, { clearedAt: string }>();
     const sendResults = new Map<string, { messageId: string; status: 'accepted' | 'rejected' }>();
+    const externalEffects = { rotate: 0, clear: 0, send: 0 };
     return {
+      props: externalEffects,
       rotateSecret: vi.fn(async (secret: string, idempotencyKey: string) => {
-        if (!rotateResults.has(idempotencyKey)) rotateResults.set(idempotencyKey, { lastRotatedAt: `rotated-${rotateResults.size}` });
+        if (!rotateResults.has(idempotencyKey)) {
+          externalEffects.rotate += 1;
+          rotateResults.set(idempotencyKey, { lastRotatedAt: `rotated-${externalEffects.rotate}` });
+        }
         return rotateResults.get(idempotencyKey)!;
       }),
       clearSecret: vi.fn(async (idempotencyKey: string) => {
-        if (!clearResults.has(idempotencyKey)) clearResults.set(idempotencyKey, { clearedAt: `cleared-${clearResults.size}` });
+        if (!clearResults.has(idempotencyKey)) {
+          externalEffects.clear += 1;
+          clearResults.set(idempotencyKey, { clearedAt: `cleared-${externalEffects.clear}` });
+        }
         return clearResults.get(idempotencyKey)!;
       }),
       submitTestSend: vi.fn(async (idempotencyKey: string) => {
-        if (!sendResults.has(idempotencyKey)) sendResults.set(idempotencyKey, { messageId: `msg-${sendResults.size}`, status: 'accepted' as const });
+        if (!sendResults.has(idempotencyKey)) {
+          externalEffects.send += 1;
+          sendResults.set(idempotencyKey, { messageId: `msg-${externalEffects.send}`, status: 'accepted' as const });
+        }
         return sendResults.get(idempotencyKey)!;
       }),
       read: vi.fn(async () => DEFAULT_SNAPSHOT),
@@ -269,7 +301,7 @@ describe('Audit protocol', () => {
         settings: { ...DEFAULT_SNAPSHOT.settings, ...(input.patch as Partial<typeof DEFAULT_SNAPSHOT.settings>) },
       })),
       validateConfiguration: vi.fn(async () => ({ checked: true, providerHealth: 'ok' as const, lastCheckedAt: '', errorClass: null })),
-    } as unknown as SmsSettingsStore;
+    } as unknown as SmsSettingsStore & { props: typeof externalEffects };
   }
 
   it('pre-attempt audit failure prevents the store dispatch', async () => {
@@ -325,7 +357,7 @@ describe('Audit protocol', () => {
     expect(b.store.validateConfiguration).not.toHaveBeenCalled();
   });
 
-  it('post-effect audit failure is replay-safe via the same idempotency key', async () => {
+  it('post-effect audit failure is replay-safe via the same idempotency key with a single external effect', async () => {
     const idempotentStore = buildIdempotentStore();
     let callCount = 0;
     const auditRecord = vi.fn(async () => {
@@ -339,9 +371,135 @@ describe('Audit protocol', () => {
       service.sendControlledTest(ctx, { confirm: true, idempotencyKey: 'replay-safe-1' }),
     ).rejects.toThrow('audit outcome write failure');
     expect(idempotentStore.submitTestSend).toHaveBeenCalledTimes(1);
+    expect(idempotentStore.props.send).toBe(1);
 
     const retryResponse = await service.sendControlledTest(ctx, { confirm: true, idempotencyKey: 'replay-safe-1' });
     expect(idempotentStore.submitTestSend).toHaveBeenCalledTimes(2);
+    expect(idempotentStore.props.send).toBe(1);
     expect(retryResponse.data.outcome.status).toBe('accepted');
+  });
+
+  it('records a failed outcome with the idempotency correlation when rotation is rejected definitively', async () => {
+    const b = build();
+    b.store.rotateSecret.mockRejectedValueOnce(
+      new ConflictException({ code: 'CONFLICT', message: 'A rotation with a conflicting payload already completed.' }),
+    );
+    await expect(
+      b.service.rotateSecret(b.ctx, { secret: '0123456789abcdef', confirm: true, idempotencyKey: DELTA_KEY }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.secret.rotated.attempt',
+        metadata: { idempotencyKey: DELTA_KEY },
+      }),
+    );
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.secret.rotated.outcome',
+        metadata: { idempotencyKey: DELTA_KEY },
+        after: { outcome: 'failed', errorCode: 'CONFLICT' },
+      }),
+    );
+  });
+
+  it('records an unknown outcome when rotation fails with an upstream-unavailable error and rethrows it', async () => {
+    const b = build();
+    b.store.rotateSecret.mockRejectedValueOnce(
+      new ServiceUnavailableException({ code: 'UPSTREAM_UNAVAILABLE', message: 'provider unreachable' }),
+    );
+    await expect(
+      b.service.rotateSecret(b.ctx, { secret: '0123456789abcdef', confirm: true, idempotencyKey: DELTA_KEY }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.secret.rotated.outcome',
+        metadata: { idempotencyKey: DELTA_KEY },
+        after: { outcome: 'unknown', errorClass: 'upstream' },
+      }),
+    );
+  });
+
+  it('records an unknown outcome for a bare store crash on clear and rethrows the original error', async () => {
+    const b = build();
+    b.store.clearSecret.mockRejectedValueOnce(new Error('connection reset'));
+    await expect(
+      b.service.clearSecret(b.ctx, { confirm: true, idempotencyKey: 'clear-3' }),
+    ).rejects.toThrow('connection reset');
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.secret.cleared.outcome',
+        metadata: { idempotencyKey: 'clear-3' },
+        after: { outcome: 'unknown', errorClass: 'unknown' },
+      }),
+    );
+  });
+
+  it('records a failed outcome for a stale optimistic update and rethrows the conflict', async () => {
+    const b = build();
+    await expect(
+      b.service.updateSettings(b.ctx, { expectedVersion: 1, patch: { enabled: false } }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.updated.outcome',
+        after: { outcome: 'failed', errorCode: 'CONFLICT' },
+      }),
+    );
+  });
+
+  it('records the success outcome before the post-effect read and records an unknown read-failure evidence', async () => {
+    const b = build();
+    b.store.read.mockResolvedValueOnce(DEFAULT_SNAPSHOT).mockRejectedValueOnce(new Error('read unavailable'));
+    await expect(
+      b.service.rotateSecret(b.ctx, { secret: '0123456789abcdef', confirm: true, idempotencyKey: DELTA_KEY }),
+    ).rejects.toThrow('read unavailable');
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.secret.rotated.outcome',
+        after: expect.objectContaining({ outcome: 'success', lastRotatedAt: '2026-09-08T10:00:00.000Z' }),
+      }),
+    );
+    expect(b.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'sms-settings.secret.rotated.read-failed',
+        metadata: { idempotencyKey: DELTA_KEY },
+        after: { outcome: 'unknown', errorClass: 'upstream' },
+      }),
+    );
+  });
+
+  it('never masks the original store error when recording the failure outcome itself fails', async () => {
+    let callCount = 0;
+    const auditFailAfterAttempt = vi.fn(async () => {
+      callCount++;
+      if (callCount > 1) throw new Error('audit unavailable');
+    });
+    const b = build(DEFAULT_SNAPSHOT, auditFailAfterAttempt);
+    b.store.rotateSecret.mockRejectedValueOnce(new ServiceUnavailableException({ code: 'UPSTREAM_UNAVAILABLE', message: 'down' }));
+    await expect(
+      b.service.rotateSecret(b.ctx, { secret: '0123456789abcdef', confirm: true, idempotencyKey: DELTA_KEY }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('correlates both attempts of a same-key replay with the same safe idempotency marker', async () => {
+    const b = build();
+    const first = await b.service.rotateSecret(b.ctx, {
+      secret: '0123456789abcdef',
+      confirm: true,
+      idempotencyKey: DELTA_KEY,
+    });
+    const second = await b.service.rotateSecret(b.ctx, {
+      secret: '0123456789abcdef',
+      confirm: true,
+      idempotencyKey: DELTA_KEY,
+    });
+    expect(second.data.snapshot.secret.configured).toBe(first.data.snapshot.secret.configured);
+    const calls = b.audit.record.mock.calls
+      .map(call => call[0] as { action: string; metadata?: { idempotencyKey?: string } })
+      .filter(call => call.action.startsWith('sms-settings.secret.rotated'));
+    expect(calls).toHaveLength(4);
+    for (const call of calls) {
+      expect(call.metadata).toEqual({ idempotencyKey: DELTA_KEY });
+    }
   });
 });

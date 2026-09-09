@@ -52,6 +52,21 @@ describe('AllExceptionsFilter', () => {
     });
   });
 
+  it('maps a ValidationPipe rejection (array message) to the stable 400 INVALID_REQUEST envelope', () => {
+    createContext(() => {
+      const { filter, response, replied } = createFilter();
+      const error = new BadRequestException(['secret must be longer than or equal to 16 characters', 'secret should not contain spaces']);
+      filter.catch(error, { switchToHttp: () => ({ getResponse: () => response }) } as unknown as ArgumentsHost);
+      const last = replied[replied.length - 1] as { status: number; body: ErrorEnvelope };
+      expect(last.status).toBe(400);
+      expect(last.body).toMatchObject({
+        code: 'INVALID_REQUEST',
+        statusCode: 400,
+        message: 'secret must be longer than or equal to 16 characters, secret should not contain spaces',
+      });
+    });
+  });
+
   it('preserves a stable code and redacts secret-like details when the exception carries them', () => {
     createContext(() => {
       const { filter, response, replied } = createFilter();

@@ -35,8 +35,10 @@ import type {
   SmsSettingsTestSendDto,
   SmsSettingsUpdateDto,
 } from './sms-settings.dto';
-import { openApiSmsBodies, openApiSmsSchemas } from './sms-settings.dto';
+import { openApiSmsBodies, openApiSmsFailures, openApiSmsSchemas } from './sms-settings.dto';
 import { SmsSettingsService } from './sms-settings.service';
+
+const smsFailure = openApiSmsFailures;
 
 @ApiTags('notifications')
 @ApiBearerAuth('access-token')
@@ -56,6 +58,8 @@ export class NotificationsAdminController {
     schema: openApiSmsSchemas.settingsResponse,
     description: 'Sanitized settings snapshot with masked secret status; never the raw secret.',
   })
+  @ApiResponse({ status: 401, schema: smsFailure.unauthorized, description: smsFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: smsFailure.forbidden, description: smsFailure.forbidden.description })
   getSettings(): Promise<SmsSettingsResponse> {
     return this.settings.getSettings();
   }
@@ -71,6 +75,11 @@ export class NotificationsAdminController {
     schema: openApiSmsSchemas.settingsResponse,
     description: 'Updated snapshot at the new version; conflicts return CONFLICT.',
   })
+  @ApiResponse({ status: 400, schema: smsFailure.validation, description: smsFailure.validation.description })
+  @ApiResponse({ status: 401, schema: smsFailure.unauthorized, description: smsFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: smsFailure.forbidden, description: smsFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: smsFailure.conflict, description: smsFailure.conflict.description })
+  @ApiResponse({ status: 503, schema: smsFailure.upstream, description: smsFailure.upstream.description })
   updateSettings(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Body() input: SmsSettingsUpdateDto,
@@ -90,6 +99,11 @@ export class NotificationsAdminController {
     schema: openApiSmsSchemas.settingsResponse,
     description: 'Secret rotated; only the masked status and last-rotated time are returned.',
   })
+  @ApiResponse({ status: 400, schema: smsFailure.validation, description: smsFailure.validation.description })
+  @ApiResponse({ status: 401, schema: smsFailure.unauthorized, description: smsFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: smsFailure.forbidden, description: smsFailure.forbidden.description })
+  @ApiResponse({ status: 422, schema: smsFailure.unprocessable, description: smsFailure.unprocessable.description })
+  @ApiResponse({ status: 503, schema: smsFailure.upstream, description: smsFailure.upstream.description })
   rotateSecret(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Body() input: SmsSettingsRotateSecretDto,
@@ -108,6 +122,11 @@ export class NotificationsAdminController {
     schema: openApiSmsSchemas.settingsResponse,
     description: 'Secret cleared; only the masked status is returned.',
   })
+  @ApiResponse({ status: 400, schema: smsFailure.validation, description: smsFailure.validation.description })
+  @ApiResponse({ status: 401, schema: smsFailure.unauthorized, description: smsFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: smsFailure.forbidden, description: smsFailure.forbidden.description })
+  @ApiResponse({ status: 422, schema: smsFailure.unprocessable, description: smsFailure.unprocessable.description })
+  @ApiResponse({ status: 503, schema: smsFailure.upstream, description: smsFailure.upstream.description })
   clearSecret(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Body() input: SmsSettingsClearSecretDto,
@@ -125,6 +144,9 @@ export class NotificationsAdminController {
     schema: openApiSmsSchemas.validateResponse,
     description: 'Validation health report with sanitized error category.',
   })
+  @ApiResponse({ status: 401, schema: smsFailure.unauthorized, description: smsFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: smsFailure.forbidden, description: smsFailure.forbidden.description })
+  @ApiResponse({ status: 503, schema: smsFailure.upstream, description: smsFailure.upstream.description })
   validateConfiguration(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<SmsValidateResponse> {
     return this.settings.validateConfiguration({ actorUserId: principal.userId, requestId: getRequestId() });
   }
@@ -140,6 +162,11 @@ export class NotificationsAdminController {
     schema: openApiSmsSchemas.testSendResponse,
     description: 'Controlled send outcome; no destination, OTP body or API key in the response.',
   })
+  @ApiResponse({ status: 400, schema: smsFailure.validation, description: smsFailure.validation.description })
+  @ApiResponse({ status: 401, schema: smsFailure.unauthorized, description: smsFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: smsFailure.forbidden, description: smsFailure.forbidden.description })
+  @ApiResponse({ status: 422, schema: smsFailure.unprocessable, description: smsFailure.unprocessable.description })
+  @ApiResponse({ status: 503, schema: smsFailure.upstream, description: smsFailure.upstream.description })
   sendControlledTest(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Body() input: SmsSettingsTestSendDto,
@@ -156,6 +183,8 @@ export class NotificationsAdminController {
     schema: openApiSmsSchemas.diagnosticsResponse,
     description: 'Diagnostics with masked/sanitized values only.',
   })
+  @ApiResponse({ status: 401, schema: smsFailure.unauthorized, description: smsFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: smsFailure.forbidden, description: smsFailure.forbidden.description })
   getDiagnostics(): Promise<SmsDiagnosticsResponse> {
     return this.settings.getDiagnostics();
   }

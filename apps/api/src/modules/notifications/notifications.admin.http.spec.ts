@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-import { Module, UnprocessableEntityException, ValidationPipe, VersioningType } from '@nestjs/common';
+import { ConflictException, Module, UnprocessableEntityException, ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory, type INestApplication } from '@nestjs/core';
 import { APP_GUARD } from '@nestjs/core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -56,7 +56,11 @@ function createServiceStub() {
   };
   return {
     getSettings: vi.fn(async () => ({ data: { snapshot: { version: 3 } } })),
-    updateSettings: vi.fn(async () => ({ data: { snapshot: { version: 4 } } })),
+    updateSettings: vi.fn(async (ctx: unknown, input: { expectedVersion: number; patch: Record<string, unknown> }) =>
+      input.expectedVersion !== 3
+        ? Promise.reject(new ConflictException({ code: 'CONFLICT', message: 'Sms settings changed concurrently.' }))
+        : ({ data: { snapshot: { version: 4 } } }),
+    ),
     rotateSecret: vi.fn(async (ctx: unknown, input: { confirm: boolean }) =>
       input.confirm === true
         ? { data: { snapshot: { version: 5 } } }
@@ -99,6 +103,10 @@ const serviceStub = createServiceStub();
     { provide: APP_GUARD, useValue: new AuthGuard(principalService as unknown as AuthPrincipalService) },
   ],
 })
+// Route-level evidence harness. It boots a dedicated Nest test module importing
+// ApiFoundationModule (redis/prisma/request context) with a real AuthGuard over a
+// stubbed AuthPrincipalService and SmsSettingsService; it is NOT the real
+// AppModule, so startup wiring beyond this controller is not exercised here.
 class NotificationsAdminHttpTestModule {}
 
 describe('NotificationsAdminController HTTP authorization', () => {
@@ -245,5 +253,15 @@ describe('NotificationsAdminController HTTP authorization', () => {
     });
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toMatchObject({ code: 'FORBIDDEN', statusCode: 403 });
+  });
+
+  it('returns the stable 409 CONFLICT envelope for a stale optimistic update', async () => {
+    const response = await fetch(baseUrl + '/api/v1/notifications/admin/sms-settings', {
+      method: 'PUT',
+      headers: { authorization: 'Bearer staff-fresh', 'content-type': 'application/json' },
+      body: JSON.stringify({ expectedVersion: 2, patch: { enabled: false } }),
+    });
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: 'CONFLICT', statusCode: 409 });
   });
 });

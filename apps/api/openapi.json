@@ -615,6 +615,89 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but lacking the required permission or authentication level.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
           }
         },
         "security": [
@@ -900,6 +983,212 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Request body failed schema validation (unknown, blank or out-of-range fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ],
+                      "example": "INVALID_REQUEST"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Request validation failed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ],
+                      "example": 400
+                    }
+                  },
+                  "description": "Request body failed schema validation (unknown, blank or out-of-range fields)."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but lacking the required permission or authentication level.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Optimistic concurrency conflict: the expectedVersion is stale and the write was rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CONFLICT"
+                      ],
+                      "example": "CONFLICT"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The settings changed concurrently. Refresh and retry."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ],
+                      "example": 409
+                    }
+                  },
+                  "description": "Optimistic concurrency conflict: the expectedVersion is stale and the write was rejected."
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UPSTREAM_UNAVAILABLE"
+                      ],
+                      "example": "UPSTREAM_UNAVAILABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The service is temporarily unavailable."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        503
+                      ],
+                      "example": 503
+                    }
+                  },
+                  "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key."
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1131,6 +1420,213 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Request body failed schema validation (unknown, blank or out-of-range fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ],
+                      "example": "INVALID_REQUEST"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Request validation failed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ],
+                      "example": 400
+                    }
+                  },
+                  "description": "Request body failed schema validation (unknown, blank or out-of-range fields)."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but lacking the required permission or authentication level.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Domain-level rejection: missing explicit confirmation or an unsupported operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UNPROCESSABLE",
+                        "OPERATION_UNSUPPORTED"
+                      ],
+                      "example": "UNPROCESSABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The request cannot be processed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "Domain-level rejection: missing explicit confirmation or an unsupported operation."
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UPSTREAM_UNAVAILABLE"
+                      ],
+                      "example": "UPSTREAM_UNAVAILABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The service is temporarily unavailable."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        503
+                      ],
+                      "example": 503
+                    }
+                  },
+                  "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key."
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1352,6 +1848,213 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Request body failed schema validation (unknown, blank or out-of-range fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ],
+                      "example": "INVALID_REQUEST"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Request validation failed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ],
+                      "example": 400
+                    }
+                  },
+                  "description": "Request body failed schema validation (unknown, blank or out-of-range fields)."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but lacking the required permission or authentication level.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Domain-level rejection: missing explicit confirmation or an unsupported operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UNPROCESSABLE",
+                        "OPERATION_UNSUPPORTED"
+                      ],
+                      "example": "UNPROCESSABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The request cannot be processed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "Domain-level rejection: missing explicit confirmation or an unsupported operation."
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UPSTREAM_UNAVAILABLE"
+                      ],
+                      "example": "UPSTREAM_UNAVAILABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The service is temporarily unavailable."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        503
+                      ],
+                      "example": 503
+                    }
+                  },
+                  "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key."
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1437,6 +2140,130 @@
                       }
                     }
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but lacking the required permission or authentication level.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UPSTREAM_UNAVAILABLE"
+                      ],
+                      "example": "UPSTREAM_UNAVAILABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The service is temporarily unavailable."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        503
+                      ],
+                      "example": 503
+                    }
+                  },
+                  "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key."
                 }
               }
             }
@@ -1535,6 +2362,213 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Request body failed schema validation (unknown, blank or out-of-range fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ],
+                      "example": "INVALID_REQUEST"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Request validation failed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ],
+                      "example": 400
+                    }
+                  },
+                  "description": "Request body failed schema validation (unknown, blank or out-of-range fields)."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but lacking the required permission or authentication level.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Domain-level rejection: missing explicit confirmation or an unsupported operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UNPROCESSABLE",
+                        "OPERATION_UNSUPPORTED"
+                      ],
+                      "example": "UNPROCESSABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The request cannot be processed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "Domain-level rejection: missing explicit confirmation or an unsupported operation."
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UPSTREAM_UNAVAILABLE"
+                      ],
+                      "example": "UPSTREAM_UNAVAILABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The service is temporarily unavailable."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        503
+                      ],
+                      "example": 503
+                    }
+                  },
+                  "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key."
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1626,6 +2660,89 @@
                       }
                     }
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but lacking the required permission or authentication level.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
                 }
               }
             }
