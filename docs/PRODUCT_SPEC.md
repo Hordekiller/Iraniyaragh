@@ -6,6 +6,10 @@ Owner: product decisions are joint; backend remains the business source of truth
 
 Last updated: 2026-08-30
 
+`COMMERCE_EXPANSION_PLAN.md` converts this product specification into complete
+dependency gates, two-contributor ownership, implementation methods and evidence
+requirements. Product intent remains here; executable sequencing remains there.
+
 ## 1. Product statement
 
 Iraniyaragh is a Persian, Iran-ready commerce and warehouse platform for hardware,
