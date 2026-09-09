@@ -1,5 +1,6 @@
 import { Inject, Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { createHash } from 'node:crypto';
 import type {
   SmsDiagnosticsResponse,
   SmsSettingsEditableFields,
@@ -61,6 +62,12 @@ function classifyStoreFailure(error: unknown): StoreFailureClassification {
 
 type ActorAndRequest = { actorUserId: string; requestId: string };
 
+function idempotencyAuditMetadata(idempotencyKey: string): Prisma.InputJsonObject {
+  return {
+    idempotencyKeyHash: createHash('sha256').update(idempotencyKey, 'utf8').digest('hex'),
+  };
+}
+
 @Injectable()
 export class SmsSettingsService {
   constructor(
@@ -84,25 +91,26 @@ export class SmsSettingsService {
     await this.audit.record(
       this.baseRecord(ctx, 'sms-settings.updated.attempt'),
     );
+    let snapshot: Awaited<ReturnType<SmsSettingsStore['update']>>;
     try {
-      const snapshot = await this.store.update(
+      snapshot = await this.store.update(
         { expectedVersion: input.expectedVersion, patch },
         ctx.requestId,
       );
-      await this.audit.record(
-        this.baseRecord(ctx, 'sms-settings.updated.outcome', {
-          after: {
-            outcome: 'success',
-            fields: Object.keys(patch),
-            expectedVersion: input.expectedVersion,
-          },
-        }),
-      );
-      return { data: { snapshot } };
     } catch (error) {
       await this.recordEffectFailure(ctx, 'sms-settings.updated.outcome', error);
       throw error;
     }
+    await this.audit.record(
+      this.baseRecord(ctx, 'sms-settings.updated.outcome', {
+        after: {
+          outcome: 'success',
+          fields: Object.keys(patch),
+          expectedVersion: input.expectedVersion,
+        },
+      }),
+    );
+    return { data: { snapshot } };
   }
 
   async rotateSecret(
@@ -111,7 +119,7 @@ export class SmsSettingsService {
   ): Promise<SmsSettingsResponse> {
     this.assertConfirmed(input.confirm, 'rotate the SMS provider secret');
     await this.assertWritableSecretBackend();
-    const idempotencyMetadata = { idempotencyKey: input.idempotencyKey };
+    const idempotencyMetadata = idempotencyAuditMetadata(input.idempotencyKey);
     await this.audit.record(
       this.baseRecord(ctx, 'sms-settings.secret.rotated.attempt', {
         metadata: idempotencyMetadata,
@@ -157,7 +165,7 @@ export class SmsSettingsService {
   async clearSecret(ctx: ActorAndRequest, input: SmsSettingsClearSecretDto): Promise<SmsSettingsResponse> {
     this.assertConfirmed(input.confirm, 'clear the SMS provider secret');
     await this.assertWritableSecretBackend();
-    const idempotencyMetadata = { idempotencyKey: input.idempotencyKey };
+    const idempotencyMetadata = idempotencyAuditMetadata(input.idempotencyKey);
     await this.audit.record(
       this.baseRecord(ctx, 'sms-settings.secret.cleared.attempt', {
         metadata: idempotencyMetadata,
@@ -198,41 +206,36 @@ export class SmsSettingsService {
 
   async validateConfiguration(ctx: ActorAndRequest): Promise<SmsValidateResponse> {
     await this.audit.record(this.baseRecord(ctx, 'sms-settings.validated.attempt'));
+    let validation: Awaited<ReturnType<SmsSettingsStore['validateConfiguration']>>;
     try {
-      const validation = await this.store.validateConfiguration(ctx.requestId, ctx.requestId);
-      await this.audit.record(
-        this.baseRecord(ctx, 'sms-settings.validated.outcome', {
-          after: {
-            outcome: 'success',
-            checked: validation.checked,
-            providerHealth: validation.providerHealth,
-          },
-        }),
-      );
-      return { data: { validation } };
+      validation = await this.store.validateConfiguration(ctx.requestId, ctx.requestId);
     } catch (error) {
       await this.recordEffectFailure(ctx, 'sms-settings.validated.outcome', error);
       throw error;
     }
+    await this.audit.record(
+      this.baseRecord(ctx, 'sms-settings.validated.outcome', {
+        after: {
+          outcome: 'success',
+          checked: validation.checked,
+          providerHealth: validation.providerHealth,
+        },
+      }),
+    );
+    return { data: { validation } };
   }
 
   async sendControlledTest(ctx: ActorAndRequest, input: SmsSettingsTestSendDto): Promise<SmsTestSendResponse> {
     this.assertConfirmed(input.confirm, 'send a controlled SMS test');
-    const idempotencyMetadata = { idempotencyKey: input.idempotencyKey };
+    const idempotencyMetadata = idempotencyAuditMetadata(input.idempotencyKey);
     await this.audit.record(
       this.baseRecord(ctx, 'sms-settings.test-send.attempt', {
         metadata: idempotencyMetadata,
       }),
     );
+    let outcome: Awaited<ReturnType<SmsSettingsStore['submitTestSend']>>;
     try {
-      const outcome = await this.store.submitTestSend(input.idempotencyKey, ctx.requestId);
-      await this.audit.record(
-        this.baseRecord(ctx, 'sms-settings.test-send.outcome', {
-          metadata: idempotencyMetadata,
-          after: { outcome: 'success', sendStatus: outcome.status, messageId: outcome.messageId },
-        }),
-      );
-      return { data: { outcome } };
+      outcome = await this.store.submitTestSend(input.idempotencyKey, ctx.requestId);
     } catch (error) {
       await this.recordEffectFailure(
         ctx,
@@ -242,6 +245,13 @@ export class SmsSettingsService {
       );
       throw error;
     }
+    await this.audit.record(
+      this.baseRecord(ctx, 'sms-settings.test-send.outcome', {
+        metadata: idempotencyMetadata,
+        after: { outcome: 'success', sendStatus: outcome.status, messageId: outcome.messageId },
+      }),
+    );
+    return { data: { outcome } };
   }
 
   getDiagnostics(): Promise<SmsDiagnosticsResponse> {

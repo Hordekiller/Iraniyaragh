@@ -4,12 +4,16 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { SmsSettingsSnapshot } from '@iranyaragh/contracts';
+import { createHash } from 'node:crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DisconnectedSmsSettingsStore } from './sms-settings.disconnected';
 import type { SmsSettingsStore } from './sms-settings.port';
 import { SmsSettingsService } from './sms-settings.service';
 
 const DELTA_KEY = 'rotate-2026-09-08-a1';
+const auditKey = (key: string) => ({
+  idempotencyKeyHash: createHash('sha256').update(key, 'utf8').digest('hex'),
+});
 
 const DEFAULT_SNAPSHOT: SmsSettingsSnapshot = {
   version: 3,
@@ -157,13 +161,13 @@ describe('SmsSettingsService', () => {
     expect(b.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'sms-settings.secret.rotated.attempt',
-        metadata: { idempotencyKey: DELTA_KEY },
+        metadata: auditKey(DELTA_KEY),
       }),
     );
     expect(b.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'sms-settings.secret.rotated.outcome',
-        metadata: { idempotencyKey: DELTA_KEY },
+        metadata: auditKey(DELTA_KEY),
         after: { outcome: 'success', lastRotatedAt: '2026-09-08T10:00:00.000Z' },
       }),
     );
@@ -186,12 +190,12 @@ describe('SmsSettingsService', () => {
     await b.service.clearSecret(b.ctx, { confirm: true, idempotencyKey: 'clear-1' });
     expect(b.store.clearSecret).toHaveBeenCalledWith('clear-1', 'req-1');
     expect(b.audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'sms-settings.secret.cleared.attempt', metadata: { idempotencyKey: 'clear-1' } }),
+      expect.objectContaining({ action: 'sms-settings.secret.cleared.attempt', metadata: auditKey('clear-1') }),
     );
     expect(b.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'sms-settings.secret.cleared.outcome',
-        metadata: { idempotencyKey: 'clear-1' },
+        metadata: auditKey('clear-1'),
         after: { outcome: 'success', clearedAt: '2026-09-08T10:00:00.000Z' },
       }),
     );
@@ -215,12 +219,12 @@ describe('SmsSettingsService', () => {
     const response = await b.service.sendControlledTest(b.ctx, { confirm: true, idempotencyKey: 'test-1' });
     expect(b.store.submitTestSend).toHaveBeenCalledWith('test-1', 'req-1');
     expect(b.audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'sms-settings.test-send.attempt', metadata: { idempotencyKey: 'test-1' } }),
+      expect.objectContaining({ action: 'sms-settings.test-send.attempt', metadata: auditKey('test-1') }),
     );
     expect(b.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'sms-settings.test-send.outcome',
-        metadata: { idempotencyKey: 'test-1' },
+        metadata: auditKey('test-1'),
         after: { outcome: 'success', sendStatus: 'accepted', messageId: 'msg-1' },
       }),
     );
@@ -390,13 +394,13 @@ describe('Audit protocol', () => {
     expect(b.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'sms-settings.secret.rotated.attempt',
-        metadata: { idempotencyKey: DELTA_KEY },
+        metadata: auditKey(DELTA_KEY),
       }),
     );
     expect(b.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'sms-settings.secret.rotated.outcome',
-        metadata: { idempotencyKey: DELTA_KEY },
+        metadata: auditKey(DELTA_KEY),
         after: { outcome: 'failed', errorCode: 'CONFLICT' },
       }),
     );
@@ -413,7 +417,7 @@ describe('Audit protocol', () => {
     expect(b.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'sms-settings.secret.rotated.outcome',
-        metadata: { idempotencyKey: DELTA_KEY },
+        metadata: auditKey(DELTA_KEY),
         after: { outcome: 'unknown', errorClass: 'upstream' },
       }),
     );
@@ -428,7 +432,7 @@ describe('Audit protocol', () => {
     expect(b.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'sms-settings.secret.cleared.outcome',
-        metadata: { idempotencyKey: 'clear-3' },
+        metadata: auditKey('clear-3'),
         after: { outcome: 'unknown', errorClass: 'unknown' },
       }),
     );
@@ -462,7 +466,7 @@ describe('Audit protocol', () => {
     expect(b.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'sms-settings.secret.rotated.read-failed',
-        metadata: { idempotencyKey: DELTA_KEY },
+        metadata: auditKey(DELTA_KEY),
         after: { outcome: 'unknown', errorClass: 'upstream' },
       }),
     );
@@ -495,11 +499,54 @@ describe('Audit protocol', () => {
     });
     expect(second.data.snapshot.secret.configured).toBe(first.data.snapshot.secret.configured);
     const calls = b.audit.record.mock.calls
-      .map(call => call[0] as { action: string; metadata?: { idempotencyKey?: string } })
+      .map(call => call[0] as { action: string; metadata?: { idempotencyKeyHash?: string } })
       .filter(call => call.action.startsWith('sms-settings.secret.rotated'));
     expect(calls).toHaveLength(4);
     for (const call of calls) {
-      expect(call.metadata).toEqual({ idempotencyKey: DELTA_KEY });
+      expect(call.metadata).toEqual(auditKey(DELTA_KEY));
     }
+  });
+
+  it.each([
+    {
+      label: 'settings update',
+      outcomeAction: 'sms-settings.updated.outcome',
+      run: (service: SmsSettingsService, ctx: typeof b.ctx) =>
+        service.updateSettings(ctx, { expectedVersion: 3, patch: { enabled: false } }),
+    },
+    {
+      label: 'configuration validation',
+      outcomeAction: 'sms-settings.validated.outcome',
+      run: (service: SmsSettingsService, ctx: typeof b.ctx) => service.validateConfiguration(ctx),
+    },
+    {
+      label: 'controlled test send',
+      outcomeAction: 'sms-settings.test-send.outcome',
+      run: (service: SmsSettingsService, ctx: typeof b.ctx) =>
+        service.sendControlledTest(ctx, { confirm: true, idempotencyKey: 'audit-separation-test' }),
+    },
+  ])('does not misclassify a successful $label when only its outcome audit write fails', async ({ outcomeAction, run }) => {
+    const recordedActions: string[] = [];
+    const auditRecord = vi.fn(async (event: { action: string }) => {
+      recordedActions.push(event.action);
+      if (event.action === outcomeAction) throw new Error('outcome audit unavailable');
+    });
+    const local = build(DEFAULT_SNAPSHOT, auditRecord);
+
+    await expect(run(local.service, local.ctx)).rejects.toThrow('outcome audit unavailable');
+    expect(recordedActions.filter(action => action === outcomeAction)).toHaveLength(1);
+    expect(recordedActions).not.toContain(`${outcomeAction}.failure`);
+  });
+
+  it('stores only a deterministic hash of an idempotency key in audit evidence', async () => {
+    const local = build();
+    await local.service.sendControlledTest(local.ctx, {
+      confirm: true,
+      idempotencyKey: 'raw-key-must-not-enter-audit',
+    });
+    const auditPayload = JSON.stringify(local.audit.record.mock.calls);
+
+    expect(auditPayload).not.toContain('raw-key-must-not-enter-audit');
+    expect(auditPayload).toContain(auditKey('raw-key-must-not-enter-audit').idempotencyKeyHash);
   });
 });
