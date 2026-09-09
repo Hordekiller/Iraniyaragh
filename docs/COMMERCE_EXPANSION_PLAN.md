@@ -22,6 +22,8 @@ Use the documents as follows:
 - this document: complete target scope, sequencing, ownership and acceptance;
 - `V1_MASTER_PLAN.md`: V1 release checklist;
 - `EXECUTION_STATUS.md`: short-horizon queue and handoff;
+- `PAGE_RELEASE_MATRIX.md`: route inventory, dynamic content, responsive purchase UX
+  and the 1.0.0/1.1.0 multi-provider boundary;
 - GitHub issues/PRs: current assignment and evidence.
 
 Every capability has one of four states: `planned`, `ready`, `in progress`, or
@@ -44,6 +46,11 @@ commands. Operators can deploy, observe, reconcile, restore and roll back.
 Purchasing, stocktake, returns, refunds, support tools, bounded exports, alert/task
 queues, merchandising and business reporting reduce manual intervention without
 bypassing the ledger or state machines.
+
+Release `1.1.0` adds governed multi-SMS and multi-payment provider orchestration under
+#141. V1 prepares vendor-neutral ports, provider/account evidence and secret-safe
+configuration, but launches with exactly one active SMS route and one payment gateway;
+multi-provider routing/failover must not delay the primary V1 selling path.
 
 ### Horizon C — Grow intelligently (V2)
 
