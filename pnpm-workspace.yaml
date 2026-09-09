@@ -5,3 +5,6 @@ packages:
 
 overrides:
   '@prisma/config>deepmerge-ts': 8.0.2
+  # Nest currently resolves multer 2.2.0, which is affected by multiple
+  # multipart denial-of-service advisories fixed in 2.3.0.
+  multer: 2.3.0
