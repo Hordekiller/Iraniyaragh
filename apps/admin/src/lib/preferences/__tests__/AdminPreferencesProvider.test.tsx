@@ -1,18 +1,34 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { AdminPreferencesProvider, useAdminPreferences } from '../AdminPreferencesProvider';
-import { defaultPreferences, ADMIN_PREFS_COOKIE, serializePreferences } from '../preferences';
+import {
+  AdminPreferencesProvider,
+  useAdminPreferences,
+} from '../AdminPreferencesProvider';
+import {
+  defaultPreferences,
+  ADMIN_PREFS_COOKIE,
+  serializePreferences,
+} from '../preferences';
 
 function Probe() {
-  const { prefs, resolvedMode, updatePrefs, resetPrefs } = useAdminPreferences();
+  const { prefs, resolvedMode, updatePrefs, resetPrefs } =
+    useAdminPreferences();
   return (
     <div>
       <output data-testid="mode">{prefs.mode}</output>
       <output data-testid="resolved">{resolvedMode}</output>
       <output data-testid="skin">{prefs.skin}</output>
       <output data-testid="layout">{prefs.layout}</output>
-      <button onClick={() => updatePrefs({ mode: 'dark', skin: 'bordered' })}>به تاریک برو</button>
-      <button onClick={() => updatePrefs({ layout: 'horizontal' })}>افقی شو</button>
+      <output data-testid="collapsed">{String(prefs.navCollapsed)}</output>
+      <button onClick={() => updatePrefs({ mode: 'dark', skin: 'bordered' })}>
+        به تاریک برو
+      </button>
+      <button onClick={() => updatePrefs({ layout: 'horizontal' })}>
+        افقی شو
+      </button>
+      <button onClick={() => updatePrefs({ navCollapsed: true })}>
+        منو را جمع کن
+      </button>
       <button onClick={resetPrefs}>بازنشانی</button>
     </div>
   );
@@ -28,7 +44,11 @@ function renderProvider(initialPrefs = defaultPreferences) {
 
 describe('AdminPreferencesProvider', () => {
   it('initializes from server-seeded preferences', () => {
-    renderProvider({ ...defaultPreferences, mode: 'dark', contentWidth: 'boxed' });
+    renderProvider({
+      ...defaultPreferences,
+      mode: 'dark',
+      contentWidth: 'boxed',
+    });
     expect(screen.getByTestId('mode')).toHaveTextContent('dark');
     expect(screen.getByTestId('resolved')).toHaveTextContent('dark');
   });
@@ -62,7 +82,11 @@ describe('AdminPreferencesProvider', () => {
     await waitFor(() => {
       expect(document.cookie).toContain(ADMIN_PREFS_COOKIE);
     });
-    const expected = serializePreferences({ ...defaultPreferences, mode: 'dark', skin: 'bordered' });
+    const expected = serializePreferences({
+      ...defaultPreferences,
+      mode: 'dark',
+      skin: 'bordered',
+    });
     expect(document.cookie).toContain(encodeURIComponent(expected));
   });
 
@@ -79,8 +103,12 @@ describe('AdminPreferencesProvider', () => {
   });
 
   it('throws when used outside the provider', () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    expect(() => render(<Probe />)).toThrow(/must be used within an AdminPreferencesProvider/);
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    expect(() => render(<Probe />)).toThrow(
+      /must be used within an AdminPreferencesProvider/,
+    );
     consoleError.mockRestore();
   });
 });

@@ -13,6 +13,7 @@ describe('preferences (pure)', () => {
       skin: 'bordered' as const,
       layout: 'horizontal' as const,
       contentWidth: 'boxed' as const,
+      navCollapsed: true,
     };
     expect(parsePreferencesCookie(serializePreferences(prefs))).toEqual(prefs);
   });
@@ -27,12 +28,15 @@ describe('preferences (pure)', () => {
   });
 
   it('falls back per-field for invalid values instead of crashing', () => {
-    const parsed = parsePreferencesCookie('{"mode":"neon","skin":"bordered","layout":"vertical","contentWidth":"fluid"}');
+    const parsed = parsePreferencesCookie(
+      '{"mode":"neon","skin":"bordered","layout":"vertical","contentWidth":"fluid"}',
+    );
     expect(parsed).toEqual({
       mode: 'light',
       skin: 'bordered',
       layout: 'vertical',
       contentWidth: 'fluid',
+      navCollapsed: false,
     });
   });
 
