@@ -67,16 +67,23 @@ test.describe('admin: authenticated shell', () => {
     }
   });
 
-  test('shows the developer profile, version and a disabled notification button', async ({ page }) => {
+  test('shows the developer profile, version and an actionable notifications bell (fixture)', async ({ page }) => {
     await signInDiAsAdmin(page);
 
-    await expect(page.getByRole('button', { name: /اعلان‌ها — به‌زودی/ })).toBeDisabled();
+    // Phase A: the bell is enabled and opens the clearly-labeled fixture panel.
+    const bell = page.getByRole('button', { name: /اعلان‌ها/ });
+    await expect(bell).toBeVisible();
+    await bell.click();
+    await expect(page.getByText('دادهٔ آزمایشی — جریان واقعی اعلان هنوز متصل نشده است.')).toBeVisible();
+    await page.keyboard.press('Escape');
 
     if (isMobile(page)) {
       // On mobile the profile label (and the sidebar footer) collapse to the
       // avatar only and the closed drawer, respectively, by responsive design.
       await expect(page.getByRole('button', { name: 'باز کردن منو' })).toBeVisible();
     } else {
+      // The developer identity now lives inside the account menu behind the avatar.
+      await page.getByRole('button', { name: 'منوی حساب کاربری' }).click();
       await expect(page.getByText('مدیر سیستم')).toBeVisible();
       await expect(adminSidebar(page).getByText(/نسخهٔ پایه/)).toBeVisible();
     }
