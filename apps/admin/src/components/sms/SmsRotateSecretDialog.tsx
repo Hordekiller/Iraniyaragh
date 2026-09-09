@@ -22,20 +22,38 @@ export type SmsRotateSecretDialogProps = {
   onSubmit: (secret: string) => void;
 };
 
+const SECRET_MIN_LENGTH = 16;
+const SECRET_MAX_LENGTH = 512;
+
+/* eslint-disable-next-line no-control-regex */
+const NO_PADDING_OR_CONTROL = new RegExp('^[^\\s\\u0000-\\u001F\\u007F]+$', 'u');
+
 /**
- * Write-only secret rotation dialog. The API accepts only {secret, confirm,
- * idempotencyKey} — there is no reason field in the contract, so the dialog
- * requires the new key and an explicit confirmation checkbox instead of
- * inventing audit metadata the server cannot consume. The secret value is never
- * echoed back or stored by the UI; only the masked state reaches the summary.
+ * The secret is write-only and must never be normalized: the exact value the
+ * operator pastes is sent to the API, byte-for-byte. The dialog therefore
+ * validates the exact input (length, no whitespace, no control characters, no
+ * surrounding padding) and rejects anything that is "only valid after trimming"
+ * instead of silently trimming it. No length/character filtering is applied on
+ * change, so pasted secrets are never altered.
  */
+function isExactlyValidSecret(secret: string): boolean {
+  if (secret.length < SECRET_MIN_LENGTH || secret.length > SECRET_MAX_LENGTH) return false;
+  return NO_PADDING_OR_CONTROL.test(secret);
+}
+
 export function SmsRotateSecretDialog({ open, setOpen, busy, onSubmit }: SmsRotateSecretDialogProps) {
   const [secret, setSecret] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [touched, setTouched] = useState(false);
 
-  const canSubmit = secret.trim().length > 0 && confirmed;
-  const secretError = touched && secret.trim().length === 0;
+  const secretValid = isExactlyValidSecret(secret);
+  const canSubmit = secretValid && confirmed;
+  const secretError = touched && !secretValid && secret.length > 0;
+  const secretHelperText =
+    secretError && secret.length > 0
+      ? `کلید باید دقیقاً همان مقداری باشد که ذخیره می‌شود: طول بین ${SECRET_MIN_LENGTH} و ${SECRET_MAX_LENGTH} نویسه، بدون فاصله، نویسهٔ کنترلی یا padding.`
+      : undefined;
+  const emptyError = touched && secret.length === 0;
 
   const handleClose = () => {
     if (busy) return;
@@ -49,7 +67,7 @@ export function SmsRotateSecretDialog({ open, setOpen, busy, onSubmit }: SmsRota
     event.preventDefault();
     setTouched(true);
     if (!canSubmit) return;
-    onSubmit(secret.trim());
+    onSubmit(secret);
     setSecret('');
     setConfirmed(false);
     setTouched(false);
@@ -92,8 +110,8 @@ export function SmsRotateSecretDialog({ open, setOpen, busy, onSubmit }: SmsRota
             label="کلید جدید سرویس پیامک"
             value={secret}
             onChange={(event) => setSecret(event.target.value)}
-            error={secretError}
-            helperText={secretError ? 'وارد کردن کلید جدید الزامی است' : undefined}
+            error={secretError || emptyError}
+            helperText={secretError ? secretHelperText : emptyError ? 'وارد کردن کلید جدید الزامی است' : undefined}
             inputProps={{ 'aria-required': true }}
             disabled={busy}
             sx={{ mt: 3 }}

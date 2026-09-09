@@ -11,6 +11,7 @@ import type {
   SmsValidation,
 } from '@iranyaragh/contracts';
 import {
+  SmsIdempotencyConflictError,
   SmsInvalidInputError,
   SmsUnsupportedOperationError,
   SmsVersionConflictError,
@@ -34,8 +35,12 @@ export type SmsSettingsFixtureOptions = {
  * - settings updates are versioned (expectedVersion compare-and-swap);
  * - the secret is write-only: only masked/configured/validated/lastRotatedAt are
  *   ever readable — the fixture never retains or returns secret material;
- * - rotate/clear/test-send require `confirm: true` and an idempotency key, and a
- *   replay of the same key returns the same outcome;
+ * - rotate/clear/test-send require `confirm: true` and an idempotency key. Keys
+ *   are scoped by operation and a safe payload fingerprint: replaying the exact
+ *   same call returns the stored outcome, reusing a key for a different
+ *   operation or payload is rejected as an idempotency conflict, and the raw
+ *   secret value is never retained (only a call-time hash feeds the
+ *   fingerprint);
  * - a `read_only` backend answers rotate/clear with the contract-stable
  *   `OPERATION_UNSUPPORTED` instead of pretending to mutate;
  * - outage mode surfaces as a failed test send and open-circuit diagnostics.
@@ -62,7 +67,8 @@ export class SmsSettingsFixture implements SmsSettingsPort {
   private lastRotatedAt = '2026-09-01T07:00:00.000Z';
   private lastTestSendOutcome: SmsSendOutcome = { messageId: 'fixture-msg-1001', status: 'accepted' };
   private lastCheckedAt: string | null = null;
-  private readonly idempotency: Map<string, unknown> = new Map();
+  private readonly usedKeys = new Map<string, string>();
+  private readonly idempotency = new Map<string, { fingerprint: string; outcome: unknown }>();
 
   constructor(options: SmsSettingsFixtureOptions = {}) {
     this.maskedValue = options.maskedValue ?? '••••••••';
@@ -103,10 +109,20 @@ export class SmsSettingsFixture implements SmsSettingsPort {
     }
   }
 
-  private idempotent<T>(key: string, produce: () => T): T {
-    if (this.idempotency.has(key)) return this.idempotency.get(key) as T;
+  private idempotent<T>(operation: string, idempotencyKey: string, fingerprint: string, produce: () => T): T {
+    const previousOperation = this.usedKeys.get(idempotencyKey);
+    if (previousOperation !== undefined && previousOperation !== operation) {
+      throw new SmsIdempotencyConflictError();
+    }
+    const entryKey = `${operation}|${idempotencyKey}`;
+    const entry = this.idempotency.get(entryKey);
+    if (entry !== undefined) {
+      if (entry.fingerprint !== fingerprint) throw new SmsIdempotencyConflictError();
+      return entry.outcome as T;
+    }
     const outcome = produce();
-    this.idempotency.set(key, outcome);
+    this.idempotency.set(entryKey, { fingerprint, outcome });
+    this.usedKeys.set(idempotencyKey, operation);
     return outcome;
   }
 
@@ -156,10 +172,12 @@ export class SmsSettingsFixture implements SmsSettingsPort {
     if (!payload.confirm) {
       throw new SmsInvalidInputError('برای چرخش کلید، تأیید صریح لازم است.');
     }
-    if (typeof payload.secret !== 'string' || payload.secret.trim().length === 0) {
-      throw new SmsInvalidInputError('کلید جدید نمی‌تواند خالی باشد.');
+    if (!isExactlyValidSecret(payload.secret)) {
+      throw new SmsInvalidInputError(
+        'کلید جدید نمی‌تواند خالی باشد یا شامل فاصله/نویسهٔ کنترلی باشد و نباید با فاصله padding شده باشد.',
+      );
     }
-    return this.idempotent(payload.idempotencyKey, () => {
+    return this.idempotent('rotate', payload.idempotencyKey, hashText(payload.secret), () => {
       this.secretConfigured = true;
       this.secretValidated = true;
       this.lastRotatedAt = new Date(this.now()).toISOString();
@@ -173,7 +191,7 @@ export class SmsSettingsFixture implements SmsSettingsPort {
     if (!payload.confirm) {
       throw new SmsInvalidInputError('برای پاک‌سازی کلید، تأیید صریح لازم است.');
     }
-    return this.idempotent(payload.idempotencyKey, () => {
+    return this.idempotent('clear', payload.idempotencyKey, 'clear-fixed', () => {
       this.secretConfigured = false;
       this.secretValidated = false;
       this.lastRotatedAt = '';
@@ -186,7 +204,7 @@ export class SmsSettingsFixture implements SmsSettingsPort {
     if (!payload.confirm) {
       throw new SmsInvalidInputError('برای ارسال آزمایشی، تأیید صریح لازم است.');
     }
-    return this.idempotent(payload.idempotencyKey, () => {
+    return this.idempotent('test-send', payload.idempotencyKey, 'test-send-fixed', () => {
       const outcome: SmsSendOutcome =
         this.outageMode || !this.secretConfigured
           ? { messageId: null, status: 'unavailable' }
@@ -219,4 +237,25 @@ export class SmsSettingsFixture implements SmsSettingsPort {
 
 export function createSmsSettingsFixture(options: SmsSettingsFixtureOptions = {}): SmsSettingsPort {
   return new SmsSettingsFixture(options);
+}
+
+/** Non-cryptographic call-time digest used only to fingerprint secret payloads. */
+function hashText(value: string): string {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) + hash + value.charCodeAt(index)) >>> 0;
+  }
+  return `h${hash.toString(16)}`;
+}
+
+/* eslint-disable-next-line no-control-regex */
+const NO_PADDING_OR_CONTROL = new RegExp('^[^\\s\\u0000-\\u001F\\u007F]+$', 'u');
+
+/**
+ * Exact-match secret rule mirroring the accepted #118 server validation: the
+ * value must be a non-empty string with no whitespace or control characters and
+ * no surrounding padding. The fixture never silently trims a padded value.
+ */
+function isExactlyValidSecret(secret: unknown): secret is string {
+  return typeof secret === 'string' && secret.length > 0 && NO_PADDING_OR_CONTROL.test(secret);
 }

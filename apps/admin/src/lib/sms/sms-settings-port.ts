@@ -31,9 +31,11 @@ export interface SmsSettingsPort {
 
 export type SmsSettingsErrorKind =
   | 'conflict'
+  | 'idempotency_conflict'
   | 'unsupported'
   | 'invalid_input'
   | 'reauthentication'
+  | 'session_invalid'
   | 'forbidden'
   | 'network'
   | 'provider'
@@ -66,6 +68,18 @@ export class SmsVersionConflictError extends SmsSettingsError {
   }
 }
 
+/**
+ * The same idempotency key was reused for a different operation or payload.
+ * Unlike a version conflict this is an operator error: the key must be fresh
+ * or the exact same payload retried.
+ */
+export class SmsIdempotencyConflictError extends SmsSettingsError {
+  constructor(message = 'شناسهٔ یکتا برای عملیات متفاوتی استفاده شده است؛ با کلید جدید تلاش کنید.') {
+    super('idempotency_conflict', message, 'CONFLICT');
+    this.name = 'SmsIdempotencyConflictError';
+  }
+}
+
 /** The configured secret/configuration backend does not support the operation. */
 export class SmsUnsupportedOperationError extends SmsSettingsError {
   constructor(message: string, code = 'OPERATION_UNSUPPORTED') {
@@ -87,6 +101,14 @@ export class SmsReauthenticationRequiredError extends SmsSettingsError {
   constructor(message = 'برای انجام این عملیات لازم است دوباره با MFA وارد شوید.') {
     super('reauthentication', message, 'AUTH_REAUTHENTICATION_REQUIRED');
     this.name = 'SmsReauthenticationRequiredError';
+  }
+}
+
+/** The staff session is no longer valid and a fresh sign-in is required. */
+export class SmsSessionExpiredError extends SmsSettingsError {
+  constructor(message = 'نشست شما منقضی شده است؛ لازم است دوباره وارد شوید.') {
+    super('session_invalid', message, 'AUTH_SESSION_INVALID');
+    this.name = 'SmsSessionExpiredError';
   }
 }
 

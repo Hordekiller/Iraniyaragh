@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Alert, Box, Button, Skeleton } from '@mui/material';
-import { MessageSquareText } from 'lucide-react';
+import { KeySquare, MessageSquareText } from 'lucide-react';
 import { FeedbackProvider } from '@/components/ui/FeedbackProvider';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -47,7 +47,20 @@ function SmsSettingsContent() {
         </Alert>
       ) : null}
 
-      {model.status === 'loading' ? (
+      {model.requireReauth ? (
+        <EmptyState
+          icon={<KeySquare size={30} />}
+          title="نشست شما منقضی شده است"
+          description="برای ادامهٔ مدیریت سرویس پیامک، لازم است دوباره با حساب مدیریتی خود وارد شوید."
+          action={
+            <Button variant="contained" href="/login/staff" component="a">
+              ورود مجدد به پنل
+            </Button>
+          }
+        />
+      ) : null}
+
+      {model.status === 'loading' && !model.requireReauth ? (
         <Box sx={{ display: 'grid', gap: 3 }}>
           <Skeleton height={128} />
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 3 }}>
@@ -57,7 +70,7 @@ function SmsSettingsContent() {
         </Box>
       ) : null}
 
-      {model.status === 'error' ? (
+      {model.status === 'error' && !model.requireReauth ? (
         <EmptyState
           icon={<MessageSquareText size={30} />}
           title="نمایش تنظیمات سرویس پیامک ممکن نیست"

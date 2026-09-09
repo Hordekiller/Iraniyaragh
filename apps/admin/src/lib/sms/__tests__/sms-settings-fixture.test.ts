@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SmsIdempotencyConflictError,
   SmsInvalidInputError,
   SmsUnsupportedOperationError,
   SmsVersionConflictError,
@@ -88,7 +89,7 @@ describe('SmsSettingsFixture', () => {
     expect(JSON.stringify(rotated)).not.toContain('fresh-api-key');
   });
 
-  it('requires confirm and a non-empty secret for rotation', async () => {
+  it('requires confirm and a non-empty, unpadded secret for rotation', async () => {
     const fixture = makeFixture();
     await expect(
       fixture.rotateSecret({ secret: 'x', confirm: false, idempotencyKey: 'r2' }),
@@ -96,18 +97,43 @@ describe('SmsSettingsFixture', () => {
     await expect(
       fixture.rotateSecret({ secret: '  ', confirm: true, idempotencyKey: 'r3' }),
     ).rejects.toBeInstanceOf(SmsInvalidInputError);
+    await expect(
+      fixture.rotateSecret({ secret: ' padded-secret-xxxxxxxx ', confirm: true, idempotencyKey: 'r3b' }),
+    ).rejects.toBeInstanceOf(SmsInvalidInputError);
+    await expect(
+      fixture.rotateSecret({ secret: 'secret-with-tab\txxxxxxxx', confirm: true, idempotencyKey: 'r3c' }),
+    ).rejects.toBeInstanceOf(SmsInvalidInputError);
   });
 
-  it('makes rotate/clear idempotent per idempotency key (replay returns the same snapshot)', async () => {
+  it('replays the exact same rotate/clear call idempotently per key', async () => {
     const fixture = makeFixture();
-    const first = await fixture.rotateSecret({ secret: 'a', confirm: true, idempotencyKey: 'r4' });
-    const second = await fixture.rotateSecret({ secret: 'b', confirm: true, idempotencyKey: 'r4' });
-    expect(second).toEqual(first);
-    expect(second.version).toBe(first.version);
+    const first = await fixture.rotateSecret({ secret: 'fresh-api-key-1', confirm: true, idempotencyKey: 'r4' });
+    const replay = await fixture.rotateSecret({ secret: 'fresh-api-key-1', confirm: true, idempotencyKey: 'r4' });
+    expect(replay).toEqual(first);
+    expect(replay.version).toBe(first.version);
 
     const cleared = await fixture.clearSecret({ confirm: true, idempotencyKey: 'c1' });
     const clearedReplay = await fixture.clearSecret({ confirm: true, idempotencyKey: 'c1' });
     expect(clearedReplay).toEqual(cleared);
+  });
+
+  it('rejects reusing a key for a different secret payload (rotate a then rotate b)', async () => {
+    const fixture = makeFixture();
+    await fixture.rotateSecret({ secret: 'fresh-api-key-a', confirm: true, idempotencyKey: 'r-conflict-1' });
+    await expect(
+      fixture.rotateSecret({ secret: 'fresh-api-key-b', confirm: true, idempotencyKey: 'r-conflict-1' }),
+    ).rejects.toBeInstanceOf(SmsIdempotencyConflictError);
+  });
+
+  it('rejects reusing a key across different operations', async () => {
+    const fixture = makeFixture();
+    await fixture.rotateSecret({ secret: 'fresh-api-key-x', confirm: true, idempotencyKey: 'cross-op-1' });
+    await expect(
+      fixture.clearSecret({ confirm: true, idempotencyKey: 'cross-op-1' }),
+    ).rejects.toBeInstanceOf(SmsIdempotencyConflictError);
+    await expect(
+      fixture.testSend({ confirm: true, idempotencyKey: 'cross-op-1' }),
+    ).rejects.toBeInstanceOf(SmsIdempotencyConflictError);
   });
 
   it('clears the secret and then reports not_configured for validation and diagnostics', async () => {

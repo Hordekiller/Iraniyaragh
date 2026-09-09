@@ -10,6 +10,9 @@ import type {
 } from '@iranyaragh/contracts';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
 import {
+  SmsNetworkError,
+  SmsReauthenticationRequiredError,
+  SmsSessionExpiredError,
   SmsSettingsError,
   SmsVersionConflictError,
   type SmsSettingsPort,
@@ -46,6 +49,13 @@ function friendlyMessage(error: unknown): string {
  * in parallel, then exposes mutation actions that keep the snapshot fresh and
  * report outcomes through the feedback provider. Version conflicts trigger an
  * automatic reload so the user edits against the newest revision.
+ *
+ * Idempotency keys are per logical attempt: the key is minted when a mutation
+ * starts and is REUSED on retries after a response loss (network error), so the
+ * backend can dedupe without creating a second external effect. Any terminal
+ * result — success, a definitive server error, or an `unknown_result` test-send
+ * answer — closes the logical attempt so a deliberate fresh operation always
+ * mints a new key.
  */
 export function useSmsSettings({ service }: UseSmsSettingsOptions) {
   const feedback = useFeedback();
@@ -56,7 +66,9 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
   const [lastValidation, setLastValidation] = useState<SmsValidation | null>(null);
   const [lastOutcome, setLastOutcome] = useState<SmsSendOutcome | null>(null);
   const [busy, setBusy] = useState<SmsActionKey>(null);
+  const [requireReauth, setRequireReauth] = useState(false);
   const inFlight = useRef<SmsActionKey>(null);
+  const pendingAttempt = useRef<{ key: Exclude<SmsActionKey, null>; idempotencyKey: string } | null>(null);
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -70,6 +82,12 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
       setDiagnostics(nextDiagnostics);
       setStatus('ready');
     } catch (error) {
+      if (error instanceof SmsSessionExpiredError || error instanceof SmsReauthenticationRequiredError) {
+        setRequireReauth(true);
+        setStatus('error');
+        setLoadError(friendlyMessage(error));
+        return;
+      }
       setLoadError(friendlyMessage(error));
       setStatus('error');
     }
@@ -79,26 +97,54 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
     void load();
   }, [load]);
 
+  const beginIdempotencyKey = useCallback((key: Exclude<SmsActionKey, null>): string => {
+    if (pendingAttempt.current?.key === key) return pendingAttempt.current.idempotencyKey;
+    const idempotencyKey = makeIdempotencyKey();
+    pendingAttempt.current = { key, idempotencyKey };
+    return idempotencyKey;
+  }, []);
+
+  const endIdempotencyKey = useCallback(() => {
+    pendingAttempt.current = null;
+  }, []);
+
   const run = useCallback(
-    async (key: Exclude<SmsActionKey, null>, action: () => Promise<void>) => {
+    async (key: Exclude<SmsActionKey, null>, action: (idempotencyKey: string) => Promise<void>) => {
       if (inFlight.current !== null) return;
       inFlight.current = key;
       setBusy(key);
+      const idempotencyKey = beginIdempotencyKey(key);
       try {
-        await action();
+        await action(idempotencyKey);
+        endIdempotencyKey();
       } catch (error) {
         if (error instanceof SmsVersionConflictError) {
+          endIdempotencyKey();
           feedback.error(friendlyMessage(error));
           await load();
           return;
         }
+        if (error instanceof SmsSessionExpiredError || error instanceof SmsReauthenticationRequiredError) {
+          endIdempotencyKey();
+          setRequireReauth(true);
+          feedback.error(friendlyMessage(error));
+          return;
+        }
+        if (error instanceof SmsNetworkError) {
+          // The backend may or may not have applied the effect. Keeping the key
+          // means the user's retry carries the same idempotency key and the
+          // backend can return the stored result instead of re-applying.
+          feedback.error(friendlyMessage(error));
+          return;
+        }
+        endIdempotencyKey();
         feedback.error(friendlyMessage(error));
       } finally {
         inFlight.current = null;
         setBusy(null);
       }
     },
-    [feedback, load],
+    [feedback, load, beginIdempotencyKey, endIdempotencyKey],
   );
 
   const save = useCallback(
@@ -116,11 +162,11 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
   const rotate = useCallback(
     (secret: string) => {
       if (!snapshot) return;
-      void run('rotate', async () => {
+      void run('rotate', async (idempotencyKey) => {
         const updated = await service.rotateSecret({
           secret,
           confirm: true,
-          idempotencyKey: makeIdempotencyKey(),
+          idempotencyKey,
         });
         setSnapshot(updated);
         feedback.success('کلید جدید اعمال شد.');
@@ -131,10 +177,10 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
 
   const clear = useCallback(() => {
     if (!snapshot) return;
-    void run('clear', async () => {
+    void run('clear', async (idempotencyKey) => {
       const updated = await service.clearSecret({
         confirm: true,
-        idempotencyKey: makeIdempotencyKey(),
+        idempotencyKey,
       });
       setSnapshot(updated);
       feedback.success('کلید پاک‌سازی شد.');
@@ -143,14 +189,16 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
 
   const testSend = useCallback(() => {
     if (!snapshot) return;
-    void run('test', async () => {
+    void run('test', async (idempotencyKey) => {
       const outcome = await service.testSend({
         confirm: true,
-        idempotencyKey: makeIdempotencyKey(),
+        idempotencyKey,
       });
       setLastOutcome(outcome);
       if (outcome.status === 'accepted') {
         feedback.success('پیام آزمایشی ارسال شد.');
+      } else if (outcome.status === 'unknown_result') {
+        feedback.warning('نتیجهٔ ارسال نامشخص است؛ برای اطلاع از وضعیت سرویس، وضعیت‌سنجی را بررسی کنید.');
       } else {
         feedback.warning('پیام آزمایشی نتوانست ارسال شود.');
       }
@@ -173,6 +221,7 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
     lastValidation,
     lastOutcome,
     busy,
+    requireReauth,
     reload: load,
     save,
     rotate,

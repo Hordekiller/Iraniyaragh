@@ -56,7 +56,7 @@ describe('SMS settings page (fixture flow)', () => {
     await screen.findByText('وضعیت سرویس پیامک');
 
     fireEvent.click(screen.getByRole('button', { name: 'چرخش کلید' }));
-    fireEvent.change(screen.getByLabelText('کلید جدید سرویس پیامک'), { target: { value: 'fresh-api-key' } });
+    fireEvent.change(screen.getByLabelText('کلید جدید سرویس پیامک'), { target: { value: 'fresh-api-key-1234' } });
     fireEvent.click(screen.getByRole('checkbox', { name: /جایگزین شود/ }));
 
     fireEvent.click(screen.getByRole('button', { name: 'ثبت کلید جدید' }));
@@ -64,7 +64,7 @@ describe('SMS settings page (fixture flow)', () => {
 
     // The masked display stays fixed and the raw secret never appears.
     expect(screen.getAllByText('••••••••').length).toBeGreaterThan(0);
-    expect(screen.queryByText('fresh-api-key')).not.toBeInTheDocument();
+    expect(screen.queryByText('fresh-api-key-1234')).not.toBeInTheDocument();
   });
 
   it('clears the secret after explicit confirmation', async () => {

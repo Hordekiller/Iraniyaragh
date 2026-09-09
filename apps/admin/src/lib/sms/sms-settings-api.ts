@@ -14,8 +14,10 @@ import type {
 } from '@iranyaragh/contracts';
 import {
   SmsForbiddenError,
+  SmsInvalidInputError,
   SmsNetworkError,
   SmsReauthenticationRequiredError,
+  SmsSessionExpiredError,
   SmsUnsupportedOperationError,
   SmsUpstreamError,
   SmsVersionConflictError,
@@ -64,8 +66,12 @@ export class SmsSettingsApiClient implements SmsSettingsPort {
         return new SmsVersionConflictError();
       case 'OPERATION_UNSUPPORTED':
         return new SmsUnsupportedOperationError(error.message, error.code);
+      case 'VALIDATION_ERROR':
+        return new SmsInvalidInputError(error.message);
       case 'AUTH_REAUTHENTICATION_REQUIRED':
         return new SmsReauthenticationRequiredError(error.message);
+      case 'AUTH_SESSION_INVALID':
+        return new SmsSessionExpiredError(error.message);
       case 'FORBIDDEN':
         return new SmsForbiddenError(error.message);
       case 'UPSTREAM_UNAVAILABLE':
