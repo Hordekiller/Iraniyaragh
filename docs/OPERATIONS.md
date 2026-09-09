@@ -231,6 +231,10 @@ Use queues for work that should not slow synchronous user requests, such as:
 
 Jobs must be retry-safe and idempotent when side effects are possible.
 
+The SMS provider's security boundary, Sandbox gate, production activation,
+diagnostics, failure handling and rollback procedure are defined in
+[`SMS_PROVIDER_OPERATIONS.md`](./SMS_PROVIDER_OPERATIONS.md).
+
 ## Feature flags
 
 Use feature flags for risky or staged product launches where appropriate. Flags must not become a permanent substitute for deleting obsolete code.
