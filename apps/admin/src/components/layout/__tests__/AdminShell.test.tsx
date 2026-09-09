@@ -1,16 +1,19 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AdminShell } from '../AdminShell';
+import { AdminPreferencesProvider } from '@/lib/preferences/AdminPreferencesProvider';
+import { defaultPreferences, type AdminPreferences } from '@/lib/preferences/preferences';
 
 const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   refresh: vi.fn(),
+  push: vi.fn(),
   signOut: vi.fn(async () => undefined),
 }));
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
-  useRouter: () => ({ replace: mocks.replace, refresh: mocks.refresh }),
+  useRouter: () => ({ replace: mocks.replace, refresh: mocks.refresh, push: mocks.push }),
 }));
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
@@ -22,19 +25,24 @@ vi.mock('@/lib/auth/AuthProvider', () => ({
   }),
 }));
 
+function renderShell(prefs: Partial<AdminPreferences> = {}, children = <div>content</div>) {
+  return render(
+    <AdminPreferencesProvider initialPrefs={{ ...defaultPreferences, ...prefs }}>
+      <AdminShell>{children}</AdminShell>
+    </AdminPreferencesProvider>,
+  );
+}
+
 describe('AdminShell', () => {
   afterEach(() => {
     mocks.replace.mockReset();
     mocks.refresh.mockReset();
+    mocks.push.mockReset();
     mocks.signOut.mockReset();
   });
 
   it('renders the authenticated sidebar and dashboard link', () => {
-    render(
-      <AdminShell>
-        <div>content</div>
-      </AdminShell>,
-    );
+    renderShell();
 
     const sidebar = screen.getByRole('complementary', { name: 'منوی اصلی' });
     expect(sidebar).toBeInTheDocument();
@@ -42,28 +50,31 @@ describe('AdminShell', () => {
     expect(screen.getByRole('main')).toHaveTextContent('content');
   });
 
-  it('renders the developer profile, version and disabled notification', () => {
-    render(
-      <AdminShell>
-        <div>content</div>
-      </AdminShell>,
-    );
+  it('renders the global search trigger and an enabled notifications bell', () => {
+    renderShell();
 
-    expect(screen.getByText('مدیر سیستم')).toBeInTheDocument();
-    expect(screen.getByText('حساب آزمایشی')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /اعلان‌ها/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'جستجوی سریع در پنل' })).toBeInTheDocument();
+    const bell = screen.getByRole('button', { name: /اعلان‌ها/ });
+    expect(bell).toBeEnabled();
     expect(screen.getByText('نسخهٔ پایه')).toBeInTheDocument();
     expect(screen.getByText('v0.1.0')).toBeInTheDocument();
   });
 
-  it('closes the session and redirects to /login on sign-out', async () => {
-    render(
-      <AdminShell>
-        <div>content</div>
-      </AdminShell>,
-    );
+  it('opens the notifications menu with fixture rows', () => {
+    renderShell();
 
-    fireEvent.click(screen.getByRole('button', { name: 'خروج از حساب' }));
+    fireEvent.click(screen.getByRole('button', { name: /اعلان‌ها/ }));
+    expect(screen.getByText(/دادهٔ آزمایشی/)).toBeInTheDocument();
+    expect(screen.getByText(/بررسی کالای جدید/)).toBeInTheDocument();
+  });
+
+  it('signs out from the profile menu and redirects to /login', async () => {
+    renderShell();
+
+    fireEvent.click(screen.getByRole('button', { name: 'منوی حساب کاربری' }));
+    expect(screen.getByText('مدیر سیستم')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /خروج از حساب/ }));
     await Promise.resolve();
 
     expect(mocks.signOut).toHaveBeenCalledTimes(1);
@@ -71,12 +82,33 @@ describe('AdminShell', () => {
     expect(mocks.refresh).toHaveBeenCalledTimes(1);
   });
 
+  it('toggles the collapsed (mini) sidebar on desktop', () => {
+    renderShell();
+
+    const toggle = screen.getByRole('button', { name: 'جمع کردن نوار کناری' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(toggle);
+    expect(screen.getByRole('button', { name: 'باز کردن نوار کناری' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'باز کردن نوار کناری' }));
+    expect(screen.getByRole('button', { name: 'جمع کردن نوار کناری' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('renders a horizontal nav bar instead of a sidebar for the horizontal layout', () => {
+    renderShell({ layout: 'horizontal' });
+
+    const navBar = screen.getByRole('navigation', { name: 'ناوبری افقی' });
+    expect(within(navBar).getByRole('link', { name: /داشبورد/ })).toBeInTheDocument();
+  });
+
+  it('renders the collapse toggle only in vertical layout', () => {
+    renderShell({ layout: 'horizontal' });
+    expect(screen.queryByRole('button', { name: 'جمع کردن نوار کناری' })).not.toBeInTheDocument();
+  });
+
   it('opens the drawer, focuses the close button and closes on Escape', () => {
-    render(
-      <AdminShell>
-        <div>content</div>
-      </AdminShell>,
-    );
+    renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'باز کردن منو' }));
 

@@ -2,6 +2,10 @@
   min-height: 100vh;
 }
 
+/* --------------------------------------------------------------------------
+ * Sidebar (vertical + mobile drawer)
+ * ------------------------------------------------------------------------ */
+
 .sidebar {
   position: fixed;
   z-index: 40;
@@ -12,6 +16,7 @@
   color: #d9e2f2;
   background: #111b31;
   border-left: 1px solid rgb(255 255 255 / 6%);
+  transition: width 180ms ease;
 }
 
 .brand {
@@ -21,10 +26,12 @@
   height: 88px;
   padding: 0 22px;
   border-bottom: 1px solid rgb(255 255 255 / 7%);
+  transition: padding 180ms ease;
 }
 
 .brandMark {
   display: grid;
+  flex-shrink: 0;
   width: 42px;
   height: 42px;
   color: #fff;
@@ -35,9 +42,10 @@
   place-items: center;
 }
 
-.brand > div:nth-child(2) {
+.brandCopy {
   display: grid;
   gap: 3px;
+  min-width: 0;
 }
 
 .brand strong {
@@ -76,6 +84,7 @@
   color: #667590;
   font-size: 0.65rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .navItem {
@@ -86,6 +95,7 @@
   padding: 0 12px;
   color: #9caac0;
   font-size: 0.76rem;
+  white-space: nowrap;
   border: 1px solid transparent;
   border-radius: 12px;
   transition:
@@ -136,15 +146,59 @@
   color: #667590;
   font-size: 0.65rem;
   border-top: 1px solid rgb(255 255 255 / 7%);
+  transition: padding 180ms ease;
 }
 
 .sidebarFooter strong {
   color: #a4b0c3;
 }
 
+/* --------------------------------------------------------------------------
+ * Collapsed (mini) sidebar — vertical desktop only
+ * ------------------------------------------------------------------------ */
+
+.shellCollapsed .sidebar {
+  width: 92px;
+}
+
+.shellCollapsed .workspace {
+  margin-right: 92px;
+}
+
+.shellCollapsed .brand {
+  justify-content: center;
+  padding: 0 25px;
+}
+
+.shellCollapsed .brandCopy,
+.shellCollapsed .groupLabel,
+.shellCollapsed .navItem span,
+.shellCollapsed .navItem small,
+.shellCollapsed .navArrow,
+.shellCollapsed .sidebarFooter strong {
+  display: none;
+}
+
+.shellCollapsed .navItem {
+  justify-content: center;
+  padding: 0;
+}
+
+.shellCollapsed .sidebarFooter {
+  justify-content: center;
+  padding: 0;
+}
+
+/* --------------------------------------------------------------------------
+ * Workspace, header, topbar
+ * ------------------------------------------------------------------------ */
+
 .workspace {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   margin-right: 280px;
+  transition: margin-right 180ms ease;
 }
 
 .header {
@@ -168,43 +222,8 @@
   align-items: center;
 }
 
-.menuButton {
-  display: none;
-}
-
-.searchBox {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  width: min(420px, 38vw);
-  height: 44px;
-  padding: 0 14px;
-  color: #8b97a9;
-  background: #f4f6f9;
-  border: 1px solid #e8edf4;
-  border-radius: 14px;
-}
-
-.searchBox > span {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: space-between;
-  color: #8b97a9;
-  font-size: 0.75rem;
-}
-
-.searchBox small {
-  padding: 3px 7px;
-  color: #8d98a8;
-  font-size: 0.58rem;
-  background: #fff;
-  border: 1px solid #dfe4ec;
-  border-radius: 7px;
-}
-
-.headerActions > button,
-.menuButton {
+.menuButton,
+.collapseToggle {
   position: relative;
   display: grid;
   width: 42px;
@@ -213,57 +232,114 @@
   background: #f4f6f9;
   border: 1px solid #e8edf4;
   border-radius: 13px;
-  place-items: center;
-}
-
-.profile {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding-right: 10px;
-  border-right: 1px solid #e8edf4;
-}
-
-.avatar {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 800;
-  background: #17233a;
-  border-radius: 13px;
-  place-items: center;
-}
-
-.profile > div:last-child {
-  display: grid;
-}
-
-.profile strong {
-  color: #25324a;
-  font-size: 0.72rem;
-}
-
-.profile span {
-  color: #8e99aa;
-  font-size: 0.62rem;
-}
-
-.logoutButton {
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  place-items: center;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.headerActions > .logoutButton:hover {
-  color: #c0392b;
-  background: #fdeeea;
-  border-color: #f4cfc6;
+.menuButton:hover,
+.collapseToggle:hover {
+  color: #25324a;
+  border-color: #d6dde7;
+}
+
+.menuButton {
+  display: none;
 }
 
 .main {
+  flex: 1;
   padding: 30px;
 }
+
+html[data-admin-width='boxed'] .main {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* --------------------------------------------------------------------------
+ * Horizontal layout — nav bar under the header
+ * ------------------------------------------------------------------------ */
+
+.shellHorizontal .sidebar {
+  display: none;
+}
+
+.shellHorizontal .workspace {
+  margin-right: 0;
+}
+
+.navBar {
+  position: sticky;
+  z-index: 25;
+  top: 0;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 10px 22px;
+  overflow-x: auto;
+  color: #d9e2f2;
+  background: #111b31;
+  border-bottom: 1px solid rgb(255 255 255 / 7%);
+  scrollbar-width: thin;
+}
+
+.navBar .navGroup {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin: 0;
+  padding: 0 8px;
+}
+
+.navBar .groupLabel {
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.navBar .navItem {
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+}
+
+.navBar .navItem small {
+  margin-right: 4px;
+}
+
+.navBar .navArrow {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+ * Dark mode shell tweaks
+ * ------------------------------------------------------------------------ */
+
+html[data-admin-mode='dark'] .header {
+  background: rgb(21 28 46 / 88%);
+  border-bottom-color: rgb(255 255 255 / 9%);
+}
+
+html[data-admin-mode='dark'] .menuButton,
+html[data-admin-mode='dark'] .collapseToggle {
+  color: #9aa8c0;
+  background: #1b2438;
+  border-color: rgb(255 255 255 / 8%);
+}
+
+html[data-admin-mode='dark'] .menuButton:hover,
+html[data-admin-mode='dark'] .collapseToggle:hover {
+  color: #e8edf6;
+  border-color: rgb(255 255 255 / 16%);
+}
+
+/* --------------------------------------------------------------------------
+ * Responsive: mobile drawer
+ * ------------------------------------------------------------------------ */
 
 .backdrop {
   display: none;
@@ -290,7 +366,18 @@
     place-items: center;
   }
 
-  .workspace {
+  .collapseToggle,
+  .navBar {
+    display: none;
+  }
+
+  .shellHorizontal .sidebar {
+    display: flex;
+  }
+
+  .workspace,
+  .shellCollapsed .workspace,
+  .shellHorizontal .workspace {
     margin-right: 0;
   }
 
@@ -309,20 +396,6 @@
   .header {
     height: 72px;
     padding: 0 16px;
-  }
-
-  .searchBox {
-    width: 42px;
-    padding: 0;
-    place-content: center;
-  }
-
-  .searchBox > span {
-    display: none;
-  }
-
-  .profile > div:last-child {
-    display: none;
   }
 
   .main {
