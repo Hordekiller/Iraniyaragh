@@ -466,6 +466,7 @@ credential returns `401`; an authenticated principal lacking permission returns
 | `AUTH_SESSION_REPLAYED`          |  401 | Refresh family revoked; client must clear state    |
 | `AUTH_REAUTHENTICATION_REQUIRED` |  401 | Fresh proof required for sensitive action          |
 | `AUTH_CSRF_INVALID`              |  403 | Cookie request failed Origin/header/cookie proof   |
+| `AUTH_PASSWORD_POLICY`           |  400 | New staff password violates the policy; never echo |
 | `FORBIDDEN`                      |  403 | Authenticated but current permission/level denied  |
 | `CONFLICT`                       |  409 | Safe non-secret state/concurrency conflict         |
 | `RATE_LIMITED`                   |  429 | Retry later; dimension/account existence hidden    |
@@ -572,8 +573,10 @@ form state and never infer account status from timing.
 
 A `401` may trigger at most one refresh attempt for a request. A `403` never
 triggers refresh. Redirects have a bounded counter so expiry cannot produce a
-login/refresh loop. Multi-tab coordination uses a browser primitive such as
-`BroadcastChannel`; it transmits state/result signals, never raw tokens.
+login/refresh loop. Multi-tab coordination uses Web Locks as the refresh mutex
+with bounded acquisition; `BroadcastChannel` carries state/result signals only,
+never raw tokens. A client without the mutex fails closed to deliberate
+reauthentication instead of risking concurrent rotation/replay.
 
 ## 16. Mandatory verification
 
