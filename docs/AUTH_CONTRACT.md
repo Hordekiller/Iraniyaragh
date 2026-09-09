@@ -466,6 +466,7 @@ credential returns `401`; an authenticated principal lacking permission returns
 | `AUTH_SESSION_REPLAYED`          |  401 | Refresh family revoked; client must clear state    |
 | `AUTH_REAUTHENTICATION_REQUIRED` |  401 | Fresh proof required for sensitive action          |
 | `AUTH_CSRF_INVALID`              |  403 | Cookie request failed Origin/header/cookie proof   |
+| `AUTH_PASSWORD_POLICY`           |  400 | New staff password violates the policy; never echo |
 | `FORBIDDEN`                      |  403 | Authenticated but current permission/level denied  |
 | `CONFLICT`                       |  409 | Safe non-secret state/concurrency conflict         |
 | `RATE_LIMITED`                   |  429 | Retry later; dimension/account existence hidden    |
