@@ -159,4 +159,60 @@ describe('DataTable', () => {
     expect(checkboxes[1]).toHaveAttribute('aria-label');
     expect(checkboxes[1].getAttribute('aria-label')).toContain('1');
   });
+
+  it('hides a column from the column-visibility menu', () => {
+    renderClientTable();
+
+    fireEvent.click(screen.getByRole('button', { name: 'مدیریت ستون‌ها' }));
+    expect(screen.getByRole('menuitem', { name: /وضعیت/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /وضعیت/ }));
+    expect(screen.queryByRole('columnheader', { name: 'وضعیت' })).not.toBeInTheDocument();
+    expect(screen.queryByText('غیرفعال')).not.toBeInTheDocument();
+    expect(screen.getByText('محصول اول')).toBeInTheDocument();
+  });
+
+  it('prevents hiding the last visible column', () => {
+    renderClientTable();
+
+    fireEvent.click(screen.getByRole('button', { name: 'مدیریت ستون‌ها' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /وضعیت/ }));
+    expect(screen.queryByRole('columnheader', { name: 'وضعیت' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'مدیریت ستون‌ها' }));
+    expect(screen.getByRole('menuitem', { name: /نام/ })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('restores columns via the menu', () => {
+    renderClientTable();
+
+    fireEvent.click(screen.getByRole('button', { name: 'مدیریت ستون‌ها' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /وضعیت/ }));
+    expect(screen.queryByRole('columnheader', { name: 'وضعیت' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'مدیریت ستون‌ها' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /وضعیت/ }));
+    expect(screen.getByRole('columnheader', { name: 'وضعیت' })).toBeInTheDocument();
+  });
+
+  it('keeps hideable: false columns out of the visibility menu', () => {
+    const pinnedColumns: DataTableColumn<TestRow>[] = [
+      { id: 'name', label: 'نام', render: (row) => row.name, hideable: false },
+      { id: 'status', label: 'وضعیت', render: (row) => row.status },
+    ];
+    render(
+      <DataTable columns={pinnedColumns} rows={rows} rowKey={(r) => r.id} enableClientView searchKeys={[]} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'مدیریت ستون‌ها' }));
+    expect(screen.queryByRole('menuitem', { name: /نام/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /وضعیت/ })).toBeEnabled();
+  });
+
+  it('renders an actions column with per-row actions', () => {
+    renderClientTable({ actions: () => <button type="button">مشاهده</button> });
+
+    expect(screen.getByRole('columnheader', { name: 'عملیات' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'مشاهده' })).toHaveLength(3);
+  });
 });

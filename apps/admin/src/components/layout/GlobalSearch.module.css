@@ -1,0 +1,70 @@
+.trigger {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  width: min(420px, 34vw);
+  height: 44px;
+  padding: 0 14px;
+  color: #8b97a9;
+  font: inherit;
+  text-align: right;
+  background: #f4f6f9;
+  border: 1px solid #e8edf4;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.trigger:hover {
+  border-color: #d6dde7;
+}
+
+.icon {
+  display: grid;
+  color: #8b97a9;
+  place-items: center;
+}
+
+.label {
+  flex: 1;
+  font-size: 0.78rem;
+}
+
+.kbd {
+  padding: 3px 8px;
+  color: #8d98a8;
+  font-size: 0.62rem;
+  font-family: inherit;
+  background: #fff;
+  border: 1px solid #dfe4ec;
+  border-radius: 7px;
+}
+
+html[data-admin-mode='dark'] .trigger {
+  color: #9aa8c0;
+  background: #1b2438;
+  border-color: rgb(255 255 255 / 8%);
+}
+
+html[data-admin-mode='dark'] .trigger:hover {
+  border-color: rgb(255 255 255 / 16%);
+}
+
+html[data-admin-mode='dark'] .kbd {
+  color: #9aa8c0;
+  background: #222c44;
+  border-color: rgb(255 255 255 / 10%);
+}
+
+@media (max-width: 640px) {
+  .trigger {
+    justify-content: center;
+    width: 44px;
+    padding: 0;
+  }
+
+  .label,
+  .kbd {
+    display: none;
+  }
+}
