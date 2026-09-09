@@ -21,7 +21,7 @@ Current delivery confidence:
 | ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------- |
 | Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist           |
 | Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                           |
-| Customer/auth UX               | Partial           | Real HTTP customer OTP wiring with silent restore is open work (#50); fixture-only paths remain |
+| Customer/auth UX               | Partial           | Real HTTP client defaults in the storefront with silent restore (#50, PR #139 open); real OTP request + error/rate surface E2E'd; happy-path OTP verify gated on SMS delivery and a dev code-reveal |
 | Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice                  |
 | Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not          |
 | Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                  |
@@ -132,7 +132,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Capability    | What exists                                                | What prevents completion                                                        |
 | ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | RBAC          | Roles, seed and guard machinery                            | Every domain route still needs explicit allow/deny policy tests                 |
-| Customer Auth | API runtime; fixture UX            | Real HTTP client now defaults in the storefront (#50 open work); production SMS/outage policy and admin SPL remain |
+| Customer Auth | API runtime; fixture UX            | Real HTTP client now defaults in the storefront (#50 PR #139 open); real OTP request + error/rate surface E2E'd (CI now runs Redis); happy-path sign-in needs SMS delivery + dev-reveal |
 | Staff Auth    | Runtime and privileged lifecycle merged; fixture UX exists | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                 |
 | Catalog       | Contracts and API foundation merged via #103               | Media/pricing, admin UI and storefront integration                              |
 | Inventory     | Correct service core                                       | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI |
@@ -163,7 +163,7 @@ security/query review, OpenAPI drift confirmation and merge.
 
 ## Open PR work (not counted as delivered)
 
-Feature branch `feat/50-auth-ux-e2e` (not yet pushed):
+Feature branch `feat/50-auth-ux-e2e` — **PR #139 open** (base `1d2292f`, all CI gates green):
 
 - `contracts(auth)`: `AUTH_PASSWORD_POLICY` added to the public error codes and the
   admin fixtures (#50 item A) — commit `b51aa51`.
@@ -172,9 +172,23 @@ Feature branch `feat/50-auth-ux-e2e` (not yet pushed):
   single-flight session restore, cross-tab refresh signals, no-retry latch after
   session/CSRF failures, `session-expired` forced re-auth UI and memory-only tokens —
   commit `1551348`. Verified: web 152 unit tests + CI coverage gates, contracts
-  typecheck, API 366 integration tests + lint + build, admin 130 tests.
+  typecheck, API 366 tests + lint + build, admin 130 tests, 26 storefront E2E specs.
+- `e2e(api)`: integrated rotation/replay/revocation evidence against the real API
+  (refresh cookie rotation, REPLAYED→family revoked→INVALID, logout/CSRF gating) —
+  commit `08ae512`.
+- `e2e(api)`: real customer-OTP request/verify surface (202 envelope, per-destination
+  60s 429 `RATE_LIMITED` + `Retry-After`, wrong/exhausted `AUTH_CHALLENGE_INVALID`,
+  DTO `INVALID_REQUEST`) — this commit. Requires Redis in the CI e2e job (added).
+- `#50 acceptance`: desktop/mobile screenshots (`docs/screenshots/auth/`) produced by
+  `pnpm --filter @iranyaragh/e2e screenshots` and accessibility notes in
+  `docs/accessibility/auth-ux.md` — this commit.
 - Admin split: Hordekiller owns the admin UI slice; this branch does not change
   admin client behavior beyond item A.
+
+Remaining for real customer sign-in: SMS delivery is wired to adapters only (no
+provider call from the OTP service yet) and the issued code has no dev-gated reveal,
+so a happy-path OTP E2E cannot run without a provider bound to a test phone (tracked
+on the Sprint 1 plan).
 
 ## Decisions and blockers
 
