@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-08
+Last reviewed: 2026-09-09
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
@@ -33,18 +33,24 @@ day-to-day assignments.
 |        1 | Issue #91 — Sprint 1 coordination | In progress   | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                |
 |        2 | Issue #50 — Auth UX/E2E           | In progress   | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up |
 |        3 | Issue #78                         | Decision work | capacity, review SLA, private coordination and release authority              | Accepted written agreement with owner and effective date      |
-|        4 | PR #119 — SMS adapter core        | Approved/paused | last pusher changed after base sync; author re-approval required              | Hordekiller re-approves current green head, then squash-merge |
-|        5 | PR #118 — admin SMS contract      | Re-review pending | CHANGES_REQUESTED was on the pre-rework head; new head 6d6fdda is green        | Hordekiller re-reviews the rework, then squash-merge          |
-|        6 | Issues #114/#115                  | Ready/blocked | adapter/secret/wiring accepted, then integrated admin states                  | Backend wiring merged, then admin UI evidence via #115        |
+|        4 | PR #118 — admin SMS contract      | Re-review pending | both remaining blockers (OpenAPI failure envelopes, audit outcome/failure semantics) corrected on head 16e6949; synced from `main` post-#134; CI green | Hordekiller re-reviews the new head, then squash-merge |
+|        5 | PR #133 — admin SMS panel         | Stacked/blocked | rebased on corrected #118 head; 188/188 admin tests; CHANGES_REQUESTED was the pre-rebase review (already addressed) | merge after #118 accepted; then #115 admin evidence lands |
+|        6 | PR #131 — rendering/canonical ADR | Awaiting approval | docs-only; all checks green; branch bumped to current `main` (push dismissed the prior approval) | Hordekiller re-approves the updated head, then squash-merge |
+|        7 | PR #135 — commerce master plan    | Review pending   | new planning PR by Hordekiller                                              | independent review, then merge or scope decision              |
+|        8 | Issues #114/#115                  | Ready/blocked | adapter/secret/wiring core merged via #119/#120; production wiring and admin states next | backend wiring evidence, then integrated admin UI via #115     |
 
-## Team disposition ledger — 2026-09-08
+## Team disposition ledger — 2026-09-09
 
 | Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                    | Closure condition                                                           |
 | --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| PR #134   | Complete/merged               | Hordekiller / Maddyrampant | None (multer 2.3.0 pin on `main`)                                                              | Squash-merged 05:19Z; supply-chain advisory cleared                          |
 | PR #121   | Complete/merged               | Hordekiller / Maddyrampant | Discovery audit workflow is self-test only until PRODUCTION_WEB_ORIGIN exists                   | Clean merge; production job intentionally inert until configured            |
-| PR #119   | Approved, merge pending       | Hordekiller / Maddyrampant | Author re-approves green head after reviewer base sync (last-pusher rule)                      | Squash-merge; content also carries the reviewed #120 secret boundary        |
-| PR #120   | Complete/merged (into #119 branch) | Hordekiller / Maddyrampant | Content travels to `main` with the #119 squash; keep the ledger row until that merge recorded | Seen on `main` in the #119 merge commit                                      |
-| PR #118   | Re-review pending             | Maddyrampant / Hordekiller | Hordekiller reviews rework head 6d6fdda (9-point reply posted; CI green)                        | Squash-merge after re-approval; then #115 typoed-client/admin UI starts      |
+| PR #119   | Complete/merged               | Hordekiller / Maddyrampant | None (SMS.ir adapter core on `main`)                                                          | Squash-merged 04:04Z after fresh approval on 26fd62a                         |
+| PR #120   | Complete/merged               | Hordekiller / Maddyrampant | None (secret boundary content travelled inside the #119 squash)                                | Recorded on `main` in the #119 merge commit                                  |
+| PR #118   | Re-review pending             | Maddyrampant / Hordekiller | Hordekiller re-reviews head 16e6949 (both remaining blockers corrected; CI green)              | Squash-merge after re-approval; then stacked #133 is unblocked              |
+| PR #133   | Stacked/blocked on #118       | Maddyrampant / Hordekiller | Merges only after corrected #118; rebased on 16e6949, 188/188                                   | #118 accepted, then #133 squash-merge                                       |
+| PR #131   | Awaiting re-approval          | Hordekiller / Maddyrampant | Hordekiller re-approves branch bumped to current `main` (docs-only ADR)                        | Independent approval then squash-merge                                      |
+| PR #135   | Open, review pending          | Hordekiller / Maddyrampant | Independent review of the commerce expansion master plan                                        | Merge or scope decision                                                     |
 | PR #112   | Complete/merged               | Hordekiller / Maddyrampant | Use the merged status/roadmap baseline                                                         | Independent approval and protected merge completed                          |
 | Issue #79 | Complete/closed               | Hordekiller / Maddyrampant | Implement #114, then #115; provision account/line/key privately                                | ADR-0011 accepted via merged #116                                           |
 | Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity |
@@ -74,8 +80,9 @@ Exit: remaining #50/#91 gaps are closed or split into owned follow-ups.
 - Map #50 and #91 acceptance checkboxes to a commit/test/PR; retain #49 as closed evidence.
 - Run clean-main quality, database and E2E gates.
 - Confirm customer OTP fixture tests and live API tests are described separately.
-- Land and record PRs #119/#120 (SMS adapter core and secret boundary) and the
-  re-reviewed PR #118 (admin SMS contract) so #114/#115 become the addressable
+- Land and record PR #118 (admin SMS contract) once re-approved, then its stacked
+  PR #133 (admin panel); record that #119/#120 (SMS adapter core and secret boundary)
+  and #134 (multer pin) are already merged, so #114/#115 become the addressable
   remaining work; the sandbox gate from `SMS_PROVIDER_OPERATIONS.md` is private,
   operator-owned evidence.
 - Decide #78; treat accepted ADR-0011 and closed #79 as the provider baseline,
