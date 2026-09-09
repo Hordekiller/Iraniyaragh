@@ -40,6 +40,24 @@ foundation, and G5–G10 have not reached integrated completion.
   #81, #114 and #115.
 - Local-only or untracked material is never counted as delivered product capability.
 
+### Local/uncommitted storefront routing work (branch `feat/user-ui-storefront`)
+
+- Single-page routed customer purchase flow inside `apps/web`: home, category,
+  search, product, cart, checkout, mock payment, account, orders, order detail and
+  404 pages, wired through `react-router` with a shared shell (`AppLayout`, header,
+  footer, mobile bottom nav).
+- Swappable, fail-closed data layer (`services/`): catalog, cart and order ports
+  with fixture implementations gated behind `VITE_FIXTURE_CATALOG=true`, matching
+  `@iranyaragh/contracts` (Money/IRR). Cart is in-memory + localStorage; orders are
+  persisted to localStorage. Auth reuses the existing fixture OTP flow.
+- All `apps/web` checks pass: typecheck, lint (incl. runtime-asset policy), build,
+  unit tests (164 in 15 files) and the `CI=true` coverage gate (lines 90.8 /
+  statements 86.7 / functions 80.7 / branches 83.8 vs 80/78/72/75).
+- Not yet a server-priced or live backend flow: order/payment are fixture placeholders
+  that a future order/payment client must replace (see `services/cart/types.ts`).
+- Not yet committed/merged; treated as local-only capability per the rule above.
+
+
 ## Delivered on `main`
 
 ### Engineering and delivery foundation
@@ -107,6 +125,9 @@ foundation, and G5–G10 have not reached integrated completion.
 - Persian RTL Next.js/MUI admin shell, dashboard guard and real development sign-in.
 - Reusable admin table/form/wizard/confirmation/feedback primitives. Showcase routes
   are not production operational modules.
+- Admin Phase A foundation (PR #138): light/dark/system theme mode, default/bordered
+  skin, vertical/horizontal layouts, boxed/fluid width, quick search, notifications
+  and profile menus, and column-visibility/actions support in the data table.
 
 ## Recently merged capability
 
@@ -148,8 +169,8 @@ security/query review, OpenAPI drift confirmation and merge.
 | Inventory     | Correct service core                                       | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI |
 | Orders        | Schema and generic state helper                            | Aggregate/services, snapshots, compensation, API and UI                         |
 | Payments      | Schema/state foundation                                    | Provider/adapter, verification, idempotency, refund and reconciliation          |
-| Web           | Accessible prototype                                       | Static `prototype.ts` data and simulated commerce actions                       |
-| Admin         | Shell, Auth and UI primitives                              | No operational domain modules                                                   |
+| Web           | Accessible prototype + routed storefront | Static `prototype.ts` data; routed pages are local/uncommitted, still fixture-driven (server-side cart/order/payment not integrated) |
+| Admin         | Shell, Auth, UI primitives and Phase A foundation (themes, layout modes, search, notifications, data-table upgrades) via #138 | No operational domain modules |
 | Operations    | CI and local Compose                                       | Deploy/staging, observability, recovery and rollback proof                      |
 
 ## Not implemented
