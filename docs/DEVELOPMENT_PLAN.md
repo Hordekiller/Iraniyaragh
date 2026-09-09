@@ -2,6 +2,11 @@
 
 Last reviewed: 2026-09-08
 
+This document schedules the MVP sequence. `COMMERCE_EXPANSION_PLAN.md` is the
+authoritative complete-scope plan for V1, operational maturity and governed growth;
+every sprint issue must preserve its engineering method, capability register and
+acceptance matrix even when the short-term schedule below is re-estimated.
+
 ## 0. Current planning baseline
 
 The sprint sequence below remains the intended dependency order, but delivery has
@@ -65,6 +70,10 @@ restore, monitor and roll back the service.
 - Complex promotions/coupon engine and multi-seller marketplace
 - Full accounting/ERP, advanced BI and automated supplier feeds
 - Microservices, Kubernetes and a dedicated search cluster without measured need
+
+Deferred does not mean forgotten. Promotions, merchandising, Persian search
+relevance, returns/support maturity, analytics, editorial content, SEO/GEO and
+grounded AI are sequenced with entry/exit gates in `COMMERCE_EXPANSION_PLAN.md`.
 
 ## 3. Work breakdown and sprint sequence
 

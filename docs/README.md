@@ -24,5 +24,8 @@ Read these documents before implementing business-critical features.
 18. `adr/` — architecture decisions that intentionally change or extend the foundation.
 19. `SEO_GEO_AI_DISCOVERY_PLAN.md` — dynamic sitemap, technical SEO, commerce
     structured data, AI-answer discovery, on-site AI controls and delivery workflows.
+20. `COMMERCE_EXPANSION_PLAN.md` — authoritative end-to-end expansion plan covering
+    all commerce capabilities, dependency gates, two-contributor ownership,
+    implementation methods, quality evidence, production readiness and governed growth.
 
 When code and documentation disagree, stop and resolve the discrepancy. Do not silently bypass a documented invariant.
