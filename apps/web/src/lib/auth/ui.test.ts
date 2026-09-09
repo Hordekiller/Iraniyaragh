@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AuthFixtureClient } from './fixtures';
-import { MemorySessionStore } from './session-store';
+import { MemorySessionStore, CrossTabSessionBus } from './session-store';
+import type { SessionSignal } from './session-store';
 import { CustomerOtpController } from './ui';
 import type { AuthApi } from './api';
 import type { CustomerOtpChallenge } from './types';
@@ -11,6 +12,34 @@ function makeFlow(nowValue = 1_000) {
   let now = nowValue;
   const controller = new CustomerOtpController(api, store, () => now);
   return { controller, store, setNow: (t: number) => (now = t) };
+}
+
+/** A fake failing `refresh` used to simulate a session-family failure. */
+function makeFailingRefreshClient(fixture: AuthFixtureClient, code: 'AUTH_SESSION_INVALID' | 'AUTH_SESSION_REPLAYED') {
+  const client = Object.create(fixture) as AuthFixtureClient;
+  client.refresh = async () => {
+    const error = new Error(code) as Error & { code: string; statusCode: number; retryAfterSeconds?: number };
+    error.code = code;
+    error.statusCode = 401;
+    throw error;
+  };
+  return client as unknown as AuthApi;
+}
+
+/** A bus that records every signal AND delivers it to subscribers (stands in for a real channel recv). */
+class RecordingBus extends CrossTabSessionBus {
+  readonly signals: string[] = [];
+  private readonly localListeners = new Set<(signal: SessionSignal) => void>();
+
+  override broadcast: (signal: SessionSignal) => void = signal => {
+    this.signals.push(signal.type);
+    for (const listener of this.localListeners) listener(signal);
+  };
+
+  override subscribe: (listener: (signal: SessionSignal) => void) => () => void = listener => {
+    this.localListeners.add(listener);
+    return () => this.localListeners.delete(listener);
+  };
 }
 
 describe('CustomerOtpController OTP flow', () => {
@@ -379,5 +408,154 @@ describe('CustomerOtpController OTP flow', () => {
     await controller.logout();
     expect(store.snapshot().status).toBe('anonymous');
     expect(store.getAccessToken()).toBeNull();
+  });
+});
+
+describe('CustomerOtpController silent session restore (#50)', () => {
+  async function authenticate(controller: CustomerOtpController) {
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    controller.setCode('123456');
+    await controller.verifyOtp();
+  }
+
+  it('does not restore when there is no in-memory session', async () => {
+    const { controller } = makeFlow();
+    const ok = await controller.restoreSession();
+    expect(ok).toBe(false);
+    expect(controller.getState().phase).toBe('idle');
+  });
+
+  it('restores a session silently when one exists and stays authenticated', async () => {
+    const { controller } = makeFlow();
+    await authenticate(controller);
+
+    const ok = await controller.restoreSession();
+    expect(ok).toBe(true);
+    const state = controller.getState();
+    expect(state.phase).toBe('authenticated');
+    expect(state.restoring).toBe(false);
+  });
+
+  it('single-flights concurrent restore calls when one is in flight', async () => {
+    const store = new MemorySessionStore();
+    const api = new AuthFixtureClient({ store });
+    const controller = new CustomerOtpController(api, store, () => Date.now());
+
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    controller.setCode('123456');
+    await controller.verifyOtp();
+
+    // Start the first restore but do not await it yet.
+    const first = controller.restoreSession();
+    const second = controller.restoreSession();
+    const third = controller.restoreSession();
+
+    const results = await Promise.all([first, second, third]);
+    // Only the first earns the right to refresh; the others collapse.
+    expect(results.filter(Boolean)).toHaveLength(1);
+  });
+
+  it('latches after an AUTH_SESSION_REPLAYED refresh and forces re-auth with no further automatic restore', async () => {
+    const store = new MemorySessionStore();
+    const fixture = new AuthFixtureClient({ store });
+    const controller = new CustomerOtpController(makeFailingRefreshClient(fixture, 'AUTH_SESSION_REPLAYED'), store, () => Date.now());
+
+    await authenticate(controller);
+    expect(store.snapshot().status).toBe('authenticated');
+
+    const ok = await controller.restoreSession();
+    expect(ok).toBe(false);
+    expect(store.snapshot().status).toBe('expired');
+    expect(controller.getState().phase).toBe('session-expired');
+    expect(controller.getState().expiredReason).toBe('replayed');
+
+    // No auto-retry: even though the store still says authenticated before the
+    // call, the latch is armed after the failure, so a second call must not run.
+    const second = await controller.restoreSession();
+    expect(second).toBe(false);
+    const calls = await controller.restoreSession();
+    expect(calls).toBe(false);
+  });
+
+  it('latches after an AUTH_SESSION_INVALID refresh and surfaces a plain expired state', async () => {
+    const store = new MemorySessionStore();
+    const fixture = new AuthFixtureClient({ store });
+    const controller = new CustomerOtpController(makeFailingRefreshClient(fixture, 'AUTH_SESSION_INVALID'), store, () => Date.now());
+
+    await authenticate(controller);
+    const ok = await controller.restoreSession();
+    expect(ok).toBe(false);
+    expect(controller.getState().phase).toBe('session-expired');
+    expect(controller.getState().expiredReason).toBe('invalid');
+  });
+
+  it('broadcasts single-flight signals on the cross-tab bus', async () => {
+    const store = new MemorySessionStore();
+    const fixture = new AuthFixtureClient({ store });
+    const bus = new RecordingBus('test-channel');
+    const controller = new CustomerOtpController(fixture, store, () => Date.now(), bus);
+
+    await authenticate(controller);
+    await controller.restoreSession();
+
+    expect(bus.signals).toContain('refresh-started');
+    expect(bus.signals).toContain('refresh-completed');
+  });
+
+  it('a session-less silent restore stays anonymously silent and latches a single refresh attempt', async () => {
+    const store = new MemorySessionStore();
+    const fixture = new AuthFixtureClient({ store });
+    let refreshCalls = 0;
+    const api = Object.create(fixture) as AuthFixtureClient;
+    api.refresh = async () => {
+      refreshCalls += 1;
+      const error = new Error('AUTH_SESSION_INVALID') as Error & { code: string; statusCode: number };
+      error.code = 'AUTH_SESSION_INVALID';
+      error.statusCode = 401;
+      throw error;
+    };
+    const controller = new CustomerOtpController(api, store, () => Date.now());
+
+    const first = await controller.restoreSession();
+    expect(first).toBe(false);
+    expect(controller.getState().phase).toBe('idle');
+    expect(controller.getState().expiredReason).toBeNull();
+
+    // No auto-retry: further reload-path restores never touch the endpoint again.
+    await controller.restoreSession();
+    await controller.restoreSession();
+    expect(refreshCalls).toBe(1);
+  });
+
+  it('a remote SESSION_REPLAYED failure force-expires this tab and keeps it silent', async () => {
+    const store = new MemorySessionStore();
+    const fixture = new AuthFixtureClient({ store });
+    const bus = new RecordingBus('test-channel');
+    const controller = new CustomerOtpController(fixture, store, () => Date.now(), bus);
+
+    await authenticate(controller);
+    expect(controller.getState().phase).toBe('authenticated');
+
+    // Simulate another tab reporting that the refresh family was revoked.
+    bus.broadcast({ type: 'refresh-failed', reason: 'invalid' });
+    expect(controller.getState().phase).toBe('session-expired');
+    // No further automatic refresh after a cross-tab revocation.
+    const ok = await controller.restoreSession();
+    expect(ok).toBe(false);
+  });
+
+  it('a remote refresh failure on an anonymous tab stays silently anonymous', async () => {
+    const store = new MemorySessionStore();
+    const fixture = new AuthFixtureClient({ store });
+    const bus = new RecordingBus('test-channel');
+    const controller = new CustomerOtpController(fixture, store, () => Date.now(), bus);
+
+    // No session in this tab.
+    bus.broadcast({ type: 'refresh-failed', reason: 'replayed' });
+    expect(controller.getState().phase).toBe('idle');
   });
 });

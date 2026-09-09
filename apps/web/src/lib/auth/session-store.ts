@@ -92,6 +92,18 @@ export class MemorySessionStore {
     return this.state.status === 'authenticated';
   }
 
+  isExpired(): boolean {
+    return this.state.status === 'expired';
+  }
+
+  getStatus(): AuthSessionState['status'] {
+    return this.state.status;
+  }
+
+  expireReason(): 'invalid' | 'replayed' | null {
+    return this.state.status === 'expired' ? this.state.reason : null;
+  }
+
   expire(reason: 'invalid' | 'replayed' = 'invalid'): void {
     this.state = { status: 'expired', reason };
   }
