@@ -2,7 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { AuthFixtureClient } from '../lib/auth/fixtures'
-import { MemorySessionStore, CrossTabSessionBus } from '../lib/auth/session-store'
+import {
+  MemorySessionStore,
+  CrossTabSessionBus,
+  LocalRefreshCoordinator,
+} from '../lib/auth/session-store'
 import type { AuthApi } from '../lib/auth/api'
 import { CustomerOtpController } from '../lib/auth/ui'
 import { AuthProvider } from './AuthProvider'
@@ -33,7 +37,12 @@ describe('AuthProvider', () => {
     await signIn(store)
 
     render(
-      <AuthProvider api={new AuthFixtureClient({ store })} store={store} bus={bus}>
+      <AuthProvider
+        api={new AuthFixtureClient({ store })}
+        store={store}
+        bus={bus}
+        refreshCoordinator={new LocalRefreshCoordinator()}
+      >
         <Probe />
       </AuthProvider>,
     )
@@ -48,6 +57,7 @@ describe('AuthProvider', () => {
         api={new AuthFixtureClient({ store }) as unknown as AuthApi}
         store={store}
         bus={new CrossTabSessionBus()}
+        refreshCoordinator={new LocalRefreshCoordinator()}
       >
         <Probe />
       </AuthProvider>,

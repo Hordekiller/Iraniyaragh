@@ -1,7 +1,7 @@
 import { isValidOtpCode, normalizeIranianMobile, normalizeOtpCodeInput } from './normalize';
 import type { AuthApi } from './api';
-import type { MemorySessionStore, SessionSignal } from './session-store';
-import { CrossTabSessionBus } from './session-store';
+import type { MemorySessionStore, RefreshCoordinator, SessionSignal } from './session-store';
+import { CrossTabSessionBus, LocalRefreshCoordinator } from './session-store';
 import type { AuthApiError } from './errors';
 import type { CustomerOtpChallenge, AuthPrincipal } from './types';
 
@@ -109,11 +109,11 @@ export class CustomerOtpController {
   private readonly store: MemorySessionStore;
   private readonly inflight = new Set<string>();
   private readonly bus: CrossTabSessionBus | null;
-  private readonly unsubscribeBus: (() => void) | null = null;
+  private unsubscribeBus: (() => void) | null = null;
+  private readonly refreshCoordinator: RefreshCoordinator;
   /** True while a silent restore/refresh is in flight (single-flight). */
   private restoring = false;
-  /** Another tab is already refreshing; defer until the bus reports completion. */
-  private crossTabRefreshInFlight = false;
+  private refreshPromise: Promise<boolean> | null = null;
   /**
    * Once a refresh produced SESSION_INVALID/REPLAYED, never fire another
    * automatic silent refresh for this page lifetime: repeated automatic calls
@@ -129,14 +129,26 @@ export class CustomerOtpController {
     store: MemorySessionStore,
     private readonly now: () => number = () => Date.now(),
     bus?: CrossTabSessionBus,
+    refreshCoordinator: RefreshCoordinator = new LocalRefreshCoordinator(),
   ) {
     this.api = api;
     this.store = store;
     this.bus = bus ?? null;
-    if (this.bus) {
+    this.refreshCoordinator = refreshCoordinator;
+    this.connect();
+    this.syncFromStore();
+  }
+
+  connect(): void {
+    if (this.bus && !this.unsubscribeBus) {
       this.unsubscribeBus = this.bus.subscribe(signal => this.onSignal(signal));
     }
-    this.syncFromStore();
+  }
+
+  dispose(): void {
+    this.unsubscribeBus?.();
+    this.unsubscribeBus = null;
+    this.listeners.clear();
   }
 
   getState(): CustomerOtpUiState {
@@ -176,13 +188,10 @@ export class CustomerOtpController {
   private onSignal(signal: SessionSignal): void {
     switch (signal.type) {
       case 'refresh-started':
-        this.crossTabRefreshInFlight = true;
         break;
       case 'refresh-completed':
-        this.crossTabRefreshInFlight = false;
         break;
       case 'refresh-failed':
-        this.crossTabRefreshInFlight = false;
         this.applyCrossTabRefreshFailure(signal.reason);
         break;
       default:
@@ -436,8 +445,36 @@ export class CustomerOtpController {
   async refreshSession(): Promise<boolean> {
     if (this.store.isExpired()) return false;
     if (this.silentRestoreLatch) return false;
-    if (this.restoring) return false;
-    if (this.crossTabRefreshInFlight) return false;
+    if (this.refreshPromise) return false;
+
+    const refreshPromise = this.runCoordinatedRefresh();
+    this.refreshPromise = refreshPromise;
+    try {
+      return await refreshPromise;
+    } finally {
+      if (this.refreshPromise === refreshPromise) this.refreshPromise = null;
+    }
+  }
+
+  private async runCoordinatedRefresh(): Promise<boolean> {
+    try {
+      return await this.refreshCoordinator.runExclusive(() => this.performRefresh());
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message === 'AUTH_CROSS_TAB_LOCK_UNAVAILABLE' ||
+          error.message === 'AUTH_CROSS_TAB_LOCK_TIMEOUT')
+      ) {
+        this.silentRestoreLatch = true;
+        if (this.store.isAuthenticated()) this.expireSession('invalid');
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  private async performRefresh(): Promise<boolean> {
+    if (this.store.isExpired() || this.silentRestoreLatch || this.restoring) return false;
 
     this.restoring = true;
     this.patch({ restoring: true });
@@ -469,6 +506,7 @@ export class CustomerOtpController {
         if (this.store.isAuthenticated()) {
           this.expireSession('invalid');
         }
+        this.broadcast({ type: 'refresh-failed', reason: 'invalid' });
         // A session-less browser found no session: stay silently anonymous.
       } else {
         this.applyRateLimit(error);
