@@ -1,6 +1,6 @@
 # ADR-0012: Public web rendering and canonical URL policy
 
-- Status: Proposed; becomes Accepted after independent review and merge
+- Status: Accepted (independently reviewed in PR #131 and merged 2026-09-09)
 - Date: 2026-09-08
 - Owners: Web/Product lead implements; Platform/API lead verifies contracts
 - Parent: #122
