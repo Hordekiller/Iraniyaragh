@@ -218,13 +218,13 @@ merged, open and local-only work. `#150` is merged and is no longer in this list
 - `#149` — admin permission-aware navigation (`feat/50-permission-nav`, head
   `44ee4f0`): its permission-aware navigation work is superseded by the corrected
   parent/child implementation in `#138` → `#143`; it must not be merged separately.
-- `#138` — admin Vuexy foundation (`feat/admin-vuexy-foundation`, head
-  `b45c502`): theme/layout preferences, shell menus, global search and DataTable
+- `#138` — admin Vuexy foundation (`feat/admin-vuexy-foundation`): theme/layout
+  preferences, shell menus, global search and DataTable
   upgrades are open and CI-green. Runtime review is approved; the PR remains open
   until this status reconciliation is reviewed and the exact resulting head is
   independently approved.
-- `#143` — admin Vuexy commerce shell (`feat/admin-vuexy-commerce-shell`, head
-  `53d8260`, based on `#138`): the child adds shell/customizer access UX and a
+- `#143` — admin Vuexy commerce shell (`feat/admin-vuexy-commerce-shell`, based on
+  `#138`): the child adds shell/customizer access UX and a
   centralized deny-by-default permission filter for both sidebar and global
   search. CI is green; review/merge is strictly sequenced after `#138`.
 - `#133` — admin settings/SMS panel (`feat/115-sms-admin-panel`, head
