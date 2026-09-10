@@ -88,9 +88,13 @@ foundation, and G5–G10 have not reached integrated completion.
   account menu now links to `/account` and `/orders`.
 - Not yet a server-priced or live backend flow: order/payment are fixture placeholders
   that a future order/payment client must replace (see `services/cart/types.ts`).
-- Not yet committed/merged; treated as local-only capability per the rule above.
+- Local commit `b2d024c` contains the storefront slice; it is not pushed or merged and
+  therefore remains local-only capability per the rule above.
 
 ### Local/uncommitted admin Orders read slice (branch `feat/admin-catalog-slice`)
+
+Local commit `1b943bb` contains this Orders/Settings read slice; it is not pushed or
+merged. Catalog files remain untracked and owned by the parallel catalog lane.
 
 - `/orders` read queue and `/orders/[orderId]` detail routes in `apps/admin`, built on
   the catalog admin conventions: `lib/orders/` (types, permissions, labels,
@@ -143,12 +147,17 @@ foundation, and G5–G10 have not reached integrated completion.
 - `apps/web` checks pass on the sweep: typecheck, lint (incl. runtime-asset policy),
   187 unit tests in 19 files, the `CI=true` coverage gate (lines 87.09 / statements
   82.66 / functions 78.11 / branches 80.48 vs 80/78/72/75), and the Vite build
-  (pre-existing >500 kB JS chunk warning only).
+  with route-level code splitting; the previous >500 kB warning is resolved (largest
+  entry chunk is 472.77 kB minified).
+- `e2e/tests/web-purchase.spec.ts` was added in local commit `80c42da`; its package
+  lint/typecheck pass. Full Playwright execution was not accepted locally: Chromium
+  returned `Object with guid ... was not bound in the connection` for web tests, while
+  admin tests additionally require CI's `AUTH_DEV_CODE`; no E2E result is claimed green.
 - Coordination: `docs/HANDOFF_2026-09-10.md` records the Developer B handoff (base SHA,
   owned/shared files, commands/results, manual scenarios, excluded backend claims) and the
   six backend decisions/contracts required before the `0.4` cart/checkout slice; the same
   inputs are tracked in `docs/EXECUTION_STATUS.md`.
-- Not yet committed/merged; part of the untracked admin catalog slice held locally.
+- Coordination docs are local commits `d998220` and `ef7fc2e`; no push or PR was created.
 
 
 ## Delivered on `main`

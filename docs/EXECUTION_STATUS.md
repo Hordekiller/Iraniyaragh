@@ -58,7 +58,7 @@ exact results, manual scenarios, intentionally excluded backend claims and revie
 
 | Item | Disposition | Accountable / reviewer | Next action | Closure condition |
 | --- | --- | --- | --- | --- |
-| Storefront cart/checkout/order hardening + admin UI sweep | Local, unmerged (`feat/admin-catalog-slice` @ `193ead6`) | Maddyrampant / Hordekiller | Review `docs/HANDOFF_2026-09-10.md`; answer decision inputs 1–5 (cart persistence, checkout draft/reservation contract, address policy, shipping-quote authority, payment provider) | A answers inputs; a contract PR for cart/checkout ports lands before further parallel work |
+| Storefront cart/checkout/order hardening + admin UI sweep | Local commits `d998220`, `b2d024c`, `80c42da`, `1b943bb`; unpushed/unmerged | Maddyrampant / Hordekiller | Review `docs/HANDOFF_2026-09-10.md` and `docs/CONTRACT_PROPOSALS/cart-checkout-order.md`; answer decision inputs 1–5 (cart persistence, checkout draft/reservation contract, address policy, shipping-quote authority, payment provider) | A answers inputs; a contract PR for cart/checkout ports lands before further parallel work |
 
 ## Next 10 working-day plan
 
