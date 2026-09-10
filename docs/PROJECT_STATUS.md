@@ -34,8 +34,8 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `8334558`, containing merged #109, #103, #112,
-  #138, #143, #144, #148, #150 and accepted ADR-0011 via #116.
+- Baseline at review: `main` commit `a824d86`, containing merged #109, #103, #112,
+  #138, #143, #144, #148, #150, #151 and accepted ADR-0011 via #116.
 - #49 and #79 are closed; active coordination includes #66, #91, #50, #78,
   #81, #114 and #115.
 - Local-only or untracked material is never counted as delivered product capability.
@@ -210,24 +210,18 @@ security/query review, OpenAPI drift confirmation and merge.
   theme/layout preferences, shell menus, global search and DataTable upgrades.
 - `#143` merged at `8334558`: the admin commerce shell and customizer now share a
   centralized deny-by-default navigation filter across sidebar and global search.
+- `#151` merged at `a824d86` as the protected-review replacement for historical
+  PR `#133`: the admin SMS settings panel now includes versioned updates,
+  write-only secret lifecycle, idempotent recovery, diagnostics and the
+  permission-aware `/settings/sms` route. PR `#133` remains closed as superseded;
+  its review history and the exact verified head are preserved.
 
 ## Open pull-request work (not yet on main)
 
-The remaining Sprint-1 #50 admin acceptance slice is tracked here and is not
-counted as delivered until merged on `main`. `#138`, `#143` and `#150` are merged;
-`#149` is closed as superseded by `#143`.
-
-- `#133` — admin settings/SMS panel (`feat/115-sms-admin-panel`): the four
-  original blockers and the two re-review fixture items are all addressed. The
-  fixture enforces the exact API idempotency-key grammar `^[\w-]{8,96}$`/u on
-  rotate/clear/test-send before any lookup or effect (valid opaque test keys,
-  8/96-char boundary, invalid-char and read-only ordering tests) and fingerprints
-  the secret only through an async Web Crypto SHA-256 digest, never retaining the
-  raw value (old 32-bit `hashText` collision-regression test included). The
-  re-review confirmed the fixture fixes and its prior CI-green head (23 files /
-  192 tests plus coverage gates, lint, typecheck and build). It has now been
-  rebased after the merged admin shell stack; fresh checks and independent review
-  of the exact resulting head remain required.
+No Sprint-1 #50 admin acceptance PR remains open: `#138`, `#143`, `#150` and
+replacement `#151` are merged; historical `#133` and duplicate `#149` are closed
+as superseded. Future work must be opened as a separately scoped PR and is not
+counted as delivered until merged on `main`.
 
 Remaining for real customer sign-in: SMS delivery is wired to adapters only (no
 provider call from the OTP service yet) and the issued code has no dev-gated reveal,
