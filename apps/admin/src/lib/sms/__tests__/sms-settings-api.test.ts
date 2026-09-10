@@ -58,7 +58,7 @@ describe('SmsSettingsApiClient error mapping', () => {
 
   it('surfaces unknown error codes as provider/unknown errors', async () => {
     mockEnvelope('PROVIDER_HAZARD', 502);
-    await expect(client.testSend({ confirm: true, idempotencyKey: 't1' })).rejects.toBeInstanceOf(SmsUpstreamError);
+    await expect(client.testSend({ confirm: true, idempotencyKey: 'test-client-0001' })).rejects.toBeInstanceOf(SmsUpstreamError);
   });
 
   it('returns snapshot data on a successful read', async () => {

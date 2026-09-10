@@ -36,10 +36,12 @@ export type SmsSettingsFixtureOptions = {
  * - the secret is write-only: only masked/configured/validated/lastRotatedAt are
  *   ever readable — the fixture never retains or returns secret material;
  * - rotate/clear/test-send require `confirm: true` and an idempotency key. Keys
- *   are scoped by operation and a safe payload fingerprint: replaying the exact
+ *   must match the API DTO grammar `^[\w-]{8,96}$` (rejected before any lookup
+ *   or effect) and are scoped by operation and a safe payload fingerprint:
+ *   replaying the exact
  *   same call returns the stored outcome, reusing a key for a different
  *   operation or payload is rejected as an idempotency conflict, and the raw
- *   secret value is never retained (only a call-time hash feeds the
+ *   secret value is never retained (only its SHA-256 digest feeds the
  *   fingerprint);
  * - a `read_only` backend answers rotate/clear with the contract-stable
  *   `OPERATION_UNSUPPORTED` instead of pretending to mutate;
@@ -109,7 +111,15 @@ export class SmsSettingsFixture implements SmsSettingsPort {
     }
   }
 
-  private idempotent<T>(operation: string, idempotencyKey: string, fingerprint: string, produce: () => T): T {
+  private requireValidIdempotencyKey(idempotencyKey: string): void {
+    if (!IDEMPOTENCY_KEY_PATTERN.test(idempotencyKey)) {
+      throw new SmsInvalidInputError(
+        'کلید یکتای درخواست باید ۸ تا ۹۶ نویسهٔ حرف/رقم/زیرخط/خط تیره باشد.',
+      );
+    }
+  }
+
+  private async idempotent<T>(operation: string, idempotencyKey: string, fingerprint: string, produce: () => T): Promise<T> {
     const previousOperation = this.usedKeys.get(idempotencyKey);
     if (previousOperation !== undefined && previousOperation !== operation) {
       throw new SmsIdempotencyConflictError();
@@ -168,6 +178,7 @@ export class SmsSettingsFixture implements SmsSettingsPort {
   }
 
   async rotateSecret(payload: SmsSettingsRotateSecretPayload): Promise<SmsSettingsSnapshot> {
+    this.requireValidIdempotencyKey(payload.idempotencyKey);
     this.requireWritableBackend();
     if (!payload.confirm) {
       throw new SmsInvalidInputError('برای چرخش کلید، تأیید صریح لازم است.');
@@ -177,7 +188,7 @@ export class SmsSettingsFixture implements SmsSettingsPort {
         'کلید جدید نمی‌تواند خالی باشد یا شامل فاصله/نویسهٔ کنترلی باشد و نباید با فاصله padding شده باشد.',
       );
     }
-    return this.idempotent('rotate', payload.idempotencyKey, hashText(payload.secret), () => {
+    return await this.idempotent('rotate', payload.idempotencyKey, await sha256Hex(payload.secret), () => {
       this.secretConfigured = true;
       this.secretValidated = true;
       this.lastRotatedAt = new Date(this.now()).toISOString();
@@ -187,11 +198,12 @@ export class SmsSettingsFixture implements SmsSettingsPort {
   }
 
   async clearSecret(payload: SmsSettingsClearSecretPayload): Promise<SmsSettingsSnapshot> {
+    this.requireValidIdempotencyKey(payload.idempotencyKey);
     this.requireWritableBackend();
     if (!payload.confirm) {
       throw new SmsInvalidInputError('برای پاک‌سازی کلید، تأیید صریح لازم است.');
     }
-    return this.idempotent('clear', payload.idempotencyKey, 'clear-fixed', () => {
+    return await this.idempotent('clear', payload.idempotencyKey, 'clear-fixed', () => {
       this.secretConfigured = false;
       this.secretValidated = false;
       this.lastRotatedAt = '';
@@ -201,10 +213,11 @@ export class SmsSettingsFixture implements SmsSettingsPort {
   }
 
   async testSend(payload: SmsSettingsTestSendPayload): Promise<SmsSendOutcome> {
+    this.requireValidIdempotencyKey(payload.idempotencyKey);
     if (!payload.confirm) {
       throw new SmsInvalidInputError('برای ارسال آزمایشی، تأیید صریح لازم است.');
     }
-    return this.idempotent('test-send', payload.idempotencyKey, 'test-send-fixed', () => {
+    return await this.idempotent('test-send', payload.idempotencyKey, 'test-send-fixed', () => {
       const outcome: SmsSendOutcome =
         this.outageMode || !this.secretConfigured
           ? { messageId: null, status: 'unavailable' }
@@ -239,14 +252,23 @@ export function createSmsSettingsFixture(options: SmsSettingsFixtureOptions = {}
   return new SmsSettingsFixture(options);
 }
 
-/** Non-cryptographic call-time digest used only to fingerprint secret payloads. */
-function hashText(value: string): string {
-  let hash = 5381;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = ((hash << 5) + hash + value.charCodeAt(index)) >>> 0;
-  }
-  return `h${hash.toString(16)}`;
+/**
+ * SHA-256 fingerprint (Web Crypto) of the secret payload, retained only as a
+ * digest for idempotency replay detection. The fixture never retains or
+ * returns the raw secret.
+ */
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
+
+/**
+ * Exact idempotency-key grammar mirroring the accepted API DTO
+ * (`apps/api/.../sms-settings.dto.ts`, `/^[\w-]{8,96}$/u`). The fixture
+ * rejects any key outside this grammar before any lookup or effect.
+ */
+export const IDEMPOTENCY_KEY_PATTERN = /^[\w-]{8,96}$/u;
 
 /* eslint-disable-next-line no-control-regex */
 const NO_PADDING_OR_CONTROL = new RegExp('^[^\\s\\u0000-\\u001F\\u007F]+$', 'u');
