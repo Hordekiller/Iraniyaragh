@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-08
+Last reviewed: 2026-09-10
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -43,19 +43,112 @@ foundation, and G5–G10 have not reached integrated completion.
 ### Local/uncommitted storefront routing work (branch `feat/user-ui-storefront`)
 
 - Single-page routed customer purchase flow inside `apps/web`: home, category,
-  search, product, cart, checkout, mock payment, account, orders, order detail and
-  404 pages, wired through `react-router` with a shared shell (`AppLayout`, header,
-  footer, mobile bottom nav).
+  search, bestsellers, product, cart, checkout, mock payment, account, orders,
+  order detail and 404 pages, wired through `react-router` with a shared shell
+  (`AppLayout`, header, footer, mobile bottom nav).
 - Swappable, fail-closed data layer (`services/`): catalog, cart and order ports
   with fixture implementations gated behind `VITE_FIXTURE_CATALOG=true`, matching
   `@iranyaragh/contracts` (Money/IRR). Cart is in-memory + localStorage; orders are
   persisted to localStorage. Auth reuses the existing fixture OTP flow.
 - All `apps/web` checks pass: typecheck, lint (incl. runtime-asset policy), build,
-  unit tests (164 in 15 files) and the `CI=true` coverage gate (lines 90.8 /
-  statements 86.7 / functions 80.7 / branches 83.8 vs 80/78/72/75).
+  unit tests (172 in 16 files) and the `CI=true` coverage gate (lines 88.5 /
+  statements 84.4 / functions 79.6 / branches 82 vs 80/78/72/75).
+- Hardcoded business values centralised: contact info, working hours, shipping
+  costs/threshold, section anchor IDs, founding copyright year (computed from the
+  live Jalali year), newsletter/brand counts, home-promo data, the catalogue
+  size advertised in the header search placeholder, the same-day delivery promo
+  copy, the special-collection copy and the login placeholder now live in
+  `apps/web/src/lib/site-config.ts`; category filter pills derive from category
+  data; product counts render from array lengths. The duplicate Toman-only
+  formatter was renamed `formatTomanDisplay`, a `toLatinDigits` helper powers
+  real `tel:` links from the Persian phone constants, and `react-router-dom` is
+  declared in `apps/web/package.json`.
+- Remaining prototype-only styling fixed since the prior review: hero slide counter
+  derives from `heroSlides.length` and CTA buttons deep-link to real category routes
+  via a per-slide `ctaSlug`; best-seller and (previously) product-modal prices use
+  `formatTomanDisplay`; search-result counts used `formatPersianNumber`.
+- Fake/dangling CTAs removed: the hero secondary CTA (`cta2` field dropped from the
+  `HeroSlide` type and prototype data), the redundant category-grid "همه دستهها"
+  button, the blog "همه مقالات" button and clickable blog cards (blog CMS is
+  deferred; cards are now non-interactive articles), and footer/social/help/privacy
+  buttons that only showed "بهزودی" toasts.
+- CTAs wired to real destinations: bestsellers "مشاهده همه پرفروشها" navigates to a
+  new catalog-backed `/bestsellers` page (products sorted by popularity, registered
+  in `App.tsx`), the special-collection "نمایش کلکسیون" CTA deep-links to a
+  `Ronix` brand search, popular-tools "جزئیات" opens an inline delivery disclosure
+  derived from `site-config`, and contact controls became working `mailto:`/`tel:`
+  links (header consult, footer contact, mobile nav support).
+- Dead code removed: `SearchResults.tsx` (its home usage always rendered null) and
+  `ProductModal.tsx` + its test were deleted; the a11y test suite was updated for
+  the router-dependent CTA components and now also covers the new navigation
+  destinations and the inline delivery disclosure.
+- Functional gaps fixed: order ids no longer restart after a reload (the fixture
+  seeds its counter from persisted orders, covered by a new unit test), the header
+  search input stays in sync with the `?q=` URL param, and the authenticated
+  account menu now links to `/account` and `/orders`.
 - Not yet a server-priced or live backend flow: order/payment are fixture placeholders
   that a future order/payment client must replace (see `services/cart/types.ts`).
 - Not yet committed/merged; treated as local-only capability per the rule above.
+
+### Local/uncommitted admin Orders read slice (branch `feat/admin-catalog-slice`)
+
+- `/orders` read queue and `/orders/[orderId]` detail routes in `apps/admin`, built on
+  the catalog admin conventions: `lib/orders/` (types, permissions, labels,
+  fixture) and `components/orders/` (hook, list view, detail view) with URL-canonical
+  query state, per-column sort, pagination, search and three independent filters.
+- Domain shape follows `docs/COMMERCE_AND_INVENTORY.md`: order, payment and
+  fulfillment lifecycles stay separate and are rendered as three badges; they are
+  never flattened into a single status column.
+- Permission-gated (`orders.read` to view, `orders.write` gates the read-only notice);
+  without `orders.read` the page fails closed with the shared forbidden state.
+- Honest data layer: the backend orders module does not exist yet, so the UI depends
+  only on the `AdminOrdersApi` port, implemented by a deterministic
+  `OrdersFixtureApi` (clear synthetic demo identities, no real PII). No mutation
+  commands are faked — transitions are backend-owned per the accepted plan, so this
+  slice is intentionally read-only until the order/payment/fulfillment API lands.
+- Detail view is responsive: the lines table scrolls horizontally on narrow screens
+  (`minWidth` + `stickyHeader`) and a bounded viewport avoids page-level blowout.
+- Roles/support nav: the "سفارشها" navigation entry is now live (was `planned`); the
+  GlobalSearch planned-item test was updated to target "پرداختها" instead.
+
+### Local/uncommitted UI completion sweep (branch `feat/admin-catalog-slice`)
+
+- Storefront (`apps/web`): category/blog/hero/bestseller sections wrapped in dark
+  panels and given real marquee backgrounds, alt text and dynamic rating stars;
+  "دستهبندیها" in the mobile bottom nav scrolls to the section (or navigates home to
+  it); newsletter subscribe becomes a real validated, persistent form
+  (`services/newsletter/newsletter-fixture.ts`); site header search gains a close
+  button; checkout surfaces form-level submit errors; product trust strip shows the
+  honest free-shipping condition; search reuses `ProductGrid`; socials (Instagram)
+  are real links and the runtime-asset lint allows navigation-only external domains.
+- Cart/checkout hardening in the same local sweep: cart lines are sanitized and
+  quantity-capped, persisted cart/order data is scoped to the authenticated
+  customer (with a separate guest scope), Iranian mobile/postal input accepts
+  Persian and international forms, provinces are selected from the Iranian list,
+  order notes are persisted, checkout retries carry an idempotency key, and the
+  cart is retained until mock payment succeeds. These protections improve the
+  fixture path only; server repricing, reservations and real payment verification
+  remain backend work and are not claimed as delivered.
+- Admin (`apps/admin`): dashboard `page.module.css` now ships dark-mode surface
+  overrides (mirrors `AdminShell.module.css` tokens) and aligns to the 1400px boxed
+  width; a live `/settings` page (mode/skin/layout/content width + reset) is wired
+  through `navigation.ts`, gated by `settings.manage` (`lib/settings/`); planned nav
+  items carry `role="button"` + `aria-disabled`; FormWizard switches to a vertical
+  stepper below `sm`; the login form no longer duplicates its error; the dead `isRtl`
+  prop was removed from `DialogCloseButton`.
+- `apps/admin` checks pass: typecheck, lint (incl. runtime-asset policy), 252 unit
+  tests in 37 files, the `CI=true` coverage gate (lines 89.9 / statements 86.4 /
+  functions 84.4 / branches 77.2 vs 80/75/72/60) and the Next.js build (routes list
+  includes `/orders`, `/orders/[orderId]` and `/settings`).
+- `apps/web` checks pass on the sweep: typecheck, lint (incl. runtime-asset policy),
+  187 unit tests in 19 files, the `CI=true` coverage gate (lines 87.09 / statements
+  82.66 / functions 78.11 / branches 80.48 vs 80/78/72/75), and the Vite build
+  (pre-existing >500 kB JS chunk warning only).
+- Coordination: `docs/HANDOFF_2026-09-10.md` records the Developer B handoff (base SHA,
+  owned/shared files, commands/results, manual scenarios, excluded backend claims) and the
+  six backend decisions/contracts required before the `0.4` cart/checkout slice; the same
+  inputs are tracked in `docs/EXECUTION_STATUS.md`.
+- Not yet committed/merged; part of the untracked admin catalog slice held locally.
 
 
 ## Delivered on `main`
@@ -157,10 +250,10 @@ security/query review, OpenAPI drift confirmation and merge.
 | Staff Auth    | Runtime and privileged lifecycle merged; fixture UX exists | Live MFA/session UX and production acceptance                                   |
 | Catalog       | Contracts and API foundation merged via #103               | Media/pricing, admin UI and storefront integration                              |
 | Inventory     | Correct service core                                       | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI |
-| Orders        | Schema and generic state helper                            | Aggregate/services, snapshots, compensation, API and UI                         |
+| Orders        | Schema and generic state helper; uncommitted admin read queue + detail behind an `AdminOrdersApi` port (fixture-backed) | Aggregate/services, snapshots, compensation, API, payment/fulfillment commands and storefront integration |
 | Payments      | Schema/state foundation                                    | Provider/adapter, verification, idempotency, refund and reconciliation          |
-| Web           | Accessible prototype + routed storefront | Static `prototype.ts` data; routed pages are local/uncommitted, still fixture-driven (server-side cart/order/payment not integrated) |
-| Admin         | Shell, Auth, UI primitives and Phase A foundation (themes, layout modes, search, notifications, data-table upgrades) via #138 | No operational domain modules |
+| Web           | Accessible prototype + routed storefront; local UI-completion sweep (dark section panels, real newsletter form, social links, mobile search/close, honest checkout/product copy, product-grid reuse) | Static `prototype.ts` data; routed pages are local/uncommitted, still fixture-driven (server-side cart/order/payment not integrated); site-wide business values centralised in `lib/site-config.ts` |
+| Admin         | Shell, Auth, UI primitives, Phase A foundation (themes, layout modes, search, notifications, data-table upgrades) via #138, plus a local read-only Orders slip (queue + detail, fixture-backed) and a live `/settings` page with dark-mode dashboard surfaces | Live order API wiring, mutations, and remaining operational modules |
 | Operations    | CI and local Compose                                       | Deploy/staging, observability, recovery and rollback proof                      |
 
 ## Not implemented

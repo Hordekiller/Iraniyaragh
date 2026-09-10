@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-08
+Last reviewed: 2026-09-10
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
@@ -48,6 +48,17 @@ day-to-day assignments.
 
 Blocked decision issues do not authorize guessed business choices. They block the
 related release/production gate while deterministic local implementation may proceed.
+
+## Handoff delivered — 2026-09-10
+
+Developer B (product/web) completed a fixture-path cart/checkout/order hardening plus admin
+UI sweep, all local-only and unmerged. Full evidence is in
+`docs/HANDOFF_2026-09-10.md`, which lists the base SHA, owned/shared files, commands with
+exact results, manual scenarios, intentionally excluded backend claims and reviewer focus.
+
+| Item | Disposition | Accountable / reviewer | Next action | Closure condition |
+| --- | --- | --- | --- | --- |
+| Storefront cart/checkout/order hardening + admin UI sweep | Local, unmerged (`feat/admin-catalog-slice` @ `193ead6`) | Maddyrampant / Hordekiller | Review `docs/HANDOFF_2026-09-10.md`; answer decision inputs 1–5 (cart persistence, checkout draft/reservation contract, address policy, shipping-quote authority, payment provider) | A answers inputs; a contract PR for cart/checkout ports lands before further parallel work |
 
 ## Next 10 working-day plan
 
@@ -113,7 +124,8 @@ Exit: one thin vertical journey is demonstrable; broad CRUD breadth is secondary
 5. Warehouse/location CRUD and read-only balances/movements.
 6. Reservation expiry batching (#81), then worker design.
 7. Transfer policy/state contract.
-8. Cart/guest/merge and reservation-allocation decisions before `0.4` coding.
+8. Cart/guest/merge and reservation-allocation decisions before `0.4` coding (formally
+   requested as decision inputs 1–5 in the 2026-09-10 handoff).
 
 ## Explicitly not ready
 
