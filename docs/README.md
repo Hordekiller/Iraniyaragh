@@ -29,5 +29,7 @@ Read these documents before implementing business-critical features.
     implementation methods, quality evidence, production readiness and governed growth.
 21. `AGENT_WORKSTREAMS.md` — independent Platform, Admin and User UI ownership,
     shared-hotspot collision controls and integration handoffs.
+22. `PAGE_RELEASE_MATRIX.md` — complete dynamic customer/admin page inventory,
+    responsive purchase contract and 1.0.0/1.1.0 provider boundary.
 
 When code and documentation disagree, stop and resolve the discrepancy. Do not silently bypass a documented invariant.
