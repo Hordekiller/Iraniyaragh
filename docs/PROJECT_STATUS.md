@@ -34,8 +34,8 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `9b4ba32`, containing merged #109, #103, #112
-  and accepted ADR-0011 via #116.
+- Baseline at review: `main` commit `05c1bd4`, containing merged #109, #103, #112,
+  #144, #148, #150 and accepted ADR-0011 via #116.
 - #49 and #79 are closed; active coordination includes #66, #91, #50, #78,
   #81, #114 and #115.
 - Local-only or untracked material is never counted as delivered product capability.
@@ -199,43 +199,40 @@ security/query review, OpenAPI drift confirmation and merge.
   latch without rejecting the restore path (defensive catch in
   `runCoordinatedRefresh`); the console diagnostic is sanitized and no longer leaks
   the raw error. Verified 160 web unit tests + coverage gates, lint and build.
+- `#150` merged at `d4db129`: verified staff login now adopts the principal and
+  access token into the app-wide in-memory admin session before navigation and
+  fails closed when a usable token is unavailable.
+- `#144` merged at `8963c09`: the structured logging foundation adds bounded
+  recursive redaction, request/correlation context and safe output-failure behavior.
+- `#148` merged at `05c1bd4`: customer OTP delivery now uses the vendor-neutral
+  notification boundary and SMS.ir adapter, with focused unit/integration coverage.
 
 ## Open pull-request work (not yet on main)
 
 Sprint-1 #50 admin acceptance slices and the pending #133 re-review are tracked
 here; none of the bullets below is counted as delivered until merged on `main`.
-`docs/PROJECT_STATUS.md` is itself a shared hotspot — #144's accepted logging
-slice edits the delivered section on the same file; contributors touching it
-rebase/merge latest `main` first to keep hunks separate.
+`docs/PROJECT_STATUS.md` is a shared hotspot; contributors touching it must
+rebase/merge latest `main` first and preserve the factual distinction between
+merged, open and local-only work. `#150` is merged and is no longer in this list.
 
 - `#149` — admin permission-aware navigation (`feat/50-permission-nav`, head
-  `9e4bbae`): the admin shell filters the sidebar by `useAuth().user.permissions`
-  via a pure `filterNavigationByPermissions` helper (permission-less items always
-  render, gated/planned items only when granted, empty groups collapse).
-  **CHANGES_REQUESTED — integration sequencing, not logic**: the coordination
-  claim that no other branch edits `apps/admin/src/config/navigation.ts` is false
-  (#133 and the #138 → #143 Admin shell stack own that file); merge is gated
-  until those lanes settle or this is rebased onto the accepted combined Admin
-  head, rerunning the allow/deny/group-collapse tests. A missing final newline in
-  the navigation spec is folded into that rebase. No API/contract change.
-- `#150` — staff principal session bridge (`feat/50-principal-session`): after a
-  successful fixture staff login the verified principal and access token are
-  adopted into the app-wide `useAuth()` session (`establishSession`); the bridge
-  **fails closed** (no adoption, no redirect) when the token is unrecoverable and
-  the controller degrades to the recoverable password step. **CHANGES_REQUESTED
-  awaiting re-review** on the fail-closed path, an integration-style
-  adoption-before-navigation assertion and this status text. Tokens stay
-  memory-only; storage untouched. No API/contract change.
-- `#133` — admin settings/sms panel: the four original blockers are addressed
-  and the head is CI-green, but re-review on `820717a` found two outstanding
-  fixture correctness items, so the PR is **not merge-ready**:
-  (a) fixture tests use idempotency keys (`r4`, `c1`, `t1`) that violate the
-  accepted key grammar `^[\w-]{8,96}$` — validate the shared grammar before any
-  lookup/effect and adopt valid opaque keys with boundary tests;
-  (b) the secret payload fingerprint is a 32-bit non-cryptographic `hashText`
-  that can collide — replace with a collision-resistant SHA-256 digest (Web
-  Crypto, async fixture path) that never retains the raw secret, plus a
-  deterministic collision test.
+  `44ee4f0`): its permission-aware navigation work is superseded by the corrected
+  parent/child implementation in `#138` → `#143`; it must not be merged separately.
+- `#138` — admin Vuexy foundation (`feat/admin-vuexy-foundation`, head
+  `b45c502`): theme/layout preferences, shell menus, global search and DataTable
+  upgrades are open and CI-green. Runtime review is approved; the PR remains open
+  until this status reconciliation is reviewed and the exact resulting head is
+  independently approved.
+- `#143` — admin Vuexy commerce shell (`feat/admin-vuexy-commerce-shell`, head
+  `53d8260`, based on `#138`): the child adds shell/customizer access UX and a
+  centralized deny-by-default permission filter for both sidebar and global
+  search. CI is green; review/merge is strictly sequenced after `#138`.
+- `#133` — admin settings/SMS panel (`feat/115-sms-admin-panel`, head
+  `3301412`): the original blockers and fixture correctness items are addressed.
+  The fixture enforces the API idempotency-key grammar before any lookup/effect
+  and fingerprints secrets with Web Crypto SHA-256 without retaining raw values.
+  Its verified head is CI-green; final current-main rebase and approval are
+  intentionally sequenced after the `#138` → `#143` admin stack.
 
 Remaining for real customer sign-in: SMS delivery is wired to adapters only (no
 provider call from the OTP service yet) and the issued code has no dev-gated reveal,
