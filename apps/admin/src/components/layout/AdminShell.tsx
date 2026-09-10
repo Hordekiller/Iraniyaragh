@@ -11,7 +11,7 @@ import {
   PanelLeftOpen,
   X,
 } from 'lucide-react';
-import { navigation } from '@/config/navigation';
+import { filterNavigationByPermissions, navigation } from '@/config/navigation';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useAdminPreferences } from '@/lib/preferences/AdminPreferencesProvider';
 import { GlobalSearch } from './GlobalSearch';
@@ -31,15 +31,11 @@ function NavLinks({
 
   return (
     <>
-      {navigation.map((group) => {
-        const visibleItems = group.items.filter(
-          (item) => !item.permission || permissions.includes(item.permission),
-        );
-        if (visibleItems.length === 0) return null;
+      {filterNavigationByPermissions(navigation, permissions).map((group) => {
         return (
           <div className={styles.navGroup} key={group.label}>
             <span className={styles.groupLabel}>{group.label}</span>
-            {visibleItems.map((item) => {
+            {group.items.map((item) => {
               const Icon = item.icon;
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);

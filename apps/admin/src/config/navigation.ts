@@ -29,6 +29,24 @@ export type NavigationGroup = {
   items: NavigationItem[];
 };
 
+/**
+ * Build the presentation navigation for one authenticated principal without
+ * mutating the shared configuration. Permission-less entries remain visible;
+ * gated entries and now-empty groups are removed fail-closed.
+ */
+export function filterNavigationByPermissions(
+  groups: readonly NavigationGroup[],
+  permissions: readonly string[],
+): NavigationGroup[] {
+  const allowed = new Set(permissions);
+  return groups.flatMap((group) => {
+    const items = group.items.filter(
+      (item) => item.permission === undefined || allowed.has(item.permission),
+    );
+    return items.length > 0 ? [{ ...group, items }] : [];
+  });
+}
+
 export const navigation: NavigationGroup[] = [
   {
     label: 'نمای کلی',
