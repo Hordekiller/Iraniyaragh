@@ -38,4 +38,51 @@ describe('OpenAPI document drift and contract', () => {
     const committed = JSON.parse(readFileSync(OPENAPI_ARTIFACT_PATH, 'utf8')) as OpenAPIObject;
     expect(document).toEqual(committed);
   });
+
+  it('documents stable failure responses for every notifications admin operation', () => {
+    const paths = document.paths ?? {};
+
+    const smsPath: Record<string, string[]> = {
+      '/notifications/admin/sms-settings': ['get', 'put'],
+      '/notifications/admin/sms-settings/secret': ['post', 'delete'],
+      '/notifications/admin/sms-settings/validate': ['post'],
+      '/notifications/admin/sms-settings/test-send': ['post'],
+      '/notifications/admin/sms-settings/diagnostics': ['get'],
+    };
+
+    const nonSuccessful = (operation: { responses?: Record<string, unknown> }) =>
+      Object.keys(operation.responses ?? {}).filter(status => !/^2\d\d$/.test(status));
+
+    for (const [path, operations] of Object.entries(smsPath)) {
+      const pathItem = paths[path];
+      expect(pathItem, `missing ${path}`).toBeDefined();
+      for (const method of operations) {
+        const operation = (pathItem as Record<string, { responses?: Record<string, unknown> }>)[method];
+        expect(operation, `missing ${method.toUpperCase()} ${path}`).toBeDefined();
+
+        const failures = nonSuccessful(operation);
+        // No operation may regress to success-only documentation.
+        expect(failures.length).toBeGreaterThan(0);
+
+        if (path === '/notifications/admin/sms-settings' && method === 'get') {
+          expect(failures).toEqual(expect.arrayContaining(['401', '403']));
+        }
+        if (path === '/notifications/admin/sms-settings/diagnostics') {
+          expect(failures).toEqual(expect.arrayContaining(['401', '403']));
+        }
+        if (method === 'put') {
+          expect(failures).toEqual(expect.arrayContaining(['400', '401', '403', '409', '503']));
+        }
+        if (path === '/notifications/admin/sms-settings/secret') {
+          expect(failures).toEqual(expect.arrayContaining(['400', '401', '403', '422', '503']));
+        }
+        if (path === '/notifications/admin/sms-settings/test-send') {
+          expect(failures).toEqual(expect.arrayContaining(['400', '401', '403', '422', '503']));
+        }
+        if (path === '/notifications/admin/sms-settings/validate') {
+          expect(failures).toEqual(expect.arrayContaining(['401', '403', '503']));
+        }
+      }
+    }
+  });
 });

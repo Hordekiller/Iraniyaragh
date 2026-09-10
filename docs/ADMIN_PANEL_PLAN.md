@@ -243,13 +243,58 @@ validated non-secret configuration and safe metadata about secret health/rotatio
 
 ### 5.13 Settings, imports, jobs and system health
 
-SMS/OTP provider settings follow ADR-0011 and issue #115. The panel may edit bounded
-non-secret settings (enabled state, environment, template ID, sender line, timeout,
-delivery-status policy, outage mode and alert thresholds). The SMS.ir API key is
-write-only: administrators may rotate or clear it with fresh MFA, dedicated permission,
-confirmation and audit, but no UI/API may return it. Display only configured state,
-fixed masking, last rotation and sanitized diagnostics. Provider settings cannot weaken
-OTP expiry, attempts, cooldowns, hashing or abuse limits.
+SMS/OTP provider settings follow ADR-0011 and issues #114/#115. The panel may edit bounded
+non-secret settings (enabled state, template ID, sender line, timeout, delivery-status
+policy, outage mode and alert thresholds). The runtime/provider environment is
+server-derived and never admin-editable. The SMS.ir API key is write-only: administrators
+may rotate or clear it with fresh MFA, the shared `settings.manage` capability,
+confirmation and audit; an environment-backed (read-only) secret store reports rotation
+and clearing as unsupported. No UI/API may return the key. Display only configured state,
+fixed masking, last rotation, validation state and sanitized diagnostics. Provider
+settings cannot weaken OTP expiry, attempts, cooldowns, hashing or abuse limits.
+
+#### 5.13.1 SMS/OTP settings screen (contract slice 2026-09-08, feeds issue #114)
+
+Routes served by the `/api/v1/notifications/admin/sms-settings` surface (domain-first, API
+v1); every action requires `STAFF_MFA` and the shared `settings.manage` capability;
+rotation, clearing, validate, settings updates and controlled test sends require a fresh
+(recent) MFA session. Versioned writes use optimistic concurrency: `PUT` carries the
+server-assigned `expectedVersion`; stale writes return the stable `CONFLICT` envelope and
+the panel must re-load before retrying. Rotate/clear/test-send require an explicit
+confirmation and an idempotency key so UI retries cannot repeat sensitive effects; a
+timeout/ambiguous test is shown as `unknown_result`, never as safe-to-retry.
+
+- **Overview card**: provider enabled/disabled switch and the outage mode flag plus the
+  operator-facing maintenance message preview. The environment badge is a read-only
+  server-derived value (`development`/`production`/`unknown` when unconfigured). Edits
+  are `PUT` partial updates served from the bounded settings DTO; empty-string clearing
+  of sender line and maintenance message is normalized server-side to `null`.
+- **Secret card (write-only)**: shows configured/not-configured, a fixed mask of the
+  configured key, validated state and last rotation time. Rotation shows a write-only
+  input (blank/omitted means unchanged; a non-blank value requests rotation), an explicit
+  confirmation checkbox and a "requires fresh MFA" notice; clearing shows the same
+  confirmation and a destructive-action warning. When the secret backend is read-only
+  (environment backing), the UI must render rotation and clearing as unavailable and the
+  API returns a stable `OPERATION_UNSUPPORTED` result — it never claims to change process
+  environment at runtime. Rotation is production-approved only via a writable secret
+  manager adapter.
+- **Template/transport card**: numeric template ID (SMS.ir template IDs are integers),
+  sender line identifier, request timeout (bounded by server validation), delivery-status
+  collection/retention switch and sanitized alert thresholds (failure window + count).
+- **Validation action**: `POST …/validate` runs a configuration validation and shows its
+  checked state, provider health, last validation time and sanitized error class.
+- **Diagnostics card**: provider health category, circuit-breaker state, last successful
+  send time and sanitized error class; response bodies and secrets are never shown.
+- **Controlled test send**: targets only an approved operator destination reference
+  resolved server-side outside GitHub; the form supplies only the confirmation and
+  idempotency key, never a destination number or template parameters typed in the browser.
+- **States**: loading, empty (provider not configured — after the disconnected/fail-closed
+  state), degraded/outage banner, permission denial, fresh-auth required, read-only secret
+  backend, stale version and unknown test result — as distinct surfaces exposing sanitized
+  error classes only. Every mutation shows success/error feedback with the changed fields;
+  every action is audited (`sms-settings.*`) without secret material.
+- Versioned "stale settings" handling: the panel holds the server-assigned `version` and
+  compares it on every reload; conflicts force a fresh snapshot before edits.
 
 - non-secret, typed, versioned configuration with validation and change audit;
 - feature flags show environment, owner and expiry; secrets never render in UI;
