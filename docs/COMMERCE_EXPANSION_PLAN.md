@@ -153,6 +153,14 @@ ambiguous external outcomes. Bulk endpoints are bounded and report per-item resu
 - Dependency pinning, lockfile review, CodeQL, production audit, secret scanning and
   license review remain protected gates.
 
+Production logging and telemetry are delivered through issue #136. Diagnostic logs,
+distributed traces/metrics and immutable business/security audit records are three
+different evidence classes: they have separate schemas, permissions, retention and
+failure semantics. The platform lane owns their event contracts, recursive redaction,
+bounded-cardinality instrumentation, collection/export and permissioned diagnostics
+API. Admin may consume only the accepted read-only diagnostics contract; customer UI
+may expose a safe request ID for support but never receives internal logs or traces.
+
 ## 4. Two-contributor ownership and flow
 
 | Work            | Developer A — Platform                      | Developer B — Product                            | Shared gate                   |

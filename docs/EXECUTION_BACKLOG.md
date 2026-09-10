@@ -220,7 +220,7 @@ be imported with dry-run, reconciliation and rollback/forward-fix procedure.
 | G9-02 | CORS/rate/request/file/secret/PII controls              | A     | negative security tests    |
 | G9-03 | Query/index/load/performance tests                      | A     | B checks UX budgets        |
 | G9-04 | Production images/deploy/staging/prod isolation         | A     | B clean deploy             |
-| G9-05 | Metrics/logs/errors/queue dashboards and alerts         | A     | B triggers test alerts     |
+| G9-05 | Metrics/logs/errors/queue dashboards and alerts (#136)  | A     | B triggers test alerts     |
 | G9-06 | Backups/retention/restore and RPO/RTO drill             | A     | B performs restore         |
 | G9-07 | Migration rehearsal and rollback/forward-fix            | A     | B records results          |
 | G9-08 | Incident, payment, inventory and support runbooks       | Joint | role-swap tabletop         |
