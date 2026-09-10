@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider, useAuth } from '../AuthProvider';
+import { getAccessToken, setAccessToken } from '../token-store';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -26,9 +27,36 @@ function TestPanel() {
   );
 }
 
+const staffPrincipal = {
+  userId: 'ops@iranyaragh.local',
+  sessionId: 'staff-s-1',
+  authenticationLevel: 'STAFF_MFA',
+  permissions: ['admin.dashboard.read'],
+};
+
+function AdoptPanel() {
+  const { isAuthenticated, establishSession, signOut, user } = useAuth();
+  return (
+    <div>
+      <span data-testid="authed">{isAuthenticated ? 'yes' : 'no'}</span>
+      <span data-testid="email">{user?.userId ?? 'none'}</span>
+      <button
+        type="button"
+        onClick={() => establishSession({ accessToken: 'staff-at-1', principal: staffPrincipal })}
+      >
+        adopt
+      </button>
+      <button type="button" onClick={() => signOut()}>
+        signout
+      </button>
+    </div>
+  );
+}
+
 describe('AuthProvider', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    setAccessToken(null);
   });
 
   it('starts unauthenticated', () => {
@@ -112,5 +140,35 @@ describe('AuthProvider', () => {
     fireEvent.click(screen.getByText('signout'));
     expect(await screen.findByTestId('authed')).toHaveTextContent('no');
     expect(screen.getByTestId('email')).toHaveTextContent('none');
+  });
+
+  it('adopts a staff-verified session: sets the user and stores the token for apiFetch', () => {
+    render(
+      <AuthProvider>
+        <AdoptPanel />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByText('adopt'));
+    expect(screen.getByTestId('authed')).toHaveTextContent('yes');
+    expect(screen.getByTestId('email')).toHaveTextContent('ops@iranyaragh.local');
+    expect(getAccessToken()).toBe('staff-at-1');
+  });
+
+  it('sign-out clears a staff-adopted session and the shared token', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
+    render(
+      <AuthProvider>
+        <AdoptPanel />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByText('adopt'));
+    await waitFor(() => expect(getAccessToken()).toBe('staff-at-1'));
+
+    fireEvent.click(screen.getByText('signout'));
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
+    expect(getAccessToken()).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('email')).toHaveTextContent('none'));
   });
 });

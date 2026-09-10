@@ -230,6 +230,25 @@ describe('StaffLoginController concurrency guard', () => {
   });
 });
 
+describe('StaffLoginController access token bridge', () => {
+  it('exposes the token only for the authenticated session', async () => {
+    const { controller } = makeFlow();
+    expect(controller.getAccessToken()).toBeNull();
+    await completeLogin(controller);
+    expect(controller.getAccessToken()).toMatch(/^fixture-staff-at\./);
+    await controller.logout();
+    expect(controller.getAccessToken()).toBeNull();
+  });
+
+  it('drops the token when the session ends server-side', async () => {
+    const { controller, api } = makeFlow();
+    await completeLogin(controller);
+    await api.logout();
+    await controller.refreshSession();
+    expect(controller.getAccessToken()).toBeNull();
+  });
+});
+
 describe('StaffLoginController logout', () => {
   it('resets to the initial state and clears the token', async () => {
     const { controller, store } = makeFlow();

@@ -112,6 +112,17 @@ export class StaffLoginController {
     return this.state;
   }
 
+  /**
+   * The access token of the authenticated session (read from the injected
+   * store), or null before authentication and after logout/expiry. The staff
+   * login page bridges this into the app-wide session via
+   * `useAuth().establishSession` once the phase turns `authenticated`;
+   * the token itself never leaves memory.
+   */
+  getAccessToken(): string | null {
+    return this.tokenStore.get();
+  }
+
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

@@ -4,8 +4,9 @@ import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, Box, Button, Paper, TextField, Typography } from '@mui/material';
 import { useSyncExternalStore } from 'react';
-import { isFixtureAuthEnabled } from '@/lib/auth/staff-fixture-guard';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import { StaffAuthFixtureClient } from '@/lib/auth/staff-fixture';
+import { isFixtureAuthEnabled } from '@/lib/auth/staff-fixture-guard';
 import { StaffLoginController } from '@/lib/auth/staff-login';
 import { createMemoryStaffTokenStore } from '@/lib/auth/token-store';
 
@@ -21,10 +22,14 @@ import { createMemoryStaffTokenStore } from '@/lib/auth/token-store';
  * recovery all land with #74.
  *
  * All challenge/access state stays in controller memory; this page never writes
- * localStorage or sessionStorage.
+ * localStorage or sessionStorage. On success the verified principal and access
+ * token are bridged into the app-wide session (`useAuth().establishSession`) so
+ * the shell renders the permission-filtered navigation and API calls carry the
+ * staff token; the token itself is held only in the in-memory token store.
  */
 export default function StaffLoginPage() {
   const router = useRouter();
+  const { establishSession } = useAuth();
   const enabled = isFixtureAuthEnabled();
   const controller = useMemo(() => {
     const created = new StaffLoginController(
@@ -41,10 +46,14 @@ export default function StaffLoginPage() {
   );
 
   useEffect(() => {
-    if (state.phase === 'authenticated') {
+    if (state.phase === 'authenticated' && state.principal) {
+      const accessToken = controller.getAccessToken();
+      if (accessToken) {
+        establishSession({ accessToken, principal: state.principal });
+      }
       router.replace('/dashboard');
     }
-  }, [state.phase, router]);
+  }, [state.phase, state.principal, controller, establishSession, router]);
 
   if (!enabled) {
     return <DisabledFixtureNotice />;
