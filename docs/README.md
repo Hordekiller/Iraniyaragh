@@ -31,5 +31,7 @@ Read these documents before implementing business-critical features.
     shared-hotspot collision controls and integration handoffs.
 22. `PAGE_RELEASE_MATRIX.md` — complete dynamic customer/admin page inventory,
     responsive purchase contract and 1.0.0/1.1.0 provider boundary.
+23. `OBSERVABILITY_CONTRACT.md` — diagnostic event schema, privacy/redaction
+    limits, audit separation and phased logging/telemetry boundary.
 
 When code and documentation disagree, stop and resolve the discrepancy. Do not silently bypass a documented invariant.
