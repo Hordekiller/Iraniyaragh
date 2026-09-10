@@ -9,6 +9,7 @@ import { AuthHashService } from './auth-hash.service';
 import { CustomerOtpService, OTP_ATTEMPTS_LIMIT } from './customer-otp.service';
 import { RATE_LIMIT_DEFINITIONS } from './rate-limit.config';
 import { RateLimitException, RateLimitService } from './rate-limit.service';
+import { FakeSmsProvider } from '../notifications/fake-sms.provider';
 
 const runtimeConfig: AuthRuntimeConfig = Object.freeze({
   accessSigningSecret: 'integration-access-secret-32-bytes-minimum-value',
@@ -96,7 +97,13 @@ describe.sequential('CustomerOtpService 429-oververify database + live-Redis int
 
     client = await connectRedis();
     limits = new RateLimitService(client as unknown as RedisClient, hashes);
-    otp = new CustomerOtpService(prisma, hashes, limits);
+    otp = new CustomerOtpService(
+      prisma,
+      hashes,
+      limits,
+      new FakeSmsProvider(),
+      { templateId: 1, codeParameterName: 'Code' },
+    );
     available = client !== null;
   });
 

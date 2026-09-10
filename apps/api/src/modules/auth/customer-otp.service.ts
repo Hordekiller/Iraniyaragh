@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { LoginAttemptOutcome, LoginMethod, OtpChannel, OtpPurpose, Prisma, UserStatus } from '@prisma/client';
 import type { CustomerOtpRequest, CustomerOtpVerifyRequest } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
@@ -7,6 +7,13 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuthHashService } from './auth-hash.service';
 import { normalizeIranianMobile } from './mobile';
 import { RateLimitService } from './rate-limit.service';
+import {
+  CUSTOMER_OTP_SMS_CONFIG,
+  SMS_PROVIDER,
+  type CustomerOtpSmsConfig,
+  type SmsProvider,
+  type SmsSendResult,
+} from '../notifications/sms-provider';
 
 export const OTP_TTL_SECONDS = 300;
 export const OTP_RESEND_AFTER_SECONDS = 60;
@@ -22,9 +29,7 @@ export type OtpIssueResult = Readonly<{
 }>;
 
 export type OtpChallengeResult =
-  | { kind: 'invalid' }
-  | { kind: 'expired' }
-  | { kind: 'success'; userId: string; deviceName?: string };
+  { kind: 'invalid' } | { kind: 'expired' } | { kind: 'success'; userId: string; deviceName?: string };
 
 export type OtpVerifyResult = Readonly<{
   challenge: OtpChallengeResult;
@@ -40,9 +45,12 @@ class OtpConsumeRaceError extends Error {
 @Injectable()
 export class CustomerOtpService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly hashes: AuthHashService,
-    private readonly limits: RateLimitService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuthHashService) private readonly hashes: AuthHashService,
+    @Inject(RateLimitService) private readonly limits: RateLimitService,
+    @Inject(SMS_PROVIDER) private readonly smsProvider: SmsProvider,
+    @Inject(CUSTOMER_OTP_SMS_CONFIG)
+    private readonly smsConfig: CustomerOtpSmsConfig,
   ) {}
 
   async requestOtp(body: CustomerOtpRequest, ip: string | undefined): Promise<OtpIssueResult> {
@@ -58,15 +66,47 @@ export class CustomerOtpService {
 
     // AUTH_CONTRACT §9 — request windows are consumed before any persistence
     // read so absent and existing destinations exercise comparable work.
-    await this.limits.enforce({ dimension: 'otp-request:destination', value: mobile, context: 'identifier' });
-    await this.limits.enforce({ dimension: 'otp-request:destination-15m', value: mobile, context: 'identifier' });
-    await this.limits.enforce({ dimension: 'otp-request:destination-24h', value: mobile, context: 'identifier' });
-    await this.limits.enforce({ dimension: 'otp-request:ip-hour', value: safeIp, context: 'ip' });
-    await this.limits.enforce({ dimension: 'otp-request:ip-24h', value: safeIp, context: 'ip' });
+    await this.limits.enforce({
+      dimension: 'otp-request:destination',
+      value: mobile,
+      context: 'identifier',
+    });
+    await this.limits.enforce({
+      dimension: 'otp-request:destination-15m',
+      value: mobile,
+      context: 'identifier',
+    });
+    await this.limits.enforce({
+      dimension: 'otp-request:destination-24h',
+      value: mobile,
+      context: 'identifier',
+    });
+    await this.limits.enforce({
+      dimension: 'otp-request:ip-hour',
+      value: safeIp,
+      context: 'ip',
+    });
+    await this.limits.enforce({
+      dimension: 'otp-request:ip-24h',
+      value: safeIp,
+      context: 'ip',
+    });
 
-    const challengeId = await this.issueActiveChallenge(mobile, safeIp);
+    const issued = await this.issueActiveChallenge(mobile, safeIp);
+    const delivery = await this.dispatchOnce(mobile, issued.challengeId, issued.code);
+    if (delivery.status !== 'accepted' && delivery.status !== 'unknown_result') {
+      await this.invalidateAfterKnownDeliveryFailure(issued.challengeId, delivery);
+      throw new ServiceUnavailableException({
+        code: 'UPSTREAM_UNAVAILABLE',
+        message: 'Authentication delivery is temporarily unavailable.',
+        statusCode: 503,
+      });
+    }
+    // A failed evidence write must not prompt a resend after an accepted or
+    // ambiguous upstream dispatch.
+    await this.recordDeliveryOutcome(issued.challengeId, delivery).catch(() => undefined);
     return Object.freeze({
-      challengeId,
+      challengeId: issued.challengeId,
       expiresInSeconds: OTP_TTL_SECONDS,
       resendAfterSeconds: OTP_RESEND_AFTER_SECONDS,
     });
@@ -83,15 +123,23 @@ export class CustomerOtpService {
     // Failed verifications consume the per-IP failure window (AUTH_CONTRACT §9).
     // Exceeding it surfaces a real 429 RATE_LIMITED with Retry-After; it is
     // intentionally not folded into the challenge result.
-    await this.limits.enforce({ dimension: 'otp-verify:ip-fail-hour', value: safeIp, context: 'ip' });
+    await this.limits.enforce({
+      dimension: 'otp-verify:ip-fail-hour',
+      value: safeIp,
+      context: 'ip',
+    });
     return { challenge };
   }
 
   async resetIpVerificationFailures(ip: string | undefined): Promise<void> {
-    await this.limits.reset({ dimension: 'otp-verify:ip-fail-hour', value: this.safeIp(ip), context: 'ip' });
+    await this.limits.reset({
+      dimension: 'otp-verify:ip-fail-hour',
+      value: this.safeIp(ip),
+      context: 'ip',
+    });
   }
 
-  private async issueActiveChallenge(mobile: string, safeIp: string): Promise<string> {
+  private async issueActiveChallenge(mobile: string, safeIp: string): Promise<{ challengeId: string; code: string }> {
     const requestId = getRequestId();
     const code = this.generateCode();
     const codeHash = this.hashes.hash(code, 'otp');
@@ -105,7 +153,12 @@ export class CustomerOtpService {
       if (!user) throw new OtpConsumeRaceError();
 
       await tx.otpCode.updateMany({
-        where: { destinationHash, purpose: OtpPurpose.SIGN_IN, consumedAt: null, invalidatedAt: null },
+        where: {
+          destinationHash,
+          purpose: OtpPurpose.SIGN_IN,
+          consumedAt: null,
+          invalidatedAt: null,
+        },
         data: { invalidatedAt: now },
       });
 
@@ -139,7 +192,59 @@ export class CustomerOtpService {
         },
       });
 
-      return created.id;
+      return { challengeId: created.id, code };
+    });
+  }
+
+  private async dispatchOnce(mobile: string, challengeId: string, code: string): Promise<SmsSendResult> {
+    try {
+      return await this.smsProvider.send({
+        purpose: 'customer_login',
+        destination: mobile,
+        templateId: this.smsConfig.templateId,
+        parameters: { [this.smsConfig.codeParameterName]: code },
+        correlationId: challengeId,
+      });
+    } catch {
+      // A thrown transport error may have occurred after upstream acceptance.
+      // Preserve the challenge and never retry automatically.
+      return { status: 'unknown_result' };
+    }
+  }
+
+  private async invalidateAfterKnownDeliveryFailure(challengeId: string, delivery: SmsSendResult): Promise<void> {
+    const requestId = getRequestId();
+    const outcome = delivery.status === 'rejected' ? `rejected:${delivery.reason}` : delivery.status;
+    await this.runSerializable(async tx => {
+      await tx.otpCode.updateMany({
+        where: { id: challengeId, consumedAt: null, invalidatedAt: null },
+        data: { invalidatedAt: new Date() },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: 'auth.otp.delivery_failed',
+          entityType: 'OtpCode',
+          entityId: challengeId,
+          requestId,
+          metadata: { provider: 'sms', outcome },
+        },
+      });
+    });
+  }
+
+  private async recordDeliveryOutcome(challengeId: string, delivery: SmsSendResult): Promise<void> {
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'auth.otp.delivery_recorded',
+        entityType: 'OtpCode',
+        entityId: challengeId,
+        requestId: getRequestId(),
+        metadata: {
+          provider: 'sms',
+          outcome: delivery.status,
+          ...(delivery.status === 'accepted' ? { providerMessageId: delivery.providerMessageId } : {}),
+        },
+      },
     });
   }
 
@@ -155,7 +260,11 @@ export class CustomerOtpService {
     return this.runSerializable(async tx => {
       const challenge = await tx.otpCode.findUnique({
         where: { id: challengeId },
-        include: { user: { select: { id: true, mobile: true, status: true, lockedUntil: true } } },
+        include: {
+          user: {
+            select: { id: true, mobile: true, status: true, lockedUntil: true },
+          },
+        },
       });
 
       if (
@@ -282,15 +391,15 @@ export class CustomerOtpService {
         },
       });
 
-      return { kind: 'success', userId: challenge.user.id, deviceName } as const;
+      return {
+        kind: 'success',
+        userId: challenge.user.id,
+        deviceName,
+      } as const;
     });
   }
 
-  private ineligibleOutcome(
-    status: UserStatus,
-    lockedUntil: Date | null,
-    now: Date,
-  ): LoginAttemptOutcome | undefined {
+  private ineligibleOutcome(status: UserStatus, lockedUntil: Date | null, now: Date): LoginAttemptOutcome | undefined {
     if (lockedUntil !== null && lockedUntil > now) return LoginAttemptOutcome.ACCOUNT_LOCKED;
     if (status === UserStatus.SUSPENDED) return LoginAttemptOutcome.ACCOUNT_SUSPENDED;
     if (status === UserStatus.LOCKED) return LoginAttemptOutcome.ACCOUNT_LOCKED;
@@ -299,7 +408,10 @@ export class CustomerOtpService {
   }
 
   private async resolvePrincipal(tx: Prisma.TransactionClient, mobile: string) {
-    const existing = await tx.user.findUnique({ where: { mobile }, select: { id: true } });
+    const existing = await tx.user.findUnique({
+      where: { mobile },
+      select: { id: true },
+    });
     if (existing) return existing;
 
     try {

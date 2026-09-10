@@ -5,6 +5,8 @@ import type { AuthHashService } from './auth-hash.service';
 import { CustomerOtpService, OTP_REQUEST_IP_FALLBACK } from './customer-otp.service';
 import type { RateLimitService } from './rate-limit.service';
 import type { PrismaService } from '../../database/prisma.service';
+import { FakeSmsProvider } from '../notifications/fake-sms.provider';
+import type { SmsProvider, SmsSendResult } from '../notifications/sms-provider';
 
 type MockTx = {
   user: {
@@ -44,16 +46,21 @@ function createTx(overrides: Partial<MockTx> = {}): MockTx {
   };
 }
 
-function createService(overrides: {
-  tx?: MockTx;
-  hashes?: Pick<AuthHashService, 'hash' | 'verify'>;
-  enforce?: ReturnType<typeof vi.fn>;
-  reset?: ReturnType<typeof vi.fn>;
-  challenge?: unknown | null;
-} = {}) {
+function createService(
+  overrides: {
+    tx?: MockTx;
+    hashes?: Pick<AuthHashService, 'hash' | 'verify'>;
+    enforce?: ReturnType<typeof vi.fn>;
+    reset?: ReturnType<typeof vi.fn>;
+    challenge?: unknown | null;
+    smsResult?: SmsSendResult;
+    smsProvider?: SmsProvider;
+  } = {},
+) {
   const tx = overrides.tx ?? createTx();
   const prisma = {
     $transaction: vi.fn(async (callback: (tx: MockTx) => Promise<unknown>) => callback(tx)),
+    auditLog: tx.auditLog,
   } as unknown as PrismaService;
   const hashes = overrides.hashes ?? {
     hash: vi.fn((value: string) => `hash:${value}`),
@@ -64,12 +71,12 @@ function createService(overrides: {
     reset: overrides.reset ?? vi.fn(async () => undefined),
   } as unknown as RateLimitService;
 
-  const service = new CustomerOtpService(
-    prisma,
-    hashes as AuthHashService,
-    limits as RateLimitService,
-  );
-  return { service, prisma, hashes, limits, tx };
+  const smsProvider = overrides.smsProvider ?? new FakeSmsProvider(overrides.smsResult);
+  const service = new CustomerOtpService(prisma, hashes as AuthHashService, limits as RateLimitService, smsProvider, {
+    templateId: 42,
+    codeParameterName: 'Code',
+  });
+  return { service, prisma, hashes, limits, tx, smsProvider };
 }
 
 const CHALLENGE = {
@@ -93,7 +100,12 @@ const CHALLENGE = {
 
 const ACTIVE_CHALLENGE = {
   ...CHALLENGE,
-  user: { id: 'user-1', mobile: '+989123456789', status: UserStatus.ACTIVE, lockedUntil: null },
+  user: {
+    id: 'user-1',
+    mobile: '+989123456789',
+    status: UserStatus.ACTIVE,
+    lockedUntil: null,
+  },
 };
 
 describe('CustomerOtpService', () => {
@@ -122,7 +134,11 @@ describe('CustomerOtpService', () => {
 
       const result = await service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '192.0.2.1');
 
-      expect(result).toEqual({ challengeId: 'challenge-1', expiresInSeconds: 300, resendAfterSeconds: 60 });
+      expect(result).toEqual({
+        challengeId: 'challenge-1',
+        expiresInSeconds: 300,
+        resendAfterSeconds: 60,
+      });
       expect(enforce).toHaveBeenCalledTimes(5);
       expect(tx.otpCode.updateMany).toHaveBeenCalledWith({
         where: {
@@ -144,6 +160,83 @@ describe('CustomerOtpService', () => {
           }),
         }),
       );
+    });
+
+    it('dispatches exactly once after challenge persistence through the provider port', async () => {
+      const tx = createTx();
+      tx.user.findUnique = vi.fn(async () => ({ id: 'user-1' }));
+      const send = vi.fn(async () => ({ status: 'accepted', providerMessageId: 'message-1' }) as const);
+      const { service } = createService({ tx, smsProvider: { send } });
+
+      await service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '192.0.2.1');
+
+      expect(send).toHaveBeenCalledOnce();
+      expect(send).toHaveBeenCalledWith({
+        purpose: 'customer_login',
+        destination: '+989123456789',
+        templateId: 42,
+        parameters: { Code: expect.stringMatching(/^\d{6}$/u) },
+        correlationId: 'challenge-1',
+      });
+      expect(tx.otpCode.create.mock.invocationCallOrder[0]).toBeLessThan(send.mock.invocationCallOrder[0]);
+    });
+
+    it('does not dispatch when validation fails', async () => {
+      const send = vi.fn();
+      const { service } = createService({ smsProvider: { send } });
+
+      await expect(service.requestOtp({ mobile: 'invalid', client: 'CUSTOMER_WEB' }, undefined)).rejects.toBeDefined();
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it('keeps an unknown-result challenge usable and never retries', async () => {
+      const tx = createTx();
+      tx.user.findUnique = vi.fn(async () => ({ id: 'user-1' }));
+      const send = vi.fn(async () => ({ status: 'unknown_result' }) as const);
+      const { service } = createService({ tx, smsProvider: { send } });
+
+      await expect(
+        service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '192.0.2.1'),
+      ).resolves.toMatchObject({ challengeId: 'challenge-1' });
+      expect(send).toHaveBeenCalledOnce();
+      expect(tx.otpCode.updateMany).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      { status: 'rejected', reason: 'template' } as const,
+      { status: 'rate_limited' } as const,
+      { status: 'unavailable' } as const,
+    ])('invalidates the fresh challenge after known delivery failure $status', async smsResult => {
+      const tx = createTx();
+      tx.user.findUnique = vi.fn(async () => ({ id: 'user-1' }));
+      const { service } = createService({ tx, smsResult });
+
+      await expect(
+        service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '192.0.2.1'),
+      ).rejects.toMatchObject({ status: 503 });
+      expect(tx.otpCode.updateMany).toHaveBeenLastCalledWith({
+        where: {
+          id: 'challenge-1',
+          consumedAt: null,
+          invalidatedAt: null,
+        },
+        data: { invalidatedAt: expect.any(Date) },
+      });
+    });
+
+    it('treats a provider throw as ambiguous without retry or invalidation', async () => {
+      const tx = createTx();
+      tx.user.findUnique = vi.fn(async () => ({ id: 'user-1' }));
+      const send = vi.fn(async () => {
+        throw new Error('unsafe vendor detail');
+      });
+      const { service } = createService({ tx, smsProvider: { send } });
+
+      await expect(
+        service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '192.0.2.1'),
+      ).resolves.toMatchObject({ challengeId: 'challenge-1' });
+      expect(send).toHaveBeenCalledOnce();
+      expect(tx.otpCode.updateMany).toHaveBeenCalledTimes(1);
     });
 
     it('creates a PENDING user when the destination has no profile', async () => {
@@ -181,7 +274,11 @@ describe('CustomerOtpService', () => {
       tx.otpCode.updateMany = vi.fn(async () => ({ count: 1 }));
       const { service } = createService({ tx, challenge: ACTIVE_CHALLENGE });
       const result = await service.verifyOtp({ challengeId: 'challenge-1', code: '123456' }, '192.0.2.1');
-      expect(result.challenge).toEqual({ kind: 'success', userId: 'user-1', deviceName: undefined });
+      expect(result.challenge).toEqual({
+        kind: 'success',
+        userId: 'user-1',
+        deviceName: undefined,
+      });
       expect(tx.user.update).toHaveBeenCalled();
     });
 
@@ -208,7 +305,9 @@ describe('CustomerOtpService', () => {
       });
       expect(tx.loginAttempt.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ outcome: LoginAttemptOutcome.SUCCESS }),
+          data: expect.objectContaining({
+            outcome: LoginAttemptOutcome.SUCCESS,
+          }),
         }),
       );
     });
@@ -225,7 +324,10 @@ describe('CustomerOtpService', () => {
         ...CHALLENGE,
         expiresAt: new Date(Date.now() - 1000),
       }));
-      const { service } = createService({ tx, challenge: { ...CHALLENGE, expiresAt: new Date(Date.now() - 1000) } });
+      const { service } = createService({
+        tx,
+        challenge: { ...CHALLENGE, expiresAt: new Date(Date.now() - 1000) },
+      });
 
       const result = await service.verifyOtp({ challengeId: 'challenge-1', code: '123456' }, '192.0.2.1');
       expect(result.challenge.kind).toBe('expired');
@@ -237,7 +339,10 @@ describe('CustomerOtpService', () => {
       const { service } = createService({
         tx,
         challenge: ACTIVE_CHALLENGE,
-        hashes: { hash: vi.fn((value: string) => `hash:${value}`), verify: vi.fn(() => false) },
+        hashes: {
+          hash: vi.fn((value: string) => `hash:${value}`),
+          verify: vi.fn(() => false),
+        },
       });
 
       const result = await service.verifyOtp({ challengeId: 'challenge-1', code: '000000' }, '192.0.2.1');
@@ -248,18 +353,26 @@ describe('CustomerOtpService', () => {
       });
       expect(tx.loginAttempt.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ outcome: LoginAttemptOutcome.INVALID_CODE }),
+          data: expect.objectContaining({
+            outcome: LoginAttemptOutcome.INVALID_CODE,
+          }),
         }),
       );
     });
 
     it('invalidates the challenge after the last allowed attempt', async () => {
       const tx = createTx();
-      tx.otpCode.findUnique = vi.fn(async () => ({ ...ACTIVE_CHALLENGE, attempts: 4 }));
+      tx.otpCode.findUnique = vi.fn(async () => ({
+        ...ACTIVE_CHALLENGE,
+        attempts: 4,
+      }));
       const { service } = createService({
         tx,
         challenge: { ...ACTIVE_CHALLENGE, attempts: 4 },
-        hashes: { hash: vi.fn((value: string) => `hash:${value}`), verify: vi.fn(() => false) },
+        hashes: {
+          hash: vi.fn((value: string) => `hash:${value}`),
+          verify: vi.fn(() => false),
+        },
       });
 
       await service.verifyOtp({ challengeId: 'challenge-1', code: '000000' }, '192.0.2.1');
@@ -273,18 +386,33 @@ describe('CustomerOtpService', () => {
       const tx = createTx();
       tx.otpCode.findUnique = vi.fn(async () => ({
         ...CHALLENGE,
-        user: { id: 'user-1', mobile: '+989123456789', status: UserStatus.SUSPENDED, lockedUntil: null },
+        user: {
+          id: 'user-1',
+          mobile: '+989123456789',
+          status: UserStatus.SUSPENDED,
+          lockedUntil: null,
+        },
       }));
       const { service } = createService({
         tx,
-        challenge: { ...CHALLENGE, user: { id: 'user-1', mobile: '+989123456789', status: UserStatus.SUSPENDED, lockedUntil: null } },
+        challenge: {
+          ...CHALLENGE,
+          user: {
+            id: 'user-1',
+            mobile: '+989123456789',
+            status: UserStatus.SUSPENDED,
+            lockedUntil: null,
+          },
+        },
       });
 
       const result = await service.verifyOtp({ challengeId: 'challenge-1', code: '123456' }, '192.0.2.1');
       expect(result.challenge.kind).toBe('invalid');
       expect(tx.loginAttempt.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ outcome: LoginAttemptOutcome.ACCOUNT_SUSPENDED }),
+          data: expect.objectContaining({
+            outcome: LoginAttemptOutcome.ACCOUNT_SUSPENDED,
+          }),
         }),
       );
     });
@@ -297,7 +425,11 @@ describe('CustomerOtpService', () => {
 
       const result = await service.verifyOtp({ challengeId: 'challenge-1', code: '999999' }, '192.0.2.1');
       expect(result.challenge.kind).toBe('invalid');
-      expect(enforce).toHaveBeenCalledWith({ dimension: 'otp-verify:ip-fail-hour', value: '192.0.2.1', context: 'ip' });
+      expect(enforce).toHaveBeenCalledWith({
+        dimension: 'otp-verify:ip-fail-hour',
+        value: '192.0.2.1',
+        context: 'ip',
+      });
     });
   });
 
@@ -306,7 +438,11 @@ describe('CustomerOtpService', () => {
       const reset = vi.fn(async () => undefined);
       const { service } = createService({ reset });
       await service.resetIpVerificationFailures('192.0.2.1');
-      expect(reset).toHaveBeenCalledWith({ dimension: 'otp-verify:ip-fail-hour', value: '192.0.2.1', context: 'ip' });
+      expect(reset).toHaveBeenCalledWith({
+        dimension: 'otp-verify:ip-fail-hour',
+        value: '192.0.2.1',
+        context: 'ip',
+      });
     });
   });
 });
