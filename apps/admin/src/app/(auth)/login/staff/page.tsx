@@ -46,11 +46,16 @@ export default function StaffLoginPage() {
   );
 
   useEffect(() => {
-    if (state.phase === 'authenticated' && state.principal) {
-      const accessToken = controller.getAccessToken();
-      if (accessToken) {
-        establishSession({ accessToken, principal: state.principal });
+    if (state.phase === 'authenticated') {
+      const accessToken = state.principal ? controller.getAccessToken() : null;
+      // Fail closed: an authenticated phase without a recoverable token never
+      // reaches the shell — degrade into the recoverable password step instead
+      // of navigating unauthenticated to /dashboard.
+      if (!state.principal || !accessToken) {
+        controller.recoverToPassword('نشست تایید نامعتبر است. دوباره وارد شوید.');
+        return;
       }
+      establishSession({ accessToken, principal: state.principal });
       router.replace('/dashboard');
     }
   }, [state.phase, state.principal, controller, establishSession, router]);

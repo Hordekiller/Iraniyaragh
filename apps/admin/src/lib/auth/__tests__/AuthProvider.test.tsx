@@ -138,7 +138,7 @@ describe('AuthProvider', () => {
 
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
     fireEvent.click(screen.getByText('signout'));
-    expect(await screen.findByTestId('authed')).toHaveTextContent('no');
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
     expect(screen.getByTestId('email')).toHaveTextContent('none');
   });
 

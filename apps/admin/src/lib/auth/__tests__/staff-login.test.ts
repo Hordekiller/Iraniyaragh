@@ -154,6 +154,18 @@ describe('StaffLoginController totp step', () => {
     expect(state.phase).toBe('password');
     expect(state.challengeToken).toBeNull();
   });
+
+  it('recoverToPassword clears an inconsistent authenticated session and returns to password', async () => {
+    const { controller, store } = makeFlow();
+    await completeLogin(controller);
+    controller.recoverToPassword('نشست تایید نامعتبر است. دوباره وارد شوید.');
+    const state = controller.getState();
+    expect(state.phase).toBe('password');
+    expect(state.principal).toBeNull();
+    expect(state.challengeToken).toBeNull();
+    expect(store.get()).toBeNull();
+    expect(state.error).toBe('نشست تایید نامعتبر است. دوباره وارد شوید.');
+  });
 });
 
 describe('StaffLoginController rate limiting', () => {

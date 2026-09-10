@@ -306,6 +306,28 @@ export class StaffLoginController {
     });
   }
 
+  /**
+   * Fail-closed recovery for an inconsistent authenticated session: drops the
+   * token, clears the principal and returns to the password step. Unlike
+   * `resetToPassword` this runs even while `authenticated`; the login page uses
+   * it only when the phase claims authenticated but the access token is
+   * unrecoverable, so the UI degrades to a stable retry instead of navigating
+   * unauthenticated to the shell.
+   */
+  recoverToPassword(error: string | null = null): void {
+    this.generation += 1;
+    this.tokenStore.set(null);
+    this.patch({
+      phase: 'password',
+      password: '',
+      code: '',
+      error,
+      challengeToken: null,
+      expiresAt: null,
+      principal: null,
+    });
+  }
+
   async logout(): Promise<void> {
     if (!this.begin('logout')) return;
     try {
