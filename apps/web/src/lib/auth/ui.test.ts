@@ -658,4 +658,28 @@ describe('CustomerOtpController silent session restore (#50)', () => {
     expect(controller.getState().phase).toBe('authenticated');
     await expect(controller.restoreSession()).resolves.toBe(false);
   });
+
+  it('logs a fixed sanitized diagnostic without serializing the raw coordinator error', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const sentinel = 's3cr3t-otp-token-HEADER-url.value';
+    const store = new MemorySessionStore();
+    const controller = new CustomerOtpController(
+      new AuthFixtureClient({ store }),
+      store,
+      () => Date.now(),
+      undefined,
+      {
+        runExclusive: async () => {
+          throw Object.assign(new Error(sentinel), { response: { headers: sentinel }, url: sentinel });
+        },
+      },
+    );
+    await authenticate(controller);
+
+    await expect(controller.restoreSession()).resolves.toBe(false);
+    expect(controller.getState().phase).toBe('authenticated');
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy.mock.calls.join(' ')).not.toContain(sentinel);
+    errorSpy.mockRestore();
+  });
 });

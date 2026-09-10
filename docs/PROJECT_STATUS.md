@@ -183,10 +183,14 @@ security/query review, OpenAPI drift confirmation and merge.
     DTO `INVALID_REQUEST`); the CI e2e job runs a real Redis service.
   - `#50 acceptance`: desktop/mobile screenshots (`docs/screenshots/auth/`) and
     accessibility notes (`docs/accessibility/auth-ux.md`).
-- Follow-up on main: unexpected cross-tab refresh coordinator failures latch without
-  rejecting the restore path (defensive catch in `runCoordinatedRefresh`).
 - Admin split: the admin UI slice stays Hordekiller-owned; `#139` did not change
   admin client behavior beyond item A.
+
+## Open follow-up (PR #147, not yet on main)
+
+- Unexpected cross-tab refresh coordinator failures latch without rejecting the
+  restore path (defensive catch in `runCoordinatedRefresh`, fixed sanitized console
+  diagnostic). This bullet moves under "Recently shipped on main" after `#147` merges.
 
 Remaining for real customer sign-in: SMS delivery is wired to adapters only (no
 provider call from the OTP service yet) and the issued code has no dev-gated reveal,

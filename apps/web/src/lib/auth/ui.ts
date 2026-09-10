@@ -469,7 +469,7 @@ export class CustomerOtpController {
         if (this.store.isAuthenticated()) this.expireSession('invalid');
         return false;
       }
-      console.error('Unexpected cross-tab refresh coordinator failure', error);
+      console.error('Unexpected cross-tab refresh coordinator failure');
       this.silentRestoreLatch = true;
       return false;
     }
