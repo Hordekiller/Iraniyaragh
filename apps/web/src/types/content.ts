@@ -11,6 +11,8 @@ export type Product = {
   image: string
   badge?: string
   cat: string
+  /** Slug used to deep-link to the real product page. */
+  slug?: string
 }
 
 export type Category = {
@@ -21,6 +23,7 @@ export type Category = {
   icon: LucideIcon
   image: string
   color: string
+  slug: string
 }
 
 export type HeroSlide = {
@@ -30,10 +33,11 @@ export type HeroSlide = {
   highlight: string
   desc: string
   cta: string
-  cta2: string
   image: string
   gradient: string
   accent: string
+  /** Category slug the primary CTA deep-links to. */
+  ctaSlug: string
 }
 
 export type BlogPost = {

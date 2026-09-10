@@ -9,3 +9,12 @@
   font-display: swap;
   src: url('/fonts/Vazirmatn[wght].woff2') format('woff2');
 }
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}

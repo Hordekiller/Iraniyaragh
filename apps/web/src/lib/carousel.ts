@@ -4,7 +4,8 @@ export function scrollCarousel(ref: React.RefObject<HTMLDivElement | null>, dir:
   ref.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' })
 }
 
-export function formatToman(value: number) {
+/** Format a Toman-styled value with Persian locale digits (prototype display only). */
+export function formatTomanDisplay(value: number): string {
   return value.toLocaleString('fa-IR')
 }
 
