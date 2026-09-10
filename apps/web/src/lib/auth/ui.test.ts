@@ -642,4 +642,20 @@ describe('CustomerOtpController silent session restore (#50)', () => {
     bus.broadcast({ type: 'refresh-failed', reason: 'replayed' });
     expect(controller.getState().phase).toBe('session-expired');
   });
+
+  it('fails closed without rejecting when the coordinator itself fails unexpectedly', async () => {
+    const store = new MemorySessionStore();
+    const controller = new CustomerOtpController(
+      new AuthFixtureClient({ store }),
+      store,
+      () => Date.now(),
+      undefined,
+      { runExclusive: async () => { throw new Error('boom'); } },
+    );
+    await authenticate(controller);
+
+    await expect(controller.restoreSession()).resolves.toBe(false);
+    expect(controller.getState().phase).toBe('authenticated');
+    await expect(controller.restoreSession()).resolves.toBe(false);
+  });
 });
