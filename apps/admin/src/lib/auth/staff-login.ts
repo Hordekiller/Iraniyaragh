@@ -112,6 +112,17 @@ export class StaffLoginController {
     return this.state;
   }
 
+  /**
+   * The access token of the authenticated session (read from the injected
+   * store), or null before authentication and after logout/expiry. The staff
+   * login page bridges this into the app-wide session via
+   * `useAuth().establishSession` once the phase turns `authenticated`;
+   * the token itself never leaves memory.
+   */
+  getAccessToken(): string | null {
+    return this.tokenStore.get();
+  }
+
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -292,6 +303,28 @@ export class StaffLoginController {
       error,
       challengeToken: null,
       expiresAt: null,
+    });
+  }
+
+  /**
+   * Fail-closed recovery for an inconsistent authenticated session: drops the
+   * token, clears the principal and returns to the password step. Unlike
+   * `resetToPassword` this runs even while `authenticated`; the login page uses
+   * it only when the phase claims authenticated but the access token is
+   * unrecoverable, so the UI degrades to a stable retry instead of navigating
+   * unauthenticated to the shell.
+   */
+  recoverToPassword(error: string | null = null): void {
+    this.generation += 1;
+    this.tokenStore.set(null);
+    this.patch({
+      phase: 'password',
+      password: '',
+      code: '',
+      error,
+      challengeToken: null,
+      expiresAt: null,
+      principal: null,
     });
   }
 

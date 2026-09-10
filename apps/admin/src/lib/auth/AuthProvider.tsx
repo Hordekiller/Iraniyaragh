@@ -18,6 +18,8 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   signIn: (code: string, deviceName?: string) => Promise<SignInResult>;
   signOut: () => Promise<void>;
+  /** Adopt a session that was verified outside the dev sign-in path (#50 staff login). */
+  establishSession: (input: { accessToken: string; principal: AuthUser }) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -62,6 +64,16 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   }, []);
 
+  const establishSession = useCallback((input: { accessToken: string; principal: AuthUser }): void => {
+    setAccessToken(input.accessToken);
+    setUser({
+      userId: input.principal.userId,
+      sessionId: input.principal.sessionId,
+      authenticationLevel: input.principal.authenticationLevel,
+      permissions: input.principal.permissions,
+    });
+  }, []);
+
   const signOut = useCallback(async (): Promise<void> => {
     const token = getAccessToken();
     try {
@@ -82,8 +94,9 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       isAuthenticated: user !== null,
       signIn,
       signOut,
+      establishSession,
     }),
-    [user, signIn, signOut],
+    [user, signIn, signOut, establishSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

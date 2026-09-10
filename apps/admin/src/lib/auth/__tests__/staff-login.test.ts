@@ -154,6 +154,18 @@ describe('StaffLoginController totp step', () => {
     expect(state.phase).toBe('password');
     expect(state.challengeToken).toBeNull();
   });
+
+  it('recoverToPassword clears an inconsistent authenticated session and returns to password', async () => {
+    const { controller, store } = makeFlow();
+    await completeLogin(controller);
+    controller.recoverToPassword('نشست تایید نامعتبر است. دوباره وارد شوید.');
+    const state = controller.getState();
+    expect(state.phase).toBe('password');
+    expect(state.principal).toBeNull();
+    expect(state.challengeToken).toBeNull();
+    expect(store.get()).toBeNull();
+    expect(state.error).toBe('نشست تایید نامعتبر است. دوباره وارد شوید.');
+  });
 });
 
 describe('StaffLoginController rate limiting', () => {
@@ -227,6 +239,25 @@ describe('StaffLoginController concurrency guard', () => {
     await pending;
     expect(controller.getState().phase).toBe('idle');
     expect(controller.getState().challengeToken).toBeNull();
+  });
+});
+
+describe('StaffLoginController access token bridge', () => {
+  it('exposes the token only for the authenticated session', async () => {
+    const { controller } = makeFlow();
+    expect(controller.getAccessToken()).toBeNull();
+    await completeLogin(controller);
+    expect(controller.getAccessToken()).toMatch(/^fixture-staff-at\./);
+    await controller.logout();
+    expect(controller.getAccessToken()).toBeNull();
+  });
+
+  it('drops the token when the session ends server-side', async () => {
+    const { controller, api } = makeFlow();
+    await completeLogin(controller);
+    await api.logout();
+    await controller.refreshSession();
+    expect(controller.getAccessToken()).toBeNull();
   });
 });
 
