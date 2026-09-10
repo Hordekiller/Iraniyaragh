@@ -4,52 +4,72 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
-import { navigation } from '@/config/navigation';
+import {
+  ChevronLeft,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  X,
+} from 'lucide-react';
+import { filterNavigationByPermissions, navigation } from '@/config/navigation';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useAdminPreferences } from '@/lib/preferences/AdminPreferencesProvider';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationsMenu } from './NotificationsMenu';
 import { ProfileMenu } from './ProfileMenu';
+import { SettingsCustomizer } from './SettingsCustomizer';
 import styles from './AdminShell.module.css';
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({
+  onNavigate,
+  permissions,
+}: {
+  onNavigate?: () => void;
+  permissions: readonly string[];
+}) {
   const pathname = usePathname();
 
   return (
     <>
-      {navigation.map(group => (
-        <div className={styles.navGroup} key={group.label}>
-          <span className={styles.groupLabel}>{group.label}</span>
-          {group.items.map(item => {
-            const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+      {filterNavigationByPermissions(navigation, permissions).map((group) => {
+        return (
+          <div className={styles.navGroup} key={group.label}>
+            <span className={styles.groupLabel}>{group.label}</span>
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              const active =
+                pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-            if (item.status === 'planned') {
+              if (item.status === 'planned') {
+                return (
+                  <span
+                    className={`${styles.navItem} ${styles.planned}`}
+                    key={item.href}
+                    title="این بخش هنوز پیاده‌سازی نشده است"
+                  >
+                    <Icon size={18} strokeWidth={1.8} />
+                    <span>{item.label}</span>
+                    <small>به‌زودی</small>
+                  </span>
+                );
+              }
+
               return (
-                <span className={`${styles.navItem} ${styles.planned}`} key={item.href} title="این بخش هنوز پیاده‌سازی نشده است">
+                <Link
+                  className={`${styles.navItem} ${active ? styles.active : ''}`}
+                  href={item.href}
+                  key={item.href}
+                  onClick={onNavigate}
+                >
                   <Icon size={18} strokeWidth={1.8} />
                   <span>{item.label}</span>
-                  <small>به‌زودی</small>
-                </span>
+                  <ChevronLeft className={styles.navArrow} size={15} />
+                </Link>
               );
-            }
-
-            return (
-              <Link
-                className={`${styles.navItem} ${active ? styles.active : ''}`}
-                href={item.href}
-                key={item.href}
-                onClick={onNavigate}
-              >
-                <Icon size={18} strokeWidth={1.8} />
-                <span>{item.label}</span>
-                <ChevronLeft className={styles.navArrow} size={15} />
-              </Link>
-            );
-          })}
-        </div>
-      ))}
+            })}
+          </div>
+        );
+      })}
     </>
   );
 }
@@ -57,10 +77,9 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
-  const { prefs } = useAdminPreferences();
+  const { isAuthenticated, user } = useAuth();
+  const { prefs, updatePrefs } = useAdminPreferences();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const closeMenuRef = useRef<HTMLButtonElement>(null);
 
@@ -80,7 +99,10 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   useEffect(() => {
     if (!mobileMenuOpen) return;
 
-    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     closeMenuRef.current?.focus();
@@ -94,7 +116,9 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
       if (event.key !== 'Tab' || !sidebarRef.current) return;
 
       const focusable = Array.from(
-        sidebarRef.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'),
+        sidebarRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
       );
       const first = focusable.at(0);
       const last = focusable.at(-1);
@@ -125,8 +149,10 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const shellClass = [
     styles.shell,
     isHorizontal ? styles.shellHorizontal : '',
-    !isHorizontal && sidebarCollapsed ? styles.shellCollapsed : '',
-  ].filter(Boolean).join(' ');
+    !isHorizontal && prefs.navCollapsed ? styles.shellCollapsed : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={shellClass}>
@@ -157,7 +183,10 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
         </div>
 
         <nav className={styles.navigation} aria-label="بخش‌های پنل">
-          <NavLinks onNavigate={() => setMobileMenuOpen(false)} />
+          <NavLinks
+            onNavigate={() => setMobileMenuOpen(false)}
+            permissions={user?.permissions ?? []}
+          />
         </nav>
 
         <div className={styles.sidebarFooter}>
@@ -167,31 +196,52 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
       </aside>
 
       {mobileMenuOpen && (
-        <button className={styles.backdrop} type="button" aria-label="بستن منو" onClick={() => setMobileMenuOpen(false)} />
+        <button
+          className={styles.backdrop}
+          type="button"
+          aria-label="بستن منو"
+          onClick={() => setMobileMenuOpen(false)}
+        />
       )}
 
       <div className={styles.workspace}>
         <header className={styles.header}>
           <div className={styles.headerStart}>
-            <button className={styles.menuButton} type="button" aria-label="باز کردن منو" onClick={() => setMobileMenuOpen(true)}>
+            <button
+              className={styles.menuButton}
+              type="button"
+              aria-label="باز کردن منو"
+              onClick={() => setMobileMenuOpen(true)}
+            >
               <Menu size={21} />
             </button>
             {!isHorizontal ? (
               <button
                 className={styles.collapseToggle}
                 type="button"
-                onClick={() => setSidebarCollapsed(current => !current)}
-                aria-label={sidebarCollapsed ? 'باز کردن نوار کناری' : 'جمع کردن نوار کناری'}
+                onClick={() =>
+                  updatePrefs({ navCollapsed: !prefs.navCollapsed })
+                }
+                aria-label={
+                  prefs.navCollapsed
+                    ? 'باز کردن نوار کناری'
+                    : 'جمع کردن نوار کناری'
+                }
                 title="تغییر حالت نوار کناری"
-                aria-pressed={sidebarCollapsed}
+                aria-pressed={prefs.navCollapsed}
               >
-                {sidebarCollapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+                {prefs.navCollapsed ? (
+                  <PanelLeftOpen size={19} />
+                ) : (
+                  <PanelLeftClose size={19} />
+                )}
               </button>
             ) : null}
             <GlobalSearch />
           </div>
 
           <div className={styles.headerActions}>
+            <SettingsCustomizer />
             <NotificationsMenu />
             <ProfileMenu />
           </div>
@@ -199,11 +249,19 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
         {isHorizontal ? (
           <nav className={styles.navBar} aria-label="ناوبری افقی">
-            <NavLinks onNavigate={() => setMobileMenuOpen(false)} />
+            <NavLinks
+              onNavigate={() => setMobileMenuOpen(false)}
+              permissions={user?.permissions ?? []}
+            />
           </nav>
         ) : null}
 
-        <main className={styles.main}>{children}</main>
+        <a className={styles.skipLink} href="#admin-main-content">
+          پرش به محتوای اصلی
+        </a>
+        <main className={styles.main} id="admin-main-content" tabIndex={-1}>
+          {children}
+        </main>
       </div>
     </div>
   );

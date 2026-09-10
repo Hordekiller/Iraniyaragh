@@ -255,7 +255,23 @@
   padding: 30px;
 }
 
-html[data-admin-width='boxed'] .main {
+.skipLink {
+  position: fixed;
+  z-index: 100;
+  top: 10px;
+  right: 50%;
+  padding: 10px 16px;
+  color: #fff;
+  background: #17233a;
+  border-radius: 10px;
+  transform: translate(50%, -160%);
+}
+
+.skipLink:focus {
+  transform: translate(50%, 0);
+}
+
+html[data-admin-width="boxed"] .main {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
@@ -319,20 +335,20 @@ html[data-admin-width='boxed'] .main {
  * Dark mode shell tweaks
  * ------------------------------------------------------------------------ */
 
-html[data-admin-mode='dark'] .header {
+html[data-admin-mode="dark"] .header {
   background: rgb(21 28 46 / 88%);
   border-bottom-color: rgb(255 255 255 / 9%);
 }
 
-html[data-admin-mode='dark'] .menuButton,
-html[data-admin-mode='dark'] .collapseToggle {
+html[data-admin-mode="dark"] .menuButton,
+html[data-admin-mode="dark"] .collapseToggle {
   color: #9aa8c0;
   background: #1b2438;
   border-color: rgb(255 255 255 / 8%);
 }
 
-html[data-admin-mode='dark'] .menuButton:hover,
-html[data-admin-mode='dark'] .collapseToggle:hover {
+html[data-admin-mode="dark"] .menuButton:hover,
+html[data-admin-mode="dark"] .collapseToggle:hover {
   color: #e8edf6;
   border-color: rgb(255 255 255 / 16%);
 }
@@ -350,14 +366,18 @@ html[data-admin-mode='dark'] .collapseToggle:hover {
     visibility: hidden;
     pointer-events: none;
     transform: translateX(105%);
-    transition: visibility 0s 220ms, transform 220ms ease;
+    transition:
+      visibility 0s 220ms,
+      transform 220ms ease;
   }
 
   .sidebarOpen {
     visibility: visible;
     pointer-events: auto;
     transform: translateX(0);
-    transition: visibility 0s, transform 220ms ease;
+    transition:
+      visibility 0s,
+      transform 220ms ease;
   }
 
   .closeMenu,

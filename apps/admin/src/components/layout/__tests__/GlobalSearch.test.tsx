@@ -9,6 +9,13 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
 }));
 
+vi.mock('@/lib/auth/AuthProvider', () => ({
+  useAuth: () => ({
+    user: { permissions: ['orders.read'] },
+    isAuthenticated: true,
+  }),
+}));
+
 describe('GlobalSearch', () => {
   afterEach(() => {
     mocks.push.mockReset();
@@ -61,7 +68,7 @@ describe('GlobalSearch', () => {
     expect(mocks.push).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('does not navigate when the only match is planned', () => {
+  it('does not expose or navigate a page without the required permission', () => {
     render(<GlobalSearch />);
     fireEvent.click(screen.getByRole('button', { name: 'جستجوی سریع در پنل' }));
 
@@ -69,7 +76,9 @@ describe('GlobalSearch', () => {
       target: { value: 'پرداخت' },
     });
 
-    expect(screen.getByRole('button', { name: /پرداخت‌ها/ })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByRole('button', { name: /پرداخت‌ها/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/نتیجه‌ای برای/)).toBeInTheDocument();
+    expect(mocks.push).not.toHaveBeenCalled();
   });
 
   it('shows an empty result message', () => {

@@ -25,7 +25,8 @@ export type AdminPreferencesContextValue = {
   resetPrefs: () => void;
 };
 
-export const AdminPreferencesContext = createContext<AdminPreferencesContextValue | null>(null);
+export const AdminPreferencesContext =
+  createContext<AdminPreferencesContextValue | null>(null);
 
 type AdminPreferencesProviderProps = {
   children: ReactNode;
@@ -71,6 +72,7 @@ export function AdminPreferencesProvider({
     root.dataset.adminSkin = prefs.skin;
     root.dataset.adminLayout = prefs.layout;
     root.dataset.adminWidth = prefs.contentWidth;
+    root.dataset.adminNavCollapsed = String(prefs.navCollapsed);
     root.style.colorScheme = resolvedMode;
   }, [prefs, resolvedMode]);
 
@@ -88,15 +90,26 @@ export function AdminPreferencesProvider({
     [prefs, resolvedMode, updatePrefs, resetPrefs],
   );
 
-  return <AdminPreferencesContext.Provider value={value}>{children}</AdminPreferencesContext.Provider>;
+  return (
+    <AdminPreferencesContext.Provider value={value}>
+      {children}
+    </AdminPreferencesContext.Provider>
+  );
 }
 
 export function useAdminPreferences(): AdminPreferencesContextValue {
   const context = useContext(AdminPreferencesContext);
   if (!context) {
-    throw new Error('useAdminPreferences must be used within an AdminPreferencesProvider.');
+    throw new Error(
+      'useAdminPreferences must be used within an AdminPreferencesProvider.',
+    );
   }
   return context;
 }
 
-export type { AdminMode, AdminSkin, AdminLayoutType, ContentWidth } from './preferences';
+export type {
+  AdminMode,
+  AdminSkin,
+  AdminLayoutType,
+  ContentWidth,
+} from './preferences';

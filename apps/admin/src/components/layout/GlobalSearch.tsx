@@ -16,17 +16,19 @@ import {
   Typography,
 } from '@mui/material';
 import { CornerDownLeft, Search } from 'lucide-react';
-import { navigation } from '@/config/navigation';
+import { filterNavigationByPermissions, navigation } from '@/config/navigation';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import styles from './GlobalSearch.module.css';
 
-function flattenNavigation() {
-  return navigation.flatMap((group) =>
+function flattenNavigation(permissions: readonly string[]) {
+  return filterNavigationByPermissions(navigation, permissions).flatMap((group) =>
     group.items.map((item) => ({ ...item, groupLabel: group.label })),
   );
 }
 
 export function GlobalSearch() {
   const router = useRouter();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,13 +53,14 @@ export function GlobalSearch() {
 
   const results = useMemo(() => {
     const q = query.trim().toLocaleLowerCase('fa');
-    if (!q) return flattenNavigation();
-    return flattenNavigation().filter(
+    const permittedNavigation = flattenNavigation(user?.permissions ?? []);
+    if (!q) return permittedNavigation;
+    return permittedNavigation.filter(
       (item) =>
         item.label.toLocaleLowerCase('fa').includes(q) ||
         (item.groupLabel ?? '').toLocaleLowerCase('fa').includes(q),
     );
-  }, [query]);
+  }, [query, user?.permissions]);
 
   function close() {
     setOpen(false);
