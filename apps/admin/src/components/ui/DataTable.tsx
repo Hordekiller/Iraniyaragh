@@ -25,8 +25,13 @@ import {
   InputAdornment,
   Skeleton,
   TablePaginationProps,
+  IconButton,
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemText,
 } from '@mui/material';
-import { Search, Inbox, X } from 'lucide-react';
+import { Search, Inbox, X, Columns3 } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 
 export type DataTableColumn<T> = {
@@ -41,6 +46,11 @@ export type DataTableColumn<T> = {
   sortFn?: (a: T, b: T) => number;
   /** Value used for client search; defaults to `String(value)`. */
   searchValue?: (row: T) => string;
+  /**
+   * Whether the column can be hidden via the column-visibility menu.
+   * Defaults to `true`. At least one column always stays visible.
+   */
+  hideable?: boolean;
 };
 
 export type SortState = { columnId: string; direction: 'asc' | 'desc' } | null;
@@ -83,6 +93,10 @@ export type DataTableProps<T> = {
   onPageChange?: (page: number, pageSize: number) => void;
   onRowClick?: (row: T) => void;
   bulkActions?: ReactNode;
+  /** Render an end (left-aligned in RTL) actions cell per row. */
+  actions?: (row: T) => ReactNode;
+  /** Visible heading for the actions column. Defaults to `عملیات`. */
+  actionsLabel?: string;
 };
 
 const ROWS_PER_PAGE_OPTIONS = [5, 10, 25, 50];
@@ -122,6 +136,8 @@ export function DataTable<T>({
   onPageChange,
   onRowClick,
   bulkActions,
+  actions,
+  actionsLabel = 'عملیات',
 }: DataTableProps<T>) {
   const inputId = useId();
   const [clientSort, setClientSort] = useState<SortState>(null);
@@ -129,6 +145,51 @@ export function DataTable<T>({
   const [clientPageSize, setClientPageSize] = useState(10);
   const [clientSearch, setClientSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [columnMenuAnchor, setColumnMenuAnchor] = useState<HTMLElement | null>(null);
+
+  const hideableColumns = useMemo(
+    () => columns.filter((col) => col.hideable !== false),
+    [columns],
+  );
+  const columnsKey = useMemo(() => columns.map((col) => col.id).join('|'), [columns]);
+  const [visibleColumnIds, setVisibleColumnIds] = useState<Set<string>>(
+    () => new Set(hideableColumns.map((col) => col.id)),
+  );
+
+  // Keep visibility in sync when the column set changes upstream.
+  useEffect(() => {
+    const next = new Set<string>();
+    for (const col of hideableColumns) {
+      if (visibleColumnIds.has(col.id)) next.add(col.id);
+    }
+    if (next.size === 0 || next.size < hideableColumns.length) {
+      setVisibleColumnIds(new Set(hideableColumns.map((col) => col.id)));
+      return;
+    }
+    setVisibleColumnIds(next);
+  }, [columnsKey]);
+
+  const toggleColumn = (id: string) => {
+    setVisibleColumnIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        // Keep at least one column visible.
+        if (next.size === 1) return current;
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const visibleColumns = useMemo(
+    () => columns.filter((col) => col.hideable === false || visibleColumnIds.has(col.id)),
+    [columns, visibleColumnIds],
+  );
+
+  const hasColumnMenu = hideableColumns.length > 0;
+  const totalColSpan = visibleColumns.length + (selectable ? 1 : 0) + (actions ? 1 : 0);
 
   const isServer = !enableClientView;
   const showSearch = enableClientView
@@ -262,7 +323,7 @@ export function DataTable<T>({
 
   return (
     <Paper variant="outlined" sx={{ width: '100%', overflow: 'hidden', bgcolor: 'background.paper' }}>
-      {(selectable && selected && selected.size > 0) || toolbar || showSearch ? (
+      {(selectable && selected && selected.size > 0) || toolbar || showSearch || hasColumnMenu ? (
         <Box
           sx={{
             display: 'flex',
@@ -317,6 +378,45 @@ export function DataTable<T>({
             ) : null}
             {toolbar}
           </Box>
+          {hasColumnMenu ? (
+            <>
+              <Tooltip title="نمایش یا پنهان کردن ستون‌ها">
+                <IconButton
+                  size="small"
+                  onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
+                  aria-label="مدیریت ستون‌ها"
+                  sx={{ border: '1px solid', borderColor: 'divider', color: 'text.secondary' }}
+                >
+                  <Columns3 size={17} />
+                </IconButton>
+              </Tooltip>
+              <Menu
+                anchorEl={columnMenuAnchor}
+                open={Boolean(columnMenuAnchor)}
+                onClose={() => setColumnMenuAnchor(null)}
+              >
+                {hideableColumns.map((col) => {
+                  const visible = visibleColumnIds.has(col.id);
+                  const only = visible && visibleColumnIds.size === 1;
+                  return (
+                    <MenuItem
+                      key={col.id}
+                      dense
+                      disabled={only}
+                      onClick={() => {
+                        toggleColumn(col.id);
+                        setColumnMenuAnchor(null);
+                      }}
+                      sx={{ '&.Mui-disabled': { opacity: 0.5 } }}
+                    >
+                      <Checkbox size="small" checked={visible} />
+                      <ListItemText>{col.label}</ListItemText>
+                    </MenuItem>
+                  );
+                })}
+              </Menu>
+            </>
+          ) : null}
           {selected && selected.size > 0 ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Box sx={{ typography: 'body2', color: 'text.secondary' }}>{selected.size} مورد انتخاب شد</Box>
@@ -348,7 +448,7 @@ export function DataTable<T>({
                   />
                 </TableCell>
               ) : null}
-              {columns.map((col) => (
+              {visibleColumns.map((col) => (
                 <TableCell
                   key={col.id}
                   align={col.align}
@@ -367,6 +467,11 @@ export function DataTable<T>({
                   )}
                 </TableCell>
               ))}
+              {actions ? (
+                <TableCell align="left" sx={{ fontWeight: 700, whiteSpace: 'nowrap', width: 1 }}>
+                  {actionsLabel}
+                </TableCell>
+              ) : null}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -378,16 +483,21 @@ export function DataTable<T>({
                       <Skeleton variant="circular" width={20} height={20} />
                     </TableCell>
                   ) : null}
-                  {columns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <TableCell key={col.id} align={col.align}>
                       <Skeleton width="85%" height={20} />
                     </TableCell>
                   ))}
+                  {actions ? (
+                    <TableCell>
+                      <Skeleton width={60} height={20} />
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={columns.length + (selectable ? 1 : 0)}>
+                <TableCell colSpan={totalColSpan}>
                   <EmptyState
                     icon={emptyIcon ?? <Inbox size={28} />}
                     title="خطا در بارگیری داده‌ها"
@@ -397,7 +507,7 @@ export function DataTable<T>({
               </TableRow>
             ) : visibleRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + (selectable ? 1 : 0)}>
+                <TableCell colSpan={totalColSpan}>
                   <EmptyState
                     icon={emptyIcon ?? <Inbox size={28} />}
                     title={emptyTitle}
@@ -409,9 +519,9 @@ export function DataTable<T>({
               visibleRows.map((row) => {
                 const key = rowKey(row);
                 const isSelected = selected?.has(key) ?? false;
-                const firstCell = columns[0]?.render(row);
+                const firstCell = visibleColumns[0]?.render(row);
                 const firstColLabel =
-                  typeof firstCell === 'string' ? firstCell : (columns[0]?.label ?? '');
+                  typeof firstCell === 'string' ? firstCell : (visibleColumns[0]?.label ?? '');
                 return (
                   <TableRow
                     key={key}
@@ -430,11 +540,16 @@ export function DataTable<T>({
                         />
                       </TableCell>
                     ) : null}
-                    {columns.map((col) => (
+                    {visibleColumns.map((col) => (
                       <TableCell key={col.id} align={col.align}>
                         {col.render(row)}
                       </TableCell>
                     ))}
+                    {actions ? (
+                      <TableCell align="left" sx={{ width: 1, whiteSpace: 'nowrap' }}>
+                        {actions(row)}
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 );
               })
