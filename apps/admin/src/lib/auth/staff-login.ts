@@ -77,6 +77,8 @@ function farsiError(error: unknown): string {
       case 'UPSTREAM_UNAVAILABLE':
       case 'INTERNAL_ERROR':
         return 'سرور در دسترس نیست. چند دقیقه دیگر تلاش کنید.';
+      case 'AUTH_PASSWORD_POLICY':
+        return 'رمز عبور با سیاست امنیتی همخوانی ندارد.';
       default:
         return 'ورود انجام نشد. دوباره تلاش کنید.';
     }

@@ -20,6 +20,30 @@ function formatCountdown(msLeft: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
+type SessionExpiredPanelProps = {
+  expiredReason: 'invalid' | 'replayed' | null;
+  onRetry: () => void;
+};
+
+function SessionExpiredPanel({ expiredReason, onRetry }: SessionExpiredPanelProps) {
+  return (
+    <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-center">
+      <p className="mb-4 text-[14px] font-bold text-red-700" role="alert">
+        {expiredReason === 'replayed'
+          ? 'نشست شما از ناحیه امنیتی نامعتبر شد. برای حفاظت از حساب، دوباره وارد شوید.'
+          : 'نشست شما به پایان رسیده است. برای ادامه دوباره وارد شوید.'}
+      </p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="w-full h-11 rounded-2xl bg-[#C2410C] text-white font-black text-[15px] hover:bg-[#A83509] transition"
+      >
+        ورود دوباره
+      </button>
+    </div>
+  );
+}
+
 export function LoginDialog({ open, onClose }: LoginDialogProps) {
   const { state, controller } = useAuth()
   const [nowMs, setNowMs] = useState(() => Date.now())
@@ -39,6 +63,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
   const canSubmitMobile = !rateLimitLocked && normalizeIranianMobile(state.mobile) !== null
   const canSubmitCode = !rateLimitLocked && state.code.length === 6
   const lockedLabel = cooldownMs > 0 ? ` (${formatCountdown(cooldownMs)})` : ''
+  const sessionExpired = state.phase === 'session-expired'
 
   useEffect(() => {
     if (!open || (!resendLocked && !rateLimitLocked && !expiryPending)) return
@@ -223,7 +248,17 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                   : ''}
               </span>
 
-              <AnimatePresence mode="wait">
+              <div
+                id="login-dialog"
+                aria-busy={state.busy || state.restoring}
+              >
+              {sessionExpired ? (
+                <SessionExpiredPanel
+                  expiredReason={state.expiredReason}
+                  onRetry={() => controller.retryAfterExpiry()}
+                />
+              ) : (
+                <AnimatePresence mode="wait">
                 {state.phase !== 'code' ? (
                   <motion.form
                     key="mobile"
@@ -327,6 +362,8 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                   </motion.form>
                 )}
               </AnimatePresence>
+              )}
+              </div>
 
               <p className="mt-5 text-[11px] text-slate-400 text-center leading-5">
                 با ورود، قوانین و مقررات ایران یراق را می‌پذیرید.

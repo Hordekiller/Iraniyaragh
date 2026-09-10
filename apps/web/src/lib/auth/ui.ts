@@ -1,6 +1,7 @@
 import { isValidOtpCode, normalizeIranianMobile, normalizeOtpCodeInput } from './normalize';
 import type { AuthApi } from './api';
-import type { MemorySessionStore } from './session-store';
+import type { MemorySessionStore, RefreshCoordinator, SessionSignal } from './session-store';
+import { CrossTabSessionBus, LocalRefreshCoordinator } from './session-store';
 import type { AuthApiError } from './errors';
 import type { CustomerOtpChallenge, AuthPrincipal } from './types';
 
@@ -8,9 +9,10 @@ import type { CustomerOtpChallenge, AuthPrincipal } from './types';
  * Customer OTP auth flow controller (customer login UX for #50).
  *
  * React-agnostic: owns the two-step OTP state machine, validation, resend/expiry
- * timing and error mapping, exposing an immutable snapshot + subscribe so the UI
- * can render with `useSyncExternalStore`. Business/Auth logic intentionally stays
- * out of components (AGENTS.md). No module-global mutable state.
+ * timing, error mapping and the silent session-restore protocol, exposing an
+ * immutable snapshot + subscribe so the UI can render with `useSyncExternalStore`.
+ * Business/Auth logic intentionally stays out of components (AGENTS.md).
+ * No module-global mutable state.
  */
 
 export type CustomerOtpPhase =
@@ -20,14 +22,21 @@ export type CustomerOtpPhase =
   | 'authenticated'
   | 'session-expired';
 
+/** Why the in-memory session was invalidated. `replayed` means the refresh family was revoked. */
+export type SessionExpiryReason = 'invalid' | 'replayed';
+
 export type CustomerOtpUiState = {
   phase: CustomerOtpPhase;
   mobile: string;
   code: string;
   /** True while an async call (request/verify/resend/logout) is in flight. */
   busy: boolean;
+  /** True while a silent restore/refresh attempt is in flight. */
+  restoring: boolean;
   /** Inline, Farsi-localized error message, or null. */
   error: string | null;
+  /** Why the session ended, when `phase` is `session-expired`. */
+  expiredReason: SessionExpiryReason | null;
   /** Resend is disabled until this epoch (ms). */
   resendNotBefore: number;
   /** Rate-limit back-off: submit attempts are locked until this epoch (ms). */
@@ -43,7 +52,9 @@ const initialState: CustomerOtpUiState = {
   mobile: '',
   code: '',
   busy: false,
+  restoring: false,
   error: null,
+  expiredReason: null,
   resendNotBefore: 0,
   rateLimitNotBefore: 0,
   expiresAt: null,
@@ -97,6 +108,19 @@ export class CustomerOtpController {
   private readonly api: AuthApi;
   private readonly store: MemorySessionStore;
   private readonly inflight = new Set<string>();
+  private readonly bus: CrossTabSessionBus | null;
+  private unsubscribeBus: (() => void) | null = null;
+  private readonly refreshCoordinator: RefreshCoordinator;
+  /** True while a silent restore/refresh is in flight (single-flight). */
+  private restoring = false;
+  private refreshPromise: Promise<boolean> | null = null;
+  /**
+   * Once a refresh produced SESSION_INVALID/REPLAYED, never fire another
+   * automatic silent refresh for this page lifetime: repeated automatic calls
+   * would compound the rotation/replay instead of fixing it. Re-auth must be
+   * deliberately triggered by the user (AUTH_CONTRACT §7, no auto-retry).
+   */
+  private silentRestoreLatch = false;
   /** Generation guard: bumped on close/logout/reset to discard stale async results. */
   private generation = 0;
 
@@ -104,10 +128,27 @@ export class CustomerOtpController {
     api: AuthApi,
     store: MemorySessionStore,
     private readonly now: () => number = () => Date.now(),
+    bus?: CrossTabSessionBus,
+    refreshCoordinator: RefreshCoordinator = new LocalRefreshCoordinator(),
   ) {
     this.api = api;
     this.store = store;
+    this.bus = bus ?? null;
+    this.refreshCoordinator = refreshCoordinator;
+    this.connect();
     this.syncFromStore();
+  }
+
+  connect(): void {
+    if (this.bus && !this.unsubscribeBus) {
+      this.unsubscribeBus = this.bus.subscribe(signal => this.onSignal(signal));
+    }
+  }
+
+  dispose(): void {
+    this.unsubscribeBus?.();
+    this.unsubscribeBus = null;
+    this.listeners.clear();
   }
 
   getState(): CustomerOtpUiState {
@@ -129,11 +170,98 @@ export class CustomerOtpController {
   }
 
   private syncFromStore(): void {
+    if (this.store.isExpired()) {
+      this.patch({
+        phase: 'session-expired',
+        principal: null,
+        expiredReason: this.store.expireReason() ?? 'invalid',
+      });
+      return;
+    }
     const principal = this.store.getPrincipal();
     this.patch({
       phase: principal ? 'authenticated' : 'idle',
       principal,
     });
+  }
+
+  private onSignal(signal: SessionSignal): void {
+    switch (signal.type) {
+      case 'refresh-started':
+        break;
+      case 'refresh-completed':
+        break;
+      case 'refresh-failed':
+        this.applyCrossTabRefreshFailure(signal.reason);
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * A refresh somewhere in this browser revolved/replayed the shared family.
+   * A tab still holding a live in-memory session must surface the forced re-auth
+   * state; a tab that was already anonymous stays silently anonymous (no
+   * misleading "session ended" notice). Either way no further automatic refresh
+   * is attempted.
+   */
+  private applyCrossTabRefreshFailure(reason: SessionExpiryReason): void {
+    this.silentRestoreLatch = true;
+    if (this.store.isAuthenticated()) {
+      this.expireSession(reason);
+    }
+  }
+
+  private broadcast(signal: SessionSignal): void {
+    this.bus?.broadcast(signal);
+  }
+
+  private expireSession(reason: SessionExpiryReason): void {
+    this.store.expire(reason);
+    this.generation += 1;
+    this.patch({
+      phase: 'session-expired',
+      principal: null,
+      expiredReason: reason,
+      error: null,
+      challenge: null,
+      expiresAt: null,
+      code: '',
+      resendNotBefore: 0,
+    });
+  }
+
+  /**
+   * `true` when the thrown error means this tab's in-memory session is over and
+   * the UI must force a re-auth (no retry). When it returns `true`, the
+   * controller already switched the phase to `session-expired` — except for a
+   * session-less store receiving `AUTH_SESSION_INVALID` during a silent restore,
+   * which stays silently anonymous (a reload with no session is not an error).
+   */
+  private handleSessionFailure(error: unknown): boolean {
+    if (!isApiError(error)) return false;
+    const code = error.code;
+    if (code === 'AUTH_SESSION_REPLAYED' || code === 'AUTH_SESSION_INVALID' || code === 'AUTH_REAUTHENTICATION_REQUIRED' || code === 'AUTH_CSRF_INVALID') {
+      const sessionEnded = code === 'AUTH_SESSION_REPLAYED' || this.store.isAuthenticated();
+      if (sessionEnded) {
+        this.expireSession(code === 'AUTH_SESSION_REPLAYED' ? 'replayed' : 'invalid');
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * User consent to re-authenticate after an expired/revoked session: clears the
+   * forced state so the mobile step renders, and re-arms silent restore so a
+   * future session can be refreshed normally.
+   */
+  retryAfterExpiry(): void {
+    if (this.state.phase !== 'session-expired') return;
+    this.store.clear();
+    this.silentRestoreLatch = false;
+    this.resetChallenge();
   }
 
   private begin(label: string): boolean {
@@ -150,6 +278,10 @@ export class CustomerOtpController {
 
   open(): void {
     if (this.state.phase === 'authenticated') return;
+    if (this.store.isExpired()) {
+      this.patch({ phase: 'session-expired', error: null });
+      return;
+    }
     const phase: CustomerOtpPhase = this.state.challenge ? 'code' : 'mobile';
     this.patch({ phase, error: null });
   }
@@ -161,6 +293,7 @@ export class CustomerOtpController {
       phase: 'idle',
       code: '',
       error: null,
+      expiredReason: null,
       challenge: null,
       expiresAt: null,
       resendNotBefore: 0,
@@ -174,6 +307,7 @@ export class CustomerOtpController {
       phase: 'mobile',
       code: '',
       error,
+      expiredReason: null,
       challenge: null,
       expiresAt: null,
       resendNotBefore: 0,
@@ -286,11 +420,102 @@ export class CustomerOtpController {
         this.resetChallenge('کد منقضی شده است. کد جدید درخواست کنید.');
         return;
       }
+      if (this.handleSessionFailure(error)) return;
       this.applyRateLimit(error);
       this.patch({ error: farsiError(error, this.state.mobile) });
     } finally {
       this.end('verify');
     }
+  }
+
+  /**
+   * Silently restore a still-valid session (single-flight). Called once per
+   * provider mount: a reload re-reads the memory store, so the call only fires
+   * when the latch allows it. Once it fails with a session/CSRF code the latch
+   * prevents any further automatic silent refresh (no auto-retry). After an
+   * explicit expiry the phase is `session-expired` and re-auth is user-driven.
+   */
+  async restoreSession(): Promise<boolean> {
+    if (this.store.isExpired()) return false;
+    if (this.silentRestoreLatch) return false;
+    return this.refreshSession();
+  }
+
+  /** Single-flight refresh shared by the restore path and the cross-tab bus. */
+  async refreshSession(): Promise<boolean> {
+    if (this.store.isExpired()) return false;
+    if (this.silentRestoreLatch) return false;
+    if (this.refreshPromise) return false;
+
+    const refreshPromise = this.runCoordinatedRefresh();
+    this.refreshPromise = refreshPromise;
+    try {
+      return await refreshPromise;
+    } finally {
+      if (this.refreshPromise === refreshPromise) this.refreshPromise = null;
+    }
+  }
+
+  private async runCoordinatedRefresh(): Promise<boolean> {
+    try {
+      return await this.refreshCoordinator.runExclusive(() => this.performRefresh());
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message === 'AUTH_CROSS_TAB_LOCK_UNAVAILABLE' ||
+          error.message === 'AUTH_CROSS_TAB_LOCK_TIMEOUT')
+      ) {
+        this.silentRestoreLatch = true;
+        if (this.store.isAuthenticated()) this.expireSession('invalid');
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  private async performRefresh(): Promise<boolean> {
+    if (this.store.isExpired() || this.silentRestoreLatch || this.restoring) return false;
+
+    this.restoring = true;
+    this.patch({ restoring: true });
+    this.broadcast({ type: 'refresh-started' });
+
+    let ok = true;
+    const generation = this.generation;
+    try {
+      const refreshed = await this.api.refresh();
+      if (generation !== this.generation) return false;
+      this.patch({ phase: 'authenticated', principal: refreshed.principal, error: null });
+      this.broadcast({ type: 'refresh-completed' });
+    } catch (error) {
+      if (generation !== this.generation) {
+        return false;
+      }
+      ok = false;
+      if (!isApiError(error)) {
+        this.applyRateLimit(error);
+        return false;
+      }
+      const code = error.code;
+      if (code === 'AUTH_SESSION_REPLAYED') {
+        this.silentRestoreLatch = true;
+        this.expireSession('replayed');
+        this.broadcast({ type: 'refresh-failed', reason: 'replayed' });
+      } else if (code === 'AUTH_SESSION_INVALID' || code === 'AUTH_REAUTHENTICATION_REQUIRED' || code === 'AUTH_CSRF_INVALID') {
+        this.silentRestoreLatch = true;
+        if (this.store.isAuthenticated()) {
+          this.expireSession('invalid');
+        }
+        this.broadcast({ type: 'refresh-failed', reason: 'invalid' });
+        // A session-less browser found no session: stay silently anonymous.
+      } else {
+        this.applyRateLimit(error);
+      }
+    } finally {
+      this.restoring = false;
+      this.patch({ restoring: false });
+    }
+    return ok;
   }
 
   /** True while a rate-limit back-off window is still active. */
@@ -315,6 +540,8 @@ export class CustomerOtpController {
     } finally {
       this.store.clear();
       this.generation += 1;
+      this.silentRestoreLatch = false;
+      this.restoring = false;
       this.patch({ ...initialState, busy: true });
       this.end('logout');
     }
