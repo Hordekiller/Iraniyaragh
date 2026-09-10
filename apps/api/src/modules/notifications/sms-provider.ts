@@ -1,5 +1,13 @@
 export type SmsPurpose = "customer_login";
 
+export const SMS_PROVIDER = Symbol("SMS_PROVIDER");
+export const CUSTOMER_OTP_SMS_CONFIG = Symbol("CUSTOMER_OTP_SMS_CONFIG");
+
+export type CustomerOtpSmsConfig = Readonly<{
+  templateId: number;
+  codeParameterName: string;
+}>;
+
 export type SmsSendRequest = Readonly<{
   purpose: SmsPurpose;
   destination: string;

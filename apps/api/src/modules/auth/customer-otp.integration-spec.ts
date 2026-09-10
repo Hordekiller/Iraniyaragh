@@ -6,6 +6,7 @@ import { type AuthRuntimeConfig } from './auth.config';
 import { AuthHashService } from './auth-hash.service';
 import { CustomerOtpService, OTP_ATTEMPTS_LIMIT, OTP_TTL_SECONDS } from './customer-otp.service';
 import { type RateLimitService } from './rate-limit.service';
+import { FakeSmsProvider } from '../notifications/fake-sms.provider';
 
 const runtimeConfig: AuthRuntimeConfig = Object.freeze({
   accessSigningSecret: 'integration-access-secret-32-bytes-minimum-value',
@@ -53,7 +54,13 @@ function testMobile(prefix: string): string {
 describe.sequential('CustomerOtpService database integration', () => {
   const prisma = new PrismaService();
   const hashes = new AuthHashService(runtimeConfig);
-  const otp = new CustomerOtpService(prisma, hashes, removableLimiter() as unknown as RateLimitService);
+  const otp = new CustomerOtpService(
+    prisma,
+    hashes,
+    removableLimiter() as unknown as RateLimitService,
+    new FakeSmsProvider(),
+    { templateId: 1, codeParameterName: 'Code' },
+  );
   let connected = false;
 
   const createdUsers: string[] = [];
