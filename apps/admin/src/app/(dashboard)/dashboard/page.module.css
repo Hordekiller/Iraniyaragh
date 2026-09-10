@@ -1,7 +1,7 @@
 .page {
   display: grid;
   gap: 24px;
-  max-width: 1440px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -308,4 +308,90 @@
   .moduleRow small {
     display: none;
   }
+}
+
+/* --------------------------------------------------------------------------
+ * Dark mode surfaces (mirrors AdminShell.module.css tokens)
+ * ------------------------------------------------------------------------ */
+
+html[data-admin-mode='dark'] .metricCard,
+html[data-admin-mode='dark'] .panel {
+  background: #1b2438;
+  border-color: rgb(255 255 255 / 9%);
+  box-shadow: none;
+}
+
+html[data-admin-mode='dark'] .metricCopy span {
+  color: #9aa8c0;
+}
+
+html[data-admin-mode='dark'] .metricCopy strong {
+  color: #e8edf6;
+}
+
+html[data-admin-mode='dark'] .metricCopy small {
+  color: #6f7c93;
+}
+
+html[data-admin-mode='dark'] .orange {
+  color: #ff8a5c;
+  background: rgb(232 75 11 / 16%);
+}
+
+html[data-admin-mode='dark'] .blue {
+  color: #7aa2ff;
+  background: rgb(37 99 235 / 16%);
+}
+
+html[data-admin-mode='dark'] .amber {
+  color: #ffc46b;
+  background: rgb(182 104 0 / 18%);
+}
+
+html[data-admin-mode='dark'] .green {
+  color: #4fd1a5;
+  background: rgb(8 123 85 / 16%);
+}
+
+html[data-admin-mode='dark'] .panel h2 {
+  color: #c9d3e4;
+}
+
+html[data-admin-mode='dark'] .panelHeader button {
+  color: #9aa8c0;
+  background: #212c44;
+  border: 1px solid rgb(255 255 255 / 7%);
+}
+
+html[data-admin-mode='dark'] .moduleRow {
+  border-bottom-color: rgb(255 255 255 / 7%);
+}
+
+html[data-admin-mode='dark'] .moduleRow strong {
+  color: #c6d0e0;
+}
+
+html[data-admin-mode='dark'] .moduleRow > span:not(.moduleMarker),
+html[data-admin-mode='dark'] .moduleRow small {
+  color: #76859f;
+}
+
+html[data-admin-mode='dark'] .moduleMarker {
+  box-shadow: 0 0 0 5px rgb(255 90 23 / 14%);
+}
+
+html[data-admin-mode='dark'] .attentionPanel {
+  color: #9aa8c0;
+  background: linear-gradient(160deg, #1d2437 0%, #1f2433 100%);
+  border-color: rgb(255 90 23 / 22%);
+}
+
+html[data-admin-mode='dark'] .attentionIcon {
+  color: #ff8450;
+  background: rgb(255 90 23 / 14%);
+}
+
+html[data-admin-mode='dark'] .attentionPanel p {
+  color: #76859f;
+  border-top-color: rgb(255 255 255 / 8%);
 }

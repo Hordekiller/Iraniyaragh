@@ -48,10 +48,20 @@ export class ApiNetworkError extends Error {
   }
 }
 
+/** The request was cancelled by the caller (e.g. stale-response protection). */
+export class ApiAbortError extends Error {
+  constructor(message = 'درخواست لغو شد.') {
+    super(message);
+    this.name = 'ApiAbortError';
+  }
+}
+
 type RequestOptions = {
   method?: string;
   body?: unknown;
   token?: string | null;
+  /** Abort controller signal for stale-response protection (list views). */
+  signal?: AbortSignal;
 };
 
 function resolveUrl(path: string): string {
@@ -69,8 +79,12 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       credentials: 'include',
+      signal: options.signal,
     });
-  } catch {
+  } catch (error) {
+    if (options.signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+      throw new ApiAbortError();
+    }
     throw new ApiNetworkError('امکان برقراری ارتباط با سامانه وجود ندارد.');
   }
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, ApiClientError, ApiNetworkError, getApiBaseUrl } from '../client';
+import { apiFetch, ApiAbortError, ApiClientError, ApiNetworkError, getApiBaseUrl } from '../client';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -69,6 +69,38 @@ describe('apiFetch', () => {
   it('throws ApiNetworkError when fetch throws', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new Error('boom'))));
     await expect(apiFetch<unknown>('/auth/me')).rejects.toBeInstanceOf(ApiNetworkError);
+  });
+
+  it('forwards the abort signal and throws ApiAbortError when already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const seenSignalRef = {} as { signal?: AbortSignal | null };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        seenSignalRef.signal = init?.signal;
+        if (init?.signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+        return jsonResponse({ data: {} });
+      }),
+    );
+    await expect(apiFetch<unknown>('/health', { signal: controller.signal })).rejects.toBeInstanceOf(
+      ApiAbortError,
+    );
+    expect(seenSignalRef.signal).toBe(controller.signal);
+  });
+
+  it('throws ApiAbortError when fetch rejects with an aborted signal', async () => {
+    const controller = new AbortController();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        controller.abort();
+        throw new DOMException('The operation was aborted.', 'AbortError');
+      }),
+    );
+    await expect(apiFetch<unknown>('/health', { signal: controller.signal })).rejects.toBeInstanceOf(
+      ApiAbortError,
+    );
   });
 
   it('produces an ApiClientError subclass of Error', () => {

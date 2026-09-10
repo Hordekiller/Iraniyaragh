@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Box, Button, Stepper, Step, StepLabel } from '@mui/material';
+import { Box, Button, Stepper, Step, StepLabel, useMediaQuery, useTheme } from '@mui/material';
 
 export type FormWizardStep = {
   label: string;
@@ -33,6 +33,8 @@ export function FormWizard({
 }: FormWizardProps) {
   const [active, setActive] = useState(0);
   const isLast = active === steps.length - 1;
+  const theme = useTheme();
+  const isNarrow = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleNext = () => {
     if (beforeNext && !beforeNext(active)) return;
@@ -47,7 +49,12 @@ export function FormWizard({
 
   return (
     <Box>
-      <Stepper activeStep={active} alternativeLabel nonLinear={false}>
+      <Stepper
+        activeStep={active}
+        orientation={isNarrow ? 'vertical' : 'horizontal'}
+        alternativeLabel={!isNarrow}
+        nonLinear={false}
+      >
         {steps.map((step) => (
           <Step key={step.label}>
             <StepLabel>

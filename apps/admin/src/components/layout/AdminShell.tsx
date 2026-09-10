@@ -27,11 +27,17 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
             if (item.status === 'planned') {
               return (
-                <span className={`${styles.navItem} ${styles.planned}`} key={item.href} title="این بخش هنوز پیاده‌سازی نشده است">
-                  <Icon size={18} strokeWidth={1.8} />
-                  <span>{item.label}</span>
-                  <small>به‌زودی</small>
-                </span>
+<span
+                className={`${styles.navItem} ${styles.planned}`}
+                key={item.href}
+                role="button"
+                aria-disabled="true"
+                title="این بخش هنوز پیاده‌سازی نشده است"
+              >
+                <Icon size={18} strokeWidth={1.8} />
+                <span>{item.label}</span>
+                <small>به‌زودی</small>
+              </span>
               );
             }
 
