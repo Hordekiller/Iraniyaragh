@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-08
+Last reviewed: 2026-09-10
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -185,12 +185,32 @@ security/query review, OpenAPI drift confirmation and merge.
     accessibility notes (`docs/accessibility/auth-ux.md`).
 - Admin split: the admin UI slice stays Hordekiller-owned; `#139` did not change
   admin client behavior beyond item A.
+- `#147` merged at `c81f791`: unexpected cross-tab refresh-coordinator failures now
+  latch without rejecting the restore path (defensive catch in
+  `runCoordinatedRefresh`); the console diagnostic is sanitized and no longer leaks
+  the raw error. Verified 160 web unit tests + coverage gates, lint and build.
 
-## Open follow-up (PR #147, not yet on main)
+## Open pull-request work (not yet on main)
 
-- Unexpected cross-tab refresh coordinator failures latch without rejecting the
-  restore path (defensive catch in `runCoordinatedRefresh`, fixed sanitized console
-  diagnostic). This bullet moves under "Recently shipped on main" after `#147` merges.
+Sprint-1 #50 admin acceptance slices and the pending #133 re-review are tracked
+here; none of the bullets below is counted as delivered until merged on `main`.
+
+- `#149` — admin permission-aware navigation (`feat/50-permission-nav`, head
+  `9e4bbae`): the admin shell filters the sidebar by `useAuth().user.permissions`
+  via a pure `filterNavigationByPermissions` helper (permission-less items always
+  render, gated/planned items only when granted, empty groups collapse). No
+  API/contract change. Verified: admin 137 unit tests + coverage gates, lint,
+  typecheck, build. Review requested from Hordekiller (pushed by author).
+- `#150` — staff principal session bridge (`feat/50-principal-session`): after a
+  successful fixture staff login the verified principal and access token are
+  adopted into the app-wide `useAuth()` session (`establishSession`), so the shell
+  and `apiFetch` reflect the real staff user; tokens stay memory-only and storage
+  stays untouched. No API/contract change. Verified: admin 134 unit tests +
+  coverage gates, lint, typecheck, build. Review requested from Hordekiller
+  (pushed by author).
+- `#133` — admin settings/sms panel: all four blocked acceptance items are
+  addressed and the head is CI-green, but CHANGES_REQUESTED is still open and
+  re-review is pending on the exact head.
 
 Remaining for real customer sign-in: SMS delivery is wired to adapters only (no
 provider call from the OTP service yet) and the issued code has no dev-gated reveal,
