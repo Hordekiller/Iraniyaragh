@@ -184,7 +184,7 @@ export function DataTable<T>({
   };
 
   const visibleColumns = useMemo(
-    () => columns.filter((col) => visibleColumnIds.has(col.id)),
+    () => columns.filter((col) => col.hideable === false || visibleColumnIds.has(col.id)),
     [columns, visibleColumnIds],
   );
 

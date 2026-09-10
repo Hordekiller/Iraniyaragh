@@ -195,18 +195,31 @@ describe('DataTable', () => {
     expect(screen.getByRole('columnheader', { name: 'وضعیت' })).toBeInTheDocument();
   });
 
-  it('keeps hideable: false columns out of the visibility menu', () => {
+  it('always renders hideable: false columns and keeps them out of the visibility menu', () => {
     const pinnedColumns: DataTableColumn<TestRow>[] = [
       { id: 'name', label: 'نام', render: (row) => row.name, hideable: false },
       { id: 'status', label: 'وضعیت', render: (row) => row.status },
+      { id: 'identifier', label: 'شناسه', render: (row) => row.id },
     ];
     render(
       <DataTable columns={pinnedColumns} rows={rows} rowKey={(r) => r.id} enableClientView searchKeys={[]} />,
     );
 
+    expect(screen.getByRole('columnheader', { name: 'نام' })).toBeInTheDocument();
+    expect(screen.getByText('محصول اول')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: 'مدیریت ستون‌ها' }));
     expect(screen.queryByRole('menuitem', { name: /نام/ })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /وضعیت/ })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /وضعیت/ }));
+    expect(screen.getByRole('columnheader', { name: 'نام' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'وضعیت' })).not.toBeInTheDocument();
+    expect(screen.getByText('محصول اول')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'مدیریت ستون‌ها' }));
+    expect(screen.getByRole('menuitem', { name: /وضعیت/ })).toBeEnabled();
+    expect(screen.getByRole('menuitem', { name: /شناسه/ })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('renders an actions column with per-row actions', () => {
