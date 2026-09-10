@@ -12,10 +12,31 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOTS = ['src', 'public', 'index.html'];
-const REMOTE_URL = /https?:\/\//;
+const REMOTE_URL_SRC = /https?:\/\/[^\s"'<>)\]}]*/g;
 const REMOTE_CSS_IMPORT = /@import\s+url\([^)]*\/\//;
 const BINARY_EXT = new Set(['woff2', 'woff', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'avif']);
 const LEGAL_TXT = /(?:^|\/)(OFL\.txt|LICEN[CS]E.*|NOTICE.*|COPYING.*)$/i;
+
+/**
+ * Outbound links are user navigation, not runtime asset fetches (navigating
+ * to an `<a href>` happens only on click and never ships a resource request
+ * from the page itself). These domains are permitted as link destinations
+ * only; anything else must stay self-hosted so the page issues zero remote
+ * resource requests.
+ */
+const NAVIGATION_ONLY_DOMAINS = ['instagram.com'];
+
+function remoteUrls(content) {
+  const matches = [];
+  const re = new RegExp(REMOTE_URL_SRC.source, 'g');
+  let match = null;
+  while ((match = re.exec(content)) !== null) {
+    if (!NAVIGATION_ONLY_DOMAINS.some(domain => match[0].includes(domain))) {
+      matches.push(match[0]);
+    }
+  }
+  return matches;
+}
 
 function isLegalText(file) {
   return LEGAL_TXT.test(file);
@@ -50,7 +71,9 @@ for (const root of ROOTS) {
   for (const file of collectFiles(target)) {
     if (BINARY_EXT.has(file.split('.').pop().toLowerCase())) continue;
     const content = contentToInspect(file, readFileSync(file, 'utf8'));
-    if (REMOTE_URL.test(content)) violations.push(`  - ${file}: remote URL reference`);
+    for (const url of remoteUrls(content)) {
+      violations.push(`  - ${file}: remote asset URL reference (${url})`);
+    }
     if (REMOTE_CSS_IMPORT.test(content)) violations.push(`  - ${file}: remote CSS @import`);
   }
 }

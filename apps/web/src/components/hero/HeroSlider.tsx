@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Pause, Play, Star } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { heroSlides, heroTrustPoints, quickStats } from '../../data/prototype'
-import { useToast } from '../feedback/toast-context'
+import { formatPersianNumber, toPersianDigits } from '../../lib/format'
+import { HERO_PROMO, SECTION_IDS } from '../../lib/site-config'
+import { ROUTES } from '../../lib/routes'
 
 const SLIDE_INTERVAL_MS = 5000
 
@@ -11,12 +14,17 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+function slideCounter(current: number, total: number): string {
+  const pad = (n: number) => toPersianDigits(String(n).padStart(2, '0'))
+  return `${pad(current + 1)} / ${pad(total)}`
+}
+
 export function HeroSlider() {
   const [activeSlide, setActiveSlide] = useState(0)
   const [interactionPaused, setInteractionPaused] = useState(false)
   const [manuallyPaused, setManuallyPaused] = useState(false)
   const [reducedMotion] = useState(prefersReducedMotion)
-  const { show } = useToast()
+  const navigate = useNavigate()
 
   const autoplayStopped = reducedMotion || manuallyPaused || interactionPaused
   const permanentlyPaused = reducedMotion || manuallyPaused
@@ -28,7 +36,7 @@ export function HeroSlider() {
   }, [autoplayStopped])
 
   return (
-    <section id="home" aria-label="اسلایدر پیشنهاد ویژه" className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
+    <section id={SECTION_IDS.home} aria-label="اسلایدر پیشنهاد ویژه" className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
       <div
         onMouseEnter={() => setInteractionPaused(true)}
         onMouseLeave={() => setInteractionPaused(false)}
@@ -39,7 +47,7 @@ export function HeroSlider() {
         <AnimatePresence mode="wait">
           {reducedMotion ? (
             <div key={activeSlide} className="absolute inset-0">
-              <img src={heroSlides[activeSlide].image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={heroSlides[activeSlide].image} alt={heroSlides[activeSlide].title} className="absolute inset-0 w-full h-full object-cover" />
               <div className={`absolute inset-0 bg-gradient-to-l ${heroSlides[activeSlide].gradient}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent lg:from-black/30" />
             </div>
@@ -52,7 +60,7 @@ export function HeroSlider() {
               transition={{ duration: 0.7, ease: 'easeOut' }}
               className="absolute inset-0"
             >
-              <img src={heroSlides[activeSlide].image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={heroSlides[activeSlide].image} alt={heroSlides[activeSlide].title} className="absolute inset-0 w-full h-full object-cover" />
               <div className={`absolute inset-0 bg-gradient-to-l ${heroSlides[activeSlide].gradient}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent lg:from-black/30" />
             </motion.div>
@@ -79,11 +87,8 @@ export function HeroSlider() {
               {heroSlides[activeSlide].desc}
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
-              <button onClick={() => show('رفتن به جشنواره')} className="h-12 px-7 rounded-full bg-[#C2410C] text-white font-extrabold text-sm hover:bg-[#A83509] transition flex items-center gap-2 shadow-lg shadow-[#C2410C]/25">
+              <button onClick={() => navigate(ROUTES.category(heroSlides[activeSlide].ctaSlug))} className="h-12 px-7 rounded-full bg-[#C2410C] text-white font-extrabold text-sm hover:bg-[#A83509] transition flex items-center gap-2 shadow-lg shadow-[#C2410C]/25">
                 {heroSlides[activeSlide].cta} <ArrowLeft size={18} className="bg-white/20 rounded-full p-0.5" />
-              </button>
-              <button onClick={() => show('دانلود کاتالوگ')} className="h-12 px-6 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold text-sm hover:bg-white hover:text-slate-900 transition flex items-center gap-2">
-                <Play size={16} className="fill-current" /> {heroSlides[activeSlide].cta2}
               </button>
             </div>
             <div className="hidden lg:flex items-center gap-6 mt-8 text-white/90 text-xs">
@@ -96,9 +101,9 @@ export function HeroSlider() {
 
         {/* Slider Controls */}
         <div className="absolute bottom-6 right-6 lg:right-auto lg:left-6 flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-2 bg-black/25 backdrop-blur-xl border border-white/15 rounded-full p-1.5">
-            <button onClick={() => setActiveSlide(s => (s - 1 + heroSlides.length) % heroSlides.length)} aria-label="اسلاید قبلی" className="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronRight size={18} /></button>
-            <button onClick={() => setActiveSlide(s => (s + 1) % heroSlides.length)} aria-label="اسلاید بعدی" className="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronLeft size={18} /></button>
+          <div className="flex items-center gap-2 bg-black/25 backdrop-blur-xl border border-white/15 rounded-full p-1.5">
+            <button onClick={() => setActiveSlide(s => (s - 1 + heroSlides.length) % heroSlides.length)} aria-label="اسلاید قبلی" className="w-8 h-8 lg:w-9 lg:h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronRight size={18} /></button>
+            <button onClick={() => setActiveSlide(s => (s + 1) % heroSlides.length)} aria-label="اسلاید بعدی" className="w-8 h-8 lg:w-9 lg:h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronLeft size={18} /></button>
           </div>
           <button
             onClick={() => setManuallyPaused(p => !p)}
@@ -119,7 +124,7 @@ export function HeroSlider() {
                 className={`transition-all duration-300 ${activeSlide === i ? 'w-8 h-2.5 bg-[#FF4D00] rounded-full' : 'w-2.5 h-2.5 bg-white/50 rounded-full hover:bg-white'}`}
               />
             ))}
-            <span className="mr-2 text-white/90 text-xs font-bold tabular-nums">۰{activeSlide + 1} / ۰۳</span>
+            <span className="mr-2 text-white/90 text-xs font-bold tabular-nums">{slideCounter(activeSlide, heroSlides.length)}</span>
           </div>
         </div>
 
@@ -127,23 +132,23 @@ export function HeroSlider() {
         <div className="hidden lg:block absolute top-6 left-6 w-[300px]">
           <div className="rounded-[20px] bg-white p-4 shadow-2xl">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">پیشنهاد امروز</span>
-              <span className="px-2.5 py-1 rounded-full bg-red-600 text-white text-[11px] font-black flex items-center gap-1"><Flame size={12} /> حراج</span>
+              <span className="text-xs font-bold text-slate-500">{HERO_PROMO.label}</span>
+              <span className="px-2.5 py-1 rounded-full bg-red-600 text-white text-[11px] font-black flex items-center gap-1"><Flame size={12} /> {HERO_PROMO.badge}</span>
             </div>
             <div className="flex gap-3 mt-3">
-              <img src="/images/tool2.jpg" alt="دریل بتن‌کن رونیکس 2701" className="w-20 h-20 rounded-2xl object-cover bg-slate-50" />
+              <img src={HERO_PROMO.image} alt={HERO_PROMO.productName} className="w-20 h-20 rounded-2xl object-cover bg-slate-50" />
               <div className="flex-1">
-                <div className="text-[13px] font-bold leading-5 text-slate-900 line-clamp-2">دریل بتن‌کن رونیکس 2701 + هدیه</div>
-                <div className="flex items-center gap-1 mt-1"><Star size={12} className="fill-amber-400 text-amber-400" /><span className="text-xs font-bold">۴.۹</span><span className="text-xs text-slate-500">(۲۱۲)</span></div>
+                <div className="text-[13px] font-bold leading-5 text-slate-900 line-clamp-2">{HERO_PROMO.productName}</div>
+                <div className="flex items-center gap-1 mt-1"><Star size={12} className="fill-amber-400 text-amber-400" /><span className="text-xs font-bold">{toPersianDigits(HERO_PROMO.rating)}</span><span className="text-xs text-slate-500">({toPersianDigits(HERO_PROMO.reviews)})</span></div>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-[#C2410C] font-black text-[15px]">۵,۱۲۰,۰۰۰</span><span className="text-xs text-slate-500 line-through">۶,۴۰۰,۰۰۰</span>
+                  <span className="text-[#C2410C] font-black text-[15px]">{formatPersianNumber(HERO_PROMO.price)}</span><span className="text-xs text-slate-500 line-through">{formatPersianNumber(HERO_PROMO.oldPrice)}</span>
                 </div>
               </div>
             </div>
             <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full w-[68%] bg-[#FF4D00] rounded-full" />
+              <div style={{ width: `${HERO_PROMO.soldPercent}%` }} className="h-full bg-[#FF4D00] rounded-full" />
             </div>
-            <div className="flex justify-between mt-1.5 text-[11px] font-medium text-slate-500"><span>فروخته شده ۶۸٪</span><span>باقی‌مانده ۳۲ عدد</span></div>
+            <div className="flex justify-between mt-1.5 text-[11px] font-medium text-slate-500"><span>فروخته شده {toPersianDigits(HERO_PROMO.soldPercent)}٪</span><span>باقی‌مانده {toPersianDigits(HERO_PROMO.remainingQty)} عدد</span></div>
           </div>
         </div>
       </div>

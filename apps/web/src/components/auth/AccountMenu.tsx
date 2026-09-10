@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { LogOut, UserRound } from 'lucide-react'
+import { LogOut, Package, UserRound } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../state/auth-context'
+import { ROUTES } from '../../lib/routes'
 
 type AccountMenuProps = {
   onOpenLogin: () => void
@@ -12,7 +14,7 @@ export function AccountMenu({ onOpenLogin }: AccountMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const logoutRef = useRef<HTMLButtonElement>(null)
+  const firstItemRef = useRef<HTMLAnchorElement>(null)
   const reduceMotion = useReducedMotion()
 
   const authenticated = state.phase === 'authenticated' && Boolean(state.principal)
@@ -34,7 +36,7 @@ export function AccountMenu({ onOpenLogin }: AccountMenuProps) {
       triggerRef.current?.focus()
     }
     if (!menuOpen) return
-    const focusFrame = requestAnimationFrame(() => logoutRef.current?.focus())
+    const focusFrame = requestAnimationFrame(() => firstItemRef.current?.focus())
     document.addEventListener('mousedown', handleClick)
     document.addEventListener('keydown', handleKeyDown)
     return () => {
@@ -93,8 +95,24 @@ export function AccountMenu({ onOpenLogin }: AccountMenuProps) {
               </div>
             </div>
             <div className="h-px bg-slate-100" />
+            <Link
+              ref={firstItemRef}
+              to={ROUTES.account}
+              onClick={() => setMenuOpen(false)}
+              role="menuitem"
+              className="mt-1 flex w-full items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
+            >
+              <UserRound size={16} /> حساب کاربری
+            </Link>
+            <Link
+              to={ROUTES.orders}
+              onClick={() => setMenuOpen(false)}
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
+            >
+              <Package size={16} /> سفارش‌های من
+            </Link>
             <button
-              ref={logoutRef}
               onClick={() => void handleLogout()}
               disabled={state.busy}
               role="menuitem"

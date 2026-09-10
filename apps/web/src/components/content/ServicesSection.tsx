@@ -1,18 +1,19 @@
-import { ArrowLeft } from 'lucide-react'
-import { brandStats, services } from '../../data/prototype'
+import { brandStats, customerTotal, services } from '../../data/prototype'
+import { SECTION_IDS, SUPPORT_HOURS } from '../../lib/site-config'
+import { formatPersianNumber } from '../../lib/format'
 
 export function ServicesSection() {
 
   return (
-    <section id="services" className="max-w-[1280px] mx-auto px-4 lg:px-6 mt-8">
+    <section id={SECTION_IDS.services} className="max-w-[1280px] mx-auto px-4 lg:px-6 mt-8">
       <div className="bg-white rounded-[24px] lg:rounded-[28px] p-4 lg:p-8">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h2 className="font-black text-[20px] lg:text-[22px] text-slate-900">چرا ۴۸ هزار استادکار، ایران یراق را انتخاب کرده‌اند؟</h2>
+            <h2 className="font-black text-[20px] lg:text-[22px] text-slate-900">چرا {formatPersianNumber(customerTotal)} استادکار، ایران یراق را انتخاب کرده‌اند؟</h2>
             <p className="text-slate-500 text-[13px] mt-1">خدماتی که کار شما را آسان‌تر می‌کند، نه سخت‌تر</p>
           </div>
           <div className="hidden lg:flex items-center gap-2 text-xs font-bold text-slate-500">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" /> پشتیبانی تا ۱۰ شب • حتی جمعه‌ها
+            <span className="w-2 h-2 rounded-full bg-emerald-500" /> {SUPPORT_HOURS}
           </div>
         </div>
 
@@ -26,7 +27,6 @@ export function ServicesSection() {
                 </div>
                 <div className="font-black text-slate-900 mt-4 leading-none">{s.title}</div>
                 <div className="text-[13px] leading-6 text-slate-500 mt-2">{s.desc}</div>
-                <div className="mt-3 inline-flex items-center gap-1 text-xs font-black text-slate-900">بیشتر بدانید <ArrowLeft size={14} /></div>
               </div>
             )
           })}

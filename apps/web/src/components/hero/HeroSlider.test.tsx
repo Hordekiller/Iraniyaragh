@@ -1,13 +1,20 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ToastProvider } from '../feedback/Toast'
 import { HeroSlider } from './HeroSlider'
 
-function Harness() {
+function Harness({ initialEntry = '/' }: { initialEntry?: string }) {
   return (
-    <ToastProvider>
-      <HeroSlider />
-    </ToastProvider>
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <ToastProvider>
+        <HeroSlider />
+      </ToastProvider>
+      <Routes>
+        <Route path="/" element={<span data-testid="page-home">خانه</span>} />
+        <Route path="/category/:slug" element={<span data-testid="page-category">دسته</span>} />
+      </Routes>
+    </MemoryRouter>
   )
 }
 
@@ -138,5 +145,14 @@ describe('HeroSlider', () => {
     expect(screen.getByRole('button', { name: 'اسلاید 1' })).toHaveAttribute('aria-current', 'true')
     expect(screen.getByRole('button', { name: /ادامه چرخش خودکار/ })).toBeDisabled()
     vi.unstubAllGlobals()
+  })
+
+  it('navigates to the category linked by the active slide CTA', () => {
+    vi.useFakeTimers()
+    const { getByTestId } = render(<Harness />)
+
+    fireEvent.click(screen.getByRole('button', { name: /مشاهده جشنواره|خرید اقساطی|شروع خرید/ }))
+
+    expect(getByTestId('page-category')).toBeInTheDocument()
   })
 })
