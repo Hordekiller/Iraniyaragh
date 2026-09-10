@@ -27,5 +27,7 @@ Read these documents before implementing business-critical features.
 20. `COMMERCE_EXPANSION_PLAN.md` — authoritative end-to-end expansion plan covering
     all commerce capabilities, dependency gates, two-contributor ownership,
     implementation methods, quality evidence, production readiness and governed growth.
+21. `AGENT_WORKSTREAMS.md` — independent Platform, Admin and User UI ownership,
+    shared-hotspot collision controls and integration handoffs.
 
 When code and documentation disagree, stop and resolve the discrepancy. Do not silently bypass a documented invariant.
