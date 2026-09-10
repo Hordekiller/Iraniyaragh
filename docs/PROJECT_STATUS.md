@@ -21,7 +21,7 @@ Current delivery confidence:
 | ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------- |
 | Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist           |
 | Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                           |
-| Customer/auth UX               | Partial           | Real HTTP client defaults in the storefront with silent restore (#50, PR #139 open); real OTP request + error/rate surface E2E'd; happy-path OTP verify gated on SMS delivery and a dev code-reveal |
+| Customer/auth UX               | Merged foundation | Real HTTP client defaults in the storefront with Web-Locks-serialized silent restore (#50 delivered via #139); real OTP request + error/rate surface E2E'd; happy-path OTP verify still gated on SMS delivery and a dev code-reveal |
 | Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice                  |
 | Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not          |
 | Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                  |
@@ -132,7 +132,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Capability    | What exists                                                | What prevents completion                                                        |
 | ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | RBAC          | Roles, seed and guard machinery                            | Every domain route still needs explicit allow/deny policy tests                 |
-| Customer Auth | API runtime; fixture UX            | Real HTTP client now defaults in the storefront (#50 PR #139 open); real OTP request + error/rate surface E2E'd (CI now runs Redis); happy-path sign-in needs SMS delivery + dev-reveal |
+| Customer Auth | API runtime; real HTTP storefront client merged via #139 | Real OTP request + error/rate surface E2E'd and cross-tab refresh Web-Locks-serialized (CI runs Redis); happy-path sign-in needs SMS delivery + dev-reveal |
 | Staff Auth    | Runtime and privileged lifecycle merged; fixture UX exists | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                 |
 | Catalog       | Contracts and API foundation merged via #103               | Media/pricing, admin UI and storefront integration                              |
 | Inventory     | Correct service core                                       | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI |
@@ -145,9 +145,10 @@ security/query review, OpenAPI drift confirmation and merge.
 ## Not implemented
 
 - Production SMS delivery and provider outage behavior.
-- Silent single-flight restore, cross-tab revocation handling and expired-state UX now exist on the #50
-  feature branch (real HTTP default, fixture only behind `VITE_FIXTURE_AUTH=true`); production
-  acceptance still requires live SMS, admin MFA/session UX and permission navigation.
+- Silent single-flight restore, cross-tab revocation handling and expired-state UX are
+  merged via #139 (real HTTP default, fixture only behind `VITE_FIXTURE_AUTH=true`);
+  production acceptance still requires live SMS, admin MFA/session UX and permission
+  navigation.
 - Media upload and S3 presigned flow; price history/effective pricing/VAT policy.
 - Inventory HTTP CRUD/commands, transfers, expiry worker and operator modules.
 - Server-priced cart, address, checkout and idempotent order creation.
@@ -161,32 +162,35 @@ security/query review, OpenAPI drift confirmation and merge.
 - Dynamic sitemap/robots contract, server-rendered public discovery pages,
   structured commerce data/feed, SEO/GEO observability and governed on-site AI.
 
-## Open PR work (not counted as delivered)
+## Recently shipped on main
 
-Feature branch `feat/50-auth-ux-e2e` — **PR #139 open** (base `1d2292f`, all CI gates green):
-
-- `contracts(auth)`: `AUTH_PASSWORD_POLICY` added to the public error codes and the
-  admin fixtures (#50 item A) — commit `b51aa51`.
-- `web(auth)`: the storefront AuthProvider now defaults to the real `AuthHttpClient`
-  (fixture only when `VITE_FIXTURE_AUTH=true`), with CSRF cookie reader, silent
-  Web-Locks-serialized cross-tab session restore, token-free refresh signals,
-  bounded lock acquisition, terminal-failure propagation across tabs, lifecycle
-  cleanup, no-retry latch after session/CSRF failures, `session-expired` forced
-  re-auth UI and memory-only tokens —
-  commit `1551348` plus the bounded cross-tab correction (child PR #145).
-  Verified: web 158 unit tests + CI coverage gates, contracts typecheck,
-  API 366 tests + lint + build, admin 130 tests, 26 storefront E2E specs.
-- `e2e(api)`: integrated rotation/replay/revocation evidence against the real API
-  (refresh cookie rotation, REPLAYED→family revoked→INVALID, logout/CSRF gating) —
-  commit `08ae512`.
-- `e2e(api)`: real customer-OTP request/verify surface (202 envelope, per-destination
-  60s 429 `RATE_LIMITED` + `Retry-After`, wrong/exhausted `AUTH_CHALLENGE_INVALID`,
-  DTO `INVALID_REQUEST`) — this commit. Requires Redis in the CI e2e job (added).
-- `#50 acceptance`: desktop/mobile screenshots (`docs/screenshots/auth/`) produced by
-  `pnpm --filter @iranyaragh/e2e screenshots` and accessibility notes in
-  `docs/accessibility/auth-ux.md` — this commit.
-- Admin split: Hordekiller owns the admin UI slice; this branch does not change
+- `#139` merged at `9db6b44` (squash of `b51aa51`, `1551348`, `1ae99f9`, `08ae512`
+  and the bounded cross-tab correction from child PR `#145`):
+  - `contracts(auth)`: `AUTH_PASSWORD_POLICY` added to the public error codes and the
+    admin fixtures (#50 item A).
+  - `web(auth)`: the storefront AuthProvider now defaults to the real `AuthHttpClient`
+    (fixture only when `VITE_FIXTURE_AUTH=true`), with CSRF cookie reader, silent
+    Web-Locks-serialized cross-tab session restore, token-free refresh signals,
+    bounded lock acquisition, terminal-failure propagation across tabs, lifecycle
+    cleanup, no-retry latch after session/CSRF failures, `session-expired` forced
+    re-auth UI and memory-only tokens. Verified: web 159 unit tests + CI coverage
+    gates, contracts typecheck, API 366 tests + lint + build, admin 130 tests,
+    26 storefront + api-http E2E specs.
+  - `e2e(api)`: integrated rotation/replay/revocation evidence against the real API
+    (refresh cookie rotation, REPLAYED→family revoked→INVALID, logout/CSRF gating)
+    and the real customer-OTP request/verify surface (202 envelope, per-destination
+    60s 429 `RATE_LIMITED` + `Retry-After`, wrong/exhausted `AUTH_CHALLENGE_INVALID`,
+    DTO `INVALID_REQUEST`); the CI e2e job runs a real Redis service.
+  - `#50 acceptance`: desktop/mobile screenshots (`docs/screenshots/auth/`) and
+    accessibility notes (`docs/accessibility/auth-ux.md`).
+- Admin split: the admin UI slice stays Hordekiller-owned; `#139` did not change
   admin client behavior beyond item A.
+
+## Open follow-up (PR #147, not yet on main)
+
+- Unexpected cross-tab refresh coordinator failures latch without rejecting the
+  restore path (defensive catch in `runCoordinatedRefresh`, fixed sanitized console
+  diagnostic). This bullet moves under "Recently shipped on main" after `#147` merges.
 
 Remaining for real customer sign-in: SMS delivery is wired to adapters only (no
 provider call from the OTP service yet) and the issued code has no dev-gated reveal,
