@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import type {
   Money,
   ProductListMeta,
@@ -5,6 +6,9 @@ import type {
   PublicProductMedia,
   VariantAttributeValue,
 } from '@iranyaragh/contracts'
+=======
+import type { Money, ProductListMeta, CategorySummary } from '@iranyaragh/contracts'
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 
 /**
  * Storefront-facing catalog view types.
@@ -16,6 +20,7 @@ import type {
  * digits) stays in `lib/format.ts` and components.
  */
 
+<<<<<<< HEAD
 export type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'UNKNOWN'
 
 export type CatalogVariant = {
@@ -26,6 +31,9 @@ export type CatalogVariant = {
   attributes: VariantAttributeValue[]
   stockStatus: StockStatus
 }
+=======
+export type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK'
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 
 export type CatalogProduct = {
   id: string
@@ -34,6 +42,7 @@ export type CatalogProduct = {
   brand: string | null
   category: { id: string; name: string; slug: string } | null
   image: string
+<<<<<<< HEAD
   /** Ordered ready media gallery for the product detail page (contract union). */
   media: PublicProductMedia[]
   /** Sellable choices. List projections omit these; detail projections populate them. */
@@ -43,6 +52,11 @@ export type CatalogProduct = {
   price: Money
   /** False when the public API omitted a sellable price; zero must not impersonate it. */
   priceAvailable?: boolean
+=======
+  description: string | null
+  /** Lowest active-variant sale price, in IRR (Rial). */
+  price: Money
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
   oldPrice: Money | null
   rating: number | null
   reviews: number

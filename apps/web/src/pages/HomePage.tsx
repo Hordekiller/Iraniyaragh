@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search } from 'lucide-react'
@@ -48,10 +49,49 @@ export function HomePage() {
     setError(false)
     setCatalog(null)
     setAttempt(current => current + 1)
+=======
+import { useEffect, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import type { Product } from '../types/content'
+import { HeroSlider } from '../components/hero/HeroSlider'
+import { CategoryGrid } from '../components/catalog/CategoryGrid'
+import { PopularTools } from '../components/catalog/PopularTools'
+import { Bestsellers } from '../components/catalog/Bestsellers'
+import { SpecialCollection } from '../components/catalog/SpecialCollection'
+import { BlogSection } from '../components/content/BlogSection'
+import { ServicesSection } from '../components/content/ServicesSection'
+import { NewsletterBrands } from '../components/content/NewsletterBrands'
+import { ROUTES } from '../lib/routes'
+import { SECTION_IDS } from '../lib/site-config'
+
+type HomePageLocationState = {
+  scrollToCategories?: boolean
+}
+
+export function HomePage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const handledKeyRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const state = location.state as HomePageLocationState | null
+    if (!state?.scrollToCategories) return
+    if (handledKeyRef.current === location.key) return
+    handledKeyRef.current = location.key
+    document.getElementById(SECTION_IDS.categories)?.scrollIntoView({ behavior: 'smooth' })
+    navigate(ROUTES.home, { replace: true, state: {} })
+  }, [location.state, location.key, navigate])
+
+  function handleSelectProduct(product: Product) {
+    if (product.slug) {
+      navigate(ROUTES.product(product.slug))
+    }
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
   }
 
   return (
     <div>
+<<<<<<< HEAD
       {fixtureCatalogEnabled && (
         <div className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4" role="note">
           <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
@@ -114,6 +154,20 @@ export function HomePage() {
         </>
       )}
       <NewsletterStatus />
+=======
+      <HeroSlider />
+      <CategoryGrid />
+      <PopularTools onSelectProduct={handleSelectProduct} />
+
+      <section className="max-w-[1280px] mx-auto px-4 lg:px-6 mt-6 grid lg:grid-cols-12 gap-6">
+        <Bestsellers onSelectProduct={handleSelectProduct} />
+        <SpecialCollection onSelectProduct={handleSelectProduct} />
+      </section>
+
+      <BlogSection />
+      <ServicesSection />
+      <NewsletterBrands />
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
     </div>
   )
 }

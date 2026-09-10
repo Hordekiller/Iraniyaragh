@@ -4,6 +4,10 @@ import { ToastProvider } from './components/feedback/Toast'
 import { AuthProvider } from './state/AuthProvider'
 import { CatalogProvider } from './state/CatalogProvider'
 import { CartProvider } from './state/CartProvider'
+<<<<<<< HEAD
+=======
+import { OrderProvider } from './state/OrderProvider'
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 import { AppLayout } from './components/layout/AppLayout'
 import { HomePage } from './pages/HomePage'
 import { ROUTE_PATHS } from './lib/routes'
@@ -15,7 +19,10 @@ const BestsellersPage = lazy(() => import('./pages/BestsellersPage').then(module
 const CartPage = lazy(() => import('./pages/CartPage').then(module => ({ default: module.CartPage })))
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then(module => ({ default: module.CheckoutPage })))
 const PaymentPage = lazy(() => import('./pages/PaymentPage').then(module => ({ default: module.PaymentPage })))
+<<<<<<< HEAD
 const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage').then(module => ({ default: module.PaymentReturnPage })))
+=======
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 const AccountPage = lazy(() => import('./pages/AccountPage').then(module => ({ default: module.AccountPage })))
 const OrdersPage = lazy(() => import('./pages/OrdersPage').then(module => ({ default: module.OrdersPage })))
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage').then(module => ({ default: module.OrderDetailPage })))
@@ -36,6 +43,10 @@ export default function App() {
         <AuthProvider>
           <CatalogProvider>
             <CartProvider>
+<<<<<<< HEAD
+=======
+              <OrderProvider>
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
                 <Suspense fallback={<RouteLoading />}>
                   <Routes>
                     <Route element={<AppLayout />}>
@@ -47,8 +58,11 @@ export default function App() {
                       <Route path={ROUTE_PATHS.cart} element={<CartPage />} />
                       <Route path={ROUTE_PATHS.checkout} element={<CheckoutPage />} />
                       <Route path={ROUTE_PATHS.payment} element={<PaymentPage />} />
+<<<<<<< HEAD
                       <Route path={ROUTE_PATHS.paymentResult} element={<PaymentPage returnMode />} />
                       <Route path={ROUTE_PATHS.paymentReturn} element={<PaymentReturnPage />} />
+=======
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
                       <Route path={ROUTE_PATHS.account} element={<AccountPage />} />
                       <Route path={ROUTE_PATHS.orders} element={<OrdersPage />} />
                       <Route path={ROUTE_PATHS.order} element={<OrderDetailPage />} />
@@ -56,6 +70,10 @@ export default function App() {
                     </Route>
                   </Routes>
                 </Suspense>
+<<<<<<< HEAD
+=======
+              </OrderProvider>
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
             </CartProvider>
           </CatalogProvider>
         </AuthProvider>

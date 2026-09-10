@@ -1,12 +1,20 @@
+<<<<<<< HEAD
 import { useState } from 'react'
 import { Outlet, useLocation, useSearchParams } from 'react-router-dom'
+=======
+import { useCallback, useState } from 'react'
+import { Outlet, useSearchParams } from 'react-router-dom'
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 import { TopBar } from './TopBar'
 import { SiteHeader } from './SiteHeader'
 import { MobileBottomNav } from './MobileBottomNav'
 import { SiteFooter } from './SiteFooter'
 import { LoginDialog } from '../auth/LoginDialog'
 import { SECTION_IDS } from '../../lib/site-config'
+<<<<<<< HEAD
 import { useAuth } from '../../state/auth-context'
+=======
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 
 /**
  * Shared storefront shell. Owns the login dialog and header search state, and
@@ -14,11 +22,18 @@ import { useAuth } from '../../state/auth-context'
  * wrap this layout in App.
  */
 export function AppLayout() {
+<<<<<<< HEAD
   const auth = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [searchParams] = useSearchParams()
   const location = useLocation()
+=======
+  const [loginOpen, setLoginOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchParams] = useSearchParams()
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
   const urlQuery = searchParams.get('q') ?? ''
 
   const [resolvedUrlQuery, setResolvedUrlQuery] = useState(urlQuery)
@@ -27,10 +42,15 @@ export function AppLayout() {
     setSearchQuery(urlQuery)
   }
 
+<<<<<<< HEAD
   const loginOpen =
     auth.state.phase === 'mobile' ||
     auth.state.phase === 'code' ||
     auth.state.phase === 'session-expired'
+=======
+  const openLogin = useCallback(() => setLoginOpen(true), [])
+  const closeLogin = useCallback(() => setLoginOpen(false), [])
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 
   return (
     <>
@@ -45,6 +65,7 @@ export function AppLayout() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         showSearch={showSearch}
+<<<<<<< HEAD
         onToggleSearch={() => setShowSearch((s) => !s)}
         onOpenLogin={auth.open}
       />
@@ -57,10 +78,17 @@ export function AppLayout() {
         {routeAnnouncement(location.pathname)}
       </div>
       <main id={SECTION_IDS.mainContent} tabIndex={-1}>
+=======
+        onToggleSearch={() => setShowSearch(s => !s)}
+        onOpenLogin={openLogin}
+      />
+      <main id={SECTION_IDS.mainContent}>
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
         <Outlet />
       </main>
       <SiteFooter />
 
+<<<<<<< HEAD
       <MobileBottomNav
         onOpenSearch={() => setShowSearch(true)}
         onOpenLogin={auth.open}
@@ -81,3 +109,10 @@ function routeAnnouncement(pathname: string): string {
   if (pathname.startsWith('/product/')) return 'صفحه محصول'
   return 'صفحه جدید'
 }
+=======
+      <MobileBottomNav onOpenSearch={() => setShowSearch(true)} />
+      <LoginDialog open={loginOpen} onClose={closeLogin} />
+    </>
+  )
+}
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)

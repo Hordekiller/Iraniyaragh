@@ -36,6 +36,7 @@ export const IRAN_PROVINCES = [
 
 export type IranProvince = (typeof IRAN_PROVINCES)[number]
 
+<<<<<<< HEAD
 /** Stable uppercase codes accepted by the checkout address contract. */
 export const IRAN_PROVINCE_CODES: Record<IranProvince, string> = {
   'آذربایجان شرقی': 'EAZ',
@@ -75,6 +76,10 @@ export function normalizeIranDigits(input: string): string {
   return toLatinDigits(input).replace(/[٠-٩]/g, (digit) =>
     String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)),
   )
+=======
+export function normalizeIranDigits(input: string): string {
+  return toLatinDigits(input).replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 }
 
 /** Returns the canonical domestic form: 09xxxxxxxxx. */

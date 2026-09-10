@@ -1,0 +1,65 @@
+import { useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react'
+import { specialProducts } from '../../data/prototype'
+import type { Product } from '../../types/content'
+import { scrollCarousel } from '../../lib/carousel'
+import { toPersianDigits } from '../../lib/format'
+import { ROUTES } from '../../lib/routes'
+import { SPECIAL_COLLECTION } from '../../lib/site-config'
+
+const TOMAN_PER_MILLION = 1_000_000
+
+type SpecialCollectionProps = {
+  onSelectProduct: (product: Product) => void
+}
+
+export function SpecialCollection({ onSelectProduct }: SpecialCollectionProps) {
+  const specialRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
+  return (
+    <div className="lg:col-span-4 bg-[#0F172A] rounded-[24px] lg:rounded-[28px] p-4 lg:p-6 text-white relative overflow-hidden">
+      <div className="absolute -left-10 -top-10 w-40 h-40 rounded-full bg-[#FF4D00] blur-[60px] opacity-30" />
+      <div className="absolute -right-10 bottom-10 w-40 h-40 rounded-full bg-[#F59E0B] blur-[50px] opacity-20" />
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#FF4D00] flex items-center justify-center font-black">R</div>
+            <div>
+              <h2 className="font-black text-[15px] leading-none">{SPECIAL_COLLECTION.title}</h2>
+              <div className="text-white/60 text-xs font-medium">{SPECIAL_COLLECTION.subtitle}</div>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full bg-white text-slate-900 text-[11px] font-black">{toPersianDigits(specialProducts.length)} کالا</span>
+        </div>
+        <p className="text-white/70 text-xs leading-6 mt-3">{SPECIAL_COLLECTION.description}</p>
+
+        <div ref={specialRef} className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory mt-5 pb-2 -mx-1 px-1">
+          {specialProducts.map(p => (
+            <button key={p.id} type="button" onClick={() => onSelectProduct(p)} className="snap-start shrink-0 w-[170px] bg-white rounded-[20px] p-2.5 text-slate-900 cursor-pointer hover:shadow-xl transition text-right">
+              <div className="relative rounded-2xl overflow-hidden bg-slate-50 h-[120px]">
+                <img src={p.image} alt="" className="w-full h-full object-cover" />
+                <span className="absolute top-2 right-2 px-2 py-1 rounded-full bg-[#0F172A] text-white text-[10px] font-bold">{p.badge || 'PRO'}</span>
+              </div>
+              <div className="mt-2.5 px-1">
+                <div className="text-[12.5px] font-bold leading-5 line-clamp-2 min-h-[40px]">{p.title}</div>
+                <div className="flex items-center gap-1 mt-1"><Star size={11} aria-hidden="true" className="fill-amber-400 text-amber-400" /><span className="text-xs font-bold">{p.rating}</span></div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="font-black text-sm">{(p.price / TOMAN_PER_MILLION).toFixed(1)}<span className="text-[10px] mr-1">م تومن</span></span>
+                  <span className="w-7 h-7 rounded-full bg-[#FF4D00] text-white flex items-center justify-center"><ArrowLeft size={14} /></span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <button onClick={() => scrollCarousel(specialRef, 'right')} aria-label="پیمایش به راست" className="flex-1 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center hover:bg-white hover:text-slate-900 transition"><ChevronRight size={18} /></button>
+          <button onClick={() => scrollCarousel(specialRef, 'left')} aria-label="پیمایش به چپ" className="flex-1 h-10 rounded-full bg-white/10 border border-white/15 flex items-center justify-center hover:bg-white hover:text-slate-900 transition"><ChevronLeft size={18} /></button>
+          <button onClick={() => navigate(`${ROUTES.search}?q=${encodeURIComponent(specialProducts[0].brand)}`)} className="flex-[2] h-10 rounded-full bg-[#C2410C] font-black text-sm hover:bg-[#A83509] transition">نمایش کلکسیون</button>
+        </div>
+      </div>
+    </div>
+  )
+}

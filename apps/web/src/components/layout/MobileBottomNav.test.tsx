@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MobileBottomNav } from './MobileBottomNav'
 import { ToastProvider } from '../feedback/Toast'
 import { ROUTES } from '../../lib/routes'
+<<<<<<< HEAD
 import { AuthProvider } from '../../state/AuthProvider'
 
 function Harness({ onOpenSearch = vi.fn(), onOpenLogin = vi.fn() }: { onOpenSearch?: () => void; onOpenLogin?: () => void }) {
@@ -13,6 +14,14 @@ function Harness({ onOpenSearch = vi.fn(), onOpenLogin = vi.fn() }: { onOpenSear
         <MobileBottomNav onOpenSearch={onOpenSearch} onOpenLogin={onOpenLogin} />
         <RouteProbe />
       </AuthProvider>
+=======
+
+function Harness({ onOpenSearch = vi.fn() }: { onOpenSearch?: () => void }) {
+  return (
+    <ToastProvider>
+      <MobileBottomNav onOpenSearch={onOpenSearch} />
+      <RouteProbe />
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
     </ToastProvider>
   )
 }
@@ -49,17 +58,48 @@ describe('MobileBottomNav', () => {
     expect(onOpenSearch).toHaveBeenCalledTimes(1)
   })
 
+<<<<<<< HEAD
   it('opens login from the profile button for a guest', () => {
     const onOpenLogin = vi.fn()
     render(
       <MemoryRouter initialEntries={[ROUTES.home]}>
         <Harness onOpenLogin={onOpenLogin} />
+=======
+  it('navigates to the account page from the profile button', () => {
+    render(
+      <MemoryRouter initialEntries={[ROUTES.home]}>
+        <Harness />
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
       </MemoryRouter>,
     )
 
     fireEvent.click(screen.getByRole('button', { name: /حساب کاربری/ }))
 
-    expect(onOpenLogin).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.account)
+  })
+
+  it('navigates home from the home button', () => {
+    render(
+      <MemoryRouter initialEntries={['/elsewhere']}>
+        <Harness />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /خانه/ }))
+
+    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.home)
+  })
+
+  it('routes the categories button to home when not on the home page', () => {
+    render(
+      <MemoryRouter initialEntries={['/elsewhere']}>
+        <Harness />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /دسته‌بندی‌ها/ }))
+
+    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.home)
   })
 
   it('navigates home from the home button', () => {

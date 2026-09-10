@@ -10,6 +10,7 @@
   src: url('/fonts/Vazirmatn[wght].woff2') format('woff2');
 }
 
+<<<<<<< HEAD
 :where(a, button, input, select, textarea):focus-visible {
   outline: 3px solid #f59e0b;
   outline-offset: 2px;
@@ -19,6 +20,8 @@ main:focus {
   outline: none;
 }
 
+=======
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 @layer utilities {
   .scrollbar-none {
     scrollbar-width: none;

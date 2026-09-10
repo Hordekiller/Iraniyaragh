@@ -8,14 +8,21 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود',
   LOW_STOCK: 'فقط چند عدد باقی مانده',
   OUT_OF_STOCK: 'ناموجود',
+<<<<<<< HEAD
   UNKNOWN: 'موجودی در حال بررسی',
+=======
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 }
 
 const STOCK_CLASS: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   LOW_STOCK: 'bg-amber-50 text-amber-700 border-amber-200',
+<<<<<<< HEAD
   OUT_OF_STOCK: 'bg-slate-100 text-slate-700 border-slate-200',
   UNKNOWN: 'bg-slate-100 text-slate-700 border-slate-200',
+=======
+  OUT_OF_STOCK: 'bg-slate-100 text-slate-500 border-slate-200',
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 }
 
 export function ProductCard({ product }: { product: CatalogProduct }) {
@@ -57,12 +64,19 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
         </div>
 
         <div className="mt-3 flex items-baseline gap-1.5">
+<<<<<<< HEAD
           <span className="font-black text-[15px] text-slate-900">
             {product.priceAvailable === false ? 'قیمت در دسترس نیست' : formatToman(product.price.amount)}
           </span>
         </div>
         {oldToman != null && (
           <div className="text-xs text-slate-600 line-through">{formatToman(oldToman)}</div>
+=======
+          <span className="font-black text-[15px] text-slate-900">{formatToman(product.price.amount)}</span>
+        </div>
+        {oldToman != null && (
+          <div className="text-xs text-slate-400 line-through">{formatToman(oldToman)}</div>
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
         )}
 
         <div className={`mt-3 inline-flex self-start px-2.5 py-1 rounded-full text-[11px] font-bold border ${STOCK_CLASS[product.stockStatus]}`}>

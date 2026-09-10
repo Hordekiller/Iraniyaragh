@@ -1,18 +1,28 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Home, LayoutGrid, MessageCircle, Search, User } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
+<<<<<<< HEAD
 import { HAS_SITE_PHONE, SECTION_IDS, SITE_PHONE } from '../../lib/site-config'
 import { useAuth } from '../../state/auth-context'
+=======
+import { PHONE_MAIN, SECTION_IDS } from '../../lib/site-config'
+import { toLatinDigits } from '../../lib/format'
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 
 type MobileBottomNavProps = {
   onOpenSearch: () => void
-  onOpenLogin: () => void
 }
 
+<<<<<<< HEAD
 export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { state: authState } = useAuth()
+=======
+export function MobileBottomNav({ onOpenSearch }: MobileBottomNavProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 
   function openCategories() {
     const scrollToCategories = () => {
@@ -62,6 +72,7 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavPr
               <span className="text-[11px] font-bold leading-none text-slate-500">دسته‌ها</span>
             </button>
 
+<<<<<<< HEAD
             {HAS_SITE_PHONE && (
               <a
                 href={`tel:${SITE_PHONE}`}
@@ -78,6 +89,19 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavPr
                 if (authState.phase === 'authenticated') navigate(ROUTES.account)
                 else onOpenLogin()
               }}
+=======
+            <a
+              href={`tel:${toLatinDigits(PHONE_MAIN).replace(/[^0-9]/g, '')}`}
+              aria-label="پشتیبانی"
+              className="flex flex-col items-center gap-1 min-w-[64px] py-1.5 transition text-slate-500"
+            >
+              <MessageCircle size={22} strokeWidth={1.9} />
+              <span className="text-[11px] font-medium leading-none text-slate-500">پشتیبانی</span>
+            </a>
+
+            <button
+              onClick={() => navigate(ROUTES.account)}
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
               aria-label="حساب کاربری"
               className="flex flex-col items-center gap-1 min-w-[64px] py-1.5 transition text-slate-500"
             >

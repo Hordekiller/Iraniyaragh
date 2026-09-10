@@ -14,8 +14,11 @@ export const ROUTES = {
   orders: '/orders',
   order: (id: string) => `/orders/${id}`,
   payment: (id: string) => `/payment/${id}`,
+<<<<<<< HEAD
   paymentResult: (id: string) => `/payment/${id}/result`,
   paymentReturn: '/payment-return',
+=======
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 } as const
 
 /** Route path patterns for react-router `<Route path>` definitions. */
@@ -31,6 +34,9 @@ export const ROUTE_PATHS = {
   orders: '/orders',
   order: '/orders/:id',
   payment: '/payment/:id',
+<<<<<<< HEAD
   paymentResult: '/payment/:id/result',
   paymentReturn: '/payment-return',
+=======
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
 } as const

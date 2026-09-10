@@ -35,12 +35,19 @@ export class CatalogFixtureClient implements CatalogApi {
 
     if (query.search) {
       const term = query.search.trim().toLowerCase();
+<<<<<<< HEAD
       const tokens = term.split(/\s+/).filter(Boolean)
+=======
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
       items = items.filter(p => {
         const haystack = [p.name, p.brand ?? '', p.category?.name ?? '']
           .join(' ')
           .toLowerCase();
+<<<<<<< HEAD
         return tokens.every(token => haystack.includes(token));
+=======
+        return haystack.includes(term);
+>>>>>>> b2d024c (feat(web): harden storefront purchase flow)
       });
     }
 
