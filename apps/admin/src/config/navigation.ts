@@ -29,6 +29,29 @@ export type NavigationGroup = {
   items: NavigationItem[];
 };
 
+/**
+ * Returns the navigation groups visible to a principal: an item is shown when
+ * it declares no permission or the principal holds that permission; a group
+ * whose items are all filtered out is hidden entirely. Planned entries obey the
+ * same rule (they are only rendered as disabled placeholders when permitted).
+ */
+export function filterNavigationByPermissions(
+  groups: readonly NavigationGroup[],
+  permissions: readonly string[],
+): NavigationGroup[] {
+  const allowed = new Set(permissions);
+  const result: NavigationGroup[] = [];
+  for (const group of groups) {
+    const items = group.items.filter(
+      item => item.permission === undefined || allowed.has(item.permission),
+    );
+    if (items.length > 0) {
+      result.push({ ...group, items });
+    }
+  }
+  return result;
+}
+
 export const navigation: NavigationGroup[] = [
   {
     label: 'نمای کلی',

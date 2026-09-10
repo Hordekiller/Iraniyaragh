@@ -3,19 +3,23 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bell, ChevronLeft, LogOut, Menu, Search, X } from 'lucide-react';
-import { navigation } from '@/config/navigation';
+import { filterNavigationByPermissions, navigation } from '@/config/navigation';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import styles from './AdminShell.module.css';
 
 export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, signOut } = useAuth();
+  const { isAuthenticated, signOut, user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const closeMenuRef = useRef<HTMLButtonElement>(null);
+  const permittedNavigation = useMemo(
+    () => filterNavigationByPermissions(navigation, user?.permissions ?? []),
+    [user],
+  );
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -103,7 +107,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
         </div>
 
         <nav className={styles.navigation}>
-          {navigation.map(group => (
+          {permittedNavigation.map(group => (
             <div className={styles.navGroup} key={group.label}>
               <span className={styles.groupLabel}>{group.label}</span>
               {group.items.map(item => {

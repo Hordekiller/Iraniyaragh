@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   refresh: vi.fn(),
   signOut: vi.fn(async () => undefined),
+  permissions: ['catalog.read'],
 }));
 
 vi.mock('next/navigation', () => ({
@@ -15,7 +16,12 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({
-    user: { userId: 'dev-admin', sessionId: 's-1', authenticationLevel: 'STAFF_MFA', permissions: ['catalog.read'] },
+    user: {
+      userId: 'dev-admin',
+      sessionId: 's-1',
+      authenticationLevel: 'STAFF_MFA',
+      permissions: mocks.permissions,
+    },
     isAuthenticated: true,
     signIn: vi.fn(),
     signOut: mocks.signOut,
@@ -27,6 +33,7 @@ describe('AdminShell', () => {
     mocks.replace.mockReset();
     mocks.refresh.mockReset();
     mocks.signOut.mockReset();
+    mocks.permissions = ['catalog.read'];
   });
 
   it('renders the authenticated sidebar and dashboard link', () => {
@@ -90,5 +97,57 @@ describe('AdminShell', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'منوی اصلی' })).not.toBeInTheDocument();
     expect(document.body.style.overflow).not.toBe('hidden');
+  });
+
+  it('shows only navigation the principal is permitted to see and hides empty groups', () => {
+    mocks.permissions = ['catalog.read', 'inventory.read', 'reports.read'];
+    render(
+      <AdminShell>
+        <div>content</div>
+      </AdminShell>,
+    );
+
+    const sidebar = screen.getByRole('complementary', { name: 'منوی اصلی' });
+    expect(within(sidebar).getByRole('link', { name: /داشبورد/ })).toBeVisible();
+    expect(within(sidebar).getByText('کالا و SKU')).toBeInTheDocument();
+    expect(within(sidebar).getByText('گزارش‌های عملیاتی')).toBeInTheDocument();
+
+    expect(within(sidebar).queryByText('سفارش‌ها')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('پرداخت‌ها')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('مشتریان')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('فروش و مشتری')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('نقش‌ها و دسترسی')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('سیستم')).not.toBeInTheDocument();
+  });
+
+  it('shows only the permission-free dashboard for a principal without permissions', () => {
+    mocks.permissions = [];
+    render(
+      <AdminShell>
+        <div>content</div>
+      </AdminShell>,
+    );
+
+    const sidebar = screen.getByRole('complementary', { name: 'منوی اصلی' });
+    expect(within(sidebar).getByRole('link', { name: /داشبورد/ })).toBeVisible();
+    expect(within(sidebar).queryByText('کالا و SKU')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('تنظیمات')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('کالا و انبار')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('سیستم')).not.toBeInTheDocument();
+  });
+
+  it('keeps a partially granted group visible with only its granted entries', () => {
+    mocks.permissions = ['settings.manage'];
+    render(
+      <AdminShell>
+        <div>content</div>
+      </AdminShell>,
+    );
+
+    const sidebar = screen.getByRole('complementary', { name: 'منوی اصلی' });
+    expect(within(sidebar).getByText('سیستم')).toBeInTheDocument();
+    expect(within(sidebar).getByText('تنظیمات')).toBeInTheDocument();
+    expect(within(sidebar).queryByText('نقش‌ها و دسترسی')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('گزارش ممیزی')).not.toBeInTheDocument();
   });
 });
