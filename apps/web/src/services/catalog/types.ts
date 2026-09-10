@@ -53,7 +53,7 @@ export type CatalogListResult = {
 /**
  * The catalog access port used by the storefront. A real HTTP client and the
  * contract fixture client are swappable without touching the UI (parallel-work
- * model; see docs/AGENT_WORKSTREAMS.md, User UI lane). All methods resolve
+ * model; see docs/COLLABORATION.md and the User UI lane ownership). All methods resolve
  * view models or reject — they never silently fake data in a shipped build.
  */
 export interface CatalogApi {

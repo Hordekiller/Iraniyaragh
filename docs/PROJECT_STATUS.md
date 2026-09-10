@@ -40,7 +40,7 @@ foundation, and G5–G10 have not reached integrated completion.
   #81, #114 and #115.
 - Local-only or untracked material is never counted as delivered product capability.
 
-### Local/uncommitted storefront routing work (branch `feat/user-ui-storefront`)
+### Local storefront routing work (committed locally on `feat/admin-catalog-slice`)
 
 - Single-page routed customer purchase flow inside `apps/web`: home, category,
   search, bestsellers, product, cart, checkout, mock payment, account, orders,
@@ -91,7 +91,7 @@ foundation, and G5–G10 have not reached integrated completion.
 - Local commit `b2d024c` contains the storefront slice; it is not pushed or merged and
   therefore remains local-only capability per the rule above.
 
-### Local/uncommitted admin Orders read slice (branch `feat/admin-catalog-slice`)
+### Local admin Orders read slice (committed locally on `feat/admin-catalog-slice`)
 
 Local commit `1b943bb` contains this Orders/Settings read slice; it is not pushed or
 merged. Catalog files remain untracked and owned by the parallel catalog lane.
@@ -115,7 +115,7 @@ merged. Catalog files remain untracked and owned by the parallel catalog lane.
 - Roles/support nav: the "سفارشها" navigation entry is now live (was `planned`); the
   GlobalSearch planned-item test was updated to target "پرداختها" instead.
 
-### Local/uncommitted UI completion sweep (branch `feat/admin-catalog-slice`)
+### Local UI completion sweep (committed locally on `feat/admin-catalog-slice`)
 
 - Storefront (`apps/web`): category/blog/hero/bestseller sections wrapped in dark
   panels and given real marquee backgrounds, alt text and dynamic rating stars;

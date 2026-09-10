@@ -60,6 +60,21 @@ exact results, manual scenarios, intentionally excluded backend claims and revie
 | --- | --- | --- | --- | --- |
 | Storefront cart/checkout/order hardening + admin UI sweep | Local commits `d998220`, `b2d024c`, `80c42da`, `1b943bb`; unpushed/unmerged | Maddyrampant / Hordekiller | Review `docs/HANDOFF_2026-09-10.md` and `docs/CONTRACT_PROPOSALS/cart-checkout-order.md`; answer decision inputs 1–5 (cart persistence, checkout draft/reservation contract, address policy, shipping-quote authority, payment provider) | A answers inputs; a contract PR for cart/checkout ports lands before further parallel work |
 
+Open coordination flags that are intentionally not changed by B:
+
+- `apps/admin/src/config/navigation.ts` contains live-status changes for catalog, orders and
+  settings in one shared file; A must confirm catalog ownership before that file is merged.
+- `apps/admin/src/{app,components,lib}/**/catalog/**` remains untracked parallel-lane work.
+- The untracked `User UI/` prototype has no workspace references but unknown ownership; it is
+  preserved rather than deleted.
+- `pnpm-lock.yaml` was included with the local web dependency change and requires review as a
+  shared root hotspot before push/PR.
+- Full browser E2E is pending a stable Chromium run and CI-equivalent `AUTH_DEV_CODE` setup.
+- `apps/web/src/services/catalog/types.ts` previously referenced
+  `docs/AGENT_WORKSTREAMS.md`, which is absent on this branch; the code comment now points
+  to the tracked `docs/COLLABORATION.md`. The coordination branch containing the fuller
+  workstream document still needs an explicit merge decision.
+
 ## Next 10 working-day plan
 
 ### Days 1–2 — close Auth acceptance and coordination
