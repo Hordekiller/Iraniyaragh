@@ -25,6 +25,7 @@ export const API_ERROR_CODES = [
   'AUTH_SESSION_REPLAYED',
   'AUTH_REAUTHENTICATION_REQUIRED',
   'AUTH_CSRF_INVALID',
+  'AUTH_PASSWORD_POLICY',
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

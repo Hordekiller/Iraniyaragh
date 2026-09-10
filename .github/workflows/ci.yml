@@ -136,7 +136,7 @@ jobs:
       ALLOW_DATABASE_SEED: "true"
       API_PORT: "4000"
       DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/iraniyaragh_ci_test?schema=public
-      REDIS_URL: redis://placeholder:6379
+      REDIS_URL: redis://127.0.0.1:6379
       JWT_ACCESS_SECRET: development-only-access-secret-replace-me
       AUTH_JWT_ISSUER: iranyaragh-api
       AUTH_HASH_KEY_VERSION: "1"
@@ -159,6 +159,15 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U app_test -d iranyaragh_ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12

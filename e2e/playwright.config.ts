@@ -4,6 +4,7 @@ const CI = Boolean(process.env.CI);
 
 const WEB_URL = process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173';
 const ADMIN_URL = process.env.ADMIN_E2E_URL ?? 'http://127.0.0.1:3001';
+const API_URL = process.env.API_E2E_URL ?? 'http://127.0.0.1:4000';
 
 export default defineConfig({
   testDir: './tests',
@@ -43,6 +44,11 @@ export default defineConfig({
       name: 'admin-mobile',
       testMatch: /admin-.*\.spec\.ts/,
       use: { ...devices['Pixel 7'], baseURL: ADMIN_URL },
+    },
+    {
+      name: 'api-http',
+      testMatch: /api-.*\.spec\.ts/,
+      use: { baseURL: API_URL },
     },
   ],
   webServer: [

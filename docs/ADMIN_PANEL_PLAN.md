@@ -7,6 +7,10 @@ Owners: product/UX lead `@Maddyrampant`; runtime/security/integration lead
 
 Last reconciled with repository: 2026-09-07
 
+The admin modules in this program map to the dependency gates and complete
+capability register in `COMMERCE_EXPANSION_PLAN.md`. Admin UI sequencing must follow
+the accepted backend contract and gate dependencies recorded there.
+
 ## 1. Outcome and meaning of complete
 
 The Iraniyaragh admin application is the operational control plane for catalog,

@@ -4,6 +4,9 @@ Last reviewed: 2026-09-08
 
 This is the executive view of delivery. The executable sprint backlog, owners,
 acceptance gates and dependencies live in `DEVELOPMENT_PLAN.md`.
+The complete capability register, engineering method and post-MVP growth sequence
+live in `COMMERCE_EXPANSION_PLAN.md`; roadmap summaries must not silently drop an
+item from that plan.
 
 ## Product objective
 
@@ -105,3 +108,7 @@ Promotions/coupons, wholesale price lists, wishlist/reviews, content/blog toolin
 advanced analytics, marketplace/accounting/logistics integrations, dedicated
 search infrastructure, and React Native mobile. These are not allowed to delay
 the MVP unless a documented business decision changes scope.
+
+Their full dependency order, safety boundaries and promotion-to-active criteria are
+defined in `COMMERCE_EXPANSION_PLAN.md` Horizon C and gate G10. A candidate is not
+implementation-ready merely because it appears in this executive roadmap.

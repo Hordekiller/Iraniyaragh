@@ -2,6 +2,11 @@
 
 Last updated: 2026-09-07
 
+This is the V1 release checklist. The complete expansion scope and mandatory
+implementation method—including post-V1 operations and growth—live in
+`COMMERCE_EXPANSION_PLAN.md`. If issue decomposition changes, every V1 capability
+must remain traceable to that plan's capability register and acceptance matrix.
+
 Owners: Hordekiller (Platform/API/Data) and Maddyrampant (Product/Web/Admin/E2E).
 Dates are sequencing estimates for two consistently available contributors, not
 commitments. Re-estimate after each release gate using actual capacity.

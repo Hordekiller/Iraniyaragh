@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CrossTabSessionBus, MemorySessionStore, CROSS_TAB_CHANNEL } from './session-store';
+import {
+  BrowserRefreshCoordinator,
+  CrossTabSessionBus,
+  MemorySessionStore,
+  CROSS_TAB_CHANNEL,
+  CROSS_TAB_REFRESH_LOCK,
+} from './session-store';
 import type { AccessTokenData, AuthPrincipal } from './types';
 
 const stamp = '2026-08-31T12:00:00.000Z';
@@ -83,5 +89,60 @@ describe('CrossTabSessionBus', () => {
     a();
     b();
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('closes an unused channel and reopens it for a later subscriber', () => {
+    const bus = new CrossTabSessionBus('test-channel');
+    const unsubscribe = bus.subscribe(vi.fn());
+    unsubscribe();
+    expect((bus as unknown as { channel: BroadcastChannel | null }).channel).toBeNull();
+
+    const secondUnsubscribe = bus.subscribe(vi.fn());
+    expect((bus as unknown as { channel: BroadcastChannel | null }).channel).not.toBeNull();
+    secondUnsubscribe();
+  });
+});
+
+describe('BrowserRefreshCoordinator', () => {
+  it('requests the named browser-wide exclusive lock', async () => {
+    const calls: Array<{ name: string; options: { mode: 'exclusive'; signal: AbortSignal } }> = [];
+    const locks = {
+      async request<T>(
+        name: string,
+        options: { mode: 'exclusive'; signal: AbortSignal },
+        operation: () => Promise<T>,
+      ): Promise<T> {
+        calls.push({ name, options });
+        return operation();
+      },
+    };
+    const coordinator = new BrowserRefreshCoordinator(locks, 100);
+
+    await expect(coordinator.runExclusive(async () => 'ok')).resolves.toBe('ok');
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.name).toBe(CROSS_TAB_REFRESH_LOCK);
+    expect(calls[0]?.options).toEqual(
+      expect.objectContaining({ mode: 'exclusive', signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('fails closed after a bounded lock-acquisition timeout', async () => {
+    const locks = {
+      async request<T>(
+        _name: string,
+        options: { mode: 'exclusive'; signal: AbortSignal },
+        operation: () => Promise<T>,
+      ): Promise<T> {
+        void operation;
+        return new Promise<T>((_resolve, reject) => {
+          options.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+        });
+      },
+    };
+    const coordinator = new BrowserRefreshCoordinator(locks, 5);
+
+    await expect(coordinator.runExclusive(async () => 'never')).rejects.toThrow(
+      'AUTH_CROSS_TAB_LOCK_TIMEOUT',
+    );
   });
 });

@@ -13,6 +13,10 @@ issues from the rows for the current milestone, assign one accountable owner and
 link dependencies. A range reaches 100% only when its exit evidence is accepted;
 “code written” alone is not completion.
 
+`COMMERCE_EXPANSION_PLAN.md` is the complete capability and engineering-method
+source. This backlog may activate and split its work, but may not silently omit a
+capability or weaken its acceptance matrix.
+
 The percentages describe delivery gates, not effort or a claim that software can
 be permanently finished. They define the path to a production-operable `1.0` for
 the agreed scope in `PRODUCT_SPEC.md`.
