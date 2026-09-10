@@ -34,8 +34,8 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `05c1bd4`, containing merged #109, #103, #112,
-  #144, #148, #150 and accepted ADR-0011 via #116.
+- Baseline at review: `main` commit `8334558`, containing merged #109, #103, #112,
+  #138, #143, #144, #148, #150 and accepted ADR-0011 via #116.
 - #49 and #79 are closed; active coordination includes #66, #91, #50, #78,
   #81, #114 and #115.
 - Local-only or untracked material is never counted as delivered product capability.
@@ -206,33 +206,28 @@ security/query review, OpenAPI drift confirmation and merge.
   recursive redaction, request/correlation context and safe output-failure behavior.
 - `#148` merged at `05c1bd4`: customer OTP delivery now uses the vendor-neutral
   notification boundary and SMS.ir adapter, with focused unit/integration coverage.
+- `#138` merged at `18d74cd`: the admin Vuexy foundation adds persisted
+  theme/layout preferences, shell menus, global search and DataTable upgrades.
+- `#143` merged at `8334558`: the admin commerce shell and customizer now share a
+  centralized deny-by-default navigation filter across sidebar and global search.
 
 ## Open pull-request work (not yet on main)
 
-Sprint-1 #50 admin acceptance slices and the pending #133 re-review are tracked
-here; none of the bullets below is counted as delivered until merged on `main`.
-`docs/PROJECT_STATUS.md` is a shared hotspot; contributors touching it must
-rebase/merge latest `main` first and preserve the factual distinction between
-merged, open and local-only work. `#150` is merged and is no longer in this list.
+The remaining Sprint-1 #50 admin acceptance slice is tracked here and is not
+counted as delivered until merged on `main`. `#138`, `#143` and `#150` are merged;
+`#149` is closed as superseded by `#143`.
 
-- `#149` — admin permission-aware navigation (`feat/50-permission-nav`, head
-  `44ee4f0`): its permission-aware navigation work is superseded by the corrected
-  parent/child implementation in `#138` → `#143`; it must not be merged separately.
-- `#138` — admin Vuexy foundation (`feat/admin-vuexy-foundation`): theme/layout
-  preferences, shell menus, global search and DataTable
-  upgrades are open and CI-green. Runtime review is approved; the PR remains open
-  until this status reconciliation is reviewed and the exact resulting head is
-  independently approved.
-- `#143` — admin Vuexy commerce shell (`feat/admin-vuexy-commerce-shell`, based on
-  `#138`): the child adds shell/customizer access UX and a
-  centralized deny-by-default permission filter for both sidebar and global
-  search. CI is green; review/merge is strictly sequenced after `#138`.
-- `#133` — admin settings/SMS panel (`feat/115-sms-admin-panel`, head
-  `3301412`): the original blockers and fixture correctness items are addressed.
-  The fixture enforces the API idempotency-key grammar before any lookup/effect
-  and fingerprints secrets with Web Crypto SHA-256 without retaining raw values.
-  Its verified head is CI-green; final current-main rebase and approval are
-  intentionally sequenced after the `#138` → `#143` admin stack.
+- `#133` — admin settings/SMS panel (`feat/115-sms-admin-panel`): the four
+  original blockers and the two re-review fixture items are all addressed. The
+  fixture enforces the exact API idempotency-key grammar `^[\w-]{8,96}$`/u on
+  rotate/clear/test-send before any lookup or effect (valid opaque test keys,
+  8/96-char boundary, invalid-char and read-only ordering tests) and fingerprints
+  the secret only through an async Web Crypto SHA-256 digest, never retaining the
+  raw value (old 32-bit `hashText` collision-regression test included). The
+  re-review confirmed the fixture fixes and its prior CI-green head (23 files /
+  192 tests plus coverage gates, lint, typecheck and build). It has now been
+  rebased after the merged admin shell stack; fresh checks and independent review
+  of the exact resulting head remain required.
 
 Remaining for real customer sign-in: SMS delivery is wired to adapters only (no
 provider call from the OTP service yet) and the issued code has no dev-gated reveal,
