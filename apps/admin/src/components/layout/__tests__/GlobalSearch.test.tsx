@@ -36,13 +36,14 @@ describe('GlobalSearch', () => {
     expect(screen.getByRole('dialog', { name: 'جستجوی سریع' })).toBeInTheDocument();
   });
 
-  it('lists the live dashboard page and marks planned sections', () => {
+  it('lists the live dashboard and catalog pages and marks planned sections', () => {
     render(<GlobalSearch />);
     fireEvent.click(screen.getByRole('button', { name: 'جستجوی سریع در پنل' }));
 
     expect(screen.getByRole('button', { name: /داشبورد عملیات/ })).toBeEnabled();
-    const orders = screen.getByRole('button', { name: /سفارش‌ها/ });
-    expect(orders).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: /کالا و SKU/ })).toBeEnabled();
+    const payments = screen.getByRole('button', { name: /پرداخت‌ها/ });
+    expect(payments).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('filters results and jumps to the selected page', () => {
