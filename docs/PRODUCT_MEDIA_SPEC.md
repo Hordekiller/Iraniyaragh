@@ -1,6 +1,6 @@
 # Product media contract
 
-Status: proposed for Epic #3 acceptance  
+Status: proposed for Epic #3 independent acceptance
 Owner: Platform contract lead (`@Hordekiller`)  
 Integration owner: `@Maddyrampant`  
 Last reviewed: 2026-09-11
@@ -293,17 +293,31 @@ storage/transform health, capacity alerts, restore behavior and deletion audit.
 Merge order is `M0 -> M1 -> M2/M3 -> M4 -> M5`; M2 may proceed with accepted
 fixtures while M1 is implemented, but M2 cannot merge before the shared contract.
 
-## 12. Decision log required before M1
+## 12. Accepted implementation defaults for independent review
 
-- [ ] Accept or revise 12 total / 3 video operational limits.
-- [ ] Accept or revise 100 MiB / 120 s / 1080p video source limits.
-- [ ] Confirm whether Persian captions are authored by catalog staff or supplied by
-      a separate content owner; automated captions require human review.
-- [ ] Confirm source retention period after successful processing and after archive.
-- [ ] Confirm media delivery hostname and whether it is same-origin or controlled
-      object/CDN origin for CSP, CORS, SEO and outage policy.
-- [ ] Confirm malware scanner availability; signature/decode validation remains
-      mandatory regardless.
+- [x] Maximum 12 published gallery assets per product, including at most 3 videos.
+  Existing products are not unpublished if a future configured limit is lower.
+- [x] Video source maximum is 100 MiB, 120 seconds and 1080p. All three checks are
+  server-enforced from trusted probe metadata, not browser declarations.
+- [x] Catalog/content staff own Persian captions and transcripts. Generated caption
+  drafts are never published without an authorized human review.
+- [x] A successfully processed private source is retained for 7 days to permit a
+  bounded recovery/re-encode window, then removed by an idempotent job. Failed and
+  abandoned quarantine objects are retained at most 24 hours. Archiving immediately
+  removes public eligibility; renditions are deleted after a 30-day recovery window
+  unless a legal/order-history hold applies. Retention values are bounded deployment
+  settings and every deletion remains auditable.
+- [x] Public renditions use one configured, controlled HTTPS media origin backed by
+  S3-compatible storage. Local/dev may use the application/MinIO origin. Production
+  must define the exact allowlisted origin for CSP/CORS/SEO; arbitrary external URLs,
+  storage-console URLs and expiring admin upload URLs are never public contracts.
+- [x] Production processing requires a healthy malware-scanning capability before a
+  source can become `READY`; inability to scan fails closed with a retryable safe
+  state. Development/test may use an explicit deterministic fake scanner. Signature,
+  MIME, decode, resource and pixel-limit validation remain mandatory in every mode.
+
+These defaults become binding only after independent approval and merge of this
+contract. Any production exception requires a security review and accepted ADR.
 
 ## References
 
