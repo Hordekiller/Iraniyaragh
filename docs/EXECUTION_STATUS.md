@@ -119,14 +119,16 @@ Exit: one thin vertical journey is demonstrable; broad CRUD breadth is secondary
 
 ## Ready queue after the checkpoint
 
-1. Catalog media/price contract and API.
-2. Catalog admin draft-to-publish flow.
-3. Public product detail and storefront integration.
-4. Inventory HTTP contract with authenticated actor mapping.
-5. Warehouse/location CRUD and read-only balances/movements.
-6. Reservation expiry batching (#81), then worker design.
-7. Transfer policy/state contract.
-8. Cart/guest/merge and reservation-allocation decisions before `0.4` coding.
+1. Accept the image/video policy decisions in `PRODUCT_MEDIA_SPEC.md`, then deliver
+   its conflict-safe M1–M5 slices; media remains planned until runtime evidence exists.
+2. Catalog price contract and API.
+3. Catalog admin draft-to-publish flow.
+4. Public product detail and storefront integration.
+5. Inventory HTTP contract with authenticated actor mapping.
+6. Warehouse/location CRUD and read-only balances/movements.
+7. Reservation expiry batching (#81), then worker design.
+8. Transfer policy/state contract.
+9. Cart/guest/merge and reservation-allocation decisions before `0.4` coding.
 
 ## Explicitly not ready
 
