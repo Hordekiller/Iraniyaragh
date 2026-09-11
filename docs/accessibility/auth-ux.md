@@ -8,7 +8,8 @@ Companion notes for the desktop/mobile screenshots in
 Storefront customer sign-in (`LoginDialog`) and the authenticated account
 surface: the two-step OTP flow, resend/expiry timing, invalid-code and
 rate-limited recovery states, and silent session restore. Admin login/session
-views are out of scope here (separate admin slice).
+views are out of scope here (see [`admin-auth-sessions.md`](./admin-auth-sessions.md)
+for the admin half of #50).
 
 ## What was verified
 
