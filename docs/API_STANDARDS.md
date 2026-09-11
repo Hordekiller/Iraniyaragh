@@ -49,6 +49,19 @@ as the fallback correlation identifier. `x-correlation-id` may be supplied as an
 Browser cookie-authenticated Auth endpoints also require `X-CSRF-Token`; production
 CORS configuration must allow that exact header only for trusted credentialed origins.
 
+## Public catalog caching and projection
+
+Public Catalog reads (`products`, product detail, categories, category tree and
+brands) use `Cache-Control: public, no-cache` plus a strong content-derived `ETag`.
+Clients and shared caches may store a representation but must revalidate it before
+reuse. A matching `If-None-Match` returns `304` without a body. Publish, unpublish,
+archive and content changes therefore produce a new validator on the next request
+without relying on an in-process cache or best-effort purge.
+
+ETags are validators, not business identifiers, and clients must not parse them.
+Authenticated admin reads are outside this public policy. Anonymous variants expose
+only storefront-required fields; barcode and cost price remain admin/private data.
+
 ## Error envelope
 
 Non-2xx responses use a stable envelope so clients and monitoring can key off machine-readable

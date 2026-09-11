@@ -252,6 +252,11 @@ session/devices page model, nav entry, admin unit tests and an admin e2e spec
 against the real `/auth/sessions` endpoints (`GET /auth/sessions`,
 `DELETE /auth/sessions/:sessionId`, `POST /auth/logout-all`).
 
+The first #111 Catalog-hardening slice is branch work only: it defines conditional
+public caching across every anonymous Catalog read and removes barcode from the
+anonymous variant projection while retaining it for staff. It is not delivered until
+its protected PR, generated OpenAPI and current-head verification merge.
+
 Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
 Remaining for production sign-in is private SMS.ir account/key/template activation,
 a controlled provider-bound test destination and sanitized sandbox/production

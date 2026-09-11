@@ -270,10 +270,28 @@
     "/catalog/products": {
       "get": {
         "operationId": "CatalogController_publicProducts",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "Previously returned ETag for conditional revalidation.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "200": {
-            "description": ""
+          "304": {
+            "description": "The public representation has not changed; no body is returned.",
+            "headers": {
+              "ETag": {
+                "description": "Strong validator for the current representation."
+              },
+              "Cache-Control": {
+                "description": "public, no-cache"
+              }
+            }
           }
         },
         "tags": [
@@ -284,10 +302,28 @@
     "/catalog/products/{idOrSlug}": {
       "get": {
         "operationId": "CatalogController_publicProduct",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "Previously returned ETag for conditional revalidation.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "200": {
-            "description": ""
+          "304": {
+            "description": "The public representation has not changed; no body is returned.",
+            "headers": {
+              "ETag": {
+                "description": "Strong validator for the current representation."
+              },
+              "Cache-Control": {
+                "description": "public, no-cache"
+              }
+            }
           }
         },
         "tags": [
@@ -298,10 +334,28 @@
     "/catalog/categories": {
       "get": {
         "operationId": "CatalogController_categories",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "Previously returned ETag for conditional revalidation.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "200": {
-            "description": ""
+          "304": {
+            "description": "The public representation has not changed; no body is returned.",
+            "headers": {
+              "ETag": {
+                "description": "Strong validator for the current representation."
+              },
+              "Cache-Control": {
+                "description": "public, no-cache"
+              }
+            }
           }
         },
         "tags": [
@@ -312,10 +366,28 @@
     "/catalog/categories/tree": {
       "get": {
         "operationId": "CatalogController_categoryTree",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "Previously returned ETag for conditional revalidation.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "200": {
-            "description": ""
+          "304": {
+            "description": "The public representation has not changed; no body is returned.",
+            "headers": {
+              "ETag": {
+                "description": "Strong validator for the current representation."
+              },
+              "Cache-Control": {
+                "description": "public, no-cache"
+              }
+            }
           }
         },
         "tags": [
@@ -326,10 +398,28 @@
     "/catalog/brands": {
       "get": {
         "operationId": "CatalogController_brands",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "Previously returned ETag for conditional revalidation.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "200": {
-            "description": ""
+          "304": {
+            "description": "The public representation has not changed; no body is returned.",
+            "headers": {
+              "ETag": {
+                "description": "Strong validator for the current representation."
+              },
+              "Cache-Control": {
+                "description": "public, no-cache"
+              }
+            }
           }
         },
         "tags": [

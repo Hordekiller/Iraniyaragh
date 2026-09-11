@@ -93,6 +93,7 @@ describe('CatalogService', () => {
         salePrice: { amount: '125000', currency: 'IRR' },
       });
       expect(detail.data.product.variants[0]).not.toHaveProperty('costPrice');
+      expect(detail.data.product.variants[0]).not.toHaveProperty('barcode');
     });
 
     it('throws NotFound for a missing or non-active product', async () => {
