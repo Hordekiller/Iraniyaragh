@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({
-    user: { permissions: ['orders.read'] },
+    user: { permissions: ['orders.read', 'catalog.read', 'settings.manage'] },
     isAuthenticated: true,
   }),
 }));
@@ -36,14 +36,15 @@ describe('GlobalSearch', () => {
     expect(screen.getByRole('dialog', { name: 'جستجوی سریع' })).toBeInTheDocument();
   });
 
-  it('lists the live dashboard and catalog pages and marks planned sections', () => {
+  it('lists the live dashboard and marks catalog and settings sections as planned', () => {
     render(<GlobalSearch />);
     fireEvent.click(screen.getByRole('button', { name: 'جستجوی سریع در پنل' }));
 
     expect(screen.getByRole('button', { name: /داشبورد عملیات/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /کالا و SKU/ })).toBeEnabled();
-    const payments = screen.getByRole('button', { name: /پرداخت‌ها/ });
-    expect(payments).toHaveAttribute('aria-disabled', 'true');
+    const catalog = screen.getByRole('button', { name: /کالا و SKU/ });
+    expect(catalog).toHaveAttribute('aria-disabled', 'true');
+    const settings = screen.getByRole('button', { name: /تنظیمات/ });
+    expect(settings).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('filters results and jumps to the selected page', () => {
