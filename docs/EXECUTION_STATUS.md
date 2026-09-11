@@ -21,23 +21,23 @@ day-to-day assignments.
 
 ## Current position
 
-| Gate                  | State                              | Current evidence                                                   | Exit blocker                                                   |
-| --------------------- | ---------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
-| `0.1` Foundation/Auth | Closing                            | Auth/provider dispatch and read-only SMS/admin settings are merged | #50/#91 reconciliation; #78 agreement; private #114 acceptance |
-| `0.2` Catalog         | Started                            | Contracts and Catalog API foundation are merged via #103           | Media/pricing, admin CRUD, storefront live integration         |
-| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                           | HTTP/RBAC, warehouse/location, transfers, worker and admin     |
-| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                           | Policies and all application/client workflows                  |
+| Gate                  | State                              | Current evidence                                                 | Exit blocker                                               |
+| --------------------- | ---------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| `0.1` Foundation/Auth | Acceptance closed                  | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11 | #78 agreement; private #114 acceptance                     |
+| `0.2` Catalog         | Started                            | Contracts and Catalog API foundation are merged via #103         | Media/pricing, admin CRUD, storefront live integration     |
+| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                         | HTTP/RBAC, warehouse/location, transfers, worker and admin |
+| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                         | Policies and all application/client workflows              |
 
 ## Active merge/review queue
 
-| Priority | Work                              | State              | Required reviewer focus                                                       | Exit action                                                                                                       |
-| -------: | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-|        1 | Issue #91 — Sprint 1 coordination | In progress        | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                                                                    |
-|        2 | Issue #50 — Auth UX/E2E           | In progress        | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up; the session/devices management slice is delivered via merged #158 |
-|        3 | Issue #78                         | Decision work      | capacity, review SLA, private coordination and release authority              | Accepted written agreement with owner and effective date                                                          |
-|        4 | Issue #114                        | Private acceptance | #154 merged with no secret/PII exposure and fail-closed mutations             | Provision account/line/template/key; controlled sandbox/live evidence; decide writable secret manager if required |
+| Priority | Work                                      | State              | Required reviewer focus                                           | Exit action                                                              |
+| -------: | ----------------------------------------- | ------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+|        1 | Issue #78                                 | Decision work      | capacity, review SLA, private coordination and release authority  | Accepted written agreement with owner and effective date                 |
+|        2 | Issue #114                                | Private acceptance | #154 merged with no secret/PII exposure and fail-closed mutations | Provision account/line/template/key; controlled sandbox/live evidence    |
+|        3 | Issue #111 slice 2 (mutation idempotency) | Next platform impl | durable mutation idempotency contract before schema/API work      | Contract PR then platform implementation on current `main` in wave 0.2-A |
+|        4 | Discovery ready items #126/#129/#136      | Backlog (platform) | server-rendered pages, sitemap/robots/IndexNow and telemetry      | Pick up as platform capacity opens and wave 0.2-A is delivered           |
 
-## Team disposition ledger — 2026-09-08
+## Team disposition ledger — 2026-09-08 (updated 2026-09-11)
 
 | Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                    | Closure condition                                                           |
 | --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
@@ -45,13 +45,21 @@ day-to-day assignments.
 | Issue #79 | Complete/closed               | Hordekiller / Maddyrampant | Implement #114, then #115; provision account/line/key privately                                | ADR-0011 accepted via merged #116                                           |
 | Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity |
 | Issue #51 | Complete/closed               | Hordekiller / Maddyrampant | Routine dependency maintenance only                                                            | Already satisfied by merged #52 and protected supply-chain gates            |
-| Issue #91 | Open coordination             | Hordekiller / Maddyrampant | Finish or explicitly split #50; resolve #78; track #114/#115 as named follow-ups               | Remaining Sprint 1 outcomes have merged evidence or named follow-ups        |
+| Issue #91 | Complete/closed 2026-09-11    | Hordekiller / Maddyrampant | DoD 7/7 ticked with merge evidence; close-out recorded in the issue                            | Remaining Sprint 1 outcomes have merged evidence, now all met               |
+| Issue #50 | Complete/closed 2026-09-11    | Maddyrampant (product)     | Screenshot/a11y evidence #160 merged; issue closed                                             | All 8 acceptance items met and verified                                     |
 | PR #11    | Complete/merged               | Hordekiller / Maddyrampant | Continue residual admin hardening only in its assigned later gates                             | #9/#10 review and ADR-0004 acceptance already provide closure evidence      |
 
 Blocked decision issues do not authorize guessed business choices. They block the
 related release/production gate while deterministic local implementation may proceed.
 
 ## Next 10 working-day plan
+
+> **Checkpoint 2026-09-11:** the Days 1–4 items below that concerned #50/#91
+> acceptance (password-denial order, rotation/other-family revocation, single
+> bootstrap, OpenAPI/AUTH_CONTRACT reconcile and deliberate #49 splitting) are
+> completed — both issues were closed with 7/7 DoD merge evidence. The
+> provider-backed customer happy path stays gated on private #114 activation, now
+> the sole remaining Auth acceptance item.
 
 ### Days 1–2 — close Auth acceptance and coordination
 
