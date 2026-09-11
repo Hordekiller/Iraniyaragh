@@ -43,6 +43,8 @@ describe.sequential('Catalog mutation idempotency database integration', () => {
     await prisma.auditLog.deleteMany({ where: { requestId: { startsWith: requestIdPrefix } } });
     await prisma.productVariant.deleteMany({ where: { product: { slug: { startsWith: `idempotent-product-` } } } });
     await prisma.product.deleteMany({ where: { slug: { startsWith: `idempotent-product-` } } });
+    await prisma.category.deleteMany({ where: { slug: { startsWith: `idempotent-category-` } } });
+    await prisma.brand.deleteMany({ where: { slug: { startsWith: `idempotent-brand-` } } });
     await prisma.catalogIdempotencyRecord.deleteMany({ where: { actorId: { in: [actorId, secondActorId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [actorId, secondActorId] } } });
     await prisma.$disconnect();
@@ -56,6 +58,46 @@ describe.sequential('Catalog mutation idempotency database integration', () => {
     expect(second).toEqual(first);
     await expect(prisma.product.count({ where: { slug: input.slug } })).resolves.toBe(1);
     await expect(prisma.auditLog.count({ where: { entityId: first.data.product.id } })).resolves.toBe(1);
+  });
+
+  it('treats explicit persistence defaults as the same product payload', async () => {
+    const input = productInput('defaults');
+    const first = await catalog.createProduct(actorId, key('defaults'), input);
+    const second = await catalog.createProduct(actorId, key('defaults'), {
+      ...input,
+      status: 'DRAFT',
+      variants: input.variants.map(variant => ({ ...variant, isActive: true })),
+    });
+
+    expect(second).toEqual(first);
+    await expect(prisma.product.count({ where: { slug: input.slug } })).resolves.toBe(1);
+  });
+
+  it('replays brand and category creation without duplicate effects', async () => {
+    const brandInput = { name: ` Idempotent Brand ${runId} `, slug: `idempotent-brand-${runId}` };
+    const categoryInput = { name: ` Idempotent Category ${runId} `, slug: `idempotent-category-${runId}` };
+
+    const brand = await catalog.createBrand(actorId, key('brand'), brandInput);
+    await expect(catalog.createBrand(actorId, key('brand'), { ...brandInput, name: brandInput.name.trim() }))
+      .resolves.toEqual(brand);
+    const category = await catalog.createCategory(actorId, key('category'), categoryInput);
+    await expect(catalog.createCategory(actorId, key('category'), { ...categoryInput, name: categoryInput.name.trim() }))
+      .resolves.toEqual(category);
+
+    await expect(prisma.brand.count({ where: { slug: brandInput.slug } })).resolves.toBe(1);
+    await expect(prisma.category.count({ where: { slug: categoryInput.slug } })).resolves.toBe(1);
+  });
+
+  it('replays a product status command with one audit outcome', async () => {
+    const created = await catalog.createProduct(actorId, key('status-create'), productInput('status'));
+    const productId = created.data.product.id;
+    const first = await catalog.changeProductStatus(actorId, key('status'), productId, { action: 'publish' });
+    const second = await catalog.changeProductStatus(actorId, key('status'), productId, { action: 'publish' });
+
+    expect(second).toEqual(first);
+    await expect(prisma.auditLog.count({
+      where: { entityId: productId, action: 'catalog.product.status_changed' },
+    })).resolves.toBe(1);
   });
 
   it('rejects the same key with a different canonical payload', async () => {
@@ -85,6 +127,17 @@ describe.sequential('Catalog mutation idempotency database integration', () => {
     expect(fulfilled).toHaveLength(2);
     expect(fulfilled[0].value).toEqual(fulfilled[1].value);
     await expect(prisma.product.count({ where: { slug: input.slug } })).resolves.toBe(1);
+  });
+
+  it('commits at most one payload when conflicting commands race', async () => {
+    const raceKey = key('race-conflict');
+    const inputs = [productInput('race-conflict-a'), productInput('race-conflict-b')];
+    const results = await Promise.allSettled(inputs.map(input => catalog.createProduct(actorId, raceKey, input)));
+
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    const rejected = results.find(result => result.status === 'rejected');
+    expect(rejected).toMatchObject({ reason: { response: { code: 'IDEMPOTENCY_CONFLICT' } } });
+    await expect(prisma.product.count({ where: { slug: { in: inputs.map(input => input.slug) } } })).resolves.toBe(1);
   });
 
   it('does not retain an idempotency row when the mutation rolls back', async () => {
