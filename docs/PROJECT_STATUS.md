@@ -23,6 +23,7 @@ Current delivery confidence:
 | Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                                                                           |
 | Customer/auth UX               | Merged foundation | Real HTTP client and provider-dispatched OTP foundation are merged; live SMS.ir activation and provider-backed happy-path acceptance remain |
 | Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice                                                                  |
+| Product media                  | Planned contract  | Images/videos are not persisted or served yet; `PRODUCT_MEDIA_SPEC.md` defines the proposed contract and M0–M5 delivery sequence            |
 | Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not                                                          |
 | Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                                                                  |
 | Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                 |
