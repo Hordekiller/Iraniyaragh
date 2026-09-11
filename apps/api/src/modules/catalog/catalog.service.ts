@@ -68,8 +68,25 @@ export class CatalogService {
       throw new ConflictException({ code: 'CONFLICT', message: 'A product must have a SKU before publishing.' });
     }
     const normalized = { ...input, name: input.name.trim(), description: input.description?.trim() };
+    const idempotencyPayload = {
+      name: normalized.name,
+      slug: normalized.slug,
+      description: normalized.description ?? null,
+      brandId: normalized.brandId ?? null,
+      categoryId: normalized.categoryId ?? null,
+      status: normalized.status ?? 'DRAFT',
+      variants: (normalized.variants ?? []).map(variant => ({
+        sku: variant.sku,
+        barcode: variant.barcode ?? null,
+        title: variant.title ?? null,
+        costPrice: variant.costPrice,
+        salePrice: variant.salePrice,
+        weightGrams: variant.weightGrams ?? null,
+        isActive: variant.isActive ?? true,
+      })),
+    };
     return this.idempotency.run({
-      actorId, scope: 'catalog.product.create', key: idempotencyKey, payload: normalized,
+      actorId, scope: 'catalog.product.create', key: idempotencyKey, payload: idempotencyPayload,
       execute: async tx => {
         const created = await this.mapPrismaError(tx.product.create({
           data: {

@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
@@ -89,10 +89,17 @@ describe.sequential('Catalog mutation idempotency database integration', () => {
 
   it('does not retain an idempotency row when the mutation rolls back', async () => {
     const input = { ...productInput('rollback'), brandId: 'missing-brand' };
+    const rawKey = key('rollback');
     await expect(catalog.createProduct(actorId, key('rollback'), input)).rejects.toMatchObject({
       response: { code: 'INVALID_REFERENCE' },
     });
-    await expect(prisma.catalogIdempotencyRecord.count({ where: { actorId, scope: 'catalog.product.create' } })).resolves.toBeGreaterThanOrEqual(1);
+    await expect(prisma.catalogIdempotencyRecord.count({
+      where: {
+        actorId,
+        scope: 'catalog.product.create',
+        keyHash: createHash('sha256').update(rawKey, 'utf8').digest('hex'),
+      },
+    })).resolves.toBe(0);
     await expect(prisma.product.count({ where: { slug: input.slug } })).resolves.toBe(0);
   });
 });
