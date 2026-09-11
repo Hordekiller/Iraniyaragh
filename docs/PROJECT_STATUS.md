@@ -221,8 +221,9 @@ security/query review, OpenAPI drift confirmation and merge.
 
 No Sprint-1 #50 admin acceptance PR remains open: `#138`, `#143`, `#150` and
 replacement `#151` are merged; historical `#133` and duplicate `#149` are closed
-as superseded. Future work must be opened as a separately scoped PR and is not
-counted as delivered until merged on `main`.
+as superseded. The current #114 branch replaces the disconnected SMS-settings
+placeholder with a read-only environment projection; it is open work and is not
+counted as delivered until its protected PR is merged.
 
 Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
 Remaining for production sign-in is private SMS.ir account/key/template activation,
