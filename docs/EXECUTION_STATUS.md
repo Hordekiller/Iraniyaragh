@@ -16,6 +16,8 @@ day-to-day assignments.
 - Critical work requires failure, authorization, idempotency/concurrency, audit and
   contract evidence as applicable.
 - Limit each contributor to one primary implementation plus one review/unblock task.
+- Use the complete three-lane wave map and `D/C/P/A/W/I/O` merge train in
+  `AGENT_WORKSTREAMS.md`; Platform, Admin and User UI never share a dirty worktree.
 
 ## Current position
 
