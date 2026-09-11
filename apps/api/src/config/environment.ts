@@ -14,6 +14,9 @@ export type EnvironmentVariables = {
   JWT_ACCESS_SECRET: string;
   AUTH_DEV_CODE?: string;
   AUTH_TOTP_ENCRYPTION_KEY?: string;
+  SMS_IR_API_KEY?: string;
+  SMS_IR_OTP_TEMPLATE_ID?: number;
+  SMS_IR_TIMEOUT_MS?: number;
   OBJECT_STORAGE_ENDPOINT: string;
   OBJECT_STORAGE_ACCESS_KEY: string;
   OBJECT_STORAGE_SECRET_KEY: string;
@@ -88,9 +91,9 @@ export function parseCorsOrigins(value: unknown, environment: NodeEnvironment) {
 
   const origins = value
     .split(',')
-    .map(origin => origin.trim())
+    .map((origin) => origin.trim())
     .filter(Boolean)
-    .map(origin => {
+    .map((origin) => {
       if (origin === '*') throw new Error('CORS_ORIGINS must not contain a wildcard when credentials are enabled.');
 
       let url: URL;
@@ -135,12 +138,33 @@ function optionalSecretString(value: unknown, key: string) {
   return value;
 }
 
+function optionalOpaqueSecret(value: unknown, key: string) {
+  const secret = optionalSecretString(value, key);
+  if (secret === undefined) return undefined;
+  const hasWhitespaceOrControl = [...secret].some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return /\s/u.test(character) || codePoint <= 31 || codePoint === 127;
+  });
+  if (hasWhitespaceOrControl) {
+    throw new Error(`${key} must not contain whitespace or control characters.`);
+  }
+  return secret;
+}
+
+function parseBoundedInteger(value: unknown, key: string, minimum: number, maximum: number) {
+  const candidate = typeof value === 'number' ? value : Number(value);
+  if (!Number.isSafeInteger(candidate) || candidate < minimum || candidate > maximum) {
+    throw new Error(`${key} must be an integer between ${minimum} and ${maximum}.`);
+  }
+  return candidate;
+}
+
 function parseAuthIssuer(value: unknown) {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error('AUTH_JWT_ISSUER is required.');
   }
   const issuer = value.trim();
-  const hasControlCharacter = [...issuer].some(character => {
+  const hasControlCharacter = [...issuer].some((character) => {
     const codePoint = character.codePointAt(0) ?? 0;
     return codePoint <= 31 || codePoint === 127;
   });
@@ -200,11 +224,29 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     environment,
   );
   const totpEncryptionKey = optionalSecretString(config.AUTH_TOTP_ENCRYPTION_KEY, 'AUTH_TOTP_ENCRYPTION_KEY');
+  const smsApiKey = optionalOpaqueSecret(config.SMS_IR_API_KEY, 'SMS_IR_API_KEY');
+  const smsTemplateId =
+    config.SMS_IR_OTP_TEMPLATE_ID === undefined ||
+    config.SMS_IR_OTP_TEMPLATE_ID === null ||
+    config.SMS_IR_OTP_TEMPLATE_ID === ''
+      ? undefined
+      : parseBoundedInteger(config.SMS_IR_OTP_TEMPLATE_ID, 'SMS_IR_OTP_TEMPLATE_ID', 1, 9_999_999_999);
+  const smsTimeoutMs =
+    config.SMS_IR_TIMEOUT_MS === undefined || config.SMS_IR_TIMEOUT_MS === null || config.SMS_IR_TIMEOUT_MS === ''
+      ? undefined
+      : parseBoundedInteger(config.SMS_IR_TIMEOUT_MS, 'SMS_IR_TIMEOUT_MS', 500, 10_000);
   if (
     ['staging', 'production'].includes(environment) &&
     (!totpEncryptionKey || Buffer.byteLength(totpEncryptionKey, 'utf8') < 32)
   ) {
     throw new Error('AUTH_TOTP_ENCRYPTION_KEY must contain at least 32 bytes in staging and production.');
+  }
+
+  if (['staging', 'production'].includes(environment)) {
+    if (smsApiKey === undefined) throw new Error('SMS_IR_API_KEY is required in staging and production.');
+    if (smsTemplateId === undefined) {
+      throw new Error('SMS_IR_OTP_TEMPLATE_ID is required in staging and production.');
+    }
   }
 
   if (accessSecret === hashSecret || accessSecret === validatedPreviousHashSecret) {
@@ -229,6 +271,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     JWT_ACCESS_SECRET: accessSecret,
     AUTH_DEV_CODE: optionalSecretString(config.AUTH_DEV_CODE, 'AUTH_DEV_CODE'),
     AUTH_TOTP_ENCRYPTION_KEY: totpEncryptionKey,
+    SMS_IR_API_KEY: smsApiKey,
+    SMS_IR_OTP_TEMPLATE_ID: smsTemplateId,
+    SMS_IR_TIMEOUT_MS: smsTimeoutMs,
     OBJECT_STORAGE_ENDPOINT: objectStorageEndpoint,
     OBJECT_STORAGE_ACCESS_KEY: requiredString(config, 'OBJECT_STORAGE_ACCESS_KEY'),
     OBJECT_STORAGE_SECRET_KEY: objectStorageSecret,
