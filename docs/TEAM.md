@@ -1,6 +1,6 @@
 # Team, Ownership and Onboarding
 
-Last updated: 2026-09-04
+Last updated: 2026-09-11
 
 ## Members
 
@@ -11,9 +11,9 @@ Last updated: 2026-09-04
 
 Onboarding response is now complete. Maddyrampant reports approximately 35 hours
 per week in Iran time, normally same-day communication and a maximum one-working-day
-review target. Hordekiller's weekly capacity still needs to be recorded before the
-first sprint is committed; sprint scope must use the lower real capacity, not the
-headline roadmap estimate.
+review target. Hordekiller commits approximately 40 hours per week with
+Asia/Tehran-friendly evening overlap, same-day normal responses and urgent blocker
+responses within a few waking hours. Sprint scope uses the lower 35-hour capacity.
 
 This ownership is a starting proposal, not a statement about either person's
 ability. Change it after the onboarding response if skills, interest or weekly
@@ -56,6 +56,27 @@ Shared contracts, OpenAPI compatibility/drift checks and API integration fixture
 are joint ownership. Developer A leads API generation and persistence correctness;
 Developer B verifies consumer fixtures and integration behavior against the accepted
 contract.
+
+## Accepted working agreement — issue #78
+
+- Capacity: Hordekiller 40 hours/week; Maddyrampant 35 hours/week. Milestones are
+  sized against the lower 35-hour capacity, not the combined headline estimate.
+- Cadence: two-week sprints, starting Saturday in `Asia/Tehran`; the demo is held on
+  Friday of the second sprint week. The exact clock time is confirmed privately
+  before each sprint and is not a repository dependency.
+- Review: one working day is the normal review-response target.
+- Urgent blockers/incidents: use the private team channel; repository documents
+  record only the process and never personal contact details.
+- Secrets: use an approved password manager such as Bitwarden or 1Password;
+  credentials never enter GitHub, chat, `.env.example` or repository history.
+- Access: both members have staging implementation/reviewer access; production
+  writes and secret-manager administration are least-privilege and release-driver
+  controlled. Both retain non-secret health/diagnostic verification access.
+- Release: first release driver is Hordekiller and verifier is Maddyrampant; roles
+  rotate after the first release. Either member may execute an emergency rollback,
+  with an after-action record and independent verification afterward.
+- Continuity: every critical production procedure has a primary implementer and a
+  second-person reviewer; no release or rollback depends on undocumented knowledge.
 
 ## Onboarding response from Maddyrampant — complete
 
