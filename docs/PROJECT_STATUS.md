@@ -34,11 +34,12 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `86914a4`, containing merged #109, #103, #112,
+- Baseline at review: `main` commit `1de660e`, containing merged #109, #103, #112,
   accepted ADR-0011 via #116 and the integrated SMS/Auth/admin-settings foundation
-  through #148, #151, #153 and #154.
+  through #148, #151, #153, #154 and the docs reconciliation #155.
 - #49 and #79 are closed; active coordination includes #66, #91, #50, #78,
-  #81, #114 and #115.
+  #81 and #114. #115 is closed as delivered (the SMS admin panel shipped through
+  #151; the follow-up session/devices management slice is tracked under #50).
 - Local-only or untracked material is never counted as delivered product capability.
 
 ## Delivered on `main`
@@ -144,7 +145,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | ------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | RBAC          | Roles, seed and guard machinery                                       | Every domain route still needs explicit allow/deny policy tests                                                                                |
 | Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
-| Staff Auth    | Runtime and privileged lifecycle merged; fixture UX exists            | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                      |
+| Staff Auth    | Runtime and privileged lifecycle merged; fixture UX exists            | Live MFA/session UX and production acceptance (admin UI with Hordekiller); session/devices management UI is in the open #50 branch |
 | Catalog       | Contracts and API foundation merged via #103                          | Media/pricing, admin UI and storefront integration                                                                                             |
 | Inventory     | Correct service core                                                  | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
 | Orders        | Schema and generic state helper                                       | Aggregate/services, snapshots, compensation, API and UI                                                                                        |
@@ -223,6 +224,8 @@ security/query review, OpenAPI drift confirmation and merge.
   environment-backed settings projection, never returns the key, reports health as
   unknown until provider evidence exists and fails closed for unsupported mutation
   and uncontrolled test-send operations.
+- `#155` merged at `1de660e`: docs-only reconciliation of the post-#154 facts
+  (no runtime change).
 
 ## Open pull-request work (not yet on main)
 
@@ -230,6 +233,14 @@ No Sprint-1 #50 admin acceptance PR remains open: `#138`, `#143`, `#150` and
 replacement `#151` are merged; historical `#133` and duplicate `#149` are closed
 as superseded. The #114 read-only environment settings projection is now delivered
 through merged #154; no SMS implementation PR is currently awaiting merge.
+
+The remaining #50 admin session-management slice is in an open branch
+(`feat/50-admin-session-management`, base `1de660e`): the `/settings/sessions`
+page with a typed session port (HTTP client + fail-closed fixture gated behind
+`NEXT_PUBLIC_SESSION_FIXTURE=true`), the session/devices page model, nav entry,
+admin unit tests and an admin e2e spec against the real `/auth/sessions`
+endpoints (`GET /auth/sessions`, `DELETE /auth/sessions/:sessionId`,
+`POST /auth/logout-all`). It is not delivered until merged and CI-verified.
 
 Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
 Remaining for production sign-in is private SMS.ir account/key/template activation,
@@ -266,8 +277,10 @@ Release `0.1` closes only after:
 
 1. Treat merged #109 and closed #49 as the Auth runtime evidence baseline.
 2. Reconcile remaining acceptance across #50 and #91.
-3. Implement and verify the accepted SMS boundary through #114 and #115;
-   provision the production account, line and secret through private operations.
+3. The accepted SMS boundary is implemented; #115 (panel) is closed as delivered
+   and merged #154 covers the environment projection. Remaining acceptance is
+   private #114 provisioning: provision the production account, line and secret
+   through private operations and record controlled provider-backed evidence.
 4. #78 records capacity, review SLA and release authority.
 5. Clean `main` passes lint, typecheck, tests, integration, build, OpenAPI drift and
    browser smoke.
