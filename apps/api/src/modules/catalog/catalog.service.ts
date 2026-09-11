@@ -8,6 +8,7 @@ import { getRequestId } from '../../common/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import type { BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto } from './catalog.dto';
+import { CatalogIdempotencyService } from './catalog-idempotency.service';
 
 const statusToDb = (status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined): ProductStatus | undefined =>
   status === 'PUBLISHED' ? ProductStatus.ACTIVE : status;
@@ -27,7 +28,7 @@ type ProductDetailRow = { id: string; name: string; slug: string; description: s
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService, private readonly audit: AuditLogService) {}
+  constructor(private readonly prisma: PrismaService, private readonly audit: AuditLogService, private readonly idempotency: CatalogIdempotencyService) {}
 
   async listPublicProducts(query: Partial<ProductListQueryDto>): Promise<ProductListResponse> {
     return this.listProducts(query, false);
@@ -62,44 +63,69 @@ export class CatalogService {
     return { data: { product: this.productDetailPublic(product) } };
   }
 
-  async createProduct(actorId: string, input: ProductCreateDto): Promise<ProductDetailResponse> {
+  async createProduct(actorId: string, idempotencyKey: string, input: ProductCreateDto): Promise<ProductDetailResponse> {
     if (input.status === 'PUBLISHED' && (!input.variants || input.variants.length === 0)) {
       throw new ConflictException({ code: 'CONFLICT', message: 'A product must have a SKU before publishing.' });
     }
-    const product = await this.mapPrismaError(this.prisma.$transaction(async tx => {
-      const created = await tx.product.create({
-        data: {
-          name: input.name.trim(), slug: input.slug, description: input.description?.trim(), brandId: input.brandId, categoryId: input.categoryId,
-          status: statusToDb(input.status) ?? ProductStatus.DRAFT,
-          variants: input.variants ? { create: input.variants.map(variant => ({ sku: variant.sku, barcode: variant.barcode, title: variant.title, costPrice: BigInt(variant.costPrice.amount), salePrice: BigInt(variant.salePrice.amount), weightGrams: variant.weightGrams, isActive: variant.isActive ?? true })) } : undefined,
-        }, include: this.productInclude(),
-      });
-      await this.audit.record({ actorId, action: 'catalog.product.created', entityType: 'Product', entityId: created.id, requestId: getRequestId(), after: { productId: created.id, status: created.status, variantCount: created.variants.length } }, tx);
-      return created;
-    }), 'Product');
-    return { data: { product: this.productDetail(product) } };
+    const normalized = { ...input, name: input.name.trim(), description: input.description?.trim() };
+    const idempotencyPayload = {
+      name: normalized.name,
+      slug: normalized.slug,
+      description: normalized.description ?? null,
+      brandId: normalized.brandId ?? null,
+      categoryId: normalized.categoryId ?? null,
+      status: normalized.status ?? 'DRAFT',
+      variants: (normalized.variants ?? []).map(variant => ({
+        sku: variant.sku,
+        barcode: variant.barcode ?? null,
+        title: variant.title ?? null,
+        costPrice: variant.costPrice,
+        salePrice: variant.salePrice,
+        weightGrams: variant.weightGrams ?? null,
+        isActive: variant.isActive ?? true,
+      })),
+    };
+    return this.idempotency.run({
+      actorId, scope: 'catalog.product.create', key: idempotencyKey, payload: idempotencyPayload,
+      execute: async tx => {
+        const created = await this.mapPrismaError(tx.product.create({
+          data: {
+            name: normalized.name, slug: normalized.slug, description: normalized.description, brandId: normalized.brandId, categoryId: normalized.categoryId,
+            status: statusToDb(normalized.status) ?? ProductStatus.DRAFT,
+            variants: normalized.variants ? { create: normalized.variants.map(variant => ({ sku: variant.sku, barcode: variant.barcode, title: variant.title, costPrice: BigInt(variant.costPrice.amount), salePrice: BigInt(variant.salePrice.amount), weightGrams: variant.weightGrams, isActive: variant.isActive ?? true })) } : undefined,
+          }, include: this.productInclude(),
+        }), 'Product');
+        await this.audit.record({ actorId, action: 'catalog.product.created', entityType: 'Product', entityId: created.id, requestId: getRequestId(), after: { productId: created.id, status: created.status, variantCount: created.variants.length } }, tx);
+        return { response: { data: { product: this.productDetail(created) } }, resourceType: 'Product', resourceId: created.id };
+      },
+    });
   }
 
-  async changeProductStatus(actorId: string, id: string, input: ProductStatusDto): Promise<ProductStatusResponse> {
+  async changeProductStatus(actorId: string, idempotencyKey: string, id: string, input: ProductStatusDto): Promise<ProductStatusResponse> {
     const next = input.action === 'publish' ? ProductStatus.ACTIVE : input.action === 'archive' ? ProductStatus.ARCHIVED : ProductStatus.INACTIVE;
-    const product = await this.prisma.$transaction(async tx => {
+    return this.idempotency.run({
+      actorId, scope: `catalog.product.status:${id}`, key: idempotencyKey, payload: { action: input.action },
+      execute: async tx => {
       const current = await tx.product.findUnique({ where: { id }, include: this.productInclude() });
       if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
       if (input.action === 'publish' && current.variants.length === 0) throw new ConflictException({ code: 'CONFLICT', message: 'A product must have a SKU before publishing.' });
       const updated = await tx.product.update({ where: { id }, data: { status: next }, include: this.productInclude() });
       await this.audit.record({ actorId, action: 'catalog.product.status_changed', entityType: 'Product', entityId: id, requestId: getRequestId(), before: { status: current.status }, after: { status: updated.status } }, tx);
-      return updated;
+      return { response: { data: { product: this.productDetail(updated) } }, resourceType: 'Product', resourceId: id };
+      },
     });
-    return { data: { product: this.productDetail(product) } };
   }
 
-  async createBrand(actorId: string, input: BrandCreateDto): Promise<BrandResponse> {
-    const brand = await this.mapPrismaError(this.prisma.$transaction(async tx => {
-      const created = await tx.brand.create({ data: { name: input.name.trim(), slug: input.slug }, include: { _count: { select: { products: true } } } });
+  async createBrand(actorId: string, idempotencyKey: string, input: BrandCreateDto): Promise<BrandResponse> {
+    const normalized = { ...input, name: input.name.trim() };
+    return this.idempotency.run({
+      actorId, scope: 'catalog.brand.create', key: idempotencyKey, payload: normalized,
+      execute: async tx => {
+      const created = await this.mapPrismaError(tx.brand.create({ data: { name: normalized.name, slug: normalized.slug }, include: { _count: { select: { products: true } } } }), 'Brand');
       await this.audit.record({ actorId, action: 'catalog.brand.created', entityType: 'Brand', entityId: created.id, requestId: getRequestId(), after: { name: created.name, slug: created.slug } }, tx);
-      return created;
-    }), 'Brand');
-    return { data: { brand: { id: brand.id, name: brand.name, slug: brand.slug, productCount: brand._count.products } } };
+      return { response: { data: { brand: { id: created.id, name: created.name, slug: created.slug, productCount: created._count.products } } }, resourceType: 'Brand', resourceId: created.id };
+      },
+    });
   }
 
   async updateBrand(actorId: string, id: string, input: BrandUpdateDto): Promise<BrandResponse> {
@@ -116,13 +142,16 @@ export class CatalogService {
     return { data: { items: brands.map(brand => ({ id: brand.id, name: brand.name, slug: brand.slug, productCount: brand._count.products })) } };
   }
 
-  async createCategory(actorId: string, input: CategoryCreateDto): Promise<CategoryResponse> {
-    const category = await this.mapPrismaError(this.prisma.$transaction(async tx => {
-      const created = await tx.category.create({ data: { name: input.name.trim(), slug: input.slug, parentId: input.parentId }, include: this.categoryInclude() });
+  async createCategory(actorId: string, idempotencyKey: string, input: CategoryCreateDto): Promise<CategoryResponse> {
+    const normalized = { ...input, name: input.name.trim() };
+    return this.idempotency.run({
+      actorId, scope: 'catalog.category.create', key: idempotencyKey, payload: normalized,
+      execute: async tx => {
+      const created = await this.mapPrismaError(tx.category.create({ data: { name: normalized.name, slug: normalized.slug, parentId: normalized.parentId }, include: this.categoryInclude() }), 'Category');
       await this.audit.record({ actorId, action: 'catalog.category.created', entityType: 'Category', entityId: created.id, requestId: getRequestId(), after: { name: created.name, slug: created.slug } }, tx);
-      return created;
-    }), 'Category');
-    return { data: { category: this.categoryNode(category) } };
+      return { response: { data: { category: this.categoryNode(created) } }, resourceType: 'Category', resourceId: created.id };
+      },
+    });
   }
 
   async updateCategory(actorId: string, id: string, input: CategoryUpdateDto): Promise<CategoryResponse> {

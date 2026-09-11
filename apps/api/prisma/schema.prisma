@@ -173,6 +173,7 @@ model User {
   permissionRevocations  RolePermission[]        @relation("RolePermissionRevoker")
   mfaChallenges          MfaChallenge[]
   totpCredential         TotpCredential?
+  catalogIdempotencyRecords CatalogIdempotencyRecord[]
 
   @@index([status, createdAt])
   @@index([lockedUntil])
@@ -424,6 +425,23 @@ model ProductVariant {
   updatedAt      DateTime            @updatedAt
 
   @@index([productId])
+}
+
+model CatalogIdempotencyRecord {
+  id           String   @id @default(cuid())
+  actorId      String
+  actor        User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  scope        String   @db.VarChar(160)
+  keyHash      String   @db.Char(64)
+  payloadHash  String   @db.Char(64)
+  response     Json?
+  resourceType String?  @db.VarChar(100)
+  resourceId   String?  @db.VarChar(128)
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@unique([actorId, scope, keyHash])
+  @@index([expiresAt])
 }
 
 model Warehouse {
