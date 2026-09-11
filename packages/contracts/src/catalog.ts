@@ -129,7 +129,7 @@ export type ProductDetail = ProductListItem & {
 
 export type ProductDetailResponse = ApiSuccess<{ product: ProductDetail }>;
 
-export type ProductVariantPublic = Omit<ProductVariant, 'costPrice'>;
+export type ProductVariantPublic = Omit<ProductVariant, 'barcode' | 'costPrice'>;
 
 export type ProductDetailPublic = ProductListItem & {
   description: string | null;
