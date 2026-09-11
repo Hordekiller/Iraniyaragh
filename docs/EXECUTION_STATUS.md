@@ -19,21 +19,21 @@ day-to-day assignments.
 
 ## Current position
 
-| Gate                  | State                              | Current evidence                                              | Exit blocker                                               |
-| --------------------- | ---------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
-| `0.1` Foundation/Auth | Closing                            | Auth/provider dispatch and #115/#151 Admin UI are merged      | #50/#91 reconciliation; #78 agreement; #114 live acceptance |
-| `0.2` Catalog         | Started                            | Contracts and Catalog API foundation are merged via #103      | Media/pricing, admin CRUD, storefront live integration     |
-| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                      | HTTP/RBAC, warehouse/location, transfers, worker and admin |
-| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                      | Policies and all application/client workflows              |
+| Gate                  | State                              | Current evidence                                                   | Exit blocker                                                   |
+| --------------------- | ---------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| `0.1` Foundation/Auth | Closing                            | Auth/provider dispatch and read-only SMS/admin settings are merged | #50/#91 reconciliation; #78 agreement; private #114 acceptance |
+| `0.2` Catalog         | Started                            | Contracts and Catalog API foundation are merged via #103           | Media/pricing, admin CRUD, storefront live integration         |
+| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                           | HTTP/RBAC, warehouse/location, transfers, worker and admin     |
+| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                           | Policies and all application/client workflows                  |
 
 ## Active merge/review queue
 
-| Priority | Work                              | State         | Required reviewer focus                                                       | Exit action                                                   |
-| -------: | --------------------------------- | ------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------- |
-|        1 | Issue #91 — Sprint 1 coordination | In progress   | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                |
-|        2 | Issue #50 — Auth UX/E2E           | In progress   | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up |
-|        3 | Issue #78                         | Decision work | capacity, review SLA, private coordination and release authority              | Accepted written agreement with owner and effective date      |
-|        4 | Issue #114                        | In progress   | truthful read-only config projection; no secret/PII exposure; fail-closed mutations | Merge environment store, then private sandbox/live acceptance |
+| Priority | Work                              | State              | Required reviewer focus                                                       | Exit action                                                                                                       |
+| -------: | --------------------------------- | ------------------ | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+|        1 | Issue #91 — Sprint 1 coordination | In progress        | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                                                                    |
+|        2 | Issue #50 — Auth UX/E2E           | In progress        | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up                                                     |
+|        3 | Issue #78                         | Decision work      | capacity, review SLA, private coordination and release authority              | Accepted written agreement with owner and effective date                                                          |
+|        4 | Issue #114                        | Private acceptance | #154 merged with no secret/PII exposure and fail-closed mutations             | Provision account/line/template/key; controlled sandbox/live evidence; decide writable secret manager if required |
 
 ## Team disposition ledger — 2026-09-08
 
@@ -70,8 +70,8 @@ provider-backed happy path stays explicitly gated on private #114 activation.
 - Run clean-main quality, database and E2E gates.
 - Confirm customer OTP fixture tests and live API tests are described separately.
 - Decide #78; treat accepted ADR-0011 and closed #79 as the provider baseline.
-  #115/#151 UI is merged; #114 owns the read-only environment projection and
-  private provider-bound acceptance. A writable secret manager requires a named
+  #115/#151 UI and #114/#154 read-only environment projection are merged; #114 now
+  owns private provider-bound acceptance. A writable secret manager requires a named
   deployment-backend decision and is not inferred by application code.
 - Update Auth/API/security/operations docs only where merged behavior changed.
 

@@ -146,9 +146,9 @@ noted until verified in the account Sandbox.
 
 ## 10. Remaining delivery ownership
 
-- #114: provider port/adapter, deterministic fake, settings and secret backends,
-  Auth integration, truthful read-only environment projection,
-  delivery/diagnostics boundary, tests and production runbook.
+- #114: provider port/adapter, deterministic fake, Auth integration, truthful
+  read-only environment projection, diagnostics boundary, tests and runbook are
+  merged; private provider activation evidence remains.
 - #115/#151: the admin HTTP client and Persian RTL UI are merged; final live-provider
   acceptance remains coupled to #114 production configuration evidence.
 - Private operations: account/line/template procurement and secret injection.
