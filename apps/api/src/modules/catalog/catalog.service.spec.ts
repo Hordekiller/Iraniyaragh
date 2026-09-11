@@ -59,7 +59,8 @@ function buildService() {
     $transaction: vi.fn().mockImplementation(async (fn: (c: unknown) => Promise<unknown>) => fn(tx as never)),
   } as never;
   const audit = { record: vi.fn() } as never;
-  const service = new CatalogService(prisma, audit);
+  const idempotency = { run: vi.fn(async ({ execute }: { execute: (client: unknown) => Promise<{ response: unknown }> }) => (await execute(tx)).response) } as never;
+  const service = new CatalogService(prisma, audit, idempotency);
   return { client, tx, audit, service, prisma: prisma as unknown as Record<string, unknown> };
 }
 
@@ -136,7 +137,7 @@ describe('CatalogService', () => {
   describe('product creation', () => {
     it('creates a product with nested variants inside a transaction and records audit', async () => {
       (ctx.tx.product.create as ReturnType<typeof vi.fn>).mockResolvedValue(productRow);
-      const created = await ctx.service.createProduct('actor-1', {
+      const created = await ctx.service.createProduct('actor-1', 'unit-create-product', {
         name: 'Product One',
         slug: 'product-one',
         variants: [{ sku: 'SKU-1', costPrice: { amount: '100000', currency: 'IRR' }, salePrice: { amount: '125000', currency: 'IRR' } }],
@@ -148,14 +149,14 @@ describe('CatalogService', () => {
     it('maps a duplicate slug or sku on create to Conflict (P2002)', async () => {
       (ctx.tx.product.create as ReturnType<typeof vi.fn>).mockRejectedValue(knownError('P2002', { target: ['slug'] }));
       await expect(
-        ctx.service.createProduct('actor-1', { name: 'Product One', slug: 'product-one' }),
+        ctx.service.createProduct('actor-1', 'unit-duplicate-product', { name: 'Product One', slug: 'product-one' }),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(ctx.tx.auditLog.create).not.toHaveBeenCalled();
     });
 
     it('rejects creating an already-published product without a SKU', async () => {
       await expect(
-        ctx.service.createProduct('actor-1', { name: 'Product One', slug: 'product-one', status: 'PUBLISHED' }),
+        ctx.service.createProduct('actor-1', 'unit-invalid-product', { name: 'Product One', slug: 'product-one', status: 'PUBLISHED' }),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
     });
@@ -165,39 +166,39 @@ describe('CatalogService', () => {
     it('publishes a product with at least one SKU', async () => {
       (ctx.tx.product.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(productRow);
       (ctx.tx.product.update as ReturnType<typeof vi.fn>).mockResolvedValue({ ...productRow, status: ProductStatus.ACTIVE });
-      const result = await ctx.service.changeProductStatus('actor-1', 'product-1', { action: 'publish' });
+      const result = await ctx.service.changeProductStatus('actor-1', 'unit-publish-status', 'product-1', { action: 'publish' });
       expect(result.data.product.status).toBe('PUBLISHED');
     });
 
     it('maps INACTIVE to DRAFT for the api status model', async () => {
       (ctx.tx.product.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(productRow);
       (ctx.tx.product.update as ReturnType<typeof vi.fn>).mockResolvedValue({ ...productRow, status: ProductStatus.INACTIVE });
-      const result = await ctx.service.changeProductStatus('actor-1', 'product-1', { action: 'unpublish' });
+      const result = await ctx.service.changeProductStatus('actor-1', 'unit-unpublish-status', 'product-1', { action: 'unpublish' });
       expect(result.data.product.status).toBe('DRAFT');
     });
 
     it('rejects publishing a product without any SKU (409)', async () => {
       (ctx.tx.product.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...productRow, variants: [] });
-      await expect(ctx.service.changeProductStatus('actor-1', 'product-1', { action: 'publish' })).rejects.toBeInstanceOf(ConflictException);
+      await expect(ctx.service.changeProductStatus('actor-1', 'unit-no-sku-status', 'product-1', { action: 'publish' })).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('throws NotFound for a missing product', async () => {
       (ctx.tx.product.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-      await expect(ctx.service.changeProductStatus('actor-1', 'product-1', { action: 'unpublish' })).rejects.toBeInstanceOf(NotFoundException);
+      await expect(ctx.service.changeProductStatus('actor-1', 'unit-missing-status', 'product-1', { action: 'unpublish' })).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
   describe('brand mutations', () => {
     it('creates a brand and records audit', async () => {
       (ctx.tx.brand.create as ReturnType<typeof vi.fn>).mockResolvedValue(brandRow);
-      const result = await ctx.service.createBrand('actor-1', { name: 'Brand One', slug: 'brand-one' });
+      const result = await ctx.service.createBrand('actor-1', 'unit-create-brand', { name: 'Brand One', slug: 'brand-one' });
       expect(result.data.brand.productCount).toBe(2);
       expect(ctx.audit.record).toHaveBeenCalledWith(expect.any(Object), ctx.tx);
     });
 
     it('maps a duplicate brand slug to Conflict on create', async () => {
       (ctx.tx.brand.create as ReturnType<typeof vi.fn>).mockRejectedValue(knownError('P2002', { target: ['slug'] }));
-      await expect(ctx.service.createBrand('actor-1', { name: 'Brand One', slug: 'brand-one' })).rejects.toBeInstanceOf(ConflictException);
+      await expect(ctx.service.createBrand('actor-1', 'unit-duplicate-brand', { name: 'Brand One', slug: 'brand-one' })).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('updates a brand and maps a missing id to NotFound (P2025)', async () => {
@@ -214,14 +215,14 @@ describe('CatalogService', () => {
   describe('category mutations', () => {
     it('creates a category and records audit', async () => {
       (ctx.tx.category.create as ReturnType<typeof vi.fn>).mockResolvedValue({ ...categoryRow, children: [] });
-      const result = await ctx.service.createCategory('actor-1', { name: 'Category One', slug: 'category-one' });
+      const result = await ctx.service.createCategory('actor-1', 'unit-create-category', { name: 'Category One', slug: 'category-one' });
       expect(result.data.category.slug).toBe('category-one');
       expect(ctx.audit.record).toHaveBeenCalledWith(expect.any(Object), ctx.tx);
     });
 
     it('maps a duplicate category slug to Conflict on create', async () => {
       (ctx.tx.category.create as ReturnType<typeof vi.fn>).mockRejectedValue(knownError('P2002', { target: ['slug'] }));
-      await expect(ctx.service.createCategory('actor-1', { name: 'Category One', slug: 'category-one' })).rejects.toBeInstanceOf(ConflictException);
+      await expect(ctx.service.createCategory('actor-1', 'unit-duplicate-category', { name: 'Category One', slug: 'category-one' })).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('updates a category and maps a missing id to NotFound (P2025)', async () => {
@@ -253,7 +254,7 @@ describe('CatalogService', () => {
     it('maps an invalid parent reference to a stable unprocessable response', async () => {
       (ctx.tx.category.create as ReturnType<typeof vi.fn>).mockRejectedValue(knownError('P2003', { field_name: 'parentId' }));
       await expect(
-        ctx.service.createCategory('actor-1', { name: 'Category One', slug: 'category-one', parentId: 'missing' }),
+        ctx.service.createCategory('actor-1', 'unit-invalid-parent', { name: 'Category One', slug: 'category-one', parentId: 'missing' }),
       ).rejects.toBeInstanceOf(UnprocessableEntityException);
     });
   });

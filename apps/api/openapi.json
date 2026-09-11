@@ -442,7 +442,17 @@
       },
       "post": {
         "operationId": "CatalogController_createProduct",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": ""
@@ -456,7 +466,17 @@
     "/catalog/admin/products/{id}/status": {
       "post": {
         "operationId": "CatalogController_status",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": ""
@@ -470,7 +490,17 @@
     "/catalog/admin/brands": {
       "post": {
         "operationId": "CatalogController_createBrand",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": ""
@@ -498,7 +528,17 @@
     "/catalog/admin/categories": {
       "post": {
         "operationId": "CatalogController_createCategory",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": ""

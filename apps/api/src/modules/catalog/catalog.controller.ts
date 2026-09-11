@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiHeader } from '@nestjs/swagger';
 import type { BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse } from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
@@ -36,19 +37,22 @@ export class CatalogController {
   async adminProducts(@Query() query: ProductListQueryDto): Promise<ProductListResponse> { return this.catalog.listAdminProducts(query); }
 
   @Post('admin/products')
+  @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
-  async createProduct(@CurrentPrincipal() principal: AuthPrincipalContext, @Body() input: ProductCreateDto): Promise<ProductDetailResponse> { return this.catalog.createProduct(principal.userId, input); }
+  async createProduct(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: ProductCreateDto): Promise<ProductDetailResponse> { return this.catalog.createProduct(principal.userId, idempotencyKey, input); }
 
   @Post('admin/products/:id/status')
+  @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
-  async status(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: ProductStatusDto): Promise<ProductStatusResponse> { return this.catalog.changeProductStatus(principal.userId, id, input); }
+  async status(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: ProductStatusDto): Promise<ProductStatusResponse> { return this.catalog.changeProductStatus(principal.userId, idempotencyKey, id, input); }
 
   @Post('admin/brands')
+  @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
-  async createBrand(@CurrentPrincipal() principal: AuthPrincipalContext, @Body() input: BrandCreateDto): Promise<BrandResponse> { return this.catalog.createBrand(principal.userId, input); }
+  async createBrand(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: BrandCreateDto): Promise<BrandResponse> { return this.catalog.createBrand(principal.userId, idempotencyKey, input); }
 
   @Patch('admin/brands/:id')
   @RequireAuthentication('STAFF_MFA')
@@ -56,9 +60,10 @@ export class CatalogController {
   async updateBrand(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: BrandUpdateDto): Promise<BrandResponse> { return this.catalog.updateBrand(principal.userId, id, input); }
 
   @Post('admin/categories')
+  @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
-  async createCategory(@CurrentPrincipal() principal: AuthPrincipalContext, @Body() input: CategoryCreateDto): Promise<CategoryResponse> { return this.catalog.createCategory(principal.userId, input); }
+  async createCategory(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: CategoryCreateDto): Promise<CategoryResponse> { return this.catalog.createCategory(principal.userId, idempotencyKey, input); }
 
   @Patch('admin/categories/:id')
   @RequireAuthentication('STAFF_MFA')

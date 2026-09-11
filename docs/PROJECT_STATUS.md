@@ -259,6 +259,11 @@ security/query review, OpenAPI drift confirmation and merge.
   (admin/private detail retains it). Mutation idempotency remains the separately
   planned second #111 slice.
 
+The durable Catalog mutation-idempotency runtime is being implemented separately on
+the post-#168 platform branch. It is not delivered on `main` until its forward
+migration, replay/conflict behavior, PostgreSQL race evidence, OpenAPI header and
+current-head CI are reviewed and merged.
+
 ## Open pull-request work (not yet on main)
 
 None currently awaiting review: after the 2026-09-11 merges (`#156`, `#157`, `#160`)

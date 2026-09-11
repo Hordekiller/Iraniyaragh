@@ -5,13 +5,15 @@ import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 import { AuditLogService } from '../audit/audit-log.service';
 import { CatalogService } from './catalog.service';
+import { CatalogIdempotencyService } from './catalog-idempotency.service';
 
 describe.sequential('CatalogService database integration', () => {
   const runId = randomUUID().replaceAll('-', '').slice(0, 20);
   const requestIdPrefix = `catinteg-${runId}`;
   const prisma = new PrismaService();
   const auditLog = new AuditLogService(prisma);
-  const catalog = new CatalogService(prisma, auditLog);
+  const idempotency = new CatalogIdempotencyService(prisma);
+  const catalog = new CatalogService(prisma, auditLog, idempotency);
   let connected = false;
   let actorId = '';
   let actorRoleId = '';
@@ -25,6 +27,7 @@ describe.sequential('CatalogService database integration', () => {
   const categorySlug = `integration-category-${runId}`;
   const childSlug = `integration-child-${runId}`;
   const productSlug = `integration-product-${runId}`;
+  const key = (name: string) => `catalog-${name}-${runId}`;
 
   beforeAll(async () => {
     assertIsolatedTestDatabase({
@@ -115,7 +118,7 @@ describe.sequential('CatalogService database integration', () => {
   });
 
   it('creates a product with integer-rial money variants and persists BigInt prices', async () => {
-    const created = await catalog.createProduct(actorId, {
+    const created = await catalog.createProduct(actorId, key('create-product'), {
       name: 'Integration Product',
       slug: productSlug,
       brandId,
@@ -161,7 +164,7 @@ describe.sequential('CatalogService database integration', () => {
   });
 
   it('publishes a product and surfaces it through the public catalog', async () => {
-    const created = await catalog.createProduct(actorId, {
+    const created = await catalog.createProduct(actorId, key('publish-product'), {
       name: 'Publishable Product',
       slug: `publishable-${runId}`,
       variants: [
@@ -174,7 +177,7 @@ describe.sequential('CatalogService database integration', () => {
     });
     const id = created.data.product.id;
 
-    const published = await catalog.changeProductStatus(actorId, id, {
+    const published = await catalog.changeProductStatus(actorId, key('publish-status'), id, {
       action: 'publish',
     });
     expect(published.data.product.status).toBe('PUBLISHED');
@@ -197,14 +200,14 @@ describe.sequential('CatalogService database integration', () => {
   });
 
   it('rejects publishing a product that has no SKU', async () => {
-    const created = await catalog.createProduct(actorId, {
+    const created = await catalog.createProduct(actorId, key('no-variant'), {
       name: 'No Variant Product',
       slug: `no-variant-${runId}`,
     });
     const id = created.data.product.id;
 
     await expect(
-      catalog.changeProductStatus(actorId, id, { action: 'publish' }),
+      catalog.changeProductStatus(actorId, key('invalid-status'), id, { action: 'publish' }),
     ).rejects.toBeInstanceOf(ConflictException);
 
     await prisma.auditLog.deleteMany({
@@ -215,7 +218,7 @@ describe.sequential('CatalogService database integration', () => {
 
   it('rejects creating an already-published product that has no SKU', async () => {
     await expect(
-      catalog.createProduct(actorId, {
+      catalog.createProduct(actorId, key('invalid-published'), {
         name: 'Create Published Without SKU',
         slug: `create-published-no-sku-${runId}`,
         status: 'PUBLISHED',
@@ -255,7 +258,7 @@ describe.sequential('CatalogService database integration', () => {
 
   it('writes an audit row when creating a category', async () => {
     const extraSlug = `extra-category-${runId}`;
-    const created = await catalog.createCategory(actorId, {
+    const created = await catalog.createCategory(actorId, key('create-category'), {
       name: 'Extra Category',
       slug: extraSlug,
     });
@@ -293,7 +296,7 @@ describe.sequential('CatalogService database integration', () => {
 
   it('maps a duplicate brand slug on create to Conflict', async () => {
     await expect(
-      catalog.createBrand(actorId, { name: 'Duplicate Brand', slug: brandSlug }),
+      catalog.createBrand(actorId, key('duplicate-brand'), { name: 'Duplicate Brand', slug: brandSlug }),
     ).rejects.toBeInstanceOf(ConflictException);
 
     await prisma.auditLog.deleteMany({
@@ -303,7 +306,7 @@ describe.sequential('CatalogService database integration', () => {
 
   it('maps a duplicate category slug on create to Conflict', async () => {
     await expect(
-      catalog.createCategory(actorId, { name: 'Duplicate Category', slug: categorySlug }),
+      catalog.createCategory(actorId, key('duplicate-category'), { name: 'Duplicate Category', slug: categorySlug }),
     ).rejects.toBeInstanceOf(ConflictException);
 
     await prisma.auditLog.deleteMany({
@@ -313,7 +316,7 @@ describe.sequential('CatalogService database integration', () => {
 
   it('maps a duplicate product slug on create to Conflict', async () => {
     await expect(
-      catalog.createProduct(actorId, { name: 'Duplicate Product', slug: productSlug }),
+      catalog.createProduct(actorId, key('duplicate-product'), { name: 'Duplicate Product', slug: productSlug }),
     ).rejects.toBeInstanceOf(ConflictException);
 
     await prisma.auditLog.deleteMany({
@@ -323,7 +326,7 @@ describe.sequential('CatalogService database integration', () => {
 
   it('maps a missing category parent to a stable invalid-reference error', async () => {
     await expect(
-      catalog.createCategory(actorId, {
+      catalog.createCategory(actorId, key('invalid-parent'), {
         name: 'Orphan Category',
         slug: `orphan-${runId}`,
         parentId: 'does-not-exist',
