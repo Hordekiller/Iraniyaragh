@@ -49,6 +49,11 @@ Each release gate follows the same order:
 Issue size: `S` ≤ 1 focused day, `M` = 2–3 days, `L` = 4–5 days. Split larger
 items. Maintain at most one primary implementation per contributor.
 
+Three-lane execution (Platform, Admin and User UI), exclusive hotspot ownership,
+per-wave `D/C/P/A/W/I/O` issue splitting and the merge train are normative in
+`AGENT_WORKSTREAMS.md`. This plan defines what must ship; that document defines how
+the three agents may deliver it concurrently without changing business ownership.
+
 ## 4. Gate map and dependency chain
 
 | Gate                      |       Estimated duration | Integrated outcome                                     | Depends on                            |
