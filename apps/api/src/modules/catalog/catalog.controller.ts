@@ -1,28 +1,33 @@
-import { Body, Controller, Get, Header, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import type { BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse } from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { CatalogService } from './catalog.service';
 import { BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto } from './catalog.dto';
+import { PublicCatalogCache } from './public-catalog-cache.interceptor';
 
 @Controller({ path: 'catalog', version: '1' })
 export class CatalogController {
   constructor(private readonly catalog: CatalogService) {}
 
   @Get('products')
-  @Header('Cache-Control', 'no-store')
+  @PublicCatalogCache()
   async publicProducts(@Query() query: ProductListQueryDto): Promise<ProductListResponse> { return this.catalog.listPublicProducts(query); }
 
   @Get('products/:idOrSlug')
+  @PublicCatalogCache()
   async publicProduct(@Param('idOrSlug') idOrSlug: string): Promise<ProductDetailPublicResponse> { return this.catalog.getPublicProduct(idOrSlug); }
 
   @Get('categories')
+  @PublicCatalogCache()
   async categories(): Promise<CategoryListResponse> { return this.catalog.listCategories(); }
 
   @Get('categories/tree')
+  @PublicCatalogCache()
   async categoryTree(): Promise<CategoryTreeResponse> { return this.catalog.categoryTree(); }
 
   @Get('brands')
+  @PublicCatalogCache()
   async brands(): Promise<BrandListResponse> { return this.catalog.listBrands(); }
 
   @Get('admin/products')
