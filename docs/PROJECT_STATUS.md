@@ -34,8 +34,9 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `a824d86`, containing merged #109, #103, #112,
-  #138, #143, #144, #148, #150, #151 and accepted ADR-0011 via #116.
+- Baseline at review: `main` commit `86914a4`, containing merged #109, #103, #112,
+  accepted ADR-0011 via #116 and the integrated SMS/Auth/admin-settings foundation
+  through #148, #151, #153 and #154.
 - #49 and #79 are closed; active coordination includes #66, #91, #50, #78,
   #81, #114 and #115.
 - Local-only or untracked material is never counted as delivered product capability.
@@ -216,14 +217,19 @@ security/query review, OpenAPI drift confirmation and merge.
   write-only secret lifecycle, idempotent recovery, diagnostics and the
   permission-aware `/settings/sms` route. PR `#133` remains closed as superseded;
   its review history and the exact verified head are preserved.
+- `#153` merged at `b4c1cd1`: staging/production bootstrap now rejects missing or
+  malformed SMS.ir credentials/template/timeout configuration before serving.
+- `#154` merged at `86914a4`: the admin SMS API now exposes a truthful immutable
+  environment-backed settings projection, never returns the key, reports health as
+  unknown until provider evidence exists and fails closed for unsupported mutation
+  and uncontrolled test-send operations.
 
 ## Open pull-request work (not yet on main)
 
 No Sprint-1 #50 admin acceptance PR remains open: `#138`, `#143`, `#150` and
 replacement `#151` are merged; historical `#133` and duplicate `#149` are closed
-as superseded. The current #114 branch replaces the disconnected SMS-settings
-placeholder with a read-only environment projection; it is open work and is not
-counted as delivered until its protected PR is merged.
+as superseded. The #114 read-only environment settings projection is now delivered
+through merged #154; no SMS implementation PR is currently awaiting merge.
 
 Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
 Remaining for production sign-in is private SMS.ir account/key/template activation,
