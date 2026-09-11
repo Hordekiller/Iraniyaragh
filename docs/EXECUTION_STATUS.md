@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-08
+Last reviewed: 2026-09-11
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
@@ -21,7 +21,7 @@ day-to-day assignments.
 
 | Gate                  | State                              | Current evidence                                              | Exit blocker                                               |
 | --------------------- | ---------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
-| `0.1` Foundation/Auth | Closing                            | Core Auth is merged; #49/#79 are closed and ADR-0011 accepted | #50/#91 reconciliation; #78 agreement; #114/#115 delivery  |
+| `0.1` Foundation/Auth | Closing                            | Auth/provider dispatch and #115/#151 Admin UI are merged      | #50/#91 reconciliation; #78 agreement; #114 live acceptance |
 | `0.2` Catalog         | Started                            | Contracts and Catalog API foundation are merged via #103      | Media/pricing, admin CRUD, storefront live integration     |
 | `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                      | HTTP/RBAC, warehouse/location, transfers, worker and admin |
 | `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                      | Policies and all application/client workflows              |
@@ -33,7 +33,7 @@ day-to-day assignments.
 |        1 | Issue #91 — Sprint 1 coordination | In progress   | every accepted Auth requirement has merged evidence or explicit deferral      | Close/roll forward with named owner and reason                |
 |        2 | Issue #50 — Auth UX/E2E           | In progress   | separate fixture coverage from live integration; list remaining client states | Close only after accepted product evidence or split follow-up |
 |        3 | Issue #78                         | Decision work | capacity, review SLA, private coordination and release authority              | Accepted written agreement with owner and effective date      |
-|        4 | Issues #114/#115                  | Ready/blocked | provider contract first; then authorization, secret boundary and admin states | Backend contract accepted, then integrated admin evidence     |
+|        4 | Issue #114                        | In progress   | truthful read-only config projection; no secret/PII exposure; fail-closed mutations | Merge environment store, then private sandbox/live acceptance |
 
 ## Team disposition ledger — 2026-09-08
 
@@ -61,15 +61,18 @@ related release/production gate while deterministic local implementation may pro
 - Keep any work beyond closed #49 in separate, sized issues; do not reopen its
   completed scope implicitly under a broad “Auth complete” statement.
 
-Exit: remaining #50/#91 gaps are closed or split into owned follow-ups.
+Exit: remaining #50/#91 gaps are closed or split into owned follow-ups. The
+provider-backed happy path stays explicitly gated on private #114 activation.
 
 ### Days 2–4 — close Sprint 1 acceptance
 
 - Map #50 and #91 acceptance checkboxes to a commit/test/PR; retain #49 as closed evidence.
 - Run clean-main quality, database and E2E gates.
 - Confirm customer OTP fixture tests and live API tests are described separately.
-- Decide #78; treat accepted ADR-0011 and closed #79 as the provider baseline,
-  with implementation explicitly owned by #114/#115.
+- Decide #78; treat accepted ADR-0011 and closed #79 as the provider baseline.
+  #115/#151 UI is merged; #114 owns the read-only environment projection and
+  private provider-bound acceptance. A writable secret manager requires a named
+  deployment-backend decision and is not inferred by application code.
 - Update Auth/API/security/operations docs only where merged behavior changed.
 
 Exit: `0.1` either closes with evidence or has a short explicit carry-over list.
