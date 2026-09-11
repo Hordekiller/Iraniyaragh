@@ -123,6 +123,8 @@ noted until verified in the account Sandbox.
 
 - [ ] SMS.ir account, appropriate plan and service-capable line are provisioned privately.
 - [ ] Production Verify template is approved; its integer ID and parameter names match config.
+- [ ] Central environment validation rejects missing API key/template and timeout
+      values outside the enforced 500–10000 ms range before application bootstrap.
 - [ ] Writable production secret manager is configured, or admin rotation is visibly disabled.
 - [ ] API key is injected without appearing in shell history, CI output or tickets.
 - [ ] Non-secret settings pass optimistic-version validation and audit tests.
@@ -146,5 +148,6 @@ noted until verified in the account Sandbox.
 
 - #114: provider port/adapter, deterministic fake, settings and secret backends,
   Auth integration, delivery/diagnostics boundary, tests and production runbook.
-- #115: accepted admin HTTP client and Persian RTL UI after the #114 contract lands.
+- #115/#151: the admin HTTP client and Persian RTL UI are merged; final live-provider
+  acceptance remains coupled to #114 production configuration evidence.
 - Private operations: account/line/template procurement and secret injection.

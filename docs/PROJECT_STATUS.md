@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-10
+Last reviewed: 2026-09-11
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -17,15 +17,15 @@ operations are absent.
 
 Current delivery confidence:
 
-| Area                           | State             | Evidence-based assessment                                                                   |
-| ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------- |
-| Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist           |
-| Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                           |
-| Customer/auth UX               | Merged foundation | Real HTTP client defaults in the storefront with Web-Locks-serialized silent restore (#50 delivered via #139); real OTP request + error/rate surface E2E'd; happy-path OTP verify still gated on SMS delivery and a dev code-reveal |
-| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice                  |
-| Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not          |
-| Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                  |
-| Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not |
+| Area                           | State             | Evidence-based assessment                                                                                                                   |
+| ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist                                                           |
+| Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                                                                           |
+| Customer/auth UX               | Merged foundation | Real HTTP client and provider-dispatched OTP foundation are merged; live SMS.ir activation and provider-backed happy-path acceptance remain |
+| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice                                                                  |
+| Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not                                                          |
+| Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                                                                  |
+| Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                 |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
 G2 is at acceptance reconciliation, G3 has a merged API foundation, G4 has a reusable service
@@ -139,22 +139,23 @@ security/query review, OpenAPI drift confirmation and merge.
 
 ## Partial capabilities and exact boundaries
 
-| Capability    | What exists                                                | What prevents completion                                                        |
-| ------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| RBAC          | Roles, seed and guard machinery                            | Every domain route still needs explicit allow/deny policy tests                 |
-| Customer Auth | API runtime; real HTTP storefront client merged via #139 | Real OTP request + error/rate surface E2E'd and cross-tab refresh Web-Locks-serialized (CI runs Redis); happy-path sign-in needs SMS delivery + dev-reveal |
-| Staff Auth    | Runtime and privileged lifecycle merged; fixture UX exists | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                 |
-| Catalog       | Contracts and API foundation merged via #103               | Media/pricing, admin UI and storefront integration                              |
-| Inventory     | Correct service core                                       | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI |
-| Orders        | Schema and generic state helper                            | Aggregate/services, snapshots, compensation, API and UI                         |
-| Payments      | Schema/state foundation                                    | Provider/adapter, verification, idempotency, refund and reconciliation          |
-| Web           | Accessible prototype                                       | Static `prototype.ts` data and simulated commerce actions                       |
-| Admin         | Shell, Auth and UI primitives                              | No operational domain modules                                                   |
-| Operations    | CI and local Compose                                       | Deploy/staging, observability, recovery and rollback proof                      |
+| Capability    | What exists                                                           | What prevents completion                                                                                                                       |
+| ------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| RBAC          | Roles, seed and guard machinery                                       | Every domain route still needs explicit allow/deny policy tests                                                                                |
+| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
+| Staff Auth    | Runtime and privileged lifecycle merged; fixture UX exists            | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                      |
+| Catalog       | Contracts and API foundation merged via #103                          | Media/pricing, admin UI and storefront integration                                                                                             |
+| Inventory     | Correct service core                                                  | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
+| Orders        | Schema and generic state helper                                       | Aggregate/services, snapshots, compensation, API and UI                                                                                        |
+| Payments      | Schema/state foundation                                               | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
+| Web           | Accessible prototype                                                  | Static `prototype.ts` data and simulated commerce actions                                                                                      |
+| Admin         | Shell, Auth/UI primitives and SMS settings module                     | Catalog/inventory/order operational modules are not yet merged                                                                                 |
+| Operations    | CI and local Compose                                                  | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
 
-- Production SMS delivery and provider outage behavior.
+- Live SMS.ir sandbox/production activation evidence, approved account/template
+  configuration and controlled provider-backed happy-path acceptance.
 - Silent single-flight restore, cross-tab revocation handling and expired-state UX are
   merged via #139 (real HTTP default, fixture only behind `VITE_FIXTURE_AUTH=true`);
   production acceptance still requires live SMS, admin MFA/session UX and permission
@@ -223,10 +224,10 @@ replacement `#151` are merged; historical `#133` and duplicate `#149` are closed
 as superseded. Future work must be opened as a separately scoped PR and is not
 counted as delivered until merged on `main`.
 
-Remaining for real customer sign-in: SMS delivery is wired to adapters only (no
-provider call from the OTP service yet) and the issued code has no dev-gated reveal,
-so a happy-path OTP E2E cannot run without a provider bound to a test phone (tracked
-on the Sprint 1 plan).
+Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
+Remaining for production sign-in is private SMS.ir account/key/template activation,
+a controlled provider-bound test destination and sanitized sandbox/production
+acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient.
 
 ## Decisions and blockers
 
