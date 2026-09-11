@@ -38,6 +38,10 @@ Require/support an idempotency key for retriable critical commands such as:
 
 The same key with a conflicting payload must be rejected.
 
+Catalog create/status commands follow the scoped durable replay contract in
+`CATALOG_IDEMPOTENCY.md`; clients must not generate a new key for an ambiguous
+retry.
+
 ## Correlation IDs
 
 Every request receives a request/correlation ID. Include it in structured logs and error responses.

@@ -157,6 +157,9 @@ Developer B:
 - Replace static homepage/category/product data with API data.
 - Product listing/detail, search, filtering, pagination and empty/error states.
 - SEO metadata, structured product basics and image performance.
+- Ordered mixed product galleries with a required primary image, optional videos,
+  explicit video posters, responsive renditions, captions/transcripts and the safe
+  upload/processing lifecycle defined in `PRODUCT_MEDIA_SPEC.md`.
 - Implement the server-rendering, dynamic-sitemap and indexability foundations from
   `SEO_GEO_AI_DISCOVERY_PLAN.md`; a client-only metadata pass does not satisfy this item.
 - Responsive and accessibility pass on purchase discovery flows.
