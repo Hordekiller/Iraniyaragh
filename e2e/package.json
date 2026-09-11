@@ -10,7 +10,8 @@
     "test:headed": "playwright test --headed",
     "test:install": "playwright install chromium",
     "test:report": "playwright show-report",
-    "screenshots": "node scripts/capture-auth-screenshots.mjs"
+    "screenshots": "node scripts/capture-auth-screenshots.mjs",
+    "screenshots:admin-sessions": "node scripts/capture-admin-sessions-screenshots.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
