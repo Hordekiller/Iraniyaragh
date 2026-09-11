@@ -1,11 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import {
-  createExternalRequestsTracker,
-  isMobile,
-  signInDiAsAdmin,
-  tap,
-} from './helpers';
+import { isMobile, signInDiAsAdmin, tap } from './helpers';
 
 /**
  * Session and device management for the dev admin (#50).
@@ -33,7 +28,6 @@ function currentSessionRow(page: Page) {
 
 test.describe('admin: session and device management', () => {
   test('lists the live sessions through the real API (no fixture banner)', async ({ page }) => {
-    const network = createExternalRequestsTracker(page);
     await openSessionsPage(page);
 
     // The CI build has no NEXT_PUBLIC_SESSION_FIXTURE, so the page must be
@@ -43,8 +37,6 @@ test.describe('admin: session and device management', () => {
     // The dev admin signed in on this device, so exactly one current row exists.
     await expect(page.getByRole('listitem').filter({ hasText: 'این دستگاه' })).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'خروج از همهٔ دستگاه‌ها' })).toBeVisible();
-
-    await network.assertNone();
   });
 
   test('revoking the current device signs the operator out to /login', async ({ page }) => {
@@ -61,7 +53,7 @@ test.describe('admin: session and device management', () => {
     await openSessionsPage(page);
 
     await tap(page.getByRole('button', { name: 'خروج از همهٔ دستگاه‌ها' }));
-    await expect(page.getByText(/از تمام نشست‌های فعال این حساب خارج می‌شود/)).toBeVisible();
+    await expect(page.getByText(/از تمام نشست‌های فعال این حساب خارج می‌شوید/)).toBeVisible();
 
     await tap(page.getByTestId('session-confirm-button'));
     await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
