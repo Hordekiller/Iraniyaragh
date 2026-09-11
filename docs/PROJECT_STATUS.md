@@ -34,13 +34,14 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `5d4a3d0`, containing merged #109, #103, #112,
-  accepted ADR-0011 via #116 and the integrated SMS/Auth/admin-settings foundation
-  through #148, #151, #153, #154, the docs reconciliation #155 and the #50
-  session/device-management panel #158.
-- #49 and #79 are closed; active coordination includes #66, #91, #50, #78,
-  #81 and #114. #115 is closed as delivered (the SMS admin panel shipped through
-  #151; the follow-up session/devices management slice is tracked under #50).
+- Baseline at review: `main` commit `4a02ecd`, containing merged #109, #103, #112,
+  accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
+  through #148, #151, #153, #154, the docs reconciliation #155, the #50
+  session/device-management panel #158, the screenshot/a11y evidence #160, the
+  catalog hardenings #157 and the three-lane delivery map #156.
+- #49, #79, #50 and #91 are closed; #50/#91 were closed on 2026-09-11 with 7/7
+  acceptance evidence. Active coordination includes #66, #78, #81 and #114. #115 is
+  closed as delivered (the SMS admin panel shipped through #151).
 - Local-only or untracked material is never counted as delivered product capability.
 
 ## Delivered on `main`
@@ -142,18 +143,18 @@ security/query review, OpenAPI drift confirmation and merge.
 
 ## Partial capabilities and exact boundaries
 
-| Capability    | What exists                                                           | What prevents completion                                                                                                                       |
-| ------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| RBAC          | Roles, seed and guard machinery                                       | Every domain route still needs explicit allow/deny policy tests                                                                                |
-| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
-| Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                        |
-| Catalog       | Contracts and API foundation merged via #103                          | Media/pricing, admin UI and storefront integration                                                                                             |
-| Inventory     | Correct service core                                                  | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
-| Orders        | Schema and generic state helper                                       | Aggregate/services, snapshots, compensation, API and UI                                                                                        |
-| Payments      | Schema/state foundation                                               | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
-| Web           | Accessible prototype                                                  | Static `prototype.ts` data and simulated commerce actions                                                                                      |
-| Admin         | Shell, Auth/UI primitives and SMS settings module                     | Catalog/inventory/order operational modules are not yet merged                                                                                 |
-| Operations    | CI and local Compose                                                  | Deploy/staging, observability, recovery and rollback proof                                                                                     |
+| Capability    | What exists                                                            | What prevents completion                                                                                                                       |
+| ------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| RBAC          | Roles, seed and guard machinery                                        | Every domain route still needs explicit allow/deny policy tests                                                                                |
+| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged  | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
+| Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
+| Catalog       | Contracts and API foundation merged via #103                           | Media/pricing, admin UI and storefront integration                                                                                             |
+| Inventory     | Correct service core                                                   | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
+| Orders        | Schema and generic state helper                                        | Aggregate/services, snapshots, compensation, API and UI                                                                                        |
+| Payments      | Schema/state foundation                                                | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
+| Web           | Accessible prototype                                                   | Static `prototype.ts` data and simulated commerce actions                                                                                      |
+| Admin         | Shell, Auth/UI primitives and SMS settings module                      | Catalog/inventory/order operational modules are not yet merged                                                                                 |
+| Operations    | CI and local Compose                                                   | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
 
@@ -236,14 +237,30 @@ security/query review, OpenAPI drift confirmation and merge.
   «سیستم» nav entry, admin unit tests and an admin desktop/mobile e2e spec.
   API/contracts unchanged. Verified: all 8 CI checks green; e2e against the live
   API (list current session, revoke current → `/login`, logout-all → `/login`).
+- `#159` merged at `4e00369`: docs-only reconciliation of the post-#158 facts
+  (no runtime change).
+- `#160` merged at `aa0dffc`: admin session-management screenshot evidence and
+  accessibility notes — six desktop/mobile captures under
+  `docs/screenshots/admin-sessions/`, accessibility notes
+  (`docs/accessibility/admin-auth-sessions.md`) and the reproducible capture
+  script (`e2e/scripts/capture-admin-sessions-screenshots.mjs`).
+- `#156` merged at `4a02ecd`: a conflict-safe three-lane (Platform/Admin/User UI)
+  execution map from the current foundation through `1.0` and the deferred `1.1.0`,
+  with exclusive hotspot ownership, `D/C/P/A/W/I/O` issue splitting and a documented
+  merge train (`AGENT_WORKSTREAMS.md`).
+- `#157` merged at `a691896`: first #111 Catalog-hardening slice — conditional public
+  caching on every anonymous Catalog read (`Cache-Control: public, no-cache` + strong
+  SHA-256 content ETag, `304` on matching `If-None-Match`, all five public routes
+  documented in OpenAPI) and barcode removed from the anonymous variant projection
+  (admin/private detail retains it). Mutation idempotency remains the separately
+  planned second #111 slice.
 
 ## Open pull-request work (not yet on main)
 
-No Sprint-1 #50 admin acceptance PR remains open: `#138`, `#143`, `#150`, replacement
-`#151` and session/device management `#158` are merged; historical `#133` and
-duplicate `#149` are closed as superseded. The #114 read-only environment settings
-projection is now delivered through merged #154; no SMS implementation PR is
-currently awaiting merge.
+None currently awaiting review: after the 2026-09-11 merges (`#156`, `#157`, `#160`)
+no protected PR is open and no Sprint-1 #50/#91 admin acceptance PR remains (`#138`,
+`#143`, `#150`, replacement `#151`, session/devices `#158` and evidence `#160` are
+merged; historical `#133` and duplicate `#149` are closed as superseded).
 
 The #50 admin session-management slice is delivered through `#158` (merged):
 the `/settings/sessions` page with a typed session port (HTTP client +
@@ -252,10 +269,10 @@ session/devices page model, nav entry, admin unit tests and an admin e2e spec
 against the real `/auth/sessions` endpoints (`GET /auth/sessions`,
 `DELETE /auth/sessions/:sessionId`, `POST /auth/logout-all`).
 
-The first #111 Catalog-hardening slice is branch work only: it defines conditional
-public caching across every anonymous Catalog read and removes barcode from the
-anonymous variant projection while retaining it for staff. It is not delivered until
-its protected PR, generated OpenAPI and current-head verification merge.
+The first #111 Catalog-hardening slice (conditional public caching and the
+barcode-free anonymous variant projection) is merged via `#157`; the second slice —
+durable mutation idempotency — remains the planned next platform item under
+`AGENT_WORKSTREAMS.md` wave `0.2-A`.
 
 Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
 Remaining for production sign-in is private SMS.ir account/key/template activation,
@@ -290,16 +307,17 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
 
 Release `0.1` closes only after:
 
-1. Treat merged #109 and closed #49 as the Auth runtime evidence baseline.
-2. Reconcile remaining acceptance across #50 and #91.
-3. The accepted SMS boundary is implemented; #115 (panel) is closed as delivered
+- **Done on 2026-09-11:** #50 and #91 reconciled and closed with 7/7 DoD evidence
+  (screenshot/a11y evidence merged via #160; close-out recorded in both issues).
+
+1. The accepted SMS boundary is implemented; #115 (panel) is closed as delivered
    and merged #154 covers the environment projection. Remaining acceptance is
    private #114 provisioning: provision the production account, line and secret
    through private operations and record controlled provider-backed evidence.
-4. #78 records capacity, review SLA and release authority.
-5. Clean `main` passes lint, typecheck, tests, integration, build, OpenAPI drift and
+2. #78 records capacity, review SLA and release authority.
+3. Clean `main` passes lint, typecheck, tests, integration, build, OpenAPI drift and
    browser smoke.
-6. Auth docs and OpenAPI match merged behavior.
+4. Auth docs and OpenAPI match merged behavior.
 
 Merged PR #103 starts `0.2`; it does not alone close catalog delivery.
 

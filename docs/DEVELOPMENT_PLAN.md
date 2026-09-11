@@ -14,8 +14,9 @@ not followed clean sprint boundaries. At this review:
 
 - Sprint 0 foundations are substantially present, with production operations still
   deferred to hardening.
-- Sprint 1/Auth is at its closing checkpoint; PR #109 is merged, #49 is closed, and acceptance reconciliation
-  remain.
+- Sprint 1/Auth closed on 2026-09-11: PR #109 merged, #49 closed, and the #50/#91
+  acceptance reconciliation closed with 7/7 DoD evidence (runtime #48/#49/#74/#50,
+  screenshot/a11y evidence #160, delivery map #156).
 - Sprint 2/Catalog has started through merged contracts and the merged API foundation in #103.
 - Sprint 4 inventory service foundations exist early, without the HTTP/admin outcome.
 - Sprints 3 and 5–11 have not reached their integrated exit criteria.
