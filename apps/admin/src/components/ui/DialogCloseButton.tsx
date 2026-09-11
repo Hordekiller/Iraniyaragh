@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { styled, IconButton, useTheme } from '@mui/material';
+import { styled, IconButton } from '@mui/material';
 
 const CloseButton = styled(IconButton)(({ theme }) => ({
   position: 'absolute',
@@ -18,9 +18,6 @@ const CloseButton = styled(IconButton)(({ theme }) => ({
 }));
 
 export function DialogCloseButton({ onClick }: { onClick: () => void }) {
-  const theme = useTheme();
-  const isRtl = theme.direction === 'rtl';
-  void isRtl;
   return (
     <CloseButton size="small" onClick={onClick} aria-label="بستن">
       <X size={18} />

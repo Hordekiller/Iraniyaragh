@@ -26,6 +26,8 @@ const violations = [];
 
 for (const root of roots) {
   for (const file of await walk(root)) {
+    // Test fixtures are dev-only and never shipped; only guard runtime code.
+    if (file.includes('.test.')) continue;
     const content = await readFile(file, 'utf8');
     for (const rule of forbidden) {
       if (rule.pattern.test(content)) violations.push(`${file}: ${rule.label}`);

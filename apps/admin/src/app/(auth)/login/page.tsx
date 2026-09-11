@@ -105,7 +105,7 @@ export default function LoginPage() {
             onChange={event => setCode(event.target.value)}
             disabled={busy}
             error={error !== null}
-            helperText={error ?? 'برای ورود، کد ویژه‌ای که توسط تیم پلتفرم صادر شده را وارد کنید.'}
+            helperText="برای ورود، کد ویژه‌ای که توسط تیم پلتفرم صادر شده را وارد کنید."
             inputProps={{ 'aria-label': 'کد دسترسی توسعه‌دهنده', dir: 'ltr' }}
             sx={{ mb: 2 }}
           />
