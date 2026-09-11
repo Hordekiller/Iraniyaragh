@@ -11,7 +11,8 @@ scope. A feature is not called complete merely because code exists on a branch.
 Iraniyaragh is in **pre-release foundation/auth completion**, before release `0.1`.
 The repository has a credible platform baseline and substantial authentication,
 security and test infrastructure. It is not yet a usable commerce product: the
-storefront still sells from fixtures, the operational admin has no business modules,
+storefront still sells from fixtures, the operational admin has only read-only
+Orders/Settings modules (fixture-backed, merged via #169 — never presented as live),
 and cart, checkout, order-driving services, payment, shipping and production
 operations are absent.
 
@@ -22,8 +23,8 @@ Current delivery confidence:
 | Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist                                                           |
 | Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                                                                           |
 | Customer/auth UX               | Merged foundation | Real HTTP client and provider-dispatched OTP foundation are merged; live SMS.ir activation and provider-backed happy-path acceptance remain |
-| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice                                                                  |
-| Product media                  | Planned contract  | Images/videos are not persisted or served yet; `PRODUCT_MEDIA_SPEC.md` defines the proposed contract and M0–M5 delivery sequence            |
+| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice; #168 added the durable mutation-idempotency contract            |
+| Product media                  | Accepted contract | Images/videos are not persisted or served yet; `PRODUCT_MEDIA_SPEC.md` is accepted via #161 and its M1–M5 runtime slices are planned        |
 | Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not                                                          |
 | Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                                                                  |
 | Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                 |
@@ -35,11 +36,13 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `4a02ecd`, containing merged #109, #103, #112,
+- Baseline at review: `main` commit `ee2bb16`, containing merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
   session/device-management panel #158, the screenshot/a11y evidence #160, the
-  catalog hardenings #157 and the three-lane delivery map #156.
+  catalog hardenings #157, the three-lane delivery map #156, the catalog
+  idempotency contract #168, the product-media contract #161 and the admin
+  Orders/Settings reconciliation #169.
 - #49, #79, #50 and #91 are closed; #50/#91 were closed on 2026-09-11 with 7/7
   acceptance evidence. Active coordination includes #66, #78, #81 and #114. #115 is
   closed as delivered (the SMS admin panel shipped through #151).
@@ -144,18 +147,18 @@ security/query review, OpenAPI drift confirmation and merge.
 
 ## Partial capabilities and exact boundaries
 
-| Capability    | What exists                                                            | What prevents completion                                                                                                                       |
-| ------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| RBAC          | Roles, seed and guard machinery                                        | Every domain route still needs explicit allow/deny policy tests                                                                                |
-| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged  | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
-| Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
-| Catalog       | Contracts and API foundation merged via #103                           | Media/pricing, admin UI and storefront integration                                                                                             |
-| Inventory     | Correct service core                                                   | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
-| Orders        | Schema and generic state helper                                        | Aggregate/services, snapshots, compensation, API and UI                                                                                        |
-| Payments      | Schema/state foundation                                                | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
-| Web           | Accessible prototype                                                   | Static `prototype.ts` data and simulated commerce actions                                                                                      |
-| Admin         | Shell, Auth/UI primitives and SMS settings module                      | Catalog/inventory/order operational modules are not yet merged                                                                                 |
-| Operations    | CI and local Compose                                                   | Deploy/staging, observability, recovery and rollback proof                                                                                     |
+| Capability    | What exists                                                                                    | What prevents completion                                                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| RBAC          | Roles, seed and guard machinery                                                                | Every domain route still needs explicit allow/deny policy tests                                                                                |
+| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                          | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
+| Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged                         | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
+| Catalog       | Contracts and API foundation merged via #103; #168 added the idempotency contract              | Media runtime (M1–M5), pricing, admin UI and storefront integration                                                                            |
+| Inventory     | Correct service core                                                                           | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
+| Orders        | Schema and generic state helper; read-only admin queue/detail merged via #169 (fixture-backed) | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
+| Payments      | Schema/state foundation                                                                        | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
+| Web           | Accessible prototype                                                                           | Static `prototype.ts` data and simulated commerce actions                                                                                      |
+| Admin         | Shell, Auth/UI primitives, SMS settings and read-only Orders/Settings modules (via #169)       | Live catalog/inventory/order operational modules are not yet merged                                                                            |
+| Operations    | CI and local Compose                                                                           | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
 
@@ -272,8 +275,9 @@ against the real `/auth/sessions` endpoints (`GET /auth/sessions`,
 
 The first #111 Catalog-hardening slice (conditional public caching and the
 barcode-free anonymous variant projection) is merged via `#157`; the second slice —
-durable mutation idempotency — remains the planned next platform item under
-`AGENT_WORKSTREAMS.md` wave `0.2-A`.
+durable mutation idempotency — has its accepted contract merged via `#168`
+(`CATALOG_IDEMPOTENCY.md`), with the platform implementation remaining the planned
+next item under `AGENT_WORKSTREAMS.md` wave `0.2-A`.
 
 Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
 Remaining for production sign-in is private SMS.ir account/key/template activation,

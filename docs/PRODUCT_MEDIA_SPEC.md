@@ -1,6 +1,6 @@
 # Product media contract
 
-Status: proposed for Epic #3 independent acceptance
+Status: accepted via #161 (independent review approval and merge)
 Owner: Platform contract lead (`@Hordekiller`)  
 Integration owner: `@Maddyrampant`  
 Last reviewed: 2026-09-11
@@ -77,26 +77,26 @@ Add forward migrations; never edit an already-shared migration.
 
 ### `ProductMedia`
 
-| Field | Contract |
-| --- | --- |
-| `id` | opaque CUID primary key |
-| `productId` | required relation; restrict destructive product deletion |
-| `kind` | `IMAGE` or `VIDEO` |
-| `state` | `PENDING_UPLOAD`, `UPLOADED`, `PROCESSING`, `READY`, `FAILED`, `ARCHIVED` |
-| `role` | `PRIMARY`, `GALLERY`, or `VIDEO_POSTER`; poster linkage remains explicit |
-| `position` | non-negative integer, unique within active product ordering |
-| `altText` | nullable only while draft; trimmed, maximum 300 Unicode code points |
-| `caption` | optional customer-visible caption, maximum 500 code points |
-| `objectKey` | generated server-side, unique, never a client filename or public URL |
-| `originalFilename` | sanitized display metadata only; never used as a path |
-| `declaredMime` / `detectedMime` | both retained for security diagnostics |
-| `bytes`, `width`, `height` | positive verified metadata from trusted processing |
-| `durationMs` | required for ready video, absent for image |
-| `hasAudio` | required for ready video |
-| `posterMediaId` | required self-relation from video to a ready image poster |
-| `checksumSha256` | checksum of confirmed source object; unique per product is optional |
-| `version` | optimistic concurrency counter |
-| timestamps / actor | created, updated and archived timestamps plus creating actor |
+| Field                           | Contract                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `id`                            | opaque CUID primary key                                                   |
+| `productId`                     | required relation; restrict destructive product deletion                  |
+| `kind`                          | `IMAGE` or `VIDEO`                                                        |
+| `state`                         | `PENDING_UPLOAD`, `UPLOADED`, `PROCESSING`, `READY`, `FAILED`, `ARCHIVED` |
+| `role`                          | `PRIMARY`, `GALLERY`, or `VIDEO_POSTER`; poster linkage remains explicit  |
+| `position`                      | non-negative integer, unique within active product ordering               |
+| `altText`                       | nullable only while draft; trimmed, maximum 300 Unicode code points       |
+| `caption`                       | optional customer-visible caption, maximum 500 code points                |
+| `objectKey`                     | generated server-side, unique, never a client filename or public URL      |
+| `originalFilename`              | sanitized display metadata only; never used as a path                     |
+| `declaredMime` / `detectedMime` | both retained for security diagnostics                                    |
+| `bytes`, `width`, `height`      | positive verified metadata from trusted processing                        |
+| `durationMs`                    | required for ready video, absent for image                                |
+| `hasAudio`                      | required for ready video                                                  |
+| `posterMediaId`                 | required self-relation from video to a ready image poster                 |
+| `checksumSha256`                | checksum of confirmed source object; unique per product is optional       |
+| `version`                       | optimistic concurrency counter                                            |
+| timestamps / actor              | created, updated and archived timestamps plus creating actor              |
 
 ### `ProductMediaRendition`
 
@@ -177,18 +177,23 @@ union:
 type PublicProductMedia =
   | {
       id: string;
-      kind: 'IMAGE';
+      kind: "IMAGE";
       position: number;
-      role: 'PRIMARY' | 'GALLERY' | 'VIDEO_POSTER';
+      role: "PRIMARY" | "GALLERY" | "VIDEO_POSTER";
       alt: string;
       caption: string | null;
       width: number;
       height: number;
-      sources: Array<{ url: string; width: number; height: number; type: string }>;
+      sources: Array<{
+        url: string;
+        width: number;
+        height: number;
+        type: string;
+      }>;
     }
   | {
       id: string;
-      kind: 'VIDEO';
+      kind: "VIDEO";
       position: number;
       caption: string | null;
       description: string;
@@ -197,8 +202,18 @@ type PublicProductMedia =
       height: number;
       hasAudio: boolean;
       poster: PublicProductMediaImage;
-      sources: Array<{ url: string; type: 'video/mp4'; width: number; height: number }>;
-      captions: Array<{ url: string; kind: 'captions'; srclang: 'fa'; label: string }>;
+      sources: Array<{
+        url: string;
+        type: "video/mp4";
+        width: number;
+        height: number;
+      }>;
+      captions: Array<{
+        url: string;
+        kind: "captions";
+        srclang: "fa";
+        label: string;
+      }>;
     };
 ```
 
@@ -296,25 +311,25 @@ fixtures while M1 is implemented, but M2 cannot merge before the shared contract
 ## 12. Accepted implementation defaults for independent review
 
 - [x] Maximum 12 published gallery assets per product, including at most 3 videos.
-  Existing products are not unpublished if a future configured limit is lower.
+      Existing products are not unpublished if a future configured limit is lower.
 - [x] Video source maximum is 100 MiB, 120 seconds and 1080p. All three checks are
-  server-enforced from trusted probe metadata, not browser declarations.
+      server-enforced from trusted probe metadata, not browser declarations.
 - [x] Catalog/content staff own Persian captions and transcripts. Generated caption
-  drafts are never published without an authorized human review.
+      drafts are never published without an authorized human review.
 - [x] A successfully processed private source is retained for 7 days to permit a
-  bounded recovery/re-encode window, then removed by an idempotent job. Failed and
-  abandoned quarantine objects are retained at most 24 hours. Archiving immediately
-  removes public eligibility; renditions are deleted after a 30-day recovery window
-  unless a legal/order-history hold applies. Retention values are bounded deployment
-  settings and every deletion remains auditable.
+      bounded recovery/re-encode window, then removed by an idempotent job. Failed and
+      abandoned quarantine objects are retained at most 24 hours. Archiving immediately
+      removes public eligibility; renditions are deleted after a 30-day recovery window
+      unless a legal/order-history hold applies. Retention values are bounded deployment
+      settings and every deletion remains auditable.
 - [x] Public renditions use one configured, controlled HTTPS media origin backed by
-  S3-compatible storage. Local/dev may use the application/MinIO origin. Production
-  must define the exact allowlisted origin for CSP/CORS/SEO; arbitrary external URLs,
-  storage-console URLs and expiring admin upload URLs are never public contracts.
+      S3-compatible storage. Local/dev may use the application/MinIO origin. Production
+      must define the exact allowlisted origin for CSP/CORS/SEO; arbitrary external URLs,
+      storage-console URLs and expiring admin upload URLs are never public contracts.
 - [x] Production processing requires a healthy malware-scanning capability before a
-  source can become `READY`; inability to scan fails closed with a retryable safe
-  state. Development/test may use an explicit deterministic fake scanner. Signature,
-  MIME, decode, resource and pixel-limit validation remain mandatory in every mode.
+      source can become `READY`; inability to scan fails closed with a retryable safe
+      state. Development/test may use an explicit deterministic fake scanner. Signature,
+      MIME, decode, resource and pixel-limit validation remain mandatory in every mode.
 
 These defaults become binding only after independent approval and merge of this
 contract. Any production exception requires a security review and accepted ADR.
