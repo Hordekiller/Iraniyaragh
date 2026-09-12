@@ -1,13 +1,13 @@
 import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Prisma, ProductStatus } from '@prisma/client';
 import type {
-  BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse,
-  ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse,
+  AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse,
+  ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantPriceHistoryResponse, VariantPriceResponse,
 } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import type { BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto } from './catalog.dto';
+import type { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantPriceUpdateDto } from './catalog.dto';
 import { CatalogIdempotencyService } from './catalog-idempotency.service';
 import { EMPTY_AXIS_SIGNATURE, canonicalizeSku, legacyCombinationSignature, pendingCombinationSignature } from './variant-identifiers';
 
@@ -115,12 +115,130 @@ export class CatalogService {
       execute: async tx => {
       const current = await tx.product.findUnique({ where: { id }, include: this.productInclude() });
       if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
-      if (input.action === 'publish' && current.variants.length === 0) throw new ConflictException({ code: 'CONFLICT', message: 'A product must have a SKU before publishing.' });
+       if (input.action === 'publish' && !current.variants.some(variant => variant.status === 'ACTIVE')) throw new UnprocessableEntityException({ code: 'UNPROCESSABLE', message: 'A product must have an active variant.' });
       const updated = await tx.product.update({ where: { id }, data: { status: next }, include: this.productInclude() });
       await this.audit.record({ actorId, action: 'catalog.product.status_changed', entityType: 'Product', entityId: id, requestId: getRequestId(), before: { status: current.status }, after: { status: updated.status } }, tx);
       return { response: { data: { product: this.productDetail(updated) } }, resourceType: 'Product', resourceId: id };
       },
     });
+  }
+
+  async listAttributes(): Promise<AttributeListResponse> {
+    const attributes = await this.prisma.attributeDefinition.findMany({ orderBy: { code: 'asc' }, include: { _count: { select: { options: true } } } });
+    return { data: { items: attributes.map(attribute => this.attributeSummary(attribute)) } };
+  }
+
+  async createAttribute(actorId: string, idempotencyKey: string, input: AttributeDefinitionCreateDto): Promise<AttributeDefinitionResponse> {
+    const normalized = { ...input, code: input.code.trim(), name: input.name.trim(), description: input.description?.trim() };
+    return this.idempotency.run({
+      actorId, scope: 'catalog.attribute.create', key: idempotencyKey, payload: normalized,
+      execute: async tx => {
+        const created = await this.mapPrismaError(tx.attributeDefinition.create({
+          data: {
+            code: normalized.code, name: normalized.name, description: normalized.description,
+            status: normalized.status ?? 'ACTIVE',
+            options: normalized.options ? { create: normalized.options.map(option => ({ code: option.code.trim(), label: option.label.trim(), status: option.status ?? 'ACTIVE' })) } : undefined,
+          }, include: { options: { orderBy: { code: 'asc' } }, _count: { select: { options: true } } },
+        }), 'Attribute');
+        await this.audit.record({ actorId, action: 'catalog.attribute.created', entityType: 'AttributeDefinition', entityId: created.id, requestId: getRequestId(), after: { code: created.code, optionCount: created.options.length } }, tx);
+        return { response: { data: { attribute: this.attributeDetail(created) } }, resourceType: 'AttributeDefinition', resourceId: created.id };
+      },
+    });
+  }
+
+  async updateAttribute(actorId: string, id: string, input: AttributeDefinitionUpdateDto): Promise<AttributeDefinitionResponse> {
+    const result = await this.prisma.$transaction(async tx => {
+      const current = await tx.attributeDefinition.findUnique({ where: { id }, include: { options: { orderBy: { code: 'asc' } }, _count: { select: { options: true } } } });
+      if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Attribute not found.' });
+      if (current.version !== input.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const changed = await tx.attributeDefinition.updateMany({ where: { id, version: input.expectedVersion }, data: { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(input.description !== undefined ? { description: input.description?.trim() ?? null } : {}), ...(input.status !== undefined ? { status: input.status } : {}), version: { increment: 1 } } });
+      if (changed.count !== 1) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const updated = await tx.attributeDefinition.findUniqueOrThrow({ where: { id }, include: { options: { orderBy: { code: 'asc' } }, _count: { select: { options: true } } } });
+      await this.audit.record({ actorId, action: 'catalog.attribute.updated', entityType: 'AttributeDefinition', entityId: id, requestId: getRequestId(), before: { version: current.version }, after: { version: updated.version } }, tx);
+      return updated;
+    });
+    return { data: { attribute: this.attributeDetail(result) } };
+  }
+
+  async createAttributeOption(actorId: string, idempotencyKey: string, attributeId: string, input: AttributeOptionCreateDto): Promise<AttributeOptionResponse> {
+    const normalized = { ...input, code: input.code.trim(), label: input.label.trim() };
+    return this.idempotency.run({
+      actorId, scope: `catalog.attribute.option.create:${attributeId}`, key: idempotencyKey, payload: normalized,
+      execute: async tx => {
+        const attribute = await tx.attributeDefinition.findUnique({ where: { id: attributeId }, select: { id: true } });
+        if (!attribute) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Attribute not found.' });
+        const created = await this.mapPrismaError(tx.attributeOption.create({ data: { attributeId, code: normalized.code, label: normalized.label, status: normalized.status ?? 'ACTIVE' } }), 'Option');
+        await this.audit.record({ actorId, action: 'catalog.attribute.option.created', entityType: 'AttributeOption', entityId: created.id, requestId: getRequestId(), after: { attributeId, code: created.code } }, tx);
+        return { response: { data: { option: this.optionSummary(created) } }, resourceType: 'AttributeOption', resourceId: created.id };
+      },
+    });
+  }
+
+  async updateAttributeOption(actorId: string, attributeId: string, optionId: string, input: AttributeOptionUpdateDto): Promise<AttributeOptionResponse> {
+    const result = await this.prisma.$transaction(async tx => {
+      const current = await tx.attributeOption.findFirst({ where: { id: optionId, attributeId } });
+      if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Attribute option not found.' });
+      if (current.version !== input.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const changed = await tx.attributeOption.updateMany({ where: { id: optionId, version: input.expectedVersion }, data: { ...(input.label !== undefined ? { label: input.label.trim() } : {}), ...(input.status !== undefined ? { status: input.status } : {}), version: { increment: 1 } } });
+      if (changed.count !== 1) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const updated = await tx.attributeOption.findUniqueOrThrow({ where: { id: optionId } });
+      await this.audit.record({ actorId, action: 'catalog.attribute.option.updated', entityType: 'AttributeOption', entityId: optionId, requestId: getRequestId(), before: { version: current.version }, after: { version: updated.version } }, tx);
+      return updated;
+    });
+    return { data: { option: this.optionSummary(result) } };
+  }
+
+  async updateVariant(actorId: string, id: string, input: ProductVariantUpdateDto): Promise<ProductVariantResponse> {
+    if (input.sku !== undefined) throw new ConflictException({ code: 'SKU_CHANGE_NOT_ALLOWED', message: 'SKU cannot be changed through an ordinary variant update.' });
+    const result = await this.prisma.$transaction(async tx => {
+      const current = await tx.productVariant.findUnique({ where: { id } });
+      if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Variant not found.' });
+      if (current.version !== input.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const changed = await tx.productVariant.updateMany({ where: { id, version: input.expectedVersion }, data: { ...(input.barcode !== undefined ? { barcode: input.barcode?.trim() || null } : {}), ...(input.title !== undefined ? { title: input.title?.trim() || null } : {}), ...(input.weightGrams !== undefined ? { weightGrams: input.weightGrams } : {}), ...(input.lengthCm !== undefined ? { lengthCm: input.lengthCm } : {}), ...(input.widthCm !== undefined ? { widthCm: input.widthCm } : {}), ...(input.heightCm !== undefined ? { heightCm: input.heightCm } : {}), version: { increment: 1 } } });
+      if (changed.count !== 1) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const updated = await tx.productVariant.findUniqueOrThrow({ where: { id } });
+      await this.audit.record({ actorId, action: 'catalog.variant.updated', entityType: 'ProductVariant', entityId: id, requestId: getRequestId(), before: { version: current.version }, after: { version: updated.version } }, tx);
+      return updated;
+    });
+    return { data: { variant: this.variantResponse(result) } };
+  }
+
+  async updateVariantStatus(actorId: string, idempotencyKey: string, id: string, input: ProductVariantStatusDto): Promise<ProductVariantResponse> {
+    return this.idempotency.run({
+      actorId, scope: `catalog.variant.status:${id}`, key: idempotencyKey, payload: input,
+      execute: async tx => {
+        const current = await tx.productVariant.findUnique({ where: { id } });
+        if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Variant not found.' });
+        if (current.version !== input.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+        const changed = await tx.productVariant.updateMany({ where: { id, version: input.expectedVersion }, data: { status: input.status, isActive: input.status === 'ACTIVE', version: { increment: 1 } } });
+        if (changed.count !== 1) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+        const updated = await tx.productVariant.findUniqueOrThrow({ where: { id } });
+        await this.audit.record({ actorId, action: 'catalog.variant.status_changed', entityType: 'ProductVariant', entityId: id, requestId: getRequestId(), before: { status: current.status, version: current.version }, after: { status: updated.status, version: updated.version } }, tx);
+        return { response: { data: { variant: this.variantResponse(updated) } }, resourceType: 'ProductVariant', resourceId: id };
+      },
+    });
+  }
+
+  async updateVariantPrice(actorId: string, id: string, input: VariantPriceUpdateDto): Promise<VariantPriceResponse> {
+    const result = await this.prisma.$transaction(async tx => {
+      const current = await tx.productVariant.findUnique({ where: { id } });
+      if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Variant not found.' });
+      if (current.version !== input.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const changed = await tx.productVariant.updateMany({ where: { id, version: input.expectedVersion }, data: { costPrice: BigInt(input.costPrice.amount), salePrice: BigInt(input.salePrice.amount), version: { increment: 1 } } });
+      if (changed.count !== 1) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const updated = await tx.productVariant.findUniqueOrThrow({ where: { id } });
+      const record = await tx.variantPriceRecord.create({ data: { variantId: id, costPrice: updated.costPrice, salePrice: updated.salePrice, effectiveAt: input.effectiveAt ? new Date(input.effectiveAt) : new Date(), source: 'ADMIN', actorUserId: actorId, reason: input.reason?.trim() || null, requestId: getRequestId() } });
+      await this.audit.record({ actorId, action: 'catalog.variant.price_changed', entityType: 'ProductVariant', entityId: id, requestId: getRequestId(), before: { version: current.version, costPrice: current.costPrice.toString(), salePrice: current.salePrice.toString() }, after: { version: updated.version, costPrice: updated.costPrice.toString(), salePrice: updated.salePrice.toString(), priceRecordId: record.id } }, tx);
+      return { updated, record };
+    });
+    return { data: { variant: this.variantResponse(result.updated), record: this.priceRecordResponse(result.record) } };
+  }
+
+  async variantPriceHistory(id: string): Promise<VariantPriceHistoryResponse> {
+    const variant = await this.prisma.productVariant.findUnique({ where: { id }, select: { id: true } });
+    if (!variant) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Variant not found.' });
+    const items = await this.prisma.variantPriceRecord.findMany({ where: { variantId: id }, orderBy: { effectiveAt: 'desc' }, take: 100 });
+    return { data: { items: items.map(record => this.priceRecordResponse(record)), meta: { page: 1, perPage: 100, total: items.length, pages: items.length ? 1 : 0 } } };
   }
 
   async createBrand(actorId: string, idempotencyKey: string, input: BrandCreateDto): Promise<BrandResponse> {
@@ -195,6 +313,21 @@ export class CatalogService {
   private productVariantPublic(variant: VariantRow) { return { id: variant.id, sku: variant.sku, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }
   private productVariantBase(variant: VariantRow) { return { id: variant.id, sku: variant.sku, barcode: variant.barcode ?? undefined, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }
   private productVariantPrivateDetail(variant: VariantRow) { return { ...this.productVariantBase(variant), costPrice: { amount: variant.costPrice.toString(), currency: 'IRR' as const } }; }
+  private variantResponse(variant: { id: string; sku: string; barcode: string | null; title: string | null; costPrice: bigint; salePrice: bigint; weightGrams: number | null; lengthCm: number | null; widthCm: number | null; heightCm: number | null; status: string; isActive: boolean; version: number; createdAt: Date; updatedAt: Date }) {
+    return { id: variant.id, sku: variant.sku, barcode: variant.barcode ?? undefined, title: variant.title ?? undefined, costPrice: { amount: variant.costPrice.toString(), currency: 'IRR' as const }, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, dimensions: { lengthCm: variant.lengthCm ?? undefined, widthCm: variant.widthCm ?? undefined, heightCm: variant.heightCm ?? undefined }, status: variant.status as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED', isActive: variant.isActive, version: variant.version, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() };
+  }
+  private priceRecordResponse(record: { id: string; variantId: string; costPrice: bigint; salePrice: bigint; effectiveAt: Date; source: string; actorUserId: string | null; reason: string | null; requestId: string | null; createdAt: Date }) {
+    return { id: record.id, variantId: record.variantId, costPrice: { amount: record.costPrice.toString(), currency: 'IRR' as const }, salePrice: { amount: record.salePrice.toString(), currency: 'IRR' as const }, effectiveAt: record.effectiveAt.toISOString(), source: record.source as 'ADMIN' | 'IMPORT' | 'SYSTEM', actorUserId: record.actorUserId, reason: record.reason, requestId: record.requestId, createdAt: record.createdAt.toISOString() };
+  }
+  private attributeSummary(attribute: { id: string; code: string; name: string; description: string | null; status: string; version: number; createdAt: Date; updatedAt: Date; _count: { options: number } }) {
+    return { id: attribute.id, code: attribute.code, name: attribute.name, description: attribute.description, status: attribute.status as 'ACTIVE' | 'INACTIVE', optionCount: attribute._count.options, version: attribute.version, createdAt: attribute.createdAt.toISOString(), updatedAt: attribute.updatedAt.toISOString() };
+  }
+  private optionSummary(option: { id: string; code: string; label: string; status: string; version: number; createdAt: Date; updatedAt: Date }) {
+    return { id: option.id, code: option.code, label: option.label, status: option.status as 'ACTIVE' | 'INACTIVE', version: option.version, createdAt: option.createdAt.toISOString(), updatedAt: option.updatedAt.toISOString() };
+  }
+  private attributeDetail(attribute: { id: string; code: string; name: string; description: string | null; status: string; version: number; createdAt: Date; updatedAt: Date; _count: { options: number }; options: Array<{ id: string; code: string; label: string; status: string; version: number; createdAt: Date; updatedAt: Date }> }) {
+    return { ...this.attributeSummary(attribute), options: attribute.options.map(option => this.optionSummary(option)) };
+  }
   private async assertCategoryParentDoesNotCreateCycle(tx: Prisma.TransactionClient, categoryId: string, parentId: string): Promise<void> {
     const visited = new Set<string>();
     let cursor: string | null = parentId;
@@ -210,7 +343,7 @@ export class CatalogService {
       cursor = parent.parentId;
     }
   }
-  private async mapPrismaError<T>(operation: Promise<T>, resource: 'Brand' | 'Category' | 'Product'): Promise<T> {
+  private async mapPrismaError<T>(operation: Promise<T>, resource: 'Brand' | 'Category' | 'Product' | 'Attribute' | 'Option'): Promise<T> {
     try {
       return await operation;
     } catch (error) {

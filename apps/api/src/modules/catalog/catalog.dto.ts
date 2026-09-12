@@ -1,8 +1,9 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsEnum, IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsNotIn, IsOptional, IsString, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const AMOUNT = /^\d{1,15}$/u;
+const ATTRIBUTE_CODE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
 export class MoneyDto {
   @IsString() @Matches(AMOUNT) amount!: string;
@@ -64,4 +65,55 @@ export class ProductListQueryDto {
 
 export class ProductStatusDto {
   @IsEnum(['publish', 'unpublish', 'archive']) action!: 'publish' | 'unpublish' | 'archive';
+}
+
+export class AttributeOptionCreateDto {
+  @IsString() @Matches(ATTRIBUTE_CODE) @MaxLength(40) @IsNotIn(['new', 'edit', 'all']) code!: string;
+  @IsString() @MaxLength(150) label!: string;
+  @IsOptional() @IsEnum(['ACTIVE', 'INACTIVE']) status?: 'ACTIVE' | 'INACTIVE';
+}
+
+export class AttributeDefinitionCreateDto {
+  @IsString() @Matches(ATTRIBUTE_CODE) @MaxLength(40) @IsNotIn(['new', 'edit', 'all']) code!: string;
+  @IsString() @MaxLength(150) name!: string;
+  @IsOptional() @IsString() @MaxLength(10_000) description?: string;
+  @IsOptional() @IsEnum(['ACTIVE', 'INACTIVE']) status?: 'ACTIVE' | 'INACTIVE';
+  @IsOptional() @ValidateNested({ each: true }) @Type(() => AttributeOptionCreateDto) options?: AttributeOptionCreateDto[];
+}
+
+export class AttributeDefinitionUpdateDto {
+  @IsOptional() @IsString() @MaxLength(150) name?: string;
+  @IsOptional() @IsString() @MaxLength(10_000) description?: string | null;
+  @IsOptional() @IsEnum(['ACTIVE', 'INACTIVE']) status?: 'ACTIVE' | 'INACTIVE';
+  @IsInt() @Min(0) expectedVersion!: number;
+}
+
+export class AttributeOptionUpdateDto {
+  @IsOptional() @IsString() @MaxLength(150) label?: string;
+  @IsOptional() @IsEnum(['ACTIVE', 'INACTIVE']) status?: 'ACTIVE' | 'INACTIVE';
+  @IsInt() @Min(0) expectedVersion!: number;
+}
+
+export class ProductVariantUpdateDto {
+  @IsOptional() @IsString() sku?: string;
+  @IsOptional() @IsString() barcode?: string | null;
+  @IsOptional() @IsString() @MaxLength(150) title?: string | null;
+  @IsOptional() @IsInt() @Min(0) weightGrams?: number | null;
+  @IsOptional() @IsInt() @Min(0) lengthCm?: number | null;
+  @IsOptional() @IsInt() @Min(0) widthCm?: number | null;
+  @IsOptional() @IsInt() @Min(0) heightCm?: number | null;
+  @IsInt() @Min(0) expectedVersion!: number;
+}
+
+export class ProductVariantStatusDto {
+  @IsEnum(['ACTIVE', 'INACTIVE', 'ARCHIVED']) status!: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  @IsInt() @Min(0) expectedVersion!: number;
+}
+
+export class VariantPriceUpdateDto {
+  @ValidateNested() @Type(() => MoneyDto) costPrice!: MoneyDto;
+  @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
+  @IsOptional() @IsString() @MaxLength(500) reason?: string;
+  @IsOptional() @IsDateString() effectiveAt?: string;
+  @IsInt() @Min(0) expectedVersion!: number;
 }
