@@ -260,8 +260,18 @@ security/query review, OpenAPI drift confirmation and merge.
    planned second #111 slice.
  - `#181` merged at `5db5135`: catalog attribute/option and variant mutation services,
    optimistic version guards, SKU immutability, status synchronization, append-only
-   variant price history, and the publish-ready active-variant guard. The remaining
-   #178 continuation is product attribute configuration and bounded variant generation.
+   variant price history, and the publish-ready active-variant guard.
+ - `#182` merged at `f9fd1ff`: product attribute configuration and bounded variant
+   generation (preview + idempotent generate, `AXIS_IN_USE` guard, server-owned
+   SKU, 2000-combination cap). The remaining #178 continuation is Excel import/export.
+ - `#183` merged at `56ccd83`: bounded catalog workbook parser/exporter foundation
+   (fixed sheet contract, text-only identifier cells, 10 MB/10k-row bounds,
+   exact-pinned `exceljs@4.4.0`, `uuid@11.1.1` override).
+ - `#184` open (feat/178-catalog-import-service): staged import service — upload,
+   dry-run with zero mutation, idempotent all-or-nothing commit, bounded
+   process-local parsed workbook store (32/24 h), raw bytes never persisted, and
+   reference validation covering same-workbook definitions, brand/category
+   preflight and canonical-SKU collisions.
 
 The durable Catalog mutation-idempotency runtime is being implemented separately on
 the post-#168 platform branch. It is not delivered on `main` until its forward
@@ -270,10 +280,12 @@ current-head CI are reviewed and merged.
 
 ## Open pull-request work (not yet on main)
 
-None currently awaiting review: after the 2026-09-11 merges (`#156`, `#157`, `#160`)
-no protected PR is open and no Sprint-1 #50/#91 admin acceptance PR remains (`#138`,
-`#143`, `#150`, replacement `#151`, session/devices `#158` and evidence `#160` are
-merged; historical `#133` and duplicate `#149` are closed as superseded).
+`#184` (feat/178-catalog-import-service) is open and under review: the staged
+Catalog import service (upload/dry-run/commit/export foundation). After the
+2026-09-11 merges (`#156`, `#157`, `#160`) every older protected PR is resolved
+(`#138`, `#143`, `#150`, replacement `#151`, session/devices `#158` and evidence
+`#160` are merged; historical `#133` and duplicate `#149` are closed as
+superseded).
 
 The #50 admin session-management slice is delivered through `#158` (merged):
 the `/settings/sessions` page with a typed session port (HTTP client +
@@ -302,7 +314,8 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
 4. Reservation TTL and multi-location allocation policy.
 5. Guest checkout, identity linkage/merge and anonymization.
 6. Product variants/attributes and import format (policy and core services resolved by
-   #177/#179/#180/#181; configuration/generation and Excel import/export remain).
+   #177/#179/#180/#181; configuration/generation merged via #182; Excel import/export
+   is the merged parser #183 plus the open staged-import service #184).
 7. Staff role matrix, approval thresholds and four-eyes actions.
 8. Return/refund/damaged-stock policy.
 9. Deployment target, RPO/RTO, retention, monitoring and budget.
