@@ -7,6 +7,7 @@ settings:
 overrides:
   '@prisma/config>deepmerge-ts': 8.0.2
   multer: 2.3.0
+  uuid: 11.1.1
 
 importers:
 
@@ -143,7 +144,7 @@ importers:
         specifier: ^0.14.2
         version: 0.14.4
       exceljs:
-        specifier: ^4.4.0
+        specifier: 4.4.0
         version: 4.4.0
       helmet:
         specifier: ^8.1.0
@@ -4017,9 +4018,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  uuid@8.3.2:
-    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+  uuid@11.1.1:
+    resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
     hasBin: true
 
   validator@13.15.35:
@@ -6505,7 +6505,7 @@ snapshots:
       saxes: 5.0.1
       tmp: 0.2.7
       unzipper: 0.10.14
-      uuid: 8.3.2
+      uuid: 11.1.1
 
   expect-type@1.4.0: {}
 
@@ -7961,7 +7961,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  uuid@8.3.2: {}
+  uuid@11.1.1: {}
 
   validator@13.15.35: {}
 

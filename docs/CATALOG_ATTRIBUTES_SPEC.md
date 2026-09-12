@@ -194,6 +194,10 @@ updates, then attributes/options before variants, in a deterministic order. Any
 - Zip-bomb, oversized shared-string and oversized single-cell protections apply.
 - Committed `CatalogImportRecord` holds only import ID, actor, version, counts,
   bounded issues and timestamps — never the raw workbook or personal data.
+- The API parser uses the exact-pinned `exceljs@4.4.0` package for OOXML workbook
+  values and exports; formulas are rejected as data, and the pnpm `uuid@9.0.1`
+  override removes the vulnerable transitive `uuid@8` range required by the
+  dependency security gates.
 
 ## 10. OpenAPI example bodies
 

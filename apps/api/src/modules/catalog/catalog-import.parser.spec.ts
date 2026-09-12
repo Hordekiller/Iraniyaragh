@@ -30,6 +30,13 @@ describe('catalog workbook parser', () => {
     await expect(parseCatalogWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()))).rejects.toMatchObject({ response: { code: 'IMPORT_VALIDATION' } });
   });
 
+  it('rejects numeric identifier cells instead of losing leading zeroes', async () => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await workbookBuffer());
+    workbook.getWorksheet('Variants')!.getCell('C2').value = 123;
+    await expect(parseCatalogWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()))).rejects.toMatchObject({ response: { code: 'IMPORT_VALIDATION' } });
+  });
+
   it('exports the same fixed sheet contract', async () => {
     const output = await exportCatalogWorkbook({ products: [], variants: [], attributes: [], options: [], values: [], totalRows: 0 });
     const workbook = new ExcelJS.Workbook();
