@@ -350,7 +350,8 @@ export type CatalogImportErrorCode =
   | 'ATTRIBUTE_OPTION_INVALID'
   | 'IMPORT_VALIDATION'
   | 'IMPORT_TOO_LARGE'
-  | 'COMBINATION_LIMIT_EXCEEDED';
+  | 'COMBINATION_LIMIT_EXCEEDED'
+  | 'IMPORT_NOT_AVAILABLE';
 
 export type CatalogImportSummary = {
   products: {

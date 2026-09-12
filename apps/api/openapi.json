@@ -783,6 +783,107 @@
         ]
       }
     },
+    "/catalog/admin/imports": {
+      "post": {
+        "operationId": "CatalogController_uploadImport",
+        "parameters": [
+          {
+            "name": "x-iranyaragh-catalog-version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/imports/{id}": {
+      "get": {
+        "operationId": "CatalogController_importReport",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/imports/{id}/dry-run": {
+      "post": {
+        "operationId": "CatalogController_importDryRun",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/imports/{id}/commit": {
+      "post": {
+        "operationId": "CatalogController_commitImport",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/notifications/admin/sms-settings": {
       "get": {
         "operationId": "NotificationsAdminController_getSettings",
