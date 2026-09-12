@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-11
+Last reviewed: 2026-09-12
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
@@ -24,7 +24,7 @@ day-to-day assignments.
 | Gate                  | State                              | Current evidence                                                                                                                                                                             | Exit blocker                                                            |
 | --------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `0.1` Foundation/Auth | Acceptance closed                  | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                                                                           | private #114 acceptance                                                 |
-| `0.2` Catalog         | Started                            | Contracts #103, idempotency contract #168, durable runtime #171, admin Catalog workflow #173, policy ADR-0013 (#177), `C`-wave contract (#179) and P1 variant schema/migration (#180) merged | P2 services, P3 Excel import/export, media, storefront live integration |
+| `0.2` Catalog         | Started                            | Contracts #103, idempotency contract #168, durable runtime #171, admin Catalog workflow #173, policy ADR-0013 (#177), `C`-wave contract (#179), P1 variant schema/migration (#180) and P2 mutation services (#181) merged | P2 continuation (configuration/generation/`AXIS_IN_USE`), P3 Excel import/export, media, storefront live integration |
 | `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                                                                                                                                                     | HTTP/RBAC, warehouse/location, transfers, worker and admin              |
 | `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                                                                                                                                                     | Policies and all application/client workflows                           |
 
@@ -35,7 +35,7 @@ day-to-day assignments.
 |        1 | Issue #78                            | Closed 2026-09-12  | agreement recorded in `TEAM.md`, effective 2026-09-11                                              | Merged #172 delivers the accepted agreement; #78 closed               |
 |        2 | Issue #114                           | Private acceptance | #154 merged with no secret/PII exposure and fail-closed mutations                                  | Provision account/line/template/key; controlled sandbox/live evidence |
 |        3 | Issue #111 (mutation idempotency)    | Merged             | contract #168 + runtime #171 + admin workflow #173 merged                                          | Bounded cleanup worker remains on #81 before production               |
-|        4 | Issue #176/#178 (variants/import)    | `C` + `P1` merged  | policy ADR-0013 (#177) + `C`-wave contract (#179) + P1 schema/migration (#180) merged; #176 closed | P2 services → P3 import, each ≤400 lines and reviewed                 |
+|        4 | Issue #176/#178 (variants/import)    | `C` + `P1` + `P2` merged | policy ADR-0013 (#177) + `C`-wave contract (#179) + P1 schema/migration (#180) + P2 mutation services (#181) merged; #176 closed | P2 continuation (configuration/generation/`AXIS_IN_USE`) → P3 import, each ≤400 lines and reviewed  |
 |        5 | Discovery ready items #126/#129/#136 | Backlog (platform) | server-rendered pages, sitemap/robots/IndexNow and telemetry                                       | Pick up as platform capacity opens and wave 0.2-A is delivered        |
 
 ## Team disposition ledger — 2026-09-08 (updated 2026-09-11)

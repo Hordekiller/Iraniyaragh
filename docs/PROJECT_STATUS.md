@@ -36,7 +36,7 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `b9e6150`, containing merged #109, #103, #112,
+- Baseline at review: `main` commit `5db5135`, containing merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
   session/device-management panel #158, the screenshot/a11y evidence #160, the
@@ -46,14 +46,16 @@ foundation, and G5–G10 have not reached integrated completion.
   durable Catalog mutation-idempotency runtime #171, the TEAM capacity
   agreement #172, the admin Catalog workflow #173, the archived User UI
   reference #175, the accepted product-variant policy ADR-0013 (#177), the
-  catalog attributes/variants/pricing/import contract wave `C` (#179) and the
-  P1 variant/attribute/price-history schema and migration (#180).
+  catalog attributes/variants/pricing/import contract wave `C` (#179), the
+  P1 variant/attribute/price-history schema and migration (#180) and the P2
+  variant/attribute/price-history mutation services (#181).
 - #49, #79, #50, #91, #78, #111 and #176 are closed. #50/#91 were closed on
   2026-09-11 with all acceptance items ticked in their issue bodies; #78 (working
   agreement) was closed 2026-09-12 via merged #172; #111 was closed 2026-09-12 as
   completed through #157 and #171; #176 was closed 2026-09-12 as the decision
   behind ADR-0013 merged via #177. Active coordination includes #66, #81, #114
-  and the #178 wave (C → P1 → P2 → P3 → A/W → I). #115 is
+  and the #178 wave (C → P1 → P2-mutations (#181) → P2-continuation → P3 →
+  A/W → I). #115 is
   closed as delivered (the SMS admin panel shipped through #151).
 - Local-only or untracked material is never counted as delivered product capability.
 
@@ -148,11 +150,31 @@ merged and #49 is closed.
 - integer-Rial prices and non-sensitive public projections;
 - pagination, search, filter, allowlisted sorting and Prisma error mapping.
 
-Still outside the merged Catalog foundation: media upload, price history/effective-price policy, complete
-product detail, admin screens and live storefront integration.
+Still outside the merged Catalog foundation: media upload, attribute
+configuration/combination generation (P2 continuation), P3 Excel import/export,
+complete product detail, admin screens and live storefront integration.
 
 Delivery gate: current-main reconciliation, current-head CI, independent contract/
 security/query review, OpenAPI drift confirmation and merge.
+
+### PR #181 — P2 variant/attribute/price-history services slice
+
+- attribute/option CRUD with the accepted 2–40 char code grammar and optimistic
+  version CAS returning `STALE_VERSION` with expected/actual details;
+- variant update/status mutations with a runtime `SKU_CHANGE_NOT_ALLOWED` guard,
+  blank-barcode-to-null normalization and `status` ↔ legacy `isActive` sync;
+- atomic price update writing an append-only `VariantPriceRecord` (ADMIN source,
+  actor, requestId, reason, effectiveAt) plus a bounded 100-entry history view;
+- publish guard reconciled to require ≥1 `ACTIVE` variant (422 `UNPROCESSABLE`),
+  matching CATALOG_ATTRIBUTES_SPEC §5;
+- audit rows on every mutation and focused race/error-path DTO and service tests;
+- OpenAPI spec refreshed for the new catalog routes; full API suite green locally.
+
+Delivery evidence: `tsc`, eslint and the 515-test unit suite passed on `04810a9`;
+all eight CI checks green on the merge head; merged at `5db5135`. Remaining P2
+scope — product attribute configuration endpoints, server-side combination
+generation (cap 2000) with preview and the `AXIS_IN_USE` guard — lands in the
+declared P2-continuation PR (#178 accounting).
 
 ## Partial capabilities and exact boundaries
 
@@ -161,7 +183,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | RBAC          | Roles, seed and guard machinery                                                                                                                                             | Every domain route still needs explicit allow/deny policy tests                                                                                |
 | Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                                                                                                       | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
 | Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged                                                                                                      | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
-| Catalog       | API foundation via #103; idempotency #168/#171, admin Catalog workflow #173, policy ADR-0013 (#177), `C`-wave contract (#179) and P1 variant schema/migration (#180) merged | P2 services, P3 Excel import/export, media M1–M5, admin binding and storefront integration                                                     |
+| Catalog       | API foundation via #103; idempotency #168/#171, admin Catalog workflow #173, policy ADR-0013 (#177), `C`-wave contract (#179), P1 variant schema/migration (#180) and P2 mutation services (#181) merged | P2 continuation (configuration + combination generation + `AXIS_IN_USE`), P3 Excel import/export, media M1–M5, admin binding and storefront integration                                                     |
 | Inventory     | Correct service core                                                                                                                                                        | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
 | Orders        | Schema and generic state helper; read-only admin queue/detail merged via #169 (fixture-backed)                                                                              | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
 | Payments      | Schema/state foundation                                                                                                                                                     | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
