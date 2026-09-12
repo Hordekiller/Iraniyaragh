@@ -33,7 +33,7 @@ export class CatalogImportService {
       actorId, scope: 'catalog.import.upload', key, payload,
       execute: async tx => {
         const report = await this.report(tx, importId, actorId, workbook, 'READY');
-        await tx.catalogImportRecord.create({ data: { id: importId, actorId, version: workbookVersion, status: 'READY', requestId: getRequestId(), totalRows: workbook.totalRows, summary: report.summary, issues: report.issues, truncated: report.truncated, expiresAt: new Date(Date.now() + TTL_MS) } });
+        await tx.catalogImportRecord.create({ data: { id: importId, actorId, version: workbookVersion, status: 'READY', requestId: getRequestId(), totalRows: workbook.totalRows, summary: report.summary, issues: { issues: report.issues, items: report.items }, truncated: report.truncated, expiresAt: new Date(Date.now() + TTL_MS) } });
         await this.audit.record({ actorId, action: 'catalog.import.uploaded', entityType: 'CatalogImportRecord', entityId: importId, requestId: getRequestId(), after: { totalRows: workbook.totalRows, status: 'READY' } }, tx);
         return { response: { data: { report } }, resourceType: 'CatalogImportRecord', resourceId: importId };
       },
@@ -51,7 +51,7 @@ export class CatalogImportService {
     if (!record) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Catalog import not found.' });
     const workbook = this.getParsed(importId);
     const report = await this.report(this.prisma, importId, actorId, workbook, record.status);
-    await this.prisma.catalogImportRecord.update({ where: { id: importId }, data: { summary: report.summary, issues: report.issues, truncated: report.truncated, status: report.status, totalRows: report.totalRows } });
+    await this.prisma.catalogImportRecord.update({ where: { id: importId }, data: { summary: report.summary, issues: { issues: report.issues, items: report.items }, truncated: report.truncated, status: report.status, totalRows: report.totalRows } });
     return { data: { report } };
   }
 
@@ -69,7 +69,7 @@ export class CatalogImportService {
         }
         await this.apply(tx, actorId, workbook);
         const committedAt = new Date().toISOString();
-        await tx.catalogImportRecord.update({ where: { id: importId }, data: { status: 'COMMITTED', summary: report.summary, issues: [], truncated: false } });
+        await tx.catalogImportRecord.update({ where: { id: importId }, data: { status: 'COMMITTED', summary: report.summary, issues: { issues: [], items: report.items }, truncated: false } });
         await this.audit.record({ actorId, action: 'catalog.import.committed', entityType: 'CatalogImportRecord', entityId: importId, requestId: getRequestId(), after: { status: 'COMMITTED', totalRows: workbook.totalRows } }, tx);
         return { response: { data: { result: { importId, status: 'COMMITTED', committedAt, summary: report.summary, errorCount: 0 } } }, resourceType: 'CatalogImportRecord', resourceId: importId };
       },
@@ -131,7 +131,8 @@ export class CatalogImportService {
   }
 
   private recordReport(record: { id: string; status: string; summary: unknown; issues: unknown; truncated: boolean; totalRows: number }): CatalogImportDryRunReport {
-    return { importId: record.id, status: record.status as CatalogImportDryRunReport['status'], summary: record.summary as CatalogImportSummary ?? emptySummary(), issues: record.issues as CatalogImportIssue[] ?? [], items: [], truncated: record.truncated, totalRows: record.totalRows };
+    const stored = record.issues && typeof record.issues === 'object' && !Array.isArray(record.issues) ? record.issues as { issues?: CatalogImportIssue[]; items?: CatalogImportDryRunReport['items'] } : { issues: record.issues as CatalogImportIssue[] };
+    return { importId: record.id, status: record.status as CatalogImportDryRunReport['status'], summary: record.summary as CatalogImportSummary ?? emptySummary(), issues: stored.issues ?? [], items: stored.items ?? [], truncated: record.truncated, totalRows: record.totalRows };
   }
 
   private async apply(tx: Prisma.TransactionClient, actorId: string, workbook: ParsedCatalogWorkbook): Promise<void> {
