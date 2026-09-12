@@ -16,7 +16,8 @@ An attribute is configured once and reused by any product. Codes are the machine
 identity and never change; names/labels are Persian presentation and may change
 without affecting any variant identity.
 
-- `AttributeDefinition`: `code` (immutable, `enteregex` below), `name`, optional
+- `AttributeDefinition`: `code` (immutable; grammar in the "Code grammar" paragraph
+  below), `name`, optional
   `description`, `status` (`ACTIVE|INACTIVE`), `version`.
 - `AttributeOption`: belongs to one attribute; `code` (immutable) + `label` (mutable),
   unique per attribute, `status`, `version`.
@@ -47,8 +48,12 @@ Titles are never keys and never participate in identity.
   collapse internal whitespace). `skuKey` is globally unique; leading zeros and
   non-ASCII characters are preserved after normalization.
 - SKU is always a string in transit; never parsed as a number. Ordinary
-  Product/Variant PATCH never changes `sku`; attempts return `SKU_CHANGE_NOT_ALLOWED`.
-  A controlled SKU-correction command is out of scope this wave.
+  Product/Variant PATCH never changes `sku`. Any update or import body that
+  contains a `sku` field is **rejected with `409 SKU_CHANGE_NOT_ALLOWED`, never
+  silently stripped or ignored** — the request type also excludes `sku`
+  structurally (`ProductVariantUpdateRequest`), but the runtime guard is the
+  authoritative defence so the error code stays reachable. A controlled
+  SKU-correction command is out of scope this wave.
 - `barcode` is a trimmed string (leading zeros preserved), unique when present,
   empty ⇒ `null`. Barcode is absent from public projections.
 - Internal references always use `variantId`, never SKU.
@@ -106,7 +111,12 @@ values; formulas are never evaluated and no macro/external link is honored.
 | `description`  |     | optional                                        |
 | `brandSlug`    |     | optional, must exist                            |
 | `categorySlug` |     | optional, must exist                            |
-| `status`       |     | `DRAFT                                          | PUBLISHED | ARCHIVED` |
+| `status`       |     | `DRAFT` / `PUBLISHED` / `ARCHIVED`              |
+
+> **Status reconciliation:** the workbook validates against contract
+> `CatalogStatus` (`DRAFT|PUBLISHED|ARCHIVED`). At `P1`, the platform maps contract
+> `PUBLISHED` ⇄ schema `ProductStatus.ACTIVE/INACTIVE` exactly as the #173 status
+> flow does; the import contract and the DB enum never silently drift.
 
 ### `Variants`
 
