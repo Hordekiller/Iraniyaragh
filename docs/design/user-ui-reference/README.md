@@ -10,6 +10,8 @@ It is reference material only and is not a workspace package or production code.
 - No `package.json`, `package-lock.json`, Vite config or node_modules is included
   here. Prototype-only data and cart context may remain inside `src/` so the
   visual source stays inspectable, but they are explicitly non-production.
+- Contact values such as `021-88776655` are synthetic design placeholders, not
+  real business or personal contact data.
 - Do not import this directory from `apps/web` or `apps/admin`.
 - Do not treat prices, stock, product identities or cart behavior in the source
   as business truth.
@@ -21,5 +23,5 @@ lane PR after the accepted public catalog/rendering contracts are available.
 The target must use existing workspace dependencies, `@iranyaragh/contracts`,
 the existing route/session boundaries and explicit fixture gating where needed.
 
-The extraction plan is documented in `docs/UI_EXTRACTION_MAP.md` on the Web
-lane. The archived source was linted and audited before being placed here.
+The extraction plan is documented in `docs/UI_EXTRACTION_MAP.md`. The archived
+source was linted and audited before being placed here.
