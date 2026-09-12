@@ -487,6 +487,160 @@
         ]
       }
     },
+    "/catalog/admin/attributes": {
+      "get": {
+        "operationId": "CatalogController_attributes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "CatalogController_createAttribute",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/attributes/{id}": {
+      "patch": {
+        "operationId": "CatalogController_updateAttribute",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/attributes/{id}/options": {
+      "post": {
+        "operationId": "CatalogController_createAttributeOption",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/attributes/{attributeId}/options/{optionId}": {
+      "patch": {
+        "operationId": "CatalogController_updateAttributeOption",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/variants/{id}": {
+      "patch": {
+        "operationId": "CatalogController_updateVariant",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/variants/{id}/status": {
+      "post": {
+        "operationId": "CatalogController_updateVariantStatus",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/variants/{id}/price": {
+      "patch": {
+        "operationId": "CatalogController_updateVariantPrice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/admin/variants/{id}/price-history": {
+      "get": {
+        "operationId": "CatalogController_variantPriceHistory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/catalog/admin/brands": {
       "post": {
         "operationId": "CatalogController_createBrand",
