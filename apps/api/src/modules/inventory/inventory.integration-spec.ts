@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 import { AuditLogService } from '../audit/audit-log.service';
+import { EMPTY_AXIS_SIGNATURE, canonicalizeSku } from '../catalog/variant-identifiers';
 import { InventoryService } from './inventory.service';
 
 describe.sequential('InventoryService database integration', () => {
@@ -76,6 +77,8 @@ describe.sequential('InventoryService database integration', () => {
         id: variantId,
         productId,
         sku: `TEST-SKU-${runId}`,
+        skuKey: canonicalizeSku(`TEST-SKU-${runId}`),
+        combinationSignature: EMPTY_AXIS_SIGNATURE,
         title: 'Integration test variant',
         costPrice: 100000n,
         salePrice: 120000n,

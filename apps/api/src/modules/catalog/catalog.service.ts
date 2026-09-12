@@ -9,6 +9,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import type { BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto } from './catalog.dto';
 import { CatalogIdempotencyService } from './catalog-idempotency.service';
+import { EMPTY_AXIS_SIGNATURE, canonicalizeSku, legacyCombinationSignature, pendingCombinationSignature } from './variant-identifiers';
 
 const statusToDb = (status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined): ProductStatus | undefined =>
   status === 'PUBLISHED' ? ProductStatus.ACTIVE : status;
@@ -88,13 +89,19 @@ export class CatalogService {
     return this.idempotency.run({
       actorId, scope: 'catalog.product.create', key: idempotencyKey, payload: idempotencyPayload,
       execute: async tx => {
+        const singleVariant = normalized.variants?.length === 1;
         const created = await this.mapPrismaError(tx.product.create({
           data: {
             name: normalized.name, slug: normalized.slug, description: normalized.description, brandId: normalized.brandId, categoryId: normalized.categoryId,
             status: statusToDb(normalized.status) ?? ProductStatus.DRAFT,
-            variants: normalized.variants ? { create: normalized.variants.map(variant => ({ sku: variant.sku, barcode: variant.barcode, title: variant.title, costPrice: BigInt(variant.costPrice.amount), salePrice: BigInt(variant.salePrice.amount), weightGrams: variant.weightGrams, isActive: variant.isActive ?? true })) } : undefined,
+            variants: normalized.variants ? { create: normalized.variants.map(variant => ({ sku: variant.sku, barcode: variant.barcode, title: variant.title, costPrice: BigInt(variant.costPrice.amount), salePrice: BigInt(variant.salePrice.amount), weightGrams: variant.weightGrams, isActive: variant.isActive ?? true, skuKey: canonicalizeSku(variant.sku), combinationSignature: singleVariant ? EMPTY_AXIS_SIGNATURE : pendingCombinationSignature() })) } : undefined,
           }, include: this.productInclude(),
         }), 'Product');
+        if (normalized.variants && normalized.variants.length > 1) {
+          for (const variant of created.variants) {
+            await tx.productVariant.update({ where: { id: variant.id }, data: { combinationSignature: legacyCombinationSignature(variant.id) } });
+          }
+        }
         await this.audit.record({ actorId, action: 'catalog.product.created', entityType: 'Product', entityId: created.id, requestId: getRequestId(), after: { productId: created.id, status: created.status, variantCount: created.variants.length } }, tx);
         return { response: { data: { product: this.productDetail(created) } }, resourceType: 'Product', resourceId: created.id };
       },
