@@ -37,6 +37,8 @@ function fakePrisma() {
     productVariant: { findMany: vi.fn(async () => []) },
     attributeDefinition: { findMany: vi.fn(async () => []) },
     attributeOption: { findMany: vi.fn(async () => []) },
+    brand: { findMany: vi.fn(async () => []) },
+    category: { findMany: vi.fn(async () => []) },
   };
 }
 
