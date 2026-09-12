@@ -199,7 +199,7 @@ describe.sequential('CatalogService database integration', () => {
     await prisma.product.delete({ where: { id } });
   });
 
-  it('rejects publishing a product that has no SKU', async () => {
+  it('rejects publishing a product that has no active SKU', async () => {
     const created = await catalog.createProduct(actorId, key('no-variant'), {
       name: 'No Variant Product',
       slug: `no-variant-${runId}`,
@@ -208,7 +208,7 @@ describe.sequential('CatalogService database integration', () => {
 
     await expect(
       catalog.changeProductStatus(actorId, key('invalid-status'), id, { action: 'publish' }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
 
     await prisma.auditLog.deleteMany({
       where: { requestId: { startsWith: requestIdPrefix } },
