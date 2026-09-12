@@ -252,12 +252,16 @@ security/query review, OpenAPI drift confirmation and merge.
   execution map from the current foundation through `1.0` and the deferred `1.1.0`,
   with exclusive hotspot ownership, `D/C/P/A/W/I/O` issue splitting and a documented
   merge train (`AGENT_WORKSTREAMS.md`).
-- `#157` merged at `a691896`: first #111 Catalog-hardening slice — conditional public
+ - `#157` merged at `a691896`: first #111 Catalog-hardening slice — conditional public
   caching on every anonymous Catalog read (`Cache-Control: public, no-cache` + strong
   SHA-256 content ETag, `304` on matching `If-None-Match`, all five public routes
-  documented in OpenAPI) and barcode removed from the anonymous variant projection
-  (admin/private detail retains it). Mutation idempotency remains the separately
-  planned second #111 slice.
+   documented in OpenAPI) and barcode removed from the anonymous variant projection
+   (admin/private detail retains it). Mutation idempotency remains the separately
+   planned second #111 slice.
+ - `#181` merged at `5db5135`: catalog attribute/option and variant mutation services,
+   optimistic version guards, SKU immutability, status synchronization, append-only
+   variant price history, and the publish-ready active-variant guard. The remaining
+   #178 continuation is product attribute configuration and bounded variant generation.
 
 The durable Catalog mutation-idempotency runtime is being implemented separately on
 the post-#168 platform branch. It is not delivered on `main` until its forward
@@ -297,7 +301,8 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
 3. Shipping geography, methods and pricing authority.
 4. Reservation TTL and multi-location allocation policy.
 5. Guest checkout, identity linkage/merge and anonymization.
-6. Product variants/attributes and import format.
+6. Product variants/attributes and import format (policy and core services resolved by
+   #177/#179/#180/#181; configuration/generation and Excel import/export remain).
 7. Staff role matrix, approval thresholds and four-eyes actions.
 8. Return/refund/damaged-stock policy.
 9. Deployment target, RPO/RTO, retention, monitoring and budget.

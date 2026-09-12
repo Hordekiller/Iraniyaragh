@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsNotIn, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsNotIn, IsObject, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const AMOUNT = /^\d{1,15}$/u;
@@ -40,6 +40,12 @@ export class ProductVariantDto {
   @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
   @IsOptional() @IsInt() @Min(0) weightGrams?: number;
   @IsOptional() @IsBoolean() isActive?: boolean;
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => VariantAttributeValueDto) attributeValues?: VariantAttributeValueDto[];
+}
+
+export class VariantAttributeValueDto {
+  @IsString() @MaxLength(40) attributeCode!: string;
+  @IsString() @MaxLength(40) optionCode!: string;
 }
 
 export class ProductCreateDto {
@@ -50,6 +56,28 @@ export class ProductCreateDto {
   @IsOptional() @IsString() @MaxLength(128) categoryId?: string;
   @IsOptional() @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED']) status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   @IsOptional() @ValidateNested({ each: true }) @Type(() => ProductVariantDto) variants?: ProductVariantDto[];
+  @IsOptional() @ValidateNested({ each: true }) @Type(() => ProductAttributeConfigurationDto) attributeConfig?: ProductAttributeConfigurationDto[];
+}
+
+export class ProductAttributeConfigurationDto {
+  @IsString() @MaxLength(40) attributeCode!: string;
+  @IsBoolean() isVariantAxis!: boolean;
+  @IsOptional() @IsBoolean() isRequired?: boolean;
+}
+
+export class ProductAttributeConfigurationUpdateDto {
+  @IsInt() @Min(1) expectedVersion!: number;
+  @IsArray() @ValidateNested({ each: true }) @Type(() => ProductAttributeConfigurationDto) configurations!: ProductAttributeConfigurationDto[];
+}
+
+export class VariantGeneratePreviewDto {
+  @IsObject() optionSelection!: Record<string, string[]>;
+}
+
+export class VariantGenerateDto extends VariantGeneratePreviewDto {
+  @ValidateNested() @Type(() => MoneyDto) costPrice!: MoneyDto;
+  @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
+  @IsOptional() @IsString() @MaxLength(150) titlePattern?: string;
 }
 
 export class ProductListQueryDto {
