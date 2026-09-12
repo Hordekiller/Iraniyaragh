@@ -151,18 +151,18 @@ security/query review, OpenAPI drift confirmation and merge.
 
 ## Partial capabilities and exact boundaries
 
-| Capability    | What exists                                                                                                                 | What prevents completion                                                                                                                       |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| RBAC          | Roles, seed and guard machinery                                                                                             | Every domain route still needs explicit allow/deny policy tests                                                                                |
-| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                                                       | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
-| Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged                                                      | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
-| Catalog       | API foundation via #103; idempotency contract #168 and durable runtime #171 merged; admin Catalog workflow in review (#173) | Media runtime (M1–M5), pricing, admin UI merge and storefront integration                                                                      |
-| Inventory     | Correct service core                                                                                                        | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
-| Orders        | Schema and generic state helper; read-only admin queue/detail merged via #169 (fixture-backed)                              | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
-| Payments      | Schema/state foundation                                                                                                     | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
-| Web           | Accessible prototype                                                                                                        | Static `prototype.ts` data and simulated commerce actions                                                                                      |
-| Admin         | Shell, Auth/UI primitives, SMS settings and read-only Orders/Settings modules (via #169)                                    | Live catalog/inventory/order operational modules are not yet merged                                                                            |
-| Operations    | CI and local Compose                                                                                                        | Deploy/staging, observability, recovery and rollback proof                                                                                     |
+| Capability    | What exists                                                                                                     | What prevents completion                                                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| RBAC          | Roles, seed and guard machinery                                                                                 | Every domain route still needs explicit allow/deny policy tests                                                                                |
+| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                                           | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
+| Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged                                          | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
+| Catalog       | API foundation via #103; idempotency contract #168, durable runtime #171 and admin Catalog workflow #173 merged | Media runtime (M1–M5), pricing, admin UI merge and storefront integration                                                                      |
+| Inventory     | Correct service core                                                                                            | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
+| Orders        | Schema and generic state helper; read-only admin queue/detail merged via #169 (fixture-backed)                  | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
+| Payments      | Schema/state foundation                                                                                         | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
+| Web           | Accessible prototype                                                                                            | Static `prototype.ts` data and simulated commerce actions                                                                                      |
+| Admin         | Shell, Auth/UI primitives, SMS settings and read-only Orders/Settings modules (via #169)                        | Live catalog/inventory/order operational modules are not yet merged                                                                            |
+| Operations    | CI and local Compose                                                                                            | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
 
@@ -272,11 +272,11 @@ bounded cleanup batch remains tracked on #81 before production enablement.
 
 ## Open pull-request work (not yet on main)
 
-`#173` is open in review (`feat(admin): add contract-backed Catalog workflow`,
+`#173` is merged at `778380af` (`feat(admin): add contract-backed Catalog workflow`,
 #166): live Admin Catalog product list/create/status, Brand and Category workflows
 against current contracts and the merged #171 idempotency runtime, including
-permission gates and retry-safe key handling. Changes were requested on the
-current head; it is not on `main` until addressed and merged.
+permission gates and retry-safe key handling. It is the current open-work entry for
+the Admin Catalog track.
 
 The #50 admin session-management slice is delivered through `#158` (merged):
 the `/settings/sessions` page with a typed session port (HTTP client +
@@ -289,7 +289,7 @@ The first #111 Catalog-hardening slice (conditional public caching and the
 barcode-free anonymous variant projection) is merged via `#157`; the second slice —
 durable mutation idempotency — has its accepted contract merged via `#168`
 (`CATALOG_IDEMPOTENCY.md`) and its platform runtime merged via `#171`, with the
-Admin Catalog client workflow under review as `#173`. The bounded cleanup worker
+Admin Catalog client workflow is merged as `#173`; the bounded cleanup worker
 for expired records remains tracked on #81 before production enablement.
 
 Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
