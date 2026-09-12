@@ -319,7 +319,10 @@ export function ProductCreateForm() {
                 <Button
                   size="small"
                   startIcon={<Plus size={16} />}
-                  onClick={() => setDraft((current) => ({ ...current, variants: [...current.variants, emptyVariant()] }))}
+                  onClick={() => {
+                    idempotencyKey.current = null;
+                    setDraft((current) => ({ ...current, variants: [...current.variants, emptyVariant()] }));
+                  }}
                 >
                   افزودن تنوع
                 </Button>
@@ -341,12 +344,13 @@ export function ProductCreateForm() {
                           size="small"
                           aria-label={`حذف تنوع ${index + 1}`}
                           disabled={draft.variants.length === 1}
-                          onClick={() =>
-                            setDraft((current) => ({
-                              ...current,
-                              variants: current.variants.filter((_, i) => i !== index),
-                            }))
-                          }
+                              onClick={() => {
+                                idempotencyKey.current = null;
+                                setDraft((current) => ({
+                                  ...current,
+                                  variants: current.variants.filter((_, i) => i !== index),
+                                }));
+                              }}
                         >
                           <Trash2 size={17} />
                         </IconButton>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Button,
@@ -38,6 +38,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
   const [errors, setErrors] = useState<{ name?: string; slug?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const idempotencyKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -46,6 +47,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
       setParentId(category?.parentId ?? '');
       setErrors({});
       setSubmitError(null);
+      idempotencyKey.current = null;
     }
   }, [open, category]);
 
@@ -76,13 +78,15 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
         });
         feedback.success(`دسته‌بندی «${name.trim()}» به‌روزرسانی شد.`);
       } else {
+        idempotencyKey.current ??= createIdempotencyKey('catalog-category');
         await createCategory({
           name: name.trim(),
           slug: slug.trim(),
           ...(parentId ? { parentId } : {}),
-        }, createIdempotencyKey('catalog-category'));
+        }, idempotencyKey.current);
         feedback.success(`دسته‌بندی «${name.trim()}» ساخته شد.`);
       }
+      idempotencyKey.current = null;
       onSaved();
       onClose();
     } catch (error) {
@@ -97,7 +101,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" aria-labelledby="category-dialog-title">
+    <Dialog open={open} onClose={() => { idempotencyKey.current = null; onClose(); }} fullWidth maxWidth="sm" aria-labelledby="category-dialog-title">
       <DialogTitle id="category-dialog-title">{category ? 'ویرایش دسته‌بندی' : 'دسته‌بندی جدید'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2.5} sx={{ mt: 1 }}>
@@ -114,7 +118,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
               size="small"
               autoFocus
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => { idempotencyKey.current = null; setName(event.target.value); }}
             />
           </FormField>
           <FormField
@@ -130,7 +134,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
               size="small"
               dir="ltr"
               value={slug}
-              onChange={(event) => setSlug(event.target.value.toLocaleLowerCase('en-US').replace(/\s+/g, '-'))}
+              onChange={(event) => { idempotencyKey.current = null; setSlug(event.target.value.toLocaleLowerCase('en-US').replace(/\s+/g, '-')); }}
             />
           </FormField>
           <FormField label="دستهٔ والد" htmlFor="category-parent" helperText="خالی یعنی دستهٔ ریشه">
@@ -153,7 +157,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button type="button" onClick={onClose} color="inherit">
+          <Button type="button" onClick={() => { idempotencyKey.current = null; onClose(); }} color="inherit">
           انصراف
         </Button>
         <Button type="submit" variant="contained" disabled={submitting} onClick={(e) => void submit(e)}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Button,
@@ -33,6 +33,7 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
   const [errors, setErrors] = useState<{ name?: string; slug?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const idempotencyKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -40,6 +41,7 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
       setSlug(brand?.slug ?? '');
       setErrors({});
       setSubmitError(null);
+      idempotencyKey.current = null;
     }
   }, [open, brand]);
 
@@ -63,9 +65,11 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
         await updateBrand(brand.id, { name: name.trim(), slug: slug.trim() });
         feedback.success(`برند «${name.trim()}» به‌روزرسانی شد.`);
       } else {
-        await createBrand({ name: name.trim(), slug: slug.trim() }, createIdempotencyKey('catalog-brand'));
+        idempotencyKey.current ??= createIdempotencyKey('catalog-brand');
+        await createBrand({ name: name.trim(), slug: slug.trim() }, idempotencyKey.current);
         feedback.success(`برند «${name.trim()}» ساخته شد.`);
       }
+      idempotencyKey.current = null;
       onSaved();
       onClose();
     } catch (error) {
@@ -78,7 +82,7 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" aria-labelledby="brand-dialog-title">
+    <Dialog open={open} onClose={() => { idempotencyKey.current = null; onClose(); }} fullWidth maxWidth="sm" aria-labelledby="brand-dialog-title">
       <DialogTitle id="brand-dialog-title">{brand ? 'ویرایش برند' : 'برند جدید'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2.5} sx={{ mt: 1 }}>
@@ -95,7 +99,7 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
               size="small"
               autoFocus
               value={name}
-              onChange={(event) => setName(event.target.value)}
+               onChange={(event) => { idempotencyKey.current = null; setName(event.target.value); }}
             />
           </FormField>
           <FormField
@@ -111,13 +115,13 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
               size="small"
               dir="ltr"
               value={slug}
-              onChange={(event) => setSlug(event.target.value.toLocaleLowerCase('en-US').replace(/\s+/g, '-'))}
+               onChange={(event) => { idempotencyKey.current = null; setSlug(event.target.value.toLocaleLowerCase('en-US').replace(/\s+/g, '-')); }}
             />
           </FormField>
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button type="button" onClick={onClose} color="inherit">
+          <Button type="button" onClick={() => { idempotencyKey.current = null; onClose(); }} color="inherit">
           انصراف
         </Button>
         <Button type="submit" variant="contained" disabled={submitting} onClick={(e) => void submit(e)}>

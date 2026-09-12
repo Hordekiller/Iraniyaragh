@@ -52,6 +52,22 @@ describe('BrandDialog', () => {
     await waitFor(() => expect(updateBrand).toHaveBeenCalledWith('b1', { name: 'آبان لک', slug: 'abanlock' }));
   });
 
+  it('reuses the idempotency key after an ambiguous create failure', async () => {
+    vi.mocked(createBrand)
+      .mockRejectedValueOnce(new Error('network lost'))
+      .mockResolvedValueOnce({ brand: { ...brand, productCount: 0 } } as never);
+    renderDialog();
+    fireEvent.change(screen.getByLabelText(/نام برند/), { target: { value: 'آبان' } });
+    fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'abanlock' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'ساخت برند' }));
+    await waitFor(() => expect(createBrand).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'ساخت برند' }));
+    await waitFor(() => expect(createBrand).toHaveBeenCalledTimes(2));
+
+    expect(vi.mocked(createBrand).mock.calls[0][1]).toBe(vi.mocked(createBrand).mock.calls[1][1]);
+  });
+
   it('validates required fields before submitting', async () => {
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'ساخت برند' }));
