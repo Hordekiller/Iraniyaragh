@@ -6,7 +6,7 @@ import { CatalogService } from './catalog.service';
 const brandRow = { id: 'brand-1', name: 'Brand One', slug: 'brand-one', _count: { products: 2 } };
 const categoryRow = { id: 'cat-1', name: 'Category One', slug: 'category-one', parentId: null, _count: { products: 3 }, createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-02T00:00:00Z') };
 const variant = {
-  id: 'variant-1', sku: 'SKU-1', barcode: '123456', title: 'Variant Title', costPrice: 100000n, salePrice: 125000n, weightGrams: 250, isActive: true, createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-02T00:00:00Z'),
+  id: 'variant-1', sku: 'SKU-1', barcode: '123456', title: 'Variant Title', costPrice: 100000n, salePrice: 125000n, weightGrams: 250, status: 'ACTIVE', isActive: true, createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-02T00:00:00Z'),
 };
 const productRow = {
   id: 'product-1', name: 'Product One', slug: 'product-one', description: 'A product', status: ProductStatus.ACTIVE,
@@ -177,9 +177,9 @@ describe('CatalogService', () => {
       expect(result.data.product.status).toBe('DRAFT');
     });
 
-    it('rejects publishing a product without any SKU (409)', async () => {
+    it('rejects publishing a product without any active SKU', async () => {
       (ctx.tx.product.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...productRow, variants: [] });
-      await expect(ctx.service.changeProductStatus('actor-1', 'unit-no-sku-status', 'product-1', { action: 'publish' })).rejects.toBeInstanceOf(ConflictException);
+      await expect(ctx.service.changeProductStatus('actor-1', 'unit-no-sku-status', 'product-1', { action: 'publish' })).rejects.toBeInstanceOf(UnprocessableEntityException);
     });
 
     it('throws NotFound for a missing product', async () => {
