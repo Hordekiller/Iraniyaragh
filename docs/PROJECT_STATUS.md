@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-11
+Last reviewed: 2026-09-12
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -18,16 +18,16 @@ operations are absent.
 
 Current delivery confidence:
 
-| Area                           | State             | Evidence-based assessment                                                                                                                   |
-| ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist                                                           |
-| Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                                                                           |
-| Customer/auth UX               | Merged foundation | Real HTTP client and provider-dispatched OTP foundation are merged; live SMS.ir activation and provider-backed happy-path acceptance remain |
-| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice; #168 added the durable mutation-idempotency contract            |
-| Product media                  | Accepted contract | Images/videos are not persisted or served yet; `PRODUCT_MEDIA_SPEC.md` is accepted via #161 and its M1–M5 runtime slices are planned        |
-| Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not                                                          |
-| Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                                                                  |
-| Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                 |
+| Area                           | State             | Evidence-based assessment                                                                                                                                                                                                       |
+| ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist                                                                                                                                               |
+| Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                                                                                                                                                               |
+| Customer/auth UX               | Merged foundation | Real HTTP client and provider-dispatched OTP foundation are merged; live SMS.ir activation and provider-backed happy-path acceptance remain                                                                                     |
+| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice; #168 added the durable mutation-idempotency contract; #177/#179 accepted the attributes/variants/import policy (ADR-0013) and its `C`-wave contract |
+| Product media                  | Accepted contract | Images/videos are not persisted or served yet; `PRODUCT_MEDIA_SPEC.md` is accepted via #161 and its M1–M5 runtime slices are planned                                                                                            |
+| Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not                                                                                                                                              |
+| Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                                                                                                                                                      |
+| Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                                     |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
 G2 is at acceptance reconciliation, G3 has a merged API foundation, G4 has a reusable service
@@ -36,19 +36,23 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `5716ba1`, containing merged #109, #103, #112,
+- Baseline at review: `main` commit `0726aa3`, containing merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
   session/device-management panel #158, the screenshot/a11y evidence #160, the
   catalog hardenings #157, the three-lane delivery map #156, the catalog
   idempotency contract #168, the product-media contract #161, the admin
   Orders/Settings reconciliation #169, the #161 docs reconciliation #170, the
-  durable Catalog mutation-idempotency runtime #171 and the TEAM capacity
-  agreement #172.
-- #49, #79, #50, #91, #78 and #111 are closed. #50/#91 were closed on 2026-09-11
-  with all acceptance items ticked in their issue bodies; #78 (working agreement)
-  was closed 2026-09-12 via merged #172; #111 was closed 2026-09-12 as completed
-  through #157 and #171. Active coordination includes #66, #81 and #114. #115 is
+  durable Catalog mutation-idempotency runtime #171, the TEAM capacity
+  agreement #172, the admin Catalog workflow #173, the archived User UI
+  reference #175, the accepted product-variant policy ADR-0013 (#177) and the
+  catalog attributes/variants/pricing/import contract wave `C` (#179).
+- #49, #79, #50, #91, #78, #111 and #176 are closed. #50/#91 were closed on
+  2026-09-11 with all acceptance items ticked in their issue bodies; #78 (working
+  agreement) was closed 2026-09-12 via merged #172; #111 was closed 2026-09-12 as
+  completed through #157 and #171; #176 was closed 2026-09-12 as the decision
+  behind ADR-0013 merged via #177. Active coordination includes #66, #81, #114
+  and the #178 wave (C → P1 → P2 → P3 → A/W → I). #115 is
   closed as delivered (the SMS admin panel shipped through #151).
 - Local-only or untracked material is never counted as delivered product capability.
 
@@ -151,18 +155,18 @@ security/query review, OpenAPI drift confirmation and merge.
 
 ## Partial capabilities and exact boundaries
 
-| Capability    | What exists                                                                                                     | What prevents completion                                                                                                                       |
-| ------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| RBAC          | Roles, seed and guard machinery                                                                                 | Every domain route still needs explicit allow/deny policy tests                                                                                |
-| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                                           | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
-| Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged                                          | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
-| Catalog       | API foundation via #103; idempotency contract #168, durable runtime #171 and admin Catalog workflow #173 merged | Media runtime (M1–M5), pricing, admin UI merge and storefront integration                                                                      |
-| Inventory     | Correct service core                                                                                            | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
-| Orders        | Schema and generic state helper; read-only admin queue/detail merged via #169 (fixture-backed)                  | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
-| Payments      | Schema/state foundation                                                                                         | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
-| Web           | Accessible prototype                                                                                            | Static `prototype.ts` data and simulated commerce actions                                                                                      |
-| Admin         | Shell, Auth/UI primitives, SMS settings and read-only Orders/Settings modules (via #169)                        | Live catalog/inventory/order operational modules are not yet merged                                                                            |
-| Operations    | CI and local Compose                                                                                            | Deploy/staging, observability, recovery and rollback proof                                                                                     |
+| Capability    | What exists                                                                                                                             | What prevents completion                                                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| RBAC          | Roles, seed and guard machinery                                                                                                         | Every domain route still needs explicit allow/deny policy tests                                                                                |
+| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                                                                   | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
+| Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged                                                                  | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
+| Catalog       | API foundation via #103; idempotency #168/#171, admin Catalog workflow #173, policy ADR-0013 (#177) and `C`-wave contract (#179) merged | P1–P3 variant/SKU/pricing/import runtime, media M1–M5, admin binding and storefront integration                                                |
+| Inventory     | Correct service core                                                                                                                    | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
+| Orders        | Schema and generic state helper; read-only admin queue/detail merged via #169 (fixture-backed)                                          | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
+| Payments      | Schema/state foundation                                                                                                                 | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
+| Web           | Accessible prototype                                                                                                                    | Static `prototype.ts` data and simulated commerce actions                                                                                      |
+| Admin         | Shell, Auth/UI primitives, SMS settings and read-only Orders/Settings modules (via #169)                                                | Live catalog/inventory/order operational modules are not yet merged                                                                            |
+| Operations    | CI and local Compose                                                                                                                    | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
 
@@ -275,8 +279,20 @@ bounded cleanup batch remains tracked on #81 before production enablement.
 `#173` is merged at `778380af` (`feat(admin): add contract-backed Catalog workflow`,
 #166): live Admin Catalog product list/create/status, Brand and Category workflows
 against current contracts and the merged #171 idempotency runtime, including
-permission gates and retry-safe key handling. It is the current open-work entry for
-the Admin Catalog track.
+permission gates and retry-safe key handling.
+
+`#177` is merged at `a034732` — accepted policy ADR-0013 (product variants,
+attributes, SKU identity and import policy; closes decision issue #176). `#179` is
+merged at `0726aa3` — the `C`-wave contract for that policy
+(`packages/contracts/src/catalog.ts` additions plus
+`docs/CATALOG_ATTRIBUTES_SPEC.md`: workbook v1, SKU canonicalization, error-code
+matrix and staged import flow). The `#178` wave continues with P1 (schema and
+forward migration), P2 (services), P3 (Excel import/export), then Admin/Web
+binding and integration; every PR stays under the 400-logical-line gate except
+the accepted contract-plus-spec precedent recorded on #179.
+
+The single remaining open PR is `#174` (this branch): the project/execution
+status fact-sync; it awaits independent review.
 
 The #50 admin session-management slice is delivered through `#158` (merged):
 the `/settings/sessions` page with a typed session port (HTTP client +
@@ -288,9 +304,9 @@ against the real `/auth/sessions` endpoints (`GET /auth/sessions`,
 The first #111 Catalog-hardening slice (conditional public caching and the
 barcode-free anonymous variant projection) is merged via `#157`; the second slice —
 durable mutation idempotency — has its accepted contract merged via `#168`
-(`CATALOG_IDEMPOTENCY.md`) and its platform runtime merged via `#171`, with the
-Admin Catalog client workflow is merged as `#173`; the bounded cleanup worker
-for expired records remains tracked on #81 before production enablement.
+(`CATALOG_IDEMPOTENCY.md`) and its platform runtime merged via `#171`; the
+bounded cleanup worker for expired records remains tracked on #81 before
+production enablement.
 
 Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
 Remaining for production sign-in is private SMS.ir account/key/template activation,
@@ -305,7 +321,8 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
 3. Shipping geography, methods and pricing authority.
 4. Reservation TTL and multi-location allocation policy.
 5. Guest checkout, identity linkage/merge and anonymization.
-6. Product variants/attributes and import format.
+6. **Resolved 2026-09-12 by #177:** product variants/attributes/SKU identity and
+   import format — accepted as ADR-0013; contract wave `C` merged via #179.
 7. Staff role matrix, approval thresholds and four-eyes actions.
 8. Return/refund/damaged-stock policy.
 9. Deployment target, RPO/RTO, retention, monitoring and budget.
