@@ -8,3 +8,6 @@ overrides:
   # Nest currently resolves multer 2.2.0, which is affected by multiple
   # multipart denial-of-service advisories fixed in 2.3.0.
   multer: 2.3.0
+  # ExcelJS accepts uuid.v4 from the patched uuid major; older uuid releases
+  # are rejected by dependency-review for missing buffer bounds checks.
+  uuid: 11.1.1

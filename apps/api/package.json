@@ -34,7 +34,8 @@
     "otplib": "13.5.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "exceljs": "4.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
