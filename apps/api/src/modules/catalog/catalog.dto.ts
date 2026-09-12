@@ -40,12 +40,6 @@ export class ProductVariantDto {
   @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
   @IsOptional() @IsInt() @Min(0) weightGrams?: number;
   @IsOptional() @IsBoolean() isActive?: boolean;
-  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => VariantAttributeValueDto) attributeValues?: VariantAttributeValueDto[];
-}
-
-export class VariantAttributeValueDto {
-  @IsString() @MaxLength(40) attributeCode!: string;
-  @IsString() @MaxLength(40) optionCode!: string;
 }
 
 export class ProductCreateDto {
@@ -56,7 +50,6 @@ export class ProductCreateDto {
   @IsOptional() @IsString() @MaxLength(128) categoryId?: string;
   @IsOptional() @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED']) status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   @IsOptional() @ValidateNested({ each: true }) @Type(() => ProductVariantDto) variants?: ProductVariantDto[];
-  @IsOptional() @ValidateNested({ each: true }) @Type(() => ProductAttributeConfigurationDto) attributeConfig?: ProductAttributeConfigurationDto[];
 }
 
 export class ProductAttributeConfigurationDto {
