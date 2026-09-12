@@ -41,6 +41,13 @@ Titles are never keys and never participate in identity.
   Cartesian product of the product's configured variant axes. Preview is read-only;
   persistence is a separate idempotent command with a hard cap
   (`COMBINATION_LIMIT_EXCEEDED` beyond 2000 combinations).
+- Generated variants receive a server-owned SKU of
+  `{product.slug}-{optionCode}-{optionCode}...`, using configured axis order; the
+  client cannot provide or override generated SKU identity. `titlePattern` may use
+  `{attributeCode}` placeholders for display titles only.
+- With zero configured axes, preview returns one `Default` empty-set combination;
+  generation creates the product-slug SKU and an existing base variant is rejected
+  by the normal duplicate SKU/combination guards.
 
 ## 3. SKU and barcode
 

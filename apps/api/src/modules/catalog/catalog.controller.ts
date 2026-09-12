@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiHeader } from '@nestjs/swagger';
-import type { AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantPriceHistoryResponse, VariantPriceResponse } from '@iranyaragh/contracts';
+import type { AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse } from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { CatalogService } from './catalog.service';
-import { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantPriceUpdateDto } from './catalog.dto';
+import { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
 import { PublicCatalogCache } from './public-catalog-cache.interceptor';
 
 @Controller({ path: 'catalog', version: '1' })
@@ -36,11 +36,32 @@ export class CatalogController {
   @RequirePermission('catalog.read')
   async adminProducts(@Query() query: ProductListQueryDto): Promise<ProductListResponse> { return this.catalog.listAdminProducts(query); }
 
+  @Get('admin/products/:id')
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.read')
+  async adminProduct(@Param('id') id: string): Promise<ProductDetailResponse> { return this.catalog.getAdminProduct(id); }
+
   @Post('admin/products')
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
   async createProduct(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: ProductCreateDto): Promise<ProductDetailResponse> { return this.catalog.createProduct(principal.userId, idempotencyKey, input); }
+
+  @Patch('admin/products/:id/attributes')
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.write')
+  async configureProductAttributes(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: ProductAttributeConfigurationUpdateDto): Promise<ProductDetailResponse> { return this.catalog.configureProductAttributes(principal.userId, id, input); }
+
+  @Post('admin/products/:id/variants/preview')
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.write')
+  async previewVariants(@Param('id') id: string, @Body() input: VariantGeneratePreviewDto): Promise<VariantGeneratePreviewResponse> { return this.catalog.previewVariantGeneration(id, input); }
+
+  @Post('admin/products/:id/variants/generate')
+  @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.write')
+  async generateVariants(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: VariantGenerateDto): Promise<VariantGenerateResponse> { return this.catalog.generateVariants(principal.userId, idempotencyKey, id, input); }
 
   @Post('admin/products/:id/status')
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })

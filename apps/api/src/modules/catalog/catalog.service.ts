@@ -2,14 +2,16 @@ import { ConflictException, Injectable, NotFoundException, UnprocessableEntityEx
 import { Prisma, ProductStatus } from '@prisma/client';
 import type {
   AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse,
-  ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantPriceHistoryResponse, VariantPriceResponse,
+  ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse,
 } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import type { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantPriceUpdateDto } from './catalog.dto';
+import type { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
 import { CatalogIdempotencyService } from './catalog-idempotency.service';
-import { EMPTY_AXIS_SIGNATURE, canonicalizeSku, legacyCombinationSignature, pendingCombinationSignature } from './variant-identifiers';
+import { EMPTY_AXIS_SIGNATURE, canonicalizeSku, combinationSignature, legacyCombinationSignature, pendingCombinationSignature } from './variant-identifiers';
+
+const VARIANT_COMBINATION_LIMIT = 2_000;
 
 const statusToDb = (status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined): ProductStatus | undefined =>
   status === 'PUBLISHED' ? ProductStatus.ACTIVE : status;
@@ -24,8 +26,13 @@ type CategoryTreeNode = { id: string; name: string; slug: string; parentId: stri
 type CategoryInput = { id: string; name: string; slug: string; parentId: string | null; createdAt: Date | string; updatedAt: Date | string; children?: CategoryInput[] };
 type BrandRow = { id: string; name: string; slug: string; _count: { products: number } };
 type CategoryRow = { id: string; name: string; slug: string; parentId: string | null; _count: { products: number } };
-type VariantRow = { id: string; sku: string; barcode: string | null; title: string | null; costPrice: bigint; salePrice: bigint; weightGrams: number | null; isActive: boolean; createdAt: Date; updatedAt: Date };
-type ProductDetailRow = { id: string; name: string; slug: string; description: string | null; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; brand: BrandRow | null; category: CategoryRow | null; variants: VariantRow[] };
+type VariantAttributeValueRow = { attributeId: string; optionId: string; attribute: { code: string; name: string }; option: { code: string; label: string } };
+type VariantRow = { id: string; sku: string; barcode: string | null; title: string | null; costPrice: bigint; salePrice: bigint; weightGrams: number | null; lengthCm?: number | null; widthCm?: number | null; heightCm?: number | null; isActive: boolean; status?: string; version?: number; createdAt: Date; updatedAt: Date; attributeValues?: VariantAttributeValueRow[] };
+type ProductAttributeRow = { attributeId: string; isVariantAxis: boolean; isRequired: boolean; attribute: { code: string; name: string } };
+type ProductDetailRow = { id: string; name: string; slug: string; description: string | null; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; brand: BrandRow | null; category: CategoryRow | null; variants: VariantRow[]; attributes?: ProductAttributeRow[] };
+type GenerationOption = { attributeId: string; attributeCode: string; attributeName: string; optionId: string; optionCode: string; optionLabel: string };
+type GenerationCombination = { signature: string; values: GenerationOption[] };
+type GenerationContext = { slug: string; axes: Array<{ id: string; code: string; name: string; options: GenerationOption[] }> };
 
 @Injectable()
 export class CatalogService {
@@ -37,6 +44,86 @@ export class CatalogService {
 
   async listAdminProducts(query: Partial<ProductListQueryDto>): Promise<ProductListResponse> {
     return this.listProducts(query, true);
+  }
+
+  async getAdminProduct(id: string): Promise<ProductDetailResponse> {
+    const product = await this.prisma.product.findUnique({ where: { id }, include: this.adminProductInclude() });
+    if (!product) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
+    return { data: { product: this.productDetail(product) } };
+  }
+
+  async configureProductAttributes(actorId: string, id: string, input: ProductAttributeConfigurationUpdateDto): Promise<ProductDetailResponse> {
+    const configurations = input.configurations.map(configuration => ({
+      ...configuration,
+      attributeCode: configuration.attributeCode.trim(),
+      isRequired: configuration.isRequired ?? false,
+    }));
+    const codes = configurations.map(configuration => configuration.attributeCode);
+    if (new Set(codes).size !== codes.length || configurations.some(configuration => configuration.isRequired && !configuration.isVariantAxis)) {
+      throw new UnprocessableEntityException({ code: 'ATTRIBUTE_OPTION_INVALID', message: 'Product attribute configuration is invalid.' });
+    }
+    const result = await this.prisma.$transaction(async tx => {
+      const current = await tx.product.findUnique({ where: { id }, include: this.adminProductInclude() });
+      if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
+      if (current.version !== input.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const attributes = codes.length ? await tx.attributeDefinition.findMany({ where: { code: { in: codes }, status: 'ACTIVE' }, select: { id: true, code: true } }) : [];
+      if (attributes.length !== codes.length) throw new UnprocessableEntityException({ code: 'ATTRIBUTE_OPTION_INVALID', message: 'One or more attributes are invalid for this product.' });
+      const byCode = new Map(attributes.map(attribute => [attribute.code, attribute.id]));
+      const currentAxes = new Set(current.attributes.filter(attribute => attribute.isVariantAxis).map(attribute => attribute.attributeId));
+      const nextAxes = new Set(configurations.filter(configuration => configuration.isVariantAxis).map(configuration => byCode.get(configuration.attributeCode)!));
+      for (const attributeId of currentAxes) {
+        if (!nextAxes.has(attributeId)) {
+          const activeVariantCount = await tx.productVariantAttributeValue.count({ where: { attributeId, variant: { productId: id, status: 'ACTIVE' } } });
+          if (activeVariantCount > 0) {
+            const attribute = attributes.find(item => item.id === attributeId) ?? current.attributes.find(item => item.attributeId === attributeId)?.attribute;
+            throw new ConflictException({ code: 'AXIS_IN_USE', message: `The ${attribute?.code ?? 'attribute'} axis is used by active variants.`, details: { productId: id, attributeCode: attribute?.code, activeVariantCount } });
+          }
+        }
+      }
+      await tx.productAttributeConfiguration.deleteMany({ where: { productId: id } });
+      if (configurations.length) {
+        await tx.productAttributeConfiguration.createMany({ data: configurations.map(configuration => ({ productId: id, attributeId: byCode.get(configuration.attributeCode)!, isVariantAxis: configuration.isVariantAxis, isRequired: configuration.isRequired })) });
+      }
+      const changed = await tx.product.updateMany({ where: { id, version: input.expectedVersion }, data: { version: { increment: 1 } } });
+      if (changed.count !== 1) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+      const updated = await tx.product.findUniqueOrThrow({ where: { id }, include: this.adminProductInclude() });
+      await this.audit.record({ actorId, action: 'catalog.product.attributes_configured', entityType: 'Product', entityId: id, requestId: getRequestId(), before: { version: current.version, attributeCount: current.attributes.length }, after: { version: updated.version, attributeCount: updated.attributes.length } }, tx);
+      return updated;
+    });
+    return { data: { product: this.productDetail(result) } };
+  }
+
+  async previewVariantGeneration(id: string, input: VariantGeneratePreviewDto): Promise<VariantGeneratePreviewResponse> {
+    const context = await this.loadGenerationContext(this.prisma, id);
+    const combinations = this.buildCombinations(context, input.optionSelection);
+    return { data: { combinations: combinations.map(combination => this.combinationPreview(combination)), total: combinations.length, limit: VARIANT_COMBINATION_LIMIT } };
+  }
+
+  async generateVariants(actorId: string, idempotencyKey: string, id: string, input: VariantGenerateDto): Promise<VariantGenerateResponse> {
+    return this.idempotency.run({
+      actorId, scope: `catalog.product.variants.generate:${id}`, key: idempotencyKey, payload: input,
+      execute: async tx => {
+        const context = await this.loadGenerationContext(tx, id);
+        const combinations = this.buildCombinations(context, input.optionSelection);
+        const created = [];
+        for (const combination of combinations) {
+          const sku = this.generatedSku(context.slug, combination);
+          try {
+            const variant = await tx.productVariant.create({ data: { productId: id, sku, skuKey: canonicalizeSku(sku), combinationSignature: combination.signature, title: this.generatedTitle(input.titlePattern, combination), costPrice: BigInt(input.costPrice.amount), salePrice: BigInt(input.salePrice.amount), isActive: true, status: 'ACTIVE', attributeValues: { create: combination.values.map(value => ({ attributeId: value.attributeId, optionId: value.optionId })) } }, include: { attributeValues: { include: { attribute: true, option: true } } } });
+            created.push(variant);
+          } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+              const target = Array.isArray(error.meta?.target) ? error.meta.target as string[] : [];
+              const code = target.some(field => field === 'sku' || field === 'skuKey') ? 'DUPLICATE_SKU' : 'DUPLICATE_VARIANT_COMBINATION';
+              throw new ConflictException({ code, message: code === 'DUPLICATE_SKU' ? 'A generated SKU already exists.' : 'A variant combination already exists.' });
+            }
+            throw error;
+          }
+        }
+        await this.audit.record({ actorId, action: 'catalog.product.variants_generated', entityType: 'Product', entityId: id, requestId: getRequestId(), after: { count: created.length } }, tx);
+        return { response: { data: { variants: created.map(variant => this.variantResponse(variant)) } }, resourceType: 'Product', resourceId: id };
+      },
+    });
   }
 
   private async listProducts(query: Partial<ProductListQueryDto>, includeDrafts: boolean): Promise<ProductListResponse> {
@@ -304,17 +391,18 @@ export class CatalogService {
   }
 
   private productInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, variants: true } as const; }
+  private adminProductInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, attributes: { include: { attribute: { select: { code: true, name: true } } }, orderBy: { attribute: { code: 'asc' as const } } }, variants: { include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } } } as const; }
   private publicProductInclude() { return { brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, variants: { where: { isActive: true } } } as const; }
   private categoryInclude() { return { children: true } as const; }
   private productListItem(row: { id: string; name: string; slug: string; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date }) { return { id: row.id, name: row.name, slug: row.slug, status: statusToApi(row.status), brandId: row.brandId, categoryId: row.categoryId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() }; }
   private categoryNode(row: CategoryInput): CategoryTreeNode { return { id: row.id, name: row.name, slug: row.slug, parentId: row.parentId, children: (row.children ?? []).map(child => this.categoryNode(child)), createdAt: new Date(row.createdAt).toISOString(), updatedAt: new Date(row.updatedAt).toISOString() }; }
-  private productDetail(row: ProductDetailRow) { return { ...this.productListItem(row), description: row.description, brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantPrivateDetail(variant)) }; }
+  private productDetail(row: ProductDetailRow) { return { ...this.productListItem(row), description: row.description, brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, attributes: row.attributes?.map(attribute => ({ attributeCode: attribute.attribute.code, attributeName: attribute.attribute.name, isVariantAxis: attribute.isVariantAxis, isRequired: attribute.isRequired })), variants: row.variants.map(variant => this.productVariantPrivateDetail(variant)) }; }
   private productDetailPublic(row: ProductDetailRow) { return { ...this.productListItem(row), description: row.description, brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantPublic(variant)) }; }
   private productVariantPublic(variant: VariantRow) { return { id: variant.id, sku: variant.sku, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }
   private productVariantBase(variant: VariantRow) { return { id: variant.id, sku: variant.sku, barcode: variant.barcode ?? undefined, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }
-  private productVariantPrivateDetail(variant: VariantRow) { return { ...this.productVariantBase(variant), costPrice: { amount: variant.costPrice.toString(), currency: 'IRR' as const } }; }
-  private variantResponse(variant: { id: string; sku: string; barcode: string | null; title: string | null; costPrice: bigint; salePrice: bigint; weightGrams: number | null; lengthCm: number | null; widthCm: number | null; heightCm: number | null; status: string; isActive: boolean; version: number; createdAt: Date; updatedAt: Date }) {
-    return { id: variant.id, sku: variant.sku, barcode: variant.barcode ?? undefined, title: variant.title ?? undefined, costPrice: { amount: variant.costPrice.toString(), currency: 'IRR' as const }, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, dimensions: { lengthCm: variant.lengthCm ?? undefined, widthCm: variant.widthCm ?? undefined, heightCm: variant.heightCm ?? undefined }, status: variant.status as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED', isActive: variant.isActive, version: variant.version, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() };
+  private productVariantPrivateDetail(variant: VariantRow) { return { ...this.productVariantBase(variant), costPrice: { amount: variant.costPrice.toString(), currency: 'IRR' as const }, attributeValues: variant.attributeValues?.map(value => ({ attributeCode: value.attribute.code, attributeName: value.attribute.name, optionCode: value.option.code, optionLabel: value.option.label, isVariantAxis: true })) }; }
+  private variantResponse(variant: { id: string; sku: string; barcode?: string | null; title?: string | null; costPrice: bigint; salePrice: bigint; weightGrams?: number | null; lengthCm?: number | null; widthCm?: number | null; heightCm?: number | null; status: string; isActive: boolean; version: number; createdAt: Date; updatedAt: Date; attributeValues?: VariantAttributeValueRow[] }) {
+    return { id: variant.id, sku: variant.sku, barcode: variant.barcode ?? undefined, title: variant.title ?? undefined, costPrice: { amount: variant.costPrice.toString(), currency: 'IRR' as const }, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, dimensions: { lengthCm: variant.lengthCm ?? undefined, widthCm: variant.widthCm ?? undefined, heightCm: variant.heightCm ?? undefined }, status: variant.status as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED', isActive: variant.isActive, version: variant.version, attributeValues: variant.attributeValues?.map(value => ({ attributeCode: value.attribute.code, attributeName: value.attribute.name, optionCode: value.option.code, optionLabel: value.option.label, isVariantAxis: true })), createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() };
   }
   private priceRecordResponse(record: { id: string; variantId: string; costPrice: bigint; salePrice: bigint; effectiveAt: Date; source: string; actorUserId: string | null; reason: string | null; requestId: string | null; createdAt: Date }) {
     return { id: record.id, variantId: record.variantId, costPrice: { amount: record.costPrice.toString(), currency: 'IRR' as const }, salePrice: { amount: record.salePrice.toString(), currency: 'IRR' as const }, effectiveAt: record.effectiveAt.toISOString(), source: record.source as 'ADMIN' | 'IMPORT' | 'SYSTEM', actorUserId: record.actorUserId, reason: record.reason, requestId: record.requestId, createdAt: record.createdAt.toISOString() };
@@ -327,6 +415,38 @@ export class CatalogService {
   }
   private attributeDetail(attribute: { id: string; code: string; name: string; description: string | null; status: string; version: number; createdAt: Date; updatedAt: Date; _count: { options: number }; options: Array<{ id: string; code: string; label: string; status: string; version: number; createdAt: Date; updatedAt: Date }> }) {
     return { ...this.attributeSummary(attribute), options: attribute.options.map(option => this.optionSummary(option)) };
+  }
+  private async loadGenerationContext(client: PrismaService | Prisma.TransactionClient, productId: string): Promise<GenerationContext> {
+    const product = await client.product.findUnique({ where: { id: productId }, select: { slug: true, attributes: { where: { isVariantAxis: true, attribute: { status: 'ACTIVE' } }, orderBy: { attribute: { code: 'asc' } }, include: { attribute: { include: { options: { where: { status: 'ACTIVE' }, orderBy: { code: 'asc' } } } } } } } });
+    if (!product) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
+    return { slug: product.slug, axes: product.attributes.map(axis => ({ id: axis.attribute.id, code: axis.attribute.code, name: axis.attribute.name, options: axis.attribute.options.map(option => ({ attributeId: axis.attribute.id, attributeCode: axis.attribute.code, attributeName: axis.attribute.name, optionId: option.id, optionCode: option.code, optionLabel: option.label })) })) };
+  }
+  private buildCombinations(context: GenerationContext, selection: Record<string, string[]>): GenerationCombination[] {
+    if (!selection || typeof selection !== 'object' || Array.isArray(selection)) throw new UnprocessableEntityException({ code: 'ATTRIBUTE_OPTION_INVALID', message: 'optionSelection must be an object.' });
+    const axisCodes = new Set(context.axes.map(axis => axis.code));
+    const selectionCodes = Object.keys(selection);
+    if (selectionCodes.some(code => !axisCodes.has(code)) || selectionCodes.length !== context.axes.length || context.axes.some(axis => !Array.isArray(selection[axis.code]) || selection[axis.code].length === 0)) {
+      throw new UnprocessableEntityException({ code: 'ATTRIBUTE_OPTION_INVALID', message: 'optionSelection must contain one non-empty selection for every variant axis.' });
+    }
+    let combinations: GenerationOption[][] = [[]];
+    for (const axis of context.axes) {
+      const selected = new Set(selection[axis.code]);
+      const options = axis.options.filter(option => selected.has(option.optionCode));
+      if (options.length !== selected.size) throw new UnprocessableEntityException({ code: 'ATTRIBUTE_OPTION_INVALID', message: `One or more options are invalid for the ${axis.code} axis.` });
+      combinations = combinations.flatMap(current => options.map(option => [...current, option]));
+      if (combinations.length > VARIANT_COMBINATION_LIMIT) throw new UnprocessableEntityException({ code: 'COMBINATION_LIMIT_EXCEEDED', message: `Variant generation exceeds the ${VARIANT_COMBINATION_LIMIT} combination limit.`, details: { limit: VARIANT_COMBINATION_LIMIT } });
+    }
+    return combinations.map(values => ({ values, signature: combinationSignature(values.map(value => ({ attributeId: value.attributeId, optionId: value.optionId }))) }));
+  }
+  private combinationPreview(combination: GenerationCombination) {
+    return { label: combination.values.map(value => `${value.attributeName}: ${value.optionLabel}`).join(' / ') || 'Default', combinationSignature: combination.signature, attributeValues: combination.values.map(value => ({ attributeCode: value.attributeCode, attributeName: value.attributeName, optionCode: value.optionCode, optionLabel: value.optionLabel, isVariantAxis: true })) };
+  }
+  private generatedSku(slug: string, combination: GenerationCombination) {
+    return [slug, ...combination.values.map(value => value.optionCode)].join('-');
+  }
+  private generatedTitle(pattern: string | undefined, combination: GenerationCombination) {
+    const labels = new Map(combination.values.map(value => [value.attributeCode, value.optionLabel]));
+    return pattern?.replace(/\{([a-z0-9-]+)\}/gu, (_match, code: string) => labels.get(code) ?? '') || combination.values.map(value => value.optionLabel).join(' / ') || null;
   }
   private async assertCategoryParentDoesNotCreateCycle(tx: Prisma.TransactionClient, categoryId: string, parentId: string): Promise<void> {
     const visited = new Set<string>();
