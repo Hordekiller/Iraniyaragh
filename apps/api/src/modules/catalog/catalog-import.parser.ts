@@ -40,7 +40,8 @@ function text(value: unknown, required: boolean, field: string): string | undefi
 function rowValues(row: ExcelJS.Row, headers: readonly string[], strictIndexes = new Set<number>()): string[] {
   return headers.map((_, index) => {
     const value = row.getCell(index + 1).value;
-    if (strictIndexes.has(index) && typeof value !== 'string') invalid(`${row.worksheet.name}!${row.number} identifier cells must be stored as text.`);
+    const blank = value === null || value === undefined || value === '';
+    if (strictIndexes.has(index) && !blank && typeof value !== 'string') invalid(`${row.worksheet.name}!${row.number} identifier cells must be stored as text.`);
     return text(value, false, `${row.worksheet.name}!${row.number}`) ?? '';
   });
 }

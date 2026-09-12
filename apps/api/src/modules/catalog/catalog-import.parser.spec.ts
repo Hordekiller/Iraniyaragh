@@ -37,6 +37,17 @@ describe('catalog workbook parser', () => {
     await expect(parseCatalogWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()))).rejects.toMatchObject({ response: { code: 'IMPORT_VALIDATION' } });
   });
 
+  it('allows an empty optional barcode cell', async () => {
+    const parsed = await parseCatalogWorkbook(await workbookBuffer());
+    expect(parsed.variants[0].barcode).toBe('00123');
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await workbookBuffer());
+    workbook.getWorksheet('Variants')!.getCell('C2').value = null;
+    const empty = await parseCatalogWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()));
+    expect(empty.variants[0].barcode).toBeUndefined();
+  });
+
   it('exports the same fixed sheet contract', async () => {
     const output = await exportCatalogWorkbook({ products: [], variants: [], attributes: [], options: [], values: [], totalRows: 0 });
     const workbook = new ExcelJS.Workbook();
