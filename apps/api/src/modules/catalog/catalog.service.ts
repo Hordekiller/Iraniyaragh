@@ -349,7 +349,8 @@ export class CatalogService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         const fields = Array.isArray(error.meta?.target) ? (error.meta.target as string[]).join(', ') : 'unique value';
-        throw new ConflictException({ code: 'CONFLICT', message: `A ${resource.toLowerCase()} with that ${fields} already exists.` });
+        const article = resource === 'Attribute' || resource === 'Option' ? 'An' : 'A';
+        throw new ConflictException({ code: 'CONFLICT', message: `${article} ${resource.toLowerCase()} with that ${fields} already exists.` });
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         throw new NotFoundException({ code: 'NOT_FOUND', message: `${resource} not found.` });

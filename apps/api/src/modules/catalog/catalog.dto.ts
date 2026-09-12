@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsNotIn, IsOptional, IsString, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsNotIn, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const AMOUNT = /^\d{1,15}$/u;
@@ -68,13 +68,13 @@ export class ProductStatusDto {
 }
 
 export class AttributeOptionCreateDto {
-  @IsString() @Matches(ATTRIBUTE_CODE) @MaxLength(40) @IsNotIn(['new', 'edit', 'all']) code!: string;
+  @IsString() @MinLength(2) @Matches(ATTRIBUTE_CODE) @MaxLength(40) @IsNotIn(['new', 'edit', 'all']) code!: string;
   @IsString() @MaxLength(150) label!: string;
   @IsOptional() @IsEnum(['ACTIVE', 'INACTIVE']) status?: 'ACTIVE' | 'INACTIVE';
 }
 
 export class AttributeDefinitionCreateDto {
-  @IsString() @Matches(ATTRIBUTE_CODE) @MaxLength(40) @IsNotIn(['new', 'edit', 'all']) code!: string;
+  @IsString() @MinLength(2) @Matches(ATTRIBUTE_CODE) @MaxLength(40) @IsNotIn(['new', 'edit', 'all']) code!: string;
   @IsString() @MaxLength(150) name!: string;
   @IsOptional() @IsString() @MaxLength(10_000) description?: string;
   @IsOptional() @IsEnum(['ACTIVE', 'INACTIVE']) status?: 'ACTIVE' | 'INACTIVE';
