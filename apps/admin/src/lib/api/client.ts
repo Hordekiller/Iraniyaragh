@@ -60,6 +60,7 @@ type RequestOptions = {
   method?: string;
   body?: unknown;
   token?: string | null;
+  headers?: Record<string, string>;
   /** Abort controller signal for stale-response protection (list views). */
   signal?: AbortSignal;
 };
@@ -69,7 +70,7 @@ function resolveUrl(path: string): string {
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...options.headers };
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
 
   let response: Response;
