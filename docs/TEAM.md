@@ -59,6 +59,9 @@ contract.
 
 ## Accepted working agreement — issue #78
 
+Effective: 2026-09-11. The first two-week sprint starts on the next agreed Saturday
+after this document merges; the exact demo clock time is confirmed privately.
+
 - Capacity: Hordekiller 40 hours/week; Maddyrampant 35 hours/week. Milestones are
   sized against the lower 35-hour capacity, not the combined headline estimate.
 - Cadence: two-week sprints, starting Saturday in `Asia/Tehran`; the demo is held on
@@ -126,16 +129,12 @@ for future contributors.
 The goal is independent reasoning, not a one-word approval. Hordekiller responds to
 each proposed change; accepted changes are reflected in docs/issues/ADRs.
 
-## Working agreement to finalize
+## Finalized working-agreement reference
 
-- Weekly capacity for each person
-- Sprint start/end day and demo time
-- Review response target (proposed: one working day)
-- Urgent blocker/incident communication channel
-- Password manager and secret-sharing method
-- Staging/production access policy
-- Release authority and emergency rollback authority
-- Definition of working hours and expected asynchronous response
+Capacity, cadence, review response, urgent communication, secret sharing, access,
+release/rollback authority and asynchronous-response expectations are binding as
+recorded in the accepted agreement above. Future changes require an explicit dated
+team decision; they must not be inferred from availability in a single sprint.
 
 Never place private phone numbers, credentials or production access details in the
 repository. Record only the process and use an approved private channel for secrets.
