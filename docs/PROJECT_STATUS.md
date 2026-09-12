@@ -321,6 +321,10 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
 - Persistence state machines do not prove workflow correctness without services and
   compensation tests.
 - Production recovery is unproven until restore and rollback drills are recorded.
+- The CI `database` integration job has flaked under concurrent runs (observed
+  2026-09-12: serialization conflicts and duplicate-slug/FK collisions across the
+  catalog race specs; passed on rerun, unaffected by docs-only PRs). The test
+  database should be reset/isolated between runs before this is treated as green.
 
 ## Immediate next checkpoint
 
