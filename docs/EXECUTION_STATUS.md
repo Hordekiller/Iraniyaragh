@@ -21,33 +21,33 @@ day-to-day assignments.
 
 ## Current position
 
-| Gate                  | State                              | Current evidence                                                 | Exit blocker                                               |
-| --------------------- | ---------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------- |
-| `0.1` Foundation/Auth | Acceptance closed                  | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11 | #78 agreement; private #114 acceptance                     |
-| `0.2` Catalog         | Started                            | Contracts and Catalog API foundation are merged via #103         | Media/pricing, admin CRUD, storefront live integration     |
-| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                         | HTTP/RBAC, warehouse/location, transfers, worker and admin |
-| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                         | Policies and all application/client workflows              |
+| Gate                  | State                              | Current evidence                                                                                                   | Exit blocker                                                 |
+| --------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| `0.1` Foundation/Auth | Acceptance closed                  | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172 | private #114 acceptance                                      |
+| `0.2` Catalog         | Started                            | Contracts #103, idempotency contract #168 and durable runtime #171 merged; Admin Catalog workflow in review (#173) | Media/pricing, admin CRUD merge, storefront live integration |
+| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                                                                           | HTTP/RBAC, warehouse/location, transfers, worker and admin   |
+| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                                                                           | Policies and all application/client workflows                |
 
 ## Active merge/review queue
 
-| Priority | Work                                      | State              | Required reviewer focus                                           | Exit action                                                              |
-| -------: | ----------------------------------------- | ------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
-|        1 | Issue #78                                 | Decision work      | capacity, review SLA, private coordination and release authority  | Accepted written agreement with owner and effective date                 |
-|        2 | Issue #114                                | Private acceptance | #154 merged with no secret/PII exposure and fail-closed mutations | Provision account/line/template/key; controlled sandbox/live evidence    |
-|        3 | Issue #111 slice 2 (mutation idempotency) | Next platform impl | durable mutation idempotency contract before schema/API work      | Contract PR then platform implementation on current `main` in wave 0.2-A |
-|        4 | Discovery ready items #126/#129/#136      | Backlog (platform) | server-rendered pages, sitemap/robots/IndexNow and telemetry      | Pick up as platform capacity opens and wave 0.2-A is delivered           |
+| Priority | Work                                 | State              | Required reviewer focus                                           | Exit action                                                           |
+| -------: | ------------------------------------ | ------------------ | ----------------------------------------------------------------- | --------------------------------------------------------------------- |
+|        1 | Issue #78                            | Closed 2026-09-12  | agreement recorded in `TEAM.md`, effective 2026-09-11             | Merged #172 delivers the accepted agreement; #78 closed               |
+|        2 | Issue #114                           | Private acceptance | #154 merged with no secret/PII exposure and fail-closed mutations | Provision account/line/template/key; controlled sandbox/live evidence |
+|        3 | Issue #111 (mutation idempotency)    | Delivered to #173  | contract #168 + runtime #171 merged; Admin client under review    | Merge #173; bounded cleanup worker remains on #81 before production   |
+|        4 | Discovery ready items #126/#129/#136 | Backlog (platform) | server-rendered pages, sitemap/robots/IndexNow and telemetry      | Pick up as platform capacity opens and wave 0.2-A is delivered        |
 
 ## Team disposition ledger — 2026-09-08 (updated 2026-09-11)
 
-| Item      | Disposition                   | Accountable / reviewer     | Next action                                                                                    | Closure condition                                                           |
-| --------- | ----------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| PR #112   | Complete/merged               | Hordekiller / Maddyrampant | Use the merged status/roadmap baseline                                                         | Independent approval and protected merge completed                          |
-| Issue #79 | Complete/closed               | Hordekiller / Maddyrampant | Implement #114, then #115; provision account/line/key privately                                | ADR-0011 accepted via merged #116                                           |
-| Issue #78 | Blocked on joint confirmation | Hordekiller / Maddyrampant | Confirm cadence, review SLA, private channel, secret sharing, access and release-role rotation | Merged `TEAM.md` update and milestone sized to the lower confirmed capacity |
-| Issue #51 | Complete/closed               | Hordekiller / Maddyrampant | Routine dependency maintenance only                                                            | Already satisfied by merged #52 and protected supply-chain gates            |
-| Issue #91 | Complete/closed 2026-09-11    | Hordekiller / Maddyrampant | DoD 7/7 ticked with merge evidence; close-out recorded in the issue                            | Remaining Sprint 1 outcomes have merged evidence, now all met               |
-| Issue #50 | Complete/closed 2026-09-11    | Maddyrampant (product)     | Screenshot/a11y evidence #160 merged; issue closed                                             | All 8 acceptance items met and verified                                     |
-| PR #11    | Complete/merged               | Hordekiller / Maddyrampant | Continue residual admin hardening only in its assigned later gates                             | #9/#10 review and ADR-0004 acceptance already provide closure evidence      |
+| Item      | Disposition                | Accountable / reviewer     | Next action                                                         | Closure condition                                                      |
+| --------- | -------------------------- | -------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| PR #112   | Complete/merged            | Hordekiller / Maddyrampant | Use the merged status/roadmap baseline                              | Independent approval and protected merge completed                     |
+| Issue #79 | Complete/closed            | Hordekiller / Maddyrampant | Implement #114, then #115; provision account/line/key privately     | ADR-0011 accepted via merged #116                                      |
+| Issue #78 | Complete/closed 2026-09-12 | Hordekiller / Maddyrampant | Merged #172 records the accepted agreement with effective date      | #78 closed; milestone sizing uses the lower confirmed capacity         |
+| Issue #51 | Complete/closed            | Hordekiller / Maddyrampant | Routine dependency maintenance only                                 | Already satisfied by merged #52 and protected supply-chain gates       |
+| Issue #91 | Complete/closed 2026-09-11 | Hordekiller / Maddyrampant | DoD 7/7 ticked with merge evidence; close-out recorded in the issue | Remaining Sprint 1 outcomes have merged evidence, now all met          |
+| Issue #50 | Complete/closed 2026-09-11 | Maddyrampant (product)     | Screenshot/a11y evidence #160 merged; issue closed                  | All 8 acceptance items met and verified                                |
+| PR #11    | Complete/merged            | Hordekiller / Maddyrampant | Continue residual admin hardening only in its assigned later gates  | #9/#10 review and ADR-0004 acceptance already provide closure evidence |
 
 Blocked decision issues do not authorize guessed business choices. They block the
 related release/production gate while deterministic local implementation may proceed.
