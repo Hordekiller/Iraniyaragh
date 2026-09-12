@@ -128,8 +128,9 @@ is hardcoded; a new attribute requires configuration, not a schema change.
 
 - `version` counters on `Product`, `ProductVariant`, `AttributeDefinition` and
   `AttributeOption`. PATCH commands require `expectedVersion` and return
-  `409 STALE_VERSION` on stale writes, per the accepted idempotency/optimistic
-  concurrency guidance (`CATALOG_IDEMPOTENCY.md`: PATCH is not silently idempotent).
+  `409 STALE_VERSION` (token introduced here) on stale writes, per the accepted
+  idempotency/optimistic concurrency guidance (`CATALOG_IDEMPOTENCY.md`: PATCH is
+  not silently idempotent).
 - Create/status POST commands continue to require the `Idempotency-Key` header under
   the accepted Catalog idempotency contract.
 - `VariantStatus` (`ACTIVE|INACTIVE|ARCHIVED`) replaces boolean-only activity, with
@@ -189,8 +190,8 @@ Rejected: leading zeros and large/long identifiers require string cells.
 5. Add `skuKey` and `(productId, combinationSignature)` uniqueness after data is
    verified clean; never apply uniqueness to unverified data.
 6. Rollback/recovery: forward-only migration; recovery is a forward-fix migration or
-   restore from backup — existing SHARED_KEYS and variant identities are preserved so
-   downstream references remain valid and ordering can be replayed.
+   restore from backup — existing canonical `skuKey` values and variant identities
+   are preserved so downstream references remain valid and ordering can be replayed.
 
 ## Verification gates
 
@@ -225,5 +226,6 @@ Rejected: leading zeros and large/long identifiers require string cells.
 - `docs/FOUNDATION.md` (money, inventory, orders, authorization)
 - `docs/CATALOG_IDEMPOTENCY.md` (idempotency scope + optimistic-concurrency PATCH)
 - `docs/COMMERCE_EXPANSION_PLAN.md` G2/G3 (attribute/variant/import requirements)
-- `docs/AGENT_WORKSTREAMS.md` (`D→C→P→A/W→I` train, hotspot ownership)
+- `docs/AGENT_WORKSTREAMS.md` (`D → C → P/A/W (independent order) → I → O` train,
+  hotspot ownership)
 - Issue #176 (decision register) and #3 (Epic 0.2)
