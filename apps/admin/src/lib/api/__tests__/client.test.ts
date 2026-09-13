@@ -50,6 +50,11 @@ describe('apiFetch', () => {
     expect(readCsrfToken(document)).toBe('dev-csrf-9');
   });
 
+  it('reads the development customer/staff CSRF cookie issued by real sign-in', () => {
+    const document = { cookie: 'other=1; iranyaragh_customer_csrf=customer-csrf-4' } as unknown as Document;
+    expect(readCsrfToken(document)).toBe('customer-csrf-4');
+  });
+
   it('returns null when no CSRF cookie is set', () => {
     expect(readCsrfToken({ cookie: 'other=1' } as unknown as Document)).toBeNull();
     expect(readCsrfToken(undefined as unknown as Document)).toBeNull();
