@@ -57,7 +57,7 @@ export const navigation: NavigationGroup[] = [
   {
     label: 'فروش و مشتری',
     items: [
-      { label: 'سفارش‌ها', href: '/orders', icon: ShoppingBag, permission: 'orders.read', status: 'planned' },
+      { label: 'سفارش‌ها', href: '/orders', icon: ShoppingBag, permission: 'orders.read' },
       { label: 'پرداخت‌ها', href: '/payments', icon: CreditCard, permission: 'payments.read', status: 'planned' },
       { label: 'مشتریان', href: '/customers', icon: Users, permission: 'customers.read', status: 'planned' },
       { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'shipments.read', status: 'planned' },
@@ -78,7 +78,7 @@ export const navigation: NavigationGroup[] = [
   {
     label: 'کالا و انبار',
     items: [
-      { label: 'کالا و SKU', href: '/catalog', icon: PackageSearch, permission: 'catalog.read', status: 'planned' },
+      { label: 'کالا و SKU', href: '/catalog', icon: PackageSearch, permission: 'catalog.read' },
       { label: 'انبارها', href: '/warehouses', icon: Building2, permission: 'inventory.read', status: 'planned' },
       { label: 'موجودی و گردش', href: '/inventory', icon: Boxes, permission: 'inventory.read', status: 'planned' },
       { label: 'انتقال‌ها', href: '/transfers', icon: ReceiptText, permission: 'inventory.transfer', status: 'planned' },
@@ -92,7 +92,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'گزارش ممیزی', href: '/audit', icon: FileClock, permission: 'audit.read', status: 'planned' },
       { label: 'سرویس پیامک', href: '/settings/sms', icon: Send, permission: 'settings.manage' },
       { label: 'نشست‌ها و دستگاه‌ها', href: '/settings/sessions', icon: MonitorSmartphone },
-      { label: 'تنظیمات', href: '/settings', icon: Settings2, permission: 'settings.manage', status: 'planned' },
+      { label: 'تنظیمات', href: '/settings', icon: Settings2, permission: 'settings.manage' },
     ],
   },
 ];
