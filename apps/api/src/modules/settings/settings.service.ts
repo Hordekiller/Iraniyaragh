@@ -113,11 +113,11 @@ export class SettingsService {
     };
   }
 
-  private async writeSetting(
+  private async writeSetting<T extends object>(
     ctx: ActorAndRequest,
     key: string,
     expectedVersion: number,
-    value: Record<string, unknown>,
+    value: T,
   ): Promise<SettingRow> {
     const existing = await this.prisma.setting.findUnique({ where: { key } });
     const currentVersion = existing?.version ?? 0;

@@ -85,4 +85,15 @@ export class SettingsAdminController {
   })
   @ApiResponse({ status: 400, schema: settingsFailure.validation, description: settingsFailure.validation.description })
   @ApiResponse({ status: 401, schema: settingsFailure.unauthorized, description: settingsFailure.unauthorized.description })
-  @ApiResponse({ status: 403, schema: settingsFailure.forbidden, description: settingsFail
+  @ApiResponse({ status: 403, schema: settingsFailure.forbidden, description: settingsFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: settingsFailure.conflict, description: settingsFailure.conflict.description })
+  updateSellerLegalBlock(
+    @CurrentPrincipal() principal: AuthPrincipalContext,
+    @Body() input: SellerLegalBlockUpdateDto,
+  ): Promise<SellerLegalBlockUpdateResponse> {
+    return this.settings.updateSellerLegalBlock(
+      { actorUserId: principal.userId, requestId: getRequestId() },
+      { expectedVersion: input.expectedVersion, value: input.value },
+    );
+  }
+}

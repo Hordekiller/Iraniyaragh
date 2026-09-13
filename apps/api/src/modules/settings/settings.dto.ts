@@ -8,6 +8,7 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -100,6 +101,7 @@ export class FinancialPolicyValueDto {
 
 export class SellerLegalBlockValueDto {
   @IsString()
+  @MinLength(1)
   @MaxLength(250)
   @Matches(NO_CONTROL)
   @ApiProperty({ description: 'Registered business/trade legal name.', example: 'Iraniyaragh Bookstore' })
