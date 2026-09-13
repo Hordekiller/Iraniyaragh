@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({
-    user: { permissions: ['orders.read', 'catalog.read', 'settings.manage'] },
+    user: { permissions: ['orders.read', 'catalog.read', 'payments.read', 'settings.manage'] },
     isAuthenticated: true,
   }),
 }));
@@ -36,15 +36,17 @@ describe('GlobalSearch', () => {
     expect(screen.getByRole('dialog', { name: 'جستجوی سریع' })).toBeInTheDocument();
   });
 
-  it('lists the live dashboard and marks catalog and settings sections as planned', () => {
+  it('marks shipped module pages as live and keeps unimplemented sections disabled', () => {
     render(<GlobalSearch />);
     fireEvent.click(screen.getByRole('button', { name: 'جستجوی سریع در پنل' }));
 
     expect(screen.getByRole('button', { name: /داشبورد عملیات/ })).toBeEnabled();
-    const catalog = screen.getByRole('button', { name: /کالا و SKU/ });
-    expect(catalog).toHaveAttribute('aria-disabled', 'true');
-    const settings = screen.getByRole('button', { name: /تنظیمات/ });
-    expect(settings).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: /سفارش‌ها/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /کالا و SKU/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /تنظیمات/ })).toBeEnabled();
+
+    const payments = screen.getByRole('button', { name: /پرداخت‌ها/ });
+    expect(payments).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('filters results and jumps to the selected page', () => {
@@ -75,10 +77,10 @@ describe('GlobalSearch', () => {
     fireEvent.click(screen.getByRole('button', { name: 'جستجوی سریع در پنل' }));
 
     fireEvent.change(screen.getByRole('textbox', { name: 'عبارت جستجو' }), {
-      target: { value: 'پرداخت' },
+      target: { value: 'گزارش' },
     });
 
-    expect(screen.queryByRole('button', { name: /پرداخت‌ها/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /گزارش‌های عملیاتی/ })).not.toBeInTheDocument();
     expect(screen.getByText(/نتیجه‌ای برای/)).toBeInTheDocument();
     expect(mocks.push).not.toHaveBeenCalled();
   });
