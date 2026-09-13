@@ -19,6 +19,7 @@ import type {
 } from '@iranyaragh/contracts';
 import { apiFetch } from '@/lib/api/client';
 import { getAccessToken } from '@/lib/auth/token-store';
+import { randomUuid } from '@/lib/crypto/random-uuid';
 
 function toQuery(query: Record<string, string | number | undefined>): string {
   const params = new URLSearchParams();
@@ -35,7 +36,7 @@ function authToken(): string | null {
 }
 
 export function createIdempotencyKey(prefix: string): string {
-  return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
+  return `${prefix}-${randomUuid()}`;
 }
 
 export async function listProducts(query: ProductListQuery, signal?: AbortSignal): Promise<ProductListResponse['data']> {

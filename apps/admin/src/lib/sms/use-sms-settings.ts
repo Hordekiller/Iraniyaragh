@@ -9,6 +9,7 @@ import type {
   SmsValidation,
 } from '@iranyaragh/contracts';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
+import { randomUuid } from '@/lib/crypto/random-uuid';
 import {
   SmsNetworkError,
   SmsReauthenticationRequiredError,
@@ -27,11 +28,7 @@ export type UseSmsSettingsOptions = {
 };
 
 function makeIdempotencyKey(): string {
-  try {
-    return globalThis.crypto.randomUUID();
-  } catch {
-    return `manual-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  }
+  return randomUuid();
 }
 
 function friendlyMessage(error: unknown): string {
