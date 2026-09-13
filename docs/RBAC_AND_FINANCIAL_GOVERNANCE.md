@@ -18,44 +18,66 @@ raised, not silently resolved.
 
 ### 1.1 Data model (`apps/api/prisma/schema.prisma`)
 
-- `User`: `id`, `email` (unique), `passwordHash`, `status` (`ACTIVE`,
-  `SUSPENDED`, `LOCKED`), `staleTo` watermark (invalidation on privilege change).
-- `Role`: `key` (unique), `name`, `isSystem`, `isActive`. System roles are
-  protected from modification.
-- `Permission`: `key` (unique, format-checked via DB CHECK constraint),
-  `description`, `category`.
-- `UserRole` / `RolePermission`: composite unique keys, grant/metadata
-  (`grantedById`, `grantedAt`, `expiresAt`, `revokedById`, `revokedAt`,
-  `revokeReason`). A "re-grant" reactivates the row instead of inserting a new one
-  (idempotent semantics already in schema).
-- CHECK constraints enforce (a) grant/revoke lifecycle (a row cannot have
-  `grantedAt > revokedAt`, etc.) and (b) non-overlapping active grants per
-  `userId`/`roleId`.
+- `User`: `id`, `mobile` (unique) or `email` (unique), `passwordHash`, `status`
+  (`PENDING`, `ACTIVE`, `SUSPENDED`, `LOCKED`, `DELETED`).
+- `Role`: `key` (unique), `name`, `description`, `isSystem`, `isActive`.
+  `isSystem` marks seed/seedlike roles that administration must protect from
+  modification.
+- `Permission`: `key` (unique, format-checked via DB CHECK constraint), `name`,
+  `description`, `group`, `isActive`.
+- `UserRole` / `RolePermission`: composite unique keys
+  (`@@unique([userId, roleId])` / `@@unique([roleId, permissionId])`), with
+  assign/grant metadata (`assignedById`/`assignedAt`/`expiresAt` for `UserRole`;
+  `grantedById`/`grantedAt` for `RolePermission`) and revoke metadata
+  (`revokedById`/`revokedAt`/`revokeReason`). The composite unique key enforces
+  one row per pair, so a "re-grant" reactivates the same row (revoked columns
+  cleared) rather than inserting a new one — idempotent semantics already in
+  schema.
+- CHECK constraints enforce (a) the grant/revoke lifecycle (`revokedAt >=
+  assignedAt`/`grantedAt`, a revoked row must carry a non-empty `revokeReason`)
+  and (b) the composite unique keys above, so a `userId`/`roleId` pair can have
+  at most one assignment row.
 
 ### 1.2 Enforcement (server-side, never client-trusted)
 
-- Global `AuthGuard` + `@RequirePermission` (and `@RequireApprovedGuard` for
-  approved credentials) in `apps/api/src/modules/auth/guards`; permission check via
-  `AuthPermissionService.effectivePermissions` resolving role → permission with
-  `now() BETWEEN grantedAt AND COALESCE(expiresAt/revokedAt, ...)`.
-- Session watermark invalidation: privilege changes invalidate existing sessions,
-  and `staff` logins additionally require `STAFF_MFA` at session start (ADR-0007).
-- Admin sessions carry a `sessionTypeId` that maps roles at login; permission
-  changes to a role invalidate the effective set for its holders.
+- Guard = global `AuthGuard` (`apps/api/src/modules/auth/auth.guard.ts`) using the
+  `@RequireAuthentication`, `@RequireFreshAuthentication` and
+  `@RequirePermission` decorators; there is no separate
+  `@RequireApprovedGuard` — approved-credential access is covered by the above
+  decorators and the staff `STAFF_MFA` handshake setup at
+  `apps/api/src/modules/auth/staff-auth.controller.ts`.
+- `AuthPrincipalService` (`auth-principal.service.ts`) resolves each bearer token
+  to a session, checks session/user invariants (status `ACTIVE`, `expiresAt`,
+  inactivity deadlines — 7 days customer / 30 min staff), and for
+  `STAFF_MFA` sessions computes the effective permission set via
+  `AuthPermissionService.effectivePermissionKeys` (role → permission with
+  `revokedAt IS NULL`, `assignedAt <= now()`, `expiresAt IS NULL OR > now()`,
+  active role + active permission).
+- Sessions carry an `authenticationLevel` (`CUSTOMER_OTP | STAFF_MFA`) recorded
+  at session start — there is no `sessionTypeId` mapping roles at login.
+- Because the effective permission set is recomputed from the DB on every
+  request, a grant/revoke change takes effect on the next request without any
+  separate session-invalidation watermark; `staff` logins additionally require
+  `STAFF_MFA` at session start (ADR-0007).
 
 ### 1.3 Writers today (seed-only) and drift
 
 - `apps/api/prisma/seed.mjs` deterministically creates 20 permissions + the
   `system-admin` role + a documented bootstrap `.env` user if absent.
-  `bootstrap-admin-core.mjs` refuses to delete the last active `system-admin`
-  (a bootstrap invariant worth keeping as the runtime rule too).
+  `apps/api/scripts/bootstrap-admin-core.mjs` returns `BOOTSTRAP_REFUSAL` when an
+  **active** system-admin already exists — i.e. it refuses to bootstrap an
+  *additional* active system-admin (there is no deletion path today). The
+  last-admin *delete/revoke* invariance is the new runtime rule this ADR
+  proposes, not current code.
 - Admins UI reachable: `role` mapping + `.access` navigation item
   (`apps/admin/src/config/navigation.ts`) planned only. There is **no** staff
   directory page, role-assignment page, revoke/grant flow, or user-status
   management endpoint anywhere.
 - Observed drift between UI guard names and the seeded registry:
-  - `orders.write` is used by `apps/admin/src/context/AdminPermissionsContext.tsx`
-    but is **not** among the 20 seeded permissions;
+  - `orders.write` is used by
+    `apps/admin/src/lib/orders/orders-permissions.ts` (`ORDERS_WRITE`) and
+    consumed in `components/orders/{OrdersView,OrderDetailView}`, but is **not**
+    among the 20 seeded permissions;
   - seeded `orders.read`/`orders.manage` exist, UI uses `orders.write`;
   - `admin.dashboard.read` is a fixture role permission in the UI that has no
     registry definition.
@@ -78,24 +100,30 @@ raised, not silently resolved.
 
 ### 2.2 Pricing
 
-- `VariantPriceRecord` appends a full history row per price change, including
-  effective-dating, so price history is **append-only and audited**.
+- `VariantPriceRecord` appends a full snapshot row per price change (`variantId`,
+  `costPrice`, `salePrice`, `effectiveAt` = time of write, `source`,
+  `actorUserId`, `reason`, `requestId`), so price history is **append-only and
+  audited**. The "current price" is stored on `ProductVariant.costPrice` /
+  `salePrice`; there is no effective-dating window.
+- The `(variantId, effectiveAt)` index is **non-unique** — there is no composite
+  DB unique guard enforcing a single active price. Single-active-price semantics
+  are the caller's responsibility at write time.
 - `VariantPriceSource` distinguishes `ADMIN | IMPORT | SYSTEM` mutations.
-- A composite DB unique guard (`variantId`, `effectiveFrom`) enforces a single
-  active price per variant at a point in time; `updateVariantPrice` continues*
-  with optimistic concurrency (transform payload carries `expectedVersion` that is
-  validated server-side; mismatch → 409 idempotency conflict). [*as implemented in
-  `catalog.service.ts` for the import slice.]
+- `updateVariantPrice` uses optimistic concurrency: the transform payload carries
+  `expectedVersion` validated server-side against the current variant version;
+  mismatch → 409 (`STALE_VERSION`). [as implemented in `catalog.service.ts`.]
 
 ### 2.3 Tax, discounts, payments, settings
 
 - **Tax/VAT:** no implementation (explicitly out of scope for the catalog slice).
   No rate table, no inclusive/exclusive handling, no invoice line.
-- **Discounts:** no `Discount` module yet; only `Order.discountBb`/discount numeric
-  columns exist. No policy on max discount.
-- **Payments/refunds:** the `Order` state machine reserves `refunded`/`partially...`
-  states and a transactional ledger exists (`OrderLedger` entries), but no
-  payment/refund service is wired.
+- **Discounts:** no `Discount` module yet; the `Order` model has one
+  `discount BigInt @default(0)` column (`discountBb` does not exist). No policy
+  on max discount.
+- **Payments/refunds:** the `Order` state machine reserves
+  `refunded`/`partially...` states, but no payment/refund service is wired, and
+  there is **no `OrderLedger` model** — the only ledger-like record in the
+  schema is `InventoryMovement`.
 - **Settings:** only the environment-backed SMS provider settings (ADR-0011). No DB
   `Setting` model usable for business policy; the admin "Settings" nav
   (`apps/admin/src/config/navigation.ts`) is planned-only.
