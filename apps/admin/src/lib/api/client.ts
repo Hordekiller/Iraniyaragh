@@ -69,14 +69,43 @@ function resolveUrl(path: string): string {
   return `${getApiBaseUrl()}${API_PREFIX}${path}`;
 }
 
+/**
+ * Script-readable double-submit CSRF cookie names the API issues
+ * (AUTH_CONTRACT §12): the staff `__Host-` prefixed cookie in
+ * production/staging and the explicitly suffixed development cookie for the
+ * dev staff sign-in. The value is server-issued to the script context by
+ * design; cookie-authenticated calls (refresh, logout) must echo it back as the
+ * `X-CSRF-Token` header or the API rejects them (server session stays alive).
+ */
+const CSRF_COOKIE_NAMES = ['__Host-iranyaragh_csrf', 'iranyaragh_dev_csrf'] as const;
+
+export function readCsrfToken(document: Document): string | null {
+  if (!document) return null;
+  const pairs = document.cookie.split(';');
+  for (let i = pairs.length - 1; i >= 0; i -= 1) {
+    const separatorIndex = pairs[i].indexOf('=');
+    if (separatorIndex < 0) continue;
+    const name = pairs[i].slice(0, separatorIndex).trim();
+    if (!CSRF_COOKIE_NAMES.includes(name as (typeof CSRF_COOKIE_NAMES)[number])) continue;
+    const value = pairs[i].slice(separatorIndex + 1).trim();
+    return value.length > 0 ? value : null;
+  }
+  return null;
+}
+
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json', ...options.headers };
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
+  const method = options.method ?? 'GET';
+  if (method !== 'GET' && !headers['X-CSRF-Token']) {
+    const csrfToken = readCsrfToken(globalThis.document);
+    if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  }
 
   let response: Response;
   try {
     response = await fetch(resolveUrl(path), {
-      method: options.method ?? 'GET',
+      method,
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       credentials: 'include',
