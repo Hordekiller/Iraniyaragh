@@ -297,6 +297,13 @@ permanent VAT Law 1400 with the 10 % budget rate; پایانههای فروشگ�
 no runtime change and is intended to be the required-review basis for the schema
 slices it plans.
 
+The staged catalog import flow (`#184`) has since merged to `main` (`cb0e222`).
+Independent verification of the import-wave gaps in `#189` is tracked there; the
+associated fixes land separately: `IMPORT_NOT_AVAILABLE`/`IDEMPOTENCY_CONFLICT`
+are added to `API_ERROR_CODES`, the durable `ProductVariant.sku/skuKey` ASCII-only
+invariant is enforced, and the idempotency expiry behavior is reconciled with
+`docs/CATALOG_IDEMPOTENCY.md` and pinned by unit tests.
+
 The #50 admin session-management slice is delivered through `#158` (merged):
 the `/settings/sessions` page with a typed session port (HTTP client +
 fail-closed fixture gated behind `NEXT_PUBLIC_SESSION_FIXTURE=true`), the

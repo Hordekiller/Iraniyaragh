@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UnprocessableEntityException, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiHeader, ApiBody } from '@nestjs/swagger';
+import { ApiConsumes, ApiHeader, ApiBody, ApiResponse } from '@nestjs/swagger';
 import type { AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CatalogImportCommitResponse, CatalogImportDetailResponse, CatalogImportDryRunResponse, CatalogImportUploadResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse } from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
@@ -8,6 +8,9 @@ import { CatalogService } from './catalog.service';
 import { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
 import { PublicCatalogCache } from './public-catalog-cache.interceptor';
 import { CatalogImportService } from './catalog-import.service';
+import { openApiCatalogFailures } from './catalog.openapi';
+
+const catalogFailure = openApiCatalogFailures;
 
 type UploadedCatalogFile = { buffer: Buffer };
 
@@ -49,6 +52,10 @@ export class CatalogController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation, description: catalogFailure.validation.description })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
   async createProduct(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: ProductCreateDto): Promise<ProductDetailResponse> { return this.catalog.createProduct(principal.userId, idempotencyKey, input); }
 
   @Patch('admin/products/:id/attributes')
@@ -65,12 +72,20 @@ export class CatalogController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation, description: catalogFailure.validation.description })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
   async generateVariants(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: VariantGenerateDto): Promise<VariantGenerateResponse> { return this.catalog.generateVariants(principal.userId, idempotencyKey, id, input); }
 
   @Post('admin/products/:id/status')
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation, description: catalogFailure.validation.description })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
   async status(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: ProductStatusDto): Promise<ProductStatusResponse> { return this.catalog.changeProductStatus(principal.userId, idempotencyKey, id, input); }
 
   @Get('admin/attributes')
@@ -82,6 +97,10 @@ export class CatalogController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation, description: catalogFailure.validation.description })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
   async createAttribute(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: AttributeDefinitionCreateDto): Promise<AttributeDefinitionResponse> { return this.catalog.createAttribute(principal.userId, idempotencyKey, input); }
 
   @Patch('admin/attributes/:id')
@@ -93,6 +112,10 @@ export class CatalogController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation, description: catalogFailure.validation.description })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
   async createAttributeOption(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: AttributeOptionCreateDto): Promise<AttributeOptionResponse> { return this.catalog.createAttributeOption(principal.userId, idempotencyKey, id, input); }
 
   @Patch('admin/attributes/:attributeId/options/:optionId')
@@ -109,6 +132,10 @@ export class CatalogController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation, description: catalogFailure.validation.description })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
   async updateVariantStatus(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: ProductVariantStatusDto): Promise<ProductVariantResponse> { return this.catalog.updateVariantStatus(principal.userId, idempotencyKey, id, input); }
 
   @Patch('admin/variants/:id/price')
@@ -125,6 +152,10 @@ export class CatalogController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation, description: catalogFailure.validation.description })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
   async createBrand(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: BrandCreateDto): Promise<BrandResponse> { return this.catalog.createBrand(principal.userId, idempotencyKey, input); }
 
   @Patch('admin/brands/:id')
@@ -136,6 +167,10 @@ export class CatalogController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation, description: catalogFailure.validation.description })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
   async createCategory(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: CategoryCreateDto): Promise<CategoryResponse> { return this.catalog.createCategory(principal.userId, idempotencyKey, input); }
 
   @Patch('admin/categories/:id')
@@ -151,6 +186,12 @@ export class CatalogController {
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation, description: catalogFailure.validation.description })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
+  @ApiResponse({ status: 413, schema: catalogFailure.payloadTooLarge, description: catalogFailure.payloadTooLarge.description })
+  @ApiResponse({ status: 422, schema: catalogFailure.importValidation, description: catalogFailure.importValidation.description })
   async uploadImport(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') key: string, @Headers('x-iranyaragh-catalog-version') version: string, @UploadedFile() file: UploadedCatalogFile): Promise<CatalogImportUploadResponse> {
     if (!file?.buffer) throw new UnprocessableEntityException({ code: 'IMPORT_VALIDATION', message: 'A workbook file is required.' });
     return this.imports.upload(principal.userId, key, version, file.buffer);
@@ -159,16 +200,28 @@ export class CatalogController {
   @Get('admin/imports/:id')
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.read')
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 404, schema: catalogFailure.notFound, description: catalogFailure.notFound.description })
   async importReport(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string): Promise<CatalogImportDetailResponse> { return this.imports.get(principal.userId, id); }
 
   @Post('admin/imports/:id/dry-run')
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 404, schema: catalogFailure.notFound, description: catalogFailure.notFound.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.importUnavailable, description: catalogFailure.importUnavailable.description })
   async importDryRun(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string): Promise<CatalogImportDryRunResponse> { return this.imports.dryRun(principal.userId, id); }
 
   @Post('admin/imports/:id/commit')
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
+  @ApiResponse({ status: 404, schema: catalogFailure.notFound, description: catalogFailure.notFound.description })
+  @ApiResponse({ status: 409, schema: catalogFailure.importUnavailable, description: catalogFailure.importUnavailable.description })
+  @ApiResponse({ status: 422, schema: catalogFailure.importValidation, description: catalogFailure.importValidation.description })
   async commitImport(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') key: string, @Param('id') id: string): Promise<CatalogImportCommitResponse> { return this.imports.commit(principal.userId, key, id); }
 }

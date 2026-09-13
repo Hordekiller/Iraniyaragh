@@ -4,7 +4,11 @@ export const EMPTY_AXIS_SIGNATURE =
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
 export function canonicalizeSku(sku: string): string {
-  return sku.normalize('NFC').trim().replace(/\s+/g, ' ').toUpperCase();
+  return sku
+    .normalize('NFC')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[A-Za-z]/g, (char) => char.toUpperCase());
 }
 
 export function legacyCombinationSignature(variantId: string): string {
