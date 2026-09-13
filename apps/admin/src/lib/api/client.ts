@@ -71,13 +71,19 @@ function resolveUrl(path: string): string {
 
 /**
  * Script-readable double-submit CSRF cookie names the API issues
- * (AUTH_CONTRACT §12): the staff `__Host-` prefixed cookie in
- * production/staging and the explicitly suffixed development cookie for the
- * dev staff sign-in. The value is server-issued to the script context by
- * design; cookie-authenticated calls (refresh, logout) must echo it back as the
- * `X-CSRF-Token` header or the API rejects them (server session stays alive).
+ * (AUTH_CONTRACT §12), one per runtime cookie spec in auth.config.ts:
+ * - production/staging staff and customer: `__Host-iranyaragh_csrf`;
+ * - development customer and real staff sign-in: `iranyaragh_customer_csrf`;
+ * - development-only dev-key sign-in (`/auth/dev/signin`): `iranyaragh_dev_csrf`.
+ * The value is server-issued to the script context by design; cookie-authenticated
+ * calls (refresh, logout) must echo it back as the `X-CSRF-Token` header or the
+ * API rejects them (server session stays alive).
  */
-const CSRF_COOKIE_NAMES = ['__Host-iranyaragh_csrf', 'iranyaragh_dev_csrf'] as const;
+const CSRF_COOKIE_NAMES = [
+  '__Host-iranyaragh_csrf',
+  'iranyaragh_customer_csrf',
+  'iranyaragh_dev_csrf',
+] as const;
 
 export function readCsrfToken(document: Document): string | null {
   if (!document) return null;

@@ -165,10 +165,10 @@ For Auth persistence changes, verify on a clean PostgreSQL database:
 export NODE_ENV=test
 export DATABASE_URL='postgresql://app:app@127.0.0.1:5432/iraniyaragh_test?schema=public'
 export PSQL_DATABASE_URL='postgresql://app:app@127.0.0.1:5432/iraniyaragh_test'
-pnpm --filter api exec prisma validate
-pnpm --filter api exec prisma migrate deploy
+pnpm --filter @iranyaragh/api exec prisma validate
+pnpm --filter @iranyaragh/api exec prisma migrate deploy
 psql "$PSQL_DATABASE_URL" -f apps/api/prisma/tests/auth_constraints.sql
-pnpm --filter api run prisma:generate
+pnpm --filter @iranyaragh/api run prisma:generate
 pnpm test:integration
 ```
 
