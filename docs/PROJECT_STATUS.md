@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-11
+Last reviewed: 2026-09-13
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -36,13 +36,14 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `ee2bb16`, containing merged #109, #103, #112,
+- Baseline at review: `main` commit `cb0e222`, containing merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
   session/device-management panel #158, the screenshot/a11y evidence #160, the
   catalog hardenings #157, the three-lane delivery map #156, the catalog
-  idempotency contract #168, the product-media contract #161 and the admin
-  Orders/Settings reconciliation #169.
+  idempotency contract #168, the product-media contract #161, the admin
+  Orders/Settings reconciliation #169, the catalog P2 config/generation #182 and
+  the Excel/import foundation #183 plus the staged import service #184.
 - #49, #79, #50 and #91 are closed; #50/#91 were closed on 2026-09-11 with 7/7
   acceptance evidence. Active coordination includes #66, #78, #81 and #114. #115 is
   closed as delivered (the SMS admin panel shipped through #151).
@@ -168,7 +169,14 @@ security/query review, OpenAPI drift confirmation and merge.
   merged via #139 (real HTTP default, fixture only behind `VITE_FIXTURE_AUTH=true`);
   production acceptance still requires live SMS, admin MFA/session UX and permission
   navigation.
-- Media upload and S3 presigned flow; price history/effective pricing/VAT policy.
+- Media upload and S3 presigned flow; price history/effective pricing UI.
+- VAT policy and tax math (integer-Rial VAT on the sales basis per the permanent
+  VAT Law and the configurable-rate design in ADR-0014); electronic-invoice
+  (`سامانه مودیان`) emission; both are planned, not implemented.
+- Runtime RBAC administration: roles/permissions are seed-owned only; there is no
+  staff directory, role-assignment/revoke flow or user-status management until
+  ADR-0014 + `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` are accepted and their G1–G3
+  slices land.
 - Inventory HTTP CRUD/commands, transfers, expiry worker and operator modules.
 - Server-priced cart, address, checkout and idempotent order creation.
 - Order application lifecycle and customer/admin order experiences.
@@ -267,11 +275,12 @@ security/query review, OpenAPI drift confirmation and merge.
  - `#183` merged at `56ccd83`: bounded catalog workbook parser/exporter foundation
    (fixed sheet contract, text-only identifier cells, 10 MB/10k-row bounds,
    exact-pinned `exceljs@4.4.0`, `uuid@11.1.1` override).
- - `#184` open (feat/178-catalog-import-service): staged import service — upload,
-   dry-run with zero mutation, idempotent all-or-nothing commit, bounded
-   process-local parsed workbook store (32/24 h), raw bytes never persisted, and
-   reference validation covering same-workbook definitions, brand/category
-   preflight and canonical-SKU collisions.
+- `#184` merged at `cb0e222`: bounded staged catalog import service — upload,
+    dry-run with zero mutation, idempotent all-or-nothing commit, bounded
+    process-local parsed workbook store (32/24 h), raw bytes never persisted, and
+    reference validation covering same-workbook definitions, brand/category
+    preflight and canonical-SKU collisions. Remaining import wave follow-ups:
+    durable parsed-import storage and Excel export wiring to live data.
 
 The durable Catalog mutation-idempotency runtime is being implemented separately on
 the post-#168 platform branch. It is not delivered on `main` until its forward
@@ -280,12 +289,13 @@ current-head CI are reviewed and merged.
 
 ## Open pull-request work (not yet on main)
 
-`#184` (feat/178-catalog-import-service) is open and under review: the staged
-Catalog import service (upload/dry-run/commit/export foundation). After the
-2026-09-11 merges (`#156`, `#157`, `#160`) every older protected PR is resolved
-(`#138`, `#143`, `#150`, replacement `#151`, session/devices `#158` and evidence
-`#160` are merged; historical `#133` and duplicate `#149` are closed as
-superseded).
+A documentation-only proposal is open for review: ADR-0014 and
+`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` record the audited RBAC and
+money/financial-policy state, the Iranian legal baseline (EC Law 1382 Arts. 33-38;
+permanent VAT Law 1400 with the 10 % budget rate; پایانههای فروشگاهی و سامانه
+مودیان 1398), the admin-configurable catalogue and the G1–G8 slice plan. It makes
+no runtime change and is intended to be the required-review basis for the schema
+slices it plans.
 
 The #50 admin session-management slice is delivered through `#158` (merged):
 the `/settings/sessions` page with a typed session port (HTTP client +
@@ -314,9 +324,12 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
 4. Reservation TTL and multi-location allocation policy.
 5. Guest checkout, identity linkage/merge and anonymization.
 6. Product variants/attributes and import format (policy and core services resolved by
-   #177/#179/#180/#181; configuration/generation merged via #182; Excel import/export
-   is the merged parser #183 plus the open staged-import service #184).
-7. Staff role matrix, approval thresholds and four-eyes actions.
+   #177/#179/#180/#181; configuration/generation merged via #182; the Excel
+   import/export foundation #183 and staged import service #184 are merged; durable
+   parsed-import storage and live-data export wiring remain a follow-up slice).
+7. Staff role matrix, approval thresholds and four-eyes actions (runtime
+   admin-configurable RBAC and financial policy proposed by ADR-0014 +
+   `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`; under review, no schema change yet).
 8. Return/refund/damaged-stock policy.
 9. Deployment target, RPO/RTO, retention, monitoring and budget.
 10. Team capacity, review SLA and release authority (#78).
