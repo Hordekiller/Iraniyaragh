@@ -1,6 +1,6 @@
 # ADR-0013: Product variants, attributes and SKU identity
 
-- Status: Proposed; becomes Accepted after independent review and merge
+- Status: Accepted — merged after independent review via #176/#177 (2026-09-12)
 - Date: 2026-09-12
 - Owners: Platform contract lead implements; Product/Admin lead reviews and verifies contracts
 - Parent: #3

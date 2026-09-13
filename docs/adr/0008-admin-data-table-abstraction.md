@@ -1,7 +1,8 @@
 # ADR-0008: Administrative Data Table Abstraction
 
-Status: Proposed for joint review; implemented as in-house MUI abstraction pending
-dependency/license review and registry connectivity
+Status: Accepted — implemented in-house MUI data-table abstraction, shipped with
+the dev-gated admin primitives via #88 (2026-09-04) and extended by the admin
+shell/control and table work in #143/#158/#169/#173
 
 Date: 2026-09-03
 

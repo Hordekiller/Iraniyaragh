@@ -1,7 +1,8 @@
 # ADR-0010: Development-Enabled Staff Sign-In (Admin Panel)
 
-Status: Proposed for joint review; implementation gate-matched to the §12
-auth/admin-session checkpoint
+Status: Accepted — dev-gated staff sign-in shipped via #88 (2026-09-04); the live
+production staff HTTP client that supersedes the dev/fixture path is under review
+as #191
 
 Date: 2026-09-03
 

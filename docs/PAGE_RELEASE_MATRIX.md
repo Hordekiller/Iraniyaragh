@@ -1,6 +1,6 @@
 # Page, Content and Release Matrix
 
-Status: authoritative page inventory and release boundary; reviewed 2026-09-10.
+Status: authoritative page inventory and release boundary; reviewed 2026-09-13.
 
 Implementation truth remains in `PROJECT_STATUS.md`. An entry in this matrix means
 required scope, not delivered code. Only reviewed evidence merged to `main` changes a
@@ -11,10 +11,10 @@ capability to delivered.
 | Area         | State on `main`                                                                                               | Open work, not delivered                                                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Customer web | Accessible responsive Vite prototype with real-HTTP Auth/session recovery merged via #139; product discovery remains fixture-backed and production selling is not live | #126 Next.js rendered pages; #140 full dynamic page/content outcome |
-| Admin        | Next.js RTL shell, Auth boundary and reusable primitives; no complete operational commerce modules            | #138 shell/preferences; #133 SMS settings UI stacked on #118                                              |
-| API          | Auth/RBAC, catalog foundation and inventory service core are merged                                           | #118 SMS admin contract requires corrections; #114/#115 continue SMS integration                          |
+| Admin        | Next.js RTL shell, Auth boundary, session management (#158), SMS settings (#151/#154), catalog workflow (#173) and reusable primitives; no complete operational commerce modules | product media galleries (#162–#165); remaining commerce modules unbuilt |
+| API          | Auth/RBAC, catalog (attributes/variants/SKU/price-history/import via #179–#184) and inventory service core are merged | #114 SMS.ir OTP provider dispatch; catalog import parity #189; reservation expiry batching #81 |
 | Discovery    | ADR-0012 and the complete SEO/GEO plan are merged                                                             | #129 sitemap/robots/IndexNow and #126 rendered templates                                                  |
-| Commerce     | Persistence foundations exist; real cart, checkout, payment and fulfillment journeys do not                   | G4-G8 in `COMMERCE_EXPANSION_PLAN.md`                                                                     |
+| Commerce     | Persistence foundations exist; real cart, checkout, payment and fulfillment journeys do not                   | COMM_G4–G8 in `COMMERCE_EXPANSION_PLAN.md` (prefixed symbols; see EXEC cross-reference)                     |
 | Operations   | CI and local dependencies exist                                                                               | #136 logging/telemetry plus deploy, restore, alerts and production drills                                 |
 
 PR screenshots, fixtures, schemas and green branch tests are evidence of progress,

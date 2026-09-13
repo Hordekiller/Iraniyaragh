@@ -1,7 +1,8 @@
 # ADR-0009: Admin Form Validation Strategy
 
-Status: Proposed for joint review; implemented as an in-house validation layer
-pending registry connectivity
+Status: Accepted — implemented as an in-house validation layer, shipped with the
+dev-gated admin primitives via #88 (2026-09-04) and used by the merged admin
+forms in #151/#158/#173
 
 Date: 2026-09-03
 

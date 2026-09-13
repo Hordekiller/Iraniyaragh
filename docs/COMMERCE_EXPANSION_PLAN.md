@@ -191,6 +191,14 @@ Rules:
 
 ## 5. Dependency-ordered delivery gates
 
+> Gate symbols in this document are namespace-prefixed — `COMM_G#` — and are not
+> interchangeable with the `EXEC_G#` symbols in `EXECUTION_BACKLOG.md` (their
+> enumerations differ; e.g. EXEC_G4 = inventory vs COMM_G4 = public catalog).
+> Within this document a bare `G#` resolves to `COMM_G#`; wherever the two
+> documents are discussed together, always write the prefixed symbol. The
+> qualitative cross-reference map (`EXEC_Gn ≈ COMM_Gn ≈ 0.x`) lives in
+> `EXECUTION_BACKLOG.md`; update both when a gate boundary changes.
+
 ### G0 — Governance and safe delivery
 
 Scope: team agreement, decision ownership, branch/review protocol, environment
@@ -535,20 +543,26 @@ capability. Record the single unblock action and owner.
 
 ## 10. Decision register that must close before dependent work
 
-| Decision                                       | Blocks                                      |
-| ---------------------------------------------- | ------------------------------------------- |
-| real team capacity/release authority           | reliable scheduling and production sign-off |
-| product attributes/variants/import             | G2–G4                                       |
-| effective price/discount/tax/invoice rules     | G2, G6–G10                                  |
-| media validation/transformation/retention      | G2–G4                                       |
-| guest cart/account merge and privacy lifecycle | G6/G9                                       |
-| reservation TTL/allocation/backorder           | G5–G7                                       |
-| Iranian address and shipping rate/geography    | G6/G8                                       |
-| payment provider/verify/refund/reconciliation  | G8/G9                                       |
-| cancellation/return/damage/quarantine policy   | G7/G9                                       |
-| staff approval thresholds/four-eyes actions    | G3/G5/G8/G9                                 |
-| deployment target, SLO, RPO/RTO and retention  | G11/G12                                     |
-| crawler training policy and AI data/consent    | G4/G10                                      |
+Resolved (recorded elsewhere, removed from the open rows):
+
+- real team capacity/release authority — capacity and release agreement accepted
+  via #172 (2026-09-12);
+- product attributes/variants/SKU identity and import columns — ADR-0013 adopted
+  via #176/#177 (2026-09-12); bounded parser and staged dry-run → commit flow
+  delivered via #183/#184.
+
+| Decision                                       | Blocks                                          |
+| ---------------------------------------------- | ----------------------------------------------- |
+| effective price/discount/tax/invoice rules     | G2, G6–G10                                      |
+| media validation/transformation/retention      | G2–G4 (media M1, #162, is the first open slice) |
+| guest cart/account merge and privacy lifecycle | G6/G9                                           |
+| reservation TTL/allocation/backorder           | G5–G7                                           |
+| Iranian address and shipping rate/geography    | G6/G8                                           |
+| payment provider/verify/refund/reconciliation  | G8/G9                                           |
+| cancellation/return/damage/quarantine policy   | G7/G9                                           |
+| staff approval thresholds/four-eyes actions    | G3/G5/G8/G9                                     |
+| deployment target, SLO, RPO/RTO and retention  | G11/G12                                         |
+| crawler training policy and AI data/consent    | G4/G10                                          |
 
 ## 11. Scale path and explicit non-goals
 
@@ -568,15 +582,15 @@ platform, a second ORM or multiple payment/search abstractions merely for novelt
 
 ## 12. Current next sequence
 
-As of the review date, the immediate path is:
+As of the 2026-09-13 reconciliation (`main` = `cb0e222`, catalog wave merged via
+#179–#184), the immediate path is:
 
-1. clear the repository-wide dependency security gate;
-2. finish the accepted Auth/SMS settings and live UX integration;
-3. accept rendering/URL architecture and unblock dynamic discovery;
-4. close catalog variant/pricing/media decisions;
-5. deliver the first real publish → discover vertical slice;
-6. expose inventory operations and reservation policy;
-7. proceed through G6–G12 without skipping integrated exit evidence.
+1. close the remaining catalog parity gaps from the 2026-09-13 audit (#189) and
+   the auth parity gaps (#186/#188) before treating Auth/Catalog as gate-clean;
+2. accept media policy and deliver the conflict-safe M1–M5 slices (#162–#165),
+   then finish the publish → discover vertical slice with real media/price data;
+3. expose protected inventory HTTP plus reservation expiry batching (#81);
+4. proceed through COMM_G6–G12 without skipping integrated exit evidence.
 
 `EXECUTION_STATUS.md` must translate only the next one or two gates into active
 assignments. This plan remains complete even when short-horizon priorities change.

@@ -1,6 +1,6 @@
 # V1.0 Master Plan — ایران‌یاراغ
 
-Last updated: 2026-09-07
+Last updated: 2026-09-13
 
 This is the V1 release checklist. The complete expansion scope and mandatory
 implementation method—including post-V1 operations and growth—live in
@@ -24,8 +24,12 @@ and dedicated search infrastructure are excluded from V1.
 
 ## 2. Current baseline
 
-- `0.1` foundation is near closure; privileged Auth lifecycle is merged via #109 and #49 is closed.
-- `0.2` has started: catalog contracts and API foundation are merged via #103.
+- `0.1` foundation is closed; privileged Auth, session and RBAC runtime are merged
+  via #109/#111/#150/#158 and #49 is closed; auth-parity defect follow-ups
+  #186/#188 are tracked.
+- `0.2` catalog wave is delivered: attributes, variants/SKU identity, price history
+  and staged import merged via #179–#184; media M1 (#162) and storefront
+  integration (#166) remain, with import parity cleanup in #189.
 - Inventory has a strong transactional service foundation but no protected HTTP or UI.
 - Order/payment/fulfillment persistence states exist; business services do not.
 - Web and admin are prototypes/foundations, not integrated commerce applications.
@@ -89,9 +93,12 @@ team/provider decisions
 
 #### Policy and coordination
 
-- [ ] Accept #78: weekly capacity, review SLA, decision owner and release authority.
+- [x] Accept #78: weekly capacity, review SLA, decision owner and release authority
+      (accepted via merged #172, 2026-09-12).
 - [x] Accept ADR-0011 for the SMS.ir provider boundary via merged PR #116.
-- [ ] Implement backend #114, then the contract-dependent admin settings #115.
+- [ ] Backend #114 (SMS.ir OTP provider dispatch) remains open; the admin settings
+      panel shipped via #151 (superseding #115) and the read-only environment
+      projection via #154.
 - [x] Close #49 against merged privileged-Auth evidence; reconcile #50/#91 so every remaining criterion has evidence or a named
       follow-up; close obsolete coordination text.
 
@@ -136,7 +143,9 @@ team/provider decisions
 - [ ] Implement price history/effective-price service with snapshot-ready output.
 - [ ] Implement media metadata and presigned upload confirmation/cleanup boundary.
 - [ ] Add public detail/search/filter/pagination and query-driven indexes.
-- [ ] Add validated import dry-run, row errors, idempotency and audit.
+- [x] Add validated import dry-run, row errors, idempotency and audit (bounded
+      parser via #183 and staged dry-run → commit flow via #184; parity cleanup in
+      #189).
 
 #### Admin/web
 
@@ -351,16 +360,19 @@ Resolved:
 - one `User` principal/Customer profile boundary;
 - separate order/payment/fulfillment states;
 - Auth browser transport/security contract;
-- current admin table/form strategies.
+- current admin table/form strategies;
+- team capacity/release authority (#172, 2026-09-12);
+- product variants/SKU identity and import columns (ADR-0013 via #176/#177,
+  2026-09-12; import format + staged flow delivered via #183/#184).
 
 Open before dependent work:
 
-- SMS, payment and shipping providers/policies;
+- SMS, payment and shipping providers/policies (#114 remains the sole SMS accept);
 - reservation/allocation/backorder;
 - guest checkout and identity merge/privacy;
-- product variants/import and pricing/tax/invoice detail;
+- price/discount/tax/invoice detail (per-accountant verification required);
 - staff approvals/four-eyes; returns/damaged stock;
-- deployment/RPO/RTO/retention/budget; team capacity/release authority.
+- deployment/RPO/RTO/retention/budget.
 
 ## 8. Progress and governance
 
