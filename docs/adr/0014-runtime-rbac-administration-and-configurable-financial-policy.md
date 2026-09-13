@@ -77,7 +77,7 @@ invoice obligations (see `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`) can be met.
 
   | Policy | Default | Notes |
   | ------ | ------- | ----- |
-  | VAT rate(s) | `1000` bp (10 %) from 1404 budget law | rate per goods/service category; `0`/`900`/`1000`/`1200`/`1600` bp presets |
+  | VAT rate(s) | `1000` bp (10 %) — enacted by the 1403 budget act, continued in 1404 | rate per goods/service category; `0`/`900`/`1000`/`1200`/`1600` bp presets |
   | VAT treatment | exclusive/inclusive of displayed price | must satisfy EC Law Art. 33 disclosure |
   | Max discount per order / line | configurable `bp`/amount | 
   | Approval thresholds | auto < threshold, four-eyes ≥ threshold | separate for price edit, discount, refund |
