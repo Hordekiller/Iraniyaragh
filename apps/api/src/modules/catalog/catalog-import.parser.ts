@@ -26,6 +26,14 @@ function invalid(message: string): never {
   throw new UnprocessableEntityException({ code: 'IMPORT_VALIDATION', message });
 }
 
+function workbookStatus(value: unknown, sheet: string, allowed: readonly string[]): string | undefined {
+  const parsed = text(value, false, `${sheet}.status`);
+  if (parsed === undefined) return parsed;
+  const upper = parsed.toUpperCase();
+  if (!allowed.includes(upper)) invalid(`${sheet}.status must be one of ${allowed.map(a => `'${a}'`).join(', ')} — got ${JSON.stringify(parsed)}.`);
+  return upper;
+}
+
 function text(value: unknown, required: boolean, field: string): string | undefined {
   if (value === null || value === undefined || value === '') {
     if (required) invalid(`${field} is required.`);
@@ -76,10 +84,10 @@ export async function parseCatalogWorkbook(buffer: Buffer): Promise<ParsedCatalo
     invalid('Workbook is not a valid .xlsx file.');
   }
   if (workbook.worksheets.length !== CATALOG_SHEETS.length || workbook.worksheets.some((sheet, index) => sheet.name !== CATALOG_SHEETS[index])) invalid('Workbook sheets must match the catalog v1 order exactly.');
-  const products = parseSheet(workbook.getWorksheet('Products')!, HEADERS.Products, ([slug, name, description, brandSlug, categorySlug, status]) => ({ slug: text(slug, true, 'Products.slug')!, name: text(name, true, 'Products.name')!, description: text(description, false, 'Products.description'), brandSlug: text(brandSlug, false, 'Products.brandSlug'), categorySlug: text(categorySlug, false, 'Products.categorySlug'), status: text(status, false, 'Products.status') }), new Set([0]));
-  const variants = parseSheet(workbook.getWorksheet('Variants')!, HEADERS.Variants, ([productSlug, sku, barcode, title, costPrice, salePrice, weightGrams, status]) => ({ productSlug: text(productSlug, true, 'Variants.productSlug')!, sku: text(sku, true, 'Variants.sku')!, barcode: text(barcode, false, 'Variants.barcode'), title: text(title, false, 'Variants.title'), costPrice: text(costPrice, true, 'Variants.costPrice')!, salePrice: text(salePrice, true, 'Variants.salePrice')!, weightGrams: text(weightGrams, false, 'Variants.weightGrams'), status: text(status, false, 'Variants.status') }), new Set([0, 1, 2]));
-  const attributes = parseSheet(workbook.getWorksheet('Attributes')!, HEADERS.Attributes, ([code, name, description, status]) => ({ code: text(code, true, 'Attributes.code')!, name: text(name, true, 'Attributes.name')!, description: text(description, false, 'Attributes.description'), status: text(status, false, 'Attributes.status') }), new Set([0]));
-  const options = parseSheet(workbook.getWorksheet('AttributeOptions')!, HEADERS.AttributeOptions, ([attributeCode, code, label, status]) => ({ attributeCode: text(attributeCode, true, 'AttributeOptions.attributeCode')!, code: text(code, true, 'AttributeOptions.code')!, label: text(label, true, 'AttributeOptions.label')!, status: text(status, false, 'AttributeOptions.status') }), new Set([0, 1]));
+  const products = parseSheet(workbook.getWorksheet('Products')!, HEADERS.Products, ([slug, name, description, brandSlug, categorySlug, status]) => ({ slug: text(slug, true, 'Products.slug')!, name: text(name, true, 'Products.name')!, description: text(description, false, 'Products.description'), brandSlug: text(brandSlug, false, 'Products.brandSlug'), categorySlug: text(categorySlug, false, 'Products.categorySlug'), status: workbookStatus(status, 'Products', ['DRAFT','PUBLISHED','ARCHIVED']) }), new Set([0]));
+  const variants = parseSheet(workbook.getWorksheet('Variants')!, HEADERS.Variants, ([productSlug, sku, barcode, title, costPrice, salePrice, weightGrams, status]) => ({ productSlug: text(productSlug, true, 'Variants.productSlug')!, sku: text(sku, true, 'Variants.sku')!, barcode: text(barcode, false, 'Variants.barcode'), title: text(title, false, 'Variants.title'), costPrice: text(costPrice, true, 'Variants.costPrice')!, salePrice: text(salePrice, true, 'Variants.salePrice')!, weightGrams: text(weightGrams, false, 'Variants.weightGrams'), status: workbookStatus(status, 'Variants', ['ACTIVE','INACTIVE','ARCHIVED']) }), new Set([0, 1, 2]));
+  const attributes = parseSheet(workbook.getWorksheet('Attributes')!, HEADERS.Attributes, ([code, name, description, status]) => ({ code: text(code, true, 'Attributes.code')!, name: text(name, true, 'Attributes.name')!, description: text(description, false, 'Attributes.description'), status: workbookStatus(status, 'Attributes', ['ACTIVE','INACTIVE','ARCHIVED']) }), new Set([0]));
+  const options = parseSheet(workbook.getWorksheet('AttributeOptions')!, HEADERS.AttributeOptions, ([attributeCode, code, label, status]) => ({ attributeCode: text(attributeCode, true, 'AttributeOptions.attributeCode')!, code: text(code, true, 'AttributeOptions.code')!, label: text(label, true, 'AttributeOptions.label')!, status: workbookStatus(status, 'AttributeOptions', ['ACTIVE','INACTIVE','ARCHIVED']) }), new Set([0, 1]));
   const values = parseSheet(workbook.getWorksheet('VariantAttributeValues')!, HEADERS.VariantAttributeValues, ([sku, attributeCode, optionCode]) => ({ sku: text(sku, true, 'VariantAttributeValues.sku')!, attributeCode: text(attributeCode, true, 'VariantAttributeValues.attributeCode')!, optionCode: text(optionCode, true, 'VariantAttributeValues.optionCode')! }), new Set([0, 1, 2]));
   const totalRows = products.length + variants.length + attributes.length + options.length + values.length;
   if (totalRows > CATALOG_IMPORT_MAX_ROWS) throw new PayloadTooLargeException({ code: 'IMPORT_TOO_LARGE', message: 'Workbook exceeds the 10,000 row limit.' });
