@@ -49,11 +49,11 @@ export class StaffAuthError extends Error {
 /**
  * The typed staff-auth surface used by the admin login slice.
  *
- * A real HTTP client will implement the same interface once #49's contract PR
- * (`/auth/staff/password`, `/auth/staff/totp/verify`) lands; the deterministic
- * `StaffAuthFixtureClient` is the pre-backend stand-in (parallel-work model,
- * AUTH_CONTRACT §17). Narrow by design: session management/logout-all is the
- * later #50 slice, refresh stays behind #74.
+ * `StaffAuthHttpClient` (staff-http.ts) implements this interface against the
+ * live `/auth/staff/*` endpoints; `StaffAuthFixtureClient` is the deterministic
+ * dev/e2e stand-in used only under the `NEXT_PUBLIC_FIXTURE_AUTH=true` opt-in
+ * (parallel-work model, AUTH_CONTRACT §17). Narrow by design: session
+ * management/logout-all and refresh/cross-tab behavior are separate slices.
  */
 export interface StaffAuthApi {
   passwordRequest(payload: StaffPasswordPayload): Promise<StaffMfaChallenge>;

@@ -5,21 +5,21 @@ import { useRouter } from 'next/navigation';
 import { Alert, Box, Button, Paper, TextField, Typography } from '@mui/material';
 import { useSyncExternalStore } from 'react';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { StaffAuthFixtureClient } from '@/lib/auth/staff-fixture';
 import { isFixtureAuthEnabled } from '@/lib/auth/staff-fixture-guard';
+import { createStaffAuth } from '@/lib/auth/staff-http';
 import { StaffLoginController } from '@/lib/auth/staff-login';
 import { createMemoryStaffTokenStore } from '@/lib/auth/token-store';
 
 /**
- * Fixture-backed staff sign-in (admin login slice, #50).
+ * Staff sign-in (admin login slice, #50).
  *
  * Route split per #50 decision A: `/login/staff` stays separate so the existing
- * dev-only `/login` and `signInDiAsAdmin` e2e path are untouched until the live
- * staff flow (via the #49 contract/runtime PR) is fully released. The fixture is
- * the only data source here and is fail-closed behind the
- * `NEXT_PUBLIC_FIXTURE_AUTH=true` build opt-in (decision B); real endpoint
- * wiring, refresh/cross-tab behavior and the `AUTH_REAUTHENTICATION_REQUIRED`
- * recovery all land with #74.
+ * dev-only `/login` and `signInDiAsAdmin` e2e path remain untouched. The real
+ * `StaffAuthHttpClient` against `/auth/staff/password` -> `/auth/staff/totp/verify`
+ * is the default (parallel-work handoff, AUTH_CONTRACT §17); the deterministic
+ * fixture is the only data source when `NEXT_PUBLIC_FIXTURE_AUTH=true` is baked
+ * into the build (local dev / e2e, decision B). Refresh/cross-tab behavior and
+ * the `AUTH_REAUTHENTICATION_REQUIRED` recovery land with the refresh slice.
  *
  * All challenge/access state stays in controller memory; this page never writes
  * localStorage or sessionStorage. On success the verified principal and access
@@ -32,10 +32,9 @@ export default function StaffLoginPage() {
   const { establishSession } = useAuth();
   const enabled = isFixtureAuthEnabled();
   const controller = useMemo(() => {
-    const created = new StaffLoginController(
-      new StaffAuthFixtureClient(),
-      createMemoryStaffTokenStore(),
-    );
+    const store = createMemoryStaffTokenStore();
+    const { api } = createStaffAuth(store);
+    const created = new StaffLoginController(api, store);
     created.open();
     return created;
   }, []);
@@ -59,10 +58,6 @@ export default function StaffLoginPage() {
       router.replace('/dashboard');
     }
   }, [state.phase, state.principal, controller, establishSession, router]);
-
-  if (!enabled) {
-    return <DisabledFixtureNotice />;
-  }
 
   if (state.phase === 'authenticated') {
     return null;
@@ -132,8 +127,9 @@ export default function StaffLoginPage() {
 
         <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
           <Typography variant="caption" color="text.secondary">
-            این نسخه با کلید آزمایشی (`NEXT_PUBLIC_FIXTURE_AUTH=true`) فعال شده و صرفاً برای
-            توسعه و آزمایش در دسترس است؛ در استیجینگ و تولید به‌صورت fail-closed غیرفعال می‌شود.
+            {enabled
+              ? 'این نسخه با کلید آزمایشی (`NEXT_PUBLIC_FIXTURE_AUTH=true`) فعال شده و صرفاً برای توسعه و آزمایش در دسترس است؛ در استیجینگ و تولید از سرور واقعی استفاده می‌شود.'
+              : 'ورود کارکنان با سرور احراز هویت واقعی انجام می‌شود.'}
           </Typography>
         </Box>
       </Paper>
@@ -287,45 +283,5 @@ export function TotpStep({
         بازگشت به مرحله اول
       </Button>
     </>
-  );
-}
-
-/**
- * Shown whenever this build does NOT opt in to the fixture (decision B): the
- * fixture must fail closed in production/ship builds and never render a signed
- * form. This is a stable rendered notice rather than a render-time throw so the
- * `next build` pre-render never breaks — the route still refuses to expose any
- * sign-in form when `NEXT_PUBLIC_FIXTURE_AUTH` is absent or not exactly "true".
- */
-export function DisabledFixtureNotice() {
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-        p: 2,
-      }}
-    >
-      <Paper
-        elevation={0}
-        sx={{
-          width: '100%',
-          maxWidth: 420,
-          p: { xs: 3, sm: 4 },
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Alert severity="warning" role="alert">
-          ورود کارکنان به‌صورت آزمایشی در این نسخه فعال نیست. برای فعال‌سازی، برنامه باید با
-          کلید `NEXT_PUBLIC_FIXTURE_AUTH=true` ساخته شود؛ در استیجینگ و تولید این صفحه به‌صورت
-          fail-closed غیرفعال است و فرمی نمایش داده نمی‌شود.
-        </Alert>
-      </Paper>
-    </Box>
   );
 }
