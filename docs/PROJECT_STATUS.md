@@ -287,6 +287,16 @@ Catalog import service (upload/dry-run/commit/export foundation). After the
 `#160` are merged; historical `#133` and duplicate `#149` are closed as
 superseded).
 
+The runtime-RBAC and financial-policy governance proposal (`#185`, documentation
+only) introduces ADR-0014 and `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` and is under
+review; it is the required-review basis for the schema slices it plans, so no
+`schema.prisma` change may merge before it is accepted. The implementation branch
+`feat/178-slice-g1-g2-configurable-settings-rbac` (based on `main`) carries the
+G1 configurable Settings store behind the `Setting` model and an admin controller
+(`GET/PUT /settings/admin/*`, STAFF_MFA + `settings.manage`, optimistic
+concurrency, legal floors) with 43 new api specs; it is complete and will be
+opened as a review PR once the docs PR lands.
+
 The #50 admin session-management slice is delivered through `#158` (merged):
 the `/settings/sessions` page with a typed session port (HTTP client +
 fail-closed fixture gated behind `NEXT_PUBLIC_SESSION_FIXTURE=true`), the
@@ -316,7 +326,12 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
 6. Product variants/attributes and import format (policy and core services resolved by
    #177/#179/#180/#181; configuration/generation merged via #182; Excel import/export
    is the merged parser #183 plus the open staged-import service #184).
-7. Staff role matrix, approval thresholds and four-eyes actions.
+7. Staff role matrix, approval thresholds and four-eyes actions (runtime
+   admin-configurable RBAC and financial policy proposed by ADR-0014 +
+   `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`; the docs PR is under review, and the
+   implementation branch `feat/178-slice-g1-g2-configurable-settings-rbac` has the
+   G1 configurable Settings store implemented behind `Setting` + admin endpoints —
+   see Open pull-request work; G1 will not merge before the docs PR is accepted).
 8. Return/refund/damaged-stock policy.
 9. Deployment target, RPO/RTO, retention, monitoring and budget.
 10. Team capacity, review SLA and release authority (#78).
