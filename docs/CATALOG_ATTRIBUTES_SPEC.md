@@ -187,13 +187,37 @@ inventory, and never changes an existing `sku`. Commit applies creates first, th
 updates, then attributes/options before variants, in a deterministic order. Any
 `error` row aborts the whole commit (all-or-nothing).
 
+For every product that references an attribute through a `VariantAttributeValues`
+row, commit auto-configures that attribute as `isVariantAxis: true,
+isRequired: true` on the product (`ProductAttributeConfiguration` upsert). This is
+intentional for migration — a workbook expresses the axis set simply by using
+values, and import is the only bulk path that (re)asserts the axis set for an
+existing product. Attributes referenced only as descriptive metadata (no values
+rows in this workbook) are never reconfigured. A re-import of an unchanged catalog
+must report zero changes and rewrite no variant rows.
+
 ## 9. Bounds and safety
 
 - Workbook ≤ 10 MB, ≤ 10 000 data rows total, bounded sheet/cell counts, bounded
   parse/commit time. Over bound ⇒ `IMPORT_TOO_LARGE`.
-- Zip-bomb, oversized shared-string and oversized single-cell protections apply.
-- Committed `CatalogImportRecord` holds only import ID, actor, version, counts,
-  bounded issues and timestamps — never the raw workbook or personal data.
+- A 10 MB byte bound on the archive is enforced. The parser runs `exceljs` after
+  that byte check; the OOXML archive is decompressed in memory during parse, so a
+  small archive that expands mid-parse is limited only by the post-parse row-count
+  bound and the node per-process memory ceiling. Shared-string and single-cell
+  bounds are applied after materialisation, not before: a decompression-time guard
+  is the remaining follow-up before this authenticated endpoint can face
+  untrusted/oversized input at scale.
+- `CatalogImportRecord` persists only import ID, actor, version, status, counts,
+  bounded issues, summary and timestamps — never the raw workbook. **The parsed
+  workbook is held in bounded process-local memory** (32 imports, 24 h TTL,
+  FIFO eviction ⇒ `IMPORT_NOT_AVAILABLE`). This is a real availability limitation
+  for the staff-facing staged flow: an upload and its commit must reach the same
+  instance, and any deploy or restart between them loses the parsed payload. A
+  durable parsed-payload storage reference is the intended next step.
+- The API parser uses the exact-pinned `exceljs@4.4.0` package for OOXML workbook
+  values and exports; formulas are rejected as data, and the pnpm `uuid@11.1.1`
+  override removes the vulnerable transitive `uuid@8` range required by the
+  dependency security gates.
 
 ## 10. OpenAPI example bodies
 

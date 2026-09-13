@@ -36,7 +36,7 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `f9fd1ff`, containing merged #109, #103, #112,
+- Baseline at review: `main` commit `cb0e222`, containing merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
   session/device-management panel #158, the screenshot/a11y evidence #160, the
@@ -48,8 +48,10 @@ foundation, and G5–G10 have not reached integrated completion.
   reference #175, the accepted product-variant policy ADR-0013 (#177), the
   catalog attributes/variants/pricing/import contract wave `C` (#179), the
   P1 variant/attribute/price-history schema and migration (#180), the P2
-  variant/attribute/price-history mutation services (#181) and the P2 product
-  attribute configuration/variant generation (#182).
+  variant/attribute/price-history mutation services (#181), the P2 product
+  attribute configuration/variant generation (#182) and the P3 import wave
+  (the bounded workbook parser/exporter #183 and the staged import service
+  #184).
 - #49, #79, #50, #91, #78, #111 and #176 are closed. #50/#91 were closed on
   2026-09-11 with all acceptance items ticked in their issue bodies; #78 (working
   agreement) was closed 2026-09-12 via merged #172; #111 was closed 2026-09-12 as
@@ -151,8 +153,9 @@ merged and #49 is closed.
 - integer-Rial prices and non-sensitive public projections;
 - pagination, search, filter, allowlisted sorting and Prisma error mapping.
 
-Still outside the merged Catalog foundation: media upload, P3 Excel import/export,
-complete product detail, admin screens and live storefront integration.
+Still outside the merged Catalog foundation: media upload, complete product
+detail, admin screens, live storefront integration, and the two declared P3
+follow-ups (durable parsed-payload storage and decompression-time size guard).
 
 Delivery gate: current-main reconciliation, current-head CI, independent contract/
 security/query review, OpenAPI drift confirmation and merge.
@@ -196,6 +199,43 @@ reviewed on the exact head with the silent-ignore blocker resolved by removal; a
 eight CI checks green on the merge head; merged at `f9fd1ff` (#178 accounting:
 P2 complete).
 
+### PR #183 — P3 workbook parser/exporter foundation
+
+- exact-pinned `exceljs@4.4.0` with a workspace `uuid@11.1.1` override clearing
+  both dependency gates (`dependency-review` + `production-audit`);
+- fixed sheet order + exact headers for v1 workbooks, text-only identifier cells
+  (numeric identifier cells rejected to preserve leading zeros), formulas rejected
+  as data, per-sheet duplicate detection, 10 MB / 10 000-row bounds, and an
+  exporter that mirrors the same contract for round-trip parity.
+
+Delivery evidence: dependency gates green on the fix head; the full API suite
+(incl. parser tests) passed in CI `quality` on the merge head `e0aad36` after two
+review cycles (blank-cell false positive + doc mismatch); merged at `56ccd83`.
+
+### PR #184 — P3 staged import service
+
+- multipart upload with workbook version validation, zero-mutation dry-run with
+  bounded issues/items (`truncated`), `GET` report, and an idempotent all-or-nothing
+  commit inside the serializable `CatalogIdempotencyService`;
+- deterministically applies products/variants/attributes/options/values (creates
+  first, attributes/options before variants) with no inventory writes, preserving
+  SKU immutability (`SKU_CHANGE_NOT_ALLOWED`) and auto-configuring referenced
+  attributes as variant axes (documented policy);
+- reference validation resolves same-workbook definitions (workbook ∪ DB), surfaces
+  brand/category preflight in the dry-run, detects canonical-SKU collisions and
+  persists the true `FAILED`/`READY` report status; audits + metadata-only records;
+- parsed workbook held in bounded process-local memory (32 / 24 h, FIFO eviction ⇒
+  `IMPORT_NOT_AVAILABLE`, same-instance requirement) — honestly documented in the
+  spec §9 with the durable parsed-payload storage and decompression-time size
+  guard declared as the P3 follow-ups.
+
+Delivery evidence: requests addressed across three review cycles (same-file
+reference blocker, brand/category preflight, FAILED persistence, canonical SKU
+collisions, attribute-classification regression, fresh single-file-catalog test);
+all eight CI checks green on the merge head `3eb0a3f`; merged at `cb0e222`. P3
+import completes with the two follow-ups above and the wave moves to Admin/Web
+binding (`A`/`W`) then integration (`I`).
+
 ## Partial capabilities and exact boundaries
 
 | Capability    | What exists                                                                                                                                                                 | What prevents completion                                                                                                                       |
@@ -203,7 +243,7 @@ P2 complete).
 | RBAC          | Roles, seed and guard machinery                                                                                                                                             | Every domain route still needs explicit allow/deny policy tests                                                                                |
 | Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                                                                                                       | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
 | Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged                                                                                                      | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
-| Catalog       | API foundation via #103; idempotency #168/#171, admin Catalog workflow #173, policy ADR-0013 (#177), `C`-wave contract (#179), P1 variant schema/migration (#180), P2 mutation services (#181) and P2 configuration/generation (#182) merged | P3 Excel import/export, media M1–M5, admin binding and storefront integration                                                     |
+| Catalog       | API foundation via #103; idempotency #168/#171, admin Catalog workflow #173, policy ADR-0013 (#177), `C`-wave contract (#179), P1 variant schema/migration (#180), P2 mutation services (#181), P2 configuration/generation (#182) and P3 import (#183 parser/exporter, #184 staged service) merged | Media M1–M5, admin binding (`A`), storefront integration (`I`) and the P3 follow-ups (durable parsed-payload storage, decompression-time size guard) |
 | Inventory     | Correct service core                                                                                                                                                        | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
 | Orders        | Schema and generic state helper; read-only admin queue/detail merged via #169 (fixture-backed)                                                                              | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
 | Payments      | Schema/state foundation                                                                                                                                                     | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
@@ -312,10 +352,20 @@ P2 complete).
  - `#181` merged at `5db5135`: catalog attribute/option and variant mutation services,
    optimistic version guards, SKU immutability, status synchronization, append-only
    variant price history, and the publish-ready active-variant guard.
- - `#182` merged at `f9fd1ff`: product attribute configuration with `AXIS_IN_USE`
-   protection, read-only Cartesian preview and idempotent bounded generation (hard
-   cap 2000) with server-owned SKUs and real combination signatures. P2 completes;
-   the remaining #178 wave step is P3 Excel import/export.
+- `#182` merged at `f9fd1ff`: product attribute configuration and bounded variant
+   generation (preview + idempotent generate, `AXIS_IN_USE` guard, server-owned
+   SKU, 2000-combination cap). P2 completes.
+ - `#183` merged at `56ccd83`: bounded catalog workbook parser/exporter foundation
+   (fixed sheet contract, text-only identifier cells, 10 MB/10k-row bounds,
+   exact-pinned `exceljs@4.4.0`, `uuid@11.1.1` override).
+ - `#184` merged at `cb0e222`: staged import service — upload, zero-mutation
+   dry-run, idempotent all-or-nothing commit, bounded process-local parsed workbook
+   store (32/24 h, same-instance requirement), raw bytes never persisted,
+   workbook∪DB reference validation and the domain-rugged validation matrix
+   (fresh single-file catalogs, brand/category preflight, canonical-SKU
+   collisions). P3 import completes; two agreed follow-ups remain: durable
+   parsed-payload storage (survive deploy/restart) and a decompression-time size
+   guard before the import endpoint faces untrusted input at scale.
 
 The durable Catalog mutation-idempotency runtime is merged on `main` via `#171` at
 `322fd99`: forward migration with the `CatalogIdempotencyRecord` table, actor- and
@@ -338,10 +388,11 @@ merged at `0726aa3` — the `C`-wave contract for that policy
 `docs/CATALOG_ATTRIBUTES_SPEC.md`: workbook v1, SKU canonicalization, error-code
 matrix and staged import flow). `#180` is merged at `b9e6150` — the `P1` wave
 (forward variant/attribute/price-history schema with safe skuKey/combination
-backfill, preflight and variant-identity adapters). The `#178` wave continues
-with P2 (services), P3 (Excel import/export), then Admin/Web binding and
-integration; every PR stays under the 400-logical-line gate except the
-accepted contract-plus-spec precedent recorded on #179.
+backfill, preflight and variant-identity adapters). `#181`/`#182`/`#183`/`#184`
+complete P2 (services) and P3 (Excel import/export) as recorded in the merged-PR
+log above; the `#178` wave next needs the Admin/Web binding and integration, then
+the two declared P3 follow-ups (durable parsed-payload storage and a
+decompression-time size guard).
 
 The single remaining open PR is `#174` (this branch): the project/execution
 status fact-sync; it awaits independent review.
@@ -373,11 +424,12 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
 3. Shipping geography, methods and pricing authority.
 4. Reservation TTL and multi-location allocation policy.
 5. Guest checkout, identity linkage/merge and anonymization.
-6. **Resolved 2026-09-12 by #177 (basis), #179, #180, #181, #182:** product
-   variants/attributes/SKU identity, import format and the attribute
-   configuration/generation services — accepted as ADR-0013, with contract wave
-   `C`, P1 schema/migration, P2 mutation services and P2
-   configuration/generation merged; Excel import/export (P3) remains.
+6. **Resolved 2026-09-12 by #177 (basis), #179, #180, #181, #182, #183, #184:**
+   product variants/attributes/SKU identity, import format, the attribute
+   configuration/generation services and the staged Excel import/export flow —
+   accepted as ADR-0013 across policy (`C`), schema (`P1`), services (`P2`) and
+   import (`P3`). P3 closes with two declared follow-ups: durable parsed-payload
+   storage and a decompression-time size guard.
 7. Staff role matrix, approval thresholds and four-eyes actions.
 8. Return/refund/damaged-stock policy.
 9. Deployment target, RPO/RTO, retention, monitoring and budget.

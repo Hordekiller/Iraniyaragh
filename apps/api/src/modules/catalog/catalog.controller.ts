@@ -1,15 +1,19 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiHeader } from '@nestjs/swagger';
-import type { AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse } from '@iranyaragh/contracts';
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UnprocessableEntityException, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiHeader, ApiBody } from '@nestjs/swagger';
+import type { AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CatalogImportCommitResponse, CatalogImportDetailResponse, CatalogImportDryRunResponse, CatalogImportUploadResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse } from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { CatalogService } from './catalog.service';
 import { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
 import { PublicCatalogCache } from './public-catalog-cache.interceptor';
+import { CatalogImportService } from './catalog-import.service';
+
+type UploadedCatalogFile = { buffer: Buffer };
 
 @Controller({ path: 'catalog', version: '1' })
 export class CatalogController {
-  constructor(private readonly catalog: CatalogService) {}
+  constructor(private readonly catalog: CatalogService, private readonly imports: CatalogImportService) {}
 
   @Get('products')
   @PublicCatalogCache()
@@ -138,4 +142,33 @@ export class CatalogController {
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
   async updateCategory(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: CategoryUpdateDto): Promise<CategoryResponse> { return this.catalog.updateCategory(principal.userId, id, input); }
+
+  @Post('admin/imports')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', required: ['file'], properties: { file: { type: 'string', format: 'binary' } } } })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiHeader({ name: 'x-iranyaragh-catalog-version', required: true })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.write')
+  async uploadImport(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') key: string, @Headers('x-iranyaragh-catalog-version') version: string, @UploadedFile() file: UploadedCatalogFile): Promise<CatalogImportUploadResponse> {
+    if (!file?.buffer) throw new UnprocessableEntityException({ code: 'IMPORT_VALIDATION', message: 'A workbook file is required.' });
+    return this.imports.upload(principal.userId, key, version, file.buffer);
+  }
+
+  @Get('admin/imports/:id')
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.read')
+  async importReport(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string): Promise<CatalogImportDetailResponse> { return this.imports.get(principal.userId, id); }
+
+  @Post('admin/imports/:id/dry-run')
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.write')
+  async importDryRun(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string): Promise<CatalogImportDryRunResponse> { return this.imports.dryRun(principal.userId, id); }
+
+  @Post('admin/imports/:id/commit')
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.write')
+  async commitImport(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') key: string, @Param('id') id: string): Promise<CatalogImportCommitResponse> { return this.imports.commit(principal.userId, key, id); }
 }
