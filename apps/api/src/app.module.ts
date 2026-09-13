@@ -11,6 +11,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { RbacModule } from './modules/rbac/rbac-admin.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { validateEnvironment } from './config/environment';
@@ -36,6 +37,7 @@ import { RedisModule } from './modules/redis/redis.module';
     CustomersModule,
     NotificationsModule,
     SettingsModule,
+    RbacModule,
     SuppliersModule,
     AuditModule,
   ],

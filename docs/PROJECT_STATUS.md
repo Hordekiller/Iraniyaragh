@@ -294,8 +294,10 @@ review; it is the required-review basis for the schema slices it plans, so no
 `feat/178-slice-g1-g2-configurable-settings-rbac` (based on `main`) carries the
 G1 configurable Settings store behind the `Setting` model and an admin controller
 (`GET/PUT /settings/admin/*`, STAFF_MFA + `settings.manage`, optimistic
-concurrency, legal floors) with 43 new api specs; it is complete and will be
-opened as a review PR once the docs PR lands.
+concurrency, legal floors) with 43 new api specs, and the G2 admin RBAC API behind
+the `SoDRestriction` model with contracts, migration, seed and baseline assertions;
+both slices are implemented and verified locally (design is per ADR-0014 §4.1).
+The branch will be opened as a review PR once the docs PR lands.
 
 The #50 admin session-management slice is delivered through `#158` (merged):
 the `/settings/sessions` page with a typed session port (HTTP client +
@@ -330,8 +332,11 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
    admin-configurable RBAC and financial policy proposed by ADR-0014 +
    `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`; the docs PR is under review, and the
    implementation branch `feat/178-slice-g1-g2-configurable-settings-rbac` has the
-   G1 configurable Settings store implemented behind `Setting` + admin endpoints —
-   see Open pull-request work; G1 will not merge before the docs PR is accepted).
+   G1 configurable Settings store behind `Setting` + admin endpoints and the G2
+   admin RBAC API behind `SoDRestriction` (staff directory, role/permission
+   registry, grant/revoke with expiry, last-admin and SoD guards, impact preview) —
+   see Open pull-request work; neither slice will merge before the docs PR is
+   accepted).
 8. Return/refund/damaged-stock policy.
 9. Deployment target, RPO/RTO, retention, monitoring and budget.
 10. Team capacity, review SLA and release authority (#78).

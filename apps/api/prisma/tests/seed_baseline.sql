@@ -76,6 +76,44 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Seed bootstrap audit marker is missing';
   END IF;
+
+  IF (
+    SELECT count(*)
+      FROM "SoDRestriction"
+     WHERE "isActive" = true
+  ) <> 2 THEN
+    RAISE EXCEPTION 'Expected exactly two active SoD restriction sets in the seed';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM "SoDRestriction"
+     WHERE "key" = 'sod-pricing-write-vs-approve-pricing'
+       AND "permissionKeys"::text[] = ARRAY['pricing.write', 'finance.approve.pricing']
+       AND "isActive" = true
+  ) THEN
+    RAISE EXCEPTION 'Pricing-writer vs pricing-approver SoD set is missing or malformed';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM "SoDRestriction"
+     WHERE "key" = 'sod-discount-refund-originator-vs-approver'
+       AND "permissionKeys"::text[] = ARRAY['orders.manage', 'finance.approve.discount', 'finance.approve.refund']
+       AND "isActive" = true
+  ) THEN
+    RAISE EXCEPTION 'Discount/refund originator-vs-approver SoD set is missing or malformed';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM "SoDRestriction"
+     WHERE "key" = 'sod-roles-manage-vs-audit-read'
+       AND "permissionKeys"::text[] = ARRAY['roles.manage', 'audit.read']
+       AND "isActive" = false
+  ) THEN
+    RAISE EXCEPTION 'Roles-manage vs audit-read SoD set is missing or not opt-in';
+  END IF;
 END $$;
 
 ROLLBACK;

@@ -36,6 +36,7 @@ day-to-day assignments.
 |        2 | Issue #114                                | Private acceptance | #154 merged with no secret/PII exposure and fail-closed mutations | Provision account/line/template/key; controlled sandbox/live evidence    |
 |        3 | Issue #111 slice 2 (mutation idempotency) | Next platform impl | durable mutation idempotency contract before schema/API work      | Contract PR then platform implementation on current `main` in wave 0.2-A |
 |        4 | Discovery ready items #126/#129/#136      | Backlog (platform) | server-rendered pages, sitemap/robots/IndexNow and telemetry      | Pick up as platform capacity opens and wave 0.2-A is delivered           |
+|        5 | ADR-0014 slice #185 + implementation      | Impl ready, docs in review | G1 Settings + G2 RBAC admin API built on `feat/178-slice-g1-g2-configurable-settings-rbac` (unit/http/integration suites green) | Accept docs PR, then open the implementation review PR          |
 
 ## Team disposition ledger — 2026-09-08 (updated 2026-09-11)
 

@@ -40,6 +40,35 @@ const PERMISSIONS = [
 
 const DEV_ADMIN_EMAIL = "dev-admin@iranyaragh.local";
 
+// ADR-0014 §4.3 initial separation-of-duty sets. Keys may reference permissions
+// that are registered later (finance.approve.*), so they are plain strings.
+const SOD_RESTRICTIONS = [
+  {
+    key: "sod-pricing-write-vs-approve-pricing",
+    name: "Pricing writer vs pricing approver",
+    description:
+      "pricing.write and the future finance.approve.pricing are mutually exclusive (ADR-0014 §4.3).",
+    permissionKeys: ["pricing.write", "finance.approve.pricing"],
+    isActive: true,
+  },
+  {
+    key: "sod-discount-refund-originator-vs-approver",
+    name: "Order discount/refund originator vs approver",
+    description:
+      "Order discount/refund originator and its approver are mutually exclusive (ADR-0014 §4.3).",
+    permissionKeys: ["orders.manage", "finance.approve.discount", "finance.approve.refund"],
+    isActive: true,
+  },
+  {
+    key: "sod-roles-manage-vs-audit-read",
+    name: "Roles manager vs audit reader",
+    description:
+      "roles.manage and audit.read are deliberately not both held by one person when payroll-like power matters (ADR-0014 §4.3). Configurable; off by default because the seed system-admin owns both.",
+    permissionKeys: ["roles.manage", "audit.read"],
+    isActive: false,
+  },
+];
+
 const prisma = new PrismaClient();
 
 async function seedRbacBaseline() {
@@ -101,6 +130,22 @@ async function seedRbacBaseline() {
       });
     }
 
+    for (const restriction of SOD_RESTRICTIONS) {
+      await transaction.soDRestriction.upsert({
+        where: { key: restriction.key },
+        update: {
+          name: restriction.name,
+          description: restriction.description,
+          permissionKeys: restriction.permissionKeys,
+          isActive: restriction.isActive,
+        },
+        create: {
+          id: `seed_sod_${restriction.key}`,
+          ...restriction,
+        },
+      });
+    }
+
     await transaction.auditLog.upsert({
       where: { id: "seed_audit_rbac_baseline" },
       update: {
@@ -109,6 +154,7 @@ async function seedRbacBaseline() {
         entityType: "Role",
         metadata: {
           permissionCount: permissions.length,
+          sodRestrictionCount: SOD_RESTRICTIONS.length,
           source: "deterministic-development-seed",
         },
       },
@@ -119,6 +165,7 @@ async function seedRbacBaseline() {
         entityType: "Role",
         metadata: {
           permissionCount: permissions.length,
+          sodRestrictionCount: SOD_RESTRICTIONS.length,
           source: "deterministic-development-seed",
         },
       },
@@ -128,6 +175,7 @@ async function seedRbacBaseline() {
       permissionCount: permissions.length,
       roleCount: 1,
       rolePermissionCount: permissions.length,
+      sodRestrictionCount: SOD_RESTRICTIONS.length,
     };
   });
 }
@@ -219,7 +267,7 @@ async function seedDevAdmin() {
 try {
   const result = await seedRbacBaseline();
   console.log(
-    `Seeded RBAC baseline: ${result.permissionCount} permissions, ${result.roleCount} role, ${result.rolePermissionCount} grants.`,
+    `Seeded RBAC baseline: ${result.permissionCount} permissions, ${result.roleCount} role, ${result.rolePermissionCount} grants, ${result.sodRestrictionCount} SoD sets.`,
   );
   const configuredDevCode =
     typeof process.env.AUTH_DEV_CODE === "string" && process.env.AUTH_DEV_CODE.trim().length > 0;

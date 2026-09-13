@@ -4,6 +4,7 @@ export * from './api';
 export * from './auth';
 export * from './catalog';
 export * from './notifications-sms';
+export * from './rbac';
 export * from './settings';
 
 export type InventorySnapshot = {
