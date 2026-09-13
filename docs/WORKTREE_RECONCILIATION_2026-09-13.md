@@ -5,7 +5,8 @@ Status: active · Owner: lead engineering agent (this session) · Base: `origin/
 
 Purpose: prove nothing valuable is stranded on an unknown stale branch, classify every
 local branch / worktree / stash, and record where each capability now lives. This is the
-answer to "what happened to the old local work?".
+answer to "what happened to the old local work?". Scope: 97 local branches, 61 worktrees
+(6 detached HEADs), 4 stashes, 20 live remote branches (+main).
 
 Environment note: worktrees live under `~/development/Iraniyaragh-*`, `/tmp/iraniyaragh-*`,
 and `~/development/Iraniyaragh` (root worktree). Paths below are machine-specific; treat
