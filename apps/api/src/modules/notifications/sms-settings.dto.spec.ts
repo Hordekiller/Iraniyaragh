@@ -61,8 +61,14 @@ describe('SmsSettingsUpdateDto', () => {
     });
     expect(await errorsOf(clear)).toHaveLength(0);
 
+    const maxDigits = plainToInstance(SmsSettingsUpdateDto, { expectedVersion: 1, patch: { senderLine: '0'.repeat(16) } });
+    expect(await errorsOf(maxDigits)).toHaveLength(0);
+
     const bad = plainToInstance(SmsSettingsUpdateDto, { expectedVersion: 1, patch: { senderLine: 'has space' } });
     expect(await errorsOf(bad)).not.toHaveLength(0);
+
+    const letters = plainToInstance(SmsSettingsUpdateDto, { expectedVersion: 1, patch: { senderLine: 'abc123' } });
+    expect(await errorsOf(letters)).not.toHaveLength(0);
   });
 
   it('validates alert threshold bounds', async () => {

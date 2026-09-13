@@ -13,7 +13,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-const SENDER_LINE = /^(?:|\d{1,16})$/u;
+const SENDER_LINE = /^(?:\d{1,16})?$/u;
 const IDEMPOTENCY_KEY = /^[\w-]{8,96}$/u;
 /* eslint-disable-next-line no-control-regex */
 const NO_PADDING_OR_CONTROL = new RegExp('^[^\\s\\u0000-\\u001F\\u007F]+$', 'u');
