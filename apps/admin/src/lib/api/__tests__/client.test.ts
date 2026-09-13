@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, ApiAbortError, ApiClientError, ApiNetworkError, getApiBaseUrl } from '../client';
+import { apiFetch, ApiAbortError, ApiClientError, ApiNetworkError, getApiBaseUrl, readCsrfToken } from '../client';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -38,6 +38,37 @@ describe('apiFetch', () => {
     const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
     expect(init.method).toBe('POST');
     expect(init.body).toBe('{"code":"x"}');
+  });
+
+  it('reads the double-submit CSRF cookie for cookie-authenticated calls', () => {
+    const document = { cookie: 'other=1; __Host-iranyaragh_csrf=csrftoken-abc' } as unknown as Document;
+    expect(readCsrfToken(document)).toBe('csrftoken-abc');
+  });
+
+  it('reads the development staff CSRF cookie when present', () => {
+    const document = { cookie: 'iranyaragh_dev_csrf=dev-csrf-9' } as unknown as Document;
+    expect(readCsrfToken(document)).toBe('dev-csrf-9');
+  });
+
+  it('returns null when no CSRF cookie is set', () => {
+    expect(readCsrfToken({ cookie: 'other=1' } as unknown as Document)).toBeNull();
+    expect(readCsrfToken(undefined as unknown as Document)).toBeNull();
+  });
+
+  it('sends X-CSRF-Token on state-changing requests when a CSRF cookie exists', async () => {
+    vi.stubGlobal('document', { cookie: '__Host-iranyaragh_csrf=csrftoken-abc' });
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
+    await apiFetch<Record<string, never>>('/auth/logout', { method: 'POST' });
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toMatchObject({ 'X-CSRF-Token': 'csrftoken-abc' });
+  });
+
+  it('does not attach X-CSRF-Token when no CSRF cookie is readable', async () => {
+    vi.stubGlobal('document', { cookie: 'other=1' });
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
+    await apiFetch<Record<string, never>>('/auth/logout', { method: 'POST' });
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    expect(init.headers).not.toHaveProperty('X-CSRF-Token');
   });
 
   it('returns the success envelope', async () => {
