@@ -2,7 +2,7 @@ export const RATE_LIMIT_KEY_VERSION = 1;
 
 export const RATE_LIMITER_UNAVAILABLE = 'UPSTREAM_UNAVAILABLE';
 
-export type RateLimitKind = 'otp-request' | 'otp-verify';
+export type RateLimitKind = 'otp-request' | 'otp-verify' | 'refresh';
 
 /**
  * Fixed-window limits from AUTH_CONTRACT §9. Every key is versioned and, for
@@ -27,6 +27,8 @@ export const RATE_LIMIT_DEFINITIONS = Object.freeze({
   'staff-password:ip': Object.freeze({ limit: 30, windowSeconds: 900 }),
   /** Staff MFA challenge failures per safe IP hash. */
   'staff-mfa:ip': Object.freeze({ limit: 5, windowSeconds: 300 }),
+  /** Token refresh attempts per safe IP hash (AUTH_CONTRACT §9). */
+  'refresh:ip': Object.freeze({ limit: 30, windowSeconds: 60 }),
 } as const);
 
 export type RateLimitDefinition = Readonly<{ limit: number; windowSeconds: number }>;
