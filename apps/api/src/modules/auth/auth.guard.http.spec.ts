@@ -14,6 +14,7 @@ import {
   RequirePermission,
 } from './auth.guard';
 import { type AuthPrincipalContext, AuthPrincipalService } from './auth-principal.service';
+import { AuditLogService } from '../audit/audit-log.service';
 
 const staffPrincipal: AuthPrincipalContext = Object.freeze({
   userId: 'user-1',
@@ -49,6 +50,10 @@ const principalService = {
     }
     throw new AuthSessionException('AUTH_SESSION_INVALID');
   }),
+};
+
+const auditLog = {
+  record: vi.fn(async () => undefined),
 };
 
 @Controller('principal-test')
@@ -100,7 +105,7 @@ class PrincipalTestController {
   controllers: [PrincipalTestController],
   providers: [
     { provide: AuthPrincipalService, useValue: principalService },
-    { provide: APP_GUARD, useValue: new AuthGuard(principalService as unknown as AuthPrincipalService) },
+    { provide: APP_GUARD, useValue: new AuthGuard(principalService as unknown as AuthPrincipalService, auditLog as unknown as AuditLogService) },
   ],
 })
 class PrincipalHttpTestModule {}
@@ -119,6 +124,7 @@ describe('AuthGuard HTTP behavior', () => {
 
   beforeEach(() => {
     principalService.resolveBearerToken.mockClear();
+    auditLog.record.mockClear();
   });
 
   afterAll(async () => {
@@ -211,6 +217,39 @@ describe('AuthGuard HTTP behavior', () => {
       code: 'FORBIDDEN',
       statusCode: 403,
     });
+  });
+
+  it('records an auth.permission.denied audit event with actor, permission, route and request ID', async () => {
+    const granted = await fetch(`${baseUrl}/api/v1/principal-test/permission`, {
+      headers: { authorization: 'Bearer staff-token' },
+    });
+    expect(granted.status).toBe(200);
+    expect(auditLog.record).not.toHaveBeenCalled();
+
+    const denied = await fetch(`${baseUrl}/api/v1/principal-test/permission`, {
+      headers: { authorization: 'Bearer customer-token' },
+    });
+    expect(denied.status).toBe(403);
+
+    expect(auditLog.record).toHaveBeenCalledTimes(1);
+    expect(auditLog.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorId: 'user-2',
+        action: 'auth.permission.denied',
+        entityType: 'Permission',
+        entityId: 'catalog.write',
+        requestId: expect.any(String),
+        metadata: { method: 'GET', route: '/api/v1/principal-test/permission' },
+      }),
+    );
+  });
+
+  it('does not audit authentication-level denials (audit scope is permission-only)', async () => {
+    const response = await fetch(`${baseUrl}/api/v1/principal-test/staff`, {
+      headers: { authorization: 'Bearer customer-token' },
+    });
+    expect(response.status).toBe(403);
+    expect(auditLog.record).not.toHaveBeenCalled();
   });
 
   it('returns the stable AUTH_SESSION_REPLAYED envelope for a replayed refresh family', async () => {

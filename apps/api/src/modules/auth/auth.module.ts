@@ -18,9 +18,10 @@ import { StaffAuthService } from './staff-auth.service';
 import { StaffMfaService } from './staff-mfa.service';
 import { TotpCryptoService } from './totp-crypto.service';
 import { SmsTransportModule } from '../notifications/sms-transport.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [SmsTransportModule],
+  imports: [SmsTransportModule, AuditModule],
   controllers: [StaffAuthController, CustomerAuthController, SessionManagementController],
   providers: [
     {
