@@ -1,6 +1,19 @@
 # Team, Ownership and Onboarding
 
-Last updated: 2026-09-11
+Last updated: 2026-09-13
+
+## Current working item — RBAC and financial-policy governance (2026-09-13)
+
+A documentation-only proposal is under review on branch
+`audit/rbac-financial-policy-config`: **ADR-0014** and
+`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`. It audits the current RBAC and
+money/financial-policy state, records the Iranian legal baseline (Electronic
+Commerce Law 1382, permanent VAT Law 1400 with the 10 % budget rate, and
+پایانههای فروشگاهی و سامانه مؤدیان 1398), and specifies what must be
+admin-configurable (roles/permissions/approved actions; VAT rates, discount and
+refund thresholds, seller legal block) with a G1–G8 slice plan. Owner and
+proposed author: `@Hordekiller`; independent required reviewer: `@Maddyrampant`.
+No `schema.prisma` change may merge before this ADR is accepted.
 
 ## Members
 
