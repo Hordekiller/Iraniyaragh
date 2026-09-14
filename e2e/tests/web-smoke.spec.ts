@@ -48,7 +48,7 @@ test.describe('web: storefront shell', () => {
     await tap(dots.nth(0));
     await expect(page.getByText('قدرت را در دست بگیرید')).toBeVisible();
 
-    await expect(page.getByText('۰3 / ۰۳').or(page.getByText('۰1 / ۰۳'))).toBeVisible();
+    await expect(page.getByText(/۰[۱۳] \/ ۰۳/)).toBeVisible();
 
     await network.assertNone();
   });
@@ -60,7 +60,7 @@ test.describe('web: storefront shell', () => {
 
     await tap(page.locator('section#popular button[class*="snap-start"]').first());
 
-    await expect(page).toHaveURL(/\/products\//);
+    await expect(page).toHaveURL(/\/product\//);
     await expect(page.getByRole('button', { name: 'افزودن به سبد خرید' })).toBeVisible();
     await expect(page.getByText('موجود در انبار')).toBeVisible();
 
