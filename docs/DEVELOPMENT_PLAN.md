@@ -7,6 +7,10 @@ authoritative complete-scope plan for V1, operational maturity and governed grow
 every sprint issue must preserve its engineering method, capability register and
 acceptance matrix even when the short-term schedule below is re-estimated.
 
+Use `COMMERCE_WAVE_DESIGN.md` for the implementation-level contracts, state
+machines, security, idempotency, concurrency and verification gates of the next
+commerce wave.
+
 ## 0. Current planning baseline
 
 The sprint sequence below remains the intended dependency order, but delivery has

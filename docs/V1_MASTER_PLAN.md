@@ -7,6 +7,9 @@ implementation method—including post-V1 operations and growth—live in
 `COMMERCE_EXPANSION_PLAN.md`. If issue decomposition changes, every V1 capability
 must remain traceable to that plan's capability register and acceptance matrix.
 
+`COMMERCE_WAVE_DESIGN.md` is the implementation-level baseline for the upcoming
+Inventory → Cart/Checkout → Orders → Payments/Fulfillment wave.
+
 Owners: Hordekiller (Platform/API/Data) and Maddyrampant (Product/Web/Admin/E2E).
 Dates are sequencing estimates for two consistently available contributors, not
 commitments. Re-estimate after each release gate using actual capacity.
