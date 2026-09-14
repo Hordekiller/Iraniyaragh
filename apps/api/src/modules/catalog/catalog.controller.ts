@@ -98,6 +98,11 @@ export class CatalogController {
   @RequirePermission('catalog.read')
   async attributes(): Promise<AttributeListResponse> { return this.catalog.listAttributes(); }
 
+  @Get('admin/attributes/:id')
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.read')
+  async getAttribute(@Param('id') id: string): Promise<AttributeDefinitionResponse> { return this.catalog.getAttribute(id); }
+
   @Post('admin/attributes')
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
   @RequireAuthentication('STAFF_MFA')

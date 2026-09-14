@@ -1528,6 +1528,18 @@
       }
     },
     "/catalog/admin/attributes/{id}": {
+      "get": {
+        "operationId": "CatalogController_getAttribute",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
       "patch": {
         "operationId": "CatalogController_updateAttribute",
         "parameters": [],

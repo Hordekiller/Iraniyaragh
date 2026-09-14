@@ -164,7 +164,7 @@ export type ProductListResponse = ApiSuccess<{
   meta: ProductListMeta;
 }>;
 
-export type ProductVariant = Omit<ProductVariantPayload, 'status'> & {
+export type ProductVariant = Omit<ProductVariantPayload, 'status' | 'attributeValues'> & {
   id: string;
   status?: VariantStatus;
   isActive: boolean;
@@ -270,7 +270,9 @@ export type ProductVariantUpdateRequest = {
   barcode?: string | null;
   title?: string | null;
   weightGrams?: number | null;
-  dimensions?: VariantDimensions | null;
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
   expectedVersion: number;
 };
 
