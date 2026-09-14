@@ -128,7 +128,7 @@ export class InventoryService {
           const available = afterOnHand - reserved;
 
           if (afterOnHand < 0 || available < 0) {
-            throw new ConflictException('Insufficient stock for this operation.');
+            throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: 'Insufficient stock for this operation.' });
           }
 
           await tx.inventoryBalance.upsert({
@@ -202,7 +202,7 @@ export class InventoryService {
           this.assertVersion(command.expectedVersion, version);
 
           if (!balance || balance.available < command.quantity) {
-            throw new ConflictException('Insufficient available stock.');
+            throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: 'Insufficient available stock.' });
           }
 
           await tx.inventoryBalance.update({
@@ -264,7 +264,7 @@ export class InventoryService {
           const balance = await tx.inventoryBalance.findUnique({ where: { id: reservation.balanceId } });
           this.assertVersion(context.expectedVersion, balance?.version ?? 0);
           if (!balance || balance.reserved < reservation.quantity) {
-            throw new ConflictException('Reservation balance is inconsistent.');
+            throw new ConflictException({ code: 'RESERVATION_STATE_CONFLICT', message: 'Reservation balance is inconsistent.' });
           }
 
           await tx.inventoryBalance.update({
@@ -316,7 +316,7 @@ export class InventoryService {
           const balance = await tx.inventoryBalance.findUnique({ where: { id: reservation.balanceId } });
           this.assertVersion(context.expectedVersion, balance?.version ?? 0);
           if (!balance || balance.reserved < reservation.quantity) {
-            throw new ConflictException('Reservation balance is inconsistent.');
+            throw new ConflictException({ code: 'RESERVATION_STATE_CONFLICT', message: 'Reservation balance is inconsistent.' });
           }
 
           const beforeOnHand = balance.onHand;
@@ -482,7 +482,7 @@ export class InventoryService {
         variantId: reservation.variantId,
       }),
     });
-    if (!balance) throw new ConflictException('Reservation balance is missing.');
+    if (!balance) throw new ConflictException({ code: 'RESERVATION_STATE_CONFLICT', message: 'Reservation balance is missing.' });
 
     return { ...reservation, balanceId: balance.id };
   }
@@ -507,7 +507,7 @@ export class InventoryService {
             }),
           });
           if (!balance || balance.reserved < quantity) {
-            throw new ConflictException('Reservation balance is inconsistent.');
+            throw new ConflictException({ code: 'RESERVATION_STATE_CONFLICT', message: 'Reservation balance is inconsistent.' });
           }
 
           await tx.inventoryBalance.update({
@@ -564,7 +564,7 @@ export class InventoryService {
 
   private assertVersion(expected: number | undefined, actual: number): void {
     if (expected !== undefined && actual !== expected) {
-      throw new ConflictException('Inventory balance version conflict. Refresh and retry.');
+      throw new ConflictException({ code: 'INVENTORY_VERSION_CONFLICT', message: 'Inventory balance version conflict. Refresh and retry.' });
     }
   }
 
