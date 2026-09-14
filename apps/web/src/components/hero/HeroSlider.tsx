@@ -87,7 +87,7 @@ export function HeroSlider() {
               {heroSlides[activeSlide].desc}
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
-              <button onClick={() => navigate(ROUTES.category(heroSlides[activeSlide].ctaSlug))} className="h-12 px-7 rounded-full bg-[#C2410C] text-white font-extrabold text-sm hover:bg-[#A83509] transition flex items-center gap-2 shadow-lg shadow-[#C2410C]/25">
+              <button type="button" onClick={() => navigate(ROUTES.category(heroSlides[activeSlide].ctaSlug))} className="h-12 px-7 rounded-full bg-[#C2410C] text-white font-extrabold text-sm hover:bg-[#A83509] transition flex items-center gap-2 shadow-lg shadow-[#C2410C]/25">
                 {heroSlides[activeSlide].cta} <ArrowLeft size={18} className="bg-white/20 rounded-full p-0.5" />
               </button>
             </div>
@@ -102,10 +102,11 @@ export function HeroSlider() {
         {/* Slider Controls */}
         <div className="absolute bottom-6 right-6 lg:right-auto lg:left-6 flex items-center gap-3">
           <div className="flex items-center gap-2 bg-black/25 backdrop-blur-xl border border-white/15 rounded-full p-1.5">
-            <button onClick={() => setActiveSlide(s => (s - 1 + heroSlides.length) % heroSlides.length)} aria-label="اسلاید قبلی" className="w-8 h-8 lg:w-9 lg:h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronRight size={18} /></button>
-            <button onClick={() => setActiveSlide(s => (s + 1) % heroSlides.length)} aria-label="اسلاید بعدی" className="w-8 h-8 lg:w-9 lg:h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronLeft size={18} /></button>
+            <button type="button" onClick={() => setActiveSlide(s => (s - 1 + heroSlides.length) % heroSlides.length)} aria-label="اسلاید قبلی" className="w-8 h-8 lg:w-9 lg:h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronRight size={18} /></button>
+            <button type="button" onClick={() => setActiveSlide(s => (s + 1) % heroSlides.length)} aria-label="اسلاید بعدی" className="w-8 h-8 lg:w-9 lg:h-9 rounded-full bg-white text-slate-900 flex items-center justify-center hover:bg-slate-100 transition"><ChevronLeft size={18} /></button>
           </div>
           <button
+            type="button"
             onClick={() => setManuallyPaused(p => !p)}
             aria-pressed={permanentlyPaused}
             aria-label={permanentlyPaused ? 'ادامه چرخش خودکار' : 'توقف چرخش خودکار'}
@@ -117,6 +118,7 @@ export function HeroSlider() {
           <div role="group" aria-label="انتخاب اسلاید" className="flex items-center gap-2 bg-black/30 backdrop-blur-md rounded-full px-3 py-2">
             {heroSlides.map((_, i) => (
               <button
+                type="button"
                 key={i}
                 onClick={() => setActiveSlide(i)}
                 aria-label={`اسلاید ${i + 1}`}

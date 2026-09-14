@@ -99,7 +99,7 @@ export class OrderFixture implements OrderApi {
     if (existing) return existing
 
     this.counter += 1
-    const seed = Math.floor(Math.random() * 1000)
+    const seed = globalThis.crypto.getRandomValues(new Uint32Array(1))[0] ?? 0
     const now = new Date().toISOString()
     const order: StoreOrder = {
       id: `IR-${String(this.counter).padStart(4, '0')}-${seed}`,
