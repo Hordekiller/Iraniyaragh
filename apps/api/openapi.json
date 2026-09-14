@@ -1533,9 +1533,9 @@
         "parameters": [
           {
             "name": "id",
+            "required": true,
             "in": "path",
             "description": "Attribute definition identifier",
-            "required": true,
             "schema": {
               "type": "string"
             }
