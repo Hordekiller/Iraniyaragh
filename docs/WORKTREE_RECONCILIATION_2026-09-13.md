@@ -8,6 +8,27 @@ local branch / worktree / stash, and record where each capability now lives. Thi
 answer to "what happened to the old local work?". Scope: 98 local branches, 61 worktrees
 (6 detached HEADs), 4 stashes, 17 live remote branches (+main).
 
+## Follow-up execution — 2026-09-14
+
+The reconciliation itself created only deliberate delivery branches. After the actions
+below, the inventory is 100 local branches, 62 worktrees (6 detached), 4 untouched
+stashes and 22 live remote branches (+main):
+
+- `feat/admin-catalog-slice` was pushed as a preservation/source branch after its
+  CSPRNG-only checkout idempotency hardening was committed; it is still forbidden to
+  merge wholesale.
+- `docs/166-cart-checkout-contract` became PR #206 (docs/contract only).
+- `feat/166-web-storefront-extract` became PR #207, rebuilt from current `main` with
+  only the Web storefront and purchase E2E slices; superseded Admin/User UI/status
+  material was excluded.
+- `preserve/178-g1-g2-settings-wip-2026-09-13` was pushed as a backup only. It must be
+  split into Settings and RBAC/SoD PRs after ADR-0014 (#185) is accepted; the preserve
+  branch itself must never be merged.
+- PR #199 received only the preserved parser MUST-FIX. The contradictory expiry
+  experiment and duplicate SKU work were not applied.
+- PR #202 merged after approval and a fresh green CI run. PR #201 was updated onto
+  that new `main` and remained in its protected CI/merge queue at this checkpoint.
+
 Environment note: worktrees live under `~/development/Iraniyaragh-*`, `/tmp/iraniyaragh-*`,
 and `~/development/Iraniyaragh` (root worktree). Paths below are machine-specific; treat
 the branch names as the durable identifiers.
