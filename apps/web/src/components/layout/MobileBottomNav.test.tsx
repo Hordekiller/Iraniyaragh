@@ -4,12 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MobileBottomNav } from './MobileBottomNav'
 import { ToastProvider } from '../feedback/Toast'
 import { ROUTES } from '../../lib/routes'
+import { AuthProvider } from '../../state/AuthProvider'
 
 function Harness({ onOpenSearch = vi.fn(), onOpenLogin = vi.fn() }: { onOpenSearch?: () => void; onOpenLogin?: () => void }) {
   return (
     <ToastProvider>
-      <MobileBottomNav onOpenSearch={onOpenSearch} onOpenLogin={onOpenLogin} />
-      <RouteProbe />
+      <AuthProvider>
+        <MobileBottomNav onOpenSearch={onOpenSearch} onOpenLogin={onOpenLogin} />
+        <RouteProbe />
+      </AuthProvider>
     </ToastProvider>
   )
 }
