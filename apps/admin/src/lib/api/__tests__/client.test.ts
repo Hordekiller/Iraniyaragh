@@ -55,6 +55,13 @@ describe('apiFetch', () => {
     expect(readCsrfToken(document)).toBe('customer-csrf-4');
   });
 
+  it('prefers the configured customer CSRF cookie when stale dev cookies coexist', () => {
+    const document = {
+      cookie: 'iranyaragh_customer_csrf=customer-csrf-4; iranyaragh_dev_csrf=stale-dev-csrf',
+    } as unknown as Document;
+    expect(readCsrfToken(document)).toBe('customer-csrf-4');
+  });
+
   it('returns null when no CSRF cookie is set', () => {
     expect(readCsrfToken({ cookie: 'other=1' } as unknown as Document)).toBeNull();
     expect(readCsrfToken(undefined as unknown as Document)).toBeNull();
