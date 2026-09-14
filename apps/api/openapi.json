@@ -596,7 +596,13 @@
                       "type": "string",
                       "enum": [
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
                       ],
                       "example": "IDEMPOTENCY_CONFLICT"
                     },
@@ -617,6 +623,50 @@
                     }
                   },
                   "description": "The Idempotency-Key was already used for a different command, or a domain state conflict occurred."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REFERENCE",
+                        "ATTRIBUTE_OPTION_INVALID",
+                        "UNPROCESSABLE",
+                        "COMBINATION_LIMIT_EXCEEDED"
+                      ],
+                      "example": "INVALID_REFERENCE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A related catalog resource is invalid."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented."
                 }
               }
             }
@@ -646,8 +696,49 @@
         "operationId": "CatalogController_configureProductAttributes",
         "parameters": [],
         "responses": {
-          "200": {
-            "description": ""
+          "422": {
+            "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REFERENCE",
+                        "ATTRIBUTE_OPTION_INVALID",
+                        "UNPROCESSABLE",
+                        "COMBINATION_LIMIT_EXCEEDED"
+                      ],
+                      "example": "INVALID_REFERENCE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A related catalog resource is invalid."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented."
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -660,8 +751,49 @@
         "operationId": "CatalogController_previewVariants",
         "parameters": [],
         "responses": {
-          "201": {
-            "description": ""
+          "422": {
+            "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REFERENCE",
+                        "ATTRIBUTE_OPTION_INVALID",
+                        "UNPROCESSABLE",
+                        "COMBINATION_LIMIT_EXCEEDED"
+                      ],
+                      "example": "INVALID_REFERENCE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A related catalog resource is invalid."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented."
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -826,7 +958,13 @@
                       "type": "string",
                       "enum": [
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
                       ],
                       "example": "IDEMPOTENCY_CONFLICT"
                     },
@@ -847,6 +985,50 @@
                     }
                   },
                   "description": "The Idempotency-Key was already used for a different command, or a domain state conflict occurred."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REFERENCE",
+                        "ATTRIBUTE_OPTION_INVALID",
+                        "UNPROCESSABLE",
+                        "COMBINATION_LIMIT_EXCEEDED"
+                      ],
+                      "example": "INVALID_REFERENCE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A related catalog resource is invalid."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented."
                 }
               }
             }
@@ -1014,7 +1196,13 @@
                       "type": "string",
                       "enum": [
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
                       ],
                       "example": "IDEMPOTENCY_CONFLICT"
                     },
@@ -1035,6 +1223,50 @@
                     }
                   },
                   "description": "The Idempotency-Key was already used for a different command, or a domain state conflict occurred."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REFERENCE",
+                        "ATTRIBUTE_OPTION_INVALID",
+                        "UNPROCESSABLE",
+                        "COMBINATION_LIMIT_EXCEEDED"
+                      ],
+                      "example": "INVALID_REFERENCE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A related catalog resource is invalid."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented."
                 }
               }
             }
@@ -1214,7 +1446,13 @@
                       "type": "string",
                       "enum": [
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
                       ],
                       "example": "IDEMPOTENCY_CONFLICT"
                     },
@@ -1235,6 +1473,50 @@
                     }
                   },
                   "description": "The Idempotency-Key was already used for a different command, or a domain state conflict occurred."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REFERENCE",
+                        "ATTRIBUTE_OPTION_INVALID",
+                        "UNPROCESSABLE",
+                        "COMBINATION_LIMIT_EXCEEDED"
+                      ],
+                      "example": "INVALID_REFERENCE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A related catalog resource is invalid."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented."
                 }
               }
             }
@@ -1416,7 +1698,13 @@
                       "type": "string",
                       "enum": [
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
                       ],
                       "example": "IDEMPOTENCY_CONFLICT"
                     },
@@ -1437,6 +1725,50 @@
                     }
                   },
                   "description": "The Idempotency-Key was already used for a different command, or a domain state conflict occurred."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REFERENCE",
+                        "ATTRIBUTE_OPTION_INVALID",
+                        "UNPROCESSABLE",
+                        "COMBINATION_LIMIT_EXCEEDED"
+                      ],
+                      "example": "INVALID_REFERENCE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A related catalog resource is invalid."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented."
                 }
               }
             }
@@ -1632,7 +1964,13 @@
                       "type": "string",
                       "enum": [
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
                       ],
                       "example": "IDEMPOTENCY_CONFLICT"
                     },
@@ -1848,7 +2186,13 @@
                       "type": "string",
                       "enum": [
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
                       ],
                       "example": "IDEMPOTENCY_CONFLICT"
                     },
@@ -2050,7 +2394,13 @@
                       "type": "string",
                       "enum": [
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
                       ],
                       "example": "IDEMPOTENCY_CONFLICT"
                     },
@@ -2071,6 +2421,50 @@
                     }
                   },
                   "description": "The Idempotency-Key was already used for a different command, or a domain state conflict occurred."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REFERENCE",
+                        "ATTRIBUTE_OPTION_INVALID",
+                        "UNPROCESSABLE",
+                        "COMBINATION_LIMIT_EXCEEDED"
+                      ],
+                      "example": "INVALID_REFERENCE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A related catalog resource is invalid."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented."
                 }
               }
             }
@@ -2278,7 +2672,13 @@
                       "type": "string",
                       "enum": [
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
                       ],
                       "example": "IDEMPOTENCY_CONFLICT"
                     },

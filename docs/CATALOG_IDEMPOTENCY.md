@@ -95,6 +95,12 @@ versioned scope or response migration.
 - stored response redaction and raw-key log/audit canary;
 - OpenAPI, generated artifact, Admin client and project status parity.
 
+The current API integration suite covers PostgreSQL replay, actor isolation,
+identical and conflicting concurrent races, and rollback-without-a-record in
+`catalog-idempotency.integration-spec.ts`. Expiry remains a retention/cleanup
+policy; it is intentionally not implemented by replacing rows during request
+handling, so expiry tests must not weaken the one-effect guarantee.
+
 ## Delivery order
 
 1. Contract approval.

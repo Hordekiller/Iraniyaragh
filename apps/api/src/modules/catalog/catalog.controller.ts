@@ -56,16 +56,19 @@ export class CatalogController {
   @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
   @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
   @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
+  @ApiResponse({ status: 422, schema: catalogFailure.invalidReference, description: catalogFailure.invalidReference.description })
   async createProduct(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: ProductCreateDto): Promise<ProductDetailResponse> { return this.catalog.createProduct(principal.userId, idempotencyKey, input); }
 
   @Patch('admin/products/:id/attributes')
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 422, schema: catalogFailure.invalidReference, description: catalogFailure.invalidReference.description })
   async configureProductAttributes(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: ProductAttributeConfigurationUpdateDto): Promise<ProductDetailResponse> { return this.catalog.configureProductAttributes(principal.userId, id, input); }
 
   @Post('admin/products/:id/variants/preview')
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
+  @ApiResponse({ status: 422, schema: catalogFailure.invalidReference, description: catalogFailure.invalidReference.description })
   async previewVariants(@Param('id') id: string, @Body() input: VariantGeneratePreviewDto): Promise<VariantGeneratePreviewResponse> { return this.catalog.previewVariantGeneration(id, input); }
 
   @Post('admin/products/:id/variants/generate')
@@ -76,6 +79,7 @@ export class CatalogController {
   @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
   @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
   @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
+  @ApiResponse({ status: 422, schema: catalogFailure.invalidReference, description: catalogFailure.invalidReference.description })
   async generateVariants(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: VariantGenerateDto): Promise<VariantGenerateResponse> { return this.catalog.generateVariants(principal.userId, idempotencyKey, id, input); }
 
   @Post('admin/products/:id/status')
@@ -86,6 +90,7 @@ export class CatalogController {
   @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
   @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
   @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
+  @ApiResponse({ status: 422, schema: catalogFailure.invalidReference, description: catalogFailure.invalidReference.description })
   async status(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: ProductStatusDto): Promise<ProductStatusResponse> { return this.catalog.changeProductStatus(principal.userId, idempotencyKey, id, input); }
 
   @Get('admin/attributes')
@@ -101,6 +106,7 @@ export class CatalogController {
   @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
   @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
   @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
+  @ApiResponse({ status: 422, schema: catalogFailure.invalidReference, description: catalogFailure.invalidReference.description })
   async createAttribute(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: AttributeDefinitionCreateDto): Promise<AttributeDefinitionResponse> { return this.catalog.createAttribute(principal.userId, idempotencyKey, input); }
 
   @Patch('admin/attributes/:id')
@@ -116,6 +122,7 @@ export class CatalogController {
   @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
   @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
   @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
+  @ApiResponse({ status: 422, schema: catalogFailure.invalidReference, description: catalogFailure.invalidReference.description })
   async createAttributeOption(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: AttributeOptionCreateDto): Promise<AttributeOptionResponse> { return this.catalog.createAttributeOption(principal.userId, idempotencyKey, id, input); }
 
   @Patch('admin/attributes/:attributeId/options/:optionId')
@@ -171,6 +178,7 @@ export class CatalogController {
   @ApiResponse({ status: 401, schema: catalogFailure.unauthorized, description: catalogFailure.unauthorized.description })
   @ApiResponse({ status: 403, schema: catalogFailure.forbidden, description: catalogFailure.forbidden.description })
   @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict, description: catalogFailure.idempotencyConflict.description })
+  @ApiResponse({ status: 422, schema: catalogFailure.invalidReference, description: catalogFailure.invalidReference.description })
   async createCategory(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Body() input: CategoryCreateDto): Promise<CategoryResponse> { return this.catalog.createCategory(principal.userId, idempotencyKey, input); }
 
   @Patch('admin/categories/:id')

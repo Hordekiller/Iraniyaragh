@@ -82,9 +82,19 @@ export const openApiCatalogFailures = {
     description: 'The Idempotency-Key was already used for a different command, or a domain state conflict occurred.',
     properties: {
       ...errorEnvelope.properties,
-      code: { type: 'string', enum: ['IDEMPOTENCY_CONFLICT', 'CONFLICT'], example: 'IDEMPOTENCY_CONFLICT' },
+      code: { type: 'string', enum: ['IDEMPOTENCY_CONFLICT', 'CONFLICT', 'STALE_VERSION', 'AXIS_IN_USE', 'DUPLICATE_SKU', 'DUPLICATE_BARCODE', 'DUPLICATE_VARIANT_COMBINATION', 'SKU_CHANGE_NOT_ALLOWED'], example: 'IDEMPOTENCY_CONFLICT' },
       message: { type: 'string', example: 'The idempotency key was already used for a different command.' },
       statusCode: { type: 'integer', enum: [409], example: 409 },
+    },
+  },
+  invalidReference: {
+    ...errorEnvelope,
+    description: 'A related catalog resource is missing or invalid, or the requested combination cannot be represented.',
+    properties: {
+      ...errorEnvelope.properties,
+      code: { type: 'string', enum: ['INVALID_REFERENCE', 'ATTRIBUTE_OPTION_INVALID', 'UNPROCESSABLE', 'COMBINATION_LIMIT_EXCEEDED'], example: 'INVALID_REFERENCE' },
+      message: { type: 'string', example: 'A related catalog resource is invalid.' },
+      statusCode: { type: 'integer', enum: [422], example: 422 },
     },
   },
   importUnavailable: {
