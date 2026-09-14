@@ -1,4 +1,11 @@
+import { isIP } from 'node:net';
+
 export type NodeEnvironment = 'development' | 'test' | 'staging' | 'production';
+
+export type TrustProxySetting =
+  | { readonly kind: 'disabled' }
+  | { readonly kind: 'hops'; readonly count: number }
+  | { readonly kind: 'subnets'; readonly subnets: readonly string[] };
 
 export type EnvironmentVariables = {
   NODE_ENV: NodeEnvironment;
@@ -6,6 +13,7 @@ export type EnvironmentVariables = {
   DATABASE_URL: string;
   REDIS_URL: string;
   CORS_ORIGINS: string;
+  TRUST_PROXY: TrustProxySetting;
   AUTH_HASH_KEY_VERSION: number;
   AUTH_HASH_PREVIOUS_KEY_VERSION?: number;
   AUTH_HASH_PREVIOUS_SECRET?: string;
@@ -159,6 +167,57 @@ function parseBoundedInteger(value: unknown, key: string, minimum: number, maxim
   return candidate;
 }
 
+const TRUST_PROXY_MAX_HOPS = 5;
+
+function parseTrustProxySubnet(subnet: string): string {
+  const normalized = subnet.trim();
+  if (normalized === '') throw new Error('TRUST_PROXY must not contain an empty entry.');
+
+  const slashIndex = normalized.indexOf('/');
+  const address = slashIndex === -1 ? normalized : normalized.slice(0, slashIndex);
+  const prefixRaw = slashIndex === -1 ? undefined : normalized.slice(slashIndex + 1);
+
+  const family = isIP(address);
+  if (family === 0) {
+    throw new Error(`TRUST_PROXY must contain only IPv4/IPv6 addresses or CIDR subnets: ${subnet}.`);
+  }
+
+  if (prefixRaw !== undefined) {
+    const maximumPrefix = family === 4 ? 32 : 128;
+    if (!/^\d{1,3}$/u.test(prefixRaw)) {
+      throw new Error(`TRUST_PROXY CIDR prefix must be an integer: ${subnet}.`);
+    }
+    const prefix = Number(prefixRaw);
+    if (!Number.isInteger(prefix) || prefix < 1 || prefix > maximumPrefix) {
+      throw new Error(
+        `TRUST_PROXY CIDR prefix must be between 1 and ${maximumPrefix} (all-trusting /0 is not allowed): ${subnet}.`,
+      );
+    }
+  }
+
+  return normalized;
+}
+
+export function parseTrustProxy(value: unknown): TrustProxySetting {
+  if (value === undefined || value === null || String(value).trim() === '') return { kind: 'disabled' };
+
+  const raw = String(value).trim();
+  if (/^\d{1,2}$/u.test(raw)) {
+    const count = Number(raw);
+    if (!Number.isSafeInteger(count) || count < 1 || count > TRUST_PROXY_MAX_HOPS) {
+      throw new Error(`TRUST_PROXY hop count must be an integer between 1 and ${TRUST_PROXY_MAX_HOPS}.`);
+    }
+    return { kind: 'hops', count };
+  }
+
+  const subnets = raw
+    .split(',')
+    .map(parseTrustProxySubnet)
+    .filter(entry => entry !== '');
+  if (subnets.length === 0) throw new Error('TRUST_PROXY must contain at least one IP address or CIDR subnet.');
+  return { kind: 'subnets', subnets };
+}
+
 function parseAuthIssuer(value: unknown) {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error('AUTH_JWT_ISSUER is required.');
@@ -263,6 +322,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     DATABASE_URL: databaseUrl,
     REDIS_URL: redisUrl,
     CORS_ORIGINS: parseCorsOrigins(config.CORS_ORIGINS, environment).join(','),
+    TRUST_PROXY: parseTrustProxy(config.TRUST_PROXY),
     AUTH_HASH_KEY_VERSION: hashKeyVersion,
     AUTH_HASH_PREVIOUS_KEY_VERSION: previousHashKeyVersion,
     AUTH_HASH_PREVIOUS_SECRET: validatedPreviousHashSecret,

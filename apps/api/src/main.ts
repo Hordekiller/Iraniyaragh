@@ -1,20 +1,33 @@
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { RedactedLogger } from './common/redacted-logger';
-import type { EnvironmentVariables } from './config/environment';
+import type { EnvironmentVariables, TrustProxySetting } from './config/environment';
 import { createApiDocument, OPENAPI_UI_PATH } from './swagger';
+
+function trustProxyExpressValue(setting: TrustProxySetting): boolean | number | string[] {
+  switch (setting.kind) {
+    case 'disabled':
+      return false;
+    case 'hops':
+      return setting.count;
+    case 'subnets':
+      return [...setting.subnets];
+  }
+}
 
 async function bootstrap() {
   const logger = new RedactedLogger();
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, logger });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, logger });
   const config = app.get(ConfigService<EnvironmentVariables, true>);
   const corsOrigins = config.get('CORS_ORIGINS', { infer: true }).split(',');
 
   app.useLogger(logger);
+  app.set('trust proxy', trustProxyExpressValue(config.get('TRUST_PROXY', { infer: true })));
   app.use(helmet());
   app.enableCors({
     origin: corsOrigins,

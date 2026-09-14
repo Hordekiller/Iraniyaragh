@@ -80,7 +80,7 @@ export class StaffAuthService {
     const requestId = getRequestId();
     const expiresAt = new Date(now.getTime() + MFA_CHALLENGE_TTL_MS);
     const upgradedPasswordHash = user.passwordHash && this.passwords.needsRehash(user.passwordHash)
-      ? await this.passwords.hash(command.password)
+      ? await this.passwords.hashForLoginRehash(command.password)
       : undefined;
 
     await this.prisma.$transaction(

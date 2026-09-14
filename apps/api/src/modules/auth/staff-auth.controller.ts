@@ -41,6 +41,7 @@ import { AuthSessionException } from './auth-session.service';
 import { AuthTokenService } from './auth-token.service';
 import { StaffAuthService } from './staff-auth.service';
 import { StaffMfaService } from './staff-mfa.service';
+import { RateLimitService } from './rate-limit.service';
 
 const DEV_ADMIN_EMAIL = 'dev-admin@iranyaragh.local';
 const STAFF_LEVEL: AuthenticationLevel = 'STAFF_MFA';
@@ -58,6 +59,7 @@ export class StaffAuthController {
     private readonly tokens: AuthTokenService,
     private readonly staffAuth: StaffAuthService,
     private readonly staffMfa: StaffMfaService,
+    private readonly limits: RateLimitService,
   ) {}
 
   @Post('staff/password')
@@ -250,6 +252,10 @@ export class StaffAuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AccessTokenResponse> {
+    const refreshIp = this.requestIp(request);
+    if (refreshIp !== undefined) {
+      await this.limits.enforce({ dimension: 'refresh:ip', value: refreshIp, context: 'ip' });
+    }
     const cookieSpec = cookieSpecForRequest(request, this.config.cookies);
     const refreshToken = requireCookieProof(
       request,
@@ -280,6 +286,10 @@ export class StaffAuthController {
     const submittedHash = Buffer.from(this.hashes.hash(submitted, 'otp'), 'utf8');
     const expectedHash = Buffer.from(this.hashes.hash(expected, 'otp'), 'utf8');
     return submittedHash.length === expectedHash.length && timingSafeEqual(submittedHash, expectedHash);
+  }
+
+  private requestIp(request: Request): string | undefined {
+    return typeof request.ip === 'string' && request.ip.trim() !== '' ? request.ip : undefined;
   }
 
   private toAuthPrincipal(principal: AuthPrincipalContext): AuthPrincipal {

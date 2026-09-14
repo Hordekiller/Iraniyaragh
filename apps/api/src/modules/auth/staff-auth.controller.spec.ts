@@ -12,6 +12,7 @@ import type { StaffDevSignInDto } from './staff-auth.dto';
 import type { AuthTokenService } from './auth-token.service';
 import type { StaffAuthService } from './staff-auth.service';
 import type { StaffMfaService } from './staff-mfa.service';
+import { RateLimitException, type RateLimitService } from './rate-limit.service';
 
 const DEV_ADMIN_EMAIL = 'dev-admin@iranyaragh.local';
 
@@ -33,6 +34,7 @@ function createController(overrides: Partial<{
   tokens: Pick<AuthTokenService, 'matchesCsrfToken'>;
   staffAuth: Pick<StaffAuthService, 'requestPasswordChallenge' | 'updateCredentialAndRotateSession'>;
   staffMfa: Pick<StaffMfaService, 'verifyTotp' | 'regenerateRecoveryCodes'>;
+  limits: Pick<RateLimitService, 'enforce'>;
   devLoginEnabled: boolean;
   devCode: string;
 }> = {}): StaffAuthController {
@@ -92,6 +94,15 @@ function createController(overrides: Partial<{
       expiresAt: new Date(Date.now() + 600_000),
     })),
   };
+  const limits = overrides.limits ?? {
+    enforce: vi.fn(async () => ({
+      allowed: true,
+      limit: 30,
+      remaining: 29,
+      retryAfterSeconds: 0,
+      windowSeconds: 60,
+    })),
+  };
   const config: AuthRuntimeConfig = Object.freeze({
     accessSigningSecret: 'x',
     issuer: 'iranyaragh-test',
@@ -119,6 +130,7 @@ function createController(overrides: Partial<{
     tokens as AuthTokenService,
     staffAuth as StaffAuthService,
     staffMfa as StaffMfaService,
+    limits as RateLimitService,
   );
 }
 
@@ -313,6 +325,50 @@ describe('StaffAuthController (me / logout)', () => {
     await expect(controller.logout(request as never, response)).rejects.toBeInstanceOf(AuthCsrfException);
     expect(rotateSession).not.toHaveBeenCalled();
     expect(revokeByRefreshToken).not.toHaveBeenCalled();
+    expect(response.calls).toEqual([]);
+  });
+
+  it('enforces the refresh IP bucket before rotating a session', async () => {
+    const enforce = vi.fn(async () => ({
+      allowed: true,
+      limit: 30,
+      remaining: 29,
+      retryAfterSeconds: 0,
+      windowSeconds: 60,
+    }));
+    const rotateSession = vi.fn(async () => ({
+      accessToken: 'refreshed-at-1',
+      csrfToken: 'refreshed-csrf-1',
+      expiresAt: new Date(Date.now() + 600_000),
+      refreshToken: 'refreshed-rt-1',
+      sessionId: 'refreshed-session-1',
+      tokenFamilyId: 'tf-1',
+    }));
+    const controller = createController({
+      limits: { enforce },
+      sessions: { createSession: vi.fn(), revokeByRefreshToken: vi.fn(), rotateSession },
+    });
+    const response = mockResponse();
+
+    await controller.refresh(mockRequest() as never, response);
+
+    expect(enforce).toHaveBeenCalledWith({ dimension: 'refresh:ip', value: '127.0.0.1', context: 'ip' });
+    expect(rotateSession).toHaveBeenCalled();
+  });
+
+  it('rejects a refresh attempt that exceeds the IP bucket without rotating', async () => {
+    const enforce = vi.fn(async () => {
+      throw new RateLimitException(45);
+    });
+    const rotateSession = vi.fn();
+    const controller = createController({
+      limits: { enforce },
+      sessions: { createSession: vi.fn(), revokeByRefreshToken: vi.fn(), rotateSession },
+    });
+    const response = mockResponse();
+
+    await expect(controller.refresh(mockRequest() as never, response)).rejects.toBeInstanceOf(RateLimitException);
+    expect(rotateSession).not.toHaveBeenCalled();
     expect(response.calls).toEqual([]);
   });
 });
