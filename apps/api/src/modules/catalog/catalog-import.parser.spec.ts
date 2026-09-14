@@ -48,6 +48,19 @@ describe('catalog workbook parser', () => {
     expect(empty.variants[0].barcode).toBeUndefined();
   });
 
+  it.each([
+    ['Attributes', ['color', 'Color', '', 'ARCHIVED']],
+    ['AttributeOptions', ['color', 'red', 'Red', 'ARCHIVED']],
+  ] as const)('rejects ARCHIVED status for %s before commit', async (sheetName, row) => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await workbookBuffer());
+    workbook.getWorksheet(sheetName)!.addRow([...row]);
+
+    await expect(
+      parseCatalogWorkbook(Buffer.from(await workbook.xlsx.writeBuffer())),
+    ).rejects.toMatchObject({ response: { code: 'IMPORT_VALIDATION' } });
+  });
+
   it('exports the same fixed sheet contract', async () => {
     const output = await exportCatalogWorkbook({ products: [], variants: [], attributes: [], options: [], values: [], totalRows: 0 });
     const workbook = new ExcelJS.Workbook();
