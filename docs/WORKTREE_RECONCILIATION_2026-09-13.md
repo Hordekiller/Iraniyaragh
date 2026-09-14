@@ -1,12 +1,12 @@
 # Local Work / Worktree Reconciliation — 2026-09-13
 
 Status: active · Owner: lead engineering agent (this session) · Base: `origin/main` @
-`cb0e222`
+`5eb8915`
 
 Purpose: prove nothing valuable is stranded on an unknown stale branch, classify every
 local branch / worktree / stash, and record where each capability now lives. This is the
-answer to "what happened to the old local work?". Scope: 97 local branches, 61 worktrees
-(6 detached HEADs), 4 stashes, 20 live remote branches (+main).
+answer to "what happened to the old local work?". Scope: 98 local branches, 61 worktrees
+(6 detached HEADs), 4 stashes, 17 live remote branches (+main).
 
 Environment note: worktrees live under `~/development/Iraniyaragh-*`, `/tmp/iraniyaragh-*`,
 and `~/development/Iraniyaragh` (root worktree). Paths below are machine-specific; treat
@@ -17,8 +17,8 @@ the branch names as the durable identifiers.
 Evidence gathered with `git status --short --branch`, `git branch -vv`, `git worktree list`,
 `git stash list`, `git rev-list --left-right --count origin/main...<branch>` for every
 branch, and per-branch `git diff --stat origin/main...<branch>` for the flagged ones.
-Every branch was compared against `git show main:...` (not the working tree, which sits on
-a 36-commit-stale branch) and against the PR list (squash merges: commit SHAs differ).
+Every branch was compared against `git show origin/main:...` (not the working tree, which
+sits on a 39-commit-stale branch) and against the PR list (squash merges: commit SHAs differ).
 
 ## Dispositions used
 
@@ -53,7 +53,7 @@ Pre-existing preserve snapshots (from 2026-09-11) confirmed still valid and matc
 
 ### Root worktree (checked out: `feat/admin-catalog-slice`) — recommended: EXTRACT, then archive
 
-36 behind / 10 ahead of `origin/main`. Unique commits = the **storefront slice**
+39 behind / 10 ahead of `origin/main`. Unique commits = the **storefront slice**
 (`apps/web/src/pages/*`, `services/cart`, `services/catalog`, `state/*`, `lib/routes.ts`,
 routed `App.tsx`, `e2e/tests/web-purchase.spec.ts`) plus
 `docs/CONTRACT_PROPOSALS/cart-checkout-order.md`. Admin parts (Phase A, orders/settings)
