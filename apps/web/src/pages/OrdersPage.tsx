@@ -85,16 +85,16 @@ export function OrdersPage() {
             <div key={order.id} className="rounded-[20px] border border-slate-100 bg-white p-4 lg:p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <Link to={ROUTES.order(order.id)} className="font-black text-slate-900 hover:text-[#FF4D00]">
+                  <Link to={ROUTES.order(order.id)} className="font-black text-slate-900 hover:text-[#C2410C]">
                     سفارش <span dir="ltr">{order.id}</span>
                   </Link>
-                  <div className="text-xs text-slate-400 mt-0.5">{formatTimestamp(order.createdAt)}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{formatTimestamp(order.createdAt)}</div>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${STATUS_CLASS[order.status]}`}>
                     {STATUS_LABEL[order.status]}
                   </span>
-                  <span className="font-black text-[#FF4D00]">{formatToman(order.totalRials)}</span>
+                  <span className="font-black text-[#C2410C]">{formatToman(order.totalRials)}</span>
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -102,11 +102,11 @@ export function OrdersPage() {
                   <div key={item.productId} className="flex items-center gap-2 rounded-xl bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
                     <img src={item.image} alt="" className="w-6 h-6 rounded object-cover" />
                     <span className="line-clamp-1 max-w-[160px]">{item.name}</span>
-                    <span className="text-slate-400">×{toPersianDigits(item.quantity)}</span>
+                    <span className="text-slate-500">×{toPersianDigits(item.quantity)}</span>
                   </div>
                 ))}
                 {order.items.length > 4 && (
-                  <span className="text-xs text-slate-400 self-center">+{toPersianDigits(order.items.length - 4)} دیگر</span>
+                  <span className="text-xs text-slate-500 self-center">+{toPersianDigits(order.items.length - 4)} دیگر</span>
                 )}
               </div>
             </div>

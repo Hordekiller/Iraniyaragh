@@ -205,7 +205,7 @@ export function CheckoutPage() {
               </div>
               <div className="flex justify-between items-center pt-2">
                 <span className="font-black text-slate-900">قابل پرداخت</span>
-                <span className="font-black text-[17px] text-[#FF4D00]">{formatToman(totalR)}</span>
+                <span className="font-black text-[17px] text-[#C2410C]">{formatToman(totalR)}</span>
               </div>
             </div>
           </div>

@@ -36,7 +36,7 @@ export function CartPage() {
       <div className="flex items-center justify-between">
         <h1 className="font-black text-slate-900 text-lg lg:text-xl">
           سبد خرید
-          <span className="text-slate-400 text-sm font-bold mr-2">({toPersianDigits(itemCount)} کالا)</span>
+          <span className="text-slate-500 text-sm font-bold mr-2">({toPersianDigits(itemCount)} کالا)</span>
         </h1>
         <button
           type="button"
@@ -55,14 +55,14 @@ export function CartPage() {
                 <img src={line.image} alt={line.name} className="w-full h-full object-cover" />
               </Link>
               <div className="flex-1 min-w-0">
-                <Link to={ROUTES.product(line.slug)} className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-[#FF4D00]">
+                <Link to={ROUTES.product(line.slug)} className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-[#C2410C]">
                   {line.name}
                 </Link>
-                <div className="mt-1 text-xs text-slate-400">{line.brand}</div>
+                <div className="mt-1 text-xs text-slate-500">{line.brand}</div>
                 <div className="mt-1 text-[13px] font-black text-slate-900">
                   {formatToman(lineTotalRials(line))}
                 </div>
-                <div className="text-[11px] text-slate-400">واحد: {formatToman(Number(line.unitPrice.amount))}</div>
+                <div className="text-[11px] text-slate-500">واحد: {formatToman(Number(line.unitPrice.amount))}</div>
               </div>
 
               <div className="flex flex-col items-end gap-2">
@@ -98,13 +98,13 @@ export function CartPage() {
               <div className="h-px bg-slate-100 my-3" />
               <div className="flex justify-between items-center">
                 <dt className="font-black text-slate-900">مبلغ قابل پرداخت</dt>
-                <dd className="font-black text-[18px] text-[#FF4D00]">{formatToman(totalR)}</dd>
+                <dd className="font-black text-[18px] text-[#C2410C]">{formatToman(totalR)}</dd>
               </div>
             </dl>
 
             <Link
               to={ROUTES.checkout}
-              className="mt-5 block w-full h-12 rounded-full bg-[#FF4D00] text-white font-black flex items-center justify-center hover:bg-[#E54400] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
+              className="mt-5 block w-full h-12 rounded-full bg-[#C2410C] text-white font-black flex items-center justify-center hover:bg-[#A83509] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C2410C] focus-visible:ring-offset-2"
             >
               ادامه فرایند خرید
             </Link>
