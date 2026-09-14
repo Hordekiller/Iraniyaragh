@@ -5,10 +5,10 @@ import { MobileBottomNav } from './MobileBottomNav'
 import { ToastProvider } from '../feedback/Toast'
 import { ROUTES } from '../../lib/routes'
 
-function Harness({ onOpenSearch = vi.fn() }: { onOpenSearch?: () => void }) {
+function Harness({ onOpenSearch = vi.fn(), onOpenLogin = vi.fn() }: { onOpenSearch?: () => void; onOpenLogin?: () => void }) {
   return (
     <ToastProvider>
-      <MobileBottomNav onOpenSearch={onOpenSearch} />
+      <MobileBottomNav onOpenSearch={onOpenSearch} onOpenLogin={onOpenLogin} />
       <RouteProbe />
     </ToastProvider>
   )
@@ -46,16 +46,17 @@ describe('MobileBottomNav', () => {
     expect(onOpenSearch).toHaveBeenCalledTimes(1)
   })
 
-  it('navigates to the account page from the profile button', () => {
+  it('opens login from the profile button for a guest', () => {
+    const onOpenLogin = vi.fn()
     render(
       <MemoryRouter initialEntries={[ROUTES.home]}>
-        <Harness />
+        <Harness onOpenLogin={onOpenLogin} />
       </MemoryRouter>,
     )
 
     fireEvent.click(screen.getByRole('button', { name: /حساب کاربری/ }))
 
-    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.account)
+    expect(onOpenLogin).toHaveBeenCalledTimes(1)
   })
 
   it('navigates home from the home button', () => {

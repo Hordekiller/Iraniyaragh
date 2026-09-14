@@ -49,7 +49,7 @@ export function AppLayout() {
       </main>
       <SiteFooter />
 
-      <MobileBottomNav onOpenSearch={() => setShowSearch(true)} />
+      <MobileBottomNav onOpenSearch={() => setShowSearch(true)} onOpenLogin={openLogin} />
       <LoginDialog open={loginOpen} onClose={closeLogin} />
     </>
   )

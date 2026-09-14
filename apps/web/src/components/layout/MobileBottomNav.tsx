@@ -3,14 +3,17 @@ import { Home, LayoutGrid, MessageCircle, Search, User } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
 import { PHONE_MAIN, SECTION_IDS } from '../../lib/site-config'
 import { toLatinDigits } from '../../lib/format'
+import { useAuth } from '../../state/auth-context'
 
 type MobileBottomNavProps = {
   onOpenSearch: () => void
+  onOpenLogin: () => void
 }
 
-export function MobileBottomNav({ onOpenSearch }: MobileBottomNavProps) {
+export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavProps) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { state: authState } = useAuth()
 
   function openCategories() {
     const scrollToCategories = () => {
@@ -70,7 +73,10 @@ export function MobileBottomNav({ onOpenSearch }: MobileBottomNavProps) {
             </a>
 
             <button
-              onClick={() => navigate(ROUTES.account)}
+              onClick={() => {
+                if (authState.phase === 'authenticated') navigate(ROUTES.account)
+                else onOpenLogin()
+              }}
               aria-label="حساب کاربری"
               className="flex flex-col items-center gap-1 min-w-[64px] py-1.5 transition text-slate-500"
             >
