@@ -99,7 +99,7 @@ export class CatalogController {
   async attributes(): Promise<AttributeListResponse> { return this.catalog.listAttributes(); }
 
   @Get('admin/attributes/:id')
-  @ApiParam({ name: 'id', description: 'Attribute definition identifier', required: true })
+  @ApiParam({ name: 'id', description: 'Attribute definition identifier', required: true, type: String })
   @ApiOkResponse({
     description: 'Catalog attribute definition with its options.',
     schema: {
