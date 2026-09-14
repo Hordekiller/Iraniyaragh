@@ -50,7 +50,7 @@ function createService(overrides: {
   transaction?: MockTransaction;
   hashes?: Pick<AuthHashService, 'hash' | 'candidateHashes'>;
   tokens?: Pick<AuthTokenService, 'generateMfaChallengeToken'>;
-  passwords?: Pick<PasswordHashService, 'verify' | 'needsRehash' | 'hash'>;
+  passwords?: Pick<PasswordHashService, 'verify' | 'needsRehash' | 'hash' | 'hashForLoginRehash'>;
   enforce?: ReturnType<typeof vi.fn>;
   rotateSessionAfterCredentialChange?: ReturnType<typeof vi.fn>;
 } = {}) {
@@ -72,6 +72,7 @@ function createService(overrides: {
     verify: vi.fn(async () => true),
     needsRehash: vi.fn(() => false),
     hash: vi.fn(async (value: string) => `argon2:${value}`),
+    hashForLoginRehash: vi.fn(async (value: string) => `argon2:${value}`),
   };
   const rateLimits = {
     enforce: overrides.enforce ?? vi.fn(async () => undefined),
@@ -212,6 +213,7 @@ describe('StaffAuthService', () => {
           verify: vi.fn(async () => true),
           needsRehash: vi.fn(() => true),
           hash: vi.fn(async () => 'argon2:new-hash'),
+          hashForLoginRehash: vi.fn(async () => 'argon2:new-hash'),
         },
       });
 
