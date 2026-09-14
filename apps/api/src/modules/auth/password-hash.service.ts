@@ -11,6 +11,69 @@ const ARGON_OPTIONS: argon2.HashOptions = {
   parallelism: 1,
 };
 
+/**
+ * Curated local blocklist of common/compromised values that clear the 15–128
+ * character length bar but are trivially guessable (AUTH_CONTRACT §10). This is
+ * an embedded first line of defense for credential-stuffing; values are matched
+ * case-insensitively and no password ever leaves the process. Scaling to a
+ * larger offline source is an operations concern.
+ */
+const BLOCKLISTED_COMMON_PASSWORDS = Object.freeze([
+  'password',
+  'password123',
+  'password123456',
+  'password1234567',
+  'password12345678',
+  'password123456789',
+  'passw0rd',
+  'admin123',
+  'admin123456',
+  'admin123456789',
+  '123456789',
+  '1234567890',
+  '123456789012345',
+  '1234567890123456',
+  'qwertyuiop',
+  'qwertyuiop123',
+  'qwertyuiop123456',
+  'qwertyuiopasdfgh',
+  'asdfghjkl',
+  'asdfghjkl123456',
+  'asdfghjklqwertyu',
+  'zxcvbnm',
+  'zxcvbnm123456789',
+  '1q2w3e4r5t6y7u8i',
+  'q1w2e3r4t5y6u7i8',
+  'letmein',
+  'letmein123456',
+  'letmein123456789',
+  'welcome',
+  'welcome123456789',
+  'iloveyou',
+  'iloveyou123456',
+  'iloveyou12345678',
+  'monkey',
+  'monkey1234567890',
+  'dragon',
+  'dragon1234567890',
+  'football',
+  'football12345678',
+  'baseball',
+  'baseball12345678',
+  'superman',
+  'superman123456789',
+  'trustno1',
+  'trustno1123456789',
+  'shadow1234567890',
+  'master1234567890',
+  'access1234567890',
+  'secret1234567890',
+  'sunshine12345678',
+  'princess12345678',
+] as const);
+
+const BLOCKLISTED_PASSWORDS = new Set<string>(BLOCKLISTED_COMMON_PASSWORDS);
+
 export class PasswordPolicyError extends Error {
   constructor() {
     super('Password does not satisfy the authentication policy.');
@@ -24,6 +87,16 @@ export class PasswordHashService {
 
   async hash(password: string): Promise<string> {
     this.assertPolicy(password);
+    return argon2.hash(password, { ...ARGON_OPTIONS, raw: false });
+  }
+
+  /**
+   * Hashes an already-verified password to transparently upgrade a stale hash
+   * during login. Set-time policy (including the blocklist) is intentionally
+   * bypassed here: the credential was just verified, and rejecting it now could
+   * lock a user out. Policy is enforced at credential creation/change.
+   */
+  async hashForLoginRehash(password: string): Promise<string> {
     return argon2.hash(password, { ...ARGON_OPTIONS, raw: false });
   }
 
@@ -54,6 +127,9 @@ export class PasswordHashService {
     }
     const length = Array.from(password).length;
     if (length < PASSWORD_MIN_LENGTH || length > PASSWORD_MAX_LENGTH) {
+      throw new PasswordPolicyError();
+    }
+    if (BLOCKLISTED_PASSWORDS.has(password.toLowerCase())) {
       throw new PasswordPolicyError();
     }
   }
