@@ -1,6 +1,6 @@
 # Zero-to-Production Execution Backlog
 
-Status: active work-breakdown baseline; reconciled 2026-09-13
+Status: active work-breakdown baseline; reconciled 2026-09-14
 
 Developer A: [@Hordekiller](https://github.com/Hordekiller)
 
@@ -27,8 +27,8 @@ the agreed scope in `PRODUCT_SPEC.md`.
 | -------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | G0             | Substantially complete          | provider/business decisions and team agreement remain                                                                               |
 | G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                           |
-| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158); auth-parity defects #186/#188 still open; logout CSRF #190, staff-auth #191, nav flags #192 rebased and green                            |
-| G3             | Core delivered                  | attributes/variants/SKU/price-history/import shipped (#179–#184); catalog gap fixes #200 and report refactor #203 green; media M1 (#162), storefront (#166) remain                        |
+| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158); logout CSRF #190, staff-auth #191 and nav flags #192 remain review-gated                            |
+| G3             | Core delivered                  | attributes/variants/SKU/price-history/import shipped (#179–#184); #199, #203 merged; #200 remains review-gated; media M1 (#162) and storefront (#166) remain                        |
 | G4             | Partial foundation              | ledger/reservation service exists; protected HTTP/transfers/worker/admin incomplete                                                 |
 | G5             | Persistence foundation only     | state tables/helper exist; cart/checkout/order services absent                                                                      |
 | G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                               |
@@ -46,18 +46,21 @@ Merged to `main` on 2026-09-14 (all CI green on final heads):
 | #202 | `b8def1e` | `SENDER_LINE` regex empty alternative removed (Sonar S6323) — language unchanged |
 | #201 | `cfeda1a` | Admin catalog/SMS idempotency keys generated from `crypto.getRandomValues` only (S2245) |
 | #198 | `fe1fe2a` | SonarCloud analysis on PRs and main; production-source scope + LCOV; pipeline/e2e green |
+| #203 | `602c5ae` | Behavior-preserving catalog import report-building refactor |
+| #206 | `863bcd8` | Contract-first cart/checkout/order handoff documentation |
+| #204 | `b6b19af` | Redis 7 digest alignment for CI and local Compose |
+| #199 | `d45c5b4` | Catalog parity: no-op re-import and parser status validation |
 
-Open wave (as of `fe1fe2a`):
+Open wave (as of `d45c5b4`):
 
 | PR | State |
 | -- | ----- |
-| #190 / #191 / #192 | Rebased by author onto `fe1fe2a`, pushed (last pusher = author), green, awaiting merge |
-| #200 | Catalog import gap closes (SKU ASCII invariant migration `20260913120000`, idempotency/expiry tests, OpenAPI); rebased, green, awaiting merge |
-| #203 | Behavior-preserving catalog report-building refactor; `apply()` untouched; approved; rebased |
-| #204 | Redis e2e/Compose pinned to the CI-tested `redis:7-alpine` digest; approved |
-| #185 | RBAC/financial-governance audit facts corrected (bookstore removed, 1405 gated on adviser verification); approved; final rebase pending |
-| #199 | ARCHIVED removed from Attributes/AttributeOptions allow-sets with parser rejection tests; no-op re-import skip confirmed; approved; final rebase pending |
-| #205 / #206 / #207 | #166 extraction wave — local-work ledger + Sonar triage policy, cart/checkout/order contract handoff, storefront routed fixture — open, in review |
+| #190 / #191 / #192 | Green/rebased, but review-gated; #191/#192 wait for the #190 auth decision |
+| #200 | Rebases cleanly but blocked by contract parity, migration-lock and DB concurrency review findings |
+| #185 | Approved but intentionally held pending RBAC/financial-governance domain review |
+| #205 | Approved but held until the database integration failure is explained and green |
+| #207 | All checks green; fresh independent approval required on latest head |
+| #194 | This documentation reconciliation, updated onto current main |
 
 ## 2. Completion map
 

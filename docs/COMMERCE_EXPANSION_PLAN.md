@@ -582,11 +582,11 @@ platform, a second ORM or multiple payment/search abstractions merely for novelt
 
 ## 12. Current next sequence
 
-As of the 2026-09-13 reconciliation (`main` = `cb0e222`, catalog wave merged via
-#179–#184), the immediate path is:
+As of the 2026-09-14 reconciliation (`main` = `d45c5b4`, catalog parity #199 and
+report refactor #203 merged; contract handoff #206 merged), the immediate path is:
 
-1. close the remaining catalog parity gaps from the 2026-09-13 audit (#189) and
-   the auth parity gaps (#186/#188) before treating Auth/Catalog as gate-clean;
+1. resolve the remaining catalog contract/migration/idempotency review in #200 and
+   the auth parity review gates (#190–#192) before treating Auth/Catalog as gate-clean;
 2. accept media policy and deliver the conflict-safe M1–M5 slices (#162–#165),
    then finish the publish → discover vertical slice with real media/price data;
 3. expose protected inventory HTTP plus reservation expiry batching (#81);

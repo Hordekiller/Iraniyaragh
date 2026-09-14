@@ -1,6 +1,6 @@
 # Delivery Roadmap
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-09-14
 
 This is the executive view of delivery. The executable sprint backlog, owners,
 acceptance gates and dependencies live in `DEVELOPMENT_PLAN.md`.
@@ -33,8 +33,9 @@ store. Native mobile and advanced growth features are intentionally later.
   `main` (#109/#111/#150/#158); #49 is closed and #50/#91 acceptance reconciled.
   Auth-parity defect follow-ups #186/#188 stay tracked for the `0.3` window.
 - `0.2`: catalog wave delivered. Attributes, variants/SKU identity, price history
-  and staged import are merged via #179–#184; media M1 (#162), storefront
-  integration (#166) and import parity (#189) remain.
+  and staged import are merged via #179–#184; #199 and #203 are merged. Media M1
+  (#162) and storefront integration (#166) remain; #200 is review-gated for the
+  remaining migration, idempotency and contract evidence.
 - `0.3`: service foundation only. Inventory mutation/reservation/concurrency logic is
   implemented behind the application boundary, but protected HTTP and operator flows
   are not.
