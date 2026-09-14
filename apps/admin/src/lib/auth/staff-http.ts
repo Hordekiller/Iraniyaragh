@@ -78,6 +78,8 @@ export class StaffAuthHttpClient implements StaffAuthApi {
       });
     } catch (error) {
       throw this.mapError(error);
+    } finally {
+      this.store.set(null);
     }
   }
 
@@ -117,6 +119,7 @@ export class StaffAuthHttpClient implements StaffAuthApi {
         code,
         message: error.message,
         statusCode: error.statusCode,
+        retryAfterSeconds: error.retryAfterSeconds,
       });
     }
     return new StaffAuthError({ code: 'INTERNAL_ERROR', message: 'Unexpected client error.', statusCode: 500 });

@@ -85,6 +85,14 @@ describe('StaffAuthHttpClient', () => {
     apiFetchMock.mockResolvedValueOnce({ data: {} });
     await expect(client.logout()).resolves.toBeUndefined();
     expect(apiFetchMock).toHaveBeenCalledWith('/auth/logout', { method: 'POST', token: 'at-1' });
+    expect(store.get()).toBeNull();
+  });
+
+  it('clears the local token when logout fails after the server request', async () => {
+    store.set('at-1');
+    apiFetchMock.mockRejectedValueOnce(new ApiClientError(errorEnvelope('AUTH_CSRF_INVALID', 403)));
+    await expect(client.logout()).rejects.toMatchObject({ code: 'AUTH_CSRF_INVALID' });
+    expect(store.get()).toBeNull();
   });
 
   it('stores the new access token after a fresh verify even when a token already existed', async () => {
@@ -118,6 +126,16 @@ describe('StaffAuthHttpClient', () => {
       await expect(client.passwordRequest({ identifier: 'x', password: 'y' })).rejects.toMatchObject({
         code: 'RATE_LIMITED',
         statusCode: 429,
+      });
+    });
+
+    it('preserves Retry-After for rate-limited UI handling', async () => {
+      apiFetchMock.mockRejectedValueOnce(
+        new ApiClientError(errorEnvelope('RATE_LIMITED', 429), new Headers({ 'Retry-After': '42' })),
+      );
+      await expect(client.passwordRequest({ identifier: 'x', password: 'y' })).rejects.toMatchObject({
+        code: 'RATE_LIMITED',
+        retryAfterSeconds: 42,
       });
     });
 
