@@ -1530,10 +1530,44 @@
     "/catalog/admin/attributes/{id}": {
       "get": {
         "operationId": "CatalogController_getAttribute",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Attribute definition identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Catalog attribute definition with its options.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "attribute": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "attribute"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
           }
         },
         "tags": [
