@@ -29,7 +29,12 @@ function buildService() {
   const client = createFakeClient();
   const tx = createFakeClient();
   const prisma = {
-    inventoryBalance: { findMany: vi.fn(), count: vi.fn() },
+    inventoryBalance: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
     inventoryMovement: { findMany: vi.fn(), count: vi.fn() },
     stockReservation: {
       findMany: vi.fn(),
@@ -255,5 +260,95 @@ describe('InventoryService guards and queries', () => {
         skip: 2,
       }),
     );
+  });
+
+  it('rejects a reservation when available stock is insufficient', async () => {
+    ctx.tx.inventoryBalance.findUnique.mockResolvedValue({
+      version: 1,
+      onHand: 10,
+      reserved: 8,
+      available: 2,
+    });
+
+    await expect(
+      ctx.service.reserve({
+        ...base,
+        orderId: null,
+        quantity: 5,
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      }),
+    ).rejects.toMatchObject({ response: { code: 'INSUFFICIENT_STOCK' } });
+
+    expect(ctx.tx.stockReservation.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a release when the reservation balance is missing', async () => {
+    ctx.prisma.stockReservation.findUnique.mockResolvedValue({
+      id: 'r1',
+      warehouseId: 'wh',
+      locationId: 'loc',
+      variantId: 'variant',
+      quantity: 2,
+    });
+    ctx.prisma.inventoryBalance.findUnique.mockResolvedValue(null);
+
+    await expect(
+      ctx.service.releaseReservation('r1', { actorId: 'actor', requestId: 'request' }),
+    ).rejects.toMatchObject({ response: { code: 'RESERVATION_STATE_CONFLICT' } });
+
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects releasing a reservation whose balance is inconsistent', async () => {
+    ctx.prisma.stockReservation.findUnique.mockResolvedValue({
+      id: 'r1',
+      warehouseId: 'wh',
+      locationId: 'loc',
+      variantId: 'variant',
+      quantity: 2,
+    });
+    ctx.prisma.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1 });
+    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE' });
+    ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1, reserved: 0 });
+
+    await expect(
+      ctx.service.releaseReservation('r1', { actorId: 'actor', requestId: 'request' }),
+    ).rejects.toMatchObject({ response: { code: 'RESERVATION_STATE_CONFLICT' } });
+  });
+
+  it('rejects consuming a reservation whose balance is inconsistent', async () => {
+    ctx.prisma.stockReservation.findUnique.mockResolvedValue({
+      id: 'r1',
+      warehouseId: 'wh',
+      locationId: 'loc',
+      variantId: 'variant',
+      quantity: 2,
+    });
+    ctx.prisma.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1 });
+    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE' });
+    ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1, reserved: 0 });
+
+    await expect(
+      ctx.service.consumeReservation('r1', { actorId: 'actor', requestId: 'request' }),
+    ).rejects.toMatchObject({ response: { code: 'RESERVATION_STATE_CONFLICT' } });
+  });
+
+  it('rejects expiring a reservation whose balance is inconsistent', async () => {
+    ctx.prisma.stockReservation.findMany.mockResolvedValue([
+      {
+        id: 'r1',
+        warehouseId: 'wh',
+        locationId: 'loc',
+        variantId: 'variant',
+        quantity: 2,
+        expiresAt: new Date('2020-01-01T00:00:00.000Z'),
+      },
+    ]);
+    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE' });
+    ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1, reserved: 0 });
+
+    await expect(
+      ctx.service.expireReservations({ actorId: 'actor', requestId: 'request' }),
+    ).rejects.toMatchObject({ response: { code: 'RESERVATION_STATE_CONFLICT' } });
   });
 });
