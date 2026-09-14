@@ -5,7 +5,7 @@ import { createExternalRequestsTracker, tap } from './helpers';
 
 async function addFirstProduct(page: Page) {
   await page.goto('/');
-  await tap(page.locator('section#popular a[class*="snap-start"]').first());
+  await tap(page.locator('section#popular button[class*="snap-start"]').first());
   await expect(page.getByRole('button', { name: 'افزودن به سبد خرید' })).toBeVisible();
   await tap(page.getByRole('button', { name: 'افزودن به سبد خرید' }));
   await expect(page.getByText('به سبد خرید افزوده شد')).toBeVisible();
