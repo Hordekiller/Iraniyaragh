@@ -6,6 +6,7 @@ import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { lineTotalRials } from '../services/cart/types'
 import type { OrderItem } from '../services/cart/types'
+import { createCheckoutIdempotencyKey } from '../services/cart/idempotency'
 import { FREE_SHIPPING_THRESHOLD_RIALS, SHIPPING_COST_RIALS } from '../lib/site-config'
 import { IRAN_PROVINCES, isValidIranMobile, isValidIranPostalCode, normalizeIranMobile, normalizeIranPostalCode } from '../lib/iran'
 
@@ -86,7 +87,6 @@ export function CheckoutPage() {
     if (Object.values(nextErrors).some(Boolean)) return
 
     setSubmitting(true)
-    idempotencyKey.current ??= `checkout-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`
     const items: OrderItem[] = state.lines.map(line => ({
       productId: line.productId,
       slug: line.slug,
@@ -97,6 +97,7 @@ export function CheckoutPage() {
     }))
 
     try {
+      idempotencyKey.current ??= createCheckoutIdempotencyKey()
       const order = await orders.createOrder({
         idempotencyKey: idempotencyKey.current,
         items,
