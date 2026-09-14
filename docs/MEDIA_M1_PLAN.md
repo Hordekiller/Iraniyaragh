@@ -30,7 +30,7 @@ therefore binding. Issue #162 ("Blocked by acceptance and merge of #161") is
 | RBAC | `Permission`/`Role`/`UserRole`/`RolePermission` models exist; permission loading via `auth-permission.service.ts`; seeding lives in `apps/api/prisma/seed.mjs` (`prisma:seed` in package.json:17). No `catalog.media.*`/`catalog.publish` keys exist anywhere |
 | Idempotency pattern | `CatalogIdempotencyRecord` (actorId+scope+keyHash, payloadHash, resource) + `catalog-idempotency.service.ts`; reuse semantics, not necessarily the table |
 | Audit | `AuditLog` model (action, entityType, entityId, before/after Json, metadata, requestId) + `audit-log.service.ts`; catalog uses `audit.record(...)` |
-| ETag | Only `public-catalog-cache.interceptor.ts` (public listing ETag). Spec §6/M3 references a **product** ETag "added by #157" — a product-level ETag is **not found** in the codebase |
+| ETag | Only `public-catalog-cache.interceptor.ts` (public listing ETag). #157 (merged 2026-09-11, `feat(api): add safe public Catalog revalidation`) touched **only** `public-catalog-cache.interceptor.ts`, `catalog.controller.ts`, `catalog.service.*` and `packages/contracts/src/catalog.ts` — it is the public **catalog listing** ETag, **not** a per-product ETag; no product-level ETag exists (see D2) |
 | Money | `BigInt` integer-Rial convention in force (`20260831060000_bigint_money`, `VariantPriceRecord`) |
 | Migrations | Forward-only, timestamped `YYYYMMDDHHMMSS_name` (e.g. `20260912140000_catalog_variants_attributes`) |
 | Tests | Per-package vitest with `*.spec.ts` (unit) and `*.integration-spec.ts` (test DB); coverage thresholds per package (`vitest.config.ts`) |
@@ -40,7 +40,7 @@ therefore binding. Issue #162 ("Blocked by acceptance and merge of #161") is
 | # | Topic | Asked of | Grounding |
 | --- | --- | --- | --- |
 | D1 | Publish mapping: schema has no `PUBLISHED`. Either document `ACTIVE` as the publishable ready state (preferred, matches current parity wave) or extend `ProductStatus`. Must be decided before the readiness gate (§9) is encoded | A | schema.prisma:63-68 vs contracts/catalog.ts:7 vs spec §9 |
-| D2 | Product ETag "added by #157" is not present for product detail; M1 must not build public projection (that is M3). Decide whether M3 first re-verifies/lands the product ETag work or media-ready mutation lands without ETag invalidation (blocking for M3) | A | spec §6, §11 M3; repo grep |
+| D2 | Product ETag "added by #157": verified 2026-09-14 — #157 merged only the public **catalog listing** ETag (`public-catalog-cache.interceptor.ts` etc.); there is **no per-product ETag** in the codebase. Spec's §6 statement is therefore inaccurate. M3 must carry the product-detail ETag itself (or re-open the spec). Decide in M3; M1 notes the dependency | A | spec §6, §11 M3; #157 files; repo grep + `git ls-files` |
 | D3 | Worker framework: FOUNDATION.md:23 declares BullMQ yet no dependency exists. M1 proposes adding BullMQ (baseline, not a new framework). If avoided, the Redis-based queue alternative must be ADRed | A | FOUNDATION.md:23; api package.json |
 | D4 | Malware scan fails closed in prod (spec §12); dev/test use a deterministic fake. Choose the scanner boundary/interface in M1 so `READY` cannot be reached without it | A | spec §12 |
 | D5 | Retention settings (unconfirmed ≤30 min, quarantine ≤24 h, private source 7 d, renditions 30 d — spec §12) must be bounded deployment settings; decide config shape (env vs settings table) | A | spec §4.6, §12 |
