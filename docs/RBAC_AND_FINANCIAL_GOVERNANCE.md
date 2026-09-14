@@ -157,8 +157,11 @@ block payment gateways. The platform does not obtain it, but must expose the slo
 
 - **Standard rate: 9 %** (Art. 7), **raised to 10 %** for 1403 and 1404 by the
   annual budget acts (one percentage point). Effects:
-  - As of 1404 (current Persian year) the bookstore's standard product rate is
-    **10 % (1000 bp)** if not zero-rated.
+  - Under the 1403–1404 budget acts, the seller's standard product rate was
+    **10 % (1000 bp)** if not zero-rated. The applicable **1405 rate must be
+    verified with the business accountant/tax adviser from the enacted 1405
+    rules before any rate is configured or enforced**; this document does not
+    silently carry the 1404 rate forward.
   - **Zero rate** applies by law to staple/exempt goods, exports and public
     transport; specifically-vulnerable goods/services may be zero-rated; luxury
     items (e.g. certain luxury imports) are at **12 % / 16 %**.
@@ -174,8 +177,10 @@ block payment gateways. The platform does not obtain it, but must expose the slo
 - Covered taxpayers must **invoice electronically** (`صورتحساب الکترونیکی`) with a
   **unique tax-invoice number**, register in the **سامانه مودیان system**, and
   maintain **tax-memory** data. Paper invoices cease to be a valid taxable
-  document from **1 Dey 1404**. Penalties apply on non-issue / non-registration
-  (incl. loss of VAT credit and per-invoice penalties).
+  document from **1 Dey 1404**. This is now a past-dated transition point; the
+  accountant/tax adviser must verify the operative 1405 invoicing and penalty
+  rules before they become live policy. Penalties may apply on non-issue /
+  non-registration (incl. loss of VAT credit and per-invoice penalties).
 - **Invoice line structure** the platform must be able to emit: seller economic
   number (`شناسه اقتصادی`)/national ID, buyer identifier (economic number or
   national ID, **required for B2B**), goods/service identifier (`شناسه کالا/خدمت`),
@@ -183,10 +188,12 @@ block payment gateways. The platform does not obtain it, but must expose the slo
   amounts**, line & invoice totals, in Rials.
 - `ماده 14 مکرر` (introduced 1402) graduated thresholds: some small businesses
   are below the electronic-invoicing obligation threshold for a period, and POS
-  receipts may serve as an e-invoice until end-1404 for single-rate sellers
-  (نصاب). The founding team (a small specialty bookstore) may be outside the
-  hard obligation initially, but the **capability and rates must exist before any
-  sale is recorded**, so a revenue-enabling build never picks tax math ad hoc.
+  receipts could serve as an e-invoice until end-1404 for single-rate sellers
+  (نصاب). That window is past-dated and its 1405 replacement must be confirmed
+  by the accountant/tax adviser. The founding team (a small specialty seller)
+  may be outside the hard obligation initially, but the **capability and verified
+  rates must exist before any sale is recorded**, so a revenue-enabling build
+  never picks tax math ad hoc.
 
 ### 3.4 Access-control standards to mirror
 
@@ -223,11 +230,11 @@ block payment gateways. The platform does not obtain it, but must expose the slo
 
 ### 4.2 Financial policy (admin → "تنظیمات مالی")
 
-| Setting | Example/values | Default (1404) | Legal anchor |
+| Setting | Example/values | Default / 1405 gate | Legal anchor |
 | --- | --- | --- | --- |
-| VAT rate(s) | per category preset list | `1000` bp (10 %) | Budget acts 1403-1404; VAT Law Art. 7 |
+| VAT rate(s) | per category preset list | no enforced default until the 1405 rate is adviser-verified (`1000` bp was the 1403–1404 rate) | Budget acts 1403-1404; VAT Law Art. 7; 1405 verification required |
 | Tax position | tax-exclusive / tax-inclusive display | exclusive, price excludes VAT (decide by 1st sale) | VAT Law Art. 5 |
-| Zero-rated categories | book/paper or undefined | none until classified | VAT Law Arts. 7-9 |
+| Zero-rated categories | lawfully exempt goods or undefined | none until classified | VAT Law Arts. 7-9 |
 | Rounding method | `ROUND_HALF_UP` to Rial (**locked**) | locked | ADR-0003 |
 | Max discount per order / per line | bp or Rials | operator value | ADR-0003 math; EC Law Art. 33 (show net price) |
 | Discount approval threshold | Rials four-eyes | operator value ≥ discount cap | SoD/AC-5 |
