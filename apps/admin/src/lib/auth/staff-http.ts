@@ -11,6 +11,21 @@ import { ApiClientError, ApiNetworkError, apiFetch } from '@/lib/api/client';
 import { StaffAuthFixtureClient } from './staff-fixture';
 import { isFixtureAuthEnabled } from './staff-fixture-guard';
 
+const CSRF_COOKIE_NAMES = new Set(['__Host-iranyaragh_csrf', 'iranyaragh_dev_csrf']);
+
+function readCsrfCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  for (const pair of document.cookie.split(';')) {
+    const separator = pair.indexOf('=');
+    if (separator < 0) continue;
+    const name = pair.slice(0, separator).trim();
+    if (!CSRF_COOKIE_NAMES.has(name)) continue;
+    const value = pair.slice(separator + 1).trim();
+    if (value) return decodeURIComponent(value);
+  }
+  return null;
+}
+
 /**
  * Real staff-auth HTTP client for the admin panel (admin login slice, #50).
  *
@@ -72,9 +87,18 @@ export class StaffAuthHttpClient implements StaffAuthApi {
 
   async logout(): Promise<void> {
     try {
+      const csrfToken = readCsrfCookie();
+      if (!csrfToken) {
+        throw new StaffAuthError({
+          code: 'AUTH_CSRF_INVALID',
+          message: 'CSRF proof is unavailable.',
+          statusCode: 403,
+        });
+      }
       await apiFetch<Record<string, never>>('/auth/logout', {
         method: 'POST',
         token: this.store.get(),
+        headers: { 'X-CSRF-Token': csrfToken },
       });
     } catch (error) {
       throw this.mapError(error);
@@ -102,6 +126,7 @@ export class StaffAuthHttpClient implements StaffAuthApi {
   ]);
 
   private mapError(error: unknown): StaffAuthError {
+    if (error instanceof StaffAuthError) return error;
     if (error instanceof ApiNetworkError) {
       return new StaffAuthError({
         code: 'UPSTREAM_UNAVAILABLE',
