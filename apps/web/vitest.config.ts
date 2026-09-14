@@ -14,7 +14,7 @@ export default defineConfig({
     coverage: {
       enabled: process.env.CI === 'true',
       provider: 'v8',
-      reporter: ['text', 'json-summary'],
+      reporter: ['text', 'json-summary', 'lcov'],
       exclude: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', 'src/test/**'],
       thresholds: {
         lines: 80,
