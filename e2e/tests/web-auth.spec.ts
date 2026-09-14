@@ -18,6 +18,8 @@ async function openLogin(page: Page) {
         .getByRole('navigation', { name: 'ناوبری پایین' })
         .getByRole('button', { name: 'حساب کاربری' }),
     );
+    await expect(page).toHaveURL(/\/account$/);
+    await tap(page.getByRole('button', { name: 'ورود / ثبت‌نام' }));
   } else {
     await tap(page.getByRole('button', { name: 'ورود به حساب کاربری' }));
   }
