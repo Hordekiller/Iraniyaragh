@@ -8,6 +8,7 @@ import { ApiFoundationModule } from '../../common/api-foundation.module';
 import { AuthSessionException } from '../auth/auth-session.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { type AuthPrincipalContext, AuthPrincipalService } from '../auth/auth-principal.service';
+import { AuditLogService } from '../audit/audit-log.service';
 import { NotificationsAdminController } from './notifications.admin.controller';
 import { SmsSettingsService } from './sms-settings.service';
 
@@ -100,7 +101,7 @@ const serviceStub = createServiceStub();
   providers: [
     { provide: SmsSettingsService, useValue: serviceStub },
     { provide: AuthPrincipalService, useValue: principalService },
-    { provide: APP_GUARD, useValue: new AuthGuard(principalService as unknown as AuthPrincipalService) },
+    { provide: APP_GUARD, useValue: new AuthGuard(principalService as unknown as AuthPrincipalService, { record: vi.fn(async () => undefined) } as unknown as AuditLogService) },
   ],
 })
 // Route-level evidence harness. It boots a dedicated Nest test module importing

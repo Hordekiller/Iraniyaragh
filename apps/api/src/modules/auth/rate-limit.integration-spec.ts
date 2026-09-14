@@ -124,6 +124,31 @@ describe('RateLimitService live Redis integration', () => {
     expect(thrown).toBe(true);
   });
 
+  it('enforces the refresh IP bucket at 30 attempts per minute', async context => {
+    if (!available) return context.skip();
+    const refreshIp = `203.0.113.${Math.floor(Math.random() * 200)}`;
+    const dimension = 'refresh:ip';
+
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const decision = await service.enforce({ dimension, value: refreshIp, context: 'ip' });
+      expect(decision.allowed).toBe(true);
+      expect(decision.remaining).toBe(29 - attempt);
+    }
+
+    let thrown = false;
+    try {
+      await service.enforce({ dimension, value: refreshIp, context: 'ip' });
+    } catch (error) {
+      thrown = true;
+      expect(error).toBeInstanceOf(RateLimitException);
+      const e = error as RateLimitException;
+      expect(e.getStatus()).toBe(429);
+      expect(e.retryAfterSeconds).toBeGreaterThan(0);
+      expect(e.retryAfterSeconds).toBeLessThanOrEqual(60);
+    }
+    expect(thrown).toBe(true);
+  });
+
   it('persists only the keyed hash, never the raw identifier', async context => {
     if (!available) return context.skip();
     const mobile = mobileFor('hash');

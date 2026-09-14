@@ -8,6 +8,8 @@ import {
   createParamDecorator,
 } from '@nestjs/common';
 import type { AuthenticationLevel } from '@prisma/client';
+import { getRequestId } from '../../common/request-context';
+import { AuditLogService } from '../audit/audit-log.service';
 import { AuthPrincipalService, type AuthPrincipalContext } from './auth-principal.service';
 
 const FRESH_AUTH_WINDOW_MS = 5 * 60 * 1_000;
@@ -75,7 +77,10 @@ function readProtectedRouteMetadata(context: ExecutionContext): ProtectedRouteMe
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly principalService: AuthPrincipalService) {}
+  constructor(
+    private readonly principalService: AuthPrincipalService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const metadata = readProtectedRouteMetadata(context);
@@ -90,6 +95,8 @@ export class AuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<{
       headers: { authorization?: string };
+      method: string;
+      originalUrl: string;
       principal?: AuthPrincipalContext;
     }>();
     const principal = await this.principalService.resolveBearerToken(request.headers.authorization);
@@ -103,6 +110,14 @@ export class AuthGuard implements CanActivate {
     }
 
     if (metadata.permission !== undefined && !principal.permissions.has(metadata.permission)) {
+      await this.auditLog.record({
+        actorId: principal.userId,
+        action: 'auth.permission.denied',
+        entityType: 'Permission',
+        entityId: metadata.permission,
+        requestId: getRequestId(),
+        metadata: Object.freeze({ method: request.method, route: request.originalUrl }),
+      });
       throw new ForbiddenException({
         code: 'FORBIDDEN',
         message: 'The current principal lacks the required permission.',

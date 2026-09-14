@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCorsOrigins, validateEnvironment } from './environment';
+import { parseCorsOrigins, parseTrustProxy, validateEnvironment } from './environment';
 
 const validDevelopmentEnvironment = {
   NODE_ENV: 'development',
@@ -50,6 +50,56 @@ describe('parseCorsOrigins', () => {
 
   it('requires an explicit allowlist in production', () => {
     expect(() => parseCorsOrigins(undefined, 'production')).toThrow('CORS_ORIGINS is required');
+  });
+});
+
+describe('parseTrustProxy', () => {
+  it('disables proxy trust when unset or empty', () => {
+    expect(parseTrustProxy(undefined)).toEqual({ kind: 'disabled' });
+    expect(parseTrustProxy('')).toEqual({ kind: 'disabled' });
+    expect(parseTrustProxy('   ')).toEqual({ kind: 'disabled' });
+  });
+
+  it('parses an inline hop count', () => {
+    expect(parseTrustProxy('1')).toEqual({ kind: 'hops', count: 1 });
+    expect(parseTrustProxy('5')).toEqual({ kind: 'hops', count: 5 });
+  });
+
+  it.each(['0', '6', '10'])('rejects out-of-contract hop count %s', (value) => {
+    expect(() => parseTrustProxy(value)).toThrow('hop count');
+  });
+
+  it('parses an explicit subnet allowlist', () => {
+    expect(parseTrustProxy('127.0.0.1, 10.0.0.0/8')).toEqual({
+      kind: 'subnets',
+      subnets: ['127.0.0.1', '10.0.0.0/8'],
+    });
+  });
+
+  it('parses IPv6 subnets', () => {
+    expect(parseTrustProxy('2001:db8::/32')).toEqual({ kind: 'subnets', subnets: ['2001:db8::/32'] });
+  });
+
+  it.each([
+    'example.com',
+    '192.168.1.abc',
+    '192.168.1.0/0',
+    '10.0.0.0/33',
+    '2001:db8::/0',
+    '2001:db8::/129',
+    '192.168.1.1/',
+  ])('rejects unsafe proxy trust value %s', (value) => {
+    expect(() => parseTrustProxy(value)).toThrow('TRUST_PROXY');
+  });
+
+  it('exposes the parsed value through validateEnvironment', () => {
+    const result = validateEnvironment({ ...validDevelopmentEnvironment, TRUST_PROXY: '2' });
+    expect(result.TRUST_PROXY).toEqual({ kind: 'hops', count: 2 });
+  });
+
+  it('leaves proxy trust disabled when omitted', () => {
+    const result = validateEnvironment(validDevelopmentEnvironment);
+    expect(result.TRUST_PROXY).toEqual({ kind: 'disabled' });
   });
 });
 
