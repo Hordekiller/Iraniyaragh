@@ -475,6 +475,7 @@ model ProductMedia {
   objectKey        String                  @unique @db.VarChar(512)
   originalFilename String                  @db.VarChar(255)
   declaredMime     String                  @db.VarChar(100)
+  declaredBytes    BigInt
   detectedMime     String?                 @db.VarChar(100)
   bytes            BigInt?
   width            Int?

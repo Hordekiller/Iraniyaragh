@@ -6,18 +6,27 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { ProductMediaUploadResponse } from '@iranyaragh/contracts';
+import type {
+  AdminProductMedia,
+  ProductMediaConfirmResponse,
+  ProductMediaUploadResponse,
+} from '@iranyaragh/contracts';
+import type { ProductMedia } from '@prisma/client';
 import { getRequestId } from '../../common/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { CatalogIdempotencyService } from '../catalog/catalog-idempotency.service';
-import type { ProductMediaUploadDto } from './media.dto';
+import type { ProductMediaConfirmDto, ProductMediaUploadDto } from './media.dto';
 import { MediaPolicyService } from './media-policy.service';
 import {
   PRODUCT_MEDIA_STORAGE,
   mediaSourceObjectKey,
   type ProductMediaStorage,
 } from './storage.port';
+import {
+  PRODUCT_MEDIA_PROCESSING_QUEUE,
+  type ProductMediaProcessingQueue,
+} from './processing-queue.port';
 
 function sanitizedFilename(value: string): string {
   const cleaned = [...value.trim()]
@@ -32,6 +41,35 @@ function sanitizedFilename(value: string): string {
   return cleaned || 'upload';
 }
 
+function adminMedia(row: ProductMedia): AdminProductMedia {
+  return {
+    id: row.id,
+    productId: row.productId,
+    kind: row.kind,
+    state: row.state,
+    role: row.role,
+    position: row.position,
+    altText: row.altText,
+    caption: row.caption,
+    originalFilename: row.originalFilename,
+    declaredMime: row.declaredMime,
+    declaredBytes: row.declaredBytes.toString(),
+    detectedMime: row.detectedMime,
+    bytes: row.bytes?.toString() ?? null,
+    width: row.width,
+    height: row.height,
+    durationMs: row.durationMs,
+    hasAudio: row.hasAudio,
+    posterMediaId: row.posterMediaId,
+    checksumSha256: row.checksumSha256,
+    failureCode: row.failureCode,
+    version: row.version,
+    uploadExpiresAt: row.uploadExpiresAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 @Injectable()
 export class MediaService {
   constructor(
@@ -39,6 +77,7 @@ export class MediaService {
     private readonly audit: AuditLogService,
     private readonly idempotency: CatalogIdempotencyService,
     @Inject(PRODUCT_MEDIA_STORAGE) private readonly storage: ProductMediaStorage,
+    @Inject(PRODUCT_MEDIA_PROCESSING_QUEUE) private readonly processingQueue: ProductMediaProcessingQueue,
     private readonly policy: MediaPolicyService,
   ) {}
 
@@ -108,6 +147,7 @@ export class MediaService {
             objectKey,
             originalFilename: safeInput.originalFilename,
             declaredMime: input.declaredMime,
+            declaredBytes: BigInt(input.bytes),
             createdById: actorId,
             uploadExpiresAt,
           },
@@ -161,6 +201,107 @@ export class MediaService {
         },
       },
     };
+  }
+
+  async confirmUpload(
+    actorId: string,
+    idempotencyKey: string,
+    productId: string,
+    mediaId: string,
+    input: ProductMediaConfirmDto,
+  ): Promise<ProductMediaConfirmResponse> {
+    const current = await this.prisma.productMedia.findFirst({ where: { id: mediaId, productId } });
+    if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Media upload not found.' });
+    if (current.state === 'ARCHIVED' || current.state === 'FAILED') {
+      throw new UnprocessableEntityException({
+        code: 'MEDIA_NOT_READY',
+        message: 'The media upload cannot be confirmed in its current state.',
+      });
+    }
+    if (current.state === 'PENDING_UPLOAD' && current.uploadExpiresAt.getTime() <= Date.now()) {
+      throw new UnprocessableEntityException({
+        code: 'MEDIA_UPLOAD_EXPIRED',
+        message: 'The media upload intent has expired.',
+      });
+    }
+
+    if (current.state === 'PENDING_UPLOAD') {
+      const head = await this.storage.headObject(current.objectKey);
+      if (!head) {
+        throw new UnprocessableEntityException({
+          code: 'MEDIA_NOT_READY',
+          message: 'The uploaded object is not available for confirmation.',
+        });
+      }
+      if (head.objectKey !== current.objectKey || head.bytes !== Number(current.declaredBytes)) {
+        throw new UnprocessableEntityException({
+          code: head.bytes > this.policy.maxBytes(current.kind) ? 'MEDIA_TOO_LARGE' : 'MEDIA_CHECKSUM_MISMATCH',
+          message: 'Uploaded object metadata does not match the upload intent.',
+        });
+      }
+      if (head.contentType !== current.declaredMime) {
+        throw new UnprocessableEntityException({
+          code: 'MEDIA_TYPE_UNSUPPORTED',
+          message: 'Uploaded object content type does not match the upload intent.',
+        });
+      }
+      if (
+        input.checksumSha256 &&
+        head.checksumSha256 &&
+        input.checksumSha256 !== head.checksumSha256
+      ) {
+        throw new UnprocessableEntityException({
+          code: 'MEDIA_CHECKSUM_MISMATCH',
+          message: 'Uploaded object checksum does not match.',
+        });
+      }
+    }
+
+    const result = await this.idempotency.run<{ mediaId: string }>({
+      actorId,
+      scope: `media.confirm:${mediaId}`,
+      key: idempotencyKey,
+      payload: { productId, mediaId, checksumSha256: input.checksumSha256 ?? null },
+      execute: async tx => {
+        const row = await tx.productMedia.findFirst({ where: { id: mediaId, productId } });
+        if (!row) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Media upload not found.' });
+        if (row.state === 'PENDING_UPLOAD') {
+          const updated = await tx.productMedia.updateMany({
+            where: { id: mediaId, productId, state: 'PENDING_UPLOAD', version: row.version },
+            data: { state: 'UPLOADED', version: { increment: 1 } },
+          });
+          if (updated.count !== 1) {
+            throw new ConflictException({ code: 'STALE_VERSION', message: 'Media version conflict.' });
+          }
+          await this.audit.record(
+            {
+              action: 'catalog.media.upload.confirmed',
+              entityType: 'ProductMedia',
+              entityId: mediaId,
+              actorId,
+              requestId: getRequestId(),
+              before: { state: 'PENDING_UPLOAD', version: row.version },
+              after: { state: 'UPLOADED', version: row.version + 1 },
+              metadata: { productId },
+            },
+            tx,
+          );
+        } else if (row.state !== 'UPLOADED' && row.state !== 'PROCESSING' && row.state !== 'READY') {
+          throw new UnprocessableEntityException({
+            code: 'MEDIA_NOT_READY',
+            message: 'The media upload cannot be confirmed in its current state.',
+          });
+        }
+        return { response: { mediaId }, resourceType: 'ProductMedia', resourceId: mediaId };
+      },
+    });
+
+    const confirmed = await this.prisma.productMedia.findUnique({ where: { id: result.mediaId } });
+    if (!confirmed) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Media upload not found.' });
+    if (confirmed.state === 'UPLOADED' || confirmed.state === 'PROCESSING') {
+      await this.processingQueue.enqueue({ mediaId: confirmed.id, objectKey: confirmed.objectKey });
+    }
+    return { data: { media: adminMedia(confirmed) } };
   }
 
   private assertKindMatchesMime(kind: ProductMediaUploadDto['kind'], mime: string): void {

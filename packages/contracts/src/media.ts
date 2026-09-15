@@ -74,6 +74,7 @@ export type AdminProductMedia = {
   caption: string | null;
   originalFilename: string;
   declaredMime: string;
+  declaredBytes: string;
   detectedMime: string | null;
   bytes: string | null;
   width: number | null;
@@ -90,6 +91,7 @@ export type AdminProductMedia = {
 };
 
 export type AdminProductMediaResponse = ApiSuccess<{ media: AdminProductMedia }>;
+export type ProductMediaConfirmResponse = AdminProductMediaResponse;
 export type AdminProductMediaListResponse = ApiSuccess<{ items: AdminProductMedia[] }>;
 
 export type PublicProductMediaImage = {

@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 
 export class ProductMediaUploadDto {
   @IsEnum(['IMAGE', 'VIDEO'])
@@ -31,4 +31,11 @@ export class ProductMediaUploadDto {
   @IsInt()
   @Min(1)
   productVersion!: number;
+}
+
+export class ProductMediaConfirmDto {
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-f0-9]{64}$/u)
+  checksumSha256?: string;
 }

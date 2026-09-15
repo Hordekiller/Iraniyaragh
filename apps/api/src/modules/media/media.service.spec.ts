@@ -20,6 +20,8 @@ function setup() {
     productMedia: {
       count: vi.fn().mockResolvedValue(0),
       create: vi.fn().mockResolvedValue(undefined),
+      findFirst: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
   };
   const storedMedia = {
@@ -34,6 +36,7 @@ function setup() {
     objectKey: 'quarantine/products/product-1/media-id/source.jpg',
     originalFilename: '..-unsafe-name.jpg',
     declaredMime: 'image/jpeg',
+    declaredBytes: 1024n,
     detectedMime: null,
     bytes: null,
     width: null,
@@ -52,7 +55,10 @@ function setup() {
     updatedAt: now,
   };
   const prisma = {
-    productMedia: { findUnique: vi.fn().mockResolvedValue(storedMedia) },
+    productMedia: {
+      findUnique: vi.fn().mockResolvedValue(storedMedia),
+      findFirst: vi.fn().mockResolvedValue(storedMedia),
+    },
   };
   const audit = { record: vi.fn().mockResolvedValue(undefined) };
   const idempotency = {
@@ -68,15 +74,24 @@ function setup() {
       requiredHeaders: { 'content-type': 'image/jpeg' },
       expiresAt: new Date(now.getTime() + 10 * 60 * 1000),
     }),
+    headObject: vi.fn().mockResolvedValue({
+      objectKey: storedMedia.objectKey,
+      bytes: 1024,
+      contentType: 'image/jpeg',
+      checksumSha256: 'a'.repeat(64),
+    }),
   };
+  const processingQueue = { enqueue: vi.fn().mockResolvedValue(undefined) };
   const service = new MediaService(
     prisma as never,
     audit as never,
     idempotency as never,
     storage as never,
+    processingQueue,
     new MediaPolicyService(),
   );
-  return { service, prisma, audit, idempotency, storage, tx, storedMedia };
+  tx.productMedia.findFirst.mockImplementation(async () => storedMedia);
+  return { service, prisma, audit, idempotency, storage, processingQueue, tx, storedMedia };
 }
 
 describe('MediaService initiateUpload', () => {
@@ -151,5 +166,100 @@ describe('MediaService initiateUpload', () => {
       ctx.service.initiateUpload('actor-1', 'stable-key-123', 'product-1', input),
     ).rejects.toMatchObject({ response: { code: 'MEDIA_UPLOAD_EXPIRED' } });
     expect(ctx.storage.presignPut).not.toHaveBeenCalled();
+  });
+});
+
+describe('MediaService confirmUpload', () => {
+  beforeEach(() => vi.useFakeTimers({ now }));
+
+  it('trusts storage HEAD, atomically advances state and enqueues by stable media id', async () => {
+    const ctx = setup();
+    ctx.idempotency.run.mockImplementationOnce(async ({ execute }) => {
+      const result = await execute(ctx.tx);
+      ctx.storedMedia.state = 'UPLOADED';
+      ctx.storedMedia.version = 2;
+      return result.response;
+    });
+
+    const result = await ctx.service.confirmUpload(
+      'actor-1',
+      'confirm-key-123',
+      'product-1',
+      'media-id',
+      { checksumSha256: 'a'.repeat(64) },
+    );
+
+    expect(ctx.storage.headObject).toHaveBeenCalledWith(ctx.storedMedia.objectKey);
+    expect(ctx.tx.productMedia.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({ id: 'media-id', productId: 'product-1', state: 'PENDING_UPLOAD' }),
+      data: { state: 'UPLOADED', version: { increment: 1 } },
+    });
+    expect(ctx.processingQueue.enqueue).toHaveBeenCalledWith({
+      mediaId: 'media-id',
+      objectKey: ctx.storedMedia.objectKey,
+    });
+    expect(result.data.media.state).toBe('UPLOADED');
+  });
+
+  it('rejects missing and swapped object metadata before persistence', async () => {
+    const missing = setup();
+    missing.storage.headObject.mockResolvedValue(null);
+    await expect(
+      missing.service.confirmUpload('actor-1', 'confirm-key-123', 'product-1', 'media-id', {}),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_NOT_READY' } });
+    expect(missing.idempotency.run).not.toHaveBeenCalled();
+
+    const swapped = setup();
+    swapped.storage.headObject.mockResolvedValue({
+      objectKey: 'quarantine/products/other/media-id/source.jpg',
+      bytes: 1024,
+      contentType: 'image/jpeg',
+      checksumSha256: null,
+    });
+    await expect(
+      swapped.service.confirmUpload('actor-1', 'confirm-key-456', 'product-1', 'media-id', {}),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_CHECKSUM_MISMATCH' } });
+  });
+
+  it('rejects MIME, byte and checksum mismatches with stable errors', async () => {
+    const wrongMime = setup();
+    wrongMime.storage.headObject.mockResolvedValue({
+      objectKey: wrongMime.storedMedia.objectKey,
+      bytes: 1024,
+      contentType: 'text/html',
+      checksumSha256: null,
+    });
+    await expect(
+      wrongMime.service.confirmUpload('actor-1', 'confirm-key-123', 'product-1', 'media-id', {}),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_TYPE_UNSUPPORTED' } });
+
+    const wrongBytes = setup();
+    wrongBytes.storage.headObject.mockResolvedValue({
+      objectKey: wrongBytes.storedMedia.objectKey,
+      bytes: 2048,
+      contentType: 'image/jpeg',
+      checksumSha256: null,
+    });
+    await expect(
+      wrongBytes.service.confirmUpload('actor-1', 'confirm-key-456', 'product-1', 'media-id', {}),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_CHECKSUM_MISMATCH' } });
+
+    const wrongChecksum = setup();
+    await expect(
+      wrongChecksum.service.confirmUpload('actor-1', 'confirm-key-789', 'product-1', 'media-id', {
+        checksumSha256: 'b'.repeat(64),
+      }),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_CHECKSUM_MISMATCH' } });
+  });
+
+  it('re-enqueues an uploaded replay without repeating HEAD or state mutation', async () => {
+    const ctx = setup();
+    ctx.storedMedia.state = 'UPLOADED';
+
+    await ctx.service.confirmUpload('actor-1', 'confirm-key-123', 'product-1', 'media-id', {});
+
+    expect(ctx.storage.headObject).not.toHaveBeenCalled();
+    expect(ctx.tx.productMedia.updateMany).not.toHaveBeenCalled();
+    expect(ctx.processingQueue.enqueue).toHaveBeenCalledTimes(1);
   });
 });

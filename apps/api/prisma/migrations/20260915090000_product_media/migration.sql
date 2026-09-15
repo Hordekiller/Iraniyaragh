@@ -15,6 +15,7 @@ CREATE TABLE "ProductMedia" (
     "objectKey" VARCHAR(512) NOT NULL,
     "originalFilename" VARCHAR(255) NOT NULL,
     "declaredMime" VARCHAR(100) NOT NULL,
+    "declaredBytes" BIGINT NOT NULL,
     "detectedMime" VARCHAR(100),
     "bytes" BIGINT,
     "width" INTEGER,
@@ -35,7 +36,7 @@ CREATE TABLE "ProductMedia" (
     CONSTRAINT "ProductMedia_position_check" CHECK ("position" >= 0),
     CONSTRAINT "ProductMedia_version_check" CHECK ("version" >= 1),
     CONSTRAINT "ProductMedia_verified_values_check" CHECK (
-      ("bytes" IS NULL OR "bytes" > 0) AND
+      "declaredBytes" > 0 AND ("bytes" IS NULL OR "bytes" > 0) AND
       ("width" IS NULL OR "width" > 0) AND
       ("height" IS NULL OR "height" > 0) AND
       ("durationMs" IS NULL OR "durationMs" > 0)
