@@ -26,6 +26,11 @@ describe('variant identifiers', () => {
       const once = canonicalizeSku(' Gear  X ');
       expect(canonicalizeSku(once)).toBe(once);
     });
+
+    it('folds ASCII case only; non-ASCII letters are preserved (ADR-0013)', () => {
+      expect(canonicalizeSku('élan-Q')).toBe('éLAN-Q');
+      expect(canonicalizeSku(' قیر-۱ ')).toBe('قیر-۱');
+    });
   });
 
   describe('combinationSignature', () => {

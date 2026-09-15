@@ -61,9 +61,12 @@ A forward migration adds a Catalog-specific request table with:
 
 Default retention is 24 hours and is server configuration bounded between 1 and 72
 hours. Cleanup is an idempotent bounded batch and must not run in request latency.
-Expiry is checked by the service, but an expired row is replaced only under a lock/
-transaction that cannot permit two effects. Until the cleanup worker is delivered,
-expired keys remain safely replayable rather than being reused.
+Expiry is not yet enforced for reuse: an identical-payload replay against an
+expired key still returns the stored original success representation (the effect
+already committed exactly once), and a conflicting payload against an expired key
+still returns `IDEMPOTENCY_CONFLICT` — a key is never executed twice, before or
+after expiry. Replacing an expired row is only safe under a serializable
+transaction and is deferred until the cleanup worker is delivered.
 
 Stored responses are public/admin DTO snapshots, never Prisma models. They may not
 contain secrets, tokens, cost fields outside the authorized original response, or
@@ -91,6 +94,12 @@ versioned scope or response migration.
 - transaction rollback leaves no idempotency row;
 - stored response redaction and raw-key log/audit canary;
 - OpenAPI, generated artifact, Admin client and project status parity.
+
+The current API integration suite covers PostgreSQL replay, actor isolation,
+identical and conflicting concurrent races, and rollback-without-a-record in
+`catalog-idempotency.integration-spec.ts`. Expiry remains a retention/cleanup
+policy; it is intentionally not implemented by replacing rows during request
+handling, so expiry tests must not weaken the one-effect guarantee.
 
 ## Delivery order
 

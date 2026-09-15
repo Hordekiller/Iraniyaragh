@@ -51,9 +51,10 @@ Titles are never keys and never participate in identity.
 
 ## 3. SKU and barcode
 
-- `sku` display string plus canonical `skuKey` (NFC → trim → uppercase ASCII →
-  collapse internal whitespace). `skuKey` is globally unique; leading zeros and
-  non-ASCII characters are preserved after normalization.
+- `sku` display string plus canonical `skuKey` (NFC → trim → collapse internal
+  whitespace → uppercase ASCII letters). `skuKey` is globally unique and leading
+  zeros are preserved. SKUs are ASCII-only: the schema enforces it, so non-ASCII
+  SKUs are rejected rather than silently canonicalized.
 - SKU is always a string in transit; never parsed as a number. Ordinary
   Product/Variant PATCH never changes `sku`. Any update or import body that
   contains a `sku` field is **rejected with `409 SKU_CHANGE_NOT_ALLOWED`, never
