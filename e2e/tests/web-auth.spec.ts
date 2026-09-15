@@ -8,12 +8,16 @@ const INVALID_CODE = '000000';
 
 /**
  * Opens the customer OTP login dialog through the relevant entry point for the
- * current viewport: the mobile bottom-nav "پروفایل" button or the header's
+ * current viewport: the mobile bottom-nav account button or the header's
  * "ورود به حساب کاربری" account button. Both route to the same LoginDialog.
  */
 async function openLogin(page: Page) {
   if (isMobile(page)) {
-    await tap(page.getByRole('button', { name: 'پروفایل' }));
+    await tap(
+      page
+        .getByRole('navigation', { name: 'ناوبری پایین' })
+        .getByRole('button', { name: 'حساب کاربری' }),
+    );
   } else {
     await tap(page.getByRole('button', { name: 'ورود به حساب کاربری' }));
   }
@@ -60,7 +64,7 @@ test.describe('web: customer OTP login (fixture client, #50)', () => {
     await tap(page.getByRole('button', { name: 'ورود به حساب', exact: true }));
     await expect(page.getByRole('dialog')).toBeHidden();
 
-    const accountButton = page.getByRole('button', { name: 'حساب کاربری' });
+    const accountButton = page.getByRole('banner').getByRole('button', { name: 'حساب کاربری' });
     await expect(accountButton).toBeVisible();
     await tap(accountButton);
     await expect(page.getByText('fixture-user-otp-1').first()).toBeVisible();

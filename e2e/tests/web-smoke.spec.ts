@@ -22,7 +22,7 @@ test.describe('web: storefront shell', () => {
     await expect(page.getByText('ابزار محبوب هفته')).toBeVisible();
     await expect(page.getByText('پرفروش‌ترین‌ها').first()).toBeVisible();
     await expect(page.getByText('مجله آموزشی ایران یراق')).toBeVisible();
-    await expect(page.getByText('چرا ۴۸ هزار استادکار، ایران یراق را انتخاب کرده‌اند؟')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /چرا .* استادکار، ایران یراق را انتخاب کرده‌اند؟/ })).toBeVisible();
 
     if (!isMobile(page)) {
       await expect(page.getByText('آدرس فروشگاه مرکزی')).toBeVisible();
@@ -48,23 +48,24 @@ test.describe('web: storefront shell', () => {
     await tap(dots.nth(0));
     await expect(page.getByText('قدرت را در دست بگیرید')).toBeVisible();
 
-    await expect(page.getByText('۰3 / ۰۳').or(page.getByText('۰1 / ۰۳'))).toBeVisible();
+    await expect(page.getByText(/۰[۱۳] \/ ۰۳/)).toBeVisible();
 
     await network.assertNone();
   });
 
-  test('product card opens the detail modal and adds to cart with a toast', async ({ page }) => {
+  test('product card opens its route and adds to cart with a toast', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
     await page.goto('/');
 
     await tap(page.locator('section#popular button[class*="snap-start"]').first());
 
-    await expect(page.getByText('افزودن به سبد خرید')).toBeVisible();
+    await expect(page).toHaveURL(/\/product\//);
+    await expect(page.getByRole('button', { name: 'افزودن به سبد خرید' })).toBeVisible();
     await expect(page.getByText('موجود در انبار')).toBeVisible();
 
-    await tap(page.getByText('افزودن به سبد خرید'));
-    await expect(page.getByText('به سبد افزوده شد')).toBeVisible();
+    await tap(page.getByRole('button', { name: 'افزودن به سبد خرید' }));
+    await expect(page.getByText('به سبد خرید افزوده شد')).toBeVisible();
 
     await network.assertNone();
   });
@@ -92,7 +93,7 @@ test.describe('web: storefront shell', () => {
     await network.assertNone();
   });
 
-  test('desktop: search input binds the query and clears it', async ({ page }) => {
+  test('desktop: search submits the query and renders its route', async ({ page }) => {
     test.skip(isMobile(page), 'desktop-only input');
 
     const network = createExternalRequestsTracker(page);
@@ -104,19 +105,17 @@ test.describe('web: storefront shell', () => {
 
     await search.fill('دریل رونیکس');
     await expect(search).toHaveValue('دریل رونیکس');
+    await search.press('Enter');
 
-    const results = page.locator('section[aria-live="polite"]');
-    await expect(results).toBeVisible();
+    await expect(page).toHaveURL(/\/search\?q=/);
     await expect(page.getByRole('heading', { name: /نتایج جستجو/ })).toBeVisible();
-    await expect(page.getByText('۲ کالا یافت شد')).toBeVisible();
-    await expect(results.getByText(/دریل چکشی ۱۳/)).toBeVisible();
-    await expect(results.getByText(/ست دریل و/)).toBeVisible();
+    await expect(page.getByText(/دریل چکشی ۱۳/)).toBeVisible();
+    await expect(page.getByText(/ست دریل و/)).toBeVisible();
 
     await expect(page.getByRole('button', { name: 'پاک کردن جستجو' })).toBeVisible();
     await tap(page.getByRole('button', { name: 'پاک کردن جستجو' }));
     await expect(search).toHaveValue('');
     await expect(page.getByRole('button', { name: 'پاک کردن جستجو' })).toBeHidden();
-    await expect(results).toBeHidden();
 
     await network.assertNone();
   });
@@ -128,14 +127,13 @@ test.describe('web: storefront shell', () => {
 
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: 'دسته‌ها' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'پشتیبانی' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'دسته‌بندی‌ها' })).toBeVisible();
+    const support = page.getByRole('link', { name: 'پشتیبانی' });
+    await expect(support).toBeVisible();
+    await expect(support).toHaveAttribute('href', /^tel:/);
 
-    await tap(page.getByRole('button', { name: 'پشتیبانی' }));
-    await expect(page.getByText('پشتیبانی: ۰۲۱-۸۸۸۸۸۸۸۸')).toBeVisible();
-
-    await tap(page.getByRole('button', { name: 'دسته‌ها' }));
-    await expect(page.getByText('✓ دسته‌بندی‌ها', { exact: true })).toBeVisible();
+    await tap(page.getByRole('button', { name: 'دسته‌بندی‌ها' }));
+    await expect(page.locator('section#categories')).toBeInViewport();
 
     await tap(page.getByRole('button', { name: 'جستجو' }).first());
     await expect(page.locator('input[placeholder="جستجوی ابزار..."]')).toBeVisible();

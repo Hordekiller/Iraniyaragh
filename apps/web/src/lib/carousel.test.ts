@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { discountPercent, formatToman, scrollCarousel } from './carousel';
+import { discountPercent, formatTomanDisplay, scrollCarousel } from './carousel';
 
 describe('carousel helpers', () => {
-  it('formatToman() renders the fa-IR thousands grouping', () => {
-    expect(formatToman(340000)).toBe('۳۴۰٬۰۰۰');
-    expect(formatToman(0)).toBe('۰');
+  it('formatTomanDisplay() renders the fa-IR thousands grouping', () => {
+    expect(formatTomanDisplay(340000)).toBe('۳۴۰٬۰۰۰');
+    expect(formatTomanDisplay(0)).toBe('۰');
   });
 
   it('discountPercent() rounds to a whole percentage', () => {

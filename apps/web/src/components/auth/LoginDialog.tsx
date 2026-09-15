@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, KeyRound, Loader2, Smartphone, X } from 'lucide-react'
 import { normalizeIranianMobile } from '../../lib/auth/normalize'
 import { useAuth } from '../../state/auth-context'
+import { MOBILE_PLACEHOLDER } from '../../lib/site-config'
 
 type LoginDialogProps = {
   open: boolean
@@ -280,7 +281,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                         aria-describedby={state.error ? 'login-dialog-error' : undefined}
                         value={state.mobile}
                         onChange={e => controller.setMobile(e.target.value)}
-                        placeholder="۰۹۱۲ ۳۴۵ ۶۷۸۹"
+                        placeholder={MOBILE_PLACEHOLDER}
                         className="w-full h-[52px] px-4 bg-slate-50 border border-slate-200 rounded-2xl text-center text-[17px] font-bold tracking-widest text-[#0F172A] placeholder:text-slate-300 placeholder:text-[13px] placeholder:font-medium placeholder:tracking-normal focus:outline-none focus:border-[#FF4D00]/50 focus:bg-white focus:ring-4 focus:ring-[#FF4D00]/10 transition"
                       />
                     </div>
