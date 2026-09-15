@@ -148,6 +148,18 @@ foundation, and G5–G10 have not reached integrated completion.
 - M2 adds a version-guarded, idempotent primary-selection command and prevents a
   published product from losing its primary image through archive.
 
+### Product Media M3 (`feat/product-media-m3`, stacked pending review)
+
+- Public catalog lists expose only the ready primary image and its `CARD`
+  renditions; product detail exposes the ordered ready gallery with intrinsic
+  dimensions and immutable JPEG/WebP sources.
+- Public URLs are derived only from the validated `PUBLIC_MEDIA_ORIGIN`; staging
+  and production require an explicit HTTPS origin without credentials, query, or
+  fragment. Private source and presigned upload URLs never enter public contracts.
+- Media is part of the existing public response ETag payload, so ready metadata,
+  ordering, archive, and rendition changes invalidate conditional responses.
+- The committed OpenAPI artifact describes list `primaryMedia` and detail `media`.
+
 ## Recently merged capability
 
 ### PR #109 — Auth privileged lifecycle
@@ -200,8 +212,8 @@ security/query review, OpenAPI drift confirmation and merge.
   merged via #139 (real HTTP default, fixture only behind `VITE_FIXTURE_AUTH=true`);
   production acceptance still requires live SMS, admin MFA/session UX and permission
   navigation.
-- Product Media admin manager, public projection, storefront gallery and integrated
-  M5 journey; production S3/CORS and malware-scanner acceptance evidence.
+- Product Media storefront gallery and integrated M5 journey; production S3/CORS
+  and malware-scanner acceptance evidence.
 - VAT policy and tax math (integer-Rial VAT on the sales basis per the permanent
   VAT Law and the configurable-rate design in ADR-0014); electronic-invoice
   (`سامانه مودیان`) emission; both are planned, not implemented.

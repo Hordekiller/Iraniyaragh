@@ -13,6 +13,14 @@ const productRow = {
   brandId: brandRow.id, categoryId: categoryRow.id, createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-02T00:00:00Z'),
   brand: brandRow, category: categoryRow, variants: [variant],
 };
+const readyPrimaryMedia = {
+  id: 'media-1', kind: 'IMAGE', role: 'PRIMARY', state: 'READY', position: 0,
+  altText: 'نمای روبه‌روی محصول', caption: null, width: 1200, height: 800,
+  renditions: [
+    { objectKey: 'renditions/products/product-1/media-1/v3/card.jpeg', purpose: 'CARD', format: 'jpeg', width: 480, height: 320 },
+    { objectKey: 'renditions/products/product-1/media-1/v3/card.webp', purpose: 'CARD', format: 'webp', width: 480, height: 320 },
+  ],
+};
 
 function createFakeClient(overrides: Record<string, unknown> = {}) {
   return {
@@ -61,7 +69,8 @@ function buildService() {
   } as never;
   const audit = { record: vi.fn() } as never;
   const idempotency = { run: vi.fn(async ({ execute }: { execute: (client: unknown) => Promise<{ response: unknown }> }) => (await execute(tx)).response) } as never;
-  const service = new CatalogService(prisma, audit, idempotency);
+  const config = { get: vi.fn().mockReturnValue('https://media.example.com') } as never;
+  const service = new CatalogService(prisma, audit, idempotency, config);
   return { client, tx, audit, service, prisma: prisma as unknown as Record<string, unknown> };
 }
 
@@ -78,7 +87,7 @@ describe('CatalogService', () => {
 
   describe('public product detail', () => {
     it('returns a published product with public variant shape that omits costPrice but keeps salePrice', async () => {
-      (ctx.prisma.product.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(productRow);
+      (ctx.prisma.product.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({ ...productRow, media: [readyPrimaryMedia] });
       const detail = await ctx.service.getPublicProduct('product-one');
       expect(ctx.prisma.product.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -96,6 +105,15 @@ describe('CatalogService', () => {
       });
       expect(detail.data.product.variants[0]).not.toHaveProperty('costPrice');
       expect(detail.data.product.variants[0]).not.toHaveProperty('barcode');
+      expect(detail.data.product.media).toEqual([
+        expect.objectContaining({
+          id: 'media-1', kind: 'IMAGE', role: 'PRIMARY', alt: 'نمای روبه‌روی محصول',
+          sources: [
+            expect.objectContaining({ url: 'https://media.example.com/renditions/products/product-1/media-1/v3/card.jpeg', type: 'image/jpeg' }),
+            expect.objectContaining({ url: 'https://media.example.com/renditions/products/product-1/media-1/v3/card.webp', type: 'image/webp' }),
+          ],
+        }),
+      ]);
     });
 
     it('throws NotFound for a missing or non-active product', async () => {
@@ -106,7 +124,7 @@ describe('CatalogService', () => {
 
   describe('product list projections', () => {
     it('lists only active products for public queries and omits variants and description', async () => {
-      (ctx.prisma.product.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([productRow]);
+      (ctx.prisma.product.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([{ ...productRow, media: [readyPrimaryMedia] }]);
       (ctx.prisma.product.count as ReturnType<typeof vi.fn>).mockResolvedValue(1);
       const list = await ctx.service.listPublicProducts({});
       expect(ctx.prisma.product.findMany).toHaveBeenCalledWith(
@@ -114,6 +132,10 @@ describe('CatalogService', () => {
       );
       expect(list.data.items[0]).not.toHaveProperty('variants');
       expect(list.data.items[0]).not.toHaveProperty('description');
+      expect(list.data.items[0].primaryMedia?.sources).toHaveLength(2);
+      expect(ctx.prisma.product.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ include: expect.objectContaining({ media: expect.objectContaining({ where: { state: 'READY', role: 'PRIMARY', kind: 'IMAGE' } }) }) }),
+      );
     });
 
     it('maps admin DRAFT filter to both DRAFT and INACTIVE rows', async () => {
