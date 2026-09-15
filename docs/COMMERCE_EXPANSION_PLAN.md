@@ -3,7 +3,7 @@
 Status: authoritative expansion plan; implementation status remains in
 `PROJECT_STATUS.md`.
 
-Last reviewed: 2026-09-09
+Last reviewed: 2026-09-15
 
 Owners: Developer A — Platform/API/Data/Operations; Developer B —
 Product/Web/Admin/E2E. Every critical change requires independent review by the
@@ -582,14 +582,17 @@ platform, a second ORM or multiple payment/search abstractions merely for novelt
 
 ## 12. Current next sequence
 
-As of the 2026-09-14 reconciliation (`main` = `d45c5b4`, catalog parity #199 and
-report refactor #203 merged; contract handoff #206 merged), the immediate path is:
+As of the 2026-09-15 reconciliation (`main` = `e67b26e`; catalog parity #199/#200,
+variant-contract typing parity #214, report refactor #203, media M1 plan #211 and
+protected inventory HTTP #217/#219 merged), the immediate path is:
 
-1. resolve the remaining catalog contract/migration/idempotency review in #200 and
-   the auth parity review gates (#190–#192) before treating Auth/Catalog as gate-clean;
-2. accept media policy and deliver the conflict-safe M1–M5 slices (#162–#165),
-   then finish the publish → discover vertical slice with real media/price data;
-3. expose protected inventory HTTP plus reservation expiry batching (#81);
+1. bind the American/Warehouse (`A`/`W`) faces of the catalog contract, then deliver
+   the conflict-safe media M1–M5 slices (#162–#165) and finish the
+   publish → discover vertical slice with real media/price data;
+2. advance Inventory along #215: reservations/transfers HTTP on the protected
+   #217/#219 base, warehouse/location CRUD and the operator flows, then concrete
+   reservation expiry batching (#81);
+3. pull the storefront from fixtures to live catalog/price projections (#166);
 4. proceed through COMM_G6–G12 without skipping integrated exit evidence.
 
 `EXECUTION_STATUS.md` must translate only the next one or two gates into active

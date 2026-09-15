@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-14
+Last reviewed: 2026-09-15
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
@@ -21,39 +21,43 @@ day-to-day assignments.
 
 ## Current position
 
-| Gate                  | State                              | Current evidence                                                                                                                                                                             | Exit blocker                                                            |
-| --------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `0.1` Foundation/Auth | Acceptance closed                  | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                                                                           | private #114 acceptance                                                 |
-| `0.2` Catalog         | Active                            | Contracts #103, idempotency contract #168, durable runtime #171, admin Catalog workflow #173, policy ADR-0013 (#177), `C`-wave contract (#179), P1 variant schema/migration (#180), P2 mutation services (#181), P2 configuration/generation (#182) and P3 import (#183 parser/exporter, #184 staged service) merged | `A`/`W` binding, media M1–M5, storefront live integration, P3 follow-ups (durable parsed-payload storage, decompression-time size guard) |
-| `0.3` Inventory       | Foundation + protected HTTP | Transactional ledger/reservation service; protected balance/adjustment API merged (#217)          | Warehouse/location CRUD, HTTP reservations, transfers, expiry worker and admin (EXEC_G4 / #215) |
-| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                                                                                                                                                     | Policies and all application/client workflows                           |
+| Gate                  | State                              | Current evidence                                                                                                                                                                                                                                                                                                                                                                                          | Exit blocker                                                                                                                             |
+| --------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `0.1` Foundation/Auth | Acceptance closed                  | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                                                                                                                                                                                                                                                                                        | private #114 acceptance                                                                                                                  |
+| `0.2` Catalog         | Active                             | Contracts #103, idempotency contract #168, durable runtime #171, admin Catalog workflow #173, policy ADR-0013 (#177), `C`-wave contract (#179), P1 variant schema/migration (#180), P2 mutation services (#181), P2 configuration/generation (#182), P3 import (#183 parser/exporter, #184 staged service), catalog parity #199/#200, report refactor #203 and variant-contract typing parity #214 merged | `A`/`W` binding, media M1–M5, storefront live integration, P3 follow-ups (durable parsed-payload storage, decompression-time size guard) |
+| `0.3` Inventory       | Foundation + protected HTTP        | Transactional ledger/reservation service; protected balance/adjustment API merged (#217) with declared error-code wiring and request-ID binding (#219)                                                                                                                                                                                                                                                    | Warehouse/location CRUD, HTTP reservations, transfers, expiry worker and admin (EXEC_G4 / #215)                                          |
+| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                                                                                                                                                                                                                                                                                                                                                                  | Policies and all application/client workflows                                                                                            |
 
 ## Active merge/review queue
 
-| Priority | Work                                 | State              | Required reviewer focus                                                                            | Exit action                                                           |
-| -------: | ------------------------------------ | ------------------ | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-|        1 | Issue #78                            | Closed 2026-09-12  | agreement recorded in `TEAM.md`, effective 2026-09-11                                              | Merged #172 delivers the accepted agreement; #78 closed               |
-|        2 | Issue #114                           | Private acceptance | #154 merged with no secret/PII exposure and fail-closed mutations                                  | Provision account/line/template/key; controlled sandbox/live evidence |
-|        3 | Issue #111 (mutation idempotency)    | Merged             | contract #168 + runtime #171 + admin workflow #173 merged                                          | Bounded cleanup worker remains on #81 before production               |
-|        4 | Issue #176/#178 (variants/import)    | `C` + `P1` + `P2` + `P3` merged | policy ADR-0013 (#177) + `C`-wave contract (#179) + P1 schema/migration (#180) + P2 mutation services (#181) + P2 configuration/generation (#182) + P3 parser/exporter (#183) + P3 staged import service (#184) merged; #176 closed | A/W/I binding, each ≤400 lines and reviewed; P3 follow-ups (durable parsed-payload storage, decompression-time size guard) |
-|        5 | Discovery ready items #126/#129/#136 | Backlog (platform) | server-rendered pages, sitemap/robots/IndexNow and telemetry                                       | Pick up as platform capacity opens and wave 0.2-A is delivered        |
-|        6 | Admin catalog slice (#166)           | Local `feat/admin-catalog-crud`; isolated verify green on the post-#214 base (contracts/admin typecheck, lint, 400 admin tests) | contracts typing parity; `GET /catalog/admin/attributes/:id` OpenAPI; admin UI permission gates | Merge split PR `#214` (rebased to `bcf3864` on `5e34936`, all checks green, owner re-approval pending after stale-review dismissal), then rebase slice on `main` and open the admin UI PR under #166 |
+| Priority | Work                                 | State                                                                                                                                                         | Required reviewer focus                                                                                                                                                                                                             | Exit action                                                                                                                |
+| -------: | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+|        1 | Issue #78                            | Closed 2026-09-12                                                                                                                                             | agreement recorded in `TEAM.md`, effective 2026-09-11                                                                                                                                                                               | Merged #172 delivers the accepted agreement; #78 closed                                                                    |
+|        2 | Issue #114                           | Private acceptance                                                                                                                                            | #154 merged with no secret/PII exposure and fail-closed mutations                                                                                                                                                                   | Provision account/line/template/key; controlled sandbox/live evidence                                                      |
+|        3 | Issue #111 (mutation idempotency)    | Merged                                                                                                                                                        | contract #168 + runtime #171 + admin workflow #173 merged                                                                                                                                                                           | Bounded cleanup worker remains on #81 before production                                                                    |
+|        4 | Issue #176/#178 (variants/import)    | `C` + `P1` + `P2` + `P3` merged                                                                                                                               | policy ADR-0013 (#177) + `C`-wave contract (#179) + P1 schema/migration (#180) + P2 mutation services (#181) + P2 configuration/generation (#182) + P3 parser/exporter (#183) + P3 staged import service (#184) merged; #176 closed | A/W/I binding, each ≤400 lines and reviewed; P3 follow-ups (durable parsed-payload storage, decompression-time size guard) |
+|        5 | Discovery ready items #126/#129/#136 | Backlog (platform)                                                                                                                                            | server-rendered pages, sitemap/robots/IndexNow and telemetry                                                                                                                                                                        | Pick up as platform capacity opens and wave 0.2-A is delivered                                                             |
+|        6 | Admin catalog slice (#166)           | Local `feat/admin-catalog-crud`; isolated verify green on the post-#214 base (contracts/admin typecheck, lint, 400 admin tests); split PR #214 merged on main | contracts typing parity; `GET /catalog/admin/attributes/:id` OpenAPI; admin UI permission gates                                                                                                                                     | Rebase the slice on `main` (verified conflict-free ahead) and open the admin UI PR under #166                              |
 
-## Resolved since the 2026-09-13 review
+## Resolved since the 2026-09-14 review
 
-- `main` advanced to `5e34936` with the protected inventory balance/adjustment API
-  merged (#217): balance/movement reads and `POST /inventory/changes`, stable
-  `INSUFFICIENT_STOCK`/`INVENTORY_VERSION_CONFLICT`/`RESERVATION_STATE_CONFLICT`
-  codes in the shared contract, and the canonical `REPOSITORY_WORKFLOW.md`
-  (strict-protection, PR state machine, Sonar truthfulness). Follow-ups for the
-  five declared-but-unemitted codes and the real `getRequestId()` binding are
-  tracked on #215.
-- The catalog attribute-detail endpoint split PR #214 was rebased onto `5e34936`
-  (OpenAPI regenerated, drift-clean) to head `bcf3864`; the owner's prior approval
-  was dismissed by stale-review policy and a fresh approval on `bcf3864` is required.
-- #212 (SonarCloud workflow truthfulness fix) approved by Maddyrampant; #174 closed
-  as superseded by this docs PR; #211 (media M1 plan) rebased to `26c311e`; #216
-  (storefront coverage gate) closed as delivered with #207 coverage evidence.
+- `main` advanced from `0091808` to `e67b26e`. The protected inventory
+  balance/adjustment API (#217, `5e34936`) is joined by the declared error-code
+  wiring and real `getRequestId()` binding shipped via #219 (`f7eb9a7`),
+  resolving the five declared-but-unemitted code follow-ups tracked on #215.
+- The catalog attribute-detail endpoint split PR #214 was merged to `main` at
+  `0091808` (variant-contract typing parity + `GET /catalog/admin/attributes/:id`,
+  OpenAPI regenerated and drift-clean); the admin UI slice under #166 can now
+  rebase on `main`.
+- Closure wave on 2026-09-15: #212 (SonarCloud workflow truthfulness) merged at
+  `44d2262`; #211 (media M1 plan) merged at `c8790b6`; #216 (storefront coverage
+  gate) closed as delivered with #207 evidence; #186/#188 closed via #190/#195;
+  #189 closed via #199/#200; #218 (`e67b26e`) reconciled `PROJECT_STATUS.md` and
+  `REPOSITORY_WORKFLOW.md` to current `main` (incl. #217/#219/#213) after
+  independent review. #213 (SonarCloud external-bucket definition) remains open
+  on the GitHub side.
+- The 2026-09-11/13 review items (Auth acceptance, catalog P-wave, #217 API) were
+  already reflected in the previous snapshot; the latest one is `e67b26e`.
 
 ## Team disposition ledger — 2026-09-08 (updated 2026-09-11)
 

@@ -1,6 +1,6 @@
 # Zero-to-Production Execution Backlog
 
-Status: active work-breakdown baseline; reconciled 2026-09-14
+Status: active work-breakdown baseline; reconciled 2026-09-15
 
 Developer A: [@Hordekiller](https://github.com/Hordekiller)
 
@@ -23,15 +23,15 @@ the agreed scope in `PRODUCT_SPEC.md`.
 
 ### Current gate assessment
 
-| Gate (EXEC_G#) | Assessment                      | Why it is not closed                                                                                                                |
-| -------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| G0             | Substantially complete          | provider/business decisions and team agreement remain                                                                               |
-| G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                           |
-| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158); logout CSRF #190, staff-auth #191 and nav flags #192 remain review-gated                            |
-| G3             | Core delivered                  | attributes/variants/SKU/price-history/import shipped (#179–#184); #199, #203 merged; #200 remains review-gated; media M1 (#162) and storefront (#166) remain                        |
-| G4             | Partial foundation              | ledger/reservation service and protected balance/adjustment HTTP (#217) merged; warehouse/location, reservations, transfers, worker/admin incomplete                                                 |
-| G5             | Persistence foundation only     | state tables/helper exist; cart/checkout/order services absent                                                                      |
-| G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                               |
+| Gate (EXEC_G#) | Assessment                      | Why it is not closed                                                                                                                                                                                                     |
+| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| G0             | Substantially complete          | provider/business decisions and team agreement remain                                                                                                                                                                    |
+| G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                                                                                                                |
+| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158) plus admin logout CSRF #190, real staff-auth client #191 and live nav flags #192; refresh/CSRF parity #186/#188 closed via #190/#195                                      |
+| G3             | Core delivered                  | attributes/variants/SKU/price-history/import shipped (#179–#184) with catalog parity #199/#200, report refactor #203 and contract-typing parity #214; media M1 (#162) and storefront (#166) remain                       |
+| G4             | Partial foundation              | ledger/reservation service and protected balance/adjustment HTTP merged (#217) with declared error codes and request-ID binding wired (#219); warehouse/location, reservations/transfers, worker/admin incomplete (#215) |
+| G5             | Persistence foundation only     | state tables/helper exist; cart/checkout/order services absent                                                                                                                                                           |
+| G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                                                                                                                    |
 
 This table is qualitative. A numeric delivery percentage is intentionally withheld
 until each row has accepted exit evidence.
@@ -40,27 +40,46 @@ until each row has accepted exit evidence.
 
 Merged to `main` on 2026-09-14 (all CI green on final heads):
 
-| PR | Main head | Content |
-| -- | --------- | ------- |
-| #197 | `5eb8915` | Blocklisted common staff passwords enforced per contract §10 (endpoint + validation) |
-| #202 | `b8def1e` | `SENDER_LINE` regex empty alternative removed (Sonar S6323) — language unchanged |
+| PR   | Main head | Content                                                                                 |
+| ---- | --------- | --------------------------------------------------------------------------------------- |
+| #197 | `5eb8915` | Blocklisted common staff passwords enforced per contract §10 (endpoint + validation)    |
+| #202 | `b8def1e` | `SENDER_LINE` regex empty alternative removed (Sonar S6323) — language unchanged        |
 | #201 | `cfeda1a` | Admin catalog/SMS idempotency keys generated from `crypto.getRandomValues` only (S2245) |
 | #198 | `fe1fe2a` | SonarCloud analysis on PRs and main; production-source scope + LCOV; pipeline/e2e green |
-| #203 | `602c5ae` | Behavior-preserving catalog import report-building refactor |
-| #206 | `863bcd8` | Contract-first cart/checkout/order handoff documentation |
-| #204 | `b6b19af` | Redis 7 digest alignment for CI and local Compose |
-| #199 | `d45c5b4` | Catalog parity: no-op re-import and parser status validation |
+| #203 | `602c5ae` | Behavior-preserving catalog import report-building refactor                             |
+| #206 | `863bcd8` | Contract-first cart/checkout/order handoff documentation                                |
+| #204 | `b6b19af` | Redis 7 digest alignment for CI and local Compose                                       |
+| #199 | `d45c5b4` | Catalog parity: no-op re-import and parser status validation                            |
 
-Open wave (as of `d45c5b4`):
+Open wave (resolved to `main` on 2026-09-15):
 
-| PR | State |
-| -- | ----- |
-| #190 / #191 / #192 | Green/rebased, but review-gated; #191/#192 wait for the #190 auth decision |
-| #200 | Rebases cleanly but blocked by contract parity, migration-lock and DB concurrency review findings |
-| #185 | Approved but intentionally held pending RBAC/financial-governance domain review |
-| #205 | Approved but held until the database integration failure is explained and green |
-| #207 | All checks green; fresh independent approval required on latest head |
-| #194 | This documentation reconciliation, updated onto current main |
+| PR                 | State                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| #190 / #191 / #192 | Merged (`a7cfbac`/`3fafceb`/`64d4428`) — admin CSRF proof, real staff-auth HTTP client, live nav flags |
+| #200               | Merged (`6c9e546`) — closed the #189 import-verification gaps                                          |
+| #185               | Merged (`2e137d2`) — ADR-0014 runtime RBAC/financial governance                                        |
+| #205               | Merged (`8fa18e0`) — local worktree preservation                                                       |
+| #207               | Merged (`1e11274`) — routed fixture storefront onto `main`                                             |
+| #194               | Merged (`e888b7b`) — execution-docs and ADR-status reconciliation (this register)                      |
+| #211               | Merged (`c8790b6`) — media M1 execution plan (#162)                                                    |
+
+### Dated status delta — 2026-09-15
+
+Merged to `main` on 2026-09-15 (all CI green on final heads):
+
+| PR   | Main head | Content                                                                                |
+| ---- | --------- | -------------------------------------------------------------------------------------- |
+| #212 | `44d2262` | SonarCloud runs a real scan when the token is available (job-scope secret)             |
+| #219 | `f7eb9a7` | Declared inventory error codes wired and `getRequestId()` bound (#215 follow-up)       |
+| #207 | `1e11274` | Routed fixture storefront (discovery/product/cart/checkout/account/orders)             |
+| #200 | `6c9e546` | Catalog import parity gaps closed (from #189 verification)                             |
+| #191 | `3fafceb` | Real admin staff-auth HTTP client (password request → TOTP → `me()`)                   |
+| #214 | `0091808` | Catalog variant-contract typing parity and attribute-detail endpoint (split from #166) |
+| #218 | `e67b26e` | Project status / repository workflow facts reconciled; #217/#219/#213 recorded         |
+
+Closed as delivered: #216 (storefront coverage gate, #207 evidence); #189 (parity, via #199/#200);
+#186 and #188 (auth/refresh parity, via #190/#195). Open lane: #215 owns the next Inventory
+contract slice (reservations/transfers, warehouse/location CRUD) on the API side.
 
 ## 2. Completion map
 
