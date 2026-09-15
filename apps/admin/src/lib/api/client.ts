@@ -31,13 +31,19 @@ export class ApiClientError extends Error {
   readonly code: string;
   readonly requestId: string;
   readonly statusCode: number;
+  readonly retryAfterSeconds?: number;
 
-  constructor(failure: ApiErrorEnvelope) {
+  constructor(failure: ApiErrorEnvelope, headers?: Headers) {
     super(failure.message);
     this.name = 'ApiClientError';
     this.code = failure.code;
     this.requestId = failure.requestId;
     this.statusCode = failure.statusCode;
+    const retryAfter = headers?.get('Retry-After');
+    if (retryAfter) {
+      const seconds = Number(retryAfter);
+      if (Number.isFinite(seconds) && seconds >= 0) this.retryAfterSeconds = seconds;
+    }
   }
 }
 
@@ -134,7 +140,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       requestId: '',
       statusCode: response.status,
     };
-    throw new ApiClientError(failure);
+    throw new ApiClientError(failure, response.headers);
   }
 
   return payload as ApiSuccess<T>;

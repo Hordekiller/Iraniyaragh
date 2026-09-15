@@ -92,15 +92,14 @@ describe('StaffLoginPage full flow (fixture)', () => {
     expect(sessionStorage.length).toBe(0);
   });
 
-  it('fails closed and renders no sign-in form when the fixture opt-in is absent', () => {
+  it('defaults to the real staff-auth backend and renders the password form without the fixture opt-in', () => {
     delete process.env.NEXT_PUBLIC_FIXTURE_AUTH;
     render(<StaffLoginPage />);
 
-    expect(
-      screen.getByRole('alert'),
-    ).toHaveTextContent('ورود کارکنان به‌صورت آزمایشی در این نسخه فعال نیست');
-    expect(screen.queryByLabelText('شناسه کارکن')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'ادامه' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/فعّال نیست/)).not.toBeInTheDocument();
+    expect(screen.getByText(/سرور احراز هویت واقعی/)).toBeInTheDocument();
+    expect(screen.getByLabelText('شناسه کارکن')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ادامه' })).toBeInTheDocument();
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
   });
