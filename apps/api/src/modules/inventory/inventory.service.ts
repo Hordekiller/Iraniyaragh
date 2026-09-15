@@ -9,6 +9,12 @@ type StockKey = {
   variantId: string;
 };
 
+type StockReservationRow = Prisma.StockReservationGetPayload<Record<string, never>>;
+
+type ActiveReservation = StockReservationRow & { balanceId: string };
+
+type ActiveBalance = Prisma.InventoryBalanceGetPayload<Record<string, never>>;
+
 export type ActorContext = {
   actorId: string;
   requestId: string;
@@ -115,7 +121,7 @@ export class InventoryService {
             }
           }
 
-          await this.assertLocation(tx, command);
+          await this.assertStockIdentity(tx, command);
 
           const key = this.balanceKey(command);
           const current = await tx.inventoryBalance.findUnique({ where: key });
@@ -195,7 +201,7 @@ export class InventoryService {
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
-          await this.assertLocation(tx, command);
+          await this.assertStockIdentity(tx, command);
           const key = this.balanceKey(command);
           const balance = await tx.inventoryBalance.findUnique({ where: key });
           const version = balance?.version ?? 0;
@@ -250,58 +256,102 @@ export class InventoryService {
   }
 
   async releaseReservation(reservationId: string, context: ReservationLifecycleContext) {
-    this.assertTracked(context);
-    const reservation = await this.requireActiveReservation(reservationId);
-
-    return this.withSerializableRetry(() =>
-      this.prisma.$transaction(
-        async (tx) => {
-          const recheck = await tx.stockReservation.findUnique({ where: { id: reservationId } });
-          if (!recheck || recheck.status !== 'ACTIVE') {
-            return recheck ?? reservation;
-          }
-
-          const balance = await tx.inventoryBalance.findUnique({ where: { id: reservation.balanceId } });
-          this.assertVersion(context.expectedVersion, balance?.version ?? 0);
-          if (!balance || balance.reserved < reservation.quantity) {
-            throw new ConflictException({ code: 'RESERVATION_STATE_CONFLICT', message: 'Reservation balance is inconsistent.' });
-          }
-
-          await tx.inventoryBalance.update({
-            where: { id: balance.id },
-            data: {
-              reserved: { decrement: reservation.quantity },
-              available: { increment: reservation.quantity },
-              version: { increment: 1 },
-            },
-          });
-
-          const released = await tx.stockReservation.update({
-            where: { id: reservationId },
-            data: { status: 'RELEASED' },
-          });
-
-          await this.auditLog.record(
-            {
-              action: 'inventory.reservation.released',
-              entityType: 'stock-reservation',
-              entityId: reservationId,
-              before: { reserved: balance.reserved, available: balance.available },
-              after: { reserved: balance.reserved - reservation.quantity, available: balance.available + reservation.quantity },
-              actorId: context.actorId,
-              requestId: context.requestId,
-            },
-            tx,
-          );
-
-          return released;
+    return this.transitionReservation(reservationId, context, async (tx, reservation, balance) => {
+      await tx.inventoryBalance.update({
+        where: { id: balance.id },
+        data: {
+          reserved: { decrement: reservation.quantity },
+          available: { increment: reservation.quantity },
+          version: { increment: 1 },
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      ),
-    );
+      });
+
+      const released = await tx.stockReservation.update({
+        where: { id: reservationId },
+        data: { status: 'RELEASED' },
+      });
+
+      await this.auditLog.record(
+        {
+          action: 'inventory.reservation.released',
+          entityType: 'stock-reservation',
+          entityId: reservationId,
+          before: { reserved: balance.reserved, available: balance.available },
+          after: { reserved: balance.reserved - reservation.quantity, available: balance.available + reservation.quantity },
+          actorId: context.actorId,
+          requestId: context.requestId,
+        },
+        tx,
+      );
+
+      return released;
+    });
   }
 
   async consumeReservation(reservationId: string, context: ReservationLifecycleContext) {
+    return this.transitionReservation(reservationId, context, async (tx, reservation, balance) => {
+      const beforeOnHand = balance.onHand;
+      const afterReserved = balance.reserved - reservation.quantity;
+      const afterOnHand = balance.onHand - reservation.quantity;
+      const available = afterOnHand - afterReserved;
+
+      await tx.inventoryBalance.update({
+        where: { id: balance.id },
+        data: {
+          onHand: afterOnHand,
+          reserved: afterReserved,
+          available,
+          version: { increment: 1 },
+        },
+      });
+
+      await tx.inventoryMovement.create({
+        data: {
+          warehouseId: reservation.warehouseId,
+          locationId: reservation.locationId,
+          variantId: reservation.variantId,
+          type: InventoryMovementType.SALE,
+          quantity: -reservation.quantity,
+          beforeOnHand,
+          afterOnHand,
+          referenceType: reservation.orderId ? 'order' : 'stock-reservation',
+          referenceId: reservation.orderId ?? reservationId,
+          reason: 'Reservation consumed',
+        },
+      });
+
+      const consumed = await tx.stockReservation.update({
+        where: { id: reservationId },
+        data: { status: 'CONSUMED' },
+      });
+
+      await this.auditLog.record(
+        {
+          action: 'inventory.reservation.consumed',
+          entityType: 'stock-reservation',
+          entityId: reservationId,
+          before: { onHand: beforeOnHand, reserved: balance.reserved },
+          after: { onHand: afterOnHand, reserved: afterReserved, available },
+          metadata: { orderId: reservation.orderId },
+          actorId: context.actorId,
+          requestId: context.requestId,
+        },
+        tx,
+      );
+
+      return consumed;
+    });
+  }
+
+  private async transitionReservation<R extends { id: string; status: string }>(
+    reservationId: string,
+    context: ReservationLifecycleContext,
+    apply: (
+      tx: Prisma.TransactionClient,
+      reservation: ActiveReservation,
+      balance: ActiveBalance,
+    ) => Promise<R>,
+  ): Promise<R | StockReservationRow> {
     this.assertTracked(context);
     const reservation = await this.requireActiveReservation(reservationId);
 
@@ -309,8 +359,9 @@ export class InventoryService {
       this.prisma.$transaction(
         async (tx) => {
           const recheck = await tx.stockReservation.findUnique({ where: { id: reservationId } });
-          if (!recheck || recheck.status !== 'ACTIVE') {
-            return recheck ?? reservation;
+          const replayState = this.reservationReplay(recheck, reservation);
+          if (replayState !== null) {
+            return replayState;
           }
 
           const balance = await tx.inventoryBalance.findUnique({ where: { id: reservation.balanceId } });
@@ -319,56 +370,7 @@ export class InventoryService {
             throw new ConflictException({ code: 'RESERVATION_STATE_CONFLICT', message: 'Reservation balance is inconsistent.' });
           }
 
-          const beforeOnHand = balance.onHand;
-          const afterReserved = balance.reserved - reservation.quantity;
-          const afterOnHand = balance.onHand - reservation.quantity;
-          const available = afterOnHand - afterReserved;
-
-          await tx.inventoryBalance.update({
-            where: { id: balance.id },
-            data: {
-              onHand: afterOnHand,
-              reserved: afterReserved,
-              available,
-              version: { increment: 1 },
-            },
-          });
-
-          await tx.inventoryMovement.create({
-            data: {
-              warehouseId: reservation.warehouseId,
-              locationId: reservation.locationId,
-              variantId: reservation.variantId,
-              type: InventoryMovementType.SALE,
-              quantity: -reservation.quantity,
-              beforeOnHand,
-              afterOnHand,
-              referenceType: reservation.orderId ? 'order' : 'stock-reservation',
-              referenceId: reservation.orderId ?? reservationId,
-              reason: 'Reservation consumed',
-            },
-          });
-
-          const consumed = await tx.stockReservation.update({
-            where: { id: reservationId },
-            data: { status: 'CONSUMED' },
-          });
-
-          await this.auditLog.record(
-            {
-              action: 'inventory.reservation.consumed',
-              entityType: 'stock-reservation',
-              entityId: reservationId,
-              before: { onHand: beforeOnHand, reserved: balance.reserved },
-              after: { onHand: afterOnHand, reserved: afterReserved, available },
-              metadata: { orderId: reservation.orderId },
-              actorId: context.actorId,
-              requestId: context.requestId,
-            },
-            tx,
-          );
-
-          return consumed;
+          return apply(tx, reservation, balance);
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       ),
@@ -473,7 +475,12 @@ export class InventoryService {
     const reservation = await this.prisma.stockReservation.findUnique({
       where: { id: reservationId },
     });
-    if (!reservation) throw new NotFoundException('Reservation not found.');
+    if (!reservation) {
+      throw new NotFoundException({ code: 'RESERVATION_NOT_FOUND', message: 'Reservation not found.' });
+    }
+    if (reservation.status === 'EXPIRED') {
+      throw new ConflictException({ code: 'RESERVATION_EXPIRED', message: 'Reservation has expired.' });
+    }
 
     const balance = await this.prisma.inventoryBalance.findUnique({
       where: this.balanceKey({
@@ -554,12 +561,41 @@ export class InventoryService {
     } as const;
   }
 
-  private async assertLocation(tx: Prisma.TransactionClient, key: StockKey) {
+  private reservationReplay<R extends { id: string; status: string }, T extends { id: string }>(
+    recheck: R | null,
+    reservation: T,
+  ): R | T | null {
+    if (!recheck) return reservation;
+    if (recheck.status === 'EXPIRED') {
+      throw new ConflictException({ code: 'RESERVATION_EXPIRED', message: 'Reservation has expired.' });
+    }
+    return recheck.status === 'ACTIVE' ? null : recheck;
+  }
+
+  private async assertStockIdentity(tx: Prisma.TransactionClient, key: StockKey) {
+    const warehouse = await tx.warehouse.findUnique({
+      where: { id: key.warehouseId },
+      select: { id: true },
+    });
+    if (!warehouse) {
+      throw new NotFoundException({ code: 'WAREHOUSE_NOT_FOUND', message: 'Warehouse not found.' });
+    }
+
     const location = await tx.warehouseLocation.findFirst({
       where: { id: key.locationId, warehouseId: key.warehouseId, isActive: true },
       select: { id: true },
     });
-    if (!location) throw new NotFoundException('Active warehouse location not found.');
+    if (!location) {
+      throw new NotFoundException({ code: 'LOCATION_NOT_FOUND', message: 'Active warehouse location not found.' });
+    }
+
+    const variant = await tx.productVariant.findUnique({
+      where: { id: key.variantId },
+      select: { id: true },
+    });
+    if (!variant) {
+      throw new NotFoundException({ code: 'SKU_NOT_FOUND', message: 'SKU not found.' });
+    }
   }
 
   private assertVersion(expected: number | undefined, actual: number): void {
