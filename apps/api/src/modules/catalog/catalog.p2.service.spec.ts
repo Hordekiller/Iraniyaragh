@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { CatalogService } from './catalog.service';
 
@@ -31,10 +31,13 @@ function setup() {
       create: vi.fn().mockResolvedValue({ id: 'price-1', variantId: variant.id, costPrice: 110n, salePrice: 220n, effectiveAt: new Date('2026-01-02T00:00:00Z'), source: 'ADMIN', actorUserId: 'actor-1', reason: 'Increase', requestId: 'req-1', createdAt: new Date('2026-01-02T00:00:00Z') }),
     },
   };
-  const prisma = { $transaction: vi.fn(async (callback: (client: typeof tx) => unknown) => callback(tx)) };
+  const prisma = {
+    attributeDefinition: { findUnique: vi.fn() },
+    $transaction: vi.fn(async (callback: (client: typeof tx) => unknown) => callback(tx)),
+  };
   const audit = { record: vi.fn() };
   const idempotency = { run: vi.fn(async ({ execute }: { execute: (client: typeof tx) => unknown }) => { const result = await execute(tx) as { response?: unknown }; return result.response ?? result; }) };
-  return { service: new CatalogService(prisma as never, audit as never, idempotency as never), tx, audit };
+  return { service: new CatalogService(prisma as never, audit as never, idempotency as never), prisma, tx, audit };
 }
 
 describe('CatalogService P2 variant mutations', () => {
@@ -89,5 +92,25 @@ describe('CatalogService P2 variant mutations', () => {
     const { service, tx } = setup();
     tx.attributeDefinition.updateMany.mockResolvedValue({ count: 0 });
     await expect(service.updateAttribute('actor-1', 'attribute-1', { name: 'New', expectedVersion: 0 })).rejects.toMatchObject({ response: { code: 'STALE_VERSION' } });
+  });
+
+  it('returns an attribute detail with its options', async () => {
+    const { service, prisma } = setup();
+    prisma.attributeDefinition.findUnique.mockResolvedValue({
+      id: 'attribute-1', code: 'color', name: 'Color', description: null, status: 'ACTIVE', version: 1,
+      createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-01T00:00:00Z'),
+      options: [{ id: 'option-1', code: 'red', label: 'Red', status: 'ACTIVE', version: 1, createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-01T00:00:00Z') }],
+      _count: { options: 1 },
+    });
+    const result = await service.getAttribute('attribute-1');
+    expect(prisma.attributeDefinition.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'attribute-1' } }));
+    expect(result.data.attribute.options).toHaveLength(1);
+    expect(result.data.attribute.options[0].label).toBe('Red');
+  });
+
+  it('throws NotFound when an attribute id does not exist', async () => {
+    const { service, prisma } = setup();
+    prisma.attributeDefinition.findUnique.mockResolvedValue(null);
+    await expect(service.getAttribute('missing')).rejects.toBeInstanceOf(NotFoundException);
   });
 });

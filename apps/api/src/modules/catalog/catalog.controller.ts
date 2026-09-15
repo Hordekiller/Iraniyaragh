@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UnprocessableEntityException, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiHeader, ApiBody, ApiResponse } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiHeader, ApiOkResponse, ApiParam, ApiResponse } from '@nestjs/swagger';
 import type { AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CatalogImportCommitResponse, CatalogImportDetailResponse, CatalogImportDryRunResponse, CatalogImportUploadResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse } from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
@@ -97,6 +97,26 @@ export class CatalogController {
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.read')
   async attributes(): Promise<AttributeListResponse> { return this.catalog.listAttributes(); }
+
+  @Get('admin/attributes/:id')
+  @ApiParam({ name: 'id', description: 'Attribute definition identifier', required: true, type: String })
+  @ApiOkResponse({
+    description: 'Catalog attribute definition with its options.',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: { attribute: { type: 'object', additionalProperties: true } },
+          required: ['attribute'],
+        },
+      },
+      required: ['data'],
+    },
+  })
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.read')
+  async getAttribute(@Param('id') id: string): Promise<AttributeDefinitionResponse> { return this.catalog.getAttribute(id); }
 
   @Post('admin/attributes')
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })

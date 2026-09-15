@@ -215,6 +215,15 @@ export class CatalogService {
     return { data: { items: attributes.map(attribute => this.attributeSummary(attribute)) } };
   }
 
+  async getAttribute(id: string): Promise<AttributeDefinitionResponse> {
+    const attribute = await this.prisma.attributeDefinition.findUnique({
+      where: { id },
+      include: { options: { orderBy: { code: 'asc' } }, _count: { select: { options: true } } },
+    });
+    if (!attribute) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Attribute not found.' });
+    return { data: { attribute: this.attributeDetail(attribute) } };
+  }
+
   async createAttribute(actorId: string, idempotencyKey: string, input: AttributeDefinitionCreateDto): Promise<AttributeDefinitionResponse> {
     const normalized = { ...input, code: input.code.trim(), name: input.name.trim(), description: input.description?.trim() };
     return this.idempotency.run({
