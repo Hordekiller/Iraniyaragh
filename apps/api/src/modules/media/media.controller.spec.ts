@@ -10,6 +10,7 @@ describe('MediaController', () => {
     updateMetadata: vi.fn(),
     reorder: vi.fn(),
     archive: vi.fn(),
+    setPrimary: vi.fn(),
   };
   const controller = new MediaController(service as never);
   const principal = { userId: 'staff-1' } as never;
@@ -24,6 +25,7 @@ describe('MediaController', () => {
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.updateMetadata)).toBe('catalog.media.write');
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.reorder)).toBe('catalog.media.write');
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.archive)).toBe('catalog.media.write');
+    expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.setPrimary)).toBe('catalog.media.write');
   });
 
   it('passes actor, idempotency key and route ownership to upload commands', async () => {
