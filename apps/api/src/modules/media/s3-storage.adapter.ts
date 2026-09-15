@@ -75,6 +75,18 @@ export class S3ProductMediaStorage implements ProductMediaStorage {
     return response.Body as NodeJS.ReadableStream;
   }
 
+  async putObject(input: { objectKey: string; body: Buffer; contentType: string; checksumSha256: string }): Promise<void> {
+    await this.client.send(new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: input.objectKey,
+      Body: input.body,
+      ContentLength: input.body.byteLength,
+      ContentType: input.contentType,
+      ChecksumSHA256: Buffer.from(input.checksumSha256, 'hex').toString('base64'),
+      CacheControl: 'public, max-age=31536000, immutable',
+    }));
+  }
+
   async deleteObject(objectKey: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: objectKey }));
   }

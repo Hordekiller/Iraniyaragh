@@ -24,7 +24,23 @@ export interface ProductMediaStorage {
   }): Promise<PresignedPut>;
   headObject(objectKey: string): Promise<StoredObjectHead | null>;
   getObject(objectKey: string): Promise<NodeJS.ReadableStream>;
+  putObject(input: { objectKey: string; body: Buffer; contentType: string; checksumSha256: string }): Promise<void>;
   deleteObject(objectKey: string): Promise<void>;
+}
+
+export function mediaRenditionObjectKey(input: {
+  productId: string;
+  mediaId: string;
+  mediaVersion: number;
+  purpose: string;
+  format: 'jpeg' | 'webp';
+}): string {
+  if (!OPAQUE_ID.test(input.productId) || !OPAQUE_ID.test(input.mediaId) || input.mediaVersion < 1) {
+    throw new Error('Invalid rendition object key input.');
+  }
+  const purpose = input.purpose.toLowerCase();
+  if (!/^[a-z_]+$/u.test(purpose)) throw new Error('Invalid rendition purpose.');
+  return `renditions/products/${input.productId}/${input.mediaId}/v${input.mediaVersion}/${purpose}.${input.format}`;
 }
 
 const EXTENSION_BY_MIME: Readonly<Record<string, string>> = {

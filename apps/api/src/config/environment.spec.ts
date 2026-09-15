@@ -29,6 +29,7 @@ const validProductionEnvironment = {
   SMS_IR_OTP_TEMPLATE_ID: '123456',
   SMS_IR_TIMEOUT_MS: '5000',
   PRODUCT_MEDIA_IMAGE_MAX_BYTES: '20971520',
+  PRODUCT_MEDIA_MAX_IMAGE_PIXELS: '40000000',
 };
 
 describe('parseCorsOrigins', () => {
@@ -196,6 +197,7 @@ describe('validateEnvironment', () => {
         SMS_IR_API_KEY: validProductionEnvironment.SMS_IR_API_KEY,
         SMS_IR_OTP_TEMPLATE_ID: validProductionEnvironment.SMS_IR_OTP_TEMPLATE_ID,
         PRODUCT_MEDIA_IMAGE_MAX_BYTES: validProductionEnvironment.PRODUCT_MEDIA_IMAGE_MAX_BYTES,
+        PRODUCT_MEDIA_MAX_IMAGE_PIXELS: validProductionEnvironment.PRODUCT_MEDIA_MAX_IMAGE_PIXELS,
       }),
     ).toThrow('API_PORT is required');
   });

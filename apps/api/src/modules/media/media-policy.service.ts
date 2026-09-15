@@ -10,6 +10,7 @@ export class MediaPolicyService {
   readonly maxActiveAssets: number;
   readonly maxActiveVideos: number;
   readonly imageMaxBytes: number;
+  readonly maxImagePixels: number;
   readonly videoMaxBytes = 100 * MIB;
   readonly uploadTtlSeconds: number;
 
@@ -17,6 +18,7 @@ export class MediaPolicyService {
     this.maxActiveAssets = config?.get('PRODUCT_MEDIA_MAX_ASSETS', { infer: true }) ?? 12;
     this.maxActiveVideos = config?.get('PRODUCT_MEDIA_MAX_VIDEOS', { infer: true }) ?? 3;
     this.imageMaxBytes = config?.get('PRODUCT_MEDIA_IMAGE_MAX_BYTES', { infer: true }) ?? 20 * MIB;
+    this.maxImagePixels = config?.get('PRODUCT_MEDIA_MAX_IMAGE_PIXELS', { infer: true }) ?? 40_000_000;
     this.uploadTtlSeconds = config?.get('PRODUCT_MEDIA_UPLOAD_TTL_SECONDS', { infer: true }) ?? 15 * 60;
   }
 

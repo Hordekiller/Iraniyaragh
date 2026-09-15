@@ -5,6 +5,8 @@ import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { BullMqProductMediaProcessingQueue } from './bullmq-processing-queue.adapter';
 import { MediaController } from './media.controller';
+import { ProductMediaImageProcessor } from './image-processor.service';
+import { EnvironmentMediaMalwareScanner, PRODUCT_MEDIA_MALWARE_SCANNER } from './malware-scanner.port';
 import { MediaPolicyService } from './media-policy.service';
 import { MediaService } from './media.service';
 import { PRODUCT_MEDIA_PROCESSING_QUEUE } from './processing-queue.port';
@@ -17,6 +19,9 @@ import { PRODUCT_MEDIA_STORAGE } from './storage.port';
   providers: [
     MediaPolicyService,
     MediaService,
+    ProductMediaImageProcessor,
+    EnvironmentMediaMalwareScanner,
+    { provide: PRODUCT_MEDIA_MALWARE_SCANNER, useExisting: EnvironmentMediaMalwareScanner },
     BullMqProductMediaProcessingQueue,
     {
       provide: PRODUCT_MEDIA_PROCESSING_QUEUE,
@@ -28,6 +33,6 @@ import { PRODUCT_MEDIA_STORAGE } from './storage.port';
       useFactory: (config: ConfigService<EnvironmentVariables, true>) => new S3ProductMediaStorage(config),
     },
   ],
-  exports: [MediaService, PRODUCT_MEDIA_PROCESSING_QUEUE, PRODUCT_MEDIA_STORAGE],
+  exports: [MediaService, ProductMediaImageProcessor, PRODUCT_MEDIA_PROCESSING_QUEUE, PRODUCT_MEDIA_STORAGE],
 })
 export class MediaModule {}

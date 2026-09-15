@@ -60,6 +60,20 @@ describe('S3ProductMediaStorage', () => {
     });
   });
 
+  it('uploads immutable renditions with a storage-verifiable checksum', async () => {
+    const send = vi.spyOn(S3Client.prototype, 'send').mockResolvedValueOnce({} as never);
+    await adapter().putObject({
+      objectKey: 'renditions/products/p1/m1/v2/card.webp',
+      body: Buffer.from('image'),
+      contentType: 'image/webp',
+      checksumSha256: 'ab'.repeat(32),
+    });
+    expect(send.mock.calls[0]![0]).toEqual(expect.objectContaining({ input: expect.objectContaining({
+      Key: 'renditions/products/p1/m1/v2/card.webp',
+      CacheControl: 'public, max-age=31536000, immutable',
+    }) }));
+  });
+
   it('maps only a storage 404 to a missing object', async () => {
     vi.spyOn(S3Client.prototype, 'send').mockRejectedValueOnce({ $metadata: { httpStatusCode: 404 } });
     await expect(adapter().headObject('missing')).resolves.toBeNull();

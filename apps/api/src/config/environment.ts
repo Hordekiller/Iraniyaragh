@@ -34,7 +34,9 @@ export type EnvironmentVariables = {
   PRODUCT_MEDIA_MAX_ASSETS: number;
   PRODUCT_MEDIA_MAX_VIDEOS: number;
   PRODUCT_MEDIA_IMAGE_MAX_BYTES: number;
+  PRODUCT_MEDIA_MAX_IMAGE_PIXELS: number;
   PRODUCT_MEDIA_UPLOAD_TTL_SECONDS: number;
+  PRODUCT_MEDIA_WORKER_CONCURRENCY: number;
 };
 
 const supportedEnvironments = new Set<NodeEnvironment>(['development', 'test', 'staging', 'production']);
@@ -322,6 +324,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     if (config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === undefined || config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === '') {
       throw new Error('PRODUCT_MEDIA_IMAGE_MAX_BYTES is required in staging and production.');
     }
+    if (config.PRODUCT_MEDIA_MAX_IMAGE_PIXELS === undefined || config.PRODUCT_MEDIA_MAX_IMAGE_PIXELS === '') {
+      throw new Error('PRODUCT_MEDIA_MAX_IMAGE_PIXELS is required in staging and production.');
+    }
   }
 
   if (accessSecret === hashSecret || accessSecret === validatedPreviousHashSecret) {
@@ -381,11 +386,23 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
       1024,
       100 * 1024 * 1024,
     ),
+    PRODUCT_MEDIA_MAX_IMAGE_PIXELS: parseBoundedInteger(
+      config.PRODUCT_MEDIA_MAX_IMAGE_PIXELS ?? 40_000_000,
+      'PRODUCT_MEDIA_MAX_IMAGE_PIXELS',
+      1_000_000,
+      100_000_000,
+    ),
     PRODUCT_MEDIA_UPLOAD_TTL_SECONDS: parseBoundedInteger(
       config.PRODUCT_MEDIA_UPLOAD_TTL_SECONDS ?? 15 * 60,
       'PRODUCT_MEDIA_UPLOAD_TTL_SECONDS',
       60,
       30 * 60,
+    ),
+    PRODUCT_MEDIA_WORKER_CONCURRENCY: parseBoundedInteger(
+      config.PRODUCT_MEDIA_WORKER_CONCURRENCY ?? 2,
+      'PRODUCT_MEDIA_WORKER_CONCURRENCY',
+      1,
+      16,
     ),
   };
 }
