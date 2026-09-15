@@ -1,22 +1,50 @@
 # Canonical PR, Review and Merge Workflow
 
-Reviewed: 2026-09-14
-
+Reviewed: 2026-09-15
 Applies to: all contributors and agents
 
 ## Repository protection (observed)
 
 `main` currently has no additional ruleset. Classic branch protection is enabled
-with strict up-to-date branches, one approving review, code-owner approval,
-stale-review dismissal, approval from someone other than the latest pusher,
-required conversation resolution, linear history, administrator enforcement and
-no force-push/deletion. Required checks are exact contexts: `quality`,
-`database`, `e2e`, `dependency-review`, `Analyze (actions)`, `Analyze
-(javascript-typescript)` and `production-audit`. Sonar is not yet a required
-context on `main`; merge #212 and verify the real scan before adding it.
+(observed via the REST API on 2026-09-15):
+
+- Required checks are exact contexts: `quality`, `database`, `e2e`,
+  `dependency-review`, `Analyze (actions)`, `Analyze (javascript-typescript)`
+  and `production-audit`. Sonar is not yet a required context on `main`; #212
+  is merged but the real scan remains unverified while the #213 SonarCloud
+  organization suspension is unresolved (must be restored by an org admin; the
+  gate must not be weakened in the meantime).
+- `strict` (up-to-date-before-merge) is disabled so already-green PRs are not
+  re-blocked by every concurrent merge; merge conflicts are still detected.
+- Required approving reviews: `0`; code-owner review: off; stale-review
+  dismissal: off; last-push approval: off.
+- Required linear history: on (merge commits are rejected, use squash).
+- Required conversation resolution: on. Administrator enforcement: on.
+- Force-push and deletion on `main`: off.
 
 These settings are security controls. Do not bypass them, self-approve sensitive
-work or merge a skipped check as if it passed.
+work or merge a skipped check as if it passed. The checks listed above must all
+be green on the exact head being merged; disabling `strict` never means merging
+with failing or absent required checks.
+
+### Two-person review handoff protocol
+
+This repository has two contributors. To prevent two-person review deadlocks
+(the author pushing the branch that the co-contributor then has to review and
+push again):
+
+1. Declare who will perform the final push before the final review.
+2. The final pusher must be the contributor who is not providing final approval.
+3. After that push, wait for every required check, obtain approval from the
+   other contributor on the exact head, and freeze the branch.
+4. Do not use empty commits or repeated rebases to repair attribution.
+5. If GitHub reports a different last-pusher identity than the audit log, stop
+   and record the discrepancy; do not weaken protection or merge by bypass.
+
+This is a coordination protocol, not a branch-protection rule: with
+`require_last_push_approval` currently off at the repository level, GitHub does
+not enforce it automatically — the two contributors enforce it as a working
+agreement until the owner re-enables last-push approval.
 
 ## PR state machine
 
@@ -26,10 +54,10 @@ DRAFT → IMPLEMENTATION → LOCAL VERIFICATION → PUSH → CI
   → APPROVED LATEST SHA → FREEZE → MERGE
 ```
 
-Approval is valid only for the final reviewable SHA. With stale-review dismissal
-and last-push approval enabled, any new reviewable push (including a rebase) must
-be treated as requiring fresh approval and fresh checks. After final approval,
-make no code push. If a change is unavoidable, reopen the review cycle explicitly.
+Approval is valid only for the final reviewable SHA. Any new reviewable push
+(including a rebase) must be treated as requiring fresh approval and fresh
+checks. After final approval, make no code push. If a change is unavoidable,
+reopen the review cycle explicitly.
 
 ## Roles and dependencies
 
@@ -52,9 +80,13 @@ uploads the exact commit/PR and reports Quality Gate status. Distinguish scanner
 account/org suspension and Quality Gate failures. Never change application code,
 coverage thresholds or valid PostgreSQL to hide an infrastructure problem.
 
-After #212 is merged and the Sonar organization is operational, add the exact
-`sonar` check context to branch protection and verify it on a test PR. Until then
-the absence of a Sonar check is a known protection gap, not evidence of analysis.
+#212 (Sonar token at job scope) is merged but the real scan remains unverified
+while the #213 SonarCloud organization suspension is unresolved (must be restored
+by an org admin; the gate must not be weakened in the meantime). When the
+organization scan is stable, add the exact `sonar` check context to branch
+protection and verify it on a test PR. Until then the absence of the `sonar`
+required context is a known protection gap, not evidence of analysis — a failing
+`sonar` run must still be investigated, not ignored.
 
 ## Final review checklist
 
@@ -70,8 +102,8 @@ the absence of a Sonar check is a known protection gap, not evidence of analysis
 
 ## Current merge-train policy
 
-The active Auth/catalog train is `#190 → #191`; #200 is independent of Auth after
-its contract/migration review; #207 remains blocked until Sonar new-code coverage
-passes; #212 must land before Sonar can become a truthful protected check. A
-branch is called READY only when the final SHA is approved and every required
-context is green.
+Merged: `#217 → #219` (inventory HTTP then declared error codes), `#190 → #191`
+(Auth/admin CSRF then real HTTP login), `#200 → #214` (catalog contract parity),
+`#207` (storefront), `#212` (Sonar), `#194`/`#211` (docs). Open: `#218` (this
+docs PR). A branch is called READY only when the final SHA is approved and every
+required context is green.

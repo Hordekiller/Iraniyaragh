@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-09-15
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -12,22 +12,23 @@ Iraniyaragh is in **pre-release foundation/auth completion**, before release `0.
 The repository has a credible platform baseline and substantial authentication,
 security and test infrastructure. It is not yet a usable commerce product: the
 storefront still sells from fixtures, the operational admin has only read-only
-Orders/Settings modules (fixture-backed, merged via #169 — never presented as live),
-and cart, checkout, order-driving services, payment, shipping and production
+Orders/Settings modules (fixture-backed — never presented as live), and cart,
+checkout, order-driving services, payment, shipping and production
 operations are absent.
 
 Current delivery confidence:
 
-| Area                           | State             | Evidence-based assessment                                                                                                                   |
-| ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist                                                           |
-| Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                                                                           |
+| Area                           | State             | Evidence-based assessment                                                                   |
+| ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------- |
+| Repository/platform foundation | Advanced          | Monorepo, CI, migrations, health, structured API foundation and test layers exist           |
+| Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                           |
 | Customer/auth UX               | Merged foundation | Real HTTP client and provider-dispatched OTP foundation are merged; live SMS.ir activation and provider-backed happy-path acceptance remain |
-| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice; #168 added the durable mutation-idempotency contract            |
-| Product media                  | Accepted contract | Images/videos are not persisted or served yet; `PRODUCT_MEDIA_SPEC.md` is accepted via #161 and its M1–M5 runtime slices are planned        |
-| Inventory core                 | Partial           | Transactional service and concurrency tests exist; HTTP/RBAC/operator flows do not                                                          |
-| Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                                                                  |
-| Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                 |
+| Staff/auth admin UX            | Merged foundation | Staff login now uses the real `StaffAuthHttpClient` (#191); live MFA/session UX and production acceptance remain |
+| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice; #168/#200/#214 added idempotency, import parity and contract parity |
+| Product media                  | Accepted contract | Images/videos are not persisted or served yet; `PRODUCT_MEDIA_SPEC.md` accepted via #161; M1 plan merged via #211 |
+| Inventory core                 | Partial           | Protected balance/adjustment HTTP API, stable conflict codes, OpenAPI parity and failure-path coverage merged via #217/#219 |
+| Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                  |
+| Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
 G2 is at acceptance reconciliation, G3 has a merged API foundation, G4 has a reusable service
@@ -36,16 +37,22 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `cb0e222`, containing merged #109, #103, #112,
+- Baseline at review: `main` commit `0091808`, containing merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
   session/device-management panel #158, the screenshot/a11y evidence #160, the
   catalog hardenings #157, the three-lane delivery map #156, the catalog
   idempotency contract #168, the product-media contract #161, the admin
   Orders/Settings reconciliation #169, the catalog P2 config/generation #182 and
-  the Excel/import foundation #183 plus the staged import service #184.
+  the Excel/import foundation #183 plus the staged import service #184, ADR-0014
+  runtime RBAC/financial policy via #185, the admin navigation live-status #192,
+  inventory HTTP balance/adjustment via #217, inventory error-code wiring #219,
+  Sonar token handling #212, the admin double-submit CSRF fix #190, the real
+  staff-auth HTTP client #191, catalog import gap fixes #200, the routed
+  fixture storefront #207, the execution-docs reconciliation #194, the media
+  M1 plan #211 and catalog variant-contract/attribute-endpoint parity #214.
 - #49, #79, #50 and #91 are closed; #50/#91 were closed on 2026-09-11 with 7/7
-  acceptance evidence. Active coordination includes #66, #78, #81 and #114. #115 is
+  acceptance evidence. Active coordination includes #78, #81 and #114. #115 is
   closed as delivered (the SMS admin panel shipped through #151).
 - Local-only or untracked material is never counted as delivered product capability.
 
@@ -152,13 +159,13 @@ security/query review, OpenAPI drift confirmation and merge.
 | ------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | RBAC          | Roles, seed and guard machinery                                                                | Every domain route still needs explicit allow/deny policy tests                                                                                |
 | Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                          | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
-| Staff Auth    | Runtime, privileged lifecycle and session/devices management UI merged                         | Live MFA UX and production acceptance (admin UI with Hordekiller)                                                                              |
-| Catalog       | Contracts and API foundation merged via #103; #168 added the idempotency contract              | Media runtime (M1–M5), pricing, admin UI and storefront integration                                                                            |
-| Inventory     | Correct service core                                                                           | Authenticated HTTP, warehouse/location commands, transfers, worker and admin UI                                                                |
-| Orders        | Schema and generic state helper; read-only admin queue/detail merged via #169 (fixture-backed) | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
+| Staff Auth    | Runtime, privileged lifecycle, double-submit CSRF logout fix (#190) and real HTTP login (#191) merged | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                  |
+| Catalog       | Contracts and API foundation merged via #103; #168 idempotency contract; #200 import gap-fixes and ASCII-SKU invariant; #214 contract parity | Media runtime (M1 plan merged via #211), pricing, admin UI and live storefront pricing |
+| Inventory     | Correct service core plus protected balance/adjustment HTTP, conflict codes, OpenAPI parity and failure-path coverage (via #217/#219) | Warehouse/location commands, reservations/transfers HTTP, worker and admin UI                                                                |
+| Orders        | Schema and generic state helper; read-only admin queue/detail in the #207 storefront slice (fixture-backed, behind `AdminOrdersApi` port) | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
 | Payments      | Schema/state foundation                                                                        | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
-| Web           | Accessible prototype                                                                           | Static `prototype.ts` data and simulated commerce actions                                                                                      |
-| Admin         | Shell, Auth/UI primitives, SMS settings and read-only Orders/Settings modules (via #169)       | Live catalog/inventory/order operational modules are not yet merged                                                                            |
+| Web           | Accessible prototype + routed fixture storefront (discovery/product/cart/checkout/mock-payment/account/orders) merged via #207 | Catalog/cart/order/payment remain fixtures behind `VITE_FIXTURE_CATALOG`; server pricing/reservations not integrated |
+| Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191) and read-only Orders/Settings modules (via #169)       | Live catalog/inventory/order operational modules (not yet merged)                                                                              |
 | Operations    | CI and local Compose                                                                           | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
@@ -175,9 +182,9 @@ security/query review, OpenAPI drift confirmation and merge.
   (`سامانه مودیان`) emission; both are planned, not implemented.
 - Runtime RBAC administration: roles/permissions are seed-owned only; there is no
   staff directory, role-assignment/revoke flow or user-status management until
-  ADR-0014 + `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` are accepted and their G1–G3
-  slices land.
-- Inventory HTTP CRUD/commands, transfers, expiry worker and operator modules.
+  ADR-0014 (`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`, accepted via #185) and its
+  G1–G3 slices land.
+- Warehouse/location CRUD/commands, reservations/transfers HTTP, expiry worker and operator modules.
 - Server-priced cart, address, checkout and idempotent order creation.
 - Order application lifecycle and customer/admin order experiences.
 - Payment gateway, verified callback, refunds and reconciliation.
@@ -281,6 +288,43 @@ security/query review, OpenAPI drift confirmation and merge.
     reference validation covering same-workbook definitions, brand/category
     preflight and canonical-SKU collisions. Remaining import wave follow-ups:
     durable parsed-import storage and Excel export wiring to live data.
+- `#200` merged at `6c9e546`: closed the #189 import-verification gaps —
+  `IMPORT_NOT_AVAILABLE`/`IDEMPOTENCY_CONFLICT` added to `API_ERROR_CODES` and
+  documented in OpenAPI; `canonicalizeSku` folds ASCII case only (ADR-0013) and
+  a forward migration enforces the ASCII-only `ProductVariant.sku/skuKey`
+  invariant; idempotency-retention behavior reconciled with the service and
+  pinned by tests. API 48/48 files, 537 tests green with `CI=true`.
+- `#217` merged at `5e34936`: protected inventory balance/adjustment HTTP API
+  (catalog of stable conflict codes, OpenAPI parity, failure-path coverage).
+- `#219` merged at `f7eb9a7`: wire the declared inventory error codes into the
+  service API and bind the real request ID to error envelopes.
+- `#212` merged at `44d2262`: `SONAR_TOKEN` at job scope in the Sonar workflow
+  with the trusted-push missing-secret failure gate; real scan runs where a
+  token is available. Sonar is still not a required context on `main`.
+- `#190` merged at `a7cfbac`: admin sends the double-submit CSRF proof
+  (`X-CSRF-Token` echoed from the cookie) on state-changing requests, so logout
+  is not 403'd; regression guard added at the AuthProvider boundary; also fixed
+  the `docs/README.md` index and `@iranyaragh/api` prisma scope in
+  `docs/OPERATIONS.md`. Closes #186.
+- `#191` merged at `3fafceb`: the admin staff login now uses the real
+  `StaffAuthHttpClient` against `/api/v1/auth/*` (password → TOTP verify →
+  in-memory Bearer store → `me()` → logout with double-submit CSRF), error
+  envelopes normalized to the same `StaffAuthError` codes; the fixture remains
+  only behind `NEXT_PUBLIC_FIXTURE_AUTH=true`. Closes the login half of #187.
+- `#207` merged at `1e11274`: extracted routed fixture storefront
+  (discovery/category/search/bestsellers/product/cart/checkout/mock
+  payment/account/orders + 404), fixture-gated catalog/cart/order ports behind
+  `VITE_FIXTURE_CATALOG`, cart/input/idempotency hardening with CSPRNG-only
+  checkout keys, responsive shell and route-level code splitting, plus the
+  purchase-flow Playwright spec. Web 214 tests green; not server-priced.
+- `#194` merged at `e888b7b`: docs(187) execution reconciliation — gate-symbol
+  namespacing, backlog/ROADMAP/master-plan/ADR status alignment, without touching
+  `PROJECT_STATUS.md`/`EXECUTION_STATUS.md`.
+- `#211` merged at `c8790b6`: product-media M1 execution plan for the accepted
+  `PRODUCT_MEDIA_SPEC.md` contract; binds no schema/API/UI change yet.
+- `#214` merged at `0091808`: catalog variant-contract typing parity plus the
+  documented `GET /catalog/admin/attributes/:id` detail endpoint with OpenAPI
+  regeneration.
 
 The durable Catalog mutation-idempotency runtime is being implemented separately on
 the post-#168 platform branch. It is not delivered on `main` until its forward
@@ -289,38 +333,22 @@ current-head CI are reviewed and merged.
 
 ## Open pull-request work (not yet on main)
 
-A documentation-only proposal is open for review: ADR-0014 and
-`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` record the audited RBAC and
-money/financial-policy state, the Iranian legal baseline (EC Law 1382 Arts. 33-38;
-permanent VAT Law 1400 with the 10 % budget rate; پایانههای فروشگاهی و سامانه
-مودیان 1398), the admin-configurable catalogue and the G1–G8 slice plan. It makes
-no runtime change and is intended to be the required-review basis for the schema
-slices it plans.
+ADR-0014 is accepted via #185 (`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` records
+the audited RBAC and money/financial-policy state and the G1–G8 slice plan). The
+runtime slices it plans are not yet merged.
 
-The staged catalog import flow (`#184`) has since merged to `main` (`cb0e222`).
-Independent verification of the import-wave gaps in `#189` is tracked there; the
-associated fixes land separately: `IMPORT_NOT_AVAILABLE`/`IDEMPOTENCY_CONFLICT`
-are added to `API_ERROR_CODES`, the durable `ProductVariant.sku/skuKey` ASCII-only
-invariant is enforced, and the idempotency expiry behavior is reconciled with
-`docs/CATALOG_IDEMPOTENCY.md` and pinned by unit tests.
+The staged catalog import flow (`#184`) and its verification fixes (`#200`) are
+merged; durable parsed-import storage and live-data export wiring remain.
 
-The #50 admin session-management slice is delivered through `#158` (merged):
-the `/settings/sessions` page with a typed session port (HTTP client +
-fail-closed fixture gated behind `NEXT_PUBLIC_SESSION_FIXTURE=true`), the
-session/devices page model, nav entry, admin unit tests and an admin e2e spec
-against the real `/auth/sessions` endpoints (`GET /auth/sessions`,
-`DELETE /auth/sessions/:sessionId`, `POST /auth/logout-all`).
-
-The first #111 Catalog-hardening slice (conditional public caching and the
-barcode-free anonymous variant projection) is merged via `#157`; the second slice —
-durable mutation idempotency — has its accepted contract merged via `#168`
-(`CATALOG_IDEMPOTENCY.md`), with the platform implementation remaining the planned
-next item under `AGENT_WORKSTREAMS.md` wave `0.2-A`.
+The #50 admin session-management slice is delivered through `#158` (merged); the
+#186 logout CSRF fix landed via `#190`, real staff-auth HTTP login via `#191`.
 
 Customer OTP dispatch is integrated through the vendor-neutral provider boundary.
-Remaining for production sign-in is private SMS.ir account/key/template activation,
-a controlled provider-bound test destination and sanitized sandbox/production
-acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient.
+Remaining for production sign-in is private SMS.ir account/key/template
+activation, a controlled provider-bound test destination and sanitized
+sandbox/production acceptance evidence.
+
+Open: this review-handoff docs PR (`#218`).
 
 ## Decisions and blockers
 
@@ -332,11 +360,12 @@ acceptance evidence; no OTP or full mobile may be exposed to make E2E convenient
 5. Guest checkout, identity linkage/merge and anonymization.
 6. Product variants/attributes and import format (policy and core services resolved by
    #177/#179/#180/#181; configuration/generation merged via #182; the Excel
-   import/export foundation #183 and staged import service #184 are merged; durable
+   import/export foundation #183 and staged import service #184 are merged; import
+   gap fixes and the ASCII-only SKU invariant landed via #200; durable
    parsed-import storage and live-data export wiring remain a follow-up slice).
 7. Staff role matrix, approval thresholds and four-eyes actions (runtime
-   admin-configurable RBAC and financial policy proposed by ADR-0014 +
-   `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`; under review, no schema change yet).
+   admin-configurable RBAC and financial policy accepted via ADR-0014 #185;
+   its G1–G3 schema/runtime slices are planned, not yet merged).
 8. Return/refund/damaged-stock policy.
 9. Deployment target, RPO/RTO, retention, monitoring and budget.
 10. Team capacity, review SLA and release authority (#78).
