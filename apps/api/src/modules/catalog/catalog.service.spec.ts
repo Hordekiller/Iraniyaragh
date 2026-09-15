@@ -134,7 +134,7 @@ describe('CatalogService', () => {
       expect(list.data.items[0]).not.toHaveProperty('description');
       expect(list.data.items[0].primaryMedia?.sources).toHaveLength(2);
       expect(ctx.prisma.product.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ include: expect.objectContaining({ media: expect.objectContaining({ where: { state: 'READY', role: 'PRIMARY', kind: 'IMAGE' } }) }) }),
+        expect.objectContaining({ include: expect.objectContaining({ media: expect.objectContaining({ where: expect.objectContaining({ state: 'READY', role: 'PRIMARY', kind: 'IMAGE', altText: { not: null } }) }) }) }),
       );
     });
 
