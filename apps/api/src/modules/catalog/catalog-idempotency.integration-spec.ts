@@ -41,6 +41,7 @@ describe.sequential('Catalog mutation idempotency database integration', () => {
   afterAll(async () => {
     if (!connected) return;
     await prisma.auditLog.deleteMany({ where: { requestId: { startsWith: requestIdPrefix } } });
+    await prisma.productMedia.deleteMany({ where: { product: { slug: { startsWith: `idempotent-product-` } } } });
     await prisma.productVariant.deleteMany({ where: { product: { slug: { startsWith: `idempotent-product-` } } } });
     await prisma.product.deleteMany({ where: { slug: { startsWith: `idempotent-product-` } } });
     await prisma.category.deleteMany({ where: { slug: { startsWith: `idempotent-category-` } } });
@@ -91,6 +92,15 @@ describe.sequential('Catalog mutation idempotency database integration', () => {
   it('replays a product status command with one audit outcome', async () => {
     const created = await catalog.createProduct(actorId, key('status-create'), productInput('status'));
     const productId = created.data.product.id;
+    await prisma.productMedia.create({
+      data: {
+        productId, kind: 'IMAGE', state: 'READY', role: 'PRIMARY', position: 0,
+        objectKey: `test/${runId}/${productId}/primary.webp`, originalFilename: 'primary.webp',
+        declaredMime: 'image/webp', declaredBytes: 100n, detectedMime: 'image/webp', bytes: 100n,
+        width: 100, height: 100, checksumSha256: 'cd'.repeat(32), createdById: actorId,
+        uploadExpiresAt: new Date(Date.now() + 60_000),
+      },
+    });
     const first = await catalog.changeProductStatus(actorId, key('status'), productId, { action: 'publish' });
     const second = await catalog.changeProductStatus(actorId, key('status'), productId, { action: 'publish' });
 
