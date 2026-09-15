@@ -1,6 +1,6 @@
 # Delivery Roadmap
 
-Last reviewed: 2026-09-14
+Last reviewed: 2026-09-15
 
 This is the executive view of delivery. The executable sprint backlog, owners,
 acceptance gates and dependencies live in `DEVELOPMENT_PLAN.md`.
@@ -31,14 +31,15 @@ store. Native mobile and advanced growth features are intentionally later.
 
 - `0.1`: closed. Auth runtime, privileged lifecycle, sessions and RBAC are on
   `main` (#109/#111/#150/#158); #49 is closed and #50/#91 acceptance reconciled.
-  Auth-parity defect follow-ups #186/#188 stay tracked for the `0.3` window.
+  Auth-parity follow-ups #186/#188 were delivered via #190/#195 (2026-09-15/13).
 - `0.2`: catalog wave delivered. Attributes, variants/SKU identity, price history
-  and staged import are merged via #179–#184; #199 and #203 are merged. Media M1
-  (#162) and storefront integration (#166) remain; #200 is review-gated for the
-  remaining migration, idempotency and contract evidence.
-- `0.3`: service foundation only. Inventory mutation/reservation/concurrency logic is
-  implemented behind the application boundary, but protected HTTP and operator flows
-  are not.
+  and staged import are merged via #179–#184; catalog parity #199/#200, report
+  refactor #203 and variant-contract typing parity #214 are merged. Media M1
+  (#162) and storefront integration (#166) remain.
+- `0.3`: service foundation plus protected HTTP. Ledger/reservation logic and the
+  protected balance/adjustment API (#217) are on `main` with declared error-code and
+  request-ID wiring (#219); reservations/transfers HTTP, warehouse/location CRUD and
+  operator flows remain under #215.
 - `0.4`–`1.0`: planned. Persistence scaffolding is not counted as an integrated
   selling, payment, fulfillment or production capability.
 
