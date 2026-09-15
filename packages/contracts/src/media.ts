@@ -63,6 +63,10 @@ export type ProductMediaReorderRequest = {
   items: Array<{ mediaId: string; expectedVersion: number; position: number }>;
 };
 
+export type ProductMediaArchiveRequest = {
+  expectedVersion: number;
+};
+
 export type AdminProductMedia = {
   id: string;
   productId: string;

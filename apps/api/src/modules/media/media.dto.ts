@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 
 export class ProductMediaUploadDto {
   @IsEnum(['IMAGE', 'VIDEO'])
@@ -38,4 +38,62 @@ export class ProductMediaConfirmDto {
   @IsString()
   @Matches(/^[a-f0-9]{64}$/u)
   checksumSha256?: string;
+}
+
+export class ProductMediaMetadataDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expectedVersion!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  altText?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  caption?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  posterMediaId?: string | null;
+}
+
+export class ProductMediaOrderItemDto {
+  @IsString()
+  @MaxLength(128)
+  mediaId!: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expectedVersion!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(11)
+  position!: number;
+}
+
+export class ProductMediaReorderDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expectedProductVersion!: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductMediaOrderItemDto)
+  items!: ProductMediaOrderItemDto[];
+}
+
+export class ProductMediaArchiveDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expectedVersion!: number;
 }

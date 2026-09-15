@@ -16,11 +16,17 @@ const input = {
 
 function setup() {
   const tx = {
-    product: { findUnique: vi.fn().mockResolvedValue({ id: 'product-1', version: 3 }) },
+    product: {
+      findUnique: vi.fn().mockResolvedValue({ id: 'product-1', version: 3 }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    },
     productMedia: {
       count: vi.fn().mockResolvedValue(0),
       create: vi.fn().mockResolvedValue(undefined),
       findFirst: vi.fn(),
+      findMany: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+      update: vi.fn(),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
   };
@@ -55,16 +61,18 @@ function setup() {
     updatedAt: now,
   };
   const prisma = {
+    $transaction: vi.fn().mockImplementation(async callback => callback(tx)),
     productMedia: {
       findUnique: vi.fn().mockResolvedValue(storedMedia),
       findFirst: vi.fn().mockResolvedValue(storedMedia),
+      findMany: vi.fn().mockResolvedValue([storedMedia]),
     },
   };
   const audit = { record: vi.fn().mockResolvedValue(undefined) };
   const idempotency = {
     run: vi.fn().mockImplementation(async ({ execute }) => {
       const result = await execute(tx);
-      storedMedia.id = result.response.mediaId;
+      if (typeof result.response.mediaId === 'string') storedMedia.id = result.response.mediaId;
       return result.response;
     }),
   };
@@ -91,6 +99,8 @@ function setup() {
     new MediaPolicyService(),
   );
   tx.productMedia.findFirst.mockImplementation(async () => storedMedia);
+  tx.productMedia.findUniqueOrThrow.mockImplementation(async () => storedMedia);
+  tx.productMedia.findMany.mockImplementation(async () => [storedMedia]);
   return { service, prisma, audit, idempotency, storage, processingQueue, tx, storedMedia };
 }
 
@@ -261,5 +271,133 @@ describe('MediaService confirmUpload', () => {
     expect(ctx.storage.headObject).not.toHaveBeenCalled();
     expect(ctx.tx.productMedia.updateMany).not.toHaveBeenCalled();
     expect(ctx.processingQueue.enqueue).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('MediaService metadata, archive and ordering', () => {
+  beforeEach(() => vi.useFakeTimers({ now }));
+
+  it('updates trimmed metadata with optimistic concurrency and safe audit fields', async () => {
+    const ctx = setup();
+    ctx.storedMedia.state = 'READY';
+    ctx.tx.productMedia.updateMany.mockImplementationOnce(async () => {
+      ctx.storedMedia.altText = 'نمای روبرو';
+      ctx.storedMedia.caption = null;
+      ctx.storedMedia.version = 2;
+      return { count: 1 };
+    });
+
+    const response = await ctx.service.updateMetadata('actor-1', 'metadata-key-123', 'product-1', 'media-id', {
+      expectedVersion: 1,
+      altText: '  نمای روبرو  ',
+      caption: '   ',
+    });
+
+    expect(ctx.tx.productMedia.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({ id: 'media-id', version: 1 }),
+      data: expect.objectContaining({ altText: 'نمای روبرو', caption: null }),
+    });
+    expect(response.data.media.altText).toBe('نمای روبرو');
+    expect(ctx.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'catalog.media.metadata.updated', actorId: 'actor-1' }),
+      ctx.tx,
+    );
+  });
+
+  it('requires a ready same-product poster with the poster role for video', async () => {
+    const ctx = setup();
+    ctx.storedMedia.kind = 'VIDEO';
+    ctx.tx.productMedia.findFirst
+      .mockResolvedValueOnce(ctx.storedMedia)
+      .mockResolvedValueOnce(null);
+
+    await expect(
+      ctx.service.updateMetadata('actor-1', 'metadata-key-123', 'product-1', 'media-id', {
+        expectedVersion: 1,
+        posterMediaId: 'poster-1',
+      }),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_POSTER_REQUIRED' } });
+    expect(ctx.tx.productMedia.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('prevents archiving a poster referenced by active video media', async () => {
+    const ctx = setup();
+    ctx.storedMedia.state = 'READY';
+    ctx.tx.productMedia.count.mockResolvedValueOnce(1);
+
+    await expect(
+      ctx.service.archive('actor-1', 'archive-key-123', 'product-1', 'media-id', { expectedVersion: 1 }),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_POSTER_REQUIRED' } });
+  });
+
+  it('archives with a version guard and audit evidence', async () => {
+    const ctx = setup();
+    ctx.storedMedia.state = 'READY';
+    ctx.tx.productMedia.count.mockResolvedValueOnce(0);
+    ctx.tx.productMedia.updateMany.mockImplementationOnce(async () => {
+      ctx.storedMedia.state = 'ARCHIVED';
+      ctx.storedMedia.archivedAt = now;
+      ctx.storedMedia.version = 2;
+      return { count: 1 };
+    });
+
+    const response = await ctx.service.archive('actor-1', 'archive-key-123', 'product-1', 'media-id', {
+      expectedVersion: 1,
+    });
+
+    expect(response.data.media.state).toBe('ARCHIVED');
+    expect(ctx.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'catalog.media.archived' }),
+      ctx.tx,
+    );
+  });
+
+  it('rejects incomplete ordering and preserves primary position zero', async () => {
+    const ctx = setup();
+    const second = { ...ctx.storedMedia, id: 'media-2', role: 'GALLERY', position: 1 };
+    ctx.tx.productMedia.findMany.mockResolvedValueOnce([ctx.storedMedia, second]);
+
+    await expect(
+      ctx.service.reorder('actor-1', 'reorder-key-123', 'product-1', {
+        expectedProductVersion: 3,
+        items: [{ mediaId: 'media-id', expectedVersion: 1, position: 0 }],
+      }),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_POSITION_CONFLICT' } });
+
+    ctx.tx.productMedia.findMany.mockResolvedValueOnce([ctx.storedMedia, second]);
+    await expect(
+      ctx.service.reorder('actor-1', 'reorder-key-456', 'product-1', {
+        expectedProductVersion: 3,
+        items: [
+          { mediaId: 'media-id', expectedVersion: 1, position: 1 },
+          { mediaId: 'media-2', expectedVersion: 1, position: 0 },
+        ],
+      }),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_POSITION_CONFLICT' } });
+  });
+
+  it('reorders through collision-free temporary positions under version guards', async () => {
+    const ctx = setup();
+    const second = { ...ctx.storedMedia, id: 'media-2', role: 'GALLERY', position: 1 };
+    ctx.tx.productMedia.findMany
+      .mockResolvedValueOnce([ctx.storedMedia, second])
+      .mockResolvedValueOnce([ctx.storedMedia, second]);
+
+    ctx.prisma.productMedia.findMany.mockResolvedValueOnce([ctx.storedMedia, second]);
+    const response = await ctx.service.reorder('actor-1', 'reorder-key-123', 'product-1', {
+      expectedProductVersion: 3,
+      items: [
+        { mediaId: 'media-id', expectedVersion: 1, position: 0 },
+        { mediaId: 'media-2', expectedVersion: 1, position: 1 },
+      ],
+    });
+
+    expect(ctx.tx.productMedia.updateMany).toHaveBeenCalledTimes(2);
+    expect(ctx.tx.productMedia.update).toHaveBeenCalledTimes(2);
+    expect(ctx.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'catalog.media.reordered' }),
+      ctx.tx,
+    );
+    expect(response.data.items).toHaveLength(2);
   });
 });
