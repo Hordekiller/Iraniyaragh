@@ -29,7 +29,7 @@ the agreed scope in `PRODUCT_SPEC.md`.
 | G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                           |
 | G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158); logout CSRF #190, staff-auth #191 and nav flags #192 remain review-gated                            |
 | G3             | Core delivered                  | attributes/variants/SKU/price-history/import shipped (#179–#184); #199, #203 merged; #200 remains review-gated; media M1 (#162) and storefront (#166) remain                        |
-| G4             | Partial foundation              | ledger/reservation service exists; protected HTTP/transfers/worker/admin incomplete                                                 |
+| G4             | Partial foundation              | ledger/reservation service and protected balance/adjustment HTTP (#217) merged; warehouse/location, reservations, transfers, worker/admin incomplete                                                 |
 | G5             | Persistence foundation only     | state tables/helper exist; cart/checkout/order services absent                                                                      |
 | G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                               |
 
