@@ -1,10 +1,12 @@
-import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, Optional, UnprocessableEntityException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma, ProductStatus } from '@prisma/client';
 import type {
   AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse,
-  ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse,
+  ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, PublicProductMediaImage, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse,
 } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
+import type { EnvironmentVariables } from '../../config/environment';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import type { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
@@ -29,14 +31,16 @@ type CategoryRow = { id: string; name: string; slug: string; parentId: string | 
 type VariantAttributeValueRow = { attributeId: string; optionId: string; attribute: { code: string; name: string }; option: { code: string; label: string } };
 type VariantRow = { id: string; sku: string; barcode: string | null; title: string | null; costPrice: bigint; salePrice: bigint; weightGrams: number | null; lengthCm?: number | null; widthCm?: number | null; heightCm?: number | null; isActive: boolean; status?: string; version?: number; createdAt: Date; updatedAt: Date; attributeValues?: VariantAttributeValueRow[] };
 type ProductAttributeRow = { attributeId: string; isVariantAxis: boolean; isRequired: boolean; attribute: { code: string; name: string } };
-type ProductDetailRow = { id: string; name: string; slug: string; description: string | null; status: ProductStatus; version: number; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; brand: BrandRow | null; category: CategoryRow | null; variants: VariantRow[]; attributes?: ProductAttributeRow[] };
+type PublicRenditionRow = { objectKey: string; format: string; width: number; height: number; purpose: string };
+type PublicMediaRow = { id: string; kind: string; role: string; position: number; altText: string | null; caption: string | null; width: number | null; height: number | null; renditions: PublicRenditionRow[] };
+type ProductDetailRow = { id: string; name: string; slug: string; description: string | null; status: ProductStatus; version: number; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; brand: BrandRow | null; category: CategoryRow | null; variants: VariantRow[]; attributes?: ProductAttributeRow[]; media?: PublicMediaRow[] };
 type GenerationOption = { attributeId: string; attributeCode: string; attributeName: string; optionId: string; optionCode: string; optionLabel: string };
 type GenerationCombination = { signature: string; values: GenerationOption[] };
 type GenerationContext = { slug: string; axes: Array<{ id: string; code: string; name: string; options: GenerationOption[] }> };
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService, private readonly audit: AuditLogService, private readonly idempotency: CatalogIdempotencyService) {}
+  constructor(private readonly prisma: PrismaService, private readonly audit: AuditLogService, private readonly idempotency: CatalogIdempotencyService, @Optional() private readonly config?: ConfigService<EnvironmentVariables, true>) {}
 
   async listPublicProducts(query: Partial<ProductListQueryDto>): Promise<ProductListResponse> {
     return this.listProducts(query, false);
@@ -139,7 +143,7 @@ export class CatalogService {
     const sortBy = query.sortBy && PRODUCT_SORT_FIELDS.has(query.sortBy) ? query.sortBy : 'createdAt';
     const sortDir = query.sortDir && ORDER_DIRECTIONS.has(query.sortDir) ? query.sortDir : 'desc';
     const [rows, total] = await Promise.all([
-      this.prisma.product.findMany({ where, orderBy: { [sortBy]: sortDir }, skip: (page - 1) * perPage, take: perPage }),
+      this.prisma.product.findMany({ where, orderBy: { [sortBy]: sortDir }, skip: (page - 1) * perPage, take: perPage, ...(includeDrafts ? {} : { include: this.publicListMediaInclude() }) }),
       this.prisma.product.count({ where }),
     ]);
     return { data: { items: rows.map(row => this.productListItem(row)), meta: { page, perPage, total, pages: Math.ceil(total / perPage) } } };
@@ -412,12 +416,19 @@ export class CatalogService {
 
   private productInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, variants: true } as const; }
   private adminProductInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, attributes: { include: { attribute: { select: { code: true, name: true } } }, orderBy: { attribute: { code: 'asc' as const } } }, variants: { include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } } } as const; }
-  private publicProductInclude() { return { brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, variants: { where: { isActive: true } } } as const; }
+  private publicImageMediaFilter() { return { state: 'READY' as const, kind: 'IMAGE' as const, altText: { not: null }, width: { not: null }, height: { not: null } } as const; }
+  private publicListMediaInclude() { return { media: { where: { ...this.publicImageMediaFilter(), role: 'PRIMARY' as const }, take: 1, include: { renditions: { where: { purpose: 'CARD' }, orderBy: { format: 'asc' as const } } } } } as const; }
+  private publicProductInclude() { return { brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, variants: { where: { isActive: true } }, media: { where: this.publicImageMediaFilter(), orderBy: { position: 'asc' as const }, include: { renditions: { orderBy: { width: 'asc' as const } } } } } as const; }
   private categoryInclude() { return { children: true } as const; }
-  private productListItem(row: { id: string; name: string; slug: string; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date }) { return { id: row.id, name: row.name, slug: row.slug, status: statusToApi(row.status), brandId: row.brandId, categoryId: row.categoryId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() }; }
+  private productListItem(row: { id: string; name: string; slug: string; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; media?: PublicMediaRow[] }) { return { id: row.id, name: row.name, slug: row.slug, status: statusToApi(row.status), brandId: row.brandId, categoryId: row.categoryId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), ...(row.media ? { primaryMedia: row.media[0] ? this.publicImage(row.media[0]) : null } : {}) }; }
   private categoryNode(row: CategoryInput): CategoryTreeNode { return { id: row.id, name: row.name, slug: row.slug, parentId: row.parentId, children: (row.children ?? []).map(child => this.categoryNode(child)), createdAt: new Date(row.createdAt).toISOString(), updatedAt: new Date(row.updatedAt).toISOString() }; }
   private productDetail(row: ProductDetailRow) { return { ...this.productListItem(row), version: row.version, description: row.description, brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, attributes: row.attributes?.map(attribute => ({ attributeCode: attribute.attribute.code, attributeName: attribute.attribute.name, isVariantAxis: attribute.isVariantAxis, isRequired: attribute.isRequired })), variants: row.variants.map(variant => this.productVariantPrivateDetail(variant)) }; }
-  private productDetailPublic(row: ProductDetailRow) { return { ...this.productListItem(row), description: row.description, brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantPublic(variant)) }; }
+  private productDetailPublic(row: ProductDetailRow) { return { ...this.productListItem(row), description: row.description, brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantPublic(variant)), media: (row.media ?? []).filter(media => media.kind === 'IMAGE').map(media => this.publicImage(media)) }; }
+  private publicImage(media: PublicMediaRow): PublicProductMediaImage {
+    if (media.kind !== 'IMAGE' || media.width === null || media.height === null || media.altText === null) throw new Error('Invalid ready public image projection.');
+    const origin = this.config?.get('PUBLIC_MEDIA_ORIGIN', { infer: true }) ?? 'http://localhost:9000/products';
+    return { id: media.id, kind: 'IMAGE', position: media.position, role: media.role as PublicProductMediaImage['role'], alt: media.altText, caption: media.caption, width: media.width, height: media.height, sources: media.renditions.map(rendition => ({ url: `${origin.replace(/\/$/u, '')}/${rendition.objectKey.split('/').map(encodeURIComponent).join('/')}`, width: rendition.width, height: rendition.height, type: rendition.format === 'jpeg' ? 'image/jpeg' : `image/${rendition.format}` })) };
+  }
   private productVariantPublic(variant: VariantRow) { return { id: variant.id, sku: variant.sku, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }
   private productVariantBase(variant: VariantRow) { return { id: variant.id, sku: variant.sku, barcode: variant.barcode ?? undefined, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }
   private productVariantPrivateDetail(variant: VariantRow) { return { ...this.productVariantBase(variant), costPrice: { amount: variant.costPrice.toString(), currency: 'IRR' as const }, attributeValues: variant.attributeValues?.map(value => ({ attributeCode: value.attribute.code, attributeName: value.attribute.name, optionCode: value.option.code, optionLabel: value.option.label, isVariantAxis: true })) }; }
