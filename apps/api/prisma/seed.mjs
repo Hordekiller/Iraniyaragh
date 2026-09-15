@@ -12,6 +12,9 @@ const SYSTEM_ADMIN_ROLE = {
 const PERMISSIONS = [
   ["catalog.read", "Read catalog", "catalog"],
   ["catalog.write", "Manage catalog", "catalog"],
+  ["catalog.media.read", "Read catalog media", "catalog"],
+  ["catalog.media.write", "Manage catalog media", "catalog"],
+  ["catalog.publish", "Publish catalog products", "catalog"],
   ["pricing.read", "Read pricing", "pricing"],
   ["pricing.write", "Manage pricing", "pricing"],
   ["inventory.read", "Read inventory", "inventory"],
