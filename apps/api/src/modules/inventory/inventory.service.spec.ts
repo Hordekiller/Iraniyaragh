@@ -120,32 +120,28 @@ describe('InventoryService guards and queries', () => {
       ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ version: 1, onHand: 10, reserved: 0 });
     });
 
-    it('emits WAREHOUSE_NOT_FOUND when the warehouse does not exist', async () => {
-      ctx.tx.warehouse.findUnique.mockResolvedValue(null);
+    it.each([
+      {
+        scenario: 'the warehouse does not exist',
+        setup: () => ctx.tx.warehouse.findUnique.mockResolvedValue(null),
+        code: 'WAREHOUSE_NOT_FOUND',
+      },
+      {
+        scenario: 'the location is missing or inactive',
+        setup: () => ctx.tx.warehouseLocation.findFirst.mockResolvedValue(null),
+        code: 'LOCATION_NOT_FOUND',
+      },
+      {
+        scenario: 'the variant does not exist',
+        setup: () => ctx.tx.productVariant.findUnique.mockResolvedValue(null),
+        code: 'SKU_NOT_FOUND',
+      },
+    ])('emits $code when $scenario', async ({ setup, code }) => {
+      setup();
 
       await expect(
         ctx.service.changeOnHand({ ...base, delta: 3, reason: 'identity test' }),
-      ).rejects.toMatchObject({ response: { code: 'WAREHOUSE_NOT_FOUND' } });
-
-      expect(ctx.tx.inventoryBalance.upsert).not.toHaveBeenCalled();
-    });
-
-    it('emits LOCATION_NOT_FOUND when the location is missing or inactive', async () => {
-      ctx.tx.warehouseLocation.findFirst.mockResolvedValue(null);
-
-      await expect(
-        ctx.service.changeOnHand({ ...base, delta: 3, reason: 'identity test' }),
-      ).rejects.toMatchObject({ response: { code: 'LOCATION_NOT_FOUND' } });
-
-      expect(ctx.tx.inventoryBalance.upsert).not.toHaveBeenCalled();
-    });
-
-    it('emits SKU_NOT_FOUND when the variant does not exist', async () => {
-      ctx.tx.productVariant.findUnique.mockResolvedValue(null);
-
-      await expect(
-        ctx.service.changeOnHand({ ...base, delta: 3, reason: 'identity test' }),
-      ).rejects.toMatchObject({ response: { code: 'SKU_NOT_FOUND' } });
+      ).rejects.toMatchObject({ response: { code } });
 
       expect(ctx.tx.inventoryBalance.upsert).not.toHaveBeenCalled();
     });
@@ -355,35 +351,30 @@ describe('InventoryService guards and queries', () => {
   it('emits RESERVATION_NOT_FOUND for an unknown reservation', async () => {
     ctx.prisma.stockReservation.findUnique.mockResolvedValue(null);
 
-    await expect(
-      ctx.service.releaseReservation('missing', { actorId: 'actor', requestId: 'request' }),
-    ).rejects.toMatchObject({ response: { code: 'RESERVATION_NOT_FOUND' } });
-    await expect(
-      ctx.service.consumeReservation('missing', { actorId: 'actor', requestId: 'request' }),
-    ).rejects.toMatchObject({ response: { code: 'RESERVATION_NOT_FOUND' } });
+    for (const action of ['releaseReservation', 'consumeReservation'] as const) {
+      await expect(
+        ctx.service[action]('missing', { actorId: 'actor', requestId: 'request' }),
+      ).rejects.toMatchObject({ response: { code: 'RESERVATION_NOT_FOUND' } });
+    }
 
     expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('emits RESERVATION_EXPIRED when releasing or consuming an expired reservation', async () => {
-    const expiredReservation = {
+    ctx.prisma.stockReservation.findUnique.mockResolvedValue({
       id: 'r1',
       warehouseId: 'wh',
       locationId: 'loc',
       variantId: 'variant',
       quantity: 2,
-    };
-    ctx.prisma.stockReservation.findUnique.mockResolvedValue({
-      ...expiredReservation,
       status: 'EXPIRED',
     });
 
-    await expect(
-      ctx.service.releaseReservation('r1', { actorId: 'actor', requestId: 'request' }),
-    ).rejects.toMatchObject({ response: { code: 'RESERVATION_EXPIRED' } });
-    await expect(
-      ctx.service.consumeReservation('r1', { actorId: 'actor', requestId: 'request' }),
-    ).rejects.toMatchObject({ response: { code: 'RESERVATION_EXPIRED' } });
+    for (const action of ['releaseReservation', 'consumeReservation'] as const) {
+      await expect(
+        ctx.service[action]('r1', { actorId: 'actor', requestId: 'request' }),
+      ).rejects.toMatchObject({ response: { code: 'RESERVATION_EXPIRED' } });
+    }
 
     expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
   });

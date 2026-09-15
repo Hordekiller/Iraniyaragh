@@ -257,15 +257,8 @@ export class InventoryService {
       this.prisma.$transaction(
         async (tx) => {
           const recheck = await tx.stockReservation.findUnique({ where: { id: reservationId } });
-          if (!recheck) {
-            return reservation;
-          }
-          if (recheck.status === 'EXPIRED') {
-            throw new ConflictException({ code: 'RESERVATION_EXPIRED', message: 'Reservation has expired.' });
-          }
-          if (recheck.status !== 'ACTIVE') {
-            return recheck;
-          }
+          const replayState = this.reservationReplay(recheck, reservation);
+          if (replayState !== null) return replayState;
 
           const balance = await tx.inventoryBalance.findUnique({ where: { id: reservation.balanceId } });
           this.assertVersion(context.expectedVersion, balance?.version ?? 0);
@@ -315,15 +308,8 @@ export class InventoryService {
       this.prisma.$transaction(
         async (tx) => {
           const recheck = await tx.stockReservation.findUnique({ where: { id: reservationId } });
-          if (!recheck) {
-            return reservation;
-          }
-          if (recheck.status === 'EXPIRED') {
-            throw new ConflictException({ code: 'RESERVATION_EXPIRED', message: 'Reservation has expired.' });
-          }
-          if (recheck.status !== 'ACTIVE') {
-            return recheck;
-          }
+          const replayState = this.reservationReplay(recheck, reservation);
+          if (replayState !== null) return replayState;
 
           const balance = await tx.inventoryBalance.findUnique({ where: { id: reservation.balanceId } });
           this.assertVersion(context.expectedVersion, balance?.version ?? 0);
@@ -569,6 +555,17 @@ export class InventoryService {
         variantId: key.variantId,
       },
     } as const;
+  }
+
+  private reservationReplay<R extends { id: string; status: string }, T extends { id: string }>(
+    recheck: R | null,
+    reservation: T,
+  ): R | T | null {
+    if (!recheck) return reservation;
+    if (recheck.status === 'EXPIRED') {
+      throw new ConflictException({ code: 'RESERVATION_EXPIRED', message: 'Reservation has expired.' });
+    }
+    return recheck.status === 'ACTIVE' ? null : recheck;
   }
 
   private async assertStockIdentity(tx: Prisma.TransactionClient, key: StockKey) {
