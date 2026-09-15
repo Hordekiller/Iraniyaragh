@@ -3639,6 +3639,56 @@
         ]
       }
     },
+    "/catalog/admin/products/{productId}/media/{mediaId}/primary": {
+      "post": {
+        "operationId": "MediaController_setPrimary",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductMediaPrimaryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Media"
+        ]
+      }
+    },
     "/inventory/balances": {
       "get": {
         "operationId": "InventoryController_balances",
@@ -6207,6 +6257,23 @@
           }
         },
         "required": [
+          "expectedVersion"
+        ]
+      },
+      "ProductMediaPrimaryDto": {
+        "type": "object",
+        "properties": {
+          "expectedProductVersion": {
+            "type": "number",
+            "minimum": 1
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "expectedProductVersion",
           "expectedVersion"
         ]
       }
