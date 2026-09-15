@@ -24,6 +24,7 @@ function createFakeClient(overrides: Record<string, unknown> = {}) {
       update: vi.fn(),
       findUnique: vi.fn(),
     },
+    productMedia: { count: vi.fn().mockResolvedValue(1) },
     brand: {
       create: vi.fn(),
       update: vi.fn(),
@@ -180,6 +181,15 @@ describe('CatalogService', () => {
     it('rejects publishing a product without any active SKU', async () => {
       (ctx.tx.product.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...productRow, variants: [] });
       await expect(ctx.service.changeProductStatus('actor-1', 'unit-no-sku-status', 'product-1', { action: 'publish' })).rejects.toBeInstanceOf(UnprocessableEntityException);
+    });
+
+    it('rejects publishing without exactly one ready primary image', async () => {
+      (ctx.tx.product.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(productRow);
+      (ctx.tx.productMedia.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
+      await expect(
+        ctx.service.changeProductStatus('actor-1', 'unit-no-primary-media', 'product-1', { action: 'publish' }),
+      ).rejects.toMatchObject({ response: { code: 'MEDIA_PRIMARY_REQUIRED' } });
+      expect(ctx.tx.product.update).not.toHaveBeenCalled();
     });
 
     it('throws NotFound for a missing product', async () => {

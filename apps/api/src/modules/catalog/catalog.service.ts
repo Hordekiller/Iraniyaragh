@@ -203,6 +203,17 @@ export class CatalogService {
       const current = await tx.product.findUnique({ where: { id }, include: this.productInclude() });
       if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
        if (input.action === 'publish' && !current.variants.some(variant => variant.status === 'ACTIVE')) throw new UnprocessableEntityException({ code: 'UNPROCESSABLE', message: 'A product must have an active variant.' });
+      if (input.action === 'publish') {
+        const primaryMediaCount = await tx.productMedia.count({
+          where: { productId: id, kind: 'IMAGE', role: 'PRIMARY', state: 'READY' },
+        });
+        if (primaryMediaCount !== 1) {
+          throw new UnprocessableEntityException({
+            code: 'MEDIA_PRIMARY_REQUIRED',
+            message: 'A product must have exactly one ready primary image before publication.',
+          });
+        }
+      }
       const updated = await tx.product.update({ where: { id }, data: { status: next }, include: this.productInclude() });
       await this.audit.record({ actorId, action: 'catalog.product.status_changed', entityType: 'Product', entityId: id, requestId: getRequestId(), before: { status: current.status }, after: { status: updated.status } }, tx);
       return { response: { data: { product: this.productDetail(updated) } }, resourceType: 'Product', resourceId: id };
