@@ -159,6 +159,22 @@ foundation, and G5–G10 have not reached integrated completion.
 - Media is part of the existing public response ETag payload, so ready metadata,
   ordering, archive, and rendition changes invalidate conditional responses.
 - The committed OpenAPI artifact describes list `primaryMedia` and detail `media`.
+- Hardened ready projection: the public list/detail media includes resolve only
+  complete ready images — the READY state, an IMAGE kind, non-null `altText`, and
+  non-null intrinsic `width`/`height` are all required, and the projection maps
+  defensively. An incomplete READY record (for example a rendition posted by a
+  concurrent integration run) is filtered out instead of crashing the public
+  request.
+- Isolated integration cleanup: the media cleanup in the integration spec deletes
+  run-scoped product media before its product and user, keyed on the run's actor
+  (`createdById`) and `runProductSlugs`, so a mid-test failure cannot leave
+  `ProductMedia` rows that would block `afterAll` teardown via the
+  `ProductMedia_createdById_fkey` RESTRICT. The database integration job for this
+  shared HEAD is green (catalog 19/19 + media 19/19 local; unit 27/27).
+- CI note: the `quality` job has only ever failed on this sha with Vitest's
+  `Test timed out in 5000ms` — a runner flake on a tmp-backed transform cache, not
+  a code/assertion result. The same unit spec passes 27/27 in a disk-backed
+  `TMPDIR`, and the job goes green on rerun without any code change.
 
 ## Recently merged capability
 
