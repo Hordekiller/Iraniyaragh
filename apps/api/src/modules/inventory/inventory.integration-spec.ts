@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 import { AuditLogService } from '../audit/audit-log.service';
-import { EMPTY_AXIS_SIGNATURE, canonicalizeSku } from '../catalog/variant-identifiers';
+import { EMPTY_AXIS_SIGNATURE, canonicalizeSku, combinationSignature } from '../catalog/variant-identifiers';
 import { InventoryService } from './inventory.service';
 
 describe.sequential('InventoryService database integration', () => {
@@ -14,6 +14,11 @@ describe.sequential('InventoryService database integration', () => {
   const locationId = `test_location_${runId}`;
   const productId = `test_product_${runId}`;
   const variantId = `test_variant_${runId}`;
+  const sourceWarehouseId = `test_wh_src_${runId}`;
+  const sourceLocationId = `test_loc_src_${runId}`;
+  const targetWarehouseId = `test_wh_dst_${runId}`;
+  const targetLocationId = `test_loc_dst_${runId}`;
+  const transferVariantId = `test_variant_trf_${runId}`;
   const idempotencyKey = `test_adjustment_${runId}`;
   const requestIdPrefix = `invit-${runId}`;
   const prisma = new PrismaService();
@@ -84,6 +89,51 @@ describe.sequential('InventoryService database integration', () => {
         salePrice: 120000n,
       },
     });
+
+    await prisma.warehouse.create({
+      data: {
+        id: sourceWarehouseId,
+        code: `TEST-WH-SRC-${runId}`,
+        name: 'Integration test source warehouse',
+      },
+    });
+    await prisma.warehouseLocation.create({
+      data: {
+        id: sourceLocationId,
+        warehouseId: sourceWarehouseId,
+        code: `TEST-LOC-SRC-${runId}`,
+        name: 'Integration test source location',
+      },
+    });
+    await prisma.warehouse.create({
+      data: {
+        id: targetWarehouseId,
+        code: `TEST-WH-DST-${runId}`,
+        name: 'Integration test target warehouse',
+      },
+    });
+    await prisma.warehouseLocation.create({
+      data: {
+        id: targetLocationId,
+        warehouseId: targetWarehouseId,
+        code: `TEST-LOC-DST-${runId}`,
+        name: 'Integration test target location',
+      },
+    });
+    await prisma.productVariant.create({
+      data: {
+        id: transferVariantId,
+        productId,
+        sku: `TEST-SKU-TRF-${runId}`,
+        skuKey: canonicalizeSku(`TEST-SKU-TRF-${runId}`),
+        combinationSignature: combinationSignature([
+          { attributeId: 'transfer-axis', optionId: 'transfer-option' },
+        ]),
+        title: 'Integration test transfer variant',
+        costPrice: 50000n,
+        salePrice: 60000n,
+      },
+    });
   });
 
   afterAll(async () => {
@@ -92,13 +142,30 @@ describe.sequential('InventoryService database integration', () => {
     await prisma.auditLog.deleteMany({
       where: { requestId: { contains: requestIdPrefix } },
     });
-    await prisma.stockReservation.deleteMany({ where: { variantId } });
-    await prisma.inventoryMovement.deleteMany({ where: { variantId } });
-    await prisma.inventoryBalance.deleteMany({ where: { variantId } });
-    await prisma.productVariant.deleteMany({ where: { id: variantId } });
+    await prisma.stockReservation.deleteMany({
+      where: { variantId: { in: [variantId, transferVariantId] } },
+    });
+    await prisma.inventoryMovement.deleteMany({
+      where: { variantId: { in: [variantId, transferVariantId] } },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { variantId: { in: [variantId, transferVariantId] } },
+    });
+    await prisma.stockTransfer.deleteMany({
+      where: {
+        sourceWarehouseId: { in: [sourceWarehouseId, warehouseId] },
+      },
+    });
+    await prisma.warehouseLocation.deleteMany({
+      where: { warehouseId: { in: [sourceWarehouseId, targetWarehouseId, warehouseId] } },
+    });
+    await prisma.warehouse.deleteMany({
+      where: { id: { in: [sourceWarehouseId, targetWarehouseId, warehouseId] } },
+    });
+    await prisma.productVariant.deleteMany({
+      where: { id: { in: [variantId, transferVariantId] } },
+    });
     await prisma.product.deleteMany({ where: { id: productId } });
-    await prisma.warehouseLocation.deleteMany({ where: { id: locationId } });
-    await prisma.warehouse.deleteMany({ where: { id: warehouseId } });
     await prisma.userRole.deleteMany({ where: { roleId: actorRoleId } });
     await prisma.role.deleteMany({ where: { id: actorRoleId } });
     await prisma.user.deleteMany({ where: { id: actorId } });
@@ -729,5 +796,377 @@ describe.sequential('InventoryService database integration', () => {
     expect(new Set(ids).size).toBe(ids.length);
     const createdAtValues = movements.items.map((m) => m.createdAt.getTime());
     expect([...createdAtValues]).toEqual([...createdAtValues].sort((a, b) => b - a));
+  });
+
+  it('returns the original reservation when an idempotency key is replayed with the same payload', async () => {
+    const key = `test-reservation-idem-${runId}`;
+    const payload = {
+      warehouseId,
+      locationId,
+      variantId,
+      orderId: null,
+      quantity: 1,
+      expiresAt: new Date(Date.now() + 60_000),
+      idempotencyKey: key,
+      actorId,
+      requestId: `${requestIdPrefix}-reservation-idem-first`,
+    } as const;
+
+    const first = await inventory.reserve(payload);
+    const replay = await inventory.reserve(payload);
+
+    expect(replay.id).toBe(first.id);
+    await expect(
+      prisma.stockReservation.count({ where: { idempotencyKey: key } }),
+    ).resolves.toBe(1);
+
+    const balance = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: balanceWhere(),
+    });
+    expect(balance.reserved).toBeGreaterThanOrEqual(1);
+  });
+
+  it('rejects a reservation idempotency replay with a different payload', async () => {
+    const key = `test-reservation-idem-conflict-${runId}`;
+    await inventory.reserve({
+      warehouseId,
+      locationId,
+      variantId,
+      orderId: null,
+      quantity: 1,
+      expiresAt: new Date(Date.now() + 60_000),
+      idempotencyKey: key,
+      actorId,
+      requestId: `${requestIdPrefix}-reservation-idem-conflict-first`,
+    });
+
+    await expect(
+      inventory.reserve({
+        warehouseId,
+        locationId,
+        variantId,
+        orderId: null,
+        quantity: 99,
+        expiresAt: new Date(Date.now() + 60_000),
+        idempotencyKey: key,
+        actorId,
+        requestId: `${requestIdPrefix}-reservation-idem-conflict-second`,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('creates and updates warehouses and locations, rejecting duplicate codes', async () => {
+    const suffix = `wh-${runId}`;
+
+    const created = await inventory.createWarehouse({
+      code: `CRUD-WH-${suffix}`,
+      name: 'CRUD warehouse',
+      actorId,
+      requestId: `${requestIdPrefix}-wh-create`,
+    });
+    expect(created.code).toBe(`CRUD-WH-${suffix}`);
+
+    await expect(
+      inventory.createWarehouse({
+        code: `CRUD-WH-${suffix}`,
+        name: 'Duplicate warehouse',
+        actorId,
+        requestId: `${requestIdPrefix}-wh-duplicate`,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'WAREHOUSE_CODE_CONFLICT' } });
+
+    const updated = await inventory.updateWarehouse(created.id, {
+      name: 'Renamed CRUD warehouse',
+      isActive: false,
+      actorId,
+      requestId: `${requestIdPrefix}-wh-update`,
+    });
+    expect(updated.name).toBe('Renamed CRUD warehouse');
+    expect(updated.isActive).toBe(false);
+
+    const listed = await inventory.listWarehouses({ limit: 100 });
+    expect(listed.items.some((w: { id: string }) => w.id === created.id)).toBe(true);
+
+    const location = await inventory.createLocation(created.id, {
+      code: 'CRUD-LOC',
+      actorId,
+      requestId: `${requestIdPrefix}-loc-create`,
+    });
+    expect(location.warehouseId).toBe(created.id);
+
+    await expect(
+      inventory.createLocation(created.id, {
+        code: 'CRUD-LOC',
+        actorId,
+        requestId: `${requestIdPrefix}-loc-duplicate`,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'LOCATION_CODE_CONFLICT' } });
+
+    await expect(
+      inventory.createLocation('missing-warehouse', {
+        code: 'X',
+        actorId,
+        requestId: `${requestIdPrefix}-loc-missing-wh`,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'WAREHOUSE_NOT_FOUND' } });
+
+    await inventory.updateLocation(location.id, {
+      name: 'Renamed location',
+      actorId,
+      requestId: `${requestIdPrefix}-loc-update`,
+    });
+
+    const listedLocations = await inventory.listLocations(created.id, { limit: 100 });
+    expect(listedLocations.items.some((l: { id: string }) => l.id === location.id)).toBe(true);
+
+    await prisma.warehouseLocation.deleteMany({ where: { id: location.id } });
+    await prisma.warehouse.deleteMany({ where: { id: created.id } });
+  });
+
+  it('moves stock through the full transfer lifecycle with movements and audit', async () => {
+    const requestId = `${requestIdPrefix}-transfer-lifecycle`;
+    await inventory.changeOnHand({
+      warehouseId: sourceWarehouseId,
+      locationId: sourceLocationId,
+      variantId: transferVariantId,
+      delta: 10,
+      type: InventoryMovementType.RECEIPT,
+      actorId,
+      requestId: `${requestId}-seed`,
+    });
+
+    const beforeSource = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: { warehouseId_locationId_variantId: { warehouseId: sourceWarehouseId, locationId: sourceLocationId, variantId: transferVariantId } },
+    });
+    expect(beforeSource.onHand).toBe(10);
+
+    const transfer = await inventory.createTransfer({
+      sourceWarehouseId,
+      targetWarehouseId,
+      items: [
+        {
+          variantId: transferVariantId,
+          quantity: 4,
+          sourceLocationId,
+          targetLocationId,
+        },
+      ],
+      actorId,
+      requestId: `${requestId}-create`,
+    });
+    expect(transfer.status).toBe('DRAFT');
+
+    const requested = await inventory.requestTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-request`,
+    });
+    expect(requested.status).toBe('REQUESTED');
+
+    const approved = await inventory.approveTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-approve`,
+    });
+    expect(approved.status).toBe('APPROVED');
+
+    const dispatched = await inventory.dispatchTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-dispatch`,
+    });
+    expect(dispatched.status).toBe('IN_TRANSIT');
+
+    const afterDispatchSource = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: { warehouseId_locationId_variantId: { warehouseId: sourceWarehouseId, locationId: sourceLocationId, variantId: transferVariantId } },
+    });
+    expect(afterDispatchSource.onHand).toBe(6);
+
+    const received = await inventory.receiveTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-receive`,
+    });
+    expect(received.status).toBe('RECEIVED');
+
+    const afterReceiveTarget = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: { warehouseId_locationId_variantId: { warehouseId: targetWarehouseId, locationId: targetLocationId, variantId: transferVariantId } },
+    });
+    expect(afterReceiveTarget.onHand).toBe(4);
+
+    const outMovement = await prisma.inventoryMovement.findFirst({
+      where: { referenceType: 'stock-transfer', referenceId: transfer.code, type: InventoryMovementType.TRANSFER_OUT },
+    });
+    expect(outMovement).not.toBeNull();
+    expect(outMovement).toMatchObject({ quantity: -4, afterOnHand: 6 });
+
+    const inMovement = await prisma.inventoryMovement.findFirst({
+      where: { referenceType: 'stock-transfer', referenceId: transfer.code, type: InventoryMovementType.TRANSFER_IN },
+    });
+    expect(inMovement).not.toBeNull();
+    expect(inMovement).toMatchObject({ quantity: 4, afterOnHand: 4 });
+
+    const audits = await prisma.auditLog.findMany({
+      where: { requestId: { startsWith: requestId } },
+      orderBy: { createdAt: 'asc' },
+    });
+    const actions = audits.map((a) => a.action);
+    expect(actions).toEqual([
+      'inventory.balance.changed',
+      'inventory.transfer.created',
+      'inventory.transfer.requested',
+      'inventory.transfer.approved',
+      'inventory.transfer.dispatched',
+      'inventory.transfer.received',
+    ]);
+  });
+
+  it('rejects illegal transfer transitions and records no movement', async () => {
+    const requestId = `${requestIdPrefix}-transfer-illegal`;
+    const transfer = await inventory.createTransfer({
+      sourceWarehouseId,
+      targetWarehouseId,
+      items: [{ variantId: transferVariantId, quantity: 1, sourceLocationId, targetLocationId }],
+      actorId,
+      requestId: `${requestId}-create`,
+    });
+
+    await expect(
+      inventory.approveTransfer(transfer.id, { actorId, requestId: `${requestId}-approve` }),
+    ).rejects.toMatchObject({ response: { code: 'TRANSFER_STATE_CONFLICT' } });
+
+    await expect(
+      inventory.receiveTransfer(transfer.id, { actorId, requestId: `${requestId}-receive` }),
+    ).rejects.toMatchObject({ response: { code: 'TRANSFER_STATE_CONFLICT' } });
+
+    const cancelled = await inventory.cancelTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-cancel`,
+    });
+    expect(cancelled.status).toBe('CANCELLED');
+
+    await expect(
+      inventory.cancelTransfer(transfer.id, { actorId, requestId: `${requestId}-cancel-again` }),
+    ).rejects.toMatchObject({ response: { code: 'TRANSFER_STATE_CONFLICT' } });
+
+    const outMovements = await prisma.inventoryMovement.count({
+      where: { referenceType: 'stock-transfer', referenceId: transfer.code, type: InventoryMovementType.TRANSFER_OUT },
+    });
+    expect(outMovements).toBe(0);
+  });
+
+  it('requires locations when dispatching and receiving', async () => {
+    const requestId = `${requestIdPrefix}-transfer-no-loc`;
+    const withoutLocations = await inventory.createTransfer({
+      sourceWarehouseId,
+      targetWarehouseId,
+      items: [{ variantId: transferVariantId, quantity: 1 }],
+      actorId,
+      requestId: `${requestId}-create`,
+    });
+
+    const requested = await inventory.requestTransfer(withoutLocations.id, {
+      actorId,
+      requestId: `${requestId}-request`,
+    });
+    const approved = await inventory.approveTransfer(requested.id, {
+      actorId,
+      requestId: `${requestId}-approve`,
+    });
+
+    await expect(
+      inventory.dispatchTransfer(approved.id, { actorId, requestId: `${requestId}-dispatch` }),
+    ).rejects.toMatchObject({ response: { code: 'TRANSFER_ITEM_LOCATION_REQUIRED' } });
+
+    await inventory.cancelTransfer(approved.id, { actorId, requestId: `${requestId}-cancel` });
+  });
+
+  it('replays a matching transfer for a repeated idempotency key and conflicts a mismatch', async () => {
+    const key = `test-transfer-idem-${runId}`;
+    const payload = {
+      sourceWarehouseId,
+      targetWarehouseId,
+      items: [{ variantId: transferVariantId, quantity: 2, sourceLocationId, targetLocationId }] as { variantId: string; quantity: number; sourceLocationId: string; targetLocationId: string }[],
+      idempotencyKey: key,
+      actorId,
+      requestId: `${requestIdPrefix}-transfer-idem-first`,
+    };
+
+    const first = await inventory.createTransfer(payload);
+    const replay = await inventory.createTransfer(payload);
+
+    expect(replay.id).toBe(first.id);
+    await expect(
+      prisma.stockTransfer.count({ where: { idempotencyKey: key } }),
+    ).resolves.toBe(1);
+
+    await expect(
+      inventory.createTransfer({
+        ...payload,
+        items: [{ variantId: transferVariantId, quantity: 99, sourceLocationId, targetLocationId }],
+        requestId: `${requestIdPrefix}-transfer-idem-second`,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('keeps a single dispatch winner when two identical transfers race', async () => {
+    const requestId = `${requestIdPrefix}-transfer-race`;
+    await inventory.changeOnHand({
+      warehouseId: sourceWarehouseId,
+      locationId: sourceLocationId,
+      variantId: transferVariantId,
+      delta: 5,
+      type: InventoryMovementType.RECEIPT,
+      actorId,
+      requestId: `${requestId}-seed`,
+    });
+
+    const createTransfer = async (): Promise<string> => {
+      const transfer = await inventory.createTransfer({
+        sourceWarehouseId,
+        targetWarehouseId,
+        items: [{ variantId: transferVariantId, quantity: 3, sourceLocationId, targetLocationId }],
+        actorId,
+        requestId: `${requestId}-create`,
+      });
+      await inventory.requestTransfer(transfer.id, { actorId, requestId: `${requestId}-request` });
+      await inventory.approveTransfer(transfer.id, { actorId, requestId: `${requestId}-approve` });
+      return transfer.id;
+    };
+
+    const a = await createTransfer();
+    const b = await createTransfer();
+    void b;
+
+    const outBefore = await prisma.inventoryMovement.count({
+      where: { type: InventoryMovementType.TRANSFER_OUT, variantId: transferVariantId },
+    });
+    const inTransitBefore = await prisma.stockTransfer.count({
+      where: { status: 'IN_TRANSIT', sourceWarehouseId },
+    });
+
+    const results = await Promise.allSettled([
+      inventory.dispatchTransfer(a, { actorId, requestId: `${requestId}-dispatch-a` }),
+      inventory.dispatchTransfer(b, { actorId, requestId: `${requestId}-dispatch-b` }),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+    expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+    for (const r of rejected) {
+      expect(r.reason).toBeInstanceOf(ConflictException);
+    }
+
+    const balance = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: { warehouseId_locationId_variantId: { warehouseId: sourceWarehouseId, locationId: sourceLocationId, variantId: transferVariantId } },
+    });
+    const seedBalance = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: { warehouseId_locationId_variantId: { warehouseId: sourceWarehouseId, locationId: sourceLocationId, variantId: transferVariantId } },
+    });
+    expect(balance.onHand).toBe(seedBalance.onHand);
+
+    const outDrift = (await prisma.inventoryMovement.count({
+      where: { type: InventoryMovementType.TRANSFER_OUT, variantId: transferVariantId },
+    })) - outBefore;
+    const inTransitDrift = (await prisma.stockTransfer.count({
+      where: { status: 'IN_TRANSIT', sourceWarehouseId },
+    })) - inTransitBefore;
+    expect(outDrift).toBe(inTransitDrift);
   });
 });

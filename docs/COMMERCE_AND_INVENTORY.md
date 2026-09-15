@@ -61,12 +61,57 @@ Reservations require:
 
 Expired/cancelled reservations release available stock. Fulfillment consumes the reservation with the corresponding physical movement.
 
-## Transfers
-A transfer is a state machine. Suggested lifecycle:
-`DRAFT -> APPROVED -> DISPATCHED -> RECEIVED`
-with cancellation rules depending on state.
+Reservation writes are idempotent via an optional `idempotency-key` header (`StockReservation.idempotencyKey`); replaying the same key with the same payload returns the original reservation, while a conflicting payload is rejected. Expiry runs in a serializable transaction and makes each reservation expire exactly once, restoring `available` stock.
 
-Once dispatched, source stock has physically moved; receiving should create destination movement. Avoid direct balance reassignment.
+## Transfers
+A transfer is a backend-controlled state machine. Implemented lifecycle:
+
+`DRAFT -> REQUESTED -> APPROVED -> IN_TRANSIT -> RECEIVED`
+
+with explicit cancellation paths from `DRAFT`, `REQUESTED` and `APPROVED`.
+
+### Transfer transition matrix
+
+| Transition  | Allowed from            | Effect                                                                 |
+| ----------- | ----------------------- | ---------------------------------------------------------------------- |
+| request     | DRAFT                   | Requests approval                                                      |
+| approve     | REQUESTED               | Approves the transfer                                                  |
+| dispatch    | APPROVED                | Creates `TRANSFER_OUT` movements; requires `sourceLocationId` per item |
+| receive     | IN_TRANSIT              | Creates `TRANSFER_IN` movements; requires `targetLocationId` per item  |
+| cancel      | DRAFT / REQUESTED / APPROVED | Marks the transfer `CANCELLED`, no stock effect                        |
+
+Invalid transitions and unknown transfer ids are rejected with `TRANSFER_STATE_CONFLICT` / `TRANSFER_NOT_FOUND`. Dispatching or receiving without the corresponding location on every item is rejected with `TRANSFER_ITEM_LOCATION_REQUIRED`. A transfer requires at least one item (`TRANSFER_NO_ITEMS`).
+
+Once dispatched, source stock has physically moved; receiving creates the destination movement. Direct balance reassignment is never used. Dispatch and receive run in serializable transactions and re-check the stock identity at the item location before applying the movement, so concurrent dispatches cannot over-draw stock.
+
+API surface is exposed through `inventory` endpoints; permission mapping is documented under Contracts & Permissions below.
+
+## Inventory HTTP contracts
+Exposed under `/api/v1/inventory` (staff-MFA authenticated routes).
+
+| Endpoint                                            | Permission        | Purpose                                        |
+| --------------------------------------------------- | ----------------- | ---------------------------------------------- |
+| `GET /inventory/balances`                           | `inventory.read`  | Balance snapshots (SKU/warehouse/location)     |
+| `GET /inventory/movements`                          | `inventory.read`  | Ledger movement history                        |
+| `POST /inventory/changes`                           | `inventory.adjust`| Direct movement (receipt/adjustment)           |
+| `GET/POST /inventory/warehouses`                    | read / adjust     | Warehouse list / create                        |
+| `PATCH /inventory/warehouses/:id`                   | `inventory.adjust`| Warehouse update (incl. deactivate)            |
+| `GET/POST /inventory/warehouses/:warehouseId/locations` | read / adjust  | Location list / create                         |
+| `PATCH /inventory/locations/:id`                    | `inventory.adjust`| Location update (incl. deactivate)             |
+| `GET/POST /inventory/reservations`                  | read / adjust     | Reservation list / reserve                     |
+| `POST /inventory/reservations/:id/release`          | `inventory.adjust`| Release a reservation                          |
+| `POST /inventory/reservations/:id/consume`          | `inventory.adjust`| Consume a reservation (sale movement)          |
+| `GET/POST /inventory/transfers`                     | `inventory.transfer` | Transfer list / create                       |
+| `GET /inventory/transfers/:id`                      | `inventory.transfer` | Transfer detail                              |
+| `POST /inventory/transfers/:id/request`             | `inventory.transfer` | Request approval                              |
+| `POST /inventory/transfers/:id/approve`             | `inventory.approve`  | Approve (approval separation)                 |
+| `POST /inventory/transfers/:id/dispatch`            | `inventory.transfer` | Dispatch (source `TRANSFER_OUT`)              |
+| `POST /inventory/transfers/:id/receive`             | `inventory.transfer` | Receive (target `TRANSFER_IN`)                |
+| `POST /inventory/transfers/:id/cancel`              | `inventory.transfer` | Cancel                                        |
+
+Permissions fail closed: a caller needs the exact permission listed; `inventory.read` alone never allows mutations, and acting on a transfer requires `inventory.transfer` while approval additionally requires `inventory.approve`.
+
+DTO and error contracts (including `WAREHOUSE_CODE_CONFLICT`, `LOCATION_CODE_CONFLICT`, `TRANSFER_NOT_FOUND`, `TRANSFER_STATE_CONFLICT`, `TRANSFER_NO_ITEMS`, `TRANSFER_ITEM_LOCATION_REQUIRED`) live in `packages/contracts`. Prisma models are never exposed as public contracts.
 
 ## Stocktake
 Stocktake should support:
