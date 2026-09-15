@@ -1,15 +1,15 @@
-import { Type } from 'class-transformer';
-import { IsArray, IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from "class-transformer";
+import { IsArray, IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class ProductMediaUploadDto {
-  @ApiProperty({ type: String, enum: ['IMAGE', 'VIDEO'] })
-  @IsEnum(['IMAGE', 'VIDEO'])
-  kind!: 'IMAGE' | 'VIDEO';
+  @ApiProperty({ type: String, enum: ["IMAGE", "VIDEO"] })
+  @IsEnum(["IMAGE", "VIDEO"])
+  kind!: "IMAGE" | "VIDEO";
 
-  @ApiProperty({ type: String, enum: ['PRIMARY', 'GALLERY', 'VIDEO_POSTER'] })
-  @IsEnum(['PRIMARY', 'GALLERY', 'VIDEO_POSTER'])
-  role!: 'PRIMARY' | 'GALLERY' | 'VIDEO_POSTER';
+  @ApiProperty({ type: String, enum: ["PRIMARY", "GALLERY", "VIDEO_POSTER"] })
+  @IsEnum(["PRIMARY", "GALLERY", "VIDEO_POSTER"])
+  role!: "PRIMARY" | "GALLERY" | "VIDEO_POSTER";
 
   @ApiProperty({ type: Number, minimum: 0 })
   @Type(() => Number)
@@ -22,9 +22,12 @@ export class ProductMediaUploadDto {
   @MaxLength(255)
   originalFilename!: string;
 
-  @ApiProperty({ type: String, enum: ['image/jpeg', 'image/png', 'image/webp', 'video/mp4'] })
-  @IsEnum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4'])
-  declaredMime!: 'image/jpeg' | 'image/png' | 'image/webp' | 'video/mp4';
+  @ApiProperty({
+    type: String,
+    enum: ["image/jpeg", "image/png", "image/webp", "video/mp4"],
+  })
+  @IsEnum(["image/jpeg", "image/png", "image/webp", "video/mp4"])
+  declaredMime!: "image/jpeg" | "image/png" | "image/webp" | "video/mp4";
 
   @ApiProperty({ type: Number, minimum: 1, maximum: 104857600 })
   @Type(() => Number)
@@ -41,7 +44,7 @@ export class ProductMediaUploadDto {
 }
 
 export class ProductMediaConfirmDto {
-  @ApiPropertyOptional({ type: String, pattern: '^[a-f0-9]{64}$' })
+  @ApiPropertyOptional({ type: String, pattern: "^[a-f0-9]{64}$" })
   @IsOptional()
   @IsString()
   @Matches(/^[a-f0-9]{64}$/u)
@@ -108,6 +111,20 @@ export class ProductMediaReorderDto {
 }
 
 export class ProductMediaArchiveDto {
+  @ApiProperty({ type: Number, minimum: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expectedVersion!: number;
+}
+
+export class ProductMediaPrimaryDto {
+  @ApiProperty({ type: Number, minimum: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expectedProductVersion!: number;
+
   @ApiProperty({ type: Number, minimum: 1 })
   @Type(() => Number)
   @IsInt()
