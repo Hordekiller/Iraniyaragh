@@ -79,12 +79,12 @@ function adminMedia(row: ProductMedia): AdminProductMedia {
 @Injectable()
 export class MediaService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly audit: AuditLogService,
-    private readonly idempotency: CatalogIdempotencyService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuditLogService) private readonly audit: AuditLogService,
+    @Inject(CatalogIdempotencyService) private readonly idempotency: CatalogIdempotencyService,
     @Inject(PRODUCT_MEDIA_STORAGE) private readonly storage: ProductMediaStorage,
     @Inject(PRODUCT_MEDIA_PROCESSING_QUEUE) private readonly processingQueue: ProductMediaProcessingQueue,
-    private readonly policy: MediaPolicyService,
+    @Inject(MediaPolicyService) private readonly policy: MediaPolicyService,
   ) {}
 
   async listAdmin(productId: string): Promise<{ data: { items: AdminProductMedia[] } }> {
@@ -109,6 +109,12 @@ export class MediaService {
       throw new UnprocessableEntityException({
         code: 'MEDIA_TOO_LARGE',
         message: 'The media source exceeds the configured upload limit.',
+      });
+    }
+    if (input.position >= this.policy.maxActiveAssets) {
+      throw new UnprocessableEntityException({
+        code: 'MEDIA_POSITION_CONFLICT',
+        message: 'The requested media position is outside the configured product media limit.',
       });
     }
 

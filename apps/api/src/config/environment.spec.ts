@@ -28,6 +28,7 @@ const validProductionEnvironment = {
   SMS_IR_API_KEY: 'production-sms-ir-api-key',
   SMS_IR_OTP_TEMPLATE_ID: '123456',
   SMS_IR_TIMEOUT_MS: '5000',
+  PRODUCT_MEDIA_IMAGE_MAX_BYTES: '20971520',
 };
 
 describe('parseCorsOrigins', () => {
@@ -194,6 +195,7 @@ describe('validateEnvironment', () => {
         OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
         SMS_IR_API_KEY: validProductionEnvironment.SMS_IR_API_KEY,
         SMS_IR_OTP_TEMPLATE_ID: validProductionEnvironment.SMS_IR_OTP_TEMPLATE_ID,
+        PRODUCT_MEDIA_IMAGE_MAX_BYTES: validProductionEnvironment.PRODUCT_MEDIA_IMAGE_MAX_BYTES,
       }),
     ).toThrow('API_PORT is required');
   });
@@ -302,5 +304,40 @@ describe('validateEnvironment', () => {
         AUTH_HASH_PREVIOUS_SECRET: strongBase.AUTH_HASH_SECRET,
       }),
     ).toThrow('distinct versions and secrets');
+  });
+
+  it('uses local S3-compatible defaults and parses explicit path-style configuration', () => {
+    const local = validateEnvironment(validDevelopmentEnvironment);
+    expect(local.OBJECT_STORAGE_REGION).toBe('us-east-1');
+    expect(local.OBJECT_STORAGE_FORCE_PATH_STYLE).toBe(true);
+    expect(local.PRODUCT_MEDIA_MAX_ASSETS).toBe(12);
+    expect(local.PRODUCT_MEDIA_MAX_VIDEOS).toBe(3);
+    expect(local.PRODUCT_MEDIA_UPLOAD_TTL_SECONDS).toBe(900);
+
+    const production = validateEnvironment({
+      ...validProductionEnvironment,
+      OBJECT_STORAGE_REGION: 'eu-central-1',
+      OBJECT_STORAGE_FORCE_PATH_STYLE: 'false',
+    });
+    expect(production.OBJECT_STORAGE_REGION).toBe('eu-central-1');
+    expect(production.OBJECT_STORAGE_FORCE_PATH_STYLE).toBe(false);
+  });
+
+  it('rejects ambiguous object-storage booleans', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validDevelopmentEnvironment,
+        OBJECT_STORAGE_FORCE_PATH_STYLE: 'yes',
+      }),
+    ).toThrow('OBJECT_STORAGE_FORCE_PATH_STYLE');
+  });
+
+  it.each([
+    ['PRODUCT_MEDIA_MAX_ASSETS', '101'],
+    ['PRODUCT_MEDIA_MAX_VIDEOS', '21'],
+    ['PRODUCT_MEDIA_IMAGE_MAX_BYTES', '101'],
+    ['PRODUCT_MEDIA_UPLOAD_TTL_SECONDS', '1801'],
+  ])('rejects unsafe media policy setting %s=%s', (key, value) => {
+    expect(() => validateEnvironment({ ...validDevelopmentEnvironment, [key]: value })).toThrow(key);
   });
 });

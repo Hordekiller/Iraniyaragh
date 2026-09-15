@@ -29,6 +29,12 @@ export type EnvironmentVariables = {
   OBJECT_STORAGE_ACCESS_KEY: string;
   OBJECT_STORAGE_SECRET_KEY: string;
   OBJECT_STORAGE_BUCKET: string;
+  OBJECT_STORAGE_REGION: string;
+  OBJECT_STORAGE_FORCE_PATH_STYLE: boolean;
+  PRODUCT_MEDIA_MAX_ASSETS: number;
+  PRODUCT_MEDIA_MAX_VIDEOS: number;
+  PRODUCT_MEDIA_IMAGE_MAX_BYTES: number;
+  PRODUCT_MEDIA_UPLOAD_TTL_SECONDS: number;
 };
 
 const supportedEnvironments = new Set<NodeEnvironment>(['development', 'test', 'staging', 'production']);
@@ -67,6 +73,13 @@ function parsePositiveInteger(value: unknown, key: string, fallback?: number) {
     throw new Error(`${key} must be a positive integer.`);
   }
   return candidate as number;
+}
+
+function parseBoolean(value: unknown, key: string, fallback: boolean): boolean {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+  throw new Error(`${key} must be true or false.`);
 }
 
 function parseUrl(value: string, key: string, protocols: string[]) {
@@ -306,6 +319,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     if (smsTemplateId === undefined) {
       throw new Error('SMS_IR_OTP_TEMPLATE_ID is required in staging and production.');
     }
+    if (config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === undefined || config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === '') {
+      throw new Error('PRODUCT_MEDIA_IMAGE_MAX_BYTES is required in staging and production.');
+    }
   }
 
   if (accessSecret === hashSecret || accessSecret === validatedPreviousHashSecret) {
@@ -338,5 +354,38 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     OBJECT_STORAGE_ACCESS_KEY: requiredString(config, 'OBJECT_STORAGE_ACCESS_KEY'),
     OBJECT_STORAGE_SECRET_KEY: objectStorageSecret,
     OBJECT_STORAGE_BUCKET: requiredString(config, 'OBJECT_STORAGE_BUCKET'),
+    OBJECT_STORAGE_REGION:
+      typeof config.OBJECT_STORAGE_REGION === 'string' && config.OBJECT_STORAGE_REGION.trim()
+        ? config.OBJECT_STORAGE_REGION.trim()
+        : 'us-east-1',
+    OBJECT_STORAGE_FORCE_PATH_STYLE: parseBoolean(
+      config.OBJECT_STORAGE_FORCE_PATH_STYLE,
+      'OBJECT_STORAGE_FORCE_PATH_STYLE',
+      !['staging', 'production'].includes(environment),
+    ),
+    PRODUCT_MEDIA_MAX_ASSETS: parseBoundedInteger(
+      config.PRODUCT_MEDIA_MAX_ASSETS ?? 12,
+      'PRODUCT_MEDIA_MAX_ASSETS',
+      1,
+      100,
+    ),
+    PRODUCT_MEDIA_MAX_VIDEOS: parseBoundedInteger(
+      config.PRODUCT_MEDIA_MAX_VIDEOS ?? 3,
+      'PRODUCT_MEDIA_MAX_VIDEOS',
+      0,
+      20,
+    ),
+    PRODUCT_MEDIA_IMAGE_MAX_BYTES: parseBoundedInteger(
+      config.PRODUCT_MEDIA_IMAGE_MAX_BYTES ?? 20 * 1024 * 1024,
+      'PRODUCT_MEDIA_IMAGE_MAX_BYTES',
+      1024,
+      100 * 1024 * 1024,
+    ),
+    PRODUCT_MEDIA_UPLOAD_TTL_SECONDS: parseBoundedInteger(
+      config.PRODUCT_MEDIA_UPLOAD_TTL_SECONDS ?? 15 * 60,
+      'PRODUCT_MEDIA_UPLOAD_TTL_SECONDS',
+      60,
+      30 * 60,
+    ),
   };
 }

@@ -1,15 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { ProductMediaKind } from '@iranyaragh/contracts';
+import type { EnvironmentVariables } from '../../config/environment';
 
 const MIB = 1024 * 1024;
 
 @Injectable()
 export class MediaPolicyService {
-  readonly maxActiveAssets = 12;
-  readonly maxActiveVideos = 3;
-  readonly imageMaxBytes = 20 * MIB;
+  readonly maxActiveAssets: number;
+  readonly maxActiveVideos: number;
+  readonly imageMaxBytes: number;
   readonly videoMaxBytes = 100 * MIB;
-  readonly uploadTtlSeconds = 15 * 60;
+  readonly uploadTtlSeconds: number;
+
+  constructor(@Optional() @Inject(ConfigService) config?: ConfigService<EnvironmentVariables, true>) {
+    this.maxActiveAssets = config?.get('PRODUCT_MEDIA_MAX_ASSETS', { infer: true }) ?? 12;
+    this.maxActiveVideos = config?.get('PRODUCT_MEDIA_MAX_VIDEOS', { infer: true }) ?? 3;
+    this.imageMaxBytes = config?.get('PRODUCT_MEDIA_IMAGE_MAX_BYTES', { infer: true }) ?? 20 * MIB;
+    this.uploadTtlSeconds = config?.get('PRODUCT_MEDIA_UPLOAD_TTL_SECONDS', { infer: true }) ?? 15 * 60;
+  }
 
   maxBytes(kind: ProductMediaKind): number {
     return kind === 'VIDEO' ? this.videoMaxBytes : this.imageMaxBytes;

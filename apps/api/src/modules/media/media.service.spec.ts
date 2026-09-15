@@ -158,6 +158,14 @@ describe('MediaService initiateUpload', () => {
     ).rejects.toMatchObject({ response: { code: 'MEDIA_LIMIT_EXCEEDED' } });
   });
 
+  it('rejects positions outside the configured gallery limit before persistence', async () => {
+    const ctx = setup();
+    await expect(
+      ctx.service.initiateUpload('actor-1', 'stable-key-123', 'product-1', { ...input, position: 12 }),
+    ).rejects.toMatchObject({ response: { code: 'MEDIA_POSITION_CONFLICT' } });
+    expect(ctx.idempotency.run).not.toHaveBeenCalled();
+  });
+
   it('rejects a stale product version before creating media', async () => {
     const ctx = setup();
     ctx.tx.product.findUnique.mockResolvedValue({ id: 'product-1', version: 4 });

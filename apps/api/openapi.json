@@ -3382,6 +3382,263 @@
         ]
       }
     },
+    "/catalog/admin/products/{productId}/media": {
+      "get": {
+        "operationId": "MediaController_list",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Media"
+        ]
+      }
+    },
+    "/catalog/admin/products/{productId}/media/uploads": {
+      "post": {
+        "operationId": "MediaController_initiateUpload",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductMediaUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Media"
+        ]
+      }
+    },
+    "/catalog/admin/products/{productId}/media/{mediaId}/confirm": {
+      "post": {
+        "operationId": "MediaController_confirmUpload",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductMediaConfirmDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Media"
+        ]
+      }
+    },
+    "/catalog/admin/products/{productId}/media/{mediaId}": {
+      "patch": {
+        "operationId": "MediaController_updateMetadata",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductMediaMetadataDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Media"
+        ]
+      }
+    },
+    "/catalog/admin/products/{productId}/media/reorder": {
+      "post": {
+        "operationId": "MediaController_reorder",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductMediaReorderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Media"
+        ]
+      }
+    },
+    "/catalog/admin/products/{productId}/media/{mediaId}/archive": {
+      "post": {
+        "operationId": "MediaController_archive",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductMediaArchiveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Media"
+        ]
+      }
+    },
     "/inventory/balances": {
       "get": {
         "operationId": "InventoryController_balances",
@@ -5808,6 +6065,151 @@
         "type": "http"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "ProductMediaUploadDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "IMAGE",
+              "VIDEO"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "PRIMARY",
+              "GALLERY",
+              "VIDEO_POSTER"
+            ]
+          },
+          "position": {
+            "type": "number",
+            "minimum": 0
+          },
+          "originalFilename": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "declaredMime": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+              "video/mp4"
+            ]
+          },
+          "bytes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 104857600
+          },
+          "productVersion": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "kind",
+          "role",
+          "position",
+          "originalFilename",
+          "declaredMime",
+          "bytes",
+          "productVersion"
+        ]
+      },
+      "ProductMediaConfirmDto": {
+        "type": "object",
+        "properties": {
+          "checksumSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      },
+      "ProductMediaMetadataDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          },
+          "caption": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "posterMediaId": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "ProductMediaOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1
+          },
+          "position": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "mediaId",
+          "expectedVersion",
+          "position"
+        ]
+      },
+      "ProductMediaReorderDto": {
+        "type": "object",
+        "properties": {
+          "expectedProductVersion": {
+            "type": "number",
+            "minimum": 1
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductMediaOrderItemDto"
+            }
+          }
+        },
+        "required": [
+          "expectedProductVersion",
+          "items"
+        ]
+      },
+      "ProductMediaArchiveDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      }
+    }
   }
 }

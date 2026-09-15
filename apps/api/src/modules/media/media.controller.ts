@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post } from '@nestjs/common';
-import { ApiHeader } from '@nestjs/swagger';
+import { ApiBody, ApiHeader, ApiParam } from '@nestjs/swagger';
 import type {
   AdminProductMediaListResponse,
   AdminProductMediaResponse,
@@ -28,6 +28,7 @@ export class MediaController {
   constructor(private readonly media: MediaService) {}
 
   @Get()
+  @ApiParam({ name: 'productId', type: String })
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.media.read')
   list(@Param('productId') productId: string): Promise<AdminProductMediaListResponse> {
@@ -35,6 +36,8 @@ export class MediaController {
   }
 
   @Post('uploads')
+  @ApiParam({ name: 'productId', type: String })
+  @ApiBody({ type: ProductMediaUploadDto })
   @ApiHeader(idempotencyHeader)
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.media.write')
@@ -48,6 +51,9 @@ export class MediaController {
   }
 
   @Post(':mediaId/confirm')
+  @ApiParam({ name: 'productId', type: String })
+  @ApiParam({ name: 'mediaId', type: String })
+  @ApiBody({ type: ProductMediaConfirmDto })
   @ApiHeader(idempotencyHeader)
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.media.write')
@@ -62,6 +68,9 @@ export class MediaController {
   }
 
   @Patch(':mediaId')
+  @ApiParam({ name: 'productId', type: String })
+  @ApiParam({ name: 'mediaId', type: String })
+  @ApiBody({ type: ProductMediaMetadataDto })
   @ApiHeader(idempotencyHeader)
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.media.write')
@@ -76,6 +85,8 @@ export class MediaController {
   }
 
   @Post('reorder')
+  @ApiParam({ name: 'productId', type: String })
+  @ApiBody({ type: ProductMediaReorderDto })
   @ApiHeader(idempotencyHeader)
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.media.write')
@@ -89,6 +100,9 @@ export class MediaController {
   }
 
   @Post(':mediaId/archive')
+  @ApiParam({ name: 'productId', type: String })
+  @ApiParam({ name: 'mediaId', type: String })
+  @ApiBody({ type: ProductMediaArchiveDto })
   @ApiHeader(idempotencyHeader)
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.media.write')
