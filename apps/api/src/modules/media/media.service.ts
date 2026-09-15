@@ -208,7 +208,6 @@ export class MediaService {
       data: {
         upload: {
           mediaId: media.id,
-          objectKey: media.objectKey,
           uploadUrl: signed.url,
           method: 'PUT',
           requiredHeaders: signed.requiredHeaders,

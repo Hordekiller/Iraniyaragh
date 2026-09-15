@@ -37,7 +37,6 @@ export type ProductMediaUploadRequest = {
 
 export type ProductMediaUploadIntent = {
   mediaId: string;
-  objectKey: string;
   uploadUrl: string;
   method: 'PUT';
   requiredHeaders: Record<string, string>;
