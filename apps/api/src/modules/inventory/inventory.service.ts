@@ -115,7 +115,7 @@ export class InventoryService {
             }
           }
 
-          await this.assertLocation(tx, command);
+          await this.assertStockIdentity(tx, command);
 
           const key = this.balanceKey(command);
           const current = await tx.inventoryBalance.findUnique({ where: key });
@@ -195,7 +195,7 @@ export class InventoryService {
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
-          await this.assertLocation(tx, command);
+          await this.assertStockIdentity(tx, command);
           const key = this.balanceKey(command);
           const balance = await tx.inventoryBalance.findUnique({ where: key });
           const version = balance?.version ?? 0;
@@ -257,8 +257,14 @@ export class InventoryService {
       this.prisma.$transaction(
         async (tx) => {
           const recheck = await tx.stockReservation.findUnique({ where: { id: reservationId } });
-          if (!recheck || recheck.status !== 'ACTIVE') {
-            return recheck ?? reservation;
+          if (!recheck) {
+            return reservation;
+          }
+          if (recheck.status === 'EXPIRED') {
+            throw new ConflictException({ code: 'RESERVATION_EXPIRED', message: 'Reservation has expired.' });
+          }
+          if (recheck.status !== 'ACTIVE') {
+            return recheck;
           }
 
           const balance = await tx.inventoryBalance.findUnique({ where: { id: reservation.balanceId } });
@@ -309,8 +315,14 @@ export class InventoryService {
       this.prisma.$transaction(
         async (tx) => {
           const recheck = await tx.stockReservation.findUnique({ where: { id: reservationId } });
-          if (!recheck || recheck.status !== 'ACTIVE') {
-            return recheck ?? reservation;
+          if (!recheck) {
+            return reservation;
+          }
+          if (recheck.status === 'EXPIRED') {
+            throw new ConflictException({ code: 'RESERVATION_EXPIRED', message: 'Reservation has expired.' });
+          }
+          if (recheck.status !== 'ACTIVE') {
+            return recheck;
           }
 
           const balance = await tx.inventoryBalance.findUnique({ where: { id: reservation.balanceId } });
@@ -473,7 +485,12 @@ export class InventoryService {
     const reservation = await this.prisma.stockReservation.findUnique({
       where: { id: reservationId },
     });
-    if (!reservation) throw new NotFoundException('Reservation not found.');
+    if (!reservation) {
+      throw new NotFoundException({ code: 'RESERVATION_NOT_FOUND', message: 'Reservation not found.' });
+    }
+    if (reservation.status === 'EXPIRED') {
+      throw new ConflictException({ code: 'RESERVATION_EXPIRED', message: 'Reservation has expired.' });
+    }
 
     const balance = await this.prisma.inventoryBalance.findUnique({
       where: this.balanceKey({
@@ -554,12 +571,30 @@ export class InventoryService {
     } as const;
   }
 
-  private async assertLocation(tx: Prisma.TransactionClient, key: StockKey) {
+  private async assertStockIdentity(tx: Prisma.TransactionClient, key: StockKey) {
+    const warehouse = await tx.warehouse.findUnique({
+      where: { id: key.warehouseId },
+      select: { id: true },
+    });
+    if (!warehouse) {
+      throw new NotFoundException({ code: 'WAREHOUSE_NOT_FOUND', message: 'Warehouse not found.' });
+    }
+
     const location = await tx.warehouseLocation.findFirst({
       where: { id: key.locationId, warehouseId: key.warehouseId, isActive: true },
       select: { id: true },
     });
-    if (!location) throw new NotFoundException('Active warehouse location not found.');
+    if (!location) {
+      throw new NotFoundException({ code: 'LOCATION_NOT_FOUND', message: 'Active warehouse location not found.' });
+    }
+
+    const variant = await tx.productVariant.findUnique({
+      where: { id: key.variantId },
+      select: { id: true },
+    });
+    if (!variant) {
+      throw new NotFoundException({ code: 'SKU_NOT_FOUND', message: 'SKU not found.' });
+    }
   }
 
   private assertVersion(expected: number | undefined, actual: number): void {

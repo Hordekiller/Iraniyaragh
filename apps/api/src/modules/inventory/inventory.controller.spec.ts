@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { InventoryController } from './inventory.controller';
 import { REQUIRE_AUTH_LEVEL, REQUIRE_PERMISSION } from '../auth/auth.guard';
+import { runWithRequestContext } from '../../common/request-context';
 
 describe('InventoryController', () => {
   const service = {
@@ -31,7 +32,10 @@ describe('InventoryController', () => {
 
   it('binds actor and request context to stock changes', async () => {
     const input = { warehouseId: 'w', locationId: 'l', variantId: 'v', delta: 2, type: 'RECEIPT' } as never;
-    await controller.change(principal, 'idem-1', 'req-1', input);
+    await runWithRequestContext(
+      { requestId: 'req-1', correlationId: 'req-1', startedAt: new Date().toISOString() },
+      () => controller.change(principal, 'idem-1', input),
+    );
     expect(service.changeOnHand).toHaveBeenCalledWith({ ...input, idempotencyKey: 'idem-1', actorId: 'staff-1', requestId: 'req-1' });
   });
 });
