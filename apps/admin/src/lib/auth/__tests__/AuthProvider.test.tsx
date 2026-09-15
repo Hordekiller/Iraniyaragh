@@ -55,6 +55,9 @@ function AdoptPanel() {
 
 describe('AuthProvider', () => {
   afterEach(() => {
+    for (const name of ['__Host-iranyaragh_csrf', 'iranyaragh_dev_csrf']) {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    }
     vi.unstubAllGlobals();
     setAccessToken(null);
   });
@@ -170,5 +173,33 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
     expect(getAccessToken()).toBeNull();
     await waitFor(() => expect(screen.getByTestId('email')).toHaveTextContent('none'));
+  });
+
+  it('sign-out sends /auth/logout with the double-submit CSRF proof so the server session is revoked', async () => {
+    document.cookie = 'iranyaragh_dev_csrf=csrf-tok; path=/';
+    const fetchMock = vi.fn(async () => jsonResponse({ data: {} }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <AuthProvider>
+        <AdoptPanel />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByText('adopt'));
+    await waitFor(() => expect(getAccessToken()).toBe('staff-at-1'));
+
+    fireEvent.click(screen.getByText('signout'));
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
+
+    const logoutCall = fetchMock.mock.calls.find((call) =>
+      String((call as unknown[])[0]).endsWith('/api/v1/auth/logout'),
+    );
+    expect(logoutCall).toBeDefined();
+    if (!logoutCall) throw new Error('expected a logout request');
+    const [, logoutInit] = (logoutCall as unknown) as [string, RequestInit];
+    expect(logoutInit).toMatchObject({
+      method: 'POST',
+      headers: expect.objectContaining({ 'X-CSRF-Token': 'csrf-tok' }),
+    });
   });
 });
