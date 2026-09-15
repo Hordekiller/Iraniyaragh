@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InventoryMovementType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -14,6 +15,29 @@ type StockReservationRow = Prisma.StockReservationGetPayload<Record<string, neve
 type ActiveReservation = StockReservationRow & { balanceId: string };
 
 type ActiveBalance = Prisma.InventoryBalanceGetPayload<Record<string, never>>;
+
+type TransferItemRowLike = {
+  id: string;
+  variantId: string;
+  quantity: number;
+  sourceLocationId: string | null;
+  targetLocationId: string | null;
+};
+
+type TransferRowLike = {
+  id: string;
+  code: string;
+  sourceWarehouseId: string;
+  targetWarehouseId: string;
+  status: string;
+  items: TransferItemRowLike[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type StockTransferRowLike = TransferRowLike & {
+  idempotencyKey: string | null;
+};
 
 export type ActorContext = {
   actorId: string;
@@ -37,10 +61,87 @@ export type ReserveStockCommand = StockKey &
     quantity: number;
     expiresAt: Date;
     expectedVersion?: number;
+    idempotencyKey?: string;
   };
 
 export type ReservationLifecycleContext = ActorContext & {
   expectedVersion?: number;
+};
+
+export type WarehouseCreateCommand = ActorContext & {
+  code: string;
+  name: string;
+  city?: string;
+  address?: string;
+};
+
+export type WarehouseUpdateCommand = ActorContext & {
+  name?: string;
+  city?: string;
+  address?: string;
+  isActive?: boolean;
+};
+
+export type LocationCreateCommand = ActorContext & {
+  code: string;
+  name?: string;
+  zone?: string;
+  aisle?: string;
+  rack?: string;
+  shelf?: string;
+  bin?: string;
+};
+
+export type LocationUpdateCommand = ActorContext & {
+  name?: string;
+  zone?: string;
+  aisle?: string;
+  rack?: string;
+  shelf?: string;
+  bin?: string;
+  isActive?: boolean;
+};
+
+export type TransferItemCommand = {
+  variantId: string;
+  quantity: number;
+  sourceLocationId?: string;
+  targetLocationId?: string;
+};
+
+export type CreateTransferCommand = ActorContext & {
+  code?: string;
+  sourceWarehouseId: string;
+  targetWarehouseId: string;
+  items: TransferItemCommand[];
+  idempotencyKey?: string;
+};
+
+export type TransferContext = ActorContext & {
+  expectedVersion?: number;
+};
+
+export type WarehouseQuery = {
+  isActive?: boolean;
+  isInactive?: boolean;
+  limit?: number;
+  offset?: number;
+};
+
+export type ReservationQuery = {
+  warehouseId?: string;
+  variantId?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export type TransferQuery = {
+  status?: string;
+  sourceWarehouseId?: string;
+  targetWarehouseId?: string;
+  limit?: number;
+  offset?: number;
 };
 
 export type InventorySnapshotDto = {
@@ -63,6 +164,51 @@ export type InventoryMovementDto = {
   referenceType: string | null;
   referenceId: string | null;
   createdAt: Date;
+};
+
+export type TransferItemDto = {
+  id: string;
+  variantId: string;
+  quantity: number;
+  sourceLocationId: string | null;
+  targetLocationId: string | null;
+};
+
+export type TransferDto = {
+  id: string;
+  code: string;
+  sourceWarehouseId: string;
+  targetWarehouseId: string;
+  status: string;
+  items: TransferItemDto[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type WarehouseDto = {
+  id: string;
+  code: string;
+  name: string;
+  city: string | null;
+  address: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type LocationDto = {
+  id: string;
+  warehouseId: string;
+  code: string;
+  name: string | null;
+  zone: string | null;
+  aisle: string | null;
+  rack: string | null;
+  shelf: string | null;
+  bin: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export type SnapshotQuery = {
@@ -201,6 +347,18 @@ export class InventoryService {
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
+          if (command.idempotencyKey) {
+            const existing = await tx.stockReservation.findUnique({
+              where: { idempotencyKey: command.idempotencyKey },
+            });
+            if (existing) {
+              if (this.reservationMatches(existing, command)) return existing;
+              throw new ConflictException(
+                `Idempotency conflict: key '${command.idempotencyKey}' was already used with a different payload.`,
+              );
+            }
+          }
+
           await this.assertStockIdentity(tx, command);
           const key = this.balanceKey(command);
           const balance = await tx.inventoryBalance.findUnique({ where: key });
@@ -228,6 +386,7 @@ export class InventoryService {
               orderId: command.orderId ?? null,
               quantity: command.quantity,
               expiresAt: command.expiresAt,
+              idempotencyKey: command.idempotencyKey,
             },
           });
 
@@ -465,6 +624,368 @@ export class InventoryService {
     };
   }
 
+  async getTransfers(query: TransferQuery): Promise<{ items: TransferDto[]; count: number }> {
+    const limit = clampInt(query.limit, 1, 100, 50);
+    const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
+
+    const where: Prisma.StockTransferWhereInput = {
+      ...(query.status ? { status: query.status as Prisma.EnumTransferStatusFilter } : {}),
+      ...(query.sourceWarehouseId ? { sourceWarehouseId: query.sourceWarehouseId } : {}),
+      ...(query.targetWarehouseId ? { targetWarehouseId: query.targetWarehouseId } : {}),
+    };
+
+    const [rows, count] = await Promise.all([
+      this.prisma.stockTransfer.findMany({
+        where,
+        include: { items: true },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.stockTransfer.count({ where }),
+    ]);
+
+    return {
+      items: rows.map((transfer) => this.toTransferDto(transfer)),
+      count,
+    };
+  }
+
+  async getTransfer(id: string): Promise<TransferDto> {
+    const transfer = await this.prisma.stockTransfer.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!transfer) {
+      throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer not found.' });
+    }
+    return this.toTransferDto(transfer);
+  }
+
+  async createTransfer(command: CreateTransferCommand): Promise<TransferDto> {
+    this.assertTracked(command);
+    if (!command.items.length) {
+      throw new BadRequestException({ code: 'TRANSFER_NO_ITEMS', message: 'A transfer requires at least one item.' });
+    }
+
+    return this.withSerializableRetry(() =>
+      this.prisma.$transaction(
+        async (tx) => {
+          if (command.idempotencyKey) {
+            const existing = await tx.stockTransfer.findUnique({
+              where: { idempotencyKey: command.idempotencyKey },
+              include: { items: true },
+            });
+            if (existing) {
+              if (this.transferMatches(existing, command)) return existing;
+              throw new ConflictException(
+                `Idempotency conflict: key '${command.idempotencyKey}' was already used with a different payload.`,
+              );
+            }
+          }
+
+          await this.assertWarehousePair(tx, command.sourceWarehouseId, command.targetWarehouseId);
+          for (const item of command.items) {
+            await this.assertVariant(tx, item.variantId);
+          }
+
+          const code = command.code ?? `TRF-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`;
+          const transfer = await tx.stockTransfer.create({
+            data: {
+              code,
+              sourceWarehouseId: command.sourceWarehouseId,
+              targetWarehouseId: command.targetWarehouseId,
+              idempotencyKey: command.idempotencyKey,
+              items: {
+                create: command.items.map((item) => ({
+                  variantId: item.variantId,
+                  quantity: item.quantity,
+                  sourceLocationId: item.sourceLocationId ?? null,
+                  targetLocationId: item.targetLocationId ?? null,
+                })),
+              },
+            },
+            include: { items: true },
+          });
+
+          await this.auditLog.record(
+            {
+              action: 'inventory.transfer.created',
+              entityType: 'stock-transfer',
+              entityId: transfer.id,
+              after: { code, sourceWarehouseId: transfer.sourceWarehouseId, targetWarehouseId: transfer.targetWarehouseId },
+              metadata: { itemCount: command.items.length },
+              actorId: command.actorId,
+              requestId: command.requestId,
+            },
+            tx,
+          );
+
+          return this.toTransferDto(transfer);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    );
+  }
+
+  async requestTransfer(id: string, context: TransferContext): Promise<TransferDto> {
+    return this.transitionTransfer('request', id, context, ['DRAFT']);
+  }
+
+  async approveTransfer(id: string, context: TransferContext): Promise<TransferDto> {
+    return this.transitionTransfer('approve', id, context, ['REQUESTED']);
+  }
+
+  async dispatchTransfer(id: string, context: TransferContext): Promise<TransferDto> {
+    return this.transitionTransfer('dispatch', id, context, ['APPROVED']);
+  }
+
+  async receiveTransfer(id: string, context: TransferContext): Promise<TransferDto> {
+    return this.transitionTransfer('receive', id, context, ['IN_TRANSIT']);
+  }
+
+  async cancelTransfer(id: string, context: TransferContext): Promise<TransferDto> {
+    return this.transitionTransfer('cancel', id, context, ['DRAFT', 'REQUESTED', 'APPROVED']);
+  }
+
+  async listWarehouses(query: WarehouseQuery): Promise<{ items: WarehouseDto[]; count: number }> {
+    const limit = clampInt(query.limit, 1, 100, 50);
+    const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
+    const activeOnly = query.isActive === true && query.isInactive !== true;
+    const inactiveOnly = query.isInactive === true && query.isActive !== true;
+
+    const where: Prisma.WarehouseWhereInput =
+      activeOnly || inactiveOnly ? { isActive: activeOnly } : {};
+
+    const [rows, count] = await Promise.all([
+      this.prisma.warehouse.findMany({
+        where,
+        orderBy: [{ code: 'asc' }],
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.warehouse.count({ where }),
+    ]);
+
+    return { items: rows.map((row) => this.toWarehouseDto(row)), count };
+  }
+
+  async createWarehouse(command: WarehouseCreateCommand): Promise<WarehouseDto> {
+    this.assertTracked(command);
+    if (!command.code.trim()) {
+      throw new BadRequestException('Warehouse code is required.');
+    }
+
+    return this.withSerializableRetry(() =>
+      this.prisma.$transaction(
+        async (tx) => {
+          const existing = await tx.warehouse.findUnique({ where: { code: command.code } });
+          if (existing) {
+            throw new ConflictException({ code: 'WAREHOUSE_CODE_CONFLICT', message: 'Warehouse code already exists.' });
+          }
+
+          const warehouse = await tx.warehouse.create({
+            data: {
+              code: command.code,
+              name: command.name.trim(),
+              city: command.city ?? null,
+              address: command.address ?? null,
+            },
+          });
+
+          await this.auditLog.record(
+            {
+              action: 'inventory.warehouse.created',
+              entityType: 'warehouse',
+              entityId: warehouse.id,
+              after: { code: warehouse.code, name: warehouse.name },
+              actorId: command.actorId,
+              requestId: command.requestId,
+            },
+            tx,
+          );
+
+          return this.toWarehouseDto(warehouse);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    );
+  }
+
+  async updateWarehouse(id: string, command: WarehouseUpdateCommand): Promise<WarehouseDto> {
+    this.assertTracked(command);
+    return this.withSerializableRetry(() =>
+      this.prisma.$transaction(
+        async (tx) => {
+          const warehouse = await tx.warehouse.findUnique({ where: { id } });
+          if (!warehouse) {
+            throw new NotFoundException({ code: 'WAREHOUSE_NOT_FOUND', message: 'Warehouse not found.' });
+          }
+
+          const updated = await tx.warehouse.update({
+            where: { id },
+            data: {
+              ...(command.name !== undefined ? { name: command.name.trim() } : {}),
+              ...(command.city !== undefined ? { city: command.city } : {}),
+              ...(command.address !== undefined ? { address: command.address } : {}),
+              ...(command.isActive !== undefined ? { isActive: command.isActive } : {}),
+            },
+          });
+
+          await this.auditLog.record(
+            {
+              action: 'inventory.warehouse.updated',
+              entityType: 'warehouse',
+              entityId: warehouse.id,
+              before: { name: warehouse.name, city: warehouse.city, address: warehouse.address, isActive: warehouse.isActive },
+              after: { name: updated.name, city: updated.city, address: updated.address, isActive: updated.isActive },
+              actorId: command.actorId,
+              requestId: command.requestId,
+            },
+            tx,
+          );
+
+          return this.toWarehouseDto(updated);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    );
+  }
+
+  async listLocations(warehouseId: string, query: WarehouseQuery): Promise<{ items: LocationDto[]; count: number }> {
+    const limit = clampInt(query.limit, 1, 100, 50);
+    const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
+
+    const where: Prisma.WarehouseLocationWhereInput = { warehouseId };
+
+    const [rows, count] = await Promise.all([
+      this.prisma.warehouseLocation.findMany({
+        where,
+        orderBy: [{ code: 'asc' }],
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.warehouseLocation.count({ where }),
+    ]);
+
+    return { items: rows.map((row) => this.toLocationDto(row)), count };
+  }
+
+  async createLocation(warehouseId: string, command: LocationCreateCommand): Promise<LocationDto> {
+    this.assertTracked(command);
+    return this.withSerializableRetry(() =>
+      this.prisma.$transaction(
+        async (tx) => {
+          const warehouse = await tx.warehouse.findUnique({ where: { id: warehouseId } });
+          if (!warehouse) {
+            throw new NotFoundException({ code: 'WAREHOUSE_NOT_FOUND', message: 'Warehouse not found.' });
+          }
+
+          const existing = await tx.warehouseLocation.findUnique({
+            where: { warehouseId_code: { warehouseId, code: command.code } },
+          });
+          if (existing) {
+            throw new ConflictException({ code: 'LOCATION_CODE_CONFLICT', message: 'Location code already exists in this warehouse.' });
+          }
+
+          const location = await tx.warehouseLocation.create({
+            data: {
+              warehouseId,
+              code: command.code,
+              name: command.name ?? null,
+              zone: command.zone ?? null,
+              aisle: command.aisle ?? null,
+              rack: command.rack ?? null,
+              shelf: command.shelf ?? null,
+              bin: command.bin ?? null,
+            },
+          });
+
+          await this.auditLog.record(
+            {
+              action: 'inventory.location.created',
+              entityType: 'warehouse-location',
+              entityId: location.id,
+              after: { code: location.code, warehouseId },
+              actorId: command.actorId,
+              requestId: command.requestId,
+            },
+            tx,
+          );
+
+          return this.toLocationDto(location);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    );
+  }
+
+  async updateLocation(id: string, command: LocationUpdateCommand): Promise<LocationDto> {
+    this.assertTracked(command);
+    return this.withSerializableRetry(() =>
+      this.prisma.$transaction(
+        async (tx) => {
+          const location = await tx.warehouseLocation.findUnique({ where: { id } });
+          if (!location) {
+            throw new NotFoundException({ code: 'LOCATION_NOT_FOUND', message: 'Location not found.' });
+          }
+
+          const updated = await tx.warehouseLocation.update({
+            where: { id },
+            data: {
+              ...(command.name !== undefined ? { name: command.name } : {}),
+              ...(command.zone !== undefined ? { zone: command.zone } : {}),
+              ...(command.aisle !== undefined ? { aisle: command.aisle } : {}),
+              ...(command.rack !== undefined ? { rack: command.rack } : {}),
+              ...(command.shelf !== undefined ? { shelf: command.shelf } : {}),
+              ...(command.bin !== undefined ? { bin: command.bin } : {}),
+              ...(command.isActive !== undefined ? { isActive: command.isActive } : {}),
+            },
+          });
+
+          await this.auditLog.record(
+            {
+              action: 'inventory.location.updated',
+              entityType: 'warehouse-location',
+              entityId: location.id,
+              before: { name: location.name, isActive: location.isActive },
+              after: { name: updated.name, isActive: updated.isActive },
+              actorId: command.actorId,
+              requestId: command.requestId,
+            },
+            tx,
+          );
+
+          return this.toLocationDto(updated);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    );
+  }
+
+  async getReservations(query: ReservationQuery) {
+    const limit = clampInt(query.limit, 1, 100, 50);
+    const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
+
+    const where: Prisma.StockReservationWhereInput = {
+      ...(query.warehouseId ? { warehouseId: query.warehouseId } : {}),
+      ...(query.variantId ? { variantId: query.variantId } : {}),
+      ...(query.status ? { status: query.status as Prisma.EnumReservationStatusFilter } : {}),
+    };
+
+    const [rows, count] = await Promise.all([
+      this.prisma.stockReservation.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.stockReservation.count({ where }),
+    ]);
+
+    return { items: rows, count };
+  }
+
   private assertTracked(context: { actorId?: string | null; requestId?: string | null }): void {
     if (!context.actorId?.trim() || !context.requestId?.trim()) {
       throw new BadRequestException('actorId and requestId are required for inventory mutations.');
@@ -604,6 +1125,19 @@ export class InventoryService {
     }
   }
 
+  private reservationMatches(
+    reservation: { warehouseId: string; locationId: string; variantId: string; orderId: string | null; quantity: number },
+    command: ReserveStockCommand,
+  ): boolean {
+    return (
+      reservation.warehouseId === command.warehouseId &&
+      reservation.locationId === command.locationId &&
+      reservation.variantId === command.variantId &&
+      (reservation.orderId ?? null) === (command.orderId ?? null) &&
+      reservation.quantity === command.quantity
+    );
+  }
+
   private movementMatches(
     movement: { warehouseId: string; locationId: string; variantId: string; type: string; quantity: number; reason: string | null; referenceType: string | null; referenceId: string | null },
     command: ChangeStockCommand,
@@ -618,6 +1152,310 @@ export class InventoryService {
       (movement.referenceType ?? null) === (command.referenceType ?? null) &&
       (movement.referenceId ?? null) === (command.referenceId ?? null)
     );
+  }
+
+  private async transitionTransfer(
+    action: 'request' | 'approve' | 'dispatch' | 'receive' | 'cancel',
+    id: string,
+    context: TransferContext,
+    allowedFrom: readonly string[],
+  ): Promise<TransferDto> {
+    this.assertTracked(context);
+    return this.withSerializableRetry(() =>
+      this.prisma.$transaction(
+        async (tx) => {
+          const transfer = await tx.stockTransfer.findUnique({
+            where: { id },
+            include: { items: true },
+          });
+          if (!transfer) {
+            throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer not found.' });
+          }
+          if (!allowedFrom.includes(transfer.status)) {
+            throw new ConflictException({
+              code: 'TRANSFER_STATE_CONFLICT',
+              message: `Transfer cannot be ${action}ed from status '${transfer.status}'.`,
+            });
+          }
+
+          if (action === 'dispatch') {
+            for (const item of transfer.items) {
+              if (!item.sourceLocationId) {
+                throw new ConflictException({
+                  code: 'TRANSFER_ITEM_LOCATION_REQUIRED',
+                  message: `Dispatch requires a source location for item '${item.variantId}'.`,
+                });
+              }
+              await this.applyTransferOut(tx, transfer, item, context);
+            }
+          }
+
+          if (action === 'receive') {
+            for (const item of transfer.items) {
+              if (!item.targetLocationId) {
+                throw new ConflictException({
+                  code: 'TRANSFER_ITEM_LOCATION_REQUIRED',
+                  message: `Receive requires a target location for item '${item.variantId}'.`,
+                });
+              }
+              await this.applyTransferIn(tx, transfer, item, context);
+            }
+          }
+
+          const nextStatus = this.nextTransferStatus(action);
+          const updated = await tx.stockTransfer.update({
+            where: { id },
+            data: { status: nextStatus },
+            include: { items: true },
+          });
+
+          const auditAction =
+            action === 'receive'
+              ? 'inventory.transfer.received'
+              : action === 'approve'
+                ? 'inventory.transfer.approved'
+                : `inventory.transfer.${action}ed`;
+          await this.auditLog.record(
+            {
+              action: auditAction,
+              entityType: 'stock-transfer',
+              entityId: transfer.id,
+              before: { status: transfer.status },
+              after: { status: updated.status },
+              metadata: { code: transfer.code },
+              actorId: context.actorId,
+              requestId: context.requestId,
+            },
+            tx,
+          );
+
+          return this.toTransferDto(updated);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    );
+  }
+
+  private nextTransferStatus(
+    action: 'request' | 'approve' | 'dispatch' | 'receive' | 'cancel',
+  ): 'REQUESTED' | 'APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'CANCELLED' {
+    switch (action) {
+      case 'request':
+        return 'REQUESTED';
+      case 'approve':
+        return 'APPROVED';
+      case 'dispatch':
+        return 'IN_TRANSIT';
+      case 'receive':
+        return 'RECEIVED';
+      case 'cancel':
+        return 'CANCELLED';
+    }
+  }
+
+  private async applyTransferOut(
+    tx: Prisma.TransactionClient,
+    transfer: { sourceWarehouseId: string; code: string },
+    item: { variantId: string; quantity: number; sourceLocationId: string | null },
+    context: TransferContext,
+  ) {
+    if (!item.sourceLocationId) {
+      throw new ConflictException({ code: 'TRANSFER_ITEM_LOCATION_REQUIRED', message: 'Source location is required to dispatch.' });
+    }
+    await this.assertStockIdentity(tx, {
+      warehouseId: transfer.sourceWarehouseId,
+      locationId: item.sourceLocationId,
+      variantId: item.variantId,
+    });
+
+    return this.applyTransferMovement(tx, {
+      warehouseId: transfer.sourceWarehouseId,
+      locationId: item.sourceLocationId,
+      variantId: item.variantId,
+      delta: -item.quantity,
+      type: InventoryMovementType.TRANSFER_OUT,
+      referenceId: transfer.code,
+      expectedVersion: context.expectedVersion,
+    });
+  }
+
+  private async applyTransferIn(
+    tx: Prisma.TransactionClient,
+    transfer: { targetWarehouseId: string; code: string },
+    item: { variantId: string; quantity: number; targetLocationId: string | null },
+    context: TransferContext,
+  ) {
+    if (!item.targetLocationId) {
+      throw new ConflictException({ code: 'TRANSFER_ITEM_LOCATION_REQUIRED', message: 'Target location is required to receive.' });
+    }
+    await this.assertStockIdentity(tx, {
+      warehouseId: transfer.targetWarehouseId,
+      locationId: item.targetLocationId,
+      variantId: item.variantId,
+    });
+
+    return this.applyTransferMovement(tx, {
+      warehouseId: transfer.targetWarehouseId,
+      locationId: item.targetLocationId,
+      variantId: item.variantId,
+      delta: item.quantity,
+      type: InventoryMovementType.TRANSFER_IN,
+      referenceId: transfer.code,
+      expectedVersion: context.expectedVersion,
+    });
+  }
+
+  private async applyTransferMovement(
+    tx: Prisma.TransactionClient,
+    command: StockKey & {
+      delta: number;
+      type: InventoryMovementType;
+      referenceId: string;
+      expectedVersion?: number;
+    },
+  ) {
+    const key = this.balanceKey(command);
+    const balance = await tx.inventoryBalance.findUnique({ where: key });
+    const version = balance?.version ?? 0;
+    const expectedVersion = command.expectedVersion;
+    this.assertVersion(expectedVersion, version);
+
+    const beforeOnHand = balance?.onHand ?? 0;
+    const reserved = balance?.reserved ?? 0;
+    const afterOnHand = beforeOnHand + command.delta;
+    const available = afterOnHand - reserved;
+
+    if (afterOnHand < 0 || available < 0) {
+      throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: 'Insufficient stock for this operation.' });
+    }
+
+    await tx.inventoryBalance.upsert({
+      where: key,
+      create: {
+        warehouseId: command.warehouseId,
+        locationId: command.locationId,
+        variantId: command.variantId,
+        onHand: afterOnHand,
+        reserved,
+        available,
+        version: 1,
+      },
+      update: {
+        onHand: afterOnHand,
+        available,
+        version: { increment: 1 },
+      },
+    });
+
+    await tx.inventoryMovement.create({
+      data: {
+        warehouseId: command.warehouseId,
+        locationId: command.locationId,
+        variantId: command.variantId,
+        type: command.type,
+        quantity: command.delta,
+        beforeOnHand,
+        afterOnHand,
+        referenceType: 'stock-transfer',
+        referenceId: command.referenceId,
+        reason: command.type === InventoryMovementType.TRANSFER_OUT ? 'Transfer dispatch' : 'Transfer receive',
+      },
+    });
+  }
+
+  private async assertWarehousePair(
+    tx: Prisma.TransactionClient,
+    sourceWarehouseId: string,
+    targetWarehouseId: string,
+  ) {
+    if (sourceWarehouseId === targetWarehouseId) {
+      throw new BadRequestException('Source and target warehouses must be different.');
+    }
+    const [source, target] = await Promise.all([
+      tx.warehouse.findUnique({ where: { id: sourceWarehouseId }, select: { id: true } }),
+      tx.warehouse.findUnique({ where: { id: targetWarehouseId }, select: { id: true } }),
+    ]);
+    if (!source) {
+      throw new NotFoundException({ code: 'WAREHOUSE_NOT_FOUND', message: 'Source warehouse not found.' });
+    }
+    if (!target) {
+      throw new NotFoundException({ code: 'WAREHOUSE_NOT_FOUND', message: 'Target warehouse not found.' });
+    }
+  }
+
+  private async assertVariant(tx: Prisma.TransactionClient, variantId: string) {
+    const variant = await tx.productVariant.findUnique({ where: { id: variantId }, select: { id: true } });
+    if (!variant) {
+      throw new NotFoundException({ code: 'SKU_NOT_FOUND', message: 'SKU not found.' });
+    }
+  }
+
+  private transferMatches(transfer: StockTransferRowLike, command: CreateTransferCommand): boolean {
+    if (
+      transfer.sourceWarehouseId !== command.sourceWarehouseId ||
+      transfer.targetWarehouseId !== command.targetWarehouseId ||
+      transfer.items.length !== command.items.length
+    ) {
+      return false;
+    }
+    return transfer.items.every((item, index) => {
+      const input = command.items[index];
+      return (
+        item.variantId === input.variantId &&
+        item.quantity === input.quantity &&
+        (item.sourceLocationId ?? null) === (input.sourceLocationId ?? null) &&
+        (item.targetLocationId ?? null) === (input.targetLocationId ?? null)
+      );
+    });
+  }
+
+  private toTransferDto(transfer: TransferRowLike): TransferDto {
+    return {
+      id: transfer.id,
+      code: transfer.code,
+      sourceWarehouseId: transfer.sourceWarehouseId,
+      targetWarehouseId: transfer.targetWarehouseId,
+      status: transfer.status,
+      items: transfer.items.map((item) => ({
+        id: item.id,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        sourceLocationId: item.sourceLocationId ?? null,
+        targetLocationId: item.targetLocationId ?? null,
+      })),
+      createdAt: transfer.createdAt,
+      updatedAt: transfer.updatedAt,
+    };
+  }
+
+  private toWarehouseDto(warehouse: { id: string; code: string; name: string; city: string | null; address: string | null; isActive: boolean; createdAt: Date; updatedAt: Date }): WarehouseDto {
+    return {
+      id: warehouse.id,
+      code: warehouse.code,
+      name: warehouse.name,
+      city: warehouse.city,
+      address: warehouse.address,
+      isActive: warehouse.isActive,
+      createdAt: warehouse.createdAt,
+      updatedAt: warehouse.updatedAt,
+    };
+  }
+
+  private toLocationDto(location: { id: string; warehouseId: string; code: string; name: string | null; zone: string | null; aisle: string | null; rack: string | null; shelf: string | null; bin: string | null; isActive: boolean; createdAt: Date; updatedAt: Date }): LocationDto {
+    return {
+      id: location.id,
+      warehouseId: location.warehouseId,
+      code: location.code,
+      name: location.name,
+      zone: location.zone,
+      aisle: location.aisle,
+      rack: location.rack,
+      shelf: location.shelf,
+      bin: location.bin,
+      isActive: location.isActive,
+      createdAt: location.createdAt,
+      updatedAt: location.updatedAt,
+    };
   }
 
   private async withSerializableRetry<T>(operation: () => Promise<T>): Promise<T> {

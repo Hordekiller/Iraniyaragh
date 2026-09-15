@@ -10,6 +10,12 @@ import {
   InventoryMovementQueryDto,
   InventoryReservationDto,
   InventorySnapshotQueryDto,
+  LocationCreateDto,
+  LocationUpdateDto,
+  TransferCreateDto,
+  TransferItemCreateDto,
+  WarehouseCreateDto,
+  WarehouseUpdateDto,
 } from './inventory.dto';
 
 const CHANGE = {
@@ -112,5 +118,69 @@ describe('Inventory DTO validation', () => {
 
     const negative = plainToInstance(InventoryLifecycleDto, { expectedVersion: -1 });
     expect(await validate(negative)).toHaveLength(1);
+  });
+
+  it('accepts valid warehouse create and update payloads', async () => {
+    const create = plainToInstance(WarehouseCreateDto, { code: 'WH-1', name: 'Main' });
+    expect(await validate(create)).toEqual([]);
+
+    const update = plainToInstance(WarehouseUpdateDto, { name: 'Renamed', isActive: false });
+    expect(await validate(update)).toEqual([]);
+
+    const overLong = plainToInstance(WarehouseCreateDto, { code: 'x'.repeat(65), name: 'Main' });
+    const missingName = plainToInstance(WarehouseCreateDto, { code: 'WH-1' });
+    const badActive = plainToInstance(WarehouseUpdateDto, { isActive: 'yes' });
+    expect(await validate(overLong)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ property: 'code' })]),
+    );
+    expect(await validate(missingName)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ property: 'name' })]),
+    );
+    expect(await validate(badActive)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ property: 'isActive' })]),
+    );
+  });
+
+  it('accepts valid location create and update payloads', async () => {
+    const create = plainToInstance(LocationCreateDto, { code: 'A1', zone: 'Zone B' });
+    expect(await validate(create)).toEqual([]);
+
+    const update = plainToInstance(LocationUpdateDto, { name: 'Bin', isActive: true });
+    expect(await validate(update)).toEqual([]);
+
+    const missingCode = plainToInstance(LocationCreateDto, {});
+    expect(await validate(missingCode)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ property: 'code' })]),
+    );
+  });
+
+  it('accepts a valid transfer payload with at least one item', async () => {
+    const dto = plainToInstance(TransferCreateDto, {
+      sourceWarehouseId: 'w1',
+      targetWarehouseId: 'w2',
+      items: [{ variantId: 'v1', quantity: 2, sourceLocationId: 'l1', targetLocationId: 'l2' }],
+    });
+    expect(await validate(dto)).toEqual([]);
+  });
+
+  it('rejects a transfer payload with no items or invalid items', async () => {
+    const emptyItems = plainToInstance(TransferCreateDto, {
+      sourceWarehouseId: 'w1',
+      targetWarehouseId: 'w2',
+      items: [],
+    });
+    expect(await validate(emptyItems)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ property: 'items' })]),
+    );
+
+    const zeroQuantity = plainToInstance(TransferItemCreateDto, { variantId: 'v1', quantity: 0 });
+    expect(await validate(zeroQuantity)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ property: 'quantity' })]),
+    );
+
+    const missingSku = plainToInstance(TransferItemCreateDto, { quantity: 2 });
+    expect(await validate(missingSku)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ property: 'variantId' })]),
+    );
   });
 });
