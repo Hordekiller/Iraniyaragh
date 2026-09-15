@@ -1,6 +1,6 @@
 # Zero-to-Production Execution Backlog
 
-Status: active work-breakdown baseline; reconciled 2026-09-07
+Status: active work-breakdown baseline; reconciled 2026-09-14
 
 Developer A: [@Hordekiller](https://github.com/Hordekiller)
 
@@ -23,34 +23,88 @@ the agreed scope in `PRODUCT_SPEC.md`.
 
 ### Current gate assessment
 
-| Gate   | Assessment                      | Why it is not closed                                                                      |
-| ------ | ------------------------------- | ----------------------------------------------------------------------------------------- |
-| G0     | Substantially complete          | provider/business decisions and team agreement remain                                     |
-| G1     | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence |
-| G2     | Closing                         | #109 merged and #49 closed; Auth UX/coordination reconciliation remains                   |
-| G3     | Started                         | contracts and API foundation merged; pricing/media/admin/storefront incomplete            |
-| G4     | Partial foundation              | ledger/reservation service exists; protected HTTP/transfers/worker/admin incomplete       |
-| G5     | Persistence foundation only     | state tables/helper exist; cart/checkout/order services absent                            |
-| G6–G10 | Not started as integrated gates | no exit outcome has been demonstrated                                                     |
+| Gate (EXEC_G#) | Assessment                      | Why it is not closed                                                                                                                |
+| -------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| G0             | Substantially complete          | provider/business decisions and team agreement remain                                                                               |
+| G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                           |
+| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158); logout CSRF #190, staff-auth #191 and nav flags #192 remain review-gated                            |
+| G3             | Core delivered                  | attributes/variants/SKU/price-history/import shipped (#179–#184); #199, #203 merged; #200 remains review-gated; media M1 (#162) and storefront (#166) remain                        |
+| G4             | Partial foundation              | ledger/reservation service and protected balance/adjustment HTTP (#217) merged; warehouse/location, reservations, transfers, worker/admin incomplete                                                 |
+| G5             | Persistence foundation only     | state tables/helper exist; cart/checkout/order services absent                                                                      |
+| G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                               |
 
 This table is qualitative. A numeric delivery percentage is intentionally withheld
 until each row has accepted exit evidence.
 
+### Dated status delta — 2026-09-14
+
+Merged to `main` on 2026-09-14 (all CI green on final heads):
+
+| PR | Main head | Content |
+| -- | --------- | ------- |
+| #197 | `5eb8915` | Blocklisted common staff passwords enforced per contract §10 (endpoint + validation) |
+| #202 | `b8def1e` | `SENDER_LINE` regex empty alternative removed (Sonar S6323) — language unchanged |
+| #201 | `cfeda1a` | Admin catalog/SMS idempotency keys generated from `crypto.getRandomValues` only (S2245) |
+| #198 | `fe1fe2a` | SonarCloud analysis on PRs and main; production-source scope + LCOV; pipeline/e2e green |
+| #203 | `602c5ae` | Behavior-preserving catalog import report-building refactor |
+| #206 | `863bcd8` | Contract-first cart/checkout/order handoff documentation |
+| #204 | `b6b19af` | Redis 7 digest alignment for CI and local Compose |
+| #199 | `d45c5b4` | Catalog parity: no-op re-import and parser status validation |
+
+Open wave (as of `d45c5b4`):
+
+| PR | State |
+| -- | ----- |
+| #190 / #191 / #192 | Green/rebased, but review-gated; #191/#192 wait for the #190 auth decision |
+| #200 | Rebases cleanly but blocked by contract parity, migration-lock and DB concurrency review findings |
+| #185 | Approved but intentionally held pending RBAC/financial-governance domain review |
+| #205 | Approved but held until the database integration failure is explained and green |
+| #207 | All checks green; fresh independent approval required on latest head |
+| #194 | This documentation reconciliation, updated onto current main |
+
 ## 2. Completion map
 
-| Gate | Delivery range | Integrated outcome                                    | Accountable lead | Independent verifier |
-| ---- | -------------: | ----------------------------------------------------- | ---------------- | -------------------- |
-| G0   |           0–5% | Team/product decisions and reproducible repository    | A                | B                    |
-| G1   |          5–12% | Runtime foundation, contracts, tests and environments | A                | B                    |
-| G2   |         12–20% | Authentication, sessions, RBAC and audit baseline     | A                | B                    |
-| G3   |         20–30% | Admin catalog and public catalog integrated           | B                | A                    |
-| G4   |         30–43% | Correct warehouse ledger, availability and transfers  | A                | B                    |
-| G5   |         43–55% | Server-priced cart, checkout and order lifecycle      | A                | B                    |
-| G6   |         55–65% | Verified payment, shipping and notifications          | A                | B                    |
-| G7   |         65–74% | Purchasing, stocktake, returns and reporting          | A                | B                    |
-| G8   |         74–84% | Complete admin/customer UX and data migration         | B                | A                    |
-| G9   |         84–94% | Security, performance, observability and recovery     | A                | B                    |
-| G10  |        94–100% | UAT, production launch and stabilization sign-off     | Joint            | Rotating             |
+| Gate (EXEC_G#) | Delivery range | Integrated outcome                                    | Accountable lead | Independent verifier |
+| -------------- | -------------: | ----------------------------------------------------- | ---------------- | -------------------- |
+| G0             |           0–5% | Team/product decisions and reproducible repository    | A                | B                    |
+| G1             |          5–12% | Runtime foundation, contracts, tests and environments | A                | B                    |
+| G2             |         12–20% | Authentication, sessions, RBAC and audit baseline     | A                | B                    |
+| G3             |         20–30% | Admin catalog and public catalog integrated           | B                | A                    |
+| G4             |         30–43% | Correct warehouse ledger, availability and transfers  | A                | B                    |
+| G5             |         43–55% | Server-priced cart, checkout and order lifecycle      | A                | B                    |
+| G6             |         55–65% | Verified payment, shipping and notifications          | A                | B                    |
+| G7             |         65–74% | Purchasing, stocktake, returns and reporting          | A                | B                    |
+| G8             |         74–84% | Complete admin/customer UX and data migration         | B                | A                    |
+| G9             |         84–94% | Security, performance, observability and recovery     | A                | B                    |
+| G10            |        94–100% | UAT, production launch and stabilization sign-off     | Joint            | Rotating             |
+
+### Gate symbol cross-reference
+
+`G#` symbols are **namespaced**: this document uses `EXEC_Gn`, while
+`COMMERCE_EXPANSION_PLAN.md` uses `COMM_Gn` with a different enumeration. A bare
+“G4” is ambiguous and must never be used alone when the documents are discussed
+together; always write `EXEC_G4` or `COMM_G4` (or a `0.x` release gate). Within a
+single document a bare `G#` resolves to that document's own namespace. Deliverable
+package IDs such as `G4-05` (§3) are `EXEC_G`-namespace identifiers. The mapping
+is qualitative (`≈`), not a 1:1 equivalence — each document retains its own exit
+evidence.
+
+| Execution backlog (`EXEC_Gn`)        | Expansion plan (`COMM_Gn`)                   | V1 release gate |
+| ------------------------------------ | -------------------------------------------- | --------------- |
+| EXEC_G0 — governance/safe delivery   | COMM_G0 — governance and safe delivery       | pre-`0.1`       |
+| EXEC_G1 — engineering foundation     | COMM_G1 (foundation cluster)                 | `0.1`           |
+| EXEC_G2 — auth/sessions/RBAC/audit   | COMM_G1 (identity portion)                   | `0.1`           |
+| EXEC_G3 — admin + public catalog     | COMM_G2–G4                                   | `0.2`           |
+| EXEC_G4 — warehouse ledger/transfers | COMM_G5                                      | `0.3`           |
+| EXEC_G5 — cart/checkout/order        | COMM_G6–G7                                   | `0.4`           |
+| EXEC_G6 — payment/shipping/notify    | COMM_G8                                      | `0.5`           |
+| EXEC_G7 — purchasing/stocktake/ret   | COMM_G9                                      | `0.6`           |
+| EXEC_G8 — UX completion + migration  | COMM_G3 (import) + COMM_G11 (data rehearsal) | `0.8`           |
+| EXEC_G9 — hardening                  | COMM_G11                                     | `0.9`           |
+| EXEC_G10 — launch/stabilization      | COMM_G12                                     | `1.0`           |
+| post-V1                              | COMM_G10 — merchandising/retention/growth    | post-`1.0`      |
+
+Keep this table in sync with both documents whenever a gate boundary changes.
 
 ## 3. Detailed work packages
 

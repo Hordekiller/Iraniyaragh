@@ -1,6 +1,7 @@
 # ADR-0012: Public web rendering and canonical URL policy
 
-- Status: Proposed; becomes Accepted after independent review and merge
+- Status: Accepted — merged after independent review via #124 (2026-09-09); the
+  SEO/GEO plan adopted it as the rendering/URL baseline
 - Date: 2026-09-08
 - Owners: Web/Product lead implements; Platform/API lead verifies contracts
 - Parent: #122

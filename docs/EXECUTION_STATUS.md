@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-09-14
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
@@ -25,7 +25,7 @@ day-to-day assignments.
 | --------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `0.1` Foundation/Auth | Acceptance closed                  | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                                                                           | private #114 acceptance                                                 |
 | `0.2` Catalog         | Active                            | Contracts #103, idempotency contract #168, durable runtime #171, admin Catalog workflow #173, policy ADR-0013 (#177), `C`-wave contract (#179), P1 variant schema/migration (#180), P2 mutation services (#181), P2 configuration/generation (#182) and P3 import (#183 parser/exporter, #184 staged service) merged | `A`/`W` binding, media M1–M5, storefront live integration, P3 follow-ups (durable parsed-payload storage, decompression-time size guard) |
-| `0.3` Inventory       | Foundation available               | Transactional ledger/reservation service                                                                                                                                                     | HTTP/RBAC, warehouse/location, transfers, worker and admin              |
+| `0.3` Inventory       | Foundation + protected HTTP | Transactional ledger/reservation service; protected balance/adjustment API merged (#217)          | Warehouse/location CRUD, HTTP reservations, transfers, expiry worker and admin (EXEC_G4 / #215) |
 | `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                                                                                                                                                     | Policies and all application/client workflows                           |
 
 ## Active merge/review queue
@@ -37,6 +37,23 @@ day-to-day assignments.
 |        3 | Issue #111 (mutation idempotency)    | Merged             | contract #168 + runtime #171 + admin workflow #173 merged                                          | Bounded cleanup worker remains on #81 before production               |
 |        4 | Issue #176/#178 (variants/import)    | `C` + `P1` + `P2` + `P3` merged | policy ADR-0013 (#177) + `C`-wave contract (#179) + P1 schema/migration (#180) + P2 mutation services (#181) + P2 configuration/generation (#182) + P3 parser/exporter (#183) + P3 staged import service (#184) merged; #176 closed | A/W/I binding, each ≤400 lines and reviewed; P3 follow-ups (durable parsed-payload storage, decompression-time size guard) |
 |        5 | Discovery ready items #126/#129/#136 | Backlog (platform) | server-rendered pages, sitemap/robots/IndexNow and telemetry                                       | Pick up as platform capacity opens and wave 0.2-A is delivered        |
+|        6 | Admin catalog slice (#166)           | Local `feat/admin-catalog-crud`; isolated verify green on the post-#214 base (contracts/admin typecheck, lint, 400 admin tests) | contracts typing parity; `GET /catalog/admin/attributes/:id` OpenAPI; admin UI permission gates | Merge split PR `#214` (rebased to `bcf3864` on `5e34936`, all checks green, owner re-approval pending after stale-review dismissal), then rebase slice on `main` and open the admin UI PR under #166 |
+
+## Resolved since the 2026-09-13 review
+
+- `main` advanced to `5e34936` with the protected inventory balance/adjustment API
+  merged (#217): balance/movement reads and `POST /inventory/changes`, stable
+  `INSUFFICIENT_STOCK`/`INVENTORY_VERSION_CONFLICT`/`RESERVATION_STATE_CONFLICT`
+  codes in the shared contract, and the canonical `REPOSITORY_WORKFLOW.md`
+  (strict-protection, PR state machine, Sonar truthfulness). Follow-ups for the
+  five declared-but-unemitted codes and the real `getRequestId()` binding are
+  tracked on #215.
+- The catalog attribute-detail endpoint split PR #214 was rebased onto `5e34936`
+  (OpenAPI regenerated, drift-clean) to head `bcf3864`; the owner's prior approval
+  was dismissed by stale-review policy and a fresh approval on `bcf3864` is required.
+- #212 (SonarCloud workflow truthfulness fix) approved by Maddyrampant; #174 closed
+  as superseded by this docs PR; #211 (media M1 plan) rebased to `26c311e`; #216
+  (storefront coverage gate) closed as delivered with #207 coverage evidence.
 
 ## Team disposition ledger — 2026-09-08 (updated 2026-09-11)
 
@@ -154,6 +171,40 @@ Commands run and exact result:
 Manual scenarios checked:
 Known failures or follow-ups:
 Reviewer focus:
+```
+
+## Handoff — Admin catalog slice (2026-09-14)
+
+```text
+Issue / branch / base SHA: #166 / feat/admin-catalog-crud @ 602c5ae (local tree,
+  not pushed); coordination on #166/#178. main is now 5e34936 (incl. #217).
+Owned files and shared hotspots: apps/admin catalog views/routes/lib (see the #166
+  note); shared: packages/contracts/src/catalog.ts (ProductVariant attributeValues →
+  VariantAttributeValue[]; ProductVariantUpdateRequest flat dimensions),
+  apps/api catalog controller/service/spec + openapi.json (GET /admin/attributes/:id)
+  — carried identically on the open split PR #214 (rebased to bcf3864).
+Contract or decision used: packages/contracts catalog types; serialization checked
+  against catalog.service variantResponse/productVariantPrivateDetail.
+Implemented and intentionally excluded: attribute list/create/edit/options UI,
+  import upload/dry-run/commit UI, product detail + variant generate/edit/price.
+  Excluded: pricing, media, live storefront.
+Migration/data impact: none (no Prisma/migration change).
+Security/authorization/audit impact: permission gates canReadCatalog/canWriteCatalog
+  on every catalog route; import commit requires canWrite; DialogCloseButton gained
+  optional disabled (a11y). New endpoint guarded by MFA + catalog.read.
+Commands run and exact result: contracts typecheck pass; admin lint+build+400 tests
+  pass; web lint+build pass; api lint+build pass; api catalog unit + openapi
+  drift/regenerate spec 18/18 pass. Isolated post-#214-base verification re-confirmed
+  contracts/admin typecheck, admin lint and 400 admin tests.
+Manual scenarios checked: variant-generation axis load / selection / preview
+  2000-cap; attribute options add/toggle; import upload → dry-run report → guarded
+  commit.
+Known failures or follow-ups: #214 merged first (owner), then rebase slice on main
+  (routine conflict-free, verified ahead) and open the admin UI PR. Division of
+  docs handled here: EXECUTION_STATUS/PROJECT_STATUS via #194; the admin PR carries
+  apps/admin code only.
+Reviewer focus: ProductVariant typing parity, ProductVariantUpdateRequest shape,
+  OpenAPI for GET /admin/attributes/:id, no Prisma exposure.
 ```
 
 ## Release blockers
