@@ -5,5 +5,5 @@ import { CatalogService } from './catalog.service';
 import { CatalogIdempotencyService } from './catalog-idempotency.service';
 import { CatalogImportService } from './catalog-import.service';
 
-@Module({ imports: [AuditModule], controllers: [CatalogController], providers: [CatalogService, CatalogIdempotencyService, CatalogImportService], exports: [CatalogService, CatalogImportService] })
+@Module({ imports: [AuditModule], controllers: [CatalogController], providers: [CatalogService, CatalogIdempotencyService, CatalogImportService], exports: [CatalogService, CatalogImportService, CatalogIdempotencyService] })
 export class CatalogModule {}

@@ -11,7 +11,7 @@ describe('OpenAPI artifact regeneration', () => {
   let document: ReturnType<typeof createApiDocument>;
 
   beforeAll(async () => {
-    const app = await NestFactory.create(AppModule, { logger: false });
+    const app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
     document = createApiDocument(app);
     await app.close();
   });

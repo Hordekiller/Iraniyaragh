@@ -176,6 +176,15 @@ describe.sequential('CatalogService database integration', () => {
       ],
     });
     const id = created.data.product.id;
+    await prisma.productMedia.create({
+      data: {
+        productId: id, kind: 'IMAGE', state: 'READY', role: 'PRIMARY', position: 0,
+        objectKey: `test/${runId}/${id}/primary.webp`, originalFilename: 'primary.webp',
+        declaredMime: 'image/webp', declaredBytes: 100n, detectedMime: 'image/webp', bytes: 100n,
+        width: 100, height: 100, checksumSha256: 'ab'.repeat(32), createdById: actorId,
+        uploadExpiresAt: new Date(Date.now() + 60_000),
+      },
+    });
 
     const published = await catalog.changeProductStatus(actorId, key('publish-status'), id, {
       action: 'publish',
@@ -196,6 +205,7 @@ describe.sequential('CatalogService database integration', () => {
     await prisma.productVariant.deleteMany({
       where: { productId: id },
     });
+    await prisma.productMedia.deleteMany({ where: { productId: id } });
     await prisma.product.delete({ where: { id } });
   });
 

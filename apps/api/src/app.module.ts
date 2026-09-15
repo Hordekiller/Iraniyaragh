@@ -14,6 +14,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { validateEnvironment } from './config/environment';
 import { RedisModule } from './modules/redis/redis.module';
+import { MediaModule } from './modules/media/media.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RedisModule } from './modules/redis/redis.module';
     HealthModule,
     AuthModule,
     CatalogModule,
+    MediaModule,
     InventoryModule,
     OrdersModule,
     PaymentsModule,

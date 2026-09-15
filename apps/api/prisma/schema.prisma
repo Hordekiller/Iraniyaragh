@@ -91,6 +91,35 @@ enum CatalogImportStatus {
   FAILED
 }
 
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+enum MediaState {
+  PENDING_UPLOAD
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum MediaRole {
+  PRIMARY
+  GALLERY
+  VIDEO_POSTER
+}
+
+enum MediaRenditionPurpose {
+  THUMBNAIL
+  CARD
+  DETAIL_SM
+  DETAIL_MD
+  DETAIL_LG
+  VIDEO_PLAYBACK
+}
+
 enum OrderStatus {
   DRAFT
   PENDING_PAYMENT
@@ -200,6 +229,7 @@ model User {
   catalogIdempotencyRecords CatalogIdempotencyRecord[]
   variantPriceRecords       VariantPriceRecord[]
   catalogImportRecords      CatalogImportRecord[]
+  createdProductMedia       ProductMedia[]             @relation("ProductMediaCreator")
 
   @@index([status, createdAt])
   @@index([lockedUntil])
@@ -427,8 +457,69 @@ model Product {
   category    Category?                       @relation(fields: [categoryId], references: [id])
   variants    ProductVariant[]
   attributes  ProductAttributeConfiguration[]
+  media       ProductMedia[]
   createdAt   DateTime                        @default(now())
   updatedAt   DateTime                        @updatedAt
+}
+
+model ProductMedia {
+  id               String                  @id @default(cuid())
+  productId        String
+  product          Product                 @relation(fields: [productId], references: [id], onDelete: Restrict)
+  kind             MediaKind
+  state            MediaState              @default(PENDING_UPLOAD)
+  role             MediaRole               @default(GALLERY)
+  position         Int
+  altText          String?                 @db.VarChar(300)
+  caption          String?                 @db.VarChar(500)
+  objectKey        String                  @unique @db.VarChar(512)
+  originalFilename String                  @db.VarChar(255)
+  declaredMime     String                  @db.VarChar(100)
+  declaredBytes    BigInt
+  detectedMime     String?                 @db.VarChar(100)
+  bytes            BigInt?
+  width            Int?
+  height           Int?
+  durationMs       Int?
+  hasAudio         Boolean?
+  posterMediaId    String?
+  posterMedia      ProductMedia?           @relation("VideoPoster", fields: [posterMediaId], references: [id], onDelete: Restrict)
+  posterFor        ProductMedia[]          @relation("VideoPoster")
+  checksumSha256   String?                 @db.Char(64)
+  failureCode      String?                 @db.VarChar(100)
+  version          Int                     @default(1)
+  createdById      String
+  createdBy        User                    @relation("ProductMediaCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  uploadExpiresAt  DateTime
+  sourceDeleteAt   DateTime?
+  archivedAt       DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  renditions       ProductMediaRendition[]
+
+  @@index([productId, state, position])
+  @@index([state, uploadExpiresAt])
+  @@index([posterMediaId])
+  @@index([sourceDeleteAt])
+  @@index([archivedAt])
+}
+
+model ProductMediaRendition {
+  id             String                @id @default(cuid())
+  mediaId        String
+  media          ProductMedia          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  purpose        MediaRenditionPurpose
+  format         String                @db.VarChar(30)
+  objectKey      String                @unique @db.VarChar(512)
+  bytes          BigInt
+  width          Int
+  height         Int
+  bitrate        Int?
+  checksumSha256 String                @db.Char(64)
+  createdAt      DateTime              @default(now())
+
+  @@unique([mediaId, purpose, format])
+  @@index([mediaId])
 }
 
 model ProductVariant {

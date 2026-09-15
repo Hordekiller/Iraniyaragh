@@ -24,8 +24,8 @@ Current delivery confidence:
 | Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                           |
 | Customer/auth UX               | Merged foundation | Real HTTP client and provider-dispatched OTP foundation are merged; live SMS.ir activation and provider-backed happy-path acceptance remain |
 | Staff/auth admin UX            | Merged foundation | Staff login now uses the real `StaffAuthHttpClient` (#191); live MFA/session UX and production acceptance remain |
-| Catalog API                    | Merged foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice; #168/#200/#214 added idempotency, import parity and contract parity |
-| Product media                  | Accepted contract | Images/videos are not persisted or served yet; `PRODUCT_MEDIA_SPEC.md` accepted via #161; M1 plan merged via #211 |
+| Catalog API                    | Advanced foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice; #168/#200/#214 added idempotency, import parity and contract parity |
+| Product media                  | M1 implementation | #162 branch provides persistence, secure image upload/processing, cleanup and publish readiness; merge and object-storage acceptance remain |
 | Inventory core                 | Partial           | Protected balance/adjustment HTTP API, stable conflict codes, OpenAPI parity and failure-path coverage merged via #217/#219 |
 | Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                  |
 | Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not |
@@ -37,7 +37,9 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `0091808`, containing merged #109, #103, #112,
+- Baseline at review: `main` commit `e67b26e`. Product Media M1 is developed on
+  `feat/product-media-m1` and is not counted as merged until review/integration.
+  The baseline contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
   session/device-management panel #158, the screenshot/a11y evidence #160, the
@@ -124,6 +126,18 @@ foundation, and G5–G10 have not reached integrated completion.
 - Reusable admin table/form/wizard/confirmation/feedback primitives. Showcase routes
   are not production operational modules.
 
+### Product Media M1 (`feat/product-media-m1`, pending merge)
+
+- Forward-only `ProductMedia`/rendition persistence with database-enforced active
+  primary and position uniqueness.
+- Protected, idempotent authoring API for list, upload intent, confirmation,
+  metadata, ordering and archive operations; private S3-compatible quarantine.
+- Image-first BullMQ worker with magic-byte validation, bounded decode/pixels,
+  fail-closed malware-scanner boundary, JPEG/WebP renditions and atomic readiness.
+- Bounded cleanup for expired uploads, private sources and archived renditions.
+- Publish readiness requires exactly one `READY` primary image. Advanced video
+  processing and public/admin consumers remain later M2–M5 work.
+
 ## Recently merged capability
 
 ### PR #109 — Auth privileged lifecycle
@@ -160,7 +174,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | RBAC          | Roles, seed and guard machinery                                                                | Every domain route still needs explicit allow/deny policy tests                                                                                |
 | Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                          | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
 | Staff Auth    | Runtime, privileged lifecycle, double-submit CSRF logout fix (#190) and real HTTP login (#191) merged | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                  |
-| Catalog       | Contracts and API foundation merged via #103; #168 idempotency contract; #200 import gap-fixes and ASCII-SKU invariant; #214 contract parity | Media runtime (M1 plan merged via #211), pricing, admin UI and live storefront pricing |
+| Catalog       | Advanced API plus #162 Media M1 implementation branch | Merge/accept M1, then media admin, public projection and storefront integration (M2–M5) |
 | Inventory     | Correct service core plus protected balance/adjustment HTTP, conflict codes, OpenAPI parity and failure-path coverage (via #217/#219) | Warehouse/location commands, reservations/transfers HTTP, worker and admin UI                                                                |
 | Orders        | Schema and generic state helper; read-only admin queue/detail in the #207 storefront slice (fixture-backed, behind `AdminOrdersApi` port) | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
 | Payments      | Schema/state foundation                                                                        | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
@@ -176,7 +190,8 @@ security/query review, OpenAPI drift confirmation and merge.
   merged via #139 (real HTTP default, fixture only behind `VITE_FIXTURE_AUTH=true`);
   production acceptance still requires live SMS, admin MFA/session UX and permission
   navigation.
-- Media upload and S3 presigned flow; price history/effective pricing UI.
+- Product Media admin manager, public projection, storefront gallery and integrated
+  M5 journey; production S3/CORS and malware-scanner acceptance evidence.
 - VAT policy and tax math (integer-Rial VAT on the sales basis per the permanent
   VAT Law and the configurable-rate design in ADR-0014); electronic-invoice
   (`سامانه مودیان`) emission; both are planned, not implemented.
@@ -184,7 +199,8 @@ security/query review, OpenAPI drift confirmation and merge.
   staff directory, role-assignment/revoke flow or user-status management until
   ADR-0014 (`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`, accepted via #185) and its
   G1–G3 slices land.
-- Warehouse/location CRUD/commands, reservations/transfers HTTP, expiry worker and operator modules.
+- Inventory warehouse/location CRUD, reservation/transfer HTTP, optimized expiry
+  worker and operator modules. Balance/movement/adjustment HTTP is merged.
 - Server-priced cart, address, checkout and idempotent order creation.
 - Order application lifecycle and customer/admin order experiences.
 - Payment gateway, verified callback, refunds and reconciliation.
