@@ -4,6 +4,7 @@
  * services; see docs/CATALOG_ATTRIBUTES_SPEC.md (error-code matrix) and
  * docs/CATALOG_IDEMPOTENCY.md. The granular codes are additive to API_ERROR_CODES.
  */
+import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
 const errorEnvelope = {
   type: 'object',
@@ -14,6 +15,33 @@ const errorEnvelope = {
     requestId: { type: 'string', description: 'Request correlation id, echoed from the x-request-id flow.' },
     statusCode: { type: 'integer' },
   },
+};
+
+const publicImage: SchemaObject = {
+  type: 'object',
+  required: ['id', 'kind', 'position', 'role', 'alt', 'caption', 'width', 'height', 'sources'],
+  properties: {
+    id: { type: 'string' }, kind: { type: 'string', enum: ['IMAGE'] }, position: { type: 'integer', minimum: 0 },
+    role: { type: 'string', enum: ['PRIMARY', 'GALLERY', 'VIDEO_POSTER'] }, alt: { type: 'string' },
+    caption: { type: 'string', nullable: true }, width: { type: 'integer', minimum: 1 }, height: { type: 'integer', minimum: 1 },
+    sources: { type: 'array', items: { type: 'object', required: ['url', 'width', 'height', 'type'], properties: { url: { type: 'string', format: 'uri' }, width: { type: 'integer', minimum: 1 }, height: { type: 'integer', minimum: 1 }, type: { type: 'string' } } } },
+  },
+};
+
+const publicProductItem: SchemaObject = {
+  type: 'object',
+  required: ['id', 'name', 'slug', 'status', 'brandId', 'categoryId', 'createdAt', 'updatedAt', 'primaryMedia'],
+  properties: {
+    id: { type: 'string' }, name: { type: 'string' }, slug: { type: 'string' }, status: { type: 'string', enum: ['PUBLISHED'] },
+    brandId: { type: 'string', nullable: true }, categoryId: { type: 'string', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' },
+    primaryMedia: { ...publicImage, nullable: true },
+  },
+};
+
+export const openApiPublicCatalog: { products: SchemaObject; product: SchemaObject } = {
+  products: { type: 'object', required: ['data'], properties: { data: { type: 'object', required: ['items', 'meta'], properties: { items: { type: 'array', items: publicProductItem }, meta: { type: 'object' } } } } },
+  product: { type: 'object', required: ['data'], properties: { data: { type: 'object', required: ['product'], properties: { product: { ...publicProductItem, required: [...(publicProductItem.required ?? []), 'description', 'brand', 'category', 'variants', 'media'], properties: { ...publicProductItem.properties, description: { type: 'string', nullable: true }, brand: { type: 'object', nullable: true }, category: { type: 'object', nullable: true }, variants: { type: 'array', items: { type: 'object' } }, media: { type: 'array', items: publicImage } } } } } } },
 };
 
 export const openApiCatalogFailures = {

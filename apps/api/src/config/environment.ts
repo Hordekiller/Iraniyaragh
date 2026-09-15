@@ -31,6 +31,7 @@ export type EnvironmentVariables = {
   OBJECT_STORAGE_BUCKET: string;
   OBJECT_STORAGE_REGION: string;
   OBJECT_STORAGE_FORCE_PATH_STYLE: boolean;
+  PUBLIC_MEDIA_ORIGIN: string;
   PRODUCT_MEDIA_MAX_ASSETS: number;
   PRODUCT_MEDIA_MAX_VIDEOS: number;
   PRODUCT_MEDIA_IMAGE_MAX_BYTES: number;
@@ -97,6 +98,15 @@ function parseUrl(value: string, key: string, protocols: string[]) {
   }
 
   return value;
+}
+
+function parsePublicMediaOrigin(value: string, environment: NodeEnvironment) {
+  const normalized = parseUrl(value.trim(), 'PUBLIC_MEDIA_ORIGIN', ['staging', 'production'].includes(environment) ? ['https:'] : ['http:', 'https:']);
+  const url = new URL(normalized);
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error('PUBLIC_MEDIA_ORIGIN must not contain credentials, a query, or a fragment.');
+  }
+  return url.toString().replace(/\/$/u, '');
 }
 
 export function parseCorsOrigins(value: unknown, environment: NodeEnvironment) {
@@ -261,6 +271,15 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     'http:',
     'https:',
   ]);
+  if (['staging', 'production'].includes(environment) && !(typeof config.PUBLIC_MEDIA_ORIGIN === 'string' && config.PUBLIC_MEDIA_ORIGIN.trim())) {
+    throw new Error('PUBLIC_MEDIA_ORIGIN is required in staging and production.');
+  }
+  const publicMediaOrigin = parsePublicMediaOrigin(
+    typeof config.PUBLIC_MEDIA_ORIGIN === 'string' && config.PUBLIC_MEDIA_ORIGIN.trim()
+      ? config.PUBLIC_MEDIA_ORIGIN
+      : `${objectStorageEndpoint.replace(/\/$/u, '')}/${requiredString(config, 'OBJECT_STORAGE_BUCKET')}`,
+    environment,
+  );
   const accessSecret = validateAuthSecret(
     requiredSecretString(config, 'JWT_ACCESS_SECRET'),
     'JWT_ACCESS_SECRET',
@@ -368,6 +387,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
       'OBJECT_STORAGE_FORCE_PATH_STYLE',
       !['staging', 'production'].includes(environment),
     ),
+    PUBLIC_MEDIA_ORIGIN: publicMediaOrigin,
     PRODUCT_MEDIA_MAX_ASSETS: parseBoundedInteger(
       config.PRODUCT_MEDIA_MAX_ASSETS ?? 12,
       'PRODUCT_MEDIA_MAX_ASSETS',

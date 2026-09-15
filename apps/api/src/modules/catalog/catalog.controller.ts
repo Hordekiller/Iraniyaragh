@@ -8,7 +8,7 @@ import { CatalogService } from './catalog.service';
 import { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
 import { PublicCatalogCache } from './public-catalog-cache.interceptor';
 import { CatalogImportService } from './catalog-import.service';
-import { openApiCatalogFailures } from './catalog.openapi';
+import { openApiCatalogFailures, openApiPublicCatalog } from './catalog.openapi';
 
 const catalogFailure = openApiCatalogFailures;
 
@@ -20,10 +20,12 @@ export class CatalogController {
 
   @Get('products')
   @PublicCatalogCache()
+  @ApiOkResponse({ schema: openApiPublicCatalog.products })
   async publicProducts(@Query() query: ProductListQueryDto): Promise<ProductListResponse> { return this.catalog.listPublicProducts(query); }
 
   @Get('products/:idOrSlug')
   @PublicCatalogCache()
+  @ApiOkResponse({ schema: openApiPublicCatalog.product })
   async publicProduct(@Param('idOrSlug') idOrSlug: string): Promise<ProductDetailPublicResponse> { return this.catalog.getPublicProduct(idOrSlug); }
 
   @Get('categories')
