@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FeedbackProvider } from "@/components/ui/FeedbackProvider";
 import {
@@ -208,5 +208,198 @@ describe("ProductMediaManager", () => {
     fireEvent.click(screen.getAllByLabelText("انتقال به پایین")[1]!);
     await waitFor(() => expect(mocks.listProductMedia).toHaveBeenCalledTimes(2));
     expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
+
+  it("surfaces an initial catalog loading failure and allows retry", async () => {
+    mocks.getProduct.mockRejectedValueOnce(new Error("catalog unavailable"));
+    renderManager();
+    expect(
+      await screen.findByText("عملیات رسانه ناموفق بود؛ دوباره تلاش کنید."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "تلاش دوباره" }));
+    expect(await screen.findByText("m1.webp")).toBeInTheDocument();
+  });
+
+  it("rejects unsupported and oversized uploads before creating an intent", async () => {
+    const view = renderManager();
+    await screen.findByText("m1.webp");
+    const input = view.container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+
+    fireEvent.change(input, {
+      target: { files: [new File(["bad"], "bad.gif", { type: "image/gif" })] },
+    });
+    expect(
+      await screen.findByText("فقط تصویر JPEG، PNG یا WebP قابل ارسال است."),
+    ).toBeInTheDocument();
+
+    const oversized = new File(["large"], "large.webp", {
+      type: "image/webp",
+    });
+    Object.defineProperty(oversized, "size", { value: 20 * 1024 * 1024 + 1 });
+    fireEvent.change(input, { target: { files: [oversized] } });
+    expect(
+      await screen.findByText("حجم تصویر باید حداکثر ۲۰ مگابایت باشد."),
+    ).toBeInTheDocument();
+    expect(mocks.initiateMediaUpload).not.toHaveBeenCalled();
+  });
+
+  it("enforces the twelve-media upload limit", async () => {
+    mocks.listProductMedia.mockResolvedValue([
+      media("m1", 0, "PRIMARY"),
+      ...Array.from({ length: 11 }, (_, index) =>
+        media(`gallery-${index}`, index + 1, "GALLERY"),
+      ),
+    ]);
+    const view = renderManager();
+    await screen.findByText("gallery-10.webp");
+    const input = view.container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["image"], "extra.webp", { type: "image/webp" })],
+      },
+    });
+    expect(
+      await screen.findByText("حداکثر ۱۲ رسانه برای هر کالا مجاز است."),
+    ).toBeInTheDocument();
+    expect(mocks.initiateMediaUpload).not.toHaveBeenCalled();
+  });
+
+  it("reloads authoritative state after a primary-selection failure", async () => {
+    mocks.setPrimaryMedia.mockRejectedValueOnce(new Error("primary conflict"));
+    renderManager();
+    await screen.findByText("m2.webp");
+    fireEvent.click(screen.getAllByLabelText("تنظیم به‌عنوان تصویر اصلی")[1]!);
+    await waitFor(() => expect(mocks.listProductMedia).toHaveBeenCalledTimes(2));
+    expect(
+      screen.getByText("عملیات رسانه ناموفق بود؛ دوباره تلاش کنید."),
+    ).toBeInTheDocument();
+  });
+
+  it("reloads authoritative state after a metadata failure", async () => {
+    mocks.updateMediaMetadata.mockRejectedValueOnce(new Error("metadata conflict"));
+    renderManager();
+    await screen.findByText("m2.webp");
+    fireEvent.click(screen.getAllByText("ویرایش متن")[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "ذخیره" }));
+    await waitFor(() => expect(mocks.listProductMedia).toHaveBeenCalledTimes(2));
+    expect(
+      screen.getByText("عملیات رسانه ناموفق بود؛ دوباره تلاش کنید."),
+    ).toBeInTheDocument();
+  });
+
+  it("reloads authoritative state after an archive failure", async () => {
+    mocks.archiveMedia.mockRejectedValueOnce(new Error("archive conflict"));
+    renderManager();
+    await screen.findByText("m2.webp");
+    fireEvent.click(screen.getAllByLabelText("بایگانی رسانه")[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "بایگانی" }));
+    await waitFor(() => expect(mocks.listProductMedia).toHaveBeenCalledTimes(2));
+    expect(
+      screen.getByText("عملیات رسانه ناموفق بود؛ دوباره تلاش کنید."),
+    ).toBeInTheDocument();
+  });
+
+  it("resets upload state and reports a signed-upload failure", async () => {
+    mocks.uploadMediaObject.mockRejectedValueOnce(new Error("upload failed"));
+    const view = renderManager();
+    await screen.findByText("m1.webp");
+    const input = view.container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["image"], "failed.webp", { type: "image/webp" })],
+      },
+    });
+    expect(
+      await screen.findByText("عملیات رسانه ناموفق بود؛ دوباره تلاش کنید."),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "انتخاب تصویر" })).toBeEnabled(),
+    );
+  });
+
+  it("supports keyboard reordering and canceling both dialogs", async () => {
+    renderManager();
+    await screen.findByText("m2.webp");
+
+    fireEvent.click(screen.getAllByLabelText("انتقال به پایین")[1]!);
+    await waitFor(() => expect(mocks.reorderMedia).toHaveBeenCalled());
+
+    fireEvent.click(screen.getAllByText("ویرایش متن")[1]!);
+    expect(screen.getByRole("dialog", { name: "متادیتای تصویر" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "انصراف" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "متادیتای تصویر" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getAllByLabelText("بایگانی رسانه")[1]!);
+    expect(screen.getByRole("dialog", { name: "بایگانی رسانه" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "انصراف" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "بایگانی رسانه" }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("creates the first upload as the primary image at position zero", async () => {
+    mocks.listProductMedia.mockResolvedValue([]);
+    mocks.confirmMediaUpload.mockResolvedValue(media("m1", 0, "PRIMARY"));
+    const view = renderManager();
+    await screen.findByText("هنوز تصویری ثبت نشده");
+    const input = view.container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["image"], "primary.webp", { type: "image/webp" })],
+      },
+    });
+    await waitFor(() =>
+      expect(mocks.initiateMediaUpload).toHaveBeenCalledWith(
+        "p1",
+        expect.objectContaining({ role: "PRIMARY", position: 0 }),
+      ),
+    );
+  });
+
+  it("polls processing media and stops with a recoverable timeout", async () => {
+    let poll: TimerHandler | undefined;
+    const setIntervalSpy = vi
+      .spyOn(window, "setInterval")
+      .mockImplementation((handler: TimerHandler, delay?: number) => {
+        if (delay === 2000) poll = handler;
+        return delay === 2000 ? 123 : 456;
+      });
+    const clearIntervalSpy = vi
+      .spyOn(window, "clearInterval")
+      .mockImplementation(() => undefined);
+    mocks.listProductMedia.mockResolvedValue([
+      { ...media("m1", 0, "PRIMARY"), state: "PROCESSING" },
+    ]);
+
+    const view = renderManager();
+    await screen.findByText("در حال پردازش");
+    await waitFor(() => expect(setIntervalSpy).toHaveBeenCalled());
+    await act(async () => {
+      for (let attempt = 0; attempt < 150; attempt += 1) {
+        if (typeof poll === "function") poll();
+      }
+      await Promise.resolve();
+    });
+    expect(
+      await screen.findByText(/پردازش تصویر بیش از حد انتظار طول کشید/),
+    ).toBeInTheDocument();
+    expect(clearIntervalSpy).toHaveBeenCalledWith(123);
+    view.unmount();
+    setIntervalSpy.mockRestore();
+    clearIntervalSpy.mockRestore();
   });
 });
