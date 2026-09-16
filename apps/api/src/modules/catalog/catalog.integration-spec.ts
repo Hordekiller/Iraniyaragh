@@ -76,13 +76,18 @@ describe.sequential('CatalogService database integration', () => {
   afterAll(async () => {
     if (!connected) return;
 
+    const runProductSlugs = [productSlug, `publishable-${runId}`, `no-variant-${runId}`, `create-published-no-sku-${runId}`];
+
+    await prisma.productMedia.deleteMany({
+      where: { createdById: actorId },
+    });
     await prisma.auditLog.deleteMany({
       where: { requestId: { startsWith: requestIdPrefix } },
     });
     await prisma.productVariant.deleteMany({
-      where: { product: { slug: productSlug } },
+      where: { product: { slug: { in: runProductSlugs } } },
     });
-    await prisma.product.deleteMany({ where: { slug: productSlug } });
+    await prisma.product.deleteMany({ where: { slug: { in: runProductSlugs } } });
     await prisma.category.deleteMany({
       where: { id: { in: [childCategoryId, categoryId] } },
     });

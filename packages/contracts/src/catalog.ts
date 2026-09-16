@@ -1,4 +1,5 @@
 import type { ApiSuccess, Money } from './index';
+import type { PublicProductMedia, PublicProductMediaImage } from './media';
 
 export type CatalogStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
@@ -139,6 +140,7 @@ export type ProductListItem = {
   categoryId: string | null;
   createdAt: string;
   updatedAt: string;
+  primaryMedia?: PublicProductMediaImage | null;
 };
 
 export type ProductListQuery = {
@@ -202,6 +204,7 @@ export type ProductDetailPublic = ProductListItem & {
   brand: BrandSummary | null;
   category: CategorySummary | null;
   variants: ProductVariantPublic[];
+  media: PublicProductMedia[];
 };
 
 export type ProductDetailPublicResponse = ApiSuccess<{

@@ -16,6 +16,7 @@ const validDevelopmentEnvironment = {
   OBJECT_STORAGE_ACCESS_KEY: 'minio',
   OBJECT_STORAGE_SECRET_KEY: 'development-object-secret',
   OBJECT_STORAGE_BUCKET: 'products',
+  PUBLIC_MEDIA_ORIGIN: 'https://media.example.com',
 };
 
 const validProductionEnvironment = {
@@ -315,6 +316,7 @@ describe('validateEnvironment', () => {
     expect(local.PRODUCT_MEDIA_MAX_ASSETS).toBe(12);
     expect(local.PRODUCT_MEDIA_MAX_VIDEOS).toBe(3);
     expect(local.PRODUCT_MEDIA_UPLOAD_TTL_SECONDS).toBe(900);
+    expect(local.PUBLIC_MEDIA_ORIGIN).toBe('https://media.example.com');
 
     const production = validateEnvironment({
       ...validProductionEnvironment,
@@ -323,6 +325,12 @@ describe('validateEnvironment', () => {
     });
     expect(production.OBJECT_STORAGE_REGION).toBe('eu-central-1');
     expect(production.OBJECT_STORAGE_FORCE_PATH_STYLE).toBe(false);
+  });
+
+  it('requires a controlled HTTPS public media origin in production', () => {
+    expect(() => validateEnvironment({ ...validProductionEnvironment, PUBLIC_MEDIA_ORIGIN: undefined })).toThrow('PUBLIC_MEDIA_ORIGIN');
+    expect(() => validateEnvironment({ ...validProductionEnvironment, PUBLIC_MEDIA_ORIGIN: 'http://media.example.com' })).toThrow('PUBLIC_MEDIA_ORIGIN');
+    expect(() => validateEnvironment({ ...validProductionEnvironment, PUBLIC_MEDIA_ORIGIN: 'https://user:secret@media.example.com' })).toThrow('PUBLIC_MEDIA_ORIGIN');
   });
 
   it('rejects ambiguous object-storage booleans', () => {
