@@ -20,6 +20,7 @@ const PERMISSIONS = [
   ["inventory.read", "Read inventory", "inventory"],
   ["inventory.adjust", "Adjust inventory", "inventory"],
   ["inventory.transfer", "Transfer inventory", "inventory"],
+  ["inventory.approve", "Approve inventory transfers", "inventory"],
   ["orders.read", "Read orders", "orders"],
   ["orders.manage", "Manage orders", "orders"],
   ["shipments.read", "Read shipments", "shipments"],
