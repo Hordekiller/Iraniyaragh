@@ -3,8 +3,8 @@ import { ProductDetailView } from '@/components/catalog/ProductDetailView';
 export default async function ProductDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ productId: string }>;
 }) {
-  const { id } = await params;
-  return <ProductDetailView productId={id} />;
+  const { productId } = await params;
+  return <ProductDetailView productId={productId} />;
 }
