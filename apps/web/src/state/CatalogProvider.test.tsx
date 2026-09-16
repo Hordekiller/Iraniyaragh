@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { CatalogProvider } from '../state/CatalogProvider'
 import { useCatalogApi } from '../state/catalog-context'
 import type { CatalogApi } from '../services/catalog/types'
+import { CatalogHttpClient } from '../services/catalog/http'
 
 const api: CatalogApi = {
   listCategories: vi.fn(async () => []),
@@ -26,14 +27,13 @@ describe('CatalogProvider', () => {
     expect(screen.getByTestId('catalog-provided')).toHaveTextContent('yes')
   })
 
-  it('throws fail-closed when no api and the fixture flag is off', () => {
-    expect(() =>
-      render(
-        <CatalogProvider>
-          <span>x</span>
-        </CatalogProvider>,
-      ),
-    ).toThrow('CatalogProvider: the fixture catalog client is not enabled in this build.')
+  it('uses the live HTTP client when fixtures are not explicitly enabled', () => {
+    function Probe() {
+      const provided = useCatalogApi()
+      return <span data-testid="catalog-live">{provided instanceof CatalogHttpClient ? 'live' : 'other'}</span>
+    }
+    render(<CatalogProvider><Probe /></CatalogProvider>)
+    expect(screen.getByTestId('catalog-live')).toHaveTextContent('live')
   })
 
   it('serves the fixture client when VITE_FIXTURE_CATALOG=true', async () => {

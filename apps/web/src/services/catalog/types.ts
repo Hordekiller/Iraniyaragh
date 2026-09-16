@@ -10,7 +10,7 @@ import type { Money, ProductListMeta, CategorySummary } from '@iranyaragh/contra
  * digits) stays in `lib/format.ts` and components.
  */
 
-export type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK'
+export type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'UNKNOWN'
 
 export type CatalogProduct = {
   id: string

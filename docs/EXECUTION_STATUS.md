@@ -152,6 +152,18 @@ Exit: one thin vertical journey is demonstrable; broad CRUD breadth is secondary
 8. Transfer policy/state contract.
 9. Cart/guest/merge and reservation-allocation decisions before `0.4` coding.
 
+## Reconciliation — live catalog discovery slice (2026-09-16)
+
+`main` now contains the Product Media M1–M4 runtime and the storefront catalog
+provider is wired to the public Catalog HTTP API by default. The explicit
+`VITE_FIXTURE_CATALOG=true` flag remains available for deterministic local/E2E
+fixtures only. Public product list/detail projections expose a nullable
+`startingPrice` derived from active variants and the live adapter maps media and
+prices without fabricating stock; availability remains `UNKNOWN` until Inventory
+HTTP is integrated. The remaining exit gap is the end-to-end Admin publish →
+public discovery verification against a running API, followed by Inventory
+availability and server-side Cart/Checkout.
+
 ## Explicitly not ready
 
 - Payment implementation before provider/verification/refund decisions.

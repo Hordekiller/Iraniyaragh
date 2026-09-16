@@ -36,6 +36,7 @@ const publicProductItem: SchemaObject = {
     brandId: { type: 'string', nullable: true }, categoryId: { type: 'string', nullable: true },
     createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' },
     primaryMedia: { ...publicImage, nullable: true },
+    startingPrice: { type: 'object', nullable: true, properties: { amount: { type: 'string' }, currency: { type: 'string', enum: ['IRR'] } } },
   },
 };
 

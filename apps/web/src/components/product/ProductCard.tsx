@@ -8,12 +8,14 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود',
   LOW_STOCK: 'فقط چند عدد باقی مانده',
   OUT_OF_STOCK: 'ناموجود',
+  UNKNOWN: 'موجودی در حال بررسی',
 }
 
 const STOCK_CLASS: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   LOW_STOCK: 'bg-amber-50 text-amber-700 border-amber-200',
   OUT_OF_STOCK: 'bg-slate-100 text-slate-500 border-slate-200',
+  UNKNOWN: 'bg-slate-100 text-slate-500 border-slate-200',
 }
 
 export function ProductCard({ product }: { product: CatalogProduct }) {

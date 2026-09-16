@@ -428,6 +428,14 @@
                                 },
                                 "nullable": true
                               }
+                              ,"startingPrice": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                  "amount": { "type": "string" },
+                                  "currency": { "type": "string", "enum": ["IRR"] }
+                                }
+                              }
                             }
                           }
                         },
@@ -620,6 +628,14 @@
                                 }
                               },
                               "nullable": true
+                            },
+                            "startingPrice": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "amount": { "type": "string" },
+                                "currency": { "type": "string", "enum": ["IRR"] }
+                              }
                             },
                             "description": {
                               "type": "string",
