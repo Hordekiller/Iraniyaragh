@@ -10,7 +10,7 @@ function response(body: unknown, status = 200): Response {
 
 describe('CatalogHttpClient', () => {
   it('maps live public list data and resolves category filters', async () => {
-    const fetcher = vi.fn(async (input: string | URL) => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.endsWith('/categories')) return response({ data: { items: [{ id: 'cat-1', name: 'ابزار', slug: 'tools', productCount: 2 }] } })
       if (url.includes('/products?')) return response({ data: { items: [{ id: 'p-1', name: 'دریل', slug: 'drill', status: 'PUBLISHED', brandId: null, categoryId: 'cat-1', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', primaryMedia: image, startingPrice: { amount: '1250000', currency: 'IRR' } }], meta: { page: 1, perPage: 100, total: 1, pages: 1 } } })
