@@ -159,14 +159,6 @@ export async function updateCategory(
   return response.data;
 }
 
-export async function getProduct(id: string, signal?: AbortSignal): Promise<ProductDetailResponse['data']> {
-  const response = await apiFetch<ProductDetailResponse['data']>(`/catalog/admin/products/${id}`, {
-    token: authToken(),
-    signal,
-  });
-  return response.data;
-}
-
 export async function configureProductAttributes(
   id: string,
   expectedVersion: number,

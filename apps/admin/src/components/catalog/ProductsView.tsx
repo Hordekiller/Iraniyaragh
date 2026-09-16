@@ -130,7 +130,7 @@ export function ProductsView({ initialQuery: raw }: { initialQuery: CatalogUrlQu
         breadcrumbs={[{ label: "کالا و انبار" }, { label: "کالا و SKU" }]}
         actions={
           <>
-<Button
+            <Button
               component={Link}
               href="/catalog/attributes"
               variant="outlined"
@@ -152,8 +152,6 @@ export function ProductsView({ initialQuery: raw }: { initialQuery: CatalogUrlQu
               variant="outlined"
               size="small"
             >
-              برندها
-            </Button>
               برندها
             </Button>
             <Button component={Link} href="/catalog/categories" variant="outlined" size="small">
