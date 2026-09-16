@@ -17,9 +17,9 @@ const CloseButton = styled(IconButton)(({ theme }) => ({
   },
 }));
 
-export function DialogCloseButton({ onClick }: { onClick: () => void }) {
+export function DialogCloseButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
-    <CloseButton size="small" onClick={onClick} aria-label="بستن">
+    <CloseButton size="small" onClick={onClick} disabled={disabled} aria-label="بستن">
       <X size={18} />
     </CloseButton>
   );

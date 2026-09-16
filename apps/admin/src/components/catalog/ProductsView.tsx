@@ -130,7 +130,28 @@ export function ProductsView({ initialQuery: raw }: { initialQuery: CatalogUrlQu
         breadcrumbs={[{ label: "کالا و انبار" }, { label: "کالا و SKU" }]}
         actions={
           <>
-            <Button component={Link} href="/catalog/brands" variant="outlined" size="small">
+            <Button
+              component={Link}
+              href="/catalog/attributes"
+              variant="outlined"
+              size="small"
+            >
+              ویژگی‌ها
+            </Button>
+            <Button
+              component={Link}
+              href="/catalog/imports"
+              variant="outlined"
+              size="small"
+            >
+              واردات
+            </Button>
+            <Button
+              component={Link}
+              href="/catalog/brands"
+              variant="outlined"
+              size="small"
+            >
               برندها
             </Button>
             <Button component={Link} href="/catalog/categories" variant="outlined" size="small">
@@ -161,7 +182,13 @@ export function ProductsView({ initialQuery: raw }: { initialQuery: CatalogUrlQu
             width: 280,
             render: (row) => (
               <Box>
-                <Typography fontWeight={700} variant="body2">
+                <Typography
+                  component={Link}
+                  href={`/catalog/products/${row.id}`}
+                  variant="body2"
+                  fontWeight={700}
+                  sx={{ textDecoration: 'none', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
+                >
                   {row.name}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" dir="ltr" textAlign="start">

@@ -106,7 +106,9 @@ export function readCsrfToken(document: Document): string | null {
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...options.headers };
+  const isFormData = options.body instanceof FormData;
+  const headers: Record<string, string> = { ...options.headers };
+  if (!isFormData) headers['Content-Type'] = 'application/json';
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
   const method = options.method ?? 'GET';
   if (method !== 'GET' && !headers['X-CSRF-Token']) {
@@ -116,10 +118,16 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   let response: Response;
   try {
+    const body: BodyInit | undefined =
+      options.body === undefined
+        ? undefined
+        : options.body instanceof FormData
+          ? options.body
+          : JSON.stringify(options.body) ?? undefined;
     response = await fetch(resolveUrl(path), {
       method,
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body,
       credentials: 'include',
       signal: options.signal,
     });
