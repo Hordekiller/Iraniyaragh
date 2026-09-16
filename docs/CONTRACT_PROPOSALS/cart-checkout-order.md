@@ -1,7 +1,7 @@
 # Cart, Checkout and Order Contract Proposal
 
-Status: proposal for joint approval, not an accepted public contract
-Date: 2026-09-10
+Status: accepted baseline; see ADR-0015 for binding decisions
+Date: 2026-09-16
 Owner: Developer B (Product/Web/Admin)
 Required reviewer: Developer A (Platform/API/Data/Operations)
 Related handoff: `docs/HANDOFF_2026-09-10.md`
@@ -9,7 +9,8 @@ Related handoff: `docs/HANDOFF_2026-09-10.md`
 This proposal turns the five backend inputs in the handoff into a reviewable
 contract boundary for Sprint 6 (`0.4`), without editing `packages/contracts`,
 Prisma schema, migrations or API code. The backend remains the source of truth;
-the current web fixture is only a consumer stub.
+the current web fixture is only a consumer stub. ADR-0015 is authoritative where
+this proposal says “required A decision” or uses illustrative values.
 
 ## Governing rules
 
