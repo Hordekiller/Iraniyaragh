@@ -1,4 +1,5 @@
 import { ConflictException, UnprocessableEntityException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MediaPolicyService } from "./media-policy.service";
 import { MediaService } from "./media.service";
@@ -166,6 +167,29 @@ describe("MediaService initiateUpload", () => {
       }),
     ).rejects.toMatchObject({ response: { code: "MEDIA_POSITION_CONFLICT" } });
     expect(ctx.idempotency.run).not.toHaveBeenCalled();
+  });
+
+  it("requires a newly initiated primary image to occupy position zero", async () => {
+    const ctx = setup();
+    await expect(
+      ctx.service.initiateUpload("actor-1", "stable-key-123", "product-1", {
+        ...input,
+        role: "PRIMARY",
+        position: 2,
+      }),
+    ).rejects.toMatchObject({ response: { code: "MEDIA_POSITION_CONFLICT" } });
+    expect(ctx.idempotency.run).not.toHaveBeenCalled();
+  });
+
+  it("maps concurrent active-position uniqueness collisions to a stable conflict", async () => {
+    const ctx = setup();
+    ctx.tx.productMedia.create.mockRejectedValue(new Prisma.PrismaClientKnownRequestError("position conflict", {
+      code: "P2002",
+      clientVersion: "6.19.3",
+    }));
+    await expect(ctx.service.initiateUpload("actor-1", "stable-key-123", "product-1", input)).rejects.toMatchObject({
+      response: { code: "MEDIA_POSITION_CONFLICT" },
+    });
   });
 
   it("rejects a stale product version before creating media", async () => {
@@ -466,5 +490,28 @@ describe("MediaService primary selection", () => {
       }),
     ).rejects.toMatchObject({ response: { code: "MEDIA_NOT_READY" } });
     expect(ctx.tx.productMedia.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("demotes the actual primary even when legacy data placed it away from position zero", async () => {
+    const ctx = setup();
+    const atZero = { ...ctx.storedMedia, state: "READY", id: "media-zero", role: "GALLERY", position: 0 };
+    const target = { ...ctx.storedMedia, state: "READY", id: "media-target", role: "GALLERY", position: 1 };
+    const legacyPrimary = { ...ctx.storedMedia, state: "READY", id: "media-primary", role: "PRIMARY", position: 2 };
+    ctx.tx.productMedia.findMany.mockResolvedValue([atZero, target, legacyPrimary]);
+    ctx.prisma.productMedia.findMany.mockResolvedValue([target, atZero, legacyPrimary]);
+
+    await ctx.service.setPrimary("actor-1", "primary-key-legacy", "product-1", "media-target", {
+      expectedProductVersion: 3,
+      expectedVersion: 1,
+    });
+
+    expect(ctx.tx.productMedia.updateMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: expect.objectContaining({ id: "media-primary", role: "PRIMARY" }),
+      data: expect.objectContaining({ role: "GALLERY" }),
+    }));
+    expect(ctx.tx.productMedia.updateMany).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      where: expect.objectContaining({ id: "media-target" }),
+      data: expect.objectContaining({ role: "PRIMARY", position: 0 }),
+    }));
   });
 });

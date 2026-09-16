@@ -1,7 +1,7 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { AdminProductMedia, ProductMediaConfirmResponse, ProductMediaUploadResponse } from "@iranyaragh/contracts";
-import type { ProductMedia } from "@prisma/client";
+import { Prisma, type ProductMedia } from "@prisma/client";
 import { getRequestId } from "../../common/request-context";
 import { PrismaService } from "../../database/prisma.service";
 import { AuditLogService } from "../audit/audit-log.service";
@@ -97,6 +97,12 @@ export class MediaService {
         message: "The requested media position is outside the configured product media limit.",
       });
     }
+    if (input.role === "PRIMARY" && input.position !== 0) {
+      throw new UnprocessableEntityException({
+        code: "MEDIA_POSITION_CONFLICT",
+        message: "Primary media must use position zero.",
+      });
+    }
 
     const safeInput = {
       ...input,
@@ -150,8 +156,9 @@ export class MediaService {
           declaredMime: input.declaredMime,
         });
         const uploadExpiresAt = new Date(Date.now() + this.policy.uploadTtlSeconds * 1000);
-        await tx.productMedia.create({
-          data: {
+        try {
+          await tx.productMedia.create({
+            data: {
             id: mediaId,
             productId,
             kind: input.kind,
@@ -163,8 +170,17 @@ export class MediaService {
             declaredBytes: BigInt(input.bytes),
             createdById: actorId,
             uploadExpiresAt,
-          },
-        });
+            },
+          });
+        } catch (error) {
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            throw new ConflictException({
+              code: "MEDIA_POSITION_CONFLICT",
+              message: "The requested media position or primary role changed concurrently.",
+            });
+          }
+          throw error;
+        }
         await this.audit.record(
           {
             action: "catalog.media.upload.initiated",
@@ -742,6 +758,22 @@ export class MediaService {
             },
           });
           if (released.count !== 1)
+            throw new ConflictException({
+              code: "STALE_VERSION",
+              message: "Primary media changed concurrently.",
+            });
+        }
+        if (currentPrimary && currentPrimary.id !== displacedAtZero?.id) {
+          const demoted = await tx.productMedia.updateMany({
+            where: {
+              id: currentPrimary.id,
+              version: currentPrimary.version,
+              role: "PRIMARY",
+              state: { not: "ARCHIVED" },
+            },
+            data: { role: "GALLERY", version: { increment: 1 } },
+          });
+          if (demoted.count !== 1)
             throw new ConflictException({
               code: "STALE_VERSION",
               message: "Primary media changed concurrently.",

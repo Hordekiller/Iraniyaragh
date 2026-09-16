@@ -80,6 +80,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
   const canRead = canReadCatalogMedia(user);
   const canWrite = canWriteCatalogMedia(user);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pollCountRef = useRef(0);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [items, setItems] = useState<AdminProductMedia[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,8 +122,19 @@ export function ProductMediaManager({ productId }: { productId: string }) {
   }, [load]);
 
   useEffect(() => {
-    if (!items.some((item) => ACTIVE_PROCESSING.has(item.state))) return;
-    const timer = window.setInterval(() => void load(undefined, true), 2000);
+    if (!items.some((item) => ACTIVE_PROCESSING.has(item.state))) {
+      pollCountRef.current = 0;
+      return;
+    }
+    const timer = window.setInterval(() => {
+      pollCountRef.current += 1;
+      if (pollCountRef.current >= 150) {
+        window.clearInterval(timer);
+        setError("پردازش تصویر بیش از حد انتظار طول کشید. وضعیت را تازه‌سازی کنید یا تصویر را بایگانی و دوباره ارسال کنید.");
+        return;
+      }
+      void load(undefined, true);
+    }, 2000);
     return () => window.clearInterval(timer);
   }, [items, load]);
 
