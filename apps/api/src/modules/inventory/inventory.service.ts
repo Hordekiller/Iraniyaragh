@@ -588,6 +588,20 @@ export class InventoryService {
     };
   }
 
+  async getPublicAvailability(variantIds: string[]) {
+    const ids = [...new Set(variantIds)].slice(0, 100);
+    if (!ids.length) return { items: [] };
+    const variants = await this.prisma.productVariant.findMany({ where: { id: { in: ids }, status: 'ACTIVE' }, select: { id: true } });
+    const balances = await this.prisma.inventoryBalance.findMany({ where: { variantId: { in: variants.map(v => v.id) } }, select: { variantId: true, available: true } });
+    const totals = new Map<string, number>();
+    for (const balance of balances) totals.set(balance.variantId, (totals.get(balance.variantId) ?? 0) + balance.available);
+    return { items: ids.map(variantId => {
+      if (!variants.some(variant => variant.id === variantId)) return { variantId, status: 'UNKNOWN' as const };
+      const available = totals.get(variantId) ?? 0;
+      return { variantId, status: available <= 0 ? 'OUT_OF_STOCK' as const : available <= 5 ? 'LOW_STOCK' as const : 'IN_STOCK' as const };
+    }) };
+  }
+
   async getMovements(query: MovementQuery): Promise<{ items: InventoryMovementDto[]; count: number }> {
     const limit = clampInt(query.limit, 1, 100, 50);
     const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
