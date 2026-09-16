@@ -29,6 +29,25 @@ describe('CatalogHttpClient', () => {
     expect(product).toMatchObject({ price: { amount: '990000' }, description: 'توضیح', image: image.sources[0].url })
   })
 
+  it('resolves brands and returns an empty page for unknown filters', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/brands')) return response({ data: { items: [{ id: 'brand-1', name: 'آریا', slug: 'arya' }] } })
+      if (url.includes('brandId=brand-1')) return response({ data: { items: [], meta: { page: 1, perPage: 100, total: 0, pages: 0 } } })
+      throw new Error(`unexpected request: ${url}`)
+    })
+    const client = new CatalogHttpClient({ fetch: fetcher })
+    expect((await client.listProducts({ brand: 'arya' })).meta.total).toBe(0)
+    expect((await client.listProducts({ brand: 'missing' })).items).toEqual([])
+    expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+
+  it('uses a safe placeholder for products without media or price', async () => {
+    const fetcher = vi.fn(async () => response({ data: { items: [{ id: 'p-2', name: 'محصول', slug: 'item', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', primaryMedia: null, startingPrice: null }], meta: { page: 1, perPage: 100, total: 1, pages: 1 } } }))
+    const product = (await new CatalogHttpClient({ fetch: fetcher }).listProducts()).items[0]
+    expect(product).toMatchObject({ image: '/images/tool1.jpg', price: { amount: '0', currency: 'IRR' }, stockStatus: 'UNKNOWN' })
+  })
+
   it('normalizes transport, API and malformed responses', async () => {
     await expect(new CatalogHttpClient({ fetch: vi.fn(async () => { throw new Error('offline') }) }).listCategories()).rejects.toMatchObject({ code: 'UPSTREAM_UNAVAILABLE' })
     await expect(new CatalogHttpClient({ fetch: vi.fn(async () => response({ code: 'NOT_FOUND', message: 'missing', requestId: 'req-1' }, 404)) }).listCategories()).rejects.toMatchObject({ code: 'NOT_FOUND', statusCode: 404, requestId: 'req-1' })
