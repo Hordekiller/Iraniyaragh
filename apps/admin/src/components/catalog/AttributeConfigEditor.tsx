@@ -178,13 +178,12 @@ export function AttributeConfigEditor({
 
         {canWrite ? (
           <Stack direction="row" spacing={1.5} alignItems="flex-end">
-            <FormField label="افزودن ویژگی" htmlFor="attribute-config-add" helperText="فقط ویژگی‌های فعال نمایش داده می‌شوند.">
+            <FormField label="افزودن ویژگی" htmlFor="attribute-config-add" helperText="فقط ویژگی‌های فعال نمایش داده می‌شوند." disabled={candidates.length === 0}>
               <Select
                 id="attribute-config-add"
                 size="small"
                 displayEmpty
                 value={addCode}
-                disabled={candidates.length === 0}
                 inputProps={{ 'aria-label': 'افزودن ویژگی' }}
                 onChange={(event) => setAddCode(String(event.target.value))}
               >

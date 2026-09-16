@@ -138,12 +138,12 @@ export function AttributeDialog({
                 helperText="انگلیسی، کوچک و بدون فاصله"
                 error={Boolean(errors.code)}
                 errorText={errors.code}
+                disabled={editing}
               >
                 <TextField
                   id="attribute-code"
                   size="small"
                   dir="ltr"
-                  disabled={editing}
                   value={code}
                   onChange={(event) => setCode(event.target.value.toLocaleLowerCase('en-US'))}
                 />
