@@ -513,7 +513,10 @@ describe('InventoryService public availability', () => {
   });
 
   it('returns safe aggregate status for active variants and unknown for inactive or missing variants', async () => {
-    const prisma = ctx.prisma as any;
+    const prisma = ctx.prisma as {
+      productVariant: { findMany: ReturnType<typeof vi.fn> };
+      inventoryBalance: { findMany: ReturnType<typeof vi.fn> };
+    };
     prisma.productVariant.findMany.mockResolvedValue([{ id: 'v-in' }, { id: 'v-low' }, { id: 'v-out' }]);
     prisma.inventoryBalance.findMany.mockResolvedValue([
       { variantId: 'v-in', available: 8 },
@@ -532,7 +535,10 @@ describe('InventoryService public availability', () => {
   });
 
   it('short-circuits empty input without querying persistence', async () => {
-    const prisma = ctx.prisma as any;
+    const prisma = ctx.prisma as {
+      productVariant: { findMany: ReturnType<typeof vi.fn> };
+      inventoryBalance: { findMany: ReturnType<typeof vi.fn> };
+    };
     await expect(ctx.service.getPublicAvailability([])).resolves.toEqual({ items: [] });
     expect(prisma.productVariant.findMany).not.toHaveBeenCalled();
     expect(prisma.inventoryBalance.findMany).not.toHaveBeenCalled();
