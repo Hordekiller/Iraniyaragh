@@ -7,6 +7,7 @@ import type {
   ProductListResponse,
   PublicProductMediaImage,
 } from '@iranyaragh/contracts'
+import type { PublicAvailabilityResponse } from '@iranyaragh/contracts'
 import { CatalogError } from './errors'
 import type { CatalogApi, CatalogCategory, CatalogListResult, CatalogProduct, CatalogQuery } from './types'
 
@@ -61,7 +62,11 @@ export class CatalogHttpClient implements CatalogApi {
 
   async getProductBySlug(slug: string): Promise<CatalogProduct> {
     const response = await this.request<ProductDetailPublicResponse>(`/api/v1/catalog/products/${encodeURIComponent(slug)}`)
-    return this.mapProduct(response.data.product)
+    const product = response.data.product
+    const availability = await this.requestFlat<PublicAvailabilityResponse>(`/api/v1/inventory/public/availability?variantIds=${product.variants.map(variant => encodeURIComponent(variant.id)).join(',')}`)
+    const statuses = availability.items.map(item => item.status)
+    const stockStatus = statuses.includes('IN_STOCK') ? 'IN_STOCK' : statuses.includes('LOW_STOCK') ? 'LOW_STOCK' : statuses.length > 0 && statuses.every(status => status === 'OUT_OF_STOCK') ? 'OUT_OF_STOCK' : 'UNKNOWN'
+    return { ...this.mapProduct(product), stockStatus }
   }
 
   private async listBrands() {
@@ -113,5 +118,15 @@ export class CatalogHttpClient implements CatalogApi {
     }
     if (!body || !('data' in body)) throw new CatalogError({ code: 'INTERNAL_ERROR', message: 'پاسخ کاتالوگ معتبر نیست.', statusCode: response.status })
     return body as T
+  }
+
+  private async requestFlat<T extends object>(path: string): Promise<T> {
+    let response: Response
+    try { response = await this.fetcher(`${this.baseUrl}${path}`, { headers: { Accept: 'application/json' } }) }
+    catch { throw new CatalogError({ code: 'UPSTREAM_UNAVAILABLE', message: 'ارتباط با موجودی برقرار نشد.' }) }
+    const body = await response.json().catch(() => null) as T | null
+    if (!response.ok) throw new CatalogError({ code: 'INTERNAL_ERROR', message: 'دریافت موجودی ناموفق بود.', statusCode: response.status })
+    if (!body || !Array.isArray((body as { items?: unknown }).items)) throw new CatalogError({ code: 'INTERNAL_ERROR', message: 'پاسخ موجودی معتبر نیست.', statusCode: response.status })
+    return body
   }
 }

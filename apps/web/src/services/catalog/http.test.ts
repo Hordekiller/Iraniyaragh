@@ -23,10 +23,33 @@ describe('CatalogHttpClient', () => {
   })
 
   it('maps detail primary media and active variant price', async () => {
-    const fetcher = vi.fn(async () => response({ data: { product: { id: 'p-1', name: 'دریل', slug: 'drill', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', description: 'توضیح', brand: null, category: null, variants: [{ id: 'v-1', isActive: true, salePrice: { amount: '990000', currency: 'IRR' } }], media: [image] } } }))
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => String(input).includes('/availability')
+      ? response({ items: [{ variantId: 'v-1', status: 'IN_STOCK' }] })
+      : response({ data: { product: { id: 'p-1', name: 'دریل', slug: 'drill', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', description: 'توضیح', brand: null, category: null, variants: [{ id: 'v-1', isActive: true, salePrice: { amount: '990000', currency: 'IRR' } }], media: [image] } } }))
     const product = await new CatalogHttpClient({ fetch: fetcher }).getProductBySlug('drill/blue')
     expect(fetcher).toHaveBeenCalledWith('/api/v1/catalog/products/drill%2Fblue', expect.anything())
-    expect(product).toMatchObject({ price: { amount: '990000' }, description: 'توضیح', image: image.sources[0].url })
+    expect(product).toMatchObject({ price: { amount: '990000' }, description: 'توضیح', image: image.sources[0].url, stockStatus: 'IN_STOCK' })
+  })
+
+  it('derives low and out of stock states from public availability', async () => {
+    const detail = { data: { product: { id: 'p-1', name: 'محصول', slug: 'item', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', description: null, brand: null, category: null, variants: [{ id: 'v-1', isActive: true, salePrice: null }, { id: 'v-2', isActive: true, salePrice: null }], media: [] } } }
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => String(input).includes('/availability')
+      ? response({ items: [{ variantId: 'v-1', status: 'OUT_OF_STOCK' }, { variantId: 'v-2', status: 'LOW_STOCK' }] })
+      : response(detail))
+    await expect(new CatalogHttpClient({ fetch: fetcher }).getProductBySlug('item')).resolves.toMatchObject({ stockStatus: 'LOW_STOCK' })
+
+    const outFetcher = vi.fn(async (input: RequestInfo | URL) => String(input).includes('/availability')
+      ? response({ items: [{ variantId: 'v-1', status: 'OUT_OF_STOCK' }, { variantId: 'v-2', status: 'OUT_OF_STOCK' }] })
+      : response(detail))
+    await expect(new CatalogHttpClient({ fetch: outFetcher }).getProductBySlug('item')).resolves.toMatchObject({ stockStatus: 'OUT_OF_STOCK' })
+  })
+
+  it('fails closed when availability is unavailable or malformed', async () => {
+    const detail = { data: { product: { id: 'p-1', name: 'محصول', slug: 'item', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', description: null, brand: null, category: null, variants: [{ id: 'v-1', isActive: true, salePrice: null }], media: [] } } }
+    await expect(new CatalogHttpClient({ fetch: vi.fn(async (input: RequestInfo | URL) => String(input).includes('/availability') ? response({ nope: true }) : response(detail)) }).getProductBySlug('item'))
+      .rejects.toMatchObject({ code: 'INTERNAL_ERROR' })
+    await expect(new CatalogHttpClient({ fetch: vi.fn(async (input: RequestInfo | URL) => { if (String(input).includes('/availability')) throw new Error('offline'); return response(detail) }) }).getProductBySlug('item'))
+      .rejects.toMatchObject({ code: 'UPSTREAM_UNAVAILABLE' })
   })
 
   it('resolves brands and returns an empty page for unknown filters', async () => {

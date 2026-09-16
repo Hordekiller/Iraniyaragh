@@ -4409,6 +4409,20 @@
         ]
       }
     },
+    "/inventory/public/availability": {
+      "get": {
+        "operationId": "PublicInventoryController_availability",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PublicInventory"
+        ]
+      }
+    },
     "/notifications/admin/sms-settings": {
       "get": {
         "operationId": "NotificationsAdminController_getSettings",

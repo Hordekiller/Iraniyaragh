@@ -20,7 +20,10 @@ function createFakeClient(overrides: Record<string, unknown> = {}) {
       create: vi.fn(),
       update: vi.fn(),
     },
-    productVariant: { findUnique: vi.fn().mockResolvedValue({ id: 'variant' }) },
+    productVariant: {
+      findUnique: vi.fn().mockResolvedValue({ id: 'variant' }),
+      findMany: vi.fn().mockResolvedValue([]),
+    },
     inventoryBalance: {
       findUnique: vi.fn().mockResolvedValue({ version: 1 }),
       upsert: vi.fn(),
@@ -83,6 +86,7 @@ function buildService() {
       create: vi.fn(),
       update: vi.fn(),
     },
+    productVariant: { findMany: vi.fn() },
     stockTransfer: {
       findMany: vi.fn(),
       count: vi.fn(),
@@ -498,6 +502,46 @@ describe('InventoryService guards and queries', () => {
     await expect(
       ctx.service.expireReservations({ actorId: 'actor', requestId: 'request' }),
     ).rejects.toMatchObject({ response: { code: 'RESERVATION_STATE_CONFLICT' } });
+  });
+});
+
+describe('InventoryService public availability', () => {
+  let ctx: ReturnType<typeof buildService>;
+
+  beforeEach(() => {
+    ctx = buildService();
+  });
+
+  it('returns safe aggregate status for active variants and unknown for inactive or missing variants', async () => {
+    const prisma = ctx.prisma as {
+      productVariant: { findMany: ReturnType<typeof vi.fn> };
+      inventoryBalance: { findMany: ReturnType<typeof vi.fn> };
+    };
+    prisma.productVariant.findMany.mockResolvedValue([{ id: 'v-in' }, { id: 'v-low' }, { id: 'v-out' }]);
+    prisma.inventoryBalance.findMany.mockResolvedValue([
+      { variantId: 'v-in', available: 8 },
+      { variantId: 'v-low', available: 2 },
+      { variantId: 'v-out', available: 0 },
+      { variantId: 'v-in', available: 1 },
+    ]);
+
+    await expect(ctx.service.getPublicAvailability(['v-in', 'v-low', 'v-out', 'v-missing', 'v-in']))
+      .resolves.toEqual({ items: [
+        { variantId: 'v-in', status: 'IN_STOCK' },
+        { variantId: 'v-low', status: 'LOW_STOCK' },
+        { variantId: 'v-out', status: 'OUT_OF_STOCK' },
+        { variantId: 'v-missing', status: 'UNKNOWN' },
+      ] });
+  });
+
+  it('short-circuits empty input without querying persistence', async () => {
+    const prisma = ctx.prisma as {
+      productVariant: { findMany: ReturnType<typeof vi.fn> };
+      inventoryBalance: { findMany: ReturnType<typeof vi.fn> };
+    };
+    await expect(ctx.service.getPublicAvailability([])).resolves.toEqual({ items: [] });
+    expect(prisma.productVariant.findMany).not.toHaveBeenCalled();
+    expect(prisma.inventoryBalance.findMany).not.toHaveBeenCalled();
   });
 });
 

@@ -7,6 +7,10 @@ export const INVENTORY_PERMISSIONS = [
 
 export type InventoryPermission = (typeof INVENTORY_PERMISSIONS)[number];
 
+export type PublicAvailabilityStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'UNKNOWN';
+export type PublicVariantAvailability = { variantId: string; status: PublicAvailabilityStatus };
+export type PublicAvailabilityResponse = { items: PublicVariantAvailability[] };
+
 export type WarehouseStatus = 'ACTIVE' | 'INACTIVE';
 
 export type Warehouse = {
