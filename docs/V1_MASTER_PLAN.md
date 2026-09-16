@@ -1,6 +1,6 @@
 # V1.0 Master Plan — ایران‌یاراغ
 
-Last updated: 2026-09-13
+Last updated: 2026-09-15
 
 This is the V1 release checklist. The complete expansion scope and mandatory
 implementation method—including post-V1 operations and growth—live in
@@ -25,12 +25,14 @@ and dedicated search infrastructure are excluded from V1.
 ## 2. Current baseline
 
 - `0.1` foundation is closed; privileged Auth, session and RBAC runtime are merged
-  via #109/#111/#150/#158 and #49 is closed; auth-parity defect follow-ups
-  #186/#188 are tracked.
+  via #109/#111/#150/#158 and #49 is closed; auth-parity follow-ups #186/#188 were
+  delivered via #190/#195.
 - `0.2` catalog wave is delivered: attributes, variants/SKU identity, price history
-  and staged import merged via #179–#184; media M1 (#162) and storefront
-  integration (#166) remain, with import parity cleanup in #189.
-- Inventory has a strong transactional service foundation but no protected HTTP or UI.
+  and staged import merged via #179–#184 with catalog parity closed out via
+  #189/#199/#200; media M1 (#162) and storefront integration (#166) remain.
+- Inventory has a transactional service foundation plus the protected
+  balance/adjustment HTTP API (#217) with declared error codes and request-ID
+  binding (#219); reservations/transfers HTTP and operator UI remain (EXEC_G4 / #215).
 - Order/payment/fulfillment persistence states exist; business services do not.
 - Web and admin are prototypes/foundations, not integrated commerce applications.
 - Deployment, provider integrations, monitoring and disaster recovery remain unproven.
@@ -144,8 +146,8 @@ team/provider decisions
 - [ ] Implement media metadata and presigned upload confirmation/cleanup boundary.
 - [ ] Add public detail/search/filter/pagination and query-driven indexes.
 - [x] Add validated import dry-run, row errors, idempotency and audit (bounded
-      parser via #183 and staged dry-run → commit flow via #184; parity cleanup in
-      #189).
+      parser via #183 and staged dry-run → commit flow via #184; parity closed via
+      #189/#199/#200).
 
 #### Admin/web
 
