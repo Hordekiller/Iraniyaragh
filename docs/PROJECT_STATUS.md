@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-15
+Last reviewed: 2026-09-16
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -8,7 +8,8 @@ scope. A feature is not called complete merely because code exists on a branch.
 
 ## Executive summary
 
-Iraniyaragh is in **pre-release foundation/auth completion**, before release `0.1`.
+Iraniyaragh is in **pre-release commerce integration**, after catalog/media,
+public discovery and inventory HTTP foundations have merged.
 The repository has a credible platform baseline and substantial authentication,
 security and test infrastructure. It is not yet a usable commerce product: the
 storefront still sells from fixtures, the operational admin has only read-only
@@ -24,9 +25,13 @@ Current delivery confidence:
 | Authentication/RBAC runtime    | Merged foundation | Privileged lifecycle merged via #109 and its parent #49 is closed                           |
 | Customer/auth UX               | Merged foundation | Real HTTP client and provider-dispatched OTP foundation are merged; live SMS.ir activation and provider-backed happy-path acceptance remain |
 | Staff/auth admin UX            | Merged foundation | Staff login now uses the real `StaffAuthHttpClient` (#191); live MFA/session UX and production acceptance remain |
-| Catalog API                    | Advanced foundation | #103 delivered the first Category/Brand/Product/SKU backend vertical slice; #168/#200/#214 added idempotency, import parity and contract parity |
-| Product media                  | M1 implementation | #162 branch provides persistence, secure image upload/processing, cleanup and publish readiness; merge and object-storage acceptance remain |
-| Inventory core                 | Partial           | Protected balance/adjustment HTTP API, stable conflict codes, OpenAPI parity and failure-path coverage merged via #217/#219 |
+| Catalog API                    | Advanced foundation | #103/#168/#200/#214 deliver catalog, variants, pricing, import and contract parity |
+| Catalog Admin                  | Merged slice      | #229 delivers product detail, attributes, variants and import management |
+| Product media                  | Merged M1/M2      | #223/#224/#227 deliver image pipeline, admin authoring, public projection and gallery |
+| Public discovery               | Merged slice      | #228 connects storefront catalog reads to live API data |
+| Inventory core                 | Merged foundation | #222 delivers protected warehouse, balances, movements, adjustments and transfers |
+| Public availability            | Merged slice      | #231 exposes fail-closed variant availability without warehouse internals |
+| Reservation expiry             | Merged optimization | #232 processes bounded expiry batches transactionally with race-safe rechecks |
 | Selling/payment/fulfillment    | Foundation only   | Persistence/state-machine scaffolding exists; application workflows do not                  |
 | Production operations          | Early             | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not |
 
@@ -37,8 +42,8 @@ foundation, and G5–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline at review: `main` commit `e67b26e`. Product Media M1 is developed on
-  `feat/product-media-m1` and is not counted as merged until review/integration.
+- Baseline at review: `main` commit `0a7faba`, containing merged catalog admin,
+  public discovery, media and inventory work through #229/#232.
   The baseline contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
@@ -199,8 +204,8 @@ merged and #49 is closed.
 - integer-Rial prices and non-sensitive public projections;
 - pagination, search, filter, allowlisted sorting and Prisma error mapping.
 
-Still outside the merged Catalog foundation: media upload, price history/effective-price policy, complete
-product detail, admin screens and live storefront integration.
+Remaining beyond the merged Catalog foundation: final publish-to-discovery E2E,
+durable parsed-import storage and operational acceptance.
 
 Delivery gate: current-main reconciliation, current-head CI, independent contract/
 security/query review, OpenAPI drift confirmation and merge.
@@ -212,12 +217,12 @@ security/query review, OpenAPI drift confirmation and merge.
 | RBAC          | Roles, seed and guard machinery                                                                | Every domain route still needs explicit allow/deny policy tests                                                                                |
 | Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                          | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
 | Staff Auth    | Runtime, privileged lifecycle, double-submit CSRF logout fix (#190) and real HTTP login (#191) merged | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                  |
-| Catalog       | Advanced API, Product Media M1–M4 runtime and live storefront HTTP discovery adapter | Admin publish → public discovery E2E against a running API; inventory availability and server-side cart/checkout |
-| Inventory     | Correct service core plus protected balance/adjustment HTTP, conflict codes, OpenAPI parity and failure-path coverage (via #217/#219) | Warehouse/location commands, reservations/transfers HTTP, worker and admin UI                                                                |
+| Catalog       | Advanced API, Product Media M1–M4 runtime, live storefront discovery and merged Admin authoring (#229) | Publish → public discovery E2E against a running API; durable parsed-import storage |
+| Inventory     | Ledger, protected warehouse/balance/movement/adjustment/transfer HTTP (#222), public availability (#231) and batched expiry (#232) | Checkout allocation, reconciliation UI and production worker rollout |
 | Orders        | Schema and generic state helper; read-only admin queue/detail in the #207 storefront slice (fixture-backed, behind `AdminOrdersApi` port) | Aggregate/services, snapshots, compensation, live API and live UI                                                                              |
 | Payments      | Schema/state foundation                                                                        | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
 | Web           | Accessible routed storefront with live Catalog discovery/product HTTP adapter; cart/order/payment remain fixture clients when explicitly enabled | Server pricing, inventory availability, cart/checkout/order/payment integration |
-| Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191) and read-only Orders/Settings modules (via #169)       | Live catalog/inventory/order operational modules (not yet merged)                                                                              |
+| Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229) and read-only Orders/Settings modules | Live inventory/order operations and publish E2E |
 | Operations    | CI and local Compose                                                                           | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
@@ -379,11 +384,16 @@ security/query review, OpenAPI drift confirmation and merge.
 - `#214` merged at `0091808`: catalog variant-contract typing parity plus the
   documented `GET /catalog/admin/attributes/:id` detail endpoint with OpenAPI
   regeneration.
+- `#229` merged at `0a7faba`: Admin Catalog product detail, attributes, variants,
+  import management and complete component coverage.
+- `#231` merged at `e49444f`: public variant availability summary with fail-closed
+  status mapping and live storefront adapter integration.
+- `#232` merged at `40399b4`: bounded reservation-expiry batching in one
+  serializable transaction with race-safe rechecks and integration evidence.
 
-The durable Catalog mutation-idempotency runtime is being implemented separately on
-the post-#168 platform branch. It is not delivered on `main` until its forward
-migration, replay/conflict behavior, PostgreSQL race evidence, OpenAPI header and
-current-head CI are reviewed and merged.
+The durable Catalog mutation-idempotency runtime is merged through #171; remaining
+catalog follow-up is durable parsed-import storage and decompression-time size
+guarding.
 
 ## Open pull-request work (not yet on main)
 
@@ -402,7 +412,8 @@ Remaining for production sign-in is private SMS.ir account/key/template
 activation, a controlled provider-bound test destination and sanitized
 sandbox/production acceptance evidence.
 
-Open: this review-handoff docs PR (`#218`).
+The review-handoff docs reconciliation (#218) is merged; this file is reconciled
+again against `main` `0a7faba` on 2026-09-16.
 
 ## Decisions and blockers
 
