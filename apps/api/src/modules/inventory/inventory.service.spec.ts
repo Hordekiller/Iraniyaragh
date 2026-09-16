@@ -43,6 +43,10 @@ function createFakeClient(overrides: Record<string, unknown> = {}) {
       create: vi.fn().mockResolvedValue(undefined),
       update: vi.fn().mockResolvedValue(undefined),
     },
+    stockTransferTransition: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn(),
+    },
     auditLog: { create: vi.fn() },
     ...overrides,
   };
@@ -86,6 +90,7 @@ function buildService() {
       create: vi.fn(),
       update: vi.fn(),
     },
+    stockTransferTransition: { findUnique: vi.fn(), create: vi.fn() },
     $transaction: vi.fn().mockImplementation(async (fn: (client: unknown) => Promise<unknown>) =>
       fn(tx as never),
     ),
@@ -666,13 +671,14 @@ describe('InventoryService warehouse and location management', () => {
 
   it('lists reservations with filters', async () => {
     ctx.prisma.stockReservation.findMany.mockResolvedValue([
-      { id: 'r1', status: 'ACTIVE', quantity: 3 },
+      { id: 'r1', status: 'ACTIVE', quantity: 3, warehouseId: 'wh', locationId: 'loc', variantId: 'variant', orderId: null, expiresAt: new Date('2026-01-02T00:00:00.000Z'), createdAt: new Date('2026-01-01T00:00:00.000Z'), updatedAt: new Date('2026-01-01T00:00:00.000Z'), idempotencyKey: 'internal-only' },
     ]);
     ctx.prisma.stockReservation.count.mockResolvedValue(1);
 
     const result = await ctx.service.getReservations({ status: 'ACTIVE', limit: 20 });
 
     expect(result.count).toBe(1);
+    expect(result.items[0]).not.toHaveProperty('idempotencyKey');
     expect(ctx.prisma.stockReservation.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { status: 'ACTIVE' }, take: 20, skip: 0 }),
     );
@@ -693,6 +699,14 @@ describe('InventoryService transfer lifecycle', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([0, -1])('rejects transfer quantity %s before opening a transaction', async (quantity) => {
+    await expect(ctx.service.createTransfer({
+      sourceWarehouseId: 'src', targetWarehouseId: 'dst',
+      items: [{ variantId: 'variant', quantity }], actorId: 'actor', requestId: 'request',
+    })).rejects.toMatchObject({ response: { code: 'INVALID_REQUEST' } });
     expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
   });
 
@@ -823,6 +837,15 @@ describe('InventoryService transfer lifecycle', () => {
       expect.objectContaining({ action: 'inventory.transfer.dispatched' }),
       ctx.tx,
     );
+  });
+
+  it('replays an identical transfer transition without repeating side effects', async () => {
+    ctx.tx.stockTransfer.findUnique.mockResolvedValue(transferRow({ status: 'APPROVED' }));
+    ctx.tx.stockTransferTransition.findUnique.mockResolvedValue({ transferId: 'tr-1', action: 'dispatch', expectedVersion: null });
+    const result = await ctx.service.dispatchTransfer('tr-1', { actorId: 'actor', requestId: 'request', idempotencyKey: 'dispatch-1' });
+    expect(result).toEqual(expect.objectContaining({ id: 'tr-1', status: 'APPROVED' }));
+    expect(ctx.tx.inventoryMovement.create).not.toHaveBeenCalled();
+    expect(ctx.tx.stockTransfer.update).not.toHaveBeenCalled();
   });
 
   it('rejects an illegal transition with TRANSFER_STATE_CONFLICT', async () => {
