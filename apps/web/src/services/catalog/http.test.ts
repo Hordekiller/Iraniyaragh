@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { CatalogError } from './errors'
 import { CatalogHttpClient } from './http'
 
-const image = { id: 'media-1', kind: 'IMAGE' as const, position: 0, role: 'PRIMARY' as const, alt: 'دریل', caption: null, width: 640, height: 640, sources: [{ url: 'https://cdn.example/p.webp', width: 640, height: 640, type: 'image/webp' }] }
+const image = { id: 'media-1', kind: 'IMAGE' as const, position: 0, role: 'PRIMARY' as const, alt: 'دریل', caption: null, width: 640, height: 640, sources: [{ url: '/media/products/p.webp', width: 640, height: 640, type: 'image/webp' }] }
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
@@ -16,7 +16,7 @@ describe('CatalogHttpClient', () => {
       if (url.includes('/products?')) return response({ data: { items: [{ id: 'p-1', name: 'دریل', slug: 'drill', status: 'PUBLISHED', brandId: null, categoryId: 'cat-1', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', primaryMedia: image, startingPrice: { amount: '1250000', currency: 'IRR' } }], meta: { page: 1, perPage: 100, total: 1, pages: 1 } } })
       throw new Error(`unexpected request: ${url}`)
     })
-    const result = await new CatalogHttpClient({ baseUrl: 'https://api.example', fetch: fetcher }).listProducts({ categorySlug: 'tools' })
+    const result = await new CatalogHttpClient({ baseUrl: '/backend', fetch: fetcher }).listProducts({ categorySlug: 'tools' })
     expect(fetcher).toHaveBeenCalledTimes(2)
     expect(result.items[0]).toMatchObject({ id: 'p-1', price: { amount: '1250000', currency: 'IRR' }, image: image.sources[0].url, stockStatus: 'UNKNOWN' })
     expect(String(fetcher.mock.calls[1]?.[0])).toContain('categoryId=cat-1')
