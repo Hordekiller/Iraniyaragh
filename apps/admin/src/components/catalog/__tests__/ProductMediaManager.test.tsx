@@ -372,11 +372,13 @@ describe("ProductMediaManager", () => {
 
   it("polls processing media and stops with a recoverable timeout", async () => {
     let poll: TimerHandler | undefined;
+    const mediaInterval = {} as ReturnType<typeof setInterval>;
+    const otherInterval = {} as ReturnType<typeof setInterval>;
     const setIntervalSpy = vi
       .spyOn(window, "setInterval")
       .mockImplementation((handler: TimerHandler, delay?: number) => {
         if (delay === 2000) poll = handler;
-        return delay === 2000 ? 123 : 456;
+        return delay === 2000 ? mediaInterval : otherInterval;
       });
     const clearIntervalSpy = vi
       .spyOn(window, "clearInterval")
@@ -397,7 +399,7 @@ describe("ProductMediaManager", () => {
     expect(
       await screen.findByText(/پردازش تصویر بیش از حد انتظار طول کشید/),
     ).toBeInTheDocument();
-    expect(clearIntervalSpy).toHaveBeenCalledWith(123);
+    expect(clearIntervalSpy).toHaveBeenCalledWith(mediaInterval);
     view.unmount();
     setIntervalSpy.mockRestore();
     clearIntervalSpy.mockRestore();
