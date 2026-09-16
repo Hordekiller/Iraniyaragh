@@ -1,5 +1,6 @@
 export * from './catalog/types'
 export { CatalogFixtureClient } from './catalog/fixtures'
+export { CatalogHttpClient } from './catalog/http'
 export { CatalogError } from './catalog/errors'
 
 export * from './cart/types'

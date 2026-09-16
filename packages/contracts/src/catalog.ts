@@ -141,6 +141,8 @@ export type ProductListItem = {
   createdAt: string;
   updatedAt: string;
   primaryMedia?: PublicProductMediaImage | null;
+  /** Lowest active-variant sale price, in IRR. Public catalog read model. */
+  startingPrice?: Money | null;
 };
 
 export type ProductListQuery = {

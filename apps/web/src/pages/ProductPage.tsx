@@ -14,6 +14,7 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود در انبار',
   LOW_STOCK: 'فقط چند عدد باقی مانده',
   OUT_OF_STOCK: 'ناموجود',
+  UNKNOWN: 'موجودی در حال بررسی',
 }
 
 export function ProductPage() {
@@ -72,7 +73,7 @@ export function ProductPage() {
 
   const inCart = isInCart(item.id)
   const qty = quantityOf(item.id)
-  const available = item.stockStatus !== 'OUT_OF_STOCK'
+  const available = item.stockStatus === 'IN_STOCK' || item.stockStatus === 'LOW_STOCK'
   const discountPercent =
     product.oldPrice && Number(product.oldPrice.amount) > 0
       ? Math.round((1 - Number(product.price.amount) / Number(product.oldPrice.amount)) * 100)
