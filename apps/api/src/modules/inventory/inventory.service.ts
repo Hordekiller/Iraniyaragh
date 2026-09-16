@@ -547,11 +547,18 @@ export class InventoryService {
       orderBy: [{ expiresAt: 'asc' }, { id: 'asc' }],
     });
 
-    let expired = 0;
-    for (const reservation of reservations) {
-      expired += await this.expireSingleReservation(reservation.id, reservation.quantity, context);
-    }
-    return expired;
+    if (!reservations.length) return 0;
+
+    return this.withSerializableRetry(() => this.prisma.$transaction(
+      async (tx) => {
+        let expired = 0;
+        for (const candidate of reservations) {
+          expired += await this.expireSingleReservation(tx, candidate.id, context);
+        }
+        return expired;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ));
   }
 
   async getSnapshots(query: SnapshotQuery): Promise<{ items: InventorySnapshotDto[]; count: number }> {
@@ -1021,60 +1028,42 @@ export class InventoryService {
   }
 
   private async expireSingleReservation(
+    tx: Prisma.TransactionClient,
     reservationId: string,
-    quantity: number,
     context: ActorContext,
   ): Promise<number> {
-    return this.withSerializableRetry(() =>
-      this.prisma.$transaction(
-        async (tx) => {
-          const reservation = await tx.stockReservation.findUnique({ where: { id: reservationId } });
-          if (!reservation) return 0;
-          if (reservation.status !== 'ACTIVE') return 0;
+    const reservation = await tx.stockReservation.findUnique({ where: { id: reservationId } });
+    if (!reservation || reservation.status !== 'ACTIVE') return 0;
+    const quantity = reservation.quantity;
+    const balance = await tx.inventoryBalance.findUnique({
+      where: this.balanceKey({
+        warehouseId: reservation.warehouseId,
+        locationId: reservation.locationId,
+        variantId: reservation.variantId,
+      }),
+    });
+    if (!balance || balance.reserved < quantity) {
+      throw new ConflictException({ code: 'RESERVATION_STATE_CONFLICT', message: 'Reservation balance is inconsistent.' });
+    }
 
-          const balance = await tx.inventoryBalance.findUnique({
-            where: this.balanceKey({
-              warehouseId: reservation.warehouseId,
-              locationId: reservation.locationId,
-              variantId: reservation.variantId,
-            }),
-          });
-          if (!balance || balance.reserved < quantity) {
-            throw new ConflictException({ code: 'RESERVATION_STATE_CONFLICT', message: 'Reservation balance is inconsistent.' });
-          }
-
-          await tx.inventoryBalance.update({
-            where: { id: balance.id },
-            data: {
-              reserved: { decrement: quantity },
-              available: { increment: quantity },
-              version: { increment: 1 },
-            },
-          });
-
-          await tx.stockReservation.update({
-            where: { id: reservationId },
-            data: { status: 'EXPIRED' },
-          });
-
-          await this.auditLog.record(
-            {
-              action: 'inventory.reservation.expired',
-              entityType: 'stock-reservation',
-              entityId: reservationId,
-              before: { reserved: balance.reserved, available: balance.available },
-              after: { reserved: balance.reserved - quantity, available: balance.available + quantity },
-              actorId: context.actorId,
-              requestId: context.requestId,
-            },
-            tx,
-          );
-
-          return 1;
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      ),
+    await tx.inventoryBalance.update({
+      where: { id: balance.id },
+      data: { reserved: { decrement: quantity }, available: { increment: quantity }, version: { increment: 1 } },
+    });
+    await tx.stockReservation.update({ where: { id: reservationId }, data: { status: 'EXPIRED' } });
+    await this.auditLog.record(
+      {
+        action: 'inventory.reservation.expired',
+        entityType: 'stock-reservation',
+        entityId: reservationId,
+        before: { reserved: balance.reserved, available: balance.available },
+        after: { reserved: balance.reserved - quantity, available: balance.available + quantity },
+        actorId: context.actorId,
+        requestId: context.requestId,
+      },
+      tx,
     );
+    return 1;
   }
 
   private balanceKey(key: StockKey) {

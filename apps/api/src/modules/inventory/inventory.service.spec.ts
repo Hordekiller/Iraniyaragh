@@ -456,7 +456,7 @@ describe('InventoryService guards and queries', () => {
       quantity: 2,
     });
     ctx.prisma.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1 });
-    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE' });
+    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE', quantity: 2, warehouseId: 'wh', locationId: 'loc', variantId: 'variant' });
     ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1, reserved: 0 });
 
     await expect(
@@ -473,7 +473,7 @@ describe('InventoryService guards and queries', () => {
       quantity: 2,
     });
     ctx.prisma.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1 });
-    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE' });
+    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE', quantity: 2, warehouseId: 'wh', locationId: 'loc', variantId: 'variant' });
     ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1, reserved: 0 });
 
     await expect(
@@ -492,12 +492,28 @@ describe('InventoryService guards and queries', () => {
         expiresAt: new Date('2020-01-01T00:00:00.000Z'),
       },
     ]);
-    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE' });
+    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE', quantity: 2, warehouseId: 'wh', locationId: 'loc', variantId: 'variant' });
     ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1, reserved: 0 });
 
     await expect(
       ctx.service.expireReservations({ actorId: 'actor', requestId: 'request' }),
     ).rejects.toMatchObject({ response: { code: 'RESERVATION_STATE_CONFLICT' } });
+  });
+
+  it('expires a bounded batch in one serializable transaction and safely skips races', async () => {
+    const first = { id: 'r1', warehouseId: 'wh', locationId: 'loc', variantId: 'v1', quantity: 2, status: 'ACTIVE' };
+    const second = { id: 'r2', warehouseId: 'wh', locationId: 'loc', variantId: 'v2', quantity: 3, status: 'ACTIVE' };
+    ctx.prisma.stockReservation.findMany.mockResolvedValue([first, second]);
+    ctx.tx.stockReservation.findUnique.mockImplementation(async ({ where }: { where: { id: string } }) => where.id === 'r1' ? first : null);
+    ctx.tx.inventoryBalance.findUnique
+      .mockResolvedValueOnce({ id: 'b1', reserved: 2, available: 0, version: 1 })
+      .mockResolvedValueOnce({ id: 'b2', reserved: 3, available: 1, version: 4 });
+
+    await expect(ctx.service.expireReservations({ actorId: 'actor', requestId: 'request' }, { batchSize: 2 }))
+      .resolves.toBe(1);
+    expect(ctx.prisma.$transaction).toHaveBeenCalledOnce();
+    expect(ctx.tx.inventoryBalance.update).toHaveBeenCalledOnce();
+    expect(ctx.tx.stockReservation.update).toHaveBeenCalledWith({ where: { id: 'r1' }, data: { status: 'EXPIRED' } });
   });
 });
 
