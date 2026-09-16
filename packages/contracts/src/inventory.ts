@@ -1,5 +1,3 @@
-import type { ApiSuccess } from './api';
-
 export const INVENTORY_PERMISSIONS = [
   'inventory.read',
   'inventory.adjust',
@@ -22,12 +20,12 @@ export type Warehouse = {
   updatedAt: string;
 };
 
-export type WarehouseListResponse = ApiSuccess<{
+export type WarehouseListResponse = {
   items: Warehouse[];
   count: number;
-}>;
+};
 
-export type WarehouseResponse = ApiSuccess<{ warehouse: Warehouse }>;
+export type WarehouseResponse = Warehouse;
 
 export type WarehouseLocation = {
   id: string;
@@ -44,12 +42,12 @@ export type WarehouseLocation = {
   updatedAt: string;
 };
 
-export type WarehouseLocationListResponse = ApiSuccess<{
+export type WarehouseLocationListResponse = {
   items: WarehouseLocation[];
   count: number;
-}>;
+};
 
-export type WarehouseLocationResponse = ApiSuccess<{ location: WarehouseLocation }>;
+export type WarehouseLocationResponse = WarehouseLocation;
 
 export type ReservationStatus = 'ACTIVE' | 'CONSUMED' | 'RELEASED' | 'EXPIRED';
 
@@ -66,12 +64,12 @@ export type Reservation = {
   updatedAt: string;
 };
 
-export type ReservationListResponse = ApiSuccess<{
+export type ReservationListResponse = {
   items: Reservation[];
   count: number;
-}>;
+};
 
-export type ReservationResponse = ApiSuccess<{ reservation: Reservation }>;
+export type ReservationResponse = Reservation;
 
 export type TransferStatus = 'DRAFT' | 'REQUESTED' | 'APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'CANCELLED';
 
@@ -94,9 +92,9 @@ export type StockTransfer = {
   updatedAt: string;
 };
 
-export type TransferListResponse = ApiSuccess<{
+export type TransferListResponse = {
   items: StockTransfer[];
   count: number;
-}>;
+};
 
-export type TransferResponse = ApiSuccess<{ transfer: StockTransfer }>;
+export type TransferResponse = StockTransfer;

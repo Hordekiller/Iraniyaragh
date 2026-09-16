@@ -763,8 +763,21 @@ model StockTransfer {
   sourceWarehouse   Warehouse           @relation("TransferSource", fields: [sourceWarehouseId], references: [id])
   targetWarehouse   Warehouse           @relation("TransferTarget", fields: [targetWarehouseId], references: [id])
   items             StockTransferItem[]
+  transitions       StockTransferTransition[]
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
+}
+
+model StockTransferTransition {
+  id             String       @id @default(cuid())
+  transferId     String
+  action         String
+  idempotencyKey String       @unique
+  expectedVersion Int?
+  transfer       StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([transferId, action])
 }
 
 model StockTransferItem {

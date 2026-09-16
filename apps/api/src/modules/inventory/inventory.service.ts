@@ -119,6 +119,7 @@ export type CreateTransferCommand = ActorContext & {
 
 export type TransferContext = ActorContext & {
   expectedVersion?: number;
+  idempotencyKey?: string;
 };
 
 export type WarehouseQuery = {
@@ -667,6 +668,9 @@ export class InventoryService {
     if (!command.items.length) {
       throw new BadRequestException({ code: 'TRANSFER_NO_ITEMS', message: 'A transfer requires at least one item.' });
     }
+    if (command.items.some((item) => !Number.isInteger(item.quantity) || item.quantity <= 0)) {
+      throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'Transfer item quantity must be greater than zero.' });
+    }
 
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
@@ -689,7 +693,7 @@ export class InventoryService {
             await this.assertVariant(tx, item.variantId);
           }
 
-          const code = command.code ?? `TRF-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`;
+          const code = (command.code?.trim() || `TRF-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`);
           const transfer = await tx.stockTransfer.create({
             data: {
               code,
@@ -779,14 +783,15 @@ export class InventoryService {
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
-          const existing = await tx.warehouse.findUnique({ where: { code: command.code } });
+          const normalizedCode = command.code.trim();
+          const existing = await tx.warehouse.findUnique({ where: { code: normalizedCode } });
           if (existing) {
             throw new ConflictException({ code: 'WAREHOUSE_CODE_CONFLICT', message: 'Warehouse code already exists.' });
           }
 
           const warehouse = await tx.warehouse.create({
             data: {
-              code: command.code,
+              code: normalizedCode,
               name: command.name.trim(),
               city: command.city ?? null,
               address: command.address ?? null,
@@ -983,7 +988,7 @@ export class InventoryService {
       this.prisma.stockReservation.count({ where }),
     ]);
 
-    return { items: rows, count };
+    return { items: rows.map((row) => this.toReservationDto(row)), count };
   }
 
   private assertTracked(context: { actorId?: string | null; requestId?: string | null }): void {
@@ -1126,7 +1131,7 @@ export class InventoryService {
   }
 
   private reservationMatches(
-    reservation: { warehouseId: string; locationId: string; variantId: string; orderId: string | null; quantity: number },
+    reservation: { warehouseId: string; locationId: string; variantId: string; orderId: string | null; quantity: number; expiresAt: Date },
     command: ReserveStockCommand,
   ): boolean {
     return (
@@ -1134,7 +1139,8 @@ export class InventoryService {
       reservation.locationId === command.locationId &&
       reservation.variantId === command.variantId &&
       (reservation.orderId ?? null) === (command.orderId ?? null) &&
-      reservation.quantity === command.quantity
+      reservation.quantity === command.quantity &&
+      reservation.expiresAt.getTime() === command.expiresAt.getTime()
     );
   }
 
@@ -1170,6 +1176,15 @@ export class InventoryService {
           });
           if (!transfer) {
             throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer not found.' });
+          }
+          if (context.idempotencyKey) {
+            const replay = await tx.stockTransferTransition.findUnique({ where: { idempotencyKey: context.idempotencyKey } });
+            if (replay) {
+              if (replay.transferId !== id || replay.action !== action || replay.expectedVersion !== (context.expectedVersion ?? null)) {
+                throw new ConflictException({ code: 'IDEMPOTENCY_CONFLICT', message: 'Idempotency key was already used for a different transfer transition.' });
+              }
+              return this.toTransferDto(transfer);
+            }
           }
           if (!allowedFrom.includes(transfer.status)) {
             throw new ConflictException({
@@ -1208,6 +1223,11 @@ export class InventoryService {
             data: { status: nextStatus },
             include: { items: true },
           });
+          if (context.idempotencyKey) {
+            await tx.stockTransferTransition.create({
+              data: { transferId: id, action, idempotencyKey: context.idempotencyKey, expectedVersion: context.expectedVersion ?? null },
+            });
+          }
 
           const auditAction =
             action === 'receive'
@@ -1394,6 +1414,7 @@ export class InventoryService {
     if (
       transfer.sourceWarehouseId !== command.sourceWarehouseId ||
       transfer.targetWarehouseId !== command.targetWarehouseId ||
+      transfer.code !== (command.code ?? transfer.code) ||
       transfer.items.length !== command.items.length
     ) {
       return false;
@@ -1455,6 +1476,21 @@ export class InventoryService {
       isActive: location.isActive,
       createdAt: location.createdAt,
       updatedAt: location.updatedAt,
+    };
+  }
+
+  private toReservationDto(reservation: { id: string; warehouseId: string; locationId: string; variantId: string; orderId: string | null; quantity: number; status: string; expiresAt: Date; createdAt: Date; updatedAt: Date }) {
+    return {
+      id: reservation.id,
+      warehouseId: reservation.warehouseId,
+      locationId: reservation.locationId,
+      variantId: reservation.variantId,
+      orderId: reservation.orderId,
+      quantity: reservation.quantity,
+      status: reservation.status,
+      expiresAt: reservation.expiresAt,
+      createdAt: reservation.createdAt,
+      updatedAt: reservation.updatedAt,
     };
   }
 

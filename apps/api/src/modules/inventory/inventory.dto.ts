@@ -52,6 +52,15 @@ export class WarehouseUpdateDto {
   @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
+export class WarehouseListQueryDto {
+  @IsOptional() @Type(() => Boolean) @IsBoolean() isActive?: boolean;
+  @IsOptional() @Type(() => Boolean) @IsBoolean() isInactive?: boolean;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 50;
+}
+
+export class LocationListQueryDto extends WarehouseListQueryDto {}
+
 export class LocationCreateDto {
   @IsString() @MaxLength(64) code!: string;
   @IsOptional() @IsString() @MaxLength(200) name?: string;
@@ -80,7 +89,6 @@ export class InventoryReservationDto {
   @IsInt() @Min(1) quantity!: number;
   @IsDateString() expiresAt!: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) expectedVersion?: number;
-  @IsOptional() @IsString() @MaxLength(128) idempotencyKey?: string;
 }
 
 export class ReservationListQueryDto {
@@ -109,7 +117,6 @@ export class TransferCreateDto {
   @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true })
   @Type(() => TransferItemCreateDto)
   items!: TransferItemCreateDto[];
-  @IsOptional() @IsString() @MaxLength(128) idempotencyKey?: string;
 }
 
 export class TransferListQueryDto {

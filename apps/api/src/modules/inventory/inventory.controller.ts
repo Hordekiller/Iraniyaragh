@@ -15,6 +15,8 @@ import {
   TransferActionDto,
   TransferCreateDto,
   TransferListQueryDto,
+  WarehouseListQueryDto,
+  LocationListQueryDto,
   WarehouseCreateDto,
   WarehouseUpdateDto,
 } from './inventory.dto';
@@ -40,7 +42,7 @@ export class InventoryController {
 
   @Get('warehouses')
   @RequirePermission('inventory.read')
-  async warehouses(@Query() query: TransferListQueryDto) { return this.inventory.listWarehouses(query); }
+  async warehouses(@Query() query: WarehouseListQueryDto) { return this.inventory.listWarehouses(query); }
 
   @Post('warehouses')
   @RequirePermission('inventory.adjust')
@@ -56,7 +58,7 @@ export class InventoryController {
 
   @Get('warehouses/:warehouseId/locations')
   @RequirePermission('inventory.read')
-  async locations(@Param('warehouseId') warehouseId: string, @Query() query: TransferListQueryDto) { return this.inventory.listLocations(warehouseId, query); }
+  async locations(@Param('warehouseId') warehouseId: string, @Query() query: LocationListQueryDto) { return this.inventory.listLocations(warehouseId, query); }
 
   @Post('warehouses/:warehouseId/locations')
   @RequirePermission('inventory.adjust')
@@ -108,31 +110,31 @@ export class InventoryController {
 
   @Post('transfers/:id/request')
   @RequirePermission('inventory.transfer')
-  async requestTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto) {
-    return this.inventory.requestTransfer(id, { expectedVersion: input.expectedVersion, actorId: principal.userId, requestId: getRequestId() });
+  async requestTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto, @Headers('idempotency-key') idempotencyKey?: string) {
+    return this.inventory.requestTransfer(id, { expectedVersion: input.expectedVersion, ...(idempotencyKey ? { idempotencyKey } : {}), actorId: principal.userId, requestId: getRequestId() });
   }
 
   @Post('transfers/:id/approve')
   @RequirePermission('inventory.approve')
-  async approveTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto) {
-    return this.inventory.approveTransfer(id, { expectedVersion: input.expectedVersion, actorId: principal.userId, requestId: getRequestId() });
+  async approveTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto, @Headers('idempotency-key') idempotencyKey?: string) {
+    return this.inventory.approveTransfer(id, { expectedVersion: input.expectedVersion, ...(idempotencyKey ? { idempotencyKey } : {}), actorId: principal.userId, requestId: getRequestId() });
   }
 
   @Post('transfers/:id/dispatch')
   @RequirePermission('inventory.transfer')
-  async dispatchTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto) {
-    return this.inventory.dispatchTransfer(id, { expectedVersion: input.expectedVersion, actorId: principal.userId, requestId: getRequestId() });
+  async dispatchTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto, @Headers('idempotency-key') idempotencyKey?: string) {
+    return this.inventory.dispatchTransfer(id, { expectedVersion: input.expectedVersion, ...(idempotencyKey ? { idempotencyKey } : {}), actorId: principal.userId, requestId: getRequestId() });
   }
 
   @Post('transfers/:id/receive')
   @RequirePermission('inventory.transfer')
-  async receiveTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto) {
-    return this.inventory.receiveTransfer(id, { expectedVersion: input.expectedVersion, actorId: principal.userId, requestId: getRequestId() });
+  async receiveTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto, @Headers('idempotency-key') idempotencyKey?: string) {
+    return this.inventory.receiveTransfer(id, { expectedVersion: input.expectedVersion, ...(idempotencyKey ? { idempotencyKey } : {}), actorId: principal.userId, requestId: getRequestId() });
   }
 
   @Post('transfers/:id/cancel')
   @RequirePermission('inventory.transfer')
-  async cancelTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto) {
-    return this.inventory.cancelTransfer(id, { expectedVersion: input.expectedVersion, actorId: principal.userId, requestId: getRequestId() });
+  async cancelTransfer(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: TransferActionDto, @Headers('idempotency-key') idempotencyKey?: string) {
+    return this.inventory.cancelTransfer(id, { expectedVersion: input.expectedVersion, ...(idempotencyKey ? { idempotencyKey } : {}), actorId: principal.userId, requestId: getRequestId() });
   }
 }
