@@ -105,7 +105,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
         ]);
         setProduct(productData.product);
         setItems(media.filter((item) => item.state !== "ARCHIVED"));
-        setError(null);
+        if (!quiet) setError(null);
       } catch (caught) {
         if (!(caught instanceof ApiAbortError)) setError(message(caught));
       } finally {

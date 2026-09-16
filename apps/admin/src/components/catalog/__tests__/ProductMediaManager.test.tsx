@@ -71,6 +71,7 @@ function renderManager() {
 
 describe("ProductMediaManager", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mocks.user = { permissions: [CATALOG_MEDIA_READ, CATALOG_MEDIA_WRITE] };
     mocks.getProduct.mockResolvedValue({
       product: { id: "p1", name: "قفل", version: 3 },
@@ -92,6 +93,10 @@ describe("ProductMediaManager", () => {
       ...media("m2", 1, "GALLERY"),
       altText: "نمای کنار",
     });
+    mocks.initiateMediaUpload.mockResolvedValue({ mediaId: "m4", uploadUrl: "/signed", method: "PUT", requiredHeaders: {}, expiresAt: "", version: 1 });
+    mocks.uploadMediaObject.mockImplementation(async (_intent: unknown, _file: File, progress: (value: number) => void) => progress(100));
+    mocks.confirmMediaUpload.mockResolvedValue(media("m4", 3, "GALLERY"));
+    mocks.archiveMedia.mockResolvedValue({ ...media("m2", 1, "GALLERY"), state: "ARCHIVED" });
   });
 
   it("renders the Vuexy-aligned upload card and ordered media controls", async () => {
@@ -162,5 +167,46 @@ describe("ProductMediaManager", () => {
         }),
       ),
     );
+  });
+
+  it("uploads through initiate, signed PUT progress and confirmation", async () => {
+    const view = renderManager();
+    await screen.findByText("m1.webp");
+    const input = view.container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["image"], "new.webp", { type: "image/webp" });
+    fireEvent.change(input, { target: { files: [file] } });
+    await waitFor(() => expect(mocks.initiateMediaUpload).toHaveBeenCalledWith("p1", expect.objectContaining({
+      kind: "IMAGE", role: "GALLERY", position: 3, productVersion: 3,
+    })));
+    expect(mocks.uploadMediaObject).toHaveBeenCalledWith(expect.objectContaining({ mediaId: "m4" }), file, expect.any(Function));
+    expect(mocks.confirmMediaUpload).toHaveBeenCalledWith("p1", "m4");
+    expect(await screen.findByText("m4.webp")).toBeInTheDocument();
+  });
+
+  it("archives a gallery item only after explicit confirmation", async () => {
+    renderManager();
+    await screen.findByText("m2.webp");
+    fireEvent.click(screen.getAllByLabelText("بایگانی رسانه")[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "بایگانی" }));
+    await waitFor(() => expect(mocks.archiveMedia).toHaveBeenCalledWith("p1", "m2", 1));
+    await waitFor(() => expect(screen.queryByText("m2.webp")).not.toBeInTheDocument());
+  });
+
+  it("allows read-only staff to inspect media but disables every mutation", async () => {
+    mocks.user = { permissions: [CATALOG_MEDIA_READ] };
+    renderManager();
+    await screen.findByText("m1.webp");
+    expect(screen.getByRole("button", { name: "انتخاب تصویر" })).toBeDisabled();
+    expect(screen.getAllByLabelText("بایگانی رسانه")[1]!).toBeDisabled();
+    expect(screen.getAllByText("ویرایش متن")[1]!).toBeDisabled();
+  });
+
+  it("reloads authoritative state after a stale ordering failure", async () => {
+    mocks.reorderMedia.mockRejectedValueOnce(new Error("version conflict"));
+    renderManager();
+    await screen.findByText("m2.webp");
+    fireEvent.click(screen.getAllByLabelText("انتقال به پایین")[1]!);
+    await waitFor(() => expect(mocks.listProductMedia).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("alert")).toBeInTheDocument();
   });
 });

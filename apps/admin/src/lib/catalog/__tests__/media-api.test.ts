@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "@/lib/auth/token-store";
 import {
+  archiveMedia,
+  confirmMediaUpload,
+  initiateMediaUpload,
   listProductMedia,
   reorderMedia,
   setPrimaryMedia,
@@ -64,6 +67,25 @@ describe("media-api", () => {
     expect(
       (fetchMock.mock.calls as unknown as Array<[string, RequestInit]>)[2]![0],
     ).toBe(`${baseUrl}/m1/primary`);
+  });
+
+  it("covers initiate, confirm and archive command contracts", async () => {
+    const upload = { mediaId: "m1", uploadUrl: "/signed", method: "PUT", requiredHeaders: {}, expiresAt: "", version: 1 };
+    const media = { id: "m1" };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ upload }))
+      .mockResolvedValueOnce(response({ media }))
+      .mockResolvedValueOnce(response({ media }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(initiateMediaUpload("p1", { kind: "IMAGE", role: "PRIMARY", position: 0, originalFilename: "a.webp", declaredMime: "image/webp", bytes: 10, productVersion: 3 })).resolves.toEqual(upload);
+    await expect(confirmMediaUpload("p1", "m1")).resolves.toEqual(media);
+    await expect(archiveMedia("p1", "m1", 2)).resolves.toBeUndefined();
+    expect(fetchMock.mock.calls.map(call => call[0])).toEqual([
+      `${baseUrl}/uploads`, `${baseUrl}/m1/confirm`, `${baseUrl}/m1/archive`,
+    ]);
+    for (const [, init] of fetchMock.mock.calls as unknown as Array<[string, RequestInit]>) {
+      expect(init.headers).toEqual(expect.objectContaining({ "Idempotency-Key": expect.stringMatching(/^media-/u) }));
+    }
   });
 
   it("uploads directly to the exact presigned URL and reports progress without an API token", async () => {
