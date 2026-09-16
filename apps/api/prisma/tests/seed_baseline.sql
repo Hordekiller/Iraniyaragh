@@ -11,6 +11,7 @@ DECLARE
     'customers.manage',
     'customers.read',
     'inventory.adjust',
+    'inventory.approve',
     'inventory.read',
     'inventory.transfer',
     'orders.manage',
