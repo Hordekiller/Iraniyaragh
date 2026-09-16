@@ -138,6 +138,16 @@ foundation, and G5–G10 have not reached integrated completion.
 - Publish readiness requires exactly one `READY` primary image. Advanced video
   processing and public/admin consumers remain later M2–M5 work.
 
+### Product Media M2 (`feat/product-media-m2`, stacked pending review)
+
+- Vuexy-aligned, Persian RTL Admin Media Manager backed by the real M1 client:
+  private direct upload with progress, processing states/polling, metadata editing,
+  primary selection, pointer/keyboard ordering and guarded archive confirmation.
+- Admin access is gated independently by `catalog.media.read/write`; list actions do
+  not expose the Media route without read permission.
+- M2 adds a version-guarded, idempotent primary-selection command and prevents a
+  published product from losing its primary image through archive.
+
 ## Recently merged capability
 
 ### PR #109 — Auth privileged lifecycle

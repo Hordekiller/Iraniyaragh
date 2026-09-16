@@ -58,7 +58,9 @@ are never copied as commerce truth.
 - rich-text editor after the governed content schema, sanitizer, revision/reviewer and
   preview contracts land;
 - date picker after UTC/Tehran/Jalali input/output behavior is specified and tested;
-- upload/dropzone after presigned storage, MIME/size/malware and recovery contracts;
+- upload/dropzone is implemented for Product Media M2 using the Vuexy Product Image
+  composition over the repository-owned MUI/API/Auth foundations; server policy
+  remains authoritative for MIME, size, processing and recovery;
 - bulk actions, export and import only with bounded jobs, audit and permission gates.
 
 ## Verification contract
