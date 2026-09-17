@@ -29,4 +29,13 @@ describe('CartController', () => {
     expect(() => controller.remove(principal, undefined, 'v1')).toThrow(BadRequestException);
     expect(() => controller.remove(principal, 'key', ' ')).toThrow(BadRequestException);
   });
+
+  it('rejects an invalid set request before delegation', () => {
+    const service = { setForUser: vi.fn() };
+    const controller = new CartController(service as never);
+    expect(() => controller.set(principal, undefined, 'v1', { variantId: 'v1', quantity: 2 })).toThrow(BadRequestException);
+    expect(() => controller.set(principal, 'key', ' ', { variantId: 'v1', quantity: 2 })).toThrow(BadRequestException);
+    expect(() => controller.set(principal, 'key', 'v1', { variantId: 'v2', quantity: 2 })).toThrow(BadRequestException);
+    expect(service.setForUser).not.toHaveBeenCalled();
+  });
 });
