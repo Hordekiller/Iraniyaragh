@@ -11,7 +11,7 @@ function setup() {
     cartMutation: { findUnique: vi.fn(), create: vi.fn() },
     productVariant: { findFirst: vi.fn().mockResolvedValue(variant) },
     cart: { upsert: vi.fn().mockResolvedValue({ id: 'c1', customerId: 'c1', version: 1 }), update: vi.fn(), findUniqueOrThrow: vi.fn().mockResolvedValue(cart) },
-    cartItem: { findUnique: vi.fn().mockResolvedValue(null), count: vi.fn().mockResolvedValue(0), upsert: vi.fn() },
+    cartItem: { findUnique: vi.fn().mockResolvedValue(null), count: vi.fn().mockResolvedValue(0), upsert: vi.fn(), deleteMany: vi.fn() },
   };
   const prisma = { customer: { findUnique: vi.fn().mockResolvedValue({ id: 'c1', userId: 'u1' }) }, cart: { upsert: vi.fn().mockResolvedValue(cart) }, $transaction: vi.fn(async (fn: (value: typeof tx) => unknown) => fn(tx)) };
   return { service: new CartService(prisma as never), prisma, tx };
@@ -78,5 +78,28 @@ describe('CartService', () => {
     tx.cartItem.findUnique.mockResolvedValue({ quantity: 2 });
     await service.addForUser('u1', { variantId: 'v1', quantity: 1 }, 'k7');
     expect(tx.cartItem.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { quantity: 3 } }));
+  });
+
+  it('removes a line and records an idempotent response', async () => {
+    const { service, tx } = setup();
+    const result = await service.removeForUser('u1', 'v1', 'k8');
+    expect(result.data.cart.id).toBe('c1');
+    expect(tx.cartItem.deleteMany).toHaveBeenCalledWith({ where: { cartId: 'c1', variantId: 'v1' } });
+    expect(tx.cartMutation.create).toHaveBeenCalledOnce();
+  });
+
+  it('replays an idempotent remove without deleting twice', async () => {
+    const { service, tx } = setup();
+    const fingerprint = createHash('sha256').update(JSON.stringify({ variantId: 'v1' })).digest('hex');
+    const response = { data: { cart: { id: 'c1' } } };
+    tx.cartMutation.findUnique.mockResolvedValue({ fingerprint, responseJson: response });
+    await expect(service.removeForUser('u1', 'v1', 'k9')).resolves.toEqual(response);
+    expect(tx.cartItem.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects a remove key reused with a different variant', async () => {
+    const { service, tx } = setup();
+    tx.cartMutation.findUnique.mockResolvedValue({ fingerprint: 'different' });
+    await expect(service.removeForUser('u1', 'v1', 'k10')).rejects.toBeInstanceOf(ConflictException);
   });
 });

@@ -1739,6 +1739,14 @@
         ]
       }
     },
+    "/cart/lines/{variantId}": {
+      "delete": {
+        "operationId": "CartController_remove",
+        "parameters": [],
+        "responses": { "200": { "description": "" } },
+        "tags": ["Cart"]
+      }
+    },
     "/catalog/admin/attributes": {
       "get": {
         "operationId": "CatalogController_attributes",
