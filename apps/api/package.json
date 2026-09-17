@@ -4,8 +4,9 @@
   "version": "0.1.0",
   "scripts": {
     "auth:bootstrap": "node scripts/bootstrap-admin.mjs",
+    "media:bucket": "node scripts/provision-media-bucket.mjs",
     "dev": "nest start --watch",
-    "worker:media": "node dist/media-worker.js",
+    "worker:media": "node dist/src/media-worker.js",
     "build": "nest build",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run && node --test prisma/*.test.mjs",

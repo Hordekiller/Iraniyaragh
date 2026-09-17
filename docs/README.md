@@ -43,5 +43,7 @@ Read these documents before implementing business-critical features.
 28. `OBSERVABILITY_CONTRACT.md` — diagnostic event schema, privacy/redaction
     limits, audit separation and phased logging/telemetry boundary.
 29. `accessibility/` — accessibility review notes (auth UX, admin sessions).
+30. `MEDIA_M5_EVIDENCE.md` — verified product-media M4 storefront gallery and M5
+    publish-to-discovery evidence, plus the open contract gaps.
 
 When code and documentation disagree, stop and resolve the discrepancy. Do not silently bypass a documented invariant.

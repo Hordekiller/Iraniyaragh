@@ -145,8 +145,9 @@ jobs:
       CORS_ORIGINS: http://127.0.0.1:3001
       OBJECT_STORAGE_ENDPOINT: http://127.0.0.1:9000
       OBJECT_STORAGE_ACCESS_KEY: minio
-      OBJECT_STORAGE_SECRET_KEY: change-me
+      OBJECT_STORAGE_SECRET_KEY: change-me-now
       OBJECT_STORAGE_BUCKET: products
+      PUBLIC_MEDIA_ORIGIN: http://127.0.0.1:9000/products
       NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4000
     services:
       postgres:
@@ -189,19 +190,33 @@ jobs:
         run: pnpm --filter @iranyaragh/api prisma:seed
       - name: Install Chromium and system dependencies
         run: pnpm --filter @iranyaragh/e2e exec playwright install --with-deps chromium
-      - name: Build API, start it, build and smoke web and admin
+      - name: Start MinIO and provision the media bucket
+        run: |
+          docker run -d --name e2e-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minio \
+            -e MINIO_ROOT_PASSWORD=change-me-now \
+            minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null 2>&1 || { echo "::error ::MinIO not ready"; docker logs e2e-minio; exit 1; }
+          pnpm --filter @iranyaragh/api media:bucket
+      - name: Build API, start it and the media worker, build and smoke web and admin
         run: |
           pnpm --filter @iranyaragh/api build
           node apps/api/dist/src/main.js > api.log 2>&1 &
           API_PID=$!
-          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+          node apps/api/dist/src/media-worker.js > media-worker.log 2>&1 &
+          MEDIA_WORKER_PID=$!
+          trap 'kill "$API_PID" "$MEDIA_WORKER_PID" 2>/dev/null || true' EXIT
           for i in $(seq 1 60); do
             curl -fsS http://127.0.0.1:4000/api/v1/health/ready >/dev/null 2>&1 && break
             kill -0 "$API_PID" 2>/dev/null || { echo "::error ::API crashed during startup"; tail -n 60 api.log; exit 1; }
             sleep 1
           done
           curl -fsS http://127.0.0.1:4000/api/v1/health/ready >/dev/null 2>&1 || { echo "::error ::API not ready after 60s"; tail -n 60 api.log; exit 1; }
-          pnpm e2e
+          if ! pnpm e2e; then tail -n 60 media-worker.log; exit 1; fi
       - name: Upload Playwright failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

@@ -23,6 +23,7 @@ point for the self-hosting policies in both applications.
 | `web-mobile`    | storefront | 412×915  | Pixel 7 (touch) |
 | `admin-desktop` | operations | 1440×900 | Desktop Chrome  |
 | `admin-mobile`  | operations | 412×915  | Pixel 7 (touch) |
+| `api-http`      | API        | —        | HTTP request context |
 
 Viewport-specific cases are gated with `test.skip(!isMobile(page))` /
 `test.skip(isMobile(page))` at runtime.
@@ -57,6 +58,38 @@ Configuration overrides (`e2e/playwright.config.ts`):
 
 Playwright starts both servers itself via the `webServer` array (`vite preview`
 and `next start` on pinned ports, `--strictPort`).
+
+## API integration (`api-http`)
+
+The `api-http` project drives the real API with `APIRequestContext` and does not
+need the web/admin pages. The product-media journey
+(`tests/api-media-publish-to-discovery.spec.ts`) additionally needs PostgreSQL,
+Redis, a running media worker, and an S3-compatible object store:
+
+```bash
+# local infra (ports: postgres 55432, redis 56379, minio 9000/9001)
+docker compose -f infrastructure/docker/docker-compose.yml \
+  -f infrastructure/docker/docker-compose.override.yml up -d postgres redis minio
+
+# create the bucket + public read policy (reads OBJECT_STORAGE_*)
+OBJECT_STORAGE_ENDPOINT=http://localhost:9000 \
+  OBJECT_STORAGE_ACCESS_KEY=minio OBJECT_STORAGE_SECRET_KEY=change-me-now \
+  pnpm --filter @iranyaragh/api media:bucket
+
+# API and worker must share the MinIO credentials and public origin
+NODE_ENV=test OBJECT_STORAGE_SECRET_KEY=change-me-now \
+  PUBLIC_MEDIA_ORIGIN=http://localhost:9000/products \
+  node apps/api/dist/src/media-worker.js &
+
+AUTH_DEV_CODE=dev-admin-code-123 \
+  pnpm --filter @iranyaragh/e2e exec playwright test \
+  tests/api-media-publish-to-discovery.spec.ts --project=api-http
+```
+
+CI provides all of this in the `e2e` job (MinIO service via `docker run`, bucket
+provisioning, media worker) and sets `AUTH_DEV_CODE=dev-e2e-access-code`,
+`PUBLIC_MEDIA_ORIGIN` and the object-storage variables. See
+`docs/MEDIA_M5_EVIDENCE.md` for the verified matrix and open gaps.
 
 ## Why taps are dispatched
 

@@ -7,6 +7,7 @@ import { useToast } from '../components/feedback/toast-context'
 import { formatToman, toPersianDigits } from '../lib/format'
 import { FREE_SHIPPING_THRESHOLD_RIALS, SHIPPING_COST_RIALS } from '../lib/site-config'
 import { ROUTES } from '../lib/routes'
+import { MediaGallery } from '../components/product/MediaGallery'
 import type { CatalogProduct } from '../services/catalog/types'
 import type { CartLine } from '../services/cart/types'
 
@@ -95,8 +96,42 @@ export function ProductPage() {
     show('به سبد خرید افزوده شد')
   }
 
+  // Structured data uses only values that actually exist in the API response;
+  // counts and dates that are not returned are never invented (spec §7).
+  const structuredData: Record<string, unknown>[] = []
+  if (product.media.length > 0) {
+    const imageUrls = product.media
+      .filter(media => media.kind === 'IMAGE')
+      .flatMap(media => media.sources.map(source => source.url))
+    const productData: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      url: ROUTES.product(product.slug),
+      image: imageUrls.length > 0 ? imageUrls : undefined,
+    }
+    if (product.description) productData.description = product.description
+    structuredData.push(productData)
+  }
+  for (const media of product.media) {
+    if (media.kind !== 'VIDEO') continue
+    const videoData: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'VideoObject',
+      name: `${product.name} — ویدیو`,
+      description: media.description,
+      thumbnailUrl: media.poster.sources.map(source => source.url),
+      contentUrl: media.sources[0]?.url,
+    }
+    if (media.durationMs > 0) videoData.duration = `PT${Math.round(media.durationMs / 1000)}S`
+    structuredData.push(videoData)
+  }
+
   return (
     <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
+      {structuredData.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      )}
       <nav aria-label="مسیر محصول" className="text-xs text-slate-400 mb-4">
         <Link to={ROUTES.home} className="hover:text-[#FF4D00]">خانه</Link>
         <span className="mx-1">/</span>
@@ -112,14 +147,12 @@ export function ProductPage() {
       </nav>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        <div className="relative rounded-[28px] bg-slate-50 overflow-hidden lg:sticky lg:top-24 self-start">
-          <img src={product.image} alt={product.name} className="w-full aspect-square object-cover" />
-          {product.badge && (
-            <span className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-[#C2410C] text-white text-xs font-black">
-              {product.badge}
-            </span>
-          )}
-        </div>
+        <MediaGallery
+          media={product.media}
+          productName={product.name}
+          badge={product.badge}
+          fallbackImage={product.image}
+        />
 
         <div>
           <nav className="flex items-center gap-2">
