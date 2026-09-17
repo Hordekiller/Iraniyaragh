@@ -1711,6 +1711,34 @@
         ]
       }
     },
+    "/cart": {
+      "get": {
+        "operationId": "CartController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Cart"
+        ]
+      }
+    },
+    "/cart/lines": {
+      "post": {
+        "operationId": "CartController_add",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Cart"
+        ]
+      }
+    },
     "/catalog/admin/attributes": {
       "get": {
         "operationId": "CatalogController_attributes",
