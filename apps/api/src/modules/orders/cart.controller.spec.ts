@@ -9,7 +9,7 @@ describe('CartController', () => {
   it('requires an idempotency key for add', async () => {
     const service = { addForUser: vi.fn() };
     const controller = new CartController(service as never);
-    await expect(controller.add(principal, undefined, { variantId: 'v1', quantity: 1 })).rejects.toBeInstanceOf(BadRequestException);
+    expect(() => controller.add(principal, undefined, { variantId: 'v1', quantity: 1 })).toThrow(BadRequestException);
   });
 
   it('delegates add and remove with the authenticated owner', async () => {
@@ -24,7 +24,7 @@ describe('CartController', () => {
   it('requires both key and variant for remove', async () => {
     const service = { removeForUser: vi.fn() };
     const controller = new CartController(service as never);
-    await expect(controller.remove(principal, undefined, 'v1')).rejects.toBeInstanceOf(BadRequestException);
-    await expect(controller.remove(principal, 'key', ' ')).rejects.toBeInstanceOf(BadRequestException);
+    expect(() => controller.remove(principal, undefined, 'v1')).toThrow(BadRequestException);
+    expect(() => controller.remove(principal, 'key', ' ')).toThrow(BadRequestException);
   });
 });
