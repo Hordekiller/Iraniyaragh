@@ -1742,14 +1742,7 @@
     "/cart/lines/{variantId}": {
       "delete": {
         "operationId": "CartController_remove",
-        "parameters": [
-          {
-            "name": "variantId",
-            "required": true,
-            "in": "path",
-            "schema": { "type": "string" }
-          }
-        ],
+        "parameters": [],
         "responses": { "200": { "description": "" } },
         "tags": ["Cart"]
       }
