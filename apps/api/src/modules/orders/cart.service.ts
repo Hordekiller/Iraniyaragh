@@ -47,6 +47,27 @@ export class CartService {
     }
   }
 
+  async removeForUser(userId: string, variantId: string, key: string): Promise<CartResponse> {
+    const customer = await this.customer(userId);
+    const fingerprint = createHash('sha256').update(JSON.stringify({ variantId })).digest('hex');
+    return this.prisma.$transaction(async tx => {
+      const prior = await tx.cartMutation.findUnique({ where: { customerId_idempotencyKey: { customerId: customer.id, idempotencyKey: key } } });
+      if (prior) {
+        if (prior.fingerprint !== fingerprint) throw new ConflictException({ code: 'IDEMPOTENCY_CONFLICT', message: 'Idempotency key payload conflict.' });
+        return prior.responseJson as unknown as CartResponse;
+      }
+      const cart = await tx.cart.upsert({ where: { customerId: customer.id }, create: { customerId: customer.id }, update: {} });
+      {
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id, variantId } });
+        await tx.cart.update({ where: { id: cart.id }, data: { version: { increment: 1 } } });
+      }
+      const current = await tx.cart.findUniqueOrThrow({ where: { customerId: customer.id }, include: this.include() });
+      const result = { data: { cart: this.view(current) } };
+      await tx.cartMutation.create({ data: { cartId: current.id, customerId: customer.id, idempotencyKey: key, fingerprint, responseJson: result } });
+      return result;
+    });
+  }
+
   private async customer(userId: string) {
     const customer = await this.prisma.customer.findUnique({ where: { userId } });
     if (!customer) throw new ConflictException({ code: 'CONFLICT', message: 'Customer profile is not linked to the authenticated user.' });
