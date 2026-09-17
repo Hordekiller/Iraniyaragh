@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { CartService } from './cart.service';
 
-const variant = { id: 'v1', sku: 'SKU-1', title: 'Drill', salePrice: 1250n, product: { name: 'Tool', status: 'ACTIVE' } };
+const variant = { id: 'v1', sku: 'SKU-1', title: 'Drill', salePrice: 1250n, product: { name: 'Tool', status: 'ACTIVE' }, inventory: [{ available: 4 }] };
 const cart = { id: 'c1', customerId: 'c1', version: 2, updatedAt: new Date('2026-01-01T00:00:00Z'), items: [{ cartId: 'c1', variantId: 'v1', quantity: 2, variant }] };
 
 function setup() {
@@ -22,6 +22,7 @@ describe('CartService', () => {
     const result = await service.getForUser('u1');
     expect(result.data.cart.lines[0].unitPrice.amount).toBe('1250');
     expect(result.data.cart.lines[0].lineTotal.amount).toBe('2500');
+    expect(result.data.cart.lines[0].available).toBe(4);
   });
 
   it('rejects invalid quantities before persistence', async () => {
