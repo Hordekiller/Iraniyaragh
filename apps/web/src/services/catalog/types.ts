@@ -1,4 +1,4 @@
-import type { Money, ProductListMeta, CategorySummary } from '@iranyaragh/contracts'
+import type { Money, ProductListMeta, CategorySummary, PublicProductMedia } from '@iranyaragh/contracts'
 
 /**
  * Storefront-facing catalog view types.
@@ -19,6 +19,8 @@ export type CatalogProduct = {
   brand: string | null
   category: { id: string; name: string; slug: string } | null
   image: string
+  /** Ordered ready media gallery for the product detail page (contract union). */
+  media: PublicProductMedia[]
   description: string | null
   /** Lowest active-variant sale price, in IRR (Rial). */
   price: Money

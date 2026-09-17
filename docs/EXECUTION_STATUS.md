@@ -1,6 +1,6 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-16
+Last reviewed: 2026-09-17
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
@@ -24,7 +24,7 @@ day-to-day assignments.
 | Gate                  | State                              | Current evidence                                                                                                                                                                                                                                                                                                                                                                                          | Exit blocker                                                                                                                             |
 | --------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `0.1` Foundation/Auth | Acceptance closed                  | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                                                                                                                                                                                                                                                                                        | private #114 acceptance                                                                                                                  |
-| `0.2` Catalog         | Integrated foundation              | Catalog/media, public discovery and admin authoring merged through #223–#229 | Final publish-to-discovery E2E and operational acceptance |
+| `0.2` Catalog         | Integrated foundation              | Catalog/media, public discovery and admin authoring merged through #223–#229; the storefront gallery and the publish-to-discovery E2E are on open `feat/product-media-m5` (`MEDIA_M5_EVIDENCE.md`) | Review/merge of the M4/M5 PR and operational acceptance |
 | `0.3` Inventory       | Protected HTTP foundation          | #222 warehouse/location, balances, movements, adjustments and transfers; #231 availability; #232 expiry batching | Checkout allocation, reconciliation UI and worker rollout |
 | `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                                                                                                                                                                                                                                                                                                                                                                  | Policies and all application/client workflows                                                                                            |
 
@@ -64,6 +64,25 @@ day-to-day assignments.
   on the GitHub side.
 - The 2026-09-11/13 review items (Auth acceptance, catalog P-wave, #217 API) were
   already reflected in the previous snapshot; the latest one is `e67b26e`.
+
+## Reconciliation — product media M4/M5 slice (2026-09-17)
+
+The storefront gallery was recorded as delivered but was not. Merged `#227`
+(`d4d8a95`) carried the title "render accessible product media gallery (#227)"
+and changed only 16 lines of `docs/PROJECT_STATUS.md`; no gallery component ever
+landed on `main`, and `ProductPage` still rendered a single image. The open
+`feat/product-media-m5` branch (base `83dcbcb`) supplies the missing M4 gallery/
+player/structured data plus the M5 real-infra journey, and corrects the M1–M3
+section statuses in `PROJECT_STATUS.md` to merged (#162/#223/#224).
+
+Verified on the branch: web 343/343 tests, API 690 tests, `api-http` M5 E2E 6/6
+against real PostgreSQL, Redis, MinIO and the BullMQ media worker; the CI `e2e`
+job now starts MinIO, provisions the bucket and runs the worker. Evidence and the
+open contract gaps (video pipeline, `catalog.publish`, 15 vs 30-minute TTL,
+publish readiness weaker than spec §9) are recorded in `docs/MEDIA_M5_EVIDENCE.md`.
+A real runtime defect is also fixed there: missing `esModuleInterop` made
+`sharp`/`exceljs` default imports `undefined`, so no image upload could reach
+`READY`.
 
 ## Team disposition ledger — 2026-09-08 (updated 2026-09-11)
 
@@ -168,7 +187,10 @@ fixtures only. Public product list/detail projections expose a nullable
 prices without fabricating stock; availability remains `UNKNOWN` until Inventory
 HTTP is integrated. The remaining exit gap is the end-to-end Admin publish →
 public discovery verification against a running API, followed by Inventory
-availability and server-side Cart/Checkout.
+availability and server-side Cart/Checkout. An API-level publish → discovery
+journey now exists on the open `feat/product-media-m5` branch
+(`docs/MEDIA_M5_EVIDENCE.md`); it is not yet merged and does not cover an Admin
+UI-driven publish.
 
 ## Explicitly not ready
 

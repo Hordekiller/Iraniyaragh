@@ -181,4 +181,43 @@ describe('ProductPage', () => {
 
     expect(screen.getByRole('button', { name: 'مشاهده سبد' })).toBeInTheDocument()
   })
+
+  it('renders the ordered media gallery with the ready primary first', async () => {
+    const api = new CatalogFixtureClient({ delayMs: 0 })
+    renderProduct('ronix-2210-hammer-drill', api)
+
+    expect(await screen.findByAltText('دریل چکشی رونیکس ۲۲۱۰ از نمای جلو')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'عکس ۲' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'ویدیو ۳' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'عکس ۴' })).toBeInTheDocument()
+  })
+
+  it('emits truthful Product and VideoObject structured data without invented fields', async () => {
+    const api = new CatalogFixtureClient({ delayMs: 0 })
+    renderProduct('ronix-2210-hammer-drill', api)
+
+    await screen.findByRole('heading', { name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰' })
+
+    const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+    expect(scripts.length).toBeGreaterThanOrEqual(1)
+
+    const nodes = scripts.flatMap(script => JSON.parse(script.textContent ?? '[]'))
+    const productData = nodes.find(node => node['@type'] === 'Product')
+    const videoData = nodes.find(node => node['@type'] === 'VideoObject')
+
+    expect(productData).toMatchObject({ name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰' })
+    expect(productData.image.length).toBeGreaterThan(0)
+    expect(videoData).toMatchObject({ name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰ — ویدیو' })
+    expect(videoData.duration).toBe('PT183S')
+    expect(videoData.uploadDate).toBeUndefined()
+  })
+
+  it('omits structured data for products without ready media', async () => {
+    const api = new CatalogFixtureClient({ delayMs: 0 })
+    renderProduct('hans-24pc-socket-set', api)
+
+    await screen.findByRole('heading', { name: 'ست آچار بکس ۲۴ پارچه هنس' })
+
+    expect(document.querySelector('script[type="application/ld+json"]')).not.toBeInTheDocument()
+  })
 })

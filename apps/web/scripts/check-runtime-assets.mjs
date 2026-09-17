@@ -45,12 +45,15 @@ function isLegalText(file) {
 /**
  * XML namespace URIs (e.g. xmlns="http://www.w3.org/2000/svg" in SVG assets)
  * are identifiers, not runtime fetch targets, so they are stripped before the
- * remote URL check. Legal license texts (OFL.txt) are shipped for attribution
- * and are never fetched at runtime.
+ * remote URL check. The same applies to JSON-LD `@context` values (schema.org):
+ * structured-data markup embeds the identifier for a data vocabulary the page
+ * itself never fetches at runtime. Legal license texts (OFL.txt) are shipped
+ * for attribution and are never fetched at runtime.
  */
 function contentToInspect(file, content) {
   if (isLegalText(file)) return '';
-  return content.replace(/xmlns(?::\w+)?="(?:https?:\/\/[^"]*)"/g, '');
+  const withoutNamespaces = content.replace(/xmlns(?::\w+)?="(?:https?:\/\/[^"]*)"/g, '');
+  return withoutNamespaces.replace(/['"]@context['"]\s*:\s*['"]https?:\/\/schema\.org['"]/g, '');
 }
 
 function collectFiles(target) {

@@ -29,6 +29,7 @@ describe('CatalogHttpClient', () => {
     const product = await new CatalogHttpClient({ fetch: fetcher }).getProductBySlug('drill/blue')
     expect(fetcher).toHaveBeenCalledWith('/api/v1/catalog/products/drill%2Fblue', expect.anything())
     expect(product).toMatchObject({ price: { amount: '990000' }, description: 'توضیح', image: image.sources[0].url, stockStatus: 'IN_STOCK' })
+    expect(product.media).toEqual([image])
   })
 
   it('derives low and out of stock states from public availability', async () => {

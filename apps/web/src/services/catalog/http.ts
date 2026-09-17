@@ -91,6 +91,7 @@ export class CatalogHttpClient implements CatalogApi {
       brand: detail?.brand?.name ?? null,
       category: detail?.category ? { id: detail.category.id, name: detail.category.name, slug: detail.category.slug } : null,
       image: primary?.sources[0]?.url ?? PLACEHOLDER_IMAGE,
+      media: detail?.media ?? [],
       description: detail?.description ?? null,
       price: product.startingPrice ?? variantPrice ?? { amount: '0', currency: 'IRR' },
       oldPrice: null,

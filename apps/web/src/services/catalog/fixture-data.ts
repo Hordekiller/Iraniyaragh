@@ -1,5 +1,5 @@
 import type { CatalogProduct, CatalogCategory } from './types'
-import type { Money } from '@iranyaragh/contracts'
+import type { Money, PublicProductMedia, PublicProductMediaImage } from '@iranyaragh/contracts'
 
 /**
  * Fixture catalog data used by `CatalogFixtureClient` only.
@@ -16,7 +16,7 @@ function tomanToMoney(toman: number): Money {
   return { amount: String(Math.trunc(toman * 10)), currency: 'IRR' }
 }
 
-function p(partial: Omit<CatalogProduct, 'price' | 'oldPrice'> & { priceToman: number; oldToman?: number }): CatalogProduct {
+function p(partial: Omit<CatalogProduct, 'price' | 'oldPrice' | 'media'> & { priceToman: number; oldToman?: number }): CatalogProduct {
   return {
     id: partial.id,
     slug: partial.slug,
@@ -24,6 +24,7 @@ function p(partial: Omit<CatalogProduct, 'price' | 'oldPrice'> & { priceToman: n
     brand: partial.brand,
     category: partial.category,
     image: partial.image,
+    media: [],
     description: partial.description,
     price: tomanToMoney(partial.priceToman),
     oldPrice: partial.oldToman !== undefined ? tomanToMoney(partial.oldToman) : null,
@@ -143,4 +144,67 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
   }),
 ]
 
-export const fixtureAllProducts = fixtureCatalogProducts
+/**
+ * Fixture ready-media galleries for the product detail page.
+ *
+ * These mirror the accepted `PublicProductMedia` union (ordered mixed list,
+ * primary image first, optional video with poster + Persian captions) so the
+ * storefront gallery/player can be developed and exercised against fixtures
+ * before the media backend is wired into the fixture mode.
+ */
+function img(position: number, role: PublicProductMediaImage['role'], src: string, alt: string, caption: string | null = null): PublicProductMediaImage {
+  return {
+    id: `fixture-img-${position}`,
+    kind: 'IMAGE',
+    position,
+    role,
+    alt,
+    caption,
+    width: 1200,
+    height: 1200,
+    sources: [
+      { url: src, width: 480, height: 480, type: 'image/jpeg' },
+      { url: src, width: 768, height: 768, type: 'image/jpeg' },
+      { url: src, width: 1200, height: 1200, type: 'image/jpeg' },
+    ],
+  }
+}
+
+function video(position: number, src: string, url: string, caption: string, description: string): PublicProductMedia {
+  return {
+    id: `fixture-video-${position}`,
+    kind: 'VIDEO',
+    position,
+    caption,
+    description,
+    durationMs: 183_000,
+    width: 1280,
+    height: 720,
+    hasAudio: true,
+    poster: img(position, 'VIDEO_POSTER', src, 'ویدیوی معرفی محصول'),
+    sources: [{ url, type: 'video/mp4', width: 1280, height: 720 }],
+    captions: [{ url: '/media/demo/captions-fa.vtt', kind: 'captions', srclang: 'fa', label: 'فارسی' }],
+  }
+}
+
+const drillGallery: PublicProductMedia[] = [
+  img(0, 'PRIMARY', '/images/hero1.jpg', 'دریل چکشی رونیکس ۲۲۱۰ از نمای جلو'),
+  img(1, 'GALLERY', '/images/tool2.jpg', 'دریل چکشی رونیکس ۲۲۱۰ از نمای کنار'),
+  video(2, '/images/hero1.jpg', '/media/demo/drill-intro.mp4', 'ویدیوی معرفی دریل چکشی', 'نمایش عملکرد دریل چکشی و دستهبندی اجزای آن در ویدیوی کوتاه معرفی.'),
+  img(3, 'GALLERY', '/images/tool3.jpg', 'دریل چکشی رونیکس ۲۲۱۰ و متعلقات'),
+]
+
+const grinderGallery: PublicProductMedia[] = [
+  img(0, 'PRIMARY', '/images/tool2.jpg', 'مینی فرز بوش GWS 750 از نمای جلو'),
+  img(1, 'GALLERY', '/images/hero1.jpg', 'مینی فرز بوش GWS 750 هنگام کار'),
+]
+
+const fixtureGalleries: Record<string, PublicProductMedia[]> = {
+  'p-101': drillGallery,
+  'p-102': grinderGallery,
+}
+
+export const fixtureAllProducts = fixtureCatalogProducts.map(product => {
+  const gallery = fixtureGalleries[product.id]
+  return gallery ? { ...product, media: gallery } : product
+})

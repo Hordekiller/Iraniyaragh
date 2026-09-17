@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-16
+Last reviewed: 2026-09-17
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -27,7 +27,7 @@ Current delivery confidence:
 | Staff/auth admin UX            | Merged foundation | Staff login now uses the real `StaffAuthHttpClient` (#191); live MFA/session UX and production acceptance remain |
 | Catalog API                    | Advanced foundation | #103/#168/#200/#214 deliver catalog, variants, pricing, import and contract parity |
 | Catalog Admin                  | Merged slice      | #229 delivers product detail, attributes, variants and import management |
-| Product media                  | Merged M1/M2      | #223/#224/#227 deliver image pipeline, admin authoring, public projection and gallery |
+| Product media                  | Merged M1–M3; M4/M5 in open PR | #162/#223 deliver the image pipeline and admin authoring, #224 the public projection; merged #227 was docs-only despite its title, so the storefront gallery and the M5 publish-to-discovery journey are in open `feat/product-media-m5` (see `MEDIA_M5_EVIDENCE.md`) |
 | Public discovery               | Merged slice      | #228 connects storefront catalog reads to live API data |
 | Inventory core                 | Merged foundation | #222 delivers protected warehouse, balances, movements, adjustments and transfers |
 | Public availability            | Merged slice      | #231 exposes fail-closed variant availability without warehouse internals |
@@ -131,7 +131,7 @@ foundation, and G5–G10 have not reached integrated completion.
 - Reusable admin table/form/wizard/confirmation/feedback primitives. Showcase routes
   are not production operational modules.
 
-### Product Media M1 (`feat/product-media-m1`, pending merge)
+### Product Media M1 (merged via #162)
 
 - Forward-only `ProductMedia`/rendition persistence with database-enforced active
   primary and position uniqueness.
@@ -143,7 +143,7 @@ foundation, and G5–G10 have not reached integrated completion.
 - Publish readiness requires exactly one `READY` primary image. Advanced video
   processing and public/admin consumers remain later M2–M5 work.
 
-### Product Media M2 (`feat/product-media-m2`, stacked pending review)
+### Product Media M2 (merged via #223)
 
 - Vuexy-aligned, Persian RTL Admin Media Manager backed by the real M1 client:
   private direct upload with progress, processing states/polling, metadata editing,
@@ -153,7 +153,7 @@ foundation, and G5–G10 have not reached integrated completion.
 - M2 adds a version-guarded, idempotent primary-selection command and prevents a
   published product from losing its primary image through archive.
 
-### Product Media M3 (`feat/product-media-m3`, stacked pending review)
+### Product Media M3 (merged via #224)
 
 - Public catalog lists expose only the ready primary image and its `CARD`
   renditions; product detail exposes the ordered ready gallery with intrinsic
@@ -180,6 +180,26 @@ foundation, and G5–G10 have not reached integrated completion.
   `Test timed out in 5000ms` — a runner flake on a tmp-backed transform cache, not
   a code/assertion result. The same unit spec passes 27/27 in a disk-backed
   `TMPDIR`, and the job goes green on rerun without any code change.
+
+### Product Media M4/M5 (`feat/product-media-m5`, open PR — not yet on main)
+
+- Storefront gallery/player replaces the single product image on the live product
+  page: ordered mixed media, primary-first, intrinsic aspect-ratio reservation,
+  `srcset`/`sizes`, `fetchPriority` only on the LCP candidate, keyboard-operable
+  thumbnails and on-demand video with native controls, poster and captions track.
+- Truthful `Product` + `VideoObject` JSON-LD emitted only from real ready media
+  (no invented durations or upload dates).
+- M5 real-infra E2E (`e2e/tests/api-media-publish-to-discovery.spec.ts`, 6 tests)
+  covers draft → upload → process → publish → public discovery, the publish and
+  projection failure paths, oversize/type mismatch, missing-object confirm,
+  stale-version conflict and idempotent confirm replay. CI now starts MinIO, the
+  media worker and a repeatable bucket-provisioning script.
+- Evidence, verified commands and the still-open contract gaps (video pipeline,
+  `catalog.publish`, 15 vs 30-minute upload TTL, weaker publish readiness) are in
+  `docs/MEDIA_M5_EVIDENCE.md`.
+- Also fixes a real runtime defect: `esModuleInterop` was missing from
+  `apps/api/tsconfig.json`, so `sharp`/`exceljs` default imports were `undefined`
+  at runtime and confirmed image uploads never reached `READY`.
 
 ## Recently merged capability
 
@@ -233,8 +253,9 @@ security/query review, OpenAPI drift confirmation and merge.
   merged via #139 (real HTTP default, fixture only behind `VITE_FIXTURE_AUTH=true`);
   production acceptance still requires live SMS, admin MFA/session UX and permission
   navigation.
-- Product Media storefront gallery and integrated M5 journey; production S3/CORS
-  and malware-scanner acceptance evidence.
+- Product Media storefront gallery and the integrated M5 journey are implemented
+  on the open `feat/product-media-m5` branch, not yet on `main`; production
+  S3/CORS and malware-scanner acceptance evidence remain.
 - VAT policy and tax math (integer-Rial VAT on the sales basis per the permanent
   VAT Law and the configurable-rate design in ADR-0014); electronic-invoice
   (`سامانه مودیان`) emission; both are planned, not implemented.
