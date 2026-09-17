@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createHash } from 'node:crypto';
 import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { CartService } from './cart.service';
 
@@ -53,5 +54,29 @@ describe('CartService', () => {
     const { service, tx } = setup();
     tx.cartItem.count.mockResolvedValue(100);
     await expect(service.addForUser('u1', { variantId: 'v1', quantity: 1 }, 'k4')).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('adds a new line and records the response for replay', async () => {
+    const { service, tx } = setup();
+    const result = await service.addForUser('u1', { variantId: 'v1', quantity: 1 }, 'k5');
+    expect(result.data.cart.lines[0].quantity).toBe(2);
+    expect(tx.cartMutation.create).toHaveBeenCalledOnce();
+  });
+
+  it('replays a stored response for the same key and payload', async () => {
+    const { service, tx } = setup();
+    const input = { variantId: 'v1', quantity: 1 };
+    const fingerprint = createHash('sha256').update(JSON.stringify(input)).digest('hex');
+    const response = { data: { cart: { id: 'c1' } } };
+    tx.cartMutation.findUnique.mockResolvedValue({ fingerprint, responseJson: response });
+    await expect(service.addForUser('u1', input, 'k6')).resolves.toEqual(response);
+    expect(tx.productVariant.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('increments an existing line without exceeding the limit', async () => {
+    const { service, tx } = setup();
+    tx.cartItem.findUnique.mockResolvedValue({ quantity: 2 });
+    await service.addForUser('u1', { variantId: 'v1', quantity: 1 }, 'k7');
+    expect(tx.cartItem.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { quantity: 3 } }));
   });
 });
