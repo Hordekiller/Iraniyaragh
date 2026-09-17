@@ -13,12 +13,14 @@ describe('CartController', () => {
   });
 
   it('delegates add and remove with the authenticated owner', async () => {
-    const service = { addForUser: vi.fn().mockResolvedValue(response), removeForUser: vi.fn().mockResolvedValue(response) };
+    const service = { addForUser: vi.fn().mockResolvedValue(response), removeForUser: vi.fn().mockResolvedValue(response), setForUser: vi.fn().mockResolvedValue(response) };
     const controller = new CartController(service as never);
     await expect(controller.add(principal, ' key ', { variantId: 'v1', quantity: 1 })).resolves.toBe(response);
     await expect(controller.remove(principal, ' key ', ' v1 ')).resolves.toBe(response);
+    await expect(controller.set(principal, ' key ', ' v1 ', { variantId: 'v1', quantity: 3 })).resolves.toBe(response);
     expect(service.addForUser).toHaveBeenCalledWith('u1', { variantId: 'v1', quantity: 1 }, 'key');
     expect(service.removeForUser).toHaveBeenCalledWith('u1', 'v1', 'key');
+    expect(service.setForUser).toHaveBeenCalledWith('u1', 'v1', 3, 'key');
   });
 
   it('requires both key and variant for remove', async () => {
@@ -26,5 +28,14 @@ describe('CartController', () => {
     const controller = new CartController(service as never);
     expect(() => controller.remove(principal, undefined, 'v1')).toThrow(BadRequestException);
     expect(() => controller.remove(principal, 'key', ' ')).toThrow(BadRequestException);
+  });
+
+  it('rejects an invalid set request before delegation', () => {
+    const service = { setForUser: vi.fn() };
+    const controller = new CartController(service as never);
+    expect(() => controller.set(principal, undefined, 'v1', { variantId: 'v1', quantity: 2 })).toThrow(BadRequestException);
+    expect(() => controller.set(principal, 'key', ' ', { variantId: 'v1', quantity: 2 })).toThrow(BadRequestException);
+    expect(() => controller.set(principal, 'key', 'v1', { variantId: 'v2', quantity: 2 })).toThrow(BadRequestException);
+    expect(service.setForUser).not.toHaveBeenCalled();
   });
 });

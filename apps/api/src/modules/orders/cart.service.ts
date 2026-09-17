@@ -68,6 +68,37 @@ export class CartService {
     });
   }
 
+  async setForUser(userId: string, variantId: string, quantity: number, key: string): Promise<CartResponse> {
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) throw new UnprocessableEntityException({ code: 'CART_QUANTITY_INVALID', message: 'Quantity must be between 1 and 99.' });
+    const customer = await this.customer(userId);
+    const fingerprint = createHash('sha256').update(JSON.stringify({ variantId, quantity })).digest('hex');
+    try {
+      return await this.prisma.$transaction(async tx => {
+        const prior = await tx.cartMutation.findUnique({ where: { customerId_idempotencyKey: { customerId: customer.id, idempotencyKey: key } } });
+        if (prior) {
+          if (prior.fingerprint !== fingerprint) throw new ConflictException({ code: 'IDEMPOTENCY_CONFLICT', message: 'Idempotency key payload conflict.' });
+          return prior.responseJson as unknown as CartResponse;
+        }
+        const variant = await tx.productVariant.findFirst({ where: { id: variantId, isActive: true, status: 'ACTIVE', product: { status: 'ACTIVE' } }, select: { id: true } });
+        if (!variant) throw new NotFoundException({ code: 'SKU_NOT_FOUND', message: 'Variant not found.' });
+        const cart = await tx.cart.upsert({ where: { customerId: customer.id }, create: { customerId: customer.id }, update: {} });
+        const line = await tx.cartItem.findUnique({ where: { cartId_variantId: { cartId: cart.id, variantId } } });
+        if (!line && await tx.cartItem.count({ where: { cartId: cart.id } }) >= MAX_LINES) throw new ConflictException({ code: 'CART_LINE_LIMIT_EXCEEDED', message: 'Cart line limit exceeded.' });
+        await tx.cartItem.upsert({ where: { cartId_variantId: { cartId: cart.id, variantId } }, create: { cartId: cart.id, variantId, quantity }, update: { quantity } });
+        await tx.cart.update({ where: { id: cart.id }, data: { version: { increment: 1 } } });
+        const result = { data: { cart: this.view(await tx.cart.findUniqueOrThrow({ where: { id: cart.id }, include: this.include() })) } };
+        await tx.cartMutation.create({ data: { cartId: cart.id, customerId: customer.id, idempotencyKey: key, fingerprint, responseJson: result } });
+        return result;
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const replay = await this.prisma.cartMutation.findUnique({ where: { customerId_idempotencyKey: { customerId: customer.id, idempotencyKey: key } } });
+        if (replay && replay.fingerprint === fingerprint) return replay.responseJson as unknown as CartResponse;
+      }
+      throw error;
+    }
+  }
+
   private async customer(userId: string) {
     const customer = await this.prisma.customer.findUnique({ where: { userId } });
     if (!customer) throw new ConflictException({ code: 'CONFLICT', message: 'Customer profile is not linked to the authenticated user.' });

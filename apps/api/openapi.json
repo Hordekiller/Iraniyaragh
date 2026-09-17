@@ -1745,6 +1745,18 @@
         "parameters": [],
         "responses": { "200": { "description": "" } },
         "tags": ["Cart"]
+      },
+      "put": {
+        "operationId": "CartController_set",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Cart"
+        ]
       }
     },
     "/catalog/admin/attributes": {

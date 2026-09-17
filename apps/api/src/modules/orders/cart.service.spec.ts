@@ -102,4 +102,52 @@ describe('CartService', () => {
     tx.cartMutation.findUnique.mockResolvedValue({ fingerprint: 'different' });
     await expect(service.removeForUser('u1', 'v1', 'k10')).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it('sets an absolute quantity and records the response for replay', async () => {
+    const { service, prisma, tx } = setup();
+    const result = await service.setForUser('u1', 'v1', 3, 'set-1');
+    expect(result.data.cart.id).toBe('c1');
+    expect(tx.cartItem.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: { cartId: 'c1', variantId: 'v1', quantity: 3 },
+      update: { quantity: 3 },
+    }));
+    expect(tx.cart.update).toHaveBeenCalledWith({ where: { id: 'c1' }, data: { version: { increment: 1 } } });
+    expect(tx.cartMutation.create).toHaveBeenCalledOnce();
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: 'Serializable' });
+  });
+
+  it.each([0, -1, 100, 1.5])('rejects set quantity %s before persistence', async quantity => {
+    const { service, prisma } = setup();
+    await expect(service.setForUser('u1', 'v1', quantity, 'set-invalid')).rejects.toBeInstanceOf(UnprocessableEntityException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('replays a stored set response without repeating side effects', async () => {
+    const { service, tx } = setup();
+    const fingerprint = createHash('sha256').update(JSON.stringify({ variantId: 'v1', quantity: 3 })).digest('hex');
+    const response = { data: { cart: { id: 'c1' } } };
+    tx.cartMutation.findUnique.mockResolvedValue({ fingerprint, responseJson: response });
+    await expect(service.setForUser('u1', 'v1', 3, 'set-replay')).resolves.toEqual(response);
+    expect(tx.productVariant.findFirst).not.toHaveBeenCalled();
+    expect(tx.cartItem.upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects a set key reused with a different payload', async () => {
+    const { service, tx } = setup();
+    tx.cartMutation.findUnique.mockResolvedValue({ fingerprint: 'different' });
+    await expect(service.setForUser('u1', 'v1', 3, 'set-conflict')).rejects.toBeInstanceOf(ConflictException);
+    expect(tx.cartItem.upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects setting an inactive or unknown variant', async () => {
+    const { service, tx } = setup();
+    tx.productVariant.findFirst.mockResolvedValue(null);
+    await expect(service.setForUser('u1', 'missing', 2, 'set-missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('rejects creating a set line after the line limit', async () => {
+    const { service, tx } = setup();
+    tx.cartItem.count.mockResolvedValue(100);
+    await expect(service.setForUser('u1', 'v1', 2, 'set-limit')).rejects.toBeInstanceOf(ConflictException);
+  });
 });
