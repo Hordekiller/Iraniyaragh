@@ -67,7 +67,8 @@ detail returned 1 media item with 10 sources, and the origin served
 
 The `e2e` job in `.github/workflows/ci.yml` now:
 
-- starts `minio/minio` (pinned by digest) with `MINIO_ROOT_PASSWORD=change-me-now`
+- starts `quay.io/minio/minio` (pinned by digest; the `minio/minio` Docker Hub
+  coordinate is no longer pullable) with `MINIO_ROOT_PASSWORD=change-me-now`
   and waits on `/minio/health/live`;
 - runs `pnpm --filter @iranyaragh/api media:bucket`
   (`apps/api/scripts/provision-media-bucket.mjs`), which idempotently creates the
