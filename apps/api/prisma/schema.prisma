@@ -230,6 +230,7 @@ model User {
   variantPriceRecords       VariantPriceRecord[]
   catalogImportRecords      CatalogImportRecord[]
   createdProductMedia       ProductMedia[]             @relation("ProductMediaCreator")
+  customer                  Customer?
 
   @@index([status, createdAt])
   @@index([lockedUntil])
@@ -896,12 +897,14 @@ model StocktakeItem {
 
 model Customer {
   id        String   @id @default(cuid())
+  userId    String?  @unique
   mobile    String   @unique
   firstName String?
   lastName  String?
   orders    Order[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model Order {
