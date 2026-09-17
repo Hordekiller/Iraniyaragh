@@ -3,7 +3,7 @@
 Status: authoritative expansion plan; implementation status remains in
 `PROJECT_STATUS.md`.
 
-Last reviewed: 2026-09-15
+Last reviewed: 2026-09-17
 
 Owners: Developer A — Platform/API/Data/Operations; Developer B —
 Product/Web/Admin/E2E. Every critical change requires independent review by the
@@ -296,8 +296,10 @@ price/availability changes meet defined freshness and parity SLAs.
 
 ### G5 — Warehouse and inventory operations
 
-Decide: reservation TTL, FEFO/FIFO/manual allocation, multi-location priority,
-backorder, damaged/quarantine representation, reason codes and approval thresholds.
+ADR-0015 fixes the V1 reservation TTL at 15 minutes and requires deterministic
+multi-location allocation with all-or-nothing line fulfillment. The exact location
+priority, backorder policy, damaged/quarantine representation, reason codes and
+approval thresholds still require policy closure before their dependent slices.
 
 Deliver:
 
@@ -314,8 +316,10 @@ every physical change reconciles to actor, reason and business reference.
 
 ### G6 — Customer profile, address, cart and checkout
 
-Decide: guest cart, login merge precedence, cart expiry, quantity limits, Iranian
-address/postal requirements, shipping quote authority and reservation visibility.
+ADR-0015 accepts guest Cart plus explicit login merge, a 24-hour idle guest expiry,
+quantity limits and server-owned pricing/availability. Iranian address/postal rules,
+shipping quote authority, privacy lifecycle details and reservation visibility still
+require implementation-level closure.
 
 Developer A:
 
@@ -549,20 +553,26 @@ Resolved (recorded elsewhere, removed from the open rows):
   via #172 (2026-09-12);
 - product attributes/variants/SKU identity and import columns — ADR-0013 adopted
   via #176/#177 (2026-09-12); bounded parser and staged dry-run → commit flow
-  delivered via #183/#184.
+  delivered via #183/#184;
+- Product Media validation/image transformation and retention contract — accepted
+  in the Product Media specification and implemented through M1–M5/#240; video
+  processing and production storage/scanner acceptance remain implementation gaps;
+- guest Cart/login merge direction, 24-hour idle expiry, 15-minute reservation TTL
+  and deterministic all-or-nothing allocation — accepted in ADR-0015; runtime work
+  remains and is not counted as delivered.
 
-| Decision                                       | Blocks                                          |
-| ---------------------------------------------- | ----------------------------------------------- |
-| effective price/discount/tax/invoice rules     | G2, G6–G10                                      |
-| media validation/transformation/retention      | G2–G4 (media M1, #162, is the first open slice) |
-| guest cart/account merge and privacy lifecycle | G6/G9                                           |
-| reservation TTL/allocation/backorder           | G5–G7                                           |
-| Iranian address and shipping rate/geography    | G6/G8                                           |
-| payment provider/verify/refund/reconciliation  | G8/G9                                           |
-| cancellation/return/damage/quarantine policy   | G7/G9                                           |
-| staff approval thresholds/four-eyes actions    | G3/G5/G8/G9                                     |
-| deployment target, SLO, RPO/RTO and retention  | G11/G12                                         |
-| crawler training policy and AI data/consent    | G4/G10                                          |
+| Decision                                         | Blocks      |
+| ------------------------------------------------ | ----------- |
+| effective price/discount/tax/invoice rules       | G2, G6–G10  |
+| video processing and production media acceptance | G3–G4       |
+| guest Cart privacy/anonymization lifecycle       | G6/G9       |
+| location priority and backorder policy           | G5–G7       |
+| Iranian address and shipping rate/geography      | G6/G8       |
+| payment provider/verify/refund/reconciliation    | G8/G9       |
+| cancellation/return/damage/quarantine policy     | G7/G9       |
+| staff approval thresholds/four-eyes actions      | G3/G5/G8/G9 |
+| deployment target, SLO, RPO/RTO and retention    | G11/G12     |
+| crawler training policy and AI data/consent      | G4/G10      |
 
 ## 11. Scale path and explicit non-goals
 
@@ -582,18 +592,16 @@ platform, a second ORM or multiple payment/search abstractions merely for novelt
 
 ## 12. Current next sequence
 
-As of the 2026-09-15 reconciliation (`main` = `e67b26e`; catalog parity #199/#200,
-variant-contract typing parity #214, report refactor #203, media M1 plan #211 and
-protected inventory HTTP #217/#219 merged), the immediate path is:
+As of the 2026-09-17 reconciliation (`origin/main` = `c3bb20b`), Catalog/media,
+live public discovery, protected Inventory HTTP/public availability and a partial
+authenticated Cart runtime are merged. The immediate path is:
 
-1. bind the American/Warehouse (`A`/`W`) faces of the catalog contract, then deliver
-   the conflict-safe media M1–M5 slices (#162–#165) and finish the
-   publish → discover vertical slice with real media/price data;
-2. advance Inventory along #215: reservations/transfers HTTP on the protected
-   #217/#219 base, warehouse/location CRUD and the operator flows, then concrete
-   reservation expiry batching (#81);
-3. pull the storefront from fixtures to live catalog/price projections (#166);
-4. proceed through COMM_G6–G12 without skipping integrated exit evidence.
+1. finish ADR-0015 Cart gaps and bind the Web Cart to the real API;
+2. implement #237 atomically: address/shipping quote, repricing, deterministic
+   allocation/reservation, immutable Order snapshot and outbox;
+3. implement #238 customer Order queries and permissioned Admin operations;
+4. proceed through verified Payment, Fulfillment and notifications, followed by
+   production operations and UAT, without skipping integrated exit evidence.
 
 `EXECUTION_STATUS.md` must translate only the next one or two gates into active
 assignments. This plan remains complete even when short-horizon priorities change.

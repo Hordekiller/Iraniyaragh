@@ -1,6 +1,6 @@
 # Detailed Development Plan
 
-Last reviewed: 2026-09-08
+Last reviewed: 2026-09-17
 
 This document schedules the MVP sequence. `COMMERCE_EXPANSION_PLAN.md` is the
 authoritative complete-scope plan for V1, operational maturity and governed growth;
@@ -17,9 +17,14 @@ not followed clean sprint boundaries. At this review:
 - Sprint 1/Auth closed on 2026-09-11: PR #109 merged, #49 closed, and the #50/#91
   acceptance reconciliation closed with 7/7 DoD evidence (runtime #48/#49/#74/#50,
   screenshot/a11y evidence #160, delivery map #156).
-- Sprint 2/Catalog has started through merged contracts and the merged API foundation in #103.
-- Sprint 4 inventory service foundations exist early, without the HTTP/admin outcome.
-- Sprints 3 and 5–11 have not reached their integrated exit criteria.
+- Sprint 2/3 Catalog, Media and live public discovery have substantial merged
+  implementation through #240; Admin-driven publish acceptance and production
+  media acceptance remain.
+- Sprint 4/5 Inventory core and protected HTTP are merged through #222/#231/#232;
+  Admin operator UX, Checkout allocation and production worker rollout remain.
+- Sprint 6 has a partial authenticated Cart runtime through #244. Guest/merge and
+  live Web binding remain; Checkout/Order (#237/#238) and Sprints 7–11 have not
+  reached their integrated exit criteria.
 
 Do not infer completion from sprint number or schema presence. Use
 `PROJECT_STATUS.md` for facts, `EXECUTION_STATUS.md` for the next ten working days,

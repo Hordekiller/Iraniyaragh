@@ -1,6 +1,6 @@
 # Independent Agent Workstreams
 
-Status: active coordination contract; reviewed 2026-09-11.
+Status: active coordination contract; reviewed 2026-09-17.
 
 This file keeps three implementation lanes independently productive without allowing
 UI branches to redefine business truth or silently collide in shared hotspots.
@@ -20,15 +20,16 @@ capability.
 
 ## Current three-lane assignment
 
-| Lane             | Current owned outcome                                                                               | Branch/worktree boundary                                                           | Integration dependency                                                                     |
-| ---------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Platform/current | #111 Catalog hardening after this coordination PR; #114 private acceptance remains externally gated | API, data, contracts and operations only; new worktree from current `main`         | Publish an accepted contract before either UI switches from fixtures                       |
-| Admin agent      | Catalog/operator UI already present as local untracked work                                         | `apps/admin/**`; one named owner alone edits `apps/admin/src/config/navigation.ts` | Compile fixtures against `packages/contracts`; live wiring follows the API merge           |
-| User UI agent    | Routed responsive storefront and purchase UX already present as local-only work                     | `apps/web/**`; one named owner alone edits web routing/layout                      | Keep sellable data fixture-gated until public API and pricing/availability contracts merge |
+| Lane             | Current owned outcome                                                                                          | Branch/worktree boundary                                                           | Integration dependency                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Platform/current | Close bounded ADR-0015 Cart gaps, then #237 Checkout/reservation/Order snapshot; #114 remains externally gated | API, data, contracts and operations only; new worktree from current `main`         | Publish accepted contract/runtime boundaries before either UI adopts them                              |
+| Admin agent      | No active PR at the reviewed baseline; consume #238 Order operations only after #237 creates real Orders       | `apps/admin/**`; one named owner alone edits `apps/admin/src/config/navigation.ts` | Keep fixture Order views explicitly non-live until the protected API merges                            |
+| User UI agent    | Bind Cart to the merged server API after its bounded hardening follow-up; Checkout waits for #237              | `apps/web/**`; one named owner alone edits web routing/layout                      | Preserve live Catalog/media/availability and keep Checkout/Orders fixture-gated until their APIs merge |
 
-The root `feat/admin-catalog-slice` worktree is owned by the UI lanes and remains dirty.
-The platform lane must use a separate worktree and must not stage, reformat, move or
-delete those files. A local commit is handoff evidence, not merged capability.
+At the reviewed `c3bb20b` baseline no PR is open. Before new work starts, each lane
+must claim its issue/branch/worktree and shared hotspots; local or untracked files
+remain user-owned and are never delivery evidence. A local commit is handoff
+evidence, not merged capability.
 
 ## End-to-end parallel delivery map
 

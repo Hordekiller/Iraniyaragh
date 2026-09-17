@@ -1,6 +1,6 @@
 # Delivery Roadmap
 
-Last reviewed: 2026-09-15
+Last reviewed: 2026-09-17
 
 This is the executive view of delivery. The executable sprint backlog, owners,
 acceptance gates and dependencies live in `DEVELOPMENT_PLAN.md`.
@@ -32,16 +32,24 @@ store. Native mobile and advanced growth features are intentionally later.
 - `0.1`: closed. Auth runtime, privileged lifecycle, sessions and RBAC are on
   `main` (#109/#111/#150/#158); #49 is closed and #50/#91 acceptance reconciled.
   Auth-parity follow-ups #186/#188 were delivered via #190/#195 (2026-09-15/13).
-- `0.2`: catalog wave delivered. Attributes, variants/SKU identity, price history
-  and staged import are merged via #179–#184; catalog parity #199/#200, report
-  refactor #203 and variant-contract typing parity #214 are merged. Media M1
-  (#162) and storefront integration (#166) remain.
-- `0.3`: service foundation plus protected HTTP. Ledger/reservation logic and the
-  protected balance/adjustment API (#217) are on `main` with declared error-code and
-  request-ID wiring (#219); reservations/transfers HTTP, warehouse/location CRUD and
-  operator flows remain under #215.
-- `0.4`–`1.0`: planned. Persistence scaffolding is not counted as an integrated
-  selling, payment, fulfillment or production capability.
+- `0.2`: integrated Catalog/Media foundation. Attributes, variants/SKU identity,
+  price history and staged import are merged via #179–#184; Catalog parity and
+  typed contracts are merged through #214; Product Media M1–M5 and the
+  publish-to-discovery API journey are merged through #240; the storefront uses
+  live Catalog/media data. Admin-driven publish acceptance, video processing and
+  production storage/scanner acceptance remain.
+- `0.3`: protected Inventory HTTP foundation. Warehouse/location, balance,
+  immutable movement, adjustment, reservation and transfer APIs are merged through
+  #222; public availability and bounded reservation expiry followed in #231/#232.
+  Inventory Admin, Checkout allocation and production worker operations remain.
+- `0.4`: partial authenticated Cart runtime. #235/#239/#241–#244 deliver accepted
+  contracts, explicit User↔Customer ownership, persistence and protected
+  read/add/set/remove endpoints with server pricing. Guest/merge, hardening and Web
+  binding remain; Checkout/Order creation (#237) and Order API/Admin (#238) do not
+  exist yet.
+- `0.5`–`1.0`: planned. Payment, fulfillment, notifications and production
+  operations have not reached application-workflow delivery; persistence scaffolding
+  is not counted as an integrated capability.
 
 The detailed, dependency-ordered checklist is in `V1_MASTER_PLAN.md`. Factual code
 status is in `PROJECT_STATUS.md`.

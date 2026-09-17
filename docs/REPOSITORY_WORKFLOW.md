@@ -1,6 +1,6 @@
 # Canonical PR, Review and Merge Workflow
 
-Reviewed: 2026-09-15
+Reviewed: 2026-09-17
 Applies to: all contributors and agents
 
 ## Repository protection (observed)
@@ -10,10 +10,10 @@ Applies to: all contributors and agents
 
 - Required checks are exact contexts: `quality`, `database`, `e2e`,
   `dependency-review`, `Analyze (actions)`, `Analyze (javascript-typescript)`
-  and `production-audit`. Sonar is not yet a required context on `main`; #212
-  is merged but the real scan remains unverified while the #213 SonarCloud
-  organization suspension is unresolved (must be restored by an org admin; the
-  gate must not be weakened in the meantime).
+  and `production-audit`. Sonar is not yet a required context on `main`; #212 is
+  merged and current internal PRs execute real scans and Quality Gates (for
+  example #244 passed). Issue #213 remains open only for SonarCloud organization-
+  admin suspension confirmation; the gate must not be weakened meanwhile.
 - `strict` (up-to-date-before-merge) is disabled so already-green PRs are not
   re-blocked by every concurrent merge; merge conflicts are still detected.
 - Required approving reviews: `0`; code-owner review: off; stale-review
@@ -80,10 +80,10 @@ uploads the exact commit/PR and reports Quality Gate status. Distinguish scanner
 account/org suspension and Quality Gate failures. Never change application code,
 coverage thresholds or valid PostgreSQL to hide an infrastructure problem.
 
-#212 (Sonar token at job scope) is merged but the real scan remains unverified
-while the #213 SonarCloud organization suspension is unresolved (must be restored
-by an org admin; the gate must not be weakened in the meantime). When the
-organization scan is stable, add the exact `sonar` check context to branch
+#212 (Sonar token at job scope) is merged and trusted internal PR scans now upload
+the exact head and enforce the Quality Gate. #213 remains open until an organization
+admin confirms the suspension banner is cleared. When that account state is stable,
+add the exact `sonar` check context to branch
 protection and verify it on a test PR. Until then the absence of the `sonar`
 required context is a known protection gap, not evidence of analysis — a failing
 `sonar` run must still be investigated, not ignored.
@@ -102,8 +102,7 @@ required context is a known protection gap, not evidence of analysis — a faili
 
 ## Current merge-train policy
 
-Merged: `#217 → #219` (inventory HTTP then declared error codes), `#190 → #191`
-(Auth/admin CSRF then real HTTP login), `#200 → #214` (catalog contract parity),
-`#207` (storefront), `#212` (Sonar), `#194`/`#211` (docs). Open: `#218` (this
-docs PR). A branch is called READY only when the final SHA is approved and every
+Recently merged: Inventory through #222/#231/#232, Product Media M4/M5 #240 and
+Cart contracts/runtime #235/#239/#241–#244. No PR was open at the reviewed
+baseline. A branch is called READY only when the final SHA is approved and every
 required context is green.

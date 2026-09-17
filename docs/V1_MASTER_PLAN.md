@@ -1,6 +1,6 @@
 # V1.0 Master Plan — ایران‌یاراغ
 
-Last updated: 2026-09-15
+Last updated: 2026-09-17
 
 This is the V1 release checklist. The complete expansion scope and mandatory
 implementation method—including post-V1 operations and growth—live in
@@ -27,14 +27,20 @@ and dedicated search infrastructure are excluded from V1.
 - `0.1` foundation is closed; privileged Auth, session and RBAC runtime are merged
   via #109/#111/#150/#158 and #49 is closed; auth-parity follow-ups #186/#188 were
   delivered via #190/#195.
-- `0.2` catalog wave is delivered: attributes, variants/SKU identity, price history
-  and staged import merged via #179–#184 with catalog parity closed out via
-  #189/#199/#200; media M1 (#162) and storefront integration (#166) remain.
-- Inventory has a transactional service foundation plus the protected
-  balance/adjustment HTTP API (#217) with declared error codes and request-ID
-  binding (#219); reservations/transfers HTTP and operator UI remain (EXEC_G4 / #215).
+- `0.2` has a merged Catalog/Media foundation: attributes, variants/SKU identity,
+  price history, staged import, Admin authoring, live storefront discovery and
+  Product Media M1–M5 through #240. Admin-driven publish and production media
+  acceptance remain.
+- Inventory has the transactional core, warehouse/location, balance/movement/
+  adjustment, reservation and transfer HTTP (#222), public availability (#231)
+  and batched expiry (#232); operator UI, Checkout allocation and production worker
+  rollout remain.
+- `0.4` has a partial authenticated Cart runtime through #244: persistence and
+  read/add/set/remove APIs with server pricing. Guest/merge, live Web binding,
+  Checkout/Order workflows and outbox remain.
 - Order/payment/fulfillment persistence states exist; business services do not.
-- Web and admin are prototypes/foundations, not integrated commerce applications.
+- Web Catalog/media/availability is live, but Web Cart/Checkout/Orders and Admin
+  Inventory/Orders remain fixture/planned surfaces rather than integrated commerce.
 - Deployment, provider integrations, monitoring and disaster recovery remain unproven.
 
 See `PROJECT_STATUS.md` for the detailed evidence ledger. Open PR code is never
@@ -132,19 +138,22 @@ team/provider decisions
 #### Contract and policy
 
 - [ ] Decide category depth/cycle/archive behavior.
-- [ ] Decide product attributes, variants, required SKU fields and import format.
+- [x] Decide product attributes, variants, required SKU fields and import format
+      (ADR-0013 and #179–#184).
 - [ ] Define price history, effective dates, discount/rounding and public money shape.
-- [ ] Define media types, byte/dimension limits, validation, ordering, alt text,
-      presigned expiry and orphan cleanup.
-- [ ] Define public product detail, availability summary and SEO contract.
+- [x] Define media types, byte/dimension limits, validation, ordering, alt text,
+      presigned expiry and orphan cleanup (`PRODUCT_MEDIA_SPEC.md`).
+- [x] Define public product detail and availability summary contracts; broader SEO
+      delivery remains #122–#130.
 
 #### API/data
 
 - [x] Review/merge PR #103 Category/Brand/Product/SKU foundation.
 - [ ] Add missing SKU lifecycle and product-detail behavior.
 - [ ] Implement price history/effective-price service with snapshot-ready output.
-- [ ] Implement media metadata and presigned upload confirmation/cleanup boundary.
-- [ ] Add public detail/search/filter/pagination and query-driven indexes.
+- [x] Implement image media metadata and presigned upload confirmation/cleanup
+      boundary; video processing and production acceptance remain.
+- [x] Add public detail/search/filter/pagination and bounded projections.
 - [x] Add validated import dry-run, row errors, idempotency and audit (bounded
       parser via #183 and staged dry-run → commit flow via #184; parity closed via
       #189/#199/#200).
@@ -152,11 +161,14 @@ team/provider decisions
 #### Admin/web
 
 - [ ] Category and brand list/form/archive screens.
-- [ ] Product draft wizard with SKU, price and media steps.
+- [x] Product/SKU/attribute/import and Product Media Admin authoring slices are merged;
+      a single Admin-driven wizard/publish acceptance journey remains.
 - [ ] Publish/unpublish/archive confirmation and permission states.
-- [ ] Replace sellable fixture data with typed API reads.
-- [ ] Product listing/detail, URL-restorable search/filter/pagination, empty/error states.
-- [ ] Metadata, structured product basics and responsive image policy.
+- [x] Replace Catalog sellable fixture data with typed API reads by default; explicit
+      fixture flags remain for tests/local use.
+- [x] Product listing/detail/search routes and failure states use the live adapter.
+- [x] Product/VideoObject client-side structured data and responsive gallery merged;
+      SSR/canonical/sitemap/feed remain open.
 
 #### Required tests
 
@@ -184,11 +196,12 @@ customer discovers the same live data. No production sellable path uses fixtures
 
 #### API/data
 
-- [ ] Protected warehouse/location CRUD.
-- [ ] Protected balance/movement reads using safe projections.
-- [ ] Receipt/adjustment commands mapped to authenticated actor and request ID.
-- [ ] Reservation expiry batching (#81), worker, retry and dead-letter behavior.
-- [ ] Transfer state machine with source/in-transit/destination ledger effects.
+- [x] Protected warehouse/location CRUD.
+- [x] Protected balance/movement reads using safe projections.
+- [x] Receipt/adjustment commands mapped to authenticated actor and request ID.
+- [ ] Reservation expiry batching is merged via #232; production scheduling,
+      retry/poison handling, metrics and dead-letter behavior remain.
+- [x] Transfer state machine with source/in-transit/destination ledger effects.
 - [ ] Reconciliation/exception query and bounded export boundary.
 
 #### Admin
@@ -213,16 +226,18 @@ reconcilable to actor and business reference.
 
 #### Policy/contract
 
-- [ ] Decide guest cart/account merge and cart expiry.
-- [ ] Define supported address fields and Iranian validation/postal policy.
-- [ ] Define shipping quote ownership and unavailable-service behavior.
-- [ ] Define price/stock-change customer messaging and checkout idempotency.
+- [x] Decide guest Cart/account merge and idle TTL (ADR-0015); runtime remains.
+- [x] Define supported address fields and Iranian validation/postal policy (ADR-0015).
+- [x] Define shipping quote ownership and stale/expired behavior (ADR-0015).
+- [x] Define Checkout repricing/idempotency authority; customer messaging remains UI work.
 - [ ] Define cancellation windows and reservation compensation.
 
 #### API/data
 
-- [ ] Cart persistence and add/change/remove commands.
-- [ ] Server repricing; ignore client totals and stale prices.
+- [x] Authenticated Cart persistence and add/set/remove commands (#241–#244);
+      guest/merge and hardening remain.
+- [x] Cart responses are server-priced and accept no client totals; Checkout
+      repricing/stale-price enforcement remains #237.
 - [ ] Address CRUD with ownership/privacy rules.
 - [ ] Checkout orchestration: reprice, recheck, reserve, snapshot, create exactly once.
 - [ ] Order service over accepted state machines and append-only transitions.
@@ -366,12 +381,14 @@ Resolved:
 - team capacity/release authority (#172, 2026-09-12);
 - product variants/SKU identity and import columns (ADR-0013 via #176/#177,
   2026-09-12; import format + staged flow delivered via #183/#184).
+- guest Cart/login merge direction, guest idle TTL, reservation TTL and
+  all-or-nothing deterministic allocation (ADR-0015; runtime remains incomplete).
 
 Open before dependent work:
 
 - SMS, payment and shipping providers/policies (#114 remains the sole SMS accept);
-- reservation/allocation/backorder;
-- guest checkout and identity merge/privacy;
+- location priority/backorder and production reservation-worker policy;
+- guest Cart identity/privacy lifecycle beyond the accepted ADR-0015 merge rules;
 - price/discount/tax/invoice detail (per-accountant verification required);
 - staff approvals/four-eyes; returns/damaged stock;
 - deployment/RPO/RTO/retention/budget.
