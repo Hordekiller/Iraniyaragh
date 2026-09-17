@@ -20,4 +20,11 @@ describe('CartController', () => {
     expect(service.addForUser).toHaveBeenCalledWith('u1', { variantId: 'v1', quantity: 1 }, 'key');
     expect(service.removeForUser).toHaveBeenCalledWith('u1', 'v1', 'key');
   });
+
+  it('requires both key and variant for remove', async () => {
+    const service = { removeForUser: vi.fn() };
+    const controller = new CartController(service as never);
+    await expect(controller.remove(principal, undefined, 'v1')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.remove(principal, 'key', ' ')).rejects.toBeInstanceOf(BadRequestException);
+  });
 });

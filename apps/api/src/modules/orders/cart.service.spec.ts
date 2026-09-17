@@ -96,4 +96,10 @@ describe('CartService', () => {
     await expect(service.removeForUser('u1', 'v1', 'k9')).resolves.toEqual(response);
     expect(tx.cartItem.deleteMany).not.toHaveBeenCalled();
   });
+
+  it('rejects a remove key reused with a different variant', async () => {
+    const { service, tx } = setup();
+    tx.cartMutation.findUnique.mockResolvedValue({ fingerprint: 'different' });
+    await expect(service.removeForUser('u1', 'v1', 'k10')).rejects.toBeInstanceOf(ConflictException);
+  });
 });
