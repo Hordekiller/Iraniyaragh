@@ -49,10 +49,8 @@ export type CheckoutAddress = {
 };
 
 export type CheckoutRequest = {
-  address: CheckoutAddress;
-  addressId?: string;
   shippingMethod: string;
-};
+} & ({ address: CheckoutAddress; addressId?: never } | { addressId: string; address?: never });
 
 export type ShippingQuote = {
   quoteId: string;
