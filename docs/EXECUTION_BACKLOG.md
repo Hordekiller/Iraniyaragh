@@ -1,6 +1,6 @@
 # Zero-to-Production Execution Backlog
 
-Status: active work-breakdown baseline; reconciled 2026-09-15
+Status: active work-breakdown baseline; reconciled 2026-09-17
 
 Developer A: [@Hordekiller](https://github.com/Hordekiller)
 
@@ -23,15 +23,15 @@ the agreed scope in `PRODUCT_SPEC.md`.
 
 ### Current gate assessment
 
-| Gate (EXEC_G#) | Assessment                      | Why it is not closed                                                                                                                                                                                                     |
-| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| G0             | Substantially complete          | provider/business decisions and team agreement remain                                                                                                                                                                    |
-| G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                                                                                                                |
-| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158) plus admin logout CSRF #190, real staff-auth client #191 and live nav flags #192; refresh/CSRF parity #186/#188 closed via #190/#195                                      |
-| G3             | Core delivered                  | attributes/variants/SKU/price-history/import shipped (#179–#184) with catalog parity #199/#200, report refactor #203 and contract-typing parity #214; media M1 (#162) and storefront (#166) remain                       |
-| G4             | Partial foundation              | ledger/reservation service and protected balance/adjustment HTTP merged (#217) with declared error codes and request-ID binding wired (#219); warehouse/location, reservations/transfers, worker/admin incomplete (#215) |
-| G5             | Persistence foundation only     | state tables/helper exist; cart/checkout/order services absent                                                                                                                                                           |
-| G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                                                                                                                    |
+| Gate (EXEC_G#) | Assessment                      | Why it is not closed                                                                                                                                                                                                               |
+| -------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G0             | Substantially complete          | provider/business decisions and team agreement remain                                                                                                                                                                              |
+| G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                                                                                                                          |
+| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158) plus admin logout CSRF #190, real staff-auth client #191 and live nav flags #192; refresh/CSRF parity #186/#188 closed via #190/#195                                                |
+| G3             | Integrated foundation           | Catalog variants/pricing/import, Admin authoring, live storefront discovery and Product Media M1–M5 are merged through #240; Admin-driven publish and production media acceptance remain                                           |
+| G4             | Protected HTTP foundation       | ledger/reservation core; warehouse/location, balance/movement/adjustment, reservation and transfer HTTP (#222); public availability (#231); batched expiry (#232) are merged; Admin/Checkout/production worker integration remains |
+| G5             | Partial Cart runtime            | Cart contracts/ownership/persistence and authenticated read/add/set/remove APIs merged through #244; guest/merge and hardening, Checkout, Order workflow/Admin and outbox remain                                                   |
+| G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                                                                                                                              |
 
 This table is qualitative. A numeric delivery percentage is intentionally withheld
 until each row has accepted exit evidence.
@@ -78,8 +78,22 @@ Merged to `main` on 2026-09-15 (all CI green on final heads):
 | #218 | `e67b26e` | Project status / repository workflow facts reconciled; #217/#219/#213 recorded         |
 
 Closed as delivered: #216 (storefront coverage gate, #207 evidence); #189 (parity, via #199/#200);
-#186 and #188 (auth/refresh parity, via #190/#195). Open lane: #215 owns the next Inventory
-contract slice (reservations/transfers, warehouse/location CRUD) on the API side.
+#186 and #188 (auth/refresh parity, via #190/#195). The former #215 Inventory
+contract slice subsequently merged through #222.
+
+### Dated status delta — 2026-09-16/17
+
+| PR        | Main head           | Content                                                                          |
+| --------- | ------------------- | -------------------------------------------------------------------------------- |
+| #222      | `c9ca7e1`           | Warehouse/location CRUD, reservation HTTP and replay-safe transfer state machine |
+| #228/#231 | `3426e2c`/`e49444f` | Live storefront Catalog plus fail-closed public availability                     |
+| #232      | `40399b4`           | Bounded serializable reservation-expiry batching                                 |
+| #240      | `ce04cce`           | Product Media M4 gallery and M5 real-infrastructure publish-to-discovery E2E     |
+| #235/#239 | `85a8ed2`/`97854ec` | Cart/Checkout contracts and explicit User↔Customer linkage                       |
+| #241–#244 | `9f3ccf7`…`c3bb20b` | Authenticated Cart persistence and read/add/remove/absolute-set runtime          |
+
+No PR was open at the `c3bb20b` reconciliation baseline. #237 and #238 are the
+next open commerce issues; schema or fixture UI is not counted as their delivery.
 
 ## 2. Completion map
 

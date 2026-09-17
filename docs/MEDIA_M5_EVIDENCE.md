@@ -2,7 +2,8 @@
 
 Last updated: 2026-09-17
 
-Branch: `feat/product-media-m5` (base `83dcbcb`). Owner: `@Maddyrampant`.
+Delivery: merged to `main` via PR #240 at `ce04cce9a2ec574aeaffc9ab863f92e3a811462d`
+(historical branch `feat/product-media-m5`, base `83dcbcb`). Owner: `@Maddyrampant`.
 This document records what was actually executed against the local and CI
 runtime. It is evidence of _verified_ behavior, not a claim that the accepted
 `PRODUCT_MEDIA_SPEC.md` contract is fully implemented. Known gaps are listed in
@@ -18,7 +19,7 @@ the last section and were intentionally reported rather than changed in code.
   discovery Playwright journey plus failure drills, a repeatable bucket
   provisioning script, and object-storage/worker wiring in the CI `e2e` job.
 
-## Verified in this slice
+## Verified for the merged slice
 
 | Check                                                     | Command                                                                                         | Result                      |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------- |

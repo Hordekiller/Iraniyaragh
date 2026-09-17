@@ -2,9 +2,10 @@
 
 Startup-ready commerce and warehouse platform for Iranian hardware/fittings retail.
 
-> Status: pre-release foundation/Auth completion. Core Auth and infrastructure are
-> substantial; catalog API work is in review, while the storefront remains fixture-
-> backed and operational commerce modules are not implemented. See
+> Status: pre-release commerce integration. Auth, live Catalog/Media discovery,
+> protected Inventory HTTP and an authenticated server Cart API are merged. Web
+> Cart/Checkout/Orders remain fixture-backed; Checkout, Order application, Payment,
+> Fulfillment and production operations are not implemented. See
 > [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) before starting work.
 
 ## Workspace

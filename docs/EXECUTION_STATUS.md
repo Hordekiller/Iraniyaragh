@@ -21,23 +21,24 @@ day-to-day assignments.
 
 ## Current position
 
-| Gate                  | State                              | Current evidence                                                                                                                                                                                                                                                                                                                                                                                          | Exit blocker                                                                                                                             |
-| --------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `0.1` Foundation/Auth | Acceptance closed                  | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                                                                                                                                                                                                                                                                                        | private #114 acceptance                                                                                                                  |
-| `0.2` Catalog         | Integrated foundation              | Catalog/media, public discovery and admin authoring merged through #223–#229; the storefront gallery and the publish-to-discovery E2E are on open `feat/product-media-m5` (`MEDIA_M5_EVIDENCE.md`) | Review/merge of the M4/M5 PR and operational acceptance |
-| `0.3` Inventory       | Protected HTTP foundation          | #222 warehouse/location, balances, movements, adjustments and transfers; #231 availability; #232 expiry batching | Checkout allocation, reconciliation UI and worker rollout |
-| `0.4+` Commerce       | Not started as an integrated slice | Schema/state helper only                                                                                                                                                                                                                                                                                                                                                                                  | Policies and all application/client workflows                                                                                            |
+| Gate                  | State                           | Current evidence                                                                                                                                | Exit blocker                                                                               |
+| --------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `0.1` Foundation/Auth | Acceptance closed               | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                              | private #114 acceptance                                                                    |
+| `0.2` Catalog         | Integrated foundation           | Catalog/Admin/public discovery plus Product Media M1–M5 are merged through #240, including the real-infrastructure API publish-to-discovery E2E | Admin-UI publish acceptance, video processing and production storage/scanner acceptance    |
+| `0.3` Inventory       | Protected HTTP foundation       | #222 warehouse/location, balances, movements, adjustments, reservations and transfers; #231 availability; #232 expiry batching                  | Admin operator UX, Checkout allocation, reconciliation UI and production worker rollout    |
+| `0.4` Commerce        | Partial Cart runtime            | #235/#239/#241–#244 deliver contracts, explicit ownership, Cart persistence and authenticated read/add/set/remove APIs                          | Guest/merge and Cart hardening, then #237 Checkout/Order snapshot and #238 Order API/Admin |
+| `0.5+`                | Not started as integrated gates | Payment/Fulfillment persistence foundations only                                                                                                | Application workflows, provider evidence and all production operations                     |
 
-## Active merge/review queue
+## Active issue queue (no open PR at baseline)
 
-| Priority | Work                                 | State                                                                                                                                                         | Required reviewer focus                                                                                                                                                                                                             | Exit action                                                                                                                |
-| -------: | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-|        1 | Issue #78                            | Closed 2026-09-12                                                                                                                                             | agreement recorded in `TEAM.md`, effective 2026-09-11                                                                                                                                                                               | Merged #172 delivers the accepted agreement; #78 closed                                                                    |
-|        2 | Issue #114                           | Private acceptance                                                                                                                                            | #154 merged with no secret/PII exposure and fail-closed mutations                                                                                                                                                                   | Provision account/line/template/key; controlled sandbox/live evidence                                                      |
-|        3 | Issue #111 (mutation idempotency)    | Merged                                                                                                                                                        | contract #168 + runtime #171 + admin workflow #173 merged                                                                                                                                                                           | Bounded cleanup worker remains on #81 before production                                                                    |
-|        4 | Issue #176/#178 (variants/import)    | `C` + `P1` + `P2` + `P3` merged                                                                                                                               | policy ADR-0013 (#177) + `C`-wave contract (#179) + P1 schema/migration (#180) + P2 mutation services (#181) + P2 configuration/generation (#182) + P3 parser/exporter (#183) + P3 staged import service (#184) merged; #176 closed | A/W/I binding, each ≤400 lines and reviewed; P3 follow-ups (durable parsed-payload storage, decompression-time size guard) |
-|        5 | Discovery ready items #126/#129/#136 | Backlog (platform)                                                                                                                                            | server-rendered pages, sitemap/robots/IndexNow and telemetry                                                                                                                                                                        | Pick up as platform capacity opens and wave 0.2-A is delivered                                                             |
-|        6 | Admin catalog slice (#166)           | Merged via #229 (`0a7faba`) with catalog detail, attributes, variants and import management | Continue only with bounded publish/E2E follow-ups; no duplicate admin rewrite | Bind publish controls to live media/catalog contracts |
+| Priority | Work                                   | State                                                    | Required reviewer focus                                                                                                    | Exit action                                                                          |
+| -------: | -------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+|        1 | Cart hardening/Web binding             | Partial; #236 is closed after authenticated API delivery | ADR-0015 gaps: guest/merge, scoped retention, side-effect-free reads, concurrent limits and a real Web adapter             | Open bounded follow-up issue(s); do not treat #236 closure as integrated Cart exit   |
+|        2 | Issue #237                             | Open; next commerce runtime slice                        | serializable Checkout, address/quote validation, deterministic allocation/reservation, immutable Order snapshot and outbox | Atomic rollback, insufficient-stock, stale-quote and concurrent-idempotency evidence |
+|        3 | Issue #238                             | Open; depends on #237                                    | customer ownership/IDOR, staff permission, pagination and persistence-safe DTO review                                      | Live customer Order API and Admin queue/detail after #237 creates Orders             |
+|        4 | Issue #114                             | Private production acceptance                            | adapter/runtime exists; no secret/PII exposure and mutations fail closed                                                   | Provision account/line/template/key; controlled provider-backed evidence             |
+|        5 | Discovery #126/#129 and telemetry #136 | Ready/backlog                                            | server-rendered pages, sitemap/robots/IndexNow and telemetry                                                               | Parallel work only when it does not displace the commerce critical path              |
+|        6 | Issue #213                             | External admin confirmation open                         | current PRs execute real Sonar scans and Quality Gates; `sonar` is not a required branch-protection context                | SonarCloud admin clears/confirms organization suspension, then protect the context   |
 
 ## Resolved since the 2026-09-14 review
 
@@ -60,22 +61,18 @@ day-to-day assignments.
   gate) closed as delivered with #207 evidence; #186/#188 closed via #190/#195;
   #189 closed via #199/#200; #218 (`e67b26e`) reconciled `PROJECT_STATUS.md` and
   `REPOSITORY_WORKFLOW.md` to current `main` (incl. #217/#219/#213) after
-  independent review. #213 (SonarCloud external-bucket definition) remains open
-  on the GitHub side.
+  independent review. #213 remains open for SonarCloud organization-admin
+  suspension confirmation; repository scans themselves are currently operational.
 - The 2026-09-11/13 review items (Auth acceptance, catalog P-wave, #217 API) were
   already reflected in the previous snapshot; the latest one is `e67b26e`.
 
-## Reconciliation — product media M4/M5 slice (2026-09-17)
+## Reconciliation — Product Media and Cart slices (2026-09-17)
 
-The storefront gallery was recorded as delivered but was not. Merged `#227`
-(`d4d8a95`) carried the title "render accessible product media gallery (#227)"
-and changed only 16 lines of `docs/PROJECT_STATUS.md`; no gallery component ever
-landed on `main`, and `ProductPage` still rendered a single image. The open
-`feat/product-media-m5` branch (base `83dcbcb`) supplies the missing M4 gallery/
-player/structured data plus the M5 real-infra journey, and corrects the M1–M3
-section statuses in `PROJECT_STATUS.md` to merged (#162/#223/#224).
+Merged `#227` (`d4d8a95`) was docs-only despite its title. The actual M4 gallery,
+player and structured data plus the M5 real-infrastructure journey subsequently
+merged through #240 at `ce04cce`; they are now on `main`.
 
-Verified on the branch: web 343/343 tests, API 690 tests, `api-http` M5 E2E 6/6
+Verified for the merged slice: web 343/343 tests, API 690 tests, `api-http` M5 E2E 6/6
 against real PostgreSQL, Redis, MinIO and the BullMQ media worker; the CI `e2e`
 job now starts MinIO, provisions the bucket and runs the worker. Evidence and the
 open contract gaps (video pipeline, `catalog.publish`, 15 vs 30-minute TTL,
@@ -83,6 +80,13 @@ publish readiness weaker than spec §9) are recorded in `docs/MEDIA_M5_EVIDENCE.
 A real runtime defect is also fixed there: missing `esModuleInterop` made
 `sharp`/`exceljs` default imports `undefined`, so no image upload could reach
 `READY`.
+
+Cart contracts (#235), explicit User↔Customer ownership (#239), persistence
+(#241), authenticated read/add (#242), remove (#243) and absolute set (#244) are
+also merged through `c3bb20b`. This is a partial Cart runtime, not Checkout: Web
+Cart remains fixture-backed; guest/merge, scoped mutation retention, complete
+concurrency hardening, address/shipping quote, reservation/Order creation and
+outbox are not delivered.
 
 ## Team disposition ledger — 2026-09-08 (updated 2026-09-11)
 
@@ -99,7 +103,10 @@ A real runtime defect is also fixed there: missing `esModuleInterop` made
 Blocked decision issues do not authorize guessed business choices. They block the
 related release/production gate while deterministic local implementation may proceed.
 
-## Next 10 working-day plan
+## Superseded 2026-09-11 ten-day plan (historical)
+
+The following dated plan is retained as delivery history and is not the active
+queue. Its Catalog/Media/Inventory tasks have since advanced as recorded above.
 
 > **Checkpoint 2026-09-11:** the Days 1–4 items below that concerned #50/#91
 > acceptance (password-denial order, rotation/other-family revocation, single
@@ -164,33 +171,43 @@ Exit: no UI or storage work relies on an invented contract.
 
 Exit: one thin vertical journey is demonstrable; broad CRUD breadth is secondary.
 
+## Current 10 working-day direction
+
+1. Close the remaining authenticated/guest Cart contract gaps and bind Web Cart
+   to the real API with ownership, failure and concurrency evidence.
+2. Deliver #237 as one atomic Checkout → reservation → immutable Order/outbox slice.
+3. Deliver #238 customer Order queries and permissioned Admin queue/detail after
+   #237 has a real Order to expose.
+4. Keep production SMS acceptance (#114), media storage/scanner acceptance and
+   Inventory operator/worker readiness as explicit parallel acceptance work.
+5. Do not start Payment implementation until #237/#238 establish idempotent Order
+   authority and the provider/verification/refund decision is recorded.
+
 ## Ready queue after the checkpoint
 
-1. Accept the image/video policy decisions in `PRODUCT_MEDIA_SPEC.md`, then deliver
-   its conflict-safe M1–M5 slices; media remains planned until runtime evidence exists.
-2. Catalog price contract and API.
-3. Catalog admin draft-to-publish flow.
-4. Public product detail and storefront integration.
-5. Inventory HTTP contract with authenticated actor mapping.
-6. Warehouse/location CRUD and read-only balances/movements.
-7. Reservation expiry batching (#81), then worker design.
-8. Transfer policy/state contract.
-9. Cart/guest/merge and reservation-allocation decisions before `0.4` coding.
+1. Close remaining ADR-0015 Cart gaps: guest token/TTL, login merge, operation-
+   scoped mutation retention, side-effect-free reads and concurrent line-limit safety.
+2. Bind Web Cart to the real Cart API; fixture Cart remains test-only.
+3. Implement #237: address validation, server shipping quote, Checkout repricing,
+   deterministic allocation/reservation, immutable Order snapshot and outbox.
+4. Implement #238 only after #237: customer Order list/detail and permissioned Admin
+   queue/detail/timeline.
+5. Then start one verified Payment provider, Fulfillment and transactional
+   notifications; do not infer these from persistence tables.
+6. Run production media/storage/scanner acceptance and Inventory worker/operator UX
+   in parallel without displacing the commerce dependency chain.
 
 ## Reconciliation — live catalog discovery slice (2026-09-16)
 
-`main` now contains the Product Media M1–M4 runtime and the storefront catalog
+`main` now contains Product Media M1–M5 and the storefront catalog
 provider is wired to the public Catalog HTTP API by default. The explicit
 `VITE_FIXTURE_CATALOG=true` flag remains available for deterministic local/E2E
 fixtures only. Public product list/detail projections expose a nullable
 `startingPrice` derived from active variants and the live adapter maps media and
-prices without fabricating stock; availability remains `UNKNOWN` until Inventory
-HTTP is integrated. The remaining exit gap is the end-to-end Admin publish →
-public discovery verification against a running API, followed by Inventory
-availability and server-side Cart/Checkout. An API-level publish → discovery
-journey now exists on the open `feat/product-media-m5` branch
-(`docs/MEDIA_M5_EVIDENCE.md`); it is not yet merged and does not cover an Admin
-UI-driven publish.
+prices without fabricating stock; public Inventory availability is integrated and
+fails closed. The API-level real-infrastructure publish → discovery journey is
+merged via #240. An Admin-UI-driven publish acceptance journey remains open. The
+server Cart API is merged, but Web Cart/Checkout/Orders remain fixture-backed.
 
 ## Explicitly not ready
 
@@ -220,8 +237,9 @@ Reviewer focus:
 ## Handoff — Admin catalog slice (2026-09-14)
 
 ```text
-Issue / branch / base SHA: #166 / feat/admin-catalog-crud @ 602c5ae (local tree,
-  not pushed); coordination on #166/#178. main is now 5e34936 (incl. #217).
+Issue / branch / base SHA: #166 / feat/admin-catalog-crud @ 602c5ae (historical
+  local handoff, not pushed); coordination on #166/#178. `main` at that handoff
+  was 5e34936 (incl. #217).
 Owned files and shared hotspots: apps/admin catalog views/routes/lib (see the #166
   note); shared: packages/contracts/src/catalog.ts (ProductVariant attributeValues →
   VariantAttributeValue[]; ProductVariantUpdateRequest flat dimensions),
@@ -253,10 +271,12 @@ Reviewer focus: ProductVariant typing parity, ProductVariantUpdateRequest shape,
 
 ## Release blockers
 
-- Live production staff/customer Auth acceptance and delivery of the accepted SMS
-  provider/admin boundary through #114/#115.
+- Live production staff/customer Auth acceptance through private provider-bound
+  #114 evidence; the provider/admin runtime boundary itself is merged.
 - Server-side permission enforcement for every business command.
-- Integrated catalog, inventory, cart, checkout, order and payment journeys.
+- Live Web Cart plus integrated Checkout, Order and Payment journeys; Catalog/media
+  and public Inventory availability are already live foundations.
 - Verified/idempotent payment and reconciliation.
-- Outbox/workers and reservation expiry.
+- Transactional outbox and production worker operations; reservation-expiry
+  batching itself is merged.
 - Production deploy/rollback, monitoring/alerts, backup/restore and RPO/RTO evidence.
