@@ -1,0 +1,13 @@
+CREATE TABLE "Cart" ("id" TEXT NOT NULL, "customerId" TEXT NOT NULL, "version" INTEGER NOT NULL DEFAULT 1, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Cart_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "CartItem" ("id" TEXT NOT NULL, "cartId" TEXT NOT NULL, "variantId" TEXT NOT NULL, "quantity" INTEGER NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "CartItem_pkey" PRIMARY KEY ("id"), CONSTRAINT "CartItem_quantity_range" CHECK ("quantity" BETWEEN 1 AND 99));
+CREATE TABLE "CartMutation" ("id" TEXT NOT NULL, "cartId" TEXT NOT NULL, "customerId" TEXT NOT NULL, "idempotencyKey" TEXT NOT NULL, "fingerprint" VARCHAR(64) NOT NULL, "responseJson" JSONB NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "CartMutation_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "Cart_customerId_key" ON "Cart"("customerId");
+CREATE UNIQUE INDEX "CartItem_cartId_variantId_key" ON "CartItem"("cartId", "variantId");
+CREATE UNIQUE INDEX "CartMutation_customerId_idempotencyKey_key" ON "CartMutation"("customerId", "idempotencyKey");
+CREATE INDEX "CartItem_variantId_idx" ON "CartItem"("variantId");
+CREATE INDEX "CartMutation_createdAt_idx" ON "CartMutation"("createdAt");
+ALTER TABLE "Cart" ADD CONSTRAINT "Cart_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "Cart"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_variantId_fkey" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "CartMutation" ADD CONSTRAINT "CartMutation_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "Cart"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CartMutation" ADD CONSTRAINT "CartMutation_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;

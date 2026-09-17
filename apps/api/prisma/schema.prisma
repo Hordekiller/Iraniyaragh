@@ -550,6 +550,7 @@ model ProductVariant {
   transferItems        StockTransferItem[]
   purchaseItems        PurchaseOrderItem[]
   stocktakeItems       StocktakeItem[]
+  cartItems            CartItem[]
   createdAt            DateTime                       @default(now())
   updatedAt            DateTime                       @updatedAt
 
@@ -905,6 +906,48 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cart      Cart?
+  cartMutations CartMutation[]
+}
+
+model Cart {
+  id          String         @id @default(cuid())
+  customerId  String         @unique
+  version     Int            @default(1)
+  customer    Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items       CartItem[]
+  mutations   CartMutation[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model CartItem {
+  id        String         @id @default(cuid())
+  cartId    String
+  variantId String
+  quantity  Int
+  cart      Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([cartId, variantId])
+  @@index([variantId])
+}
+
+model CartMutation {
+  id             String   @id @default(cuid())
+  cartId         String
+  customerId     String
+  idempotencyKey String
+  fingerprint    String   @db.VarChar(64)
+  responseJson   Json
+  createdAt      DateTime @default(now())
+  cart           Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, idempotencyKey])
+  @@index([createdAt])
 }
 
 model Order {
