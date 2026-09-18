@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { AdminOrderMeta, AdminOrderQuery, AdminOrderSummary } from '@/lib/orders/orders-types';
-import { ordersApi } from '@/lib/orders/orders-fixture';
+import { ApiAbortError } from '@/lib/api/client';
+import { ordersApi } from '@/lib/orders/orders-api';
 
 export type AdminOrdersQuery = {
   page: number;
@@ -11,7 +12,7 @@ export type AdminOrdersQuery = {
   orderStatus?: AdminOrderQuery['orderStatus'];
   paymentStatus?: AdminOrderQuery['paymentStatus'];
   fulfillmentStatus?: AdminOrderQuery['fulfillmentStatus'];
-  sortBy: 'createdAt' | 'updatedAt' | 'totalRials';
+  sortBy: 'createdAt' | 'updatedAt' | 'grandTotal';
   sortDir: 'asc' | 'desc';
 };
 
@@ -47,7 +48,7 @@ function toPortQuery(query: AdminOrdersQuery): AdminOrderQuery {
   };
 }
 
-export function useOrders(query: AdminOrdersQuery): AdminOrdersState {
+export function useOrders(query: AdminOrdersQuery, enabled = true): AdminOrdersState {
   const [items, setItems] = useState<AdminOrderSummary[]>([]);
   const [meta, setMeta] = useState<AdminOrderMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,29 +58,33 @@ export function useOrders(query: AdminOrdersQuery): AdminOrdersState {
   const key = QUERY_KEYS.map((k) => `${k}=${String(query[k] ?? '')}`).join('&');
 
   useEffect(() => {
-    let cancelled = false;
+    if (!enabled) {
+      setItems([]);
+      setMeta(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
 
     ordersApi
-      .listOrders(toPortQuery(query))
+      .listOrders(toPortQuery(query), controller.signal)
       .then((result) => {
-        if (cancelled) return;
         setItems(result.items);
         setMeta(result.meta);
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
+        if (err instanceof ApiAbortError) return;
         setError(err instanceof Error ? err.message : 'خطای غیرمنتظره در بارگیری سفارش‌ها.');
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [key, refreshKey]);
+    return () => controller.abort();
+  }, [key, refreshKey, enabled]);
 
   const refresh = useCallback(() => setRefreshKey((current) => current + 1), []);
 
