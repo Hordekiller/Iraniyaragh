@@ -152,7 +152,8 @@ G6–G10 have not reached integrated completion.
 - Immutable movements, actor/request-ID audit evidence, reason requirements,
   idempotency payload matching and optimistic balance versions.
 - Bounded serializable retry and real PostgreSQL concurrency coverage.
-- Service-level balance snapshot and movement queries.
+- Shared, OpenAPI-documented balance and sanitized movement read projections;
+  persistence-only replay keys are not exposed to operator clients.
 
 | Inventory layer        | State             | Evidence/boundary                                                                                                                                                             |
 | ---------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -157,7 +157,7 @@ Exposed under `/api/v1/inventory` (staff-MFA authenticated routes).
 
 Permissions fail closed: a caller needs the exact permission listed; `inventory.read` alone never allows mutations, and acting on a transfer requires `inventory.transfer` while approval additionally requires `inventory.approve`.
 
-DTO and error contracts (including `WAREHOUSE_CODE_CONFLICT`, `LOCATION_CODE_CONFLICT`, `TRANSFER_NOT_FOUND`, `TRANSFER_STATE_CONFLICT`, `TRANSFER_NO_ITEMS`, `TRANSFER_ITEM_LOCATION_REQUIRED`) live in `packages/contracts`. Prisma models are never exposed as public contracts.
+DTO and error contracts (including `WAREHOUSE_CODE_CONFLICT`, `LOCATION_CODE_CONFLICT`, `TRANSFER_NOT_FOUND`, `TRANSFER_STATE_CONFLICT`, `TRANSFER_NO_ITEMS`, `TRANSFER_ITEM_LOCATION_REQUIRED`) live in `packages/contracts`. Balance and movement list responses include stable warehouse, location and variant identifiers for operator clients. Movement timestamps are ISO 8601 strings, while persistence-only replay keys such as `idempotencyKey` are never returned. The committed OpenAPI artifact describes these projections and their bounded filters. Prisma models are never exposed as public contracts.
 
 ## Stocktake
 Stocktake should support:

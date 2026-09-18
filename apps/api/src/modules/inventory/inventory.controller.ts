@@ -1,8 +1,16 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { InventoryMovementType } from '@prisma/client';
+import type {
+  InventoryBalanceListResponse,
+  InventoryMovement,
+  InventoryMovementListResponse,
+} from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { getRequestId } from '../../common/request-context';
 import { InventoryService } from './inventory.service';
+import { openApiInventory } from './inventory.openapi';
 import {
   InventoryChangeDto,
   InventoryLifecycleDto,
@@ -28,15 +36,36 @@ export class InventoryController {
 
   @Get('balances')
   @RequirePermission('inventory.read')
-  async balances(@Query() query: InventorySnapshotQueryDto) { return this.inventory.getSnapshots(query); }
+  @ApiOperation({ summary: 'List warehouse/location inventory balances' })
+  @ApiQuery({ name: 'warehouseId', required: false, type: String })
+  @ApiQuery({ name: 'locationId', required: false, type: String })
+  @ApiQuery({ name: 'variantId', required: false, type: String })
+  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 100 })
+  @ApiOkResponse({ schema: openApiInventory.balanceList })
+  async balances(@Query() query: InventorySnapshotQueryDto): Promise<InventoryBalanceListResponse> {
+    return this.inventory.getSnapshots(query);
+  }
 
   @Get('movements')
   @RequirePermission('inventory.read')
-  async movements(@Query() query: InventoryMovementQueryDto) { return this.inventory.getMovements(query); }
+  @ApiOperation({ summary: 'List immutable inventory movements' })
+  @ApiQuery({ name: 'warehouseId', required: false, type: String })
+  @ApiQuery({ name: 'locationId', required: false, type: String })
+  @ApiQuery({ name: 'variantId', required: false, type: String })
+  @ApiQuery({ name: 'type', required: false, enum: Object.values(InventoryMovementType) })
+  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 100 })
+  @ApiOkResponse({ schema: openApiInventory.movementList })
+  async movements(@Query() query: InventoryMovementQueryDto): Promise<InventoryMovementListResponse> {
+    return this.inventory.getMovements(query);
+  }
 
   @Post('changes')
   @RequirePermission('inventory.adjust')
-  async change(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string | undefined, @Body() input: InventoryChangeDto) {
+  @ApiOperation({ summary: 'Apply an audited inventory receipt or adjustment' })
+  @ApiCreatedResponse({ schema: openApiInventory.movement })
+  async change(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string | undefined, @Body() input: InventoryChangeDto): Promise<InventoryMovement> {
     return this.inventory.changeOnHand({ ...input, idempotencyKey, actorId: principal.userId, requestId: getRequestId() });
   }
 

@@ -11,6 +11,70 @@ export type PublicAvailabilityStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK'
 export type PublicVariantAvailability = { variantId: string; status: PublicAvailabilityStatus };
 export type PublicAvailabilityResponse = { items: PublicVariantAvailability[] };
 
+export const INVENTORY_MOVEMENT_TYPES = [
+  'RECEIPT',
+  'SALE',
+  'RETURN_IN',
+  'RETURN_OUT',
+  'TRANSFER_IN',
+  'TRANSFER_OUT',
+  'ADJUSTMENT_IN',
+  'ADJUSTMENT_OUT',
+  'STOCKTAKE',
+  'RESERVATION',
+  'RELEASE',
+] as const;
+
+export type InventoryMovementType = (typeof INVENTORY_MOVEMENT_TYPES)[number];
+
+export type InventoryPageQuery = {
+  warehouseId?: string;
+  locationId?: string;
+  variantId?: string;
+  offset?: number;
+  limit?: number;
+};
+
+export type InventoryMovementQuery = InventoryPageQuery & {
+  type?: InventoryMovementType;
+};
+
+export type InventoryBalanceSnapshot = {
+  warehouseId: string;
+  locationId: string;
+  variantId: string;
+  onHand: number;
+  reserved: number;
+  available: number;
+  version: number;
+};
+
+export type InventoryBalanceListResponse = {
+  items: InventoryBalanceSnapshot[];
+  count: number;
+};
+
+/** Sanitized HTTP projection; persistence-only replay keys are never exposed. */
+export type InventoryMovement = {
+  id: string;
+  warehouseId: string;
+  locationId: string;
+  variantId: string;
+  type: InventoryMovementType;
+  quantity: number;
+  beforeOnHand: number;
+  afterOnHand: number;
+  reason: string | null;
+  referenceType: string | null;
+  referenceId: string | null;
+  createdAt: string;
+};
+
+export type InventoryMovementListResponse = {
+  items: InventoryMovement[];
+  count: number;
+};
+
 export type WarehouseStatus = 'ACTIVE' | 'INACTIVE';
 
 export type Warehouse = {

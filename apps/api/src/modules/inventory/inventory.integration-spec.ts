@@ -794,7 +794,7 @@ describe.sequential('InventoryService database integration', () => {
     expect(movements.items.length).toBeGreaterThanOrEqual(2);
     const ids = movements.items.map((m) => m.id);
     expect(new Set(ids).size).toBe(ids.length);
-    const createdAtValues = movements.items.map((m) => m.createdAt.getTime());
+    const createdAtValues = movements.items.map((m) => Date.parse(m.createdAt));
     expect([...createdAtValues]).toEqual([...createdAtValues].sort((a, b) => b - a));
   });
 

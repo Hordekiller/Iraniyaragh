@@ -4140,12 +4140,116 @@
     "/inventory/balances": {
       "get": {
         "operationId": "InventoryController_balances",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "variantId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locationId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "warehouseId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "items",
+                    "count"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "warehouseId",
+                          "locationId",
+                          "variantId",
+                          "onHand",
+                          "reserved",
+                          "available",
+                          "version"
+                        ],
+                        "properties": {
+                          "warehouseId": {
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "type": "string"
+                          },
+                          "variantId": {
+                            "type": "string"
+                          },
+                          "onHand": {
+                            "type": "integer"
+                          },
+                          "reserved": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "available": {
+                            "type": "integer"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
           }
         },
+        "summary": "List warehouse/location inventory balances",
         "tags": [
           "Inventory"
         ]
@@ -4154,12 +4258,172 @@
     "/inventory/movements": {
       "get": {
         "operationId": "InventoryController_movements",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "RECEIPT",
+                "SALE",
+                "RETURN_IN",
+                "RETURN_OUT",
+                "TRANSFER_IN",
+                "TRANSFER_OUT",
+                "ADJUSTMENT_IN",
+                "ADJUSTMENT_OUT",
+                "STOCKTAKE",
+                "RESERVATION",
+                "RELEASE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "variantId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locationId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "warehouseId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "items",
+                    "count"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "warehouseId",
+                          "locationId",
+                          "variantId",
+                          "type",
+                          "quantity",
+                          "beforeOnHand",
+                          "afterOnHand",
+                          "reason",
+                          "referenceType",
+                          "referenceId",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "warehouseId": {
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "type": "string"
+                          },
+                          "variantId": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "RECEIPT",
+                              "SALE",
+                              "RETURN_IN",
+                              "RETURN_OUT",
+                              "TRANSFER_IN",
+                              "TRANSFER_OUT",
+                              "ADJUSTMENT_IN",
+                              "ADJUSTMENT_OUT",
+                              "STOCKTAKE",
+                              "RESERVATION",
+                              "RELEASE"
+                            ]
+                          },
+                          "quantity": {
+                            "type": "integer"
+                          },
+                          "beforeOnHand": {
+                            "type": "integer"
+                          },
+                          "afterOnHand": {
+                            "type": "integer"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "referenceType": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "referenceId": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
           }
         },
+        "summary": "List immutable inventory movements",
         "tags": [
           "Inventory"
         ]
@@ -4171,9 +4435,87 @@
         "parameters": [],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "warehouseId",
+                    "locationId",
+                    "variantId",
+                    "type",
+                    "quantity",
+                    "beforeOnHand",
+                    "afterOnHand",
+                    "reason",
+                    "referenceType",
+                    "referenceId",
+                    "createdAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "warehouseId": {
+                      "type": "string"
+                    },
+                    "locationId": {
+                      "type": "string"
+                    },
+                    "variantId": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "RECEIPT",
+                        "SALE",
+                        "RETURN_IN",
+                        "RETURN_OUT",
+                        "TRANSFER_IN",
+                        "TRANSFER_OUT",
+                        "ADJUSTMENT_IN",
+                        "ADJUSTMENT_OUT",
+                        "STOCKTAKE",
+                        "RESERVATION",
+                        "RELEASE"
+                      ]
+                    },
+                    "quantity": {
+                      "type": "integer"
+                    },
+                    "beforeOnHand": {
+                      "type": "integer"
+                    },
+                    "afterOnHand": {
+                      "type": "integer"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "referenceType": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "referenceId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
+        "summary": "Apply an audited inventory receipt or adjustment",
         "tags": [
           "Inventory"
         ]

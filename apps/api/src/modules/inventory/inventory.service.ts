@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InventoryMovementType, Prisma } from '@prisma/client';
+import type {
+  InventoryBalanceListResponse,
+  InventoryBalanceSnapshot,
+  InventoryMovement as InventoryMovementContract,
+  InventoryMovementListResponse,
+} from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 
@@ -145,27 +151,9 @@ export type TransferQuery = {
   offset?: number;
 };
 
-export type InventorySnapshotDto = {
-  warehouseId: string;
-  locationId: string;
-  variantId: string;
-  onHand: number;
-  reserved: number;
-  available: number;
-  version: number;
-};
+export type InventorySnapshotDto = InventoryBalanceSnapshot;
 
-export type InventoryMovementDto = {
-  id: string;
-  type: InventoryMovementType;
-  quantity: number;
-  beforeOnHand: number;
-  afterOnHand: number;
-  reason: string | null;
-  referenceType: string | null;
-  referenceId: string | null;
-  createdAt: Date;
-};
+export type InventoryMovementDto = InventoryMovementContract;
 
 export type TransferItemDto = {
   id: string;
@@ -244,7 +232,7 @@ export class InventoryService {
     private readonly auditLog: AuditLogService,
   ) {}
 
-  async changeOnHand(command: ChangeStockCommand) {
+  async changeOnHand(command: ChangeStockCommand): Promise<InventoryMovementDto> {
     this.assertTracked(command);
     if (!Number.isInteger(command.delta) || command.delta === 0) {
       throw new BadRequestException('Inventory delta must be a non-zero integer.');
@@ -253,7 +241,7 @@ export class InventoryService {
       throw new BadRequestException('Manual corrections require a reason.');
     }
 
-    return this.withSerializableRetry(() =>
+    const movement = await this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
           if (command.idempotencyKey) {
@@ -337,6 +325,7 @@ export class InventoryService {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       ),
     );
+    return this.toMovementDto(movement);
   }
 
   async reserve(command: ReserveStockCommand) {
@@ -561,7 +550,7 @@ export class InventoryService {
     ));
   }
 
-  async getSnapshots(query: SnapshotQuery): Promise<{ items: InventorySnapshotDto[]; count: number }> {
+  async getSnapshots(query: SnapshotQuery): Promise<InventoryBalanceListResponse> {
     const limit = clampInt(query.limit, 1, 100, 50);
     const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
 
@@ -609,7 +598,7 @@ export class InventoryService {
     }) };
   }
 
-  async getMovements(query: MovementQuery): Promise<{ items: InventoryMovementDto[]; count: number }> {
+  async getMovements(query: MovementQuery): Promise<InventoryMovementListResponse> {
     const limit = clampInt(query.limit, 1, 100, 50);
     const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
 
@@ -631,17 +620,7 @@ export class InventoryService {
     ]);
 
     return {
-      items: rows.map((row) => ({
-        id: row.id,
-        type: row.type,
-        quantity: row.quantity,
-        beforeOnHand: row.beforeOnHand,
-        afterOnHand: row.afterOnHand,
-        reason: row.reason,
-        referenceType: row.referenceType,
-        referenceId: row.referenceId,
-        createdAt: row.createdAt,
-      })),
+      items: rows.map((row) => this.toMovementDto(row)),
       count,
     };
   }
@@ -1449,6 +1428,36 @@ export class InventoryService {
       })),
       createdAt: transfer.createdAt,
       updatedAt: transfer.updatedAt,
+    };
+  }
+
+  private toMovementDto(movement: {
+    id: string;
+    warehouseId: string;
+    locationId: string;
+    variantId: string;
+    type: InventoryMovementType;
+    quantity: number;
+    beforeOnHand: number;
+    afterOnHand: number;
+    reason: string | null;
+    referenceType: string | null;
+    referenceId: string | null;
+    createdAt: Date;
+  }): InventoryMovementDto {
+    return {
+      id: movement.id,
+      warehouseId: movement.warehouseId,
+      locationId: movement.locationId,
+      variantId: movement.variantId,
+      type: movement.type,
+      quantity: movement.quantity,
+      beforeOnHand: movement.beforeOnHand,
+      afterOnHand: movement.afterOnHand,
+      reason: movement.reason,
+      referenceType: movement.referenceType,
+      referenceId: movement.referenceId,
+      createdAt: movement.createdAt.toISOString(),
     };
   }
 

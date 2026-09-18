@@ -1,7 +1,14 @@
-import { API_ERROR_CODES } from '@iranyaragh/contracts';
+import { InventoryMovementType } from '@prisma/client';
+import { API_ERROR_CODES, INVENTORY_MOVEMENT_TYPES } from '@iranyaragh/contracts';
 import { describe, expect, it } from 'vitest';
 
 describe('inventory public error contract', () => {
+  it('keeps shared movement values aligned with the database enum', () => {
+    expect([...INVENTORY_MOVEMENT_TYPES].sort()).toEqual(
+      Object.values(InventoryMovementType).sort(),
+    );
+  });
+
   it('registers the inventory codes in the shared error code union', () => {
     for (const code of [
       'SKU_NOT_FOUND',
