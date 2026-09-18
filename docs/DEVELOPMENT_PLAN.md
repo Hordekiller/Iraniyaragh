@@ -23,10 +23,10 @@ not followed clean sprint boundaries. At this review:
 - Sprint 4/5 Inventory core and protected HTTP are merged through #222/#231/#232;
   #246/#237 also merged Checkout allocation. Admin operator UX, compensation and
   production worker rollout remain.
-- Sprint 6 has authenticated Cart through #244 and Checkout-to-reserved-Order
-  through #246/#237. #247/#238 adds merged Order reads; guest/merge and live Web/
-  Admin binding remain, and Sprints 7–11 have not reached their integrated exit
-  criteria.
+- Sprint 6 has hardened authenticated Cart through #251 and Checkout-to-reserved-
+  Order through #246/#237. #247/#238 adds merged Order reads; guest token/merge and
+  live Web/Admin binding remain, and Sprints 7–11 have not reached their integrated
+  exit criteria.
 
 Do not infer completion from sprint number or schema presence. Use
 `PROJECT_STATUS.md` for facts, `EXECUTION_STATUS.md` for the next ten working days,

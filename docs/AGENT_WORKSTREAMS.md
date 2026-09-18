@@ -20,14 +20,14 @@ capability.
 
 ## Current three-lane assignment
 
-| Lane             | Current owned outcome                                                                                        | Branch/worktree boundary                                                           | Integration dependency                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Platform/current | Close bounded ADR-0015 Cart gaps, then Order expiry/cancellation compensation; #114 remains externally gated | API, data, contracts and operations only; new worktree from current `main`         | #246/#247 are the accepted Checkout/Order contract baseline; commands require separate critical review |
-| Admin agent      | Bind read-only Order queue/detail/timeline to merged #247 before adding permission-aware commands            | `apps/admin/**`; one named owner alone edits `apps/admin/src/config/navigation.ts` | Keep command actions fixture-gated until the protected command API and compensation policy merge       |
-| User UI agent    | Bind Cart, Checkout and owned Order reads to merged #244/#246/#247 APIs after Cart hardening                 | `apps/web/**`; one named owner alone edits web routing/layout                      | Preserve live Catalog/media/availability; clients never own price, stock or Order state                |
+| Lane             | Current owned outcome                                                                                                                | Branch/worktree boundary                                                           | Integration dependency                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Platform/current | After #251, deliver guest Cart token/TTL and login merge, then Order expiry/cancellation compensation; #114 remains externally gated | API, data, contracts and operations only; new worktree from current `main`         | #246/#247 are the accepted Checkout/Order baseline; guest identity/privacy and commands require separate critical review |
+| Admin agent      | Bind read-only Order queue/detail/timeline to merged #247 before adding permission-aware commands                                    | `apps/admin/**`; one named owner alone edits `apps/admin/src/config/navigation.ts` | Keep command actions fixture-gated until the protected command API and compensation policy merge                         |
+| User UI agent    | Bind Cart, Checkout and owned Order reads to merged #251/#246/#247 APIs after guest-contract handoff                                 | `apps/web/**`; one named owner alone edits web routing/layout                      | Preserve live Catalog/media/availability; clients never own price, stock or Order state                                  |
 
-At the reviewed `b220e01` baseline, #249 is the docs-only status follow-up. Before
-new implementation starts, each lane
+At the reviewed `ab876b1` baseline, #249 is merged and #251 is the bounded
+authenticated Cart correctness slice. Before new implementation starts, each lane
 must claim its issue/branch/worktree and shared hotspots; local or untracked files
 remain user-owned and are never delivery evidence. A local commit is handoff
 evidence, not merged capability.

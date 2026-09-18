@@ -43,11 +43,12 @@ store. Native mobile and advanced growth features are intentionally later.
   #222; public availability and bounded reservation expiry followed in #231/#232.
   #246/#237 adds deterministic Checkout allocation; Inventory Admin, compensation
   and production worker operations remain.
-- `0.4`: partial authenticated Cart runtime. #235/#239/#241–#244 deliver accepted
-  contracts, explicit User↔Customer ownership, persistence and protected
-  read/add/set/remove endpoints with server pricing. Guest/merge, hardening and Web
-  binding remain. Checkout/Order creation is merged through #246/#237 and customer/
-  staff Order reads through #247/#238; live clients, commands and compensation remain.
+- `0.4`: hardened authenticated Cart runtime. #235/#239/#241–#244/#251 deliver
+  accepted contracts, explicit User↔Customer ownership, persistence, protected
+  read/add/set/remove endpoints, side-effect-free empty reads, scoped 24-hour replay
+  and concurrency-safe limits with server pricing. Guest token/merge and Web binding
+  remain. Checkout/Order creation is merged through #246/#237 and customer/staff
+  Order reads through #247/#238; live clients, commands and compensation remain.
 - `0.5`–`1.0`: planned. Payment, fulfillment, notifications and production
   operations have not reached application-workflow delivery; persistence scaffolding
   is not counted as an integrated capability.

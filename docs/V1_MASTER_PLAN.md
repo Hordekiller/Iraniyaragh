@@ -35,11 +35,12 @@ and dedicated search infrastructure are excluded from V1.
   adjustment, reservation and transfer HTTP (#222), public availability (#231)
   and batched expiry (#232); #246/#237 adds deterministic Checkout allocation.
   Operator UI, compensation and production worker rollout remain.
-- `0.4` has a partial authenticated Cart runtime through #244: persistence and
-  read/add/set/remove APIs with server pricing. #246/#237 adds Checkout-to-reserved-
+- `0.4` has a hardened authenticated Cart runtime through #251: persistence,
+  read/add/set/remove APIs, side-effect-free empty reads, scoped 24-hour replay and
+  concurrency-safe limits with server pricing. #246/#237 adds Checkout-to-reserved-
   Order creation and transactional outbox persistence, while #247/#238 adds owned
-  customer reads and permissioned staff queue/detail. Guest/merge, live clients,
-  Order commands and compensation remain.
+  customer reads and permissioned staff queue/detail. Guest token/merge, live
+  clients, Order commands and compensation remain.
 - Order creation/read services exist; Payment and Fulfillment remain persistence
   foundations without application workflows.
 - Web Catalog/media/availability is live, but Web Cart/Checkout/Orders and Admin
@@ -237,8 +238,9 @@ reconcilable to actor and business reference.
 
 #### API/data
 
-- [x] Authenticated Cart persistence and add/set/remove commands (#241–#244);
-      guest/merge and hardening remain.
+- [x] Authenticated Cart persistence and add/set/remove commands (#241–#244), plus
+      side-effect-free reads, scoped retention and concurrency hardening (#251);
+      guest token/TTL and login merge remain.
 - [x] Cart responses are server-priced and accept no client totals; Checkout
       repricing/stale-price enforcement is merged through #246/#237.
 - [ ] Address CRUD with ownership/privacy rules.
