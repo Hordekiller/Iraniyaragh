@@ -6730,113 +6730,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Cart"
-        ]
-      }
-    },
-    "/cart/lines": {
-      "post": {
-        "operationId": "CartController_add",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Cart"
-        ]
-      }
-    },
-    "/cart/lines/{variantId}": {
-      "put": {
-        "operationId": "CartController_set",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Cart"
-        ]
-      },
-      "delete": {
-        "operationId": "CartController_remove",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Cart"
-        ]
-      }
-    },
-    "/checkout/preview": {
-      "post": {
-        "operationId": "CheckoutController_preview",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "address"
-                ],
-                "properties": {
-                  "address": {
-                    "type": "object",
-                    "required": [
-                      "provinceCode",
-                      "city",
-                      "address",
-                      "postalCode",
-                      "recipient",
-                      "mobile"
-                    ],
-                    "properties": {
-                      "provinceCode": {
-                        "type": "string",
-                        "maxLength": 32
-                      },
-                      "city": {
-                        "type": "string",
-                        "maxLength": 100
-                      },
-                      "address": {
-                        "type": "string",
-                        "maxLength": 500
-                      },
-                      "postalCode": {
-                        "type": "string",
-                        "description": "Ten digits after server normalization."
-                      },
-                      "recipient": {
-                        "type": "string",
-                        "maxLength": 120
-                      },
-                      "mobile": {
-                        "type": "string",
-                        "description": "Iranian mobile normalized to +989XXXXXXXXX."
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Authoritative cart and shipping quotes.",
+            "description": "Authoritative server-priced cart; a non-persisted empty cart has null id and updatedAt with version 0.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6848,8 +6742,7 @@
                     "data": {
                       "type": "object",
                       "required": [
-                        "cart",
-                        "shipping"
+                        "cart"
                       ],
                       "properties": {
                         "cart": {
@@ -6863,11 +6756,12 @@
                           ],
                           "properties": {
                             "id": {
-                              "type": "string"
+                              "type": "string",
+                              "nullable": true
                             },
                             "version": {
                               "type": "integer",
-                              "minimum": 1
+                              "minimum": 0
                             },
                             "lines": {
                               "type": "array",
@@ -7027,7 +6921,1746 @@
                             },
                             "updatedAt": {
                               "type": "string",
-                              "format": "date-time"
+                              "format": "date-time",
+                              "nullable": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CART_LINE_LIMIT_EXCEEDED",
+                        "IDEMPOTENCY_CONFLICT",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read the authenticated customer cart",
+        "tags": [
+          "cart"
+        ]
+      }
+    },
+    "/cart/lines": {
+      "post": {
+        "operationId": "CartController_add",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque operation-scoped retry key, maximum 128 characters.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "variantId",
+                  "quantity"
+                ],
+                "properties": {
+                  "variantId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 99
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "cart"
+                      ],
+                      "properties": {
+                        "cart": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "version",
+                            "lines",
+                            "quote",
+                            "updatedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "lines": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "variantId",
+                                  "quantity",
+                                  "title",
+                                  "sku",
+                                  "unitPrice",
+                                  "lineTotal",
+                                  "available"
+                                ],
+                                "properties": {
+                                  "variantId": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 99
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "unitPrice": {
+                                    "type": "object",
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "lineTotal": {
+                                    "type": "object",
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "available": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            },
+                            "quote": {
+                              "type": "object",
+                              "required": [
+                                "subtotal",
+                                "shipping",
+                                "total",
+                                "currency",
+                                "pricePolicyRevision",
+                                "quotedAt"
+                              ],
+                              "properties": {
+                                "subtotal": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "shipping": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "total": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                },
+                                "pricePolicyRevision": {
+                                  "type": "string"
+                                },
+                                "quotedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST",
+                        "VALIDATION_ERROR"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "SKU_NOT_FOUND"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CART_LINE_LIMIT_EXCEEDED",
+                        "IDEMPOTENCY_CONFLICT",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CART_QUANTITY_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Add quantity to one authenticated cart line",
+        "tags": [
+          "cart"
+        ]
+      }
+    },
+    "/cart/lines/{variantId}": {
+      "put": {
+        "operationId": "CartController_set",
+        "parameters": [
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque operation-scoped retry key, maximum 128 characters.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "variantId",
+                  "quantity"
+                ],
+                "properties": {
+                  "variantId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 99
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "cart"
+                      ],
+                      "properties": {
+                        "cart": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "version",
+                            "lines",
+                            "quote",
+                            "updatedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "lines": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "variantId",
+                                  "quantity",
+                                  "title",
+                                  "sku",
+                                  "unitPrice",
+                                  "lineTotal",
+                                  "available"
+                                ],
+                                "properties": {
+                                  "variantId": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 99
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "unitPrice": {
+                                    "type": "object",
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "lineTotal": {
+                                    "type": "object",
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "available": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            },
+                            "quote": {
+                              "type": "object",
+                              "required": [
+                                "subtotal",
+                                "shipping",
+                                "total",
+                                "currency",
+                                "pricePolicyRevision",
+                                "quotedAt"
+                              ],
+                              "properties": {
+                                "subtotal": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "shipping": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "total": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                },
+                                "pricePolicyRevision": {
+                                  "type": "string"
+                                },
+                                "quotedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST",
+                        "VALIDATION_ERROR"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "SKU_NOT_FOUND"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CART_LINE_LIMIT_EXCEEDED",
+                        "IDEMPOTENCY_CONFLICT",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CART_QUANTITY_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Set the absolute quantity of one cart line",
+        "tags": [
+          "cart"
+        ]
+      },
+      "delete": {
+        "operationId": "CartController_remove",
+        "parameters": [
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque operation-scoped retry key, maximum 128 characters.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "cart"
+                      ],
+                      "properties": {
+                        "cart": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "version",
+                            "lines",
+                            "quote",
+                            "updatedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "lines": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "variantId",
+                                  "quantity",
+                                  "title",
+                                  "sku",
+                                  "unitPrice",
+                                  "lineTotal",
+                                  "available"
+                                ],
+                                "properties": {
+                                  "variantId": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 99
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "unitPrice": {
+                                    "type": "object",
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "lineTotal": {
+                                    "type": "object",
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "available": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            },
+                            "quote": {
+                              "type": "object",
+                              "required": [
+                                "subtotal",
+                                "shipping",
+                                "total",
+                                "currency",
+                                "pricePolicyRevision",
+                                "quotedAt"
+                              ],
+                              "properties": {
+                                "subtotal": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "shipping": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "total": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                },
+                                "pricePolicyRevision": {
+                                  "type": "string"
+                                },
+                                "quotedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST",
+                        "VALIDATION_ERROR"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CART_LINE_LIMIT_EXCEEDED",
+                        "IDEMPOTENCY_CONFLICT",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove one authenticated cart line",
+        "tags": [
+          "cart"
+        ]
+      }
+    },
+    "/checkout/preview": {
+      "post": {
+        "operationId": "CheckoutController_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "address"
+                ],
+                "properties": {
+                  "address": {
+                    "type": "object",
+                    "required": [
+                      "provinceCode",
+                      "city",
+                      "address",
+                      "postalCode",
+                      "recipient",
+                      "mobile"
+                    ],
+                    "properties": {
+                      "provinceCode": {
+                        "type": "string",
+                        "maxLength": 32
+                      },
+                      "city": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "address": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "description": "Ten digits after server normalization."
+                      },
+                      "recipient": {
+                        "type": "string",
+                        "maxLength": 120
+                      },
+                      "mobile": {
+                        "type": "string",
+                        "description": "Iranian mobile normalized to +989XXXXXXXXX."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authoritative cart and shipping quotes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "cart",
+                        "shipping"
+                      ],
+                      "properties": {
+                        "cart": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "version",
+                            "lines",
+                            "quote",
+                            "updatedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "lines": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "variantId",
+                                  "quantity",
+                                  "title",
+                                  "sku",
+                                  "unitPrice",
+                                  "lineTotal",
+                                  "available"
+                                ],
+                                "properties": {
+                                  "variantId": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 99
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "unitPrice": {
+                                    "type": "object",
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "lineTotal": {
+                                    "type": "object",
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "available": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            },
+                            "quote": {
+                              "type": "object",
+                              "required": [
+                                "subtotal",
+                                "shipping",
+                                "total",
+                                "currency",
+                                "pricePolicyRevision",
+                                "quotedAt"
+                              ],
+                              "properties": {
+                                "subtotal": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "shipping": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "total": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                },
+                                "pricePolicyRevision": {
+                                  "type": "string"
+                                },
+                                "quotedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
                             }
                           }
                         },
@@ -10289,6 +11922,10 @@
     {
       "name": "inventory",
       "description": "Stocks and ledgers"
+    },
+    {
+      "name": "cart",
+      "description": "Authenticated customer cart"
     },
     {
       "name": "orders",

@@ -57,12 +57,12 @@ const cartLine: SchemaObject = {
   },
 };
 
-const cart: SchemaObject = {
+export const openApiCartView: SchemaObject = {
   type: 'object',
   required: ['id', 'version', 'lines', 'quote', 'updatedAt'],
   properties: {
-    id: { type: 'string' },
-    version: { type: 'integer', minimum: 1 },
+    id: { type: 'string', nullable: true },
+    version: { type: 'integer', minimum: 0 },
     lines: { type: 'array', items: cartLine },
     quote: {
       type: 'object',
@@ -83,7 +83,7 @@ const cart: SchemaObject = {
         quotedAt: { type: 'string', format: 'date-time' },
       },
     },
-    updatedAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time', nullable: true },
   },
 };
 
@@ -144,7 +144,7 @@ export const openApiCheckout = {
         type: 'object',
         required: ['cart', 'shipping'],
         properties: {
-          cart,
+          cart: openApiCartView,
           shipping: { type: 'array', items: shippingQuote },
         },
       },

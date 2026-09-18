@@ -939,18 +939,22 @@ model CartItem {
 }
 
 model CartMutation {
-  id             String   @id @default(cuid())
-  cartId         String
+  id             String    @id @default(cuid())
+  cartId         String?
   customerId     String
-  idempotencyKey String
-  fingerprint    String   @db.VarChar(64)
+  scope          String    @db.VarChar(100)
+  idempotencyKey String?
+  keyHash        String?   @db.Char(64)
+  fingerprint    String    @db.VarChar(64)
   responseJson   Json
-  createdAt      DateTime @default(now())
-  cart           Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  cart           Cart?     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@unique([customerId, idempotencyKey])
-  @@index([createdAt])
+  @@unique([customerId, scope, keyHash])
+  @@index([expiresAt])
 }
 
 model Order {
