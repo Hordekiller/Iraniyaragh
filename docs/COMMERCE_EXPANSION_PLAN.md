@@ -592,12 +592,13 @@ platform, a second ORM or multiple payment/search abstractions merely for novelt
 
 ## 12. Current next sequence
 
-As of the 2026-09-18 reconciliation (`origin/main` = `b220e01`), Catalog/media,
-live public discovery, protected Inventory HTTP/public availability, authenticated
+As of the 2026-09-18 reconciliation through #251, Catalog/media, live public
+discovery, protected Inventory HTTP/public availability, hardened authenticated
 Cart, Checkout-to-reserved-Order creation and customer/staff Order reads are merged.
 The immediate path is:
 
-1. finish ADR-0015 Cart gaps and bind the Web Cart to the real API;
+1. implement ADR-0015 guest Cart token/TTL and login merge, then bind the Web Cart
+   to the hardened real API;
 2. bind Checkout/Order Web and Admin reads to #246/#247 without moving authority
    into UI clients;
 3. implement unpaid-Order expiry/cancellation commands, reservation compensation

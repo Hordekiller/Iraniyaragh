@@ -67,3 +67,20 @@ export function buildCartView(
     updatedAt: cart.updatedAt.toISOString(),
   };
 }
+
+export function buildEmptyCartView(quotedAt = new Date()): CartView {
+  return {
+    id: null,
+    version: 0,
+    lines: [],
+    quote: {
+      subtotal: { amount: '0', currency: 'IRR' },
+      shipping: { amount: '0', currency: 'IRR' },
+      total: { amount: '0', currency: 'IRR' },
+      currency: 'IRR',
+      pricePolicyRevision: 'catalog-sale-price-v1',
+      quotedAt: quotedAt.toISOString(),
+    },
+    updatedAt: null,
+  };
+}

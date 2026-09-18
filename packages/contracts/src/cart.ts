@@ -20,11 +20,11 @@ export type CartQuote = {
 };
 
 export type CartView = {
-  id: string;
+  id: string | null;
   version: number;
   lines: CartLine[];
   quote: CartQuote;
-  updatedAt: string;
+  updatedAt: string | null;
 };
 
 export type CartResponse = ApiSuccess<{ cart: CartView }>;

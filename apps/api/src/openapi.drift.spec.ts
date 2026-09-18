@@ -34,6 +34,7 @@ describe('OpenAPI document drift and contract', () => {
       'auth',
       'catalog',
       'inventory',
+      'cart',
       'orders',
     ]) {
       expect(document.tags?.map((tag) => tag.name)).toContain(expected);
@@ -168,5 +169,45 @@ describe('OpenAPI document drift and contract', () => {
     ]) {
       expect(serializedAdmin).not.toContain(forbidden);
     }
+  });
+
+  it('documents the authenticated cart contract and mutation failures', () => {
+    const paths = document.paths ?? {};
+    const cartRead = paths['/cart']?.get;
+    const add = paths['/cart/lines']?.post;
+    const set = paths['/cart/lines/{variantId}']?.put;
+    const remove = paths['/cart/lines/{variantId}']?.delete;
+
+    expect(cartRead).toBeDefined();
+    expect(add).toBeDefined();
+    expect(set).toBeDefined();
+    expect(remove).toBeDefined();
+    expect(Object.keys(cartRead?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '401', '403', '409']),
+    );
+
+    for (const operation of [add, set, remove]) {
+      const idempotencyHeader = operation?.parameters?.find(
+        (parameter) =>
+          !('$ref' in parameter) && parameter.name === 'Idempotency-Key',
+      );
+      expect(idempotencyHeader).toMatchObject({
+        in: 'header',
+        required: true,
+      });
+      expect(Object.keys(operation?.responses ?? {})).toEqual(
+        expect.arrayContaining(['400', '401', '403', '409']),
+      );
+    }
+
+    expect(Object.keys(add?.responses ?? {})).toContain('404');
+    expect(Object.keys(add?.responses ?? {})).toContain('422');
+    expect(Object.keys(set?.responses ?? {})).toContain('404');
+    expect(Object.keys(set?.responses ?? {})).toContain('422');
+
+    const readContract = JSON.stringify(cartRead?.responses?.['200']);
+    expect(readContract).toContain('"nullable":true');
+    expect(readContract).toContain('"minimum":0');
+    expect(readContract).toContain('pricePolicyRevision');
   });
 });
