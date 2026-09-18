@@ -13,7 +13,7 @@ test.describe('admin: authentication gate', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 
-    await expect(page.getByRole('heading', { name: 'ورود به پنل عملیات' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ورود توسعه‌دهنده' })).toBeVisible();
     await expect(page.getByLabel('کد دسترسی توسعه‌دهنده')).toBeVisible();
 
     await network.assertNone();
@@ -29,8 +29,8 @@ test.describe('admin: authentication gate', () => {
 
     await page.goto('/login');
 
-    await expect(page.getByText(/صرفاً برای محیط توسعه و آزمایش فعال است/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'ورود' })).toBeVisible();
+    await expect(page.getByText(/فقط در محیط توسعه و آزمایش فعال است/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'ورود به پنل' })).toBeVisible();
 
     await network.assertNone();
   });
@@ -69,14 +69,15 @@ test.describe('admin: authenticated shell', () => {
     }
   });
 
-  test('shows the developer profile, version and an actionable notifications bell (fixture)', async ({ page }) => {
+  test('shows the active profile, version and an honest disconnected notifications state', async ({ page }) => {
     await signInDiAsAdmin(page);
 
-    // Phase A: the bell is enabled and opens the clearly-labeled fixture panel.
+    // The bell remains actionable but never presents synthetic notifications.
     const bell = page.getByRole('button', { name: /اعلان‌ها/ });
     await expect(bell).toBeVisible();
     await bell.click();
-    await expect(page.getByText('دادهٔ آزمایشی — جریان واقعی اعلان هنوز متصل نشده است.')).toBeVisible();
+    await expect(page.getByText('جریان اعلان متصل نیست')).toBeVisible();
+    await expect(page.getByText(/هیچ ردیف نمونه‌ای نمایش داده نمی‌شود/)).toBeVisible();
     await page.keyboard.press('Escape');
 
     if (isMobile(page)) {
@@ -86,7 +87,8 @@ test.describe('admin: authenticated shell', () => {
     } else {
       // The developer identity now lives inside the account menu behind the avatar.
       await page.getByRole('button', { name: 'منوی حساب کاربری' }).click();
-      await expect(page.getByText('مدیر سیستم')).toBeVisible();
+      await expect(page.getByText('کاربر کارکنان')).toBeVisible();
+      await expect(page.getByText(/· STAFF_MFA/)).toBeVisible();
       await expect(adminSidebar(page).getByText(/نسخهٔ پایه/)).toBeVisible();
     }
   });
