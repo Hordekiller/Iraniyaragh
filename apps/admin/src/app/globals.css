@@ -16,8 +16,51 @@
 
 :root {
   color-scheme: light;
+  --admin-primary: #675dd8;
+  --admin-primary-dark: #5f54c7;
+  --admin-primary-contrast: #fff;
+  --admin-primary-soft: rgb(115 103 240 / 16%);
+  --admin-body-bg: #f8f7fa;
+  --admin-paper: #fff;
+  --admin-sidebar-bg: #fff;
+  --admin-navbar-bg: rgb(255 255 255 / 88%);
+  --admin-text-primary: #2f2b3d;
+  --admin-text-secondary: #6d6b77;
+  --admin-divider: rgb(47 43 61 / 12%);
+  --admin-action-hover: rgb(47 43 61 / 6%);
+  --admin-shadow-sm: 0 0.125rem 0.5rem rgb(47 43 61 / 12%);
+  --admin-shadow-md: 0 0.25rem 1.125rem rgb(47 43 61 / 14%);
+  --admin-chart-1: #7367f0;
+  --admin-chart-2: #00bad1;
+  --admin-chart-3: #28c76f;
+  --admin-chart-4: #ff9f43;
+  --admin-chart-5: #ff4c51;
+  --admin-chart-grid: rgb(47 43 61 / 10%);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+html[data-admin-mode='dark'] {
+  --admin-primary: #a9a1f6;
+  --admin-primary-dark: #8f85f3;
+  --admin-primary-contrast: #2f2b3d;
+  --admin-primary-soft: rgb(143 133 243 / 18%);
+  --admin-body-bg: #25293c;
+  --admin-paper: #2f3349;
+  --admin-sidebar-bg: #2f3349;
+  --admin-navbar-bg: rgb(47 51 73 / 88%);
+  --admin-text-primary: #e7e3fc;
+  --admin-text-secondary: #b5b2c4;
+  --admin-divider: rgb(231 227 252 / 12%);
+  --admin-action-hover: rgb(231 227 252 / 6%);
+  --admin-shadow-sm: 0 0.125rem 0.5rem rgb(15 17 30 / 26%);
+  --admin-shadow-md: 0 0.25rem 1.125rem rgb(15 17 30 / 32%);
+  --admin-chart-1: #8f85f3;
+  --admin-chart-2: #33c8da;
+  --admin-chart-3: #53d28c;
+  --admin-chart-4: #ffb269;
+  --admin-chart-5: #ff7074;
+  --admin-chart-grid: rgb(231 227 252 / 10%);
 }
 
 * {
@@ -32,9 +75,9 @@ body {
 }
 
 body {
-  color: #17233a;
+  color: var(--admin-text-primary);
   font-family: 'Iraniyaragh Sans', Tahoma, Arial, sans-serif;
-  background: #f4f6f9;
+  background: var(--admin-body-bg);
 }
 
 button,
@@ -50,6 +93,35 @@ a {
 }
 
 :focus-visible {
-  outline: 3px solid rgb(255 90 23 / 35%);
-  outline-offset: 3px;
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: ButtonText;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

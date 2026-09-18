@@ -38,8 +38,8 @@ export function ProfileMenu() {
         aria-label="منوی حساب کاربری"
         sx={{ p: 0.5, '&:hover': { bgcolor: 'action.hover' } }}
       >
-        <Avatar sx={{ bgcolor: 'secondary.main', width: 40, height: 40, fontSize: 15 }}>
-          م
+        <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40, fontSize: 15 }}>
+          ک
         </Avatar>
       </IconButton>
 
@@ -53,10 +53,10 @@ export function ProfileMenu() {
       >
         <Box sx={{ px: 2, py: 1.5 }}>
           <Typography variant="subtitle2" fontWeight={800}>
-            مدیر سیستم
+            کاربر کارکنان
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            حساب آزمایشی · {user?.authenticationLevel ?? '—'}
+          <Typography variant="caption" color="text.secondary" dir="ltr">
+            {user?.userId ?? '—'} · {user?.authenticationLevel ?? '—'}
           </Typography>
         </Box>
         <Divider />

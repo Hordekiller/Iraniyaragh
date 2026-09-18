@@ -11,12 +11,14 @@ import {
   PanelLeftOpen,
   X,
 } from 'lucide-react';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { filterNavigationByPermissions, navigation } from '@/config/navigation';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useAdminPreferences } from '@/lib/preferences/AdminPreferencesProvider';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationsMenu } from './NotificationsMenu';
 import { ProfileMenu } from './ProfileMenu';
+import { RouteAnnouncer } from './RouteAnnouncer';
 import { SettingsCustomizer } from './SettingsCustomizer';
 import styles from './AdminShell.module.css';
 
@@ -60,6 +62,7 @@ function NavLinks({
                   href={item.href}
                   key={item.href}
                   onClick={onNavigate}
+                  aria-current={active ? 'page' : undefined}
                 >
                   <Icon size={18} strokeWidth={1.8} />
                   <span>{item.label}</span>
@@ -164,13 +167,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
         role={mobileMenuOpen ? 'dialog' : undefined}
       >
         <div className={styles.brand}>
-          <div className={styles.brandMark} aria-hidden="true">
-            آی
-          </div>
-          <div className={styles.brandCopy}>
-            <strong>ایران یراق</strong>
-            <span>مرکز عملیات</span>
-          </div>
+          <BrandLogo compact={!isHorizontal && prefs.navCollapsed} />
           <button
             ref={closeMenuRef}
             className={styles.closeMenu}
@@ -259,6 +256,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
         <a className={styles.skipLink} href="#admin-main-content">
           پرش به محتوای اصلی
         </a>
+        <RouteAnnouncer />
         <main className={styles.main} id="admin-main-content" tabIndex={-1}>
           {children}
         </main>

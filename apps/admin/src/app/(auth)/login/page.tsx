@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Box, Button, Paper, TextField, Typography } from '@mui/material';
+import { Alert, Button, TextField } from '@mui/material';
+import { AuthSurface } from '@/components/auth/AuthSurface';
 import { useAuth } from '@/lib/auth/AuthProvider';
 
 export default function LoginPage() {
@@ -45,89 +46,39 @@ export default function LoginPage() {
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-        p: 2,
-      }}
+    <AuthSurface
+      title="ورود توسعه‌دهنده"
+      description="برای دسترسی به محیط محلی، کد صادرشده توسط تیم پلتفرم را وارد کنید."
+      footer={
+        <>این مسیر فقط در محیط توسعه و آزمایش فعال است و در استیجینگ و تولید غیرفعال می‌ماند.</>
+      }
     >
-      <Paper
-        elevation={0}
-        sx={{
-          width: '100%',
-          maxWidth: 420,
-          p: { xs: 3, sm: 4 },
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Box sx={{ mb: 3, textAlign: 'center' }}>
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              mx: 'auto',
-              mb: 1.5,
-              borderRadius: 2,
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: '1.25rem',
-            }}
-            aria-hidden="true"
-          >
-            آی
-          </Box>
-          <Typography variant="h5" fontWeight={700}>
-            ورود به پنل عملیات
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            ایران یراق — مرکز عملیات
-          </Typography>
-        </Box>
+      <form onSubmit={handleSubmit} noValidate>
+        <TextField
+          label="کد دسترسی توسعه‌دهنده"
+          variant="outlined"
+          fullWidth
+          autoFocus
+          autoComplete="off"
+          value={code}
+          onChange={event => setCode(event.target.value)}
+          disabled={busy}
+          error={error !== null}
+          helperText="کد فقط در حافظه نگهداری می‌شود و در مرورگر ذخیره نمی‌شود."
+          inputProps={{ 'aria-label': 'کد دسترسی توسعه‌دهنده', dir: 'ltr' }}
+          sx={{ mb: 2.5 }}
+        />
 
-        <form onSubmit={handleSubmit} noValidate>
-          <TextField
-            label="کد دسترسی توسعه‌دهنده"
-            variant="outlined"
-            fullWidth
-            autoFocus
-            autoComplete="off"
-            value={code}
-            onChange={event => setCode(event.target.value)}
-            disabled={busy}
-            error={error !== null}
-            helperText="برای ورود، کد ویژه‌ای که توسط تیم پلتفرم صادر شده را وارد کنید."
-            inputProps={{ 'aria-label': 'کد دسترسی توسعه‌دهنده', dir: 'ltr' }}
-            sx={{ mb: 2 }}
-          />
+        {error && (
+          <Alert severity="error" role="alert" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Button type="submit" variant="contained" fullWidth size="large" disabled={busy}>
-            {busy ? 'در حال ورود…' : 'ورود'}
-          </Button>
-        </form>
-
-        <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.secondary">
-            این روش ورود صرفاً برای محیط توسعه و آزمایش فعال است و در استیجینگ و تولید غیرفعال
-            خواهد بود.
-          </Typography>
-        </Box>
-      </Paper>
-    </Box>
+        <Button type="submit" variant="contained" fullWidth size="large" disabled={busy}>
+          {busy ? 'در حال ورود…' : 'ورود به پنل'}
+        </Button>
+      </form>
+    </AuthSurface>
   );
 }
