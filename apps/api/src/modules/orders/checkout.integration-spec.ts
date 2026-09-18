@@ -34,9 +34,9 @@ describe.sequential('CheckoutService database integration', () => {
   const address = {
     provinceCode: 'teh',
     city: ' تهران ',
-    address: 'خیابان نمونه پلاک ۱',
+    address: 'خیابان آزادی، پلاک ۱۰',
     postalCode: '۱۲۳۴۵۶۷۸۹۰',
-    recipient: 'کاربر نمونه',
+    recipient: 'گیرنده آزمون یکپارچگی',
     mobile: '۰۹۱۲۳۴۵۶۷۸۹',
   };
 
@@ -139,7 +139,7 @@ describe.sequential('CheckoutService database integration', () => {
         code: 'STANDARD',
         title: 'Standard shipping',
         amount: 50000n,
-        policyRevision: 'test-flat-rate-v1',
+        policyRevision: 'shipping-standard-v1',
       },
     });
   });
@@ -555,7 +555,7 @@ describe.sequential('CheckoutService database integration', () => {
           addressSnapshot: { test: true },
           shippingMethod: 'STANDARD',
           shippingMethodTitle: 'Standard shipping',
-          shippingPolicyRevision: 'test-flat-rate-v1',
+          shippingPolicyRevision: 'shipping-standard-v1',
           pricePolicyRevision: 'catalog-sale-price-v1',
           reservationExpiresAt: new Date(Date.now() + 60_000),
         },
@@ -676,7 +676,7 @@ describe.sequential('CheckoutService database integration', () => {
         code: 'STANDARD',
         title: 'Standard shipping',
         amount: 50000n,
-        policyRevision: 'test-flat-rate-v1',
+        policyRevision: 'shipping-standard-v1',
         isActive: true,
       },
     });

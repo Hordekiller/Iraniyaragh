@@ -8,9 +8,9 @@ import {
 const validAddress = {
   provinceCode: 'teh',
   city: ' تهران ',
-  address: 'خیابان  نمونه',
+  address: 'خیابان آزادی، پلاک ۱۰',
   postalCode: '۱۲۳۴۵۶۷۸۹۰',
-  recipient: 'کاربر نمونه',
+  recipient: 'گیرنده آزمون یکپارچگی',
   mobile: '۰۹۱۲-۳۴۵-۶۷۸۹',
 };
 
@@ -19,9 +19,9 @@ describe('checkout address policy', () => {
     expect(normalizeCheckoutAddress(validAddress)).toEqual({
       provinceCode: 'TEH',
       city: 'تهران',
-      address: 'خیابان نمونه',
+      address: 'خیابان آزادی، پلاک ۱۰',
       postalCode: '1234567890',
-      recipient: 'کاربر نمونه',
+      recipient: 'گیرنده آزمون یکپارچگی',
       mobile: '+989123456789',
     });
   });
