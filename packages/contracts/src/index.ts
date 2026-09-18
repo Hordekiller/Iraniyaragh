@@ -7,6 +7,7 @@ export * from './cart';
 export * from './media';
 export * from './inventory';
 export * from './notifications-sms';
+export * from './orders';
 
 export type InventorySnapshot = {
   warehouseId: string;

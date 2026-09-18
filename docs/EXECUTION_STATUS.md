@@ -21,24 +21,24 @@ day-to-day assignments.
 
 ## Current position
 
-| Gate                  | State                           | Current evidence                                                                                                                                | Exit blocker                                                                               |
-| --------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `0.1` Foundation/Auth | Acceptance closed               | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                              | private #114 acceptance                                                                    |
-| `0.2` Catalog         | Integrated foundation           | Catalog/Admin/public discovery plus Product Media M1–M5 are merged through #240, including the real-infrastructure API publish-to-discovery E2E | Admin-UI publish acceptance, video processing and production storage/scanner acceptance    |
-| `0.3` Inventory       | Protected HTTP foundation       | #222 inventory HTTP, #231 availability and #232 expiry batching are merged; #237 allocation is a local review candidate                          | Merge #237; Admin operator UX, compensation/reconciliation UI and worker rollout            |
-| `0.4` Commerce        | Partial Cart runtime            | #235/#239/#241–#244 Cart is merged; #237 locally adds address/quote/repricing/reservation, immutable Order creation and outbox persistence       | Review/merge #237; guest/merge/Cart-Web gaps, then #238 Order API/Admin and compensation    |
-| `0.5+`                | Not started as integrated gates | Payment/Fulfillment persistence foundations only                                                                                                | Application workflows, provider evidence and all production operations                     |
+| Gate                  | State                           | Current evidence                                                                                                                                | Exit blocker                                                                            |
+| --------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `0.1` Foundation/Auth | Acceptance closed               | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                              | private #114 acceptance                                                                 |
+| `0.2` Catalog         | Integrated foundation           | Catalog/Admin/public discovery plus Product Media M1–M5 are merged through #240, including the real-infrastructure API publish-to-discovery E2E | Admin-UI publish acceptance, video processing and production storage/scanner acceptance |
+| `0.3` Inventory       | Protected HTTP foundation       | #222 inventory HTTP, #231 availability, #232 expiry batching and #246/#237 Checkout allocation are merged                                       | Admin operator UX, compensation/reconciliation UI and worker rollout                    |
+| `0.4` Commerce        | Cart + Checkout foundation      | #235/#239/#241–#244 Cart and #246/#237 Checkout-to-reserved-Order runtime are merged; #238 reads are branch-local                               | Review/merge #238; guest/merge/Cart-Web gaps, commands and compensation                 |
+| `0.5+`                | Not started as integrated gates | Payment/Fulfillment persistence foundations only                                                                                                | Application workflows, provider evidence and all production operations                  |
 
-## Active issue queue (no open PR at baseline)
+## Active issue queue
 
-| Priority | Work                                   | State                                                    | Required reviewer focus                                                                                                    | Exit action                                                                          |
-| -------: | -------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-|        1 | Cart hardening/Web binding             | Partial; #236 is closed after authenticated API delivery | ADR-0015 gaps: guest/merge, scoped retention, side-effect-free reads, concurrent limits and a real Web adapter             | Open bounded follow-up issue(s); do not treat #236 closure as integrated Cart exit   |
-|        2 | Issue #237                             | Implemented on its branch; unmerged                       | serializable Checkout, privacy-safe contracts, DB money/stock constraints, rollback and concurrent replay evidence          | Independent review and merge                                                        |
-|        3 | Issue #238                             | Ready after #237 merges                                 | customer ownership/IDOR, staff permission, pagination, compensation and persistence-safe DTO review                         | Live customer Order API and Admin queue/detail over #237 Orders                     |
-|        4 | Issue #114                             | Private production acceptance                            | adapter/runtime exists; no secret/PII exposure and mutations fail closed                                                   | Provision account/line/template/key; controlled provider-backed evidence             |
-|        5 | Discovery #126/#129 and telemetry #136 | Ready/backlog                                            | server-rendered pages, sitemap/robots/IndexNow and telemetry                                                               | Parallel work only when it does not displace the commerce critical path              |
-|        6 | Issue #213                             | External admin confirmation open                         | current PRs execute real Sonar scans and Quality Gates; `sonar` is not a required branch-protection context                | SonarCloud admin clears/confirms organization suspension, then protect the context   |
+| Priority | Work                                   | State                                                    | Required reviewer focus                                                                                            | Exit action                                                                        |
+| -------: | -------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+|        1 | Cart hardening/Web binding             | Partial; #236 is closed after authenticated API delivery | ADR-0015 gaps: guest/merge, scoped retention, side-effect-free reads, concurrent limits and a real Web adapter     | Open bounded follow-up issue(s); do not treat #236 closure as integrated Cart exit |
+|        2 | Issue #237 / PR #246                   | Complete/merged                                          | independently approved serializable Checkout, privacy-safe contracts, DB constraints, rollback and replay evidence | Closed by protected squash merge `b53de29`                                         |
+|        3 | Issue #238                             | Branch-local read API candidate                          | customer ownership/IDOR, staff permission, pagination, bounded timeline and persistence-safe DTO review            | Review and merge live customer Order reads and Admin queue/detail                  |
+|        4 | Issue #114                             | Private production acceptance                            | adapter/runtime exists; no secret/PII exposure and mutations fail closed                                           | Provision account/line/template/key; controlled provider-backed evidence           |
+|        5 | Discovery #126/#129 and telemetry #136 | Ready/backlog                                            | server-rendered pages, sitemap/robots/IndexNow and telemetry                                                       | Parallel work only when it does not displace the commerce critical path            |
+|        6 | Issue #213                             | External admin confirmation open                         | current PRs execute real Sonar scans and Quality Gates; `sonar` is not a required branch-protection context        | SonarCloud admin clears/confirms organization suspension, then protect the context |
 
 ## Resolved since the 2026-09-14 review
 
@@ -175,25 +175,25 @@ Exit: one thin vertical journey is demonstrable; broad CRUD breadth is secondary
 
 1. Close the remaining authenticated/guest Cart contract gaps and bind Web Cart
    to the real API with ownership, failure and concurrency evidence.
-2. Merge and independently review #237 as one atomic Checkout → reservation →
-   immutable Order/outbox-persistence slice.
-3. Deliver #238 customer Order queries, expiry/cancellation compensation and
-   permissioned Admin queue/detail over the real Orders created by #237.
+2. Treat merged #246/#237 as the atomic Checkout → reservation → immutable
+   Order/outbox-persistence baseline.
+3. Review and merge #238 customer Order queries and permissioned Admin queue/detail;
+   track expiry/cancellation compensation as a separate critical mutation slice.
 4. Keep production SMS acceptance (#114), media storage/scanner acceptance and
    Inventory operator/worker readiness as explicit parallel acceptance work.
-5. Do not start Payment implementation until #237/#238 establish idempotent Order
-   authority and the provider/verification/refund decision is recorded.
+5. Do not start Payment implementation until merged #246/#237 and reviewed #238
+   establish Order authority and the provider/verification/refund decision is recorded.
 
 ## Ready queue after the checkpoint
 
 1. Close remaining ADR-0015 Cart gaps: guest token/TTL, login merge, operation-
    scoped mutation retention, side-effect-free reads and concurrent line-limit safety.
 2. Bind Web Cart to the real Cart API; fixture Cart remains test-only.
-3. Review/merge #237: address validation, server shipping quote, Checkout
+3. #246/#237 is merged: address validation, server shipping quote, Checkout
    repricing, deterministic allocation/reservation, immutable Order snapshot and
-   transactional outbox persistence are implemented with PostgreSQL evidence.
-4. Implement #238 next: customer Order list/detail, expiry/cancellation
-   compensation and permissioned Admin queue/detail/timeline.
+   transactional outbox persistence have PostgreSQL evidence.
+4. Review/merge #238 customer Order list/detail and permissioned Admin
+   queue/detail/timeline; keep expiry/cancellation compensation separately scoped.
 5. Then start one verified Payment provider, Fulfillment and transactional
    notifications; do not infer these from persistence tables.
 6. Run production media/storage/scanner acceptance and Inventory worker/operator UX
@@ -209,15 +209,15 @@ fixtures only. Public product list/detail projections expose a nullable
 prices without fabricating stock; public Inventory availability is integrated and
 fails closed. The API-level real-infrastructure publish → discovery journey is
 merged via #240. An Admin-UI-driven publish acceptance journey remains open. The
-server Cart API is merged. The local #237 changeset adds authenticated server
-Checkout preview and atomic reserved-Order creation, but it is not delivered until
-merge; Web Cart/Checkout/Orders remain fixture-backed and #238 Order reads/Admin
-operations do not yet exist.
+server Cart API and #246/#237 authenticated Checkout preview plus atomic
+reserved-Order creation are merged. Web Cart/Checkout/Orders remain fixture-backed;
+#238 Order reads/Admin operations exist only in the current review candidate.
 
 ## Explicitly not ready
 
 - Payment implementation before provider/verification/refund decisions.
-- Checkout UI before the server-owned #237 runtime is reviewed, merged and consumed.
+- Checkout UI before the merged server-owned #246/#237 runtime is consumed through
+  a real client and its failure states are designed.
 - Shipping/notifications before outbox/job retry policy.
 - Returns before refund and stock-outcome policy.
 - Production launch claims before deploy, monitoring and recovery drills.
@@ -280,10 +280,10 @@ Reviewer focus: ProductVariant typing parity, ProductVariantUpdateRequest shape,
   #114 evidence; the provider/admin runtime boundary itself is merged.
 - Server-side permission enforcement for every business command.
 - Live Web Cart/Checkout plus customer/Admin Order and Payment journeys; the
-  authenticated Checkout-to-reserved-Order API currently exists only in the
-  unmerged #237 changeset and has no live client.
+  authenticated Checkout-to-reserved-Order API is merged but has no live client,
+  and #238 read clients are not yet delivered.
 - Verified/idempotent payment and reconciliation.
-- Transactional outbox dispatch and production worker operations; the local #237
-  changeset persists `ORDER_CREATED` atomically and reservation-expiry batching is
+- Transactional outbox dispatch and production worker operations; merged #246/#237
+  persists `ORDER_CREATED` atomically and reservation-expiry batching is
   merged.
 - Production deploy/rollback, monitoring/alerts, backup/restore and RPO/RTO evidence.
