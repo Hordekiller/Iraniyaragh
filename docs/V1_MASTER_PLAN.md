@@ -1,6 +1,6 @@
 # V1.0 Master Plan — ایران‌یاراغ
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 This is the V1 release checklist. The complete expansion scope and mandatory
 implementation method—including post-V1 operations and growth—live in
@@ -33,12 +33,15 @@ and dedicated search infrastructure are excluded from V1.
   acceptance remain.
 - Inventory has the transactional core, warehouse/location, balance/movement/
   adjustment, reservation and transfer HTTP (#222), public availability (#231)
-  and batched expiry (#232); operator UI, Checkout allocation and production worker
-  rollout remain.
+  and batched expiry (#232); #246/#237 adds deterministic Checkout allocation.
+  Operator UI, compensation and production worker rollout remain.
 - `0.4` has a partial authenticated Cart runtime through #244: persistence and
-  read/add/set/remove APIs with server pricing. Guest/merge, live Web binding,
-  Checkout/Order workflows and outbox remain.
-- Order/payment/fulfillment persistence states exist; business services do not.
+  read/add/set/remove APIs with server pricing. #246/#237 adds Checkout-to-reserved-
+  Order creation and transactional outbox persistence, while #247/#238 adds owned
+  customer reads and permissioned staff queue/detail. Guest/merge, live clients,
+  Order commands and compensation remain.
+- Order creation/read services exist; Payment and Fulfillment remain persistence
+  foundations without application workflows.
 - Web Catalog/media/availability is live, but Web Cart/Checkout/Orders and Admin
   Inventory/Orders remain fixture/planned surfaces rather than integrated commerce.
 - Deployment, provider integrations, monitoring and disaster recovery remain unproven.
@@ -237,12 +240,15 @@ reconcilable to actor and business reference.
 - [x] Authenticated Cart persistence and add/set/remove commands (#241–#244);
       guest/merge and hardening remain.
 - [x] Cart responses are server-priced and accept no client totals; Checkout
-      repricing/stale-price enforcement remains #237.
+      repricing/stale-price enforcement is merged through #246/#237.
 - [ ] Address CRUD with ownership/privacy rules.
-- [ ] Checkout orchestration: reprice, recheck, reserve, snapshot, create exactly once.
-- [ ] Order service over accepted state machines and append-only transitions.
-- [ ] Cancellation/timeout compensation and transactional outbox foundation.
-- [ ] Customer order and admin queue/detail/action APIs.
+- [x] Checkout orchestration: reprice, recheck, reserve, snapshot and create exactly
+      once (#246/#237).
+- [ ] Order command service over accepted state machines and append-only transitions.
+- [x] Transactional outbox persistence foundation (#246/#237); dispatch remains.
+- [ ] Cancellation/timeout compensation.
+- [x] Customer order and staff queue/detail/timeline read APIs (#247/#238); actions
+      remain command scope.
 
 #### Web/admin
 

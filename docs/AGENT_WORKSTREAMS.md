@@ -1,6 +1,6 @@
 # Independent Agent Workstreams
 
-Status: active coordination contract; reviewed 2026-09-17.
+Status: active coordination contract; reviewed 2026-09-18.
 
 This file keeps three implementation lanes independently productive without allowing
 UI branches to redefine business truth or silently collide in shared hotspots.
@@ -20,13 +20,14 @@ capability.
 
 ## Current three-lane assignment
 
-| Lane             | Current owned outcome                                                                                          | Branch/worktree boundary                                                           | Integration dependency                                                                                 |
-| ---------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Platform/current | Close bounded ADR-0015 Cart gaps, then #237 Checkout/reservation/Order snapshot; #114 remains externally gated | API, data, contracts and operations only; new worktree from current `main`         | Publish accepted contract/runtime boundaries before either UI adopts them                              |
-| Admin agent      | No active PR at the reviewed baseline; consume #238 Order operations only after #237 creates real Orders       | `apps/admin/**`; one named owner alone edits `apps/admin/src/config/navigation.ts` | Keep fixture Order views explicitly non-live until the protected API merges                            |
-| User UI agent    | Bind Cart to the merged server API after its bounded hardening follow-up; Checkout waits for #237              | `apps/web/**`; one named owner alone edits web routing/layout                      | Preserve live Catalog/media/availability and keep Checkout/Orders fixture-gated until their APIs merge |
+| Lane             | Current owned outcome                                                                                        | Branch/worktree boundary                                                           | Integration dependency                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Platform/current | Close bounded ADR-0015 Cart gaps, then Order expiry/cancellation compensation; #114 remains externally gated | API, data, contracts and operations only; new worktree from current `main`         | #246/#247 are the accepted Checkout/Order contract baseline; commands require separate critical review |
+| Admin agent      | Bind read-only Order queue/detail/timeline to merged #247 before adding permission-aware commands            | `apps/admin/**`; one named owner alone edits `apps/admin/src/config/navigation.ts` | Keep command actions fixture-gated until the protected command API and compensation policy merge       |
+| User UI agent    | Bind Cart, Checkout and owned Order reads to merged #244/#246/#247 APIs after Cart hardening                 | `apps/web/**`; one named owner alone edits web routing/layout                      | Preserve live Catalog/media/availability; clients never own price, stock or Order state                |
 
-At the reviewed `c3bb20b` baseline no PR is open. Before new work starts, each lane
+At the reviewed `b220e01` baseline, #249 is the docs-only status follow-up. Before
+new implementation starts, each lane
 must claim its issue/branch/worktree and shared hotspots; local or untracked files
 remain user-owned and are never delivery evidence. A local commit is handoff
 evidence, not merged capability.

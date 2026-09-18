@@ -655,7 +655,7 @@ recorded above and still does not prove production media acceptance.
 ```text
 Harden and bind the authenticated Cart runtime
   → guest Cart and explicit login merge
-  → customer Order API + permissioned Admin queue/detail
+  → bind Checkout and Order reads to live Web/Admin clients
   → unpaid-Order expiry/cancellation compensation + outbox dispatch
   → server-verified Payment and reconciliation/refund boundary
   → Fulfillment/shipping and reservation consumption
