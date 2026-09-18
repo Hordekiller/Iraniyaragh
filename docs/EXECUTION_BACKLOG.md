@@ -29,8 +29,8 @@ the agreed scope in `PRODUCT_SPEC.md`.
 | G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                                                                                                                          |
 | G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158) plus admin logout CSRF #190, real staff-auth client #191 and live nav flags #192; refresh/CSRF parity #186/#188 closed via #190/#195                                                |
 | G3             | Integrated foundation           | Catalog variants/pricing/import, Admin authoring, live storefront discovery and Product Media M1–M5 are merged through #240; Admin-driven publish and production media acceptance remain                                           |
-| G4             | Protected HTTP foundation       | ledger/reservation core; warehouse/location, balance/movement/adjustment, reservation and transfer HTTP (#222); public availability (#231); batched expiry (#232) are merged; Admin/Checkout/production worker integration remains |
-| G5             | Partial Cart runtime            | Cart contracts/ownership/persistence and authenticated read/add/set/remove APIs merged through #244; guest/merge and hardening, Checkout, Order workflow/Admin and outbox remain                                                   |
+| G4             | Protected HTTP foundation       | inventory HTTP (#222), public availability (#231) and batched expiry (#232) are merged; #237 adds deterministic Checkout allocation in a local changeset awaiting review                                      |
+| G5             | Partial Cart runtime            | Cart runtime through #244 is merged; #237 locally adds quote/repricing/reservation, immutable Order creation and outbox persistence but is not delivered until review/merge                                  |
 | G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                                                                                                                              |
 
 This table is qualitative. A numeric delivery percentage is intentionally withheld
@@ -91,9 +91,11 @@ contract slice subsequently merged through #222.
 | #240      | `ce04cce`           | Product Media M4 gallery and M5 real-infrastructure publish-to-discovery E2E     |
 | #235/#239 | `85a8ed2`/`97854ec` | Cart/Checkout contracts and explicit User↔Customer linkage                       |
 | #241–#244 | `9f3ccf7`…`c3bb20b` | Authenticated Cart persistence and read/add/remove/absolute-set runtime          |
+| #237      | current changeset      | Atomic Checkout, deterministic reservation, immutable Order snapshot and outbox |
 
-No PR was open at the `c3bb20b` reconciliation baseline. #237 and #238 are the
-next open commerce issues; schema or fixture UI is not counted as their delivery.
+No PR was open at the `c3bb20b` reconciliation baseline. #237 is implemented by
+the current scoped changeset; #238 is the next commerce issue. Schema or fixture
+UI alone is never counted as delivery.
 
 ## 2. Completion map
 

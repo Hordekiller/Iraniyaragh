@@ -756,28 +756,28 @@ model StockReservation {
 }
 
 model StockTransfer {
-  id                String              @id @default(cuid())
-  code              String              @unique
+  id                String                    @id @default(cuid())
+  code              String                    @unique
   sourceWarehouseId String
   targetWarehouseId String
-  status            TransferStatus      @default(DRAFT)
-  idempotencyKey    String?             @unique
-  sourceWarehouse   Warehouse           @relation("TransferSource", fields: [sourceWarehouseId], references: [id])
-  targetWarehouse   Warehouse           @relation("TransferTarget", fields: [targetWarehouseId], references: [id])
+  status            TransferStatus            @default(DRAFT)
+  idempotencyKey    String?                   @unique
+  sourceWarehouse   Warehouse                 @relation("TransferSource", fields: [sourceWarehouseId], references: [id])
+  targetWarehouse   Warehouse                 @relation("TransferTarget", fields: [targetWarehouseId], references: [id])
   items             StockTransferItem[]
   transitions       StockTransferTransition[]
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
 }
 
 model StockTransferTransition {
-  id             String       @id @default(cuid())
-  transferId     String
-  action         String
-  idempotencyKey String       @unique
+  id              String        @id @default(cuid())
+  transferId      String
+  action          String
+  idempotencyKey  String        @unique
   expectedVersion Int?
-  transfer       StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
+  transfer        StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
 
   @@index([transferId, action])
 }
@@ -801,24 +801,24 @@ model StockTransferItem {
 }
 
 model WarehouseLocation {
-  id                   String              @id @default(cuid())
-  warehouseId          String
-  code                 String
-  name                 String?
-  zone                 String?
-  aisle                String?
-  rack                 String?
-  shelf                String?
-  bin                  String?
-  isActive             Boolean             @default(true)
-  warehouse            Warehouse           @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  balances             InventoryBalance[]
-  movements            InventoryMovement[]
-  reservations         StockReservation[]
-  sourceTransferItems  StockTransferItem[] @relation("TransferItemSource")
-  targetTransferItems  StockTransferItem[] @relation("TransferItemTarget")
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  id                  String              @id @default(cuid())
+  warehouseId         String
+  code                String
+  name                String?
+  zone                String?
+  aisle               String?
+  rack                String?
+  shelf               String?
+  bin                 String?
+  isActive            Boolean             @default(true)
+  warehouse           Warehouse           @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  balances            InventoryBalance[]
+  movements           InventoryMovement[]
+  reservations        StockReservation[]
+  sourceTransferItems StockTransferItem[] @relation("TransferItemSource")
+  targetTransferItems StockTransferItem[] @relation("TransferItemTarget")
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   @@unique([warehouseId, code])
 }
@@ -897,28 +897,31 @@ model StocktakeItem {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  userId    String?  @unique
-  mobile    String   @unique
-  firstName String?
-  lastName  String?
-  orders    Order[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  cart      Cart?
-  cartMutations CartMutation[]
+  id                         String                      @id @default(cuid())
+  userId                     String?                     @unique
+  mobile                     String                      @unique
+  firstName                  String?
+  lastName                   String?
+  orders                     Order[]
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  user                       User?                       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cart                       Cart?
+  cartMutations              CartMutation[]
+  shippingQuotes             ShippingQuote[]
+  checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
 }
 
 model Cart {
-  id          String         @id @default(cuid())
-  customerId  String         @unique
-  version     Int            @default(1)
-  customer    Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  items       CartItem[]
-  mutations   CartMutation[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id             String          @id @default(cuid())
+  customerId     String          @unique
+  version        Int             @default(1)
+  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items          CartItem[]
+  mutations      CartMutation[]
+  shippingQuotes ShippingQuote[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
 
 model CartItem {
@@ -951,40 +954,125 @@ model CartMutation {
 }
 
 model Order {
-  id           String             @id @default(cuid())
-  number       String             @unique
-  customerId   String
-  customer     Customer           @relation(fields: [customerId], references: [id])
-  status       OrderStatus        @default(PENDING_PAYMENT)
-  subtotal     BigInt
-  discount     BigInt             @default(0)
-  shipping     BigInt             @default(0)
-  grandTotal   BigInt
-  items        OrderItem[]
-  payments     Payment[]
-  reservations StockReservation[]
-  fulfillment  Fulfillment?
-  transitions  OrderTransition[]
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id                         String                      @id @default(cuid())
+  number                     String                      @unique
+  customerId                 String
+  customer                   Customer                    @relation(fields: [customerId], references: [id])
+  status                     OrderStatus                 @default(DRAFT)
+  subtotal                   BigInt
+  discount                   BigInt                      @default(0)
+  shipping                   BigInt                      @default(0)
+  grandTotal                 BigInt
+  addressSnapshot            Json
+  shippingMethod             String                      @db.VarChar(64)
+  shippingMethodTitle        String                      @db.VarChar(120)
+  shippingPolicyRevision     String                      @db.VarChar(100)
+  pricePolicyRevision        String                      @db.VarChar(100)
+  reservationExpiresAt       DateTime
+  items                      OrderItem[]
+  payments                   Payment[]
+  reservations               StockReservation[]
+  fulfillment                Fulfillment?
+  transitions                OrderTransition[]
+  shippingQuote              ShippingQuote?
+  checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
 
   @@index([customerId, createdAt])
   @@index([status, createdAt])
 }
 
 model OrderItem {
-  id        String         @id @default(cuid())
-  orderId   String
-  variantId String
-  sku       String
-  title     String
-  quantity  Int
-  unitPrice BigInt
-  total     BigInt
-  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  id           String         @id @default(cuid())
+  orderId      String
+  variantId    String
+  sku          String
+  title        String
+  productTitle String
+  variantTitle String?
+  ordinal      Int
+  quantity     Int
+  unitPrice    BigInt
+  total        BigInt
+  order        Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant      ProductVariant @relation(fields: [variantId], references: [id])
 
+  @@unique([orderId, ordinal])
   @@index([orderId])
+}
+
+model ShippingMethod {
+  id             String          @id @default(cuid())
+  code           String          @unique @db.VarChar(64)
+  title          String          @db.VarChar(120)
+  amount         BigInt
+  policyRevision String          @db.VarChar(100)
+  isActive       Boolean         @default(true)
+  quotes         ShippingQuote[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([isActive, code])
+}
+
+model ShippingQuote {
+  id                  String         @id @default(cuid())
+  customerId          String
+  cartId              String
+  cartVersion         Int
+  shippingMethodId    String
+  methodCode          String         @db.VarChar(64)
+  methodTitle         String         @db.VarChar(120)
+  addressHash         String         @db.Char(64)
+  subtotal            BigInt
+  amount              BigInt
+  pricePolicyRevision String         @db.VarChar(100)
+  policyRevision      String         @db.VarChar(100)
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  orderId             String?        @unique
+  customer            Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  cart                Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  shippingMethod      ShippingMethod @relation(fields: [shippingMethodId], references: [id], onDelete: Restrict)
+  order               Order?         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdAt           DateTime       @default(now())
+
+  @@index([customerId, expiresAt])
+  @@index([cartId, cartVersion])
+}
+
+model CheckoutIdempotencyRecord {
+  id           String   @id @default(cuid())
+  customerId   String
+  scope        String   @db.VarChar(100)
+  keyHash      String   @db.Char(64)
+  fingerprint  String   @db.Char(64)
+  orderId      String?
+  responseJson Json?
+  expiresAt    DateTime
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order        Order?   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now())
+
+  @@unique([customerId, scope, keyHash])
+  @@index([expiresAt])
+}
+
+model OutboxEvent {
+  id               String    @id @default(cuid())
+  topic            String    @db.VarChar(100)
+  aggregateType    String    @db.VarChar(100)
+  aggregateId      String    @db.VarChar(128)
+  payload          Json
+  deduplicationKey String    @unique @db.VarChar(200)
+  availableAt      DateTime  @default(now())
+  publishedAt      DateTime?
+  attempts         Int       @default(0)
+  createdAt        DateTime  @default(now())
+
+  @@index([publishedAt, availableAt])
+  @@index([aggregateType, aggregateId])
 }
 
 model Payment {
@@ -1012,7 +1100,7 @@ model OrderTransition {
   reason    String?     @db.VarChar(255)
   actorId   String?
   actor     User?       @relation("OrderActor", fields: [actorId], references: [id], onDelete: SetNull)
-  requestId String?     @db.VarChar(100)
+  requestId String?     @db.VarChar(128)
   createdAt DateTime    @default(now())
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
@@ -1084,7 +1172,7 @@ model AuditLog {
   before     Json?
   after      Json?
   metadata   Json?
-  requestId  String?  @db.VarChar(100)
+  requestId  String?  @db.VarChar(128)
   ipHash     String?  @db.VarChar(255)
   userAgent  String?  @db.Text
   createdAt  DateTime @default(now())

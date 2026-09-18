@@ -63,6 +63,52 @@ Expired/cancelled reservations release available stock. Fulfillment consumes the
 
 Reservation writes are idempotent via an optional `idempotency-key` header (`StockReservation.idempotencyKey`); replaying the same key with the same payload returns the original reservation, while a conflicting payload is rejected. Expiry runs in a serializable transaction and makes each reservation expire exactly once, restoring `available` stock.
 
+## Checkout runtime
+
+The authenticated Checkout boundary exposes:
+
+- `POST /api/v1/checkout/preview`: normalize/validate an inline delivery address,
+  reprice the current Cart and issue 15-minute quotes from active
+  database-configured `ShippingMethod` rows.
+- `POST /api/v1/checkout`: accept the address, `shippingQuoteId` and a bounded
+  `Idempotency-Key`; the client never supplies prices, discounts, shipping amount,
+  availability or totals.
+
+A quote is bound to the authenticated Customer, Cart id/version, normalized
+address hash, Catalog subtotal, price-policy revision, shipping-method code/title,
+policy revision and expiry. Checkout revalidates all of those facts. A stale,
+foreign or consumed quote, or any changed shipping method/policy fact, fails closed.
+
+Checkout then runs one PostgreSQL `SERIALIZABLE` transaction with bounded retry:
+
+1. claim the hashed, operation-scoped idempotency key and fingerprint;
+2. reload the Customer Cart and reprice active sellable variants;
+3. allocate active warehouse/location balances deterministically by warehouse
+   code, location code and stable id;
+4. create all 15-minute Order-linked reservations or roll the whole transaction
+   back;
+5. persist immutable product/SKU/title/price/address/shipping-policy snapshots and
+   stable line ordinals in a `DRAFT` Order;
+6. append the attributed `DRAFT -> PENDING_PAYMENT` transition;
+7. consume the quote, clear/version the Cart, write audit evidence and create one
+   deduplicated `ORDER_CREATED` outbox row;
+8. store the response for safe same-key/same-payload replay.
+
+Public Checkout responses intentionally omit warehouse/location allocation and
+internal idempotency fields. PostgreSQL checks enforce positive reservation and
+Order-line quantities, balance consistency and exact Order/line money equations.
+
+The outbox row is persistence only: dispatch/retry/DLQ/metrics remain a later
+worker slice. Shipping methods also require an operational provisioning/Admin
+flow before production; the repository does not guess a production shipping rate.
+Order reads/Admin operations, expiry/cancellation compensation, Payment and
+Fulfillment are separate downstream workflows.
+
+Tax calculation and customer tax disclosure are not implemented by this slice.
+ADR-0014 G4–G6 remain a hard gate before the first real sale; this Checkout runtime
+must not be treated as production-sale acceptance until that financial-policy work
+lands.
+
 ## Transfers
 A transfer is a backend-controlled state machine. Implemented lifecycle:
 

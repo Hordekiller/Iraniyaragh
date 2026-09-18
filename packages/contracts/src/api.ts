@@ -56,8 +56,9 @@ export const API_ERROR_CODES = [
   'CART_NOT_FOUND',
   'CART_LINE_LIMIT_EXCEEDED',
   'CART_QUANTITY_INVALID',
+  'CART_EMPTY',
+  'QUOTE_CHANGED',
   'SHIPPING_QUOTE_CHANGED',
-  'IDEMPOTENCY_CONFLICT',
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
