@@ -1,31 +1,31 @@
-import type { ApiSuccess, Money } from "./index";
-import type { CheckoutAddress } from "./cart";
+import type { ApiSuccess, Money } from './index';
+import type { CheckoutAddress } from './cart';
 
 export const ORDER_STATUSES = [
-  "DRAFT",
-  "PENDING_PAYMENT",
-  "PAID",
-  "CANCELLED",
-  "RETURNED",
+  'DRAFT',
+  'PENDING_PAYMENT',
+  'PAID',
+  'CANCELLED',
+  'RETURNED',
 ] as const;
 
 export const PAYMENT_STATUSES = [
-  "PENDING",
-  "PAID",
-  "FAILED",
-  "CANCELLED",
-  "REFUNDED",
-  "PARTIALLY_REFUNDED",
+  'PENDING',
+  'PAID',
+  'FAILED',
+  'CANCELLED',
+  'REFUNDED',
+  'PARTIALLY_REFUNDED',
 ] as const;
 
 export const FULFILLMENT_STATUSES = [
-  "PENDING",
-  "PROCESSING",
-  "READY_TO_SHIP",
-  "SHIPPED",
-  "DELIVERED",
-  "RETURNED",
-  "CANCELLED",
+  'PENDING',
+  'PROCESSING',
+  'READY_TO_SHIP',
+  'SHIPPED',
+  'DELIVERED',
+  'RETURNED',
+  'CANCELLED',
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -106,7 +106,7 @@ export type OrderFulfillmentSnapshot = {
 };
 
 export type OrderTimelineEntry = {
-  domain: "ORDER" | "PAYMENT" | "FULFILLMENT";
+  domain: 'ORDER' | 'PAYMENT' | 'FULFILLMENT';
   from: OrderStatus | PaymentStatus | FulfillmentStatus;
   to: OrderStatus | PaymentStatus | FulfillmentStatus;
   createdAt: string;
@@ -148,7 +148,7 @@ export type OrderDetail = OrderSummary & {
 
 export type AdminOrderDetail = Omit<
   OrderDetail,
-  "address" | "timeline" | "truncation"
+  'address' | 'timeline' | 'truncation'
 > & {
   customer: AdminOrderCustomer;
   address: AdminOrderAddress | null;

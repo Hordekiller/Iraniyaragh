@@ -3,13 +3,13 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-} from "@nestjs/common";
+} from '@nestjs/common';
 import {
   Prisma,
   type FulfillmentStatus,
   type OrderStatus,
   type PaymentStatus,
-} from "@prisma/client";
+} from '@prisma/client';
 import type {
   AdminOrderActor,
   AdminOrderAddress,
@@ -26,12 +26,12 @@ import type {
   OrderListMeta,
   OrderSummary,
   OrderTimelineEntry,
-} from "@iranyaragh/contracts";
-import { PrismaService } from "../../database/prisma.service";
+} from '@iranyaragh/contracts';
+import { PrismaService } from '../../database/prisma.service';
 import {
   AdminOrderListQueryDto,
   CustomerOrderListQueryDto,
-} from "./order-read.dto";
+} from './order-read.dto';
 
 const HISTORY_LIMIT = 100;
 
@@ -48,7 +48,7 @@ const customerListSelect = {
   updatedAt: true,
   payments: {
     select: { status: true },
-    orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
+    orderBy: [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
     take: 1,
   },
   _count: { select: { items: true, payments: true } },
@@ -79,7 +79,7 @@ const customerDetailSelect = {
       unitPrice: true,
       total: true,
     },
-    orderBy: [{ ordinal: "asc" as const }, { id: "asc" as const }],
+    orderBy: [{ ordinal: 'asc' as const }, { id: 'asc' as const }],
     take: HISTORY_LIMIT + 1,
   },
   payments: {
@@ -90,7 +90,7 @@ const customerDetailSelect = {
       createdAt: true,
       updatedAt: true,
     },
-    orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
+    orderBy: [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
     take: HISTORY_LIMIT + 1,
   },
   fulfillment: {
@@ -230,7 +230,7 @@ export class OrderReadService {
       this.loadTimeline(order.id),
       this.prisma.auditLog.findMany({
         where: {
-          entityType: { equals: "order", mode: "insensitive" },
+          entityType: { equals: 'order', mode: 'insensitive' },
           entityId: order.id,
         },
         select: {
@@ -241,7 +241,7 @@ export class OrderReadService {
             select: { id: true, firstName: true, lastName: true },
           },
         },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: HISTORY_LIMIT + 1,
       }),
     ]);
@@ -276,26 +276,26 @@ export class OrderReadService {
       this.prisma.orderTransition.findMany({
         where: { orderId },
         select,
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: HISTORY_LIMIT + 1,
       }),
       this.prisma.paymentTransition.findMany({
         where: { payment: { orderId } },
         select,
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: HISTORY_LIMIT + 1,
       }),
       this.prisma.fulfillmentTransition.findMany({
         where: { fulfillment: { orderId } },
         select,
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: HISTORY_LIMIT + 1,
       }),
     ]);
     const combined = [
-      ...tagTransitions("ORDER", orders),
-      ...tagTransitions("PAYMENT", payments),
-      ...tagTransitions("FULFILLMENT", fulfillments),
+      ...tagTransitions('ORDER', orders),
+      ...tagTransitions('PAYMENT', payments),
+      ...tagTransitions('FULFILLMENT', fulfillments),
     ].sort((left, right) => {
       const byTime =
         right.row.createdAt.getTime() - left.row.createdAt.getTime();
@@ -334,8 +334,8 @@ function adminOrderWhere(
   const createdTo = query.createdTo ? new Date(query.createdTo) : undefined;
   if (createdFrom && createdTo && createdFrom > createdTo) {
     throw new BadRequestException({
-      code: "INVALID_REQUEST",
-      message: "createdFrom must not be later than createdTo.",
+      code: 'INVALID_REQUEST',
+      message: 'createdFrom must not be later than createdTo.',
     });
   }
   const search = query.search?.trim();
@@ -355,7 +355,7 @@ function adminOrderWhere(
           },
         }
       : {}),
-    ...(search ? { number: { contains: search, mode: "insensitive" } } : {}),
+    ...(search ? { number: { contains: search, mode: 'insensitive' } } : {}),
   };
 }
 
@@ -468,21 +468,21 @@ function adminOrderDetail(
   };
 }
 
-function money(amount: bigint): { amount: string; currency: "IRR" } {
-  return { amount: amount.toString(), currency: "IRR" };
+function money(amount: bigint): { amount: string; currency: 'IRR' } {
+  return { amount: amount.toString(), currency: 'IRR' };
 }
 
 function checkoutAddress(value: Prisma.JsonValue): CheckoutAddress | null {
   if (!isRecord(value)) return null;
   const keys = [
-    "provinceCode",
-    "city",
-    "address",
-    "postalCode",
-    "recipient",
-    "mobile",
+    'provinceCode',
+    'city',
+    'address',
+    'postalCode',
+    'recipient',
+    'mobile',
   ] as const;
-  if (!keys.every((key) => typeof value[key] === "string")) return null;
+  if (!keys.every((key) => typeof value[key] === 'string')) return null;
   return {
     provinceCode: value.provinceCode as string,
     city: value.city as string,
@@ -494,7 +494,7 @@ function checkoutAddress(value: Prisma.JsonValue): CheckoutAddress | null {
 }
 
 function isRecord(value: Prisma.JsonValue): value is Prisma.JsonObject {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function actor(
@@ -507,7 +507,7 @@ function actor(
   if (!value) return null;
   const displayName = [value.firstName, value.lastName]
     .filter((part): part is string => Boolean(part?.trim()))
-    .join(" ");
+    .join(' ');
   return {
     id: value.id,
     displayNameMasked: displayName ? maskText(displayName) : null,
@@ -519,10 +519,10 @@ function adminCustomer(value: {
   firstName: string | null;
   lastName: string | null;
   mobile: string;
-}): AdminOrderSummary["customer"] {
+}): AdminOrderSummary['customer'] {
   const displayName = [value.firstName, value.lastName]
     .filter((part): part is string => Boolean(part?.trim()))
-    .join(" ");
+    .join(' ');
   return {
     id: value.id,
     displayNameMasked: displayName ? maskText(displayName) : null,
@@ -544,24 +544,24 @@ function adminAddress(value: CheckoutAddress | null): AdminOrderAddress | null {
 
 function maskText(value: string): string {
   const characters = [...value.trim()];
-  return characters.length ? `${characters[0]}***` : "***";
+  return characters.length ? `${characters[0]}***` : '***';
 }
 
 function maskIdentifier(value: string, prefix: number, suffix: number): string {
-  if (value.length <= prefix + suffix) return "*".repeat(value.length);
-  return `${value.slice(0, prefix)}${"*".repeat(value.length - prefix - suffix)}${value.slice(-suffix)}`;
+  if (value.length <= prefix + suffix) return '*'.repeat(value.length);
+  return `${value.slice(0, prefix)}${'*'.repeat(value.length - prefix - suffix)}${value.slice(-suffix)}`;
 }
 
 function tagTransitions<T extends TransitionRow>(
-  domain: "ORDER" | "PAYMENT" | "FULFILLMENT",
+  domain: 'ORDER' | 'PAYMENT' | 'FULFILLMENT',
   rows: T[],
-): Array<{ domain: "ORDER" | "PAYMENT" | "FULFILLMENT"; row: T }> {
+): Array<{ domain: 'ORDER' | 'PAYMENT' | 'FULFILLMENT'; row: T }> {
   return rows.map((row) => ({ domain, row }));
 }
 
 function orderNotFound(): NotFoundException {
   return new NotFoundException({
-    code: "NOT_FOUND",
-    message: "Order not found.",
+    code: 'NOT_FOUND',
+    message: 'Order not found.',
   });
 }

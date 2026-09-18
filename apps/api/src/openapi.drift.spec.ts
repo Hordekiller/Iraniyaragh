@@ -1,14 +1,14 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { NestFactory } from "@nestjs/core";
-import type { OpenAPIObject } from "@nestjs/swagger";
-import { beforeAll, describe, expect, it } from "vitest";
-import { AppModule } from "./app.module";
-import { createApiDocument } from "./swagger";
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { NestFactory } from '@nestjs/core';
+import type { OpenAPIObject } from '@nestjs/swagger';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { AppModule } from './app.module';
+import { createApiDocument } from './swagger';
 
-const OPENAPI_ARTIFACT_PATH = join(__dirname, "../openapi.json");
+const OPENAPI_ARTIFACT_PATH = join(__dirname, '../openapi.json');
 
-describe("OpenAPI document drift and contract", () => {
+describe('OpenAPI document drift and contract', () => {
   let document: OpenAPIObject;
 
   beforeAll(async () => {
@@ -17,45 +17,45 @@ describe("OpenAPI document drift and contract", () => {
     await app.close();
   });
 
-  it("is a valid OpenAPI 3.0 document", () => {
-    expect(document.openapi).toBe("3.0.0");
-    expect(document.info?.title).toBe("Iraniyaragh Commerce API");
+  it('is a valid OpenAPI 3.0 document', () => {
+    expect(document.openapi).toBe('3.0.0');
+    expect(document.info?.title).toBe('Iraniyaragh Commerce API');
     expect(document.info?.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(document.paths).toBeDefined();
   });
 
-  it("exposes the expected documentation surface", () => {
+  it('exposes the expected documentation surface', () => {
     const paths = Object.keys(document.paths ?? {});
-    for (const expected of ["/health", "/health/live", "/health/ready"]) {
+    for (const expected of ['/health', '/health/live', '/health/ready']) {
       expect(paths).toContain(expected);
     }
     for (const expected of [
-      "health",
-      "auth",
-      "catalog",
-      "inventory",
-      "orders",
+      'health',
+      'auth',
+      'catalog',
+      'inventory',
+      'orders',
     ]) {
       expect(document.tags?.map((tag) => tag.name)).toContain(expected);
     }
   });
 
-  it("matches the committed openapi.json artifact (CI drift check)", () => {
+  it('matches the committed openapi.json artifact (CI drift check)', () => {
     const committed = JSON.parse(
-      readFileSync(OPENAPI_ARTIFACT_PATH, "utf8"),
+      readFileSync(OPENAPI_ARTIFACT_PATH, 'utf8'),
     ) as OpenAPIObject;
     expect(document).toEqual(committed);
   });
 
-  it("documents stable failure responses for every notifications admin operation", () => {
+  it('documents stable failure responses for every notifications admin operation', () => {
     const paths = document.paths ?? {};
 
     const smsPath: Record<string, string[]> = {
-      "/notifications/admin/sms-settings": ["get", "put"],
-      "/notifications/admin/sms-settings/secret": ["post", "delete"],
-      "/notifications/admin/sms-settings/validate": ["post"],
-      "/notifications/admin/sms-settings/test-send": ["post"],
-      "/notifications/admin/sms-settings/diagnostics": ["get"],
+      '/notifications/admin/sms-settings': ['get', 'put'],
+      '/notifications/admin/sms-settings/secret': ['post', 'delete'],
+      '/notifications/admin/sms-settings/validate': ['post'],
+      '/notifications/admin/sms-settings/test-send': ['post'],
+      '/notifications/admin/sms-settings/diagnostics': ['get'],
     };
 
     const nonSuccessful = (operation: {
@@ -81,90 +81,90 @@ describe("OpenAPI document drift and contract", () => {
         // No operation may regress to success-only documentation.
         expect(failures.length).toBeGreaterThan(0);
 
-        if (path === "/notifications/admin/sms-settings" && method === "get") {
-          expect(failures).toEqual(expect.arrayContaining(["401", "403"]));
+        if (path === '/notifications/admin/sms-settings' && method === 'get') {
+          expect(failures).toEqual(expect.arrayContaining(['401', '403']));
         }
-        if (path === "/notifications/admin/sms-settings/diagnostics") {
-          expect(failures).toEqual(expect.arrayContaining(["401", "403"]));
+        if (path === '/notifications/admin/sms-settings/diagnostics') {
+          expect(failures).toEqual(expect.arrayContaining(['401', '403']));
         }
-        if (method === "put") {
+        if (method === 'put') {
           expect(failures).toEqual(
-            expect.arrayContaining(["400", "401", "403", "409", "503"]),
+            expect.arrayContaining(['400', '401', '403', '409', '503']),
           );
         }
-        if (path === "/notifications/admin/sms-settings/secret") {
+        if (path === '/notifications/admin/sms-settings/secret') {
           expect(failures).toEqual(
-            expect.arrayContaining(["400", "401", "403", "422", "503"]),
+            expect.arrayContaining(['400', '401', '403', '422', '503']),
           );
         }
-        if (path === "/notifications/admin/sms-settings/test-send") {
+        if (path === '/notifications/admin/sms-settings/test-send') {
           expect(failures).toEqual(
-            expect.arrayContaining(["400", "401", "403", "422", "503"]),
+            expect.arrayContaining(['400', '401', '403', '422', '503']),
           );
         }
-        if (path === "/notifications/admin/sms-settings/validate") {
+        if (path === '/notifications/admin/sms-settings/validate') {
           expect(failures).toEqual(
-            expect.arrayContaining(["401", "403", "503"]),
+            expect.arrayContaining(['401', '403', '503']),
           );
         }
       }
     }
   });
 
-  it("documents bounded customer and permissioned staff order reads", () => {
+  it('documents bounded customer and permissioned staff order reads', () => {
     const paths = document.paths ?? {};
     for (const path of [
-      "/orders",
-      "/orders/{id}",
-      "/orders/admin",
-      "/orders/admin/{id}",
+      '/orders',
+      '/orders/{id}',
+      '/orders/admin',
+      '/orders/admin/{id}',
     ]) {
       expect(paths[path], `missing ${path}`).toBeDefined();
       expect(paths[path]?.get, `missing GET ${path}`).toBeDefined();
     }
 
-    const customerList = paths["/orders"]?.get;
-    const adminList = paths["/orders/admin"]?.get;
-    const customerDetail = paths["/orders/{id}"]?.get;
-    const adminDetail = paths["/orders/admin/{id}"]?.get;
+    const customerList = paths['/orders']?.get;
+    const adminList = paths['/orders/admin']?.get;
+    const customerDetail = paths['/orders/{id}']?.get;
+    const adminDetail = paths['/orders/admin/{id}']?.get;
     const parameterNames = (operation: typeof customerList) =>
       (operation?.parameters ?? []).map((parameter) =>
-        "$ref" in parameter ? parameter.$ref : parameter.name,
+        '$ref' in parameter ? parameter.$ref : parameter.name,
       );
 
     expect(parameterNames(customerList)).toEqual(
-      expect.arrayContaining(["page", "perPage", "status", "sortDir"]),
+      expect.arrayContaining(['page', 'perPage', 'status', 'sortDir']),
     );
     expect(parameterNames(adminList)).toEqual(
       expect.arrayContaining([
-        "page",
-        "perPage",
-        "status",
-        "paymentStatus",
-        "fulfillmentStatus",
-        "createdFrom",
-        "createdTo",
-        "sortBy",
-        "sortDir",
-        "search",
+        'page',
+        'perPage',
+        'status',
+        'paymentStatus',
+        'fulfillmentStatus',
+        'createdFrom',
+        'createdTo',
+        'sortBy',
+        'sortDir',
+        'search',
       ]),
     );
     expect(Object.keys(customerDetail?.responses ?? {})).toEqual(
-      expect.arrayContaining(["200", "401", "403", "404"]),
+      expect.arrayContaining(['200', '401', '403', '404']),
     );
     expect(Object.keys(adminDetail?.responses ?? {})).toEqual(
-      expect.arrayContaining(["200", "401", "403", "404"]),
+      expect.arrayContaining(['200', '401', '403', '404']),
     );
 
     const serializedAdmin = JSON.stringify(adminDetail);
-    expect(serializedAdmin).toContain("displayNameMasked");
-    expect(serializedAdmin).toContain("addressMasked");
+    expect(serializedAdmin).toContain('displayNameMasked');
+    expect(serializedAdmin).toContain('addressMasked');
     for (const forbidden of [
-      "authority",
-      "idempotencyKey",
-      "warehouseLocationId",
-      "ipHash",
-      "userAgent",
+      'authority',
+      'idempotencyKey',
+      'warehouseLocationId',
+      'ipHash',
+      'userAgent',
     ]) {
       expect(serializedAdmin).not.toContain(forbidden);
     }
