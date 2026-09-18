@@ -15,10 +15,24 @@ VALUES ('st_customer', '+989121234567', 'Test', 'Customer', CURRENT_TIMESTAMP);
 
 INSERT INTO "Order" (
   "id", "number", "customerId", "status",
-  "subtotal", "discount", "shipping", "grandTotal", "updatedAt"
+  "subtotal", "discount", "shipping", "grandTotal",
+  "addressSnapshot", "shippingMethod", "shippingMethodTitle",
+  "shippingPolicyRevision", "pricePolicyRevision", "reservationExpiresAt",
+  "updatedAt"
 ) VALUES (
   'st_order', 'ST-1001', 'st_customer', 'PENDING_PAYMENT',
-  100000, 0, 25000, 125000, CURRENT_TIMESTAMP
+  100000, 0, 25000, 125000,
+  jsonb_build_object(
+    'provinceCode', 'TEHRAN',
+    'city', 'تهران',
+    'address', 'خیابان آزادی، پلاک ۱۰',
+    'postalCode', '1345678910',
+    'recipient', 'گیرنده آزمون یکپارچگی',
+    'mobile', '+989121234567'
+  ),
+  'STANDARD', 'ارسال استاندارد',
+  'state-transition-test-v1', 'catalog-price-v1',
+  CURRENT_TIMESTAMP + INTERVAL '15 minutes', CURRENT_TIMESTAMP
 );
 
 INSERT INTO "Payment" (

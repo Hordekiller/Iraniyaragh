@@ -19,7 +19,34 @@ jobs:
     timeout-minutes: 20
     env:
       CI: "true"
+      NODE_ENV: test
+      ALLOW_DATABASE_SEED: "true"
+      DATABASE_URL: postgresql://app_test:app_test@127.0.0.1:5432/iraniyaragh_sonar_test?schema=public
+      REDIS_URL: redis://127.0.0.1:6379
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    services:
+      postgres:
+        image: postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_DB: iranyaragh_sonar_test
+          POSTGRES_USER: app_test
+          POSTGRES_PASSWORD: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app_test -d iranyaragh_sonar_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -32,10 +59,15 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Generate Prisma client
-        run: pnpm --filter @iranyaragh/api prisma:generate
+      - name: Prepare integration database
+        run: |
+          pnpm --filter @iranyaragh/api prisma:generate
+          pnpm --filter @iranyaragh/api prisma:deploy
+          pnpm --filter @iranyaragh/api prisma:seed
       - name: Unit tests with coverage (lcov for Sonar)
         run: pnpm --filter @iranyaragh/api --filter @iranyaragh/web --filter @iranyaragh/admin test
+      - name: PostgreSQL integration tests with coverage (lcov for Sonar)
+        run: pnpm --filter @iranyaragh/api test:integration
       - name: Require SonarCloud token for trusted analysis
         if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
         run: |

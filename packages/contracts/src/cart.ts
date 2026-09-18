@@ -37,7 +37,10 @@ export type CartMergeWarning = {
   code: 'QUANTITY_CAPPED' | 'LINE_LIMIT_REACHED';
 };
 
-export type CartMergeResponse = ApiSuccess<{ cart: CartView; warnings: CartMergeWarning[] }>;
+export type CartMergeResponse = ApiSuccess<{
+  cart: CartView;
+  warnings: CartMergeWarning[];
+}>;
 
 export type CheckoutAddress = {
   provinceCode: string;
@@ -49,15 +52,64 @@ export type CheckoutAddress = {
 };
 
 export type CheckoutRequest = {
-  shippingMethod: string;
-} & ({ address: CheckoutAddress; addressId?: never } | { addressId: string; address?: never });
+  address: CheckoutAddress;
+  shippingQuoteId: string;
+};
+
+export type CheckoutPreviewRequest = {
+  address: CheckoutAddress;
+};
 
 export type ShippingQuote = {
   quoteId: string;
   method: string;
+  title: string;
   amount: Money;
   policyRevision: string;
+  pricePolicyRevision: string;
+  cartVersion: number;
   expiresAt: string;
 };
 
-export type CheckoutPreviewResponse = ApiSuccess<{ cart: CartView; shipping: ShippingQuote[] }>;
+export type CheckoutPreviewResponse = ApiSuccess<{
+  cart: CartView;
+  shipping: ShippingQuote[];
+}>;
+
+export type CheckoutOrderLineSnapshot = {
+  variantId: string;
+  productTitle: string;
+  variantTitle: string | null;
+  sku: string;
+  quantity: number;
+  unitPrice: Money;
+  lineTotal: Money;
+};
+
+export type CheckoutReservation = {
+  id: string;
+  variantId: string;
+  quantity: number;
+  expiresAt: string;
+};
+
+export type CheckoutOrder = {
+  id: string;
+  number: string;
+  status: 'PENDING_PAYMENT';
+  items: CheckoutOrderLineSnapshot[];
+  subtotal: Money;
+  discount: Money;
+  shipping: Money;
+  total: Money;
+  address: CheckoutAddress;
+  shippingQuote: ShippingQuote;
+  pricePolicyRevision: string;
+  reservationExpiresAt: string;
+  createdAt: string;
+};
+
+export type CheckoutResponse = ApiSuccess<{
+  order: CheckoutOrder;
+  reservations: CheckoutReservation[];
+}>;

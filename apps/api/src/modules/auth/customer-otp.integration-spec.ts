@@ -54,11 +54,12 @@ function testMobile(prefix: string): string {
 describe.sequential('CustomerOtpService database integration', () => {
   const prisma = new PrismaService();
   const hashes = new AuthHashService(runtimeConfig);
+  const sms = new FakeSmsProvider();
   const otp = new CustomerOtpService(
     prisma,
     hashes,
     removableLimiter() as unknown as RateLimitService,
-    new FakeSmsProvider(),
+    sms,
     { templateId: 1, codeParameterName: 'Code' },
   );
   let connected = false;
@@ -92,8 +93,11 @@ describe.sequential('CustomerOtpService database integration', () => {
 
   async function requestOtpAndRecoverCode(mobile: string, ip: string): Promise<{ challengeId: string; code: string }> {
     const issued = await otp.requestOtp({ mobile, client: 'CUSTOMER_WEB' }, ip);
-    const row = await prisma.otpCode.findUniqueOrThrow({ where: { id: issued.challengeId } });
-    const code = bruteForceOtpCode(hashes, row.codeHash);
+    const dispatched = sms.requests.findLast(
+      request => request.correlationId === issued.challengeId,
+    );
+    const code = dispatched?.parameters.Code;
+    if (!code) throw new Error('Fake SMS provider did not capture the issued OTP.');
     return { challengeId: issued.challengeId, code };
   }
 
@@ -246,11 +250,3 @@ describe.sequential('CustomerOtpService database integration', () => {
     expect(verifiedAudits).toBe(1);
   });
 });
-
-function bruteForceOtpCode(hashes: AuthHashService, codeHash: string): string {
-  for (let candidate = 0; candidate < 1_000_000; candidate += 1) {
-    const value = String(candidate).padStart(6, '0');
-    if (hashes.verify(value, codeHash, 'otp')) return value;
-  }
-  throw new Error('Unable to recover the OTP code hash in the integration test.');
-}
