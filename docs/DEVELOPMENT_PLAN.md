@@ -24,8 +24,9 @@ not followed clean sprint boundaries. At this review:
   #246/#237 also merged Checkout allocation. Admin operator UX, compensation and
   production worker rollout remain.
 - Sprint 6 has authenticated Cart through #244 and Checkout-to-reserved-Order
-  through #246/#237. Guest/merge and live Web binding remain; #238 Order reads are
-  branch-local and Sprints 7–11 have not reached their integrated exit criteria.
+  through #246/#237. #247/#238 adds merged Order reads; guest/merge and live Web/
+  Admin binding remain, and Sprints 7–11 have not reached their integrated exit
+  criteria.
 
 Do not infer completion from sprint number or schema presence. Use
 `PROJECT_STATUS.md` for facts, `EXECUTION_STATUS.md` for the next ten working days,
@@ -230,8 +231,8 @@ order; stock/price changes are communicated before confirmation.
 ### Sprint 7 — Order and admin operations (`0.4`)
 
 Status note (2026-09-18): #246/#237 merged the Checkout-to-reserved-Order and
-transactional outbox-persistence foundation. The current #238 candidate adds only
-customer-owned and `orders.read` staff query/detail APIs; cancellation/expiry
+transactional outbox-persistence foundation. #247/#238 merged the customer-owned
+and `orders.read` staff query/detail APIs; cancellation/expiry
 compensation remains separately scoped because it mutates both lifecycle and
 inventory state.
 
