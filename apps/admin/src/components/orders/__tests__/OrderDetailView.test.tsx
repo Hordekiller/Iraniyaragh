@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ORDERS_READ, ORDERS_WRITE } from '@/lib/orders/orders-permissions';
+import { ORDERS_READ } from '@/lib/orders/orders-permissions';
 import { OrderDetailView } from '../OrderDetailView';
 
 const mocks = vi.hoisted(() => ({
@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   getOrder: vi.fn(),
 }));
 
-vi.mock('@/lib/orders/orders-fixture', () => ({
+vi.mock('@/lib/orders/orders-api', () => ({
   ordersApi: { listOrders: vi.fn(), getOrder: mocks.getOrder },
 }));
 
@@ -17,82 +17,129 @@ vi.mock('@/lib/auth/AuthProvider', () => ({
 }));
 
 const detail = {
-  id: 'ord-1001',
-  orderNumber: 'IR-10-4821',
-  createdAt: '2026-09-08T10:00:00Z',
-  updatedAt: '2026-09-08T11:00:00Z',
-  customer: { fullName: 'مشتری نمونهٔ یک', mobile: '09120000001' },
-  orderStatus: 'PROCESSING' as const,
-  paymentStatus: 'PAID' as const,
-  fulfillmentStatus: 'ALLOCATED' as const,
-  subtotalRials: 4_650_000,
-  shippingRials: 80_000,
-  totalRials: 4_730_000,
-  shipping: { province: 'تهران', city: 'تهران', postalCode: '1234567890', address: 'خیابان نمونه' },
-  lines: [
+  id: 'order-1042',
+  number: 'IR-2026-1042',
+  status: 'PAID' as const,
+  payment: { latestStatus: 'PAID' as const, attemptCount: 1 },
+  fulfillmentStatus: 'PROCESSING' as const,
+  itemCount: 2,
+  totals: {
+    subtotal: { amount: '4650000', currency: 'IRR' as const },
+    discount: { amount: '0', currency: 'IRR' as const },
+    shipping: { amount: '80000', currency: 'IRR' as const },
+    total: { amount: '4730000', currency: 'IRR' as const },
+  },
+  reservationExpiresAt: '2026-09-18T12:30:00Z',
+  createdAt: '2026-09-18T10:00:00Z',
+  updatedAt: '2026-09-18T11:00:00Z',
+  customer: { id: 'customer-1', displayNameMasked: 'م*** ر***', mobileMasked: '0912*****67' },
+  address: {
+    provinceCode: '23',
+    city: 'تهران',
+    addressMasked: 'خ*** و***',
+    postalCodeMasked: '123*****90',
+    recipientMasked: 'م*** ر***',
+    mobileMasked: '0912*****67',
+  },
+  shippingMethod: { code: 'standard', title: 'ارسال استاندارد' },
+  pricePolicyRevision: 'price-2026-09',
+  shippingPolicyRevision: 'shipping-2026-09',
+  items: [
     {
-      id: 'l1',
-      productName: 'دستگیرهٔ در استیل',
-      sku: 'HND-ST-240',
+      variantId: 'variant-1',
+      sku: 'SKU-001',
+      productTitle: 'یراق‌آلات کابینت',
+      variantTitle: 'استیل',
       quantity: 2,
-      unitPriceRials: 1_800_000,
-      lineTotalRials: 3_600_000,
-    },
-    {
-      id: 'l2',
-      productName: 'قفل چندمنظوره',
-      sku: 'LCK-MP-102',
-      quantity: 1,
-      unitPriceRials: 1_050_000,
-      lineTotalRials: 1_050_000,
+      unitPrice: { amount: '2325000', currency: 'IRR' as const },
+      lineTotal: { amount: '4650000', currency: 'IRR' as const },
     },
   ],
+  payments: [
+    {
+      id: 'payment-1',
+      status: 'PAID' as const,
+      amount: { amount: '4730000', currency: 'IRR' as const },
+      createdAt: '2026-09-18T10:05:00Z',
+      updatedAt: '2026-09-18T10:06:00Z',
+    },
+  ],
+  fulfillment: {
+    status: 'PROCESSING' as const,
+    createdAt: '2026-09-18T10:10:00Z',
+    updatedAt: '2026-09-18T10:20:00Z',
+  },
+  timeline: [
+    {
+      domain: 'ORDER' as const,
+      from: 'PENDING_PAYMENT' as const,
+      to: 'PAID' as const,
+      reason: 'پرداخت تأیید شد',
+      actor: null,
+      requestId: 'request-order-1',
+      createdAt: '2026-09-18T10:06:00Z',
+    },
+  ],
+  audit: [
+    {
+      action: 'ORDER_READ_CREATED',
+      actor: { id: 'staff-1', displayNameMasked: 'ک*** پ***' },
+      requestId: 'request-audit-1',
+      createdAt: '2026-09-18T10:00:00Z',
+    },
+  ],
+  truncation: { items: false, payments: false, timeline: false, audit: false },
 };
 
 describe('OrderDetailView', () => {
   beforeEach(() => {
-    mocks.user = { permissions: [ORDERS_READ, ORDERS_WRITE] };
+    mocks.user = { permissions: [ORDERS_READ] };
     mocks.getOrder.mockResolvedValue(detail);
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  afterEach(() => vi.clearAllMocks());
+
+  it('renders the complete safe admin order contract', async () => {
+    render(<OrderDetailView orderId="order-1042" />);
+
+    expect(await screen.findByRole('heading', { name: 'سفارش IR-2026-1042' })).toBeInTheDocument();
+    expect(screen.getAllByText('م*** ر***')).toHaveLength(2);
+    expect(screen.getByText('خ*** و***')).toBeInTheDocument();
+    expect(screen.getByText('یراق‌آلات کابینت')).toBeInTheDocument();
+    expect(screen.getAllByText('۴٬۷۳۰٬۰۰۰ ریال').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('پرداخت تأیید شد')).toBeInTheDocument();
+    expect(screen.getByText('ORDER_READ_CREATED')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'تلاش‌های پرداخت' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'خط زمانی وضعیت‌های سفارش' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'رویدادهای ممیزی سفارش' })).toBeInTheDocument();
   });
 
-  it('renders the order badges, customer facts, lines and totals', async () => {
-    render(<OrderDetailView orderId="ord-1001" />);
+  it('passes an abort signal to the API', async () => {
+    render(<OrderDetailView orderId="order-1042" />);
 
-    expect(await screen.findByText('IR-10-4821')).toBeInTheDocument();
-    expect(screen.getByText(/در حال پردازش/)).toBeInTheDocument();
-    expect(screen.getByText(/پرداخت‌شده/)).toBeInTheDocument();
-    expect(screen.getByText(/تخصیص‌یافته/)).toBeInTheDocument();
-    expect(screen.getByText('مشتری نمونهٔ یک')).toBeInTheDocument();
-    expect(screen.getByText('دستگیرهٔ در استیل')).toBeInTheDocument();
-    expect(screen.getByText('قفل چندمنظوره')).toBeInTheDocument();
-    expect(screen.getByText('مبلغ نهایی')).toBeInTheDocument();
-    expect(screen.getByText('۴٬۷۳۰٬۰۰۰ ریال')).toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'سفارش IR-2026-1042' });
+    expect(mocks.getOrder).toHaveBeenCalledWith('order-1042', expect.any(AbortSignal));
   });
 
-  it('shows a forbidden state without orders.read', async () => {
+  it('shows a forbidden state and does not request detail without orders.read', async () => {
     mocks.user = { permissions: [] };
-    render(<OrderDetailView orderId="ord-1001" />);
+    render(<OrderDetailView orderId="order-1042" />);
 
     expect(await screen.findByText('دسترسی ندارید')).toBeInTheDocument();
     expect(mocks.getOrder).not.toHaveBeenCalled();
   });
 
-  it('shows the read-only notice for readers without orders.write', async () => {
-    mocks.user = { permissions: [ORDERS_READ] };
-    render(<OrderDetailView orderId="ord-1001" />);
-
-    await screen.findByText('IR-10-4821');
-    expect(screen.getByText(/فقط دسترسی خواندن/)).toBeInTheDocument();
-  });
-
   it('renders the not-found state for an unknown order', async () => {
     mocks.getOrder.mockRejectedValue(new Error('سفارش یافت نشد.'));
-    render(<OrderDetailView orderId="ord-missing" />);
+    render(<OrderDetailView orderId="missing" />);
 
     expect(await screen.findByText('سفارش یافت نشد')).toBeInTheDocument();
+  });
+
+  it('warns when a bounded history is truncated', async () => {
+    mocks.getOrder.mockResolvedValue({ ...detail, truncation: { ...detail.truncation, audit: true } });
+    render(<OrderDetailView orderId="order-1042" />);
+
+    expect(await screen.findByText(/رویدادهای ممیزی به سقف نمایش رسیده/)).toBeInTheDocument();
   });
 });

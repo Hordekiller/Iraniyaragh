@@ -24,7 +24,7 @@ import {
   paymentStatusTone,
   PAYMENT_STATUS_LABELS,
 } from '@/lib/orders/orders-labels';
-import { canReadOrders, canWriteOrders } from '@/lib/orders/orders-permissions';
+import { canReadOrders } from '@/lib/orders/orders-permissions';
 import type { AdminOrdersQuery } from './useOrders';
 import { useOrders } from './useOrders';
 
@@ -65,7 +65,7 @@ export function normalizeOrdersQuery(raw: OrdersUrlQuery): AdminOrdersQuery {
       ? (raw.fulfillmentStatus as AdminOrdersQuery['fulfillmentStatus'])
       : undefined;
 
-  const sortBy = raw.sortBy === 'updatedAt' || raw.sortBy === 'totalRials' ? raw.sortBy : 'createdAt';
+  const sortBy = raw.sortBy === 'updatedAt' || raw.sortBy === 'grandTotal' ? raw.sortBy : 'createdAt';
   const sortDir = raw.sortDir === 'asc' || raw.sortDir === 'desc' ? raw.sortDir : 'desc';
 
   return {
@@ -98,11 +98,10 @@ export function OrdersView({ initialQuery: raw }: { initialQuery: OrdersUrlQuery
   const router = useRouter();
   const { user } = useAuth();
   const canRead = canReadOrders(user);
-  const canWrite = canWriteOrders(user);
 
   const [query, setQuery] = useState<AdminOrdersQuery>(() => normalizeOrdersQuery(raw));
 
-  const { items, meta, loading, error } = useOrders(query);
+  const { items, meta, loading, error } = useOrders(query, canRead);
 
   const apply = (patch: Partial<AdminOrdersQuery>) => {
     const next = { ...query, ...patch, page: patch.page ?? 1 };
@@ -145,44 +144,45 @@ export function OrdersView({ initialQuery: raw }: { initialQuery: OrdersUrlQuery
         }
       />
 
-      {!canWrite ? (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          حساب شما فقط دسترسی خواندن به سفارش‌ها دارد؛ عملیات اجرایی (تغییر وضعیت، پردازش و ارسال) در این نسخهٔ پایه
-          ارائه نشده است و پس از اتصال سرویس سفارش فعال می‌شود.
-        </Alert>
-      ) : null}
+      <Alert severity="info" sx={{ mb: 2 }}>
+        این صفحه به API خواندنی سفارش‌ها متصل است. تغییر وضعیت سفارش، پرداخت یا ارسال تا ارائهٔ قرارداد اجرایی معتبر
+        در این صفحه انجام نمی‌شود.
+      </Alert>
 
       <DataTable<AdminOrderSummary>
         caption="فهرست سفارش‌ها"
         columns={[
           {
-            id: 'orderNumber',
+            id: 'number',
             label: 'سفارش',
             width: 220,
             render: (row) => (
               <Box>
                 <Typography component={Link} href={`/orders/${row.id}`} fontWeight={700} variant="body2">
-                  {row.orderNumber}
+                  {row.number}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {row.customer.fullName}
-                  <span dir="ltr"> · {row.customer.mobile}</span>
+                  {row.customer.displayNameMasked ?? 'نام ثبت نشده'}
+                  <span dir="ltr"> · {row.customer.mobileMasked}</span>
                 </Typography>
               </Box>
             ),
           },
           {
-            id: 'orderStatus',
+            id: 'status',
             label: 'وضعیت سفارش',
             render: (row) => (
-              <StatusChip label={orderStatusLabel(row.orderStatus)} tone={orderStatusTone(row.orderStatus)} />
+              <StatusChip label={orderStatusLabel(row.status)} tone={orderStatusTone(row.status)} />
             ),
           },
           {
             id: 'paymentStatus',
             label: 'وضعیت پرداخت',
             render: (row) => (
-              <StatusChip label={paymentStatusLabel(row.paymentStatus)} tone={paymentStatusTone(row.paymentStatus)} />
+                <StatusChip
+                  label={paymentStatusLabel(row.payment.latestStatus)}
+                  tone={paymentStatusTone(row.payment.latestStatus)}
+                />
             ),
           },
           {
@@ -196,10 +196,10 @@ export function OrdersView({ initialQuery: raw }: { initialQuery: OrdersUrlQuery
             ),
           },
           {
-            id: 'totalRials',
+            id: 'grandTotal',
             label: 'مبلغ',
             sortable: true,
-            render: (row) => <Typography variant="body2">{formatRial(row.totalRials)}</Typography>,
+            render: (row) => <Typography variant="body2">{formatRial(row.totals.total)}</Typography>,
           },
           {
             id: 'createdAt',
@@ -224,7 +224,7 @@ export function OrdersView({ initialQuery: raw }: { initialQuery: OrdersUrlQuery
         }
         search={query.search ?? ''}
         onSearchChange={(search) => apply({ search })}
-        searchPlaceholder="جستجوی شماره‌سفارش، نام یا موبایل…"
+        searchPlaceholder="جستجو فقط با شماره سفارش…"
         sort={sortState}
         onSortChange={(next: SortChange) => apply({ sortBy: next.columnId as AdminOrdersQuery['sortBy'], sortDir: next.direction })}
         rowCount={meta?.total ?? 0}

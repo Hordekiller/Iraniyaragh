@@ -14,46 +14,41 @@ import {
 } from '../orders-labels';
 
 describe('orders-labels', () => {
-  it('labels every order lifecycle state', () => {
+  it('covers every contract order state', () => {
     expect(ORDER_STATUS_LABELS).toEqual({
-      PENDING: 'در انتظار',
-      CONFIRMED: 'تأییدشده',
-      PROCESSING: 'در حال پردازش',
-      COMPLETED: 'تکمیل‌شده',
-      CANCELLED: 'لغو شده',
+      DRAFT: 'پیش‌نویس',
+      PENDING_PAYMENT: 'در انتظار پرداخت',
+      PAID: 'پرداخت‌شده',
+      CANCELLED: 'لغوشده',
+      RETURNED: 'مرجوع‌شده',
     });
-    expect(orderStatusLabel('PENDING')).toBe('در انتظار');
+    expect(orderStatusLabel('PENDING_PAYMENT')).toBe('در انتظار پرداخت');
     expect(orderStatusTone('CANCELLED')).toBe('error');
   });
 
-  it('labels every payment state', () => {
-    expect(PAYMENT_STATUS_LABELS).toEqual({
-      UNPAID: 'پرداخت نشده',
-      PENDING: 'در انتظار پرداخت',
-      PAID: 'پرداخت‌شده',
-      PARTIALLY_REFUNDED: 'استرداد جزئی',
-      REFUNDED: 'استردادشده',
-    });
+  it('covers every contract payment state and the null state', () => {
+    expect(Object.keys(PAYMENT_STATUS_LABELS)).toEqual([
+      'PENDING', 'PAID', 'FAILED', 'CANCELLED', 'REFUNDED', 'PARTIALLY_REFUNDED',
+    ]);
     expect(paymentStatusLabel('PAID')).toBe('پرداخت‌شده');
-    expect(paymentStatusTone('PARTIALLY_REFUNDED')).toBe('info');
+    expect(paymentStatusTone('FAILED')).toBe('error');
+    expect(paymentStatusLabel(null)).toBe('بدون تلاش پرداخت');
+    expect(paymentStatusTone(null)).toBe('neutral');
   });
 
-  it('labels every fulfillment state', () => {
-    expect(FULFILLMENT_STATUS_LABELS).toEqual({
-      UNFULFILLED: 'تخصیص‌نیافته',
-      ALLOCATED: 'تخصیص‌یافته',
-      PICKING: 'در حال چیدن',
-      PACKED: 'بسته‌بندی‌شده',
-      SHIPPED: 'ارسال‌شده',
-      DELIVERED: 'تحویل‌شده',
-    });
+  it('covers every contract fulfillment state and the null state', () => {
+    expect(Object.keys(FULFILLMENT_STATUS_LABELS)).toEqual([
+      'PENDING', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED', 'RETURNED', 'CANCELLED',
+    ]);
     expect(fulfillmentStatusLabel('DELIVERED')).toBe('تحویل‌شده');
-    expect(fulfillmentStatusTone('UNFULFILLED')).toBe('neutral');
+    expect(fulfillmentStatusTone('CANCELLED')).toBe('error');
+    expect(fulfillmentStatusLabel(null)).toBe('شروع نشده');
   });
 
-  it('formats Rial amounts and counts with Persian digits', () => {
-    expect(formatRial(4_650_000)).toBe('۴٬۶۵۰٬۰۰۰ ریال');
-    expect(formatRial(Number.NaN)).toBe('—');
+  it('formats large integer Rial strings without precision loss', () => {
+    expect(formatRial({ amount: '4650000', currency: 'IRR' })).toBe('۴٬۶۵۰٬۰۰۰ ریال');
+    expect(formatRial('9007199254740993000')).toBe('۹٬۰۰۷٬۱۹۹٬۲۵۴٬۷۴۰٬۹۹۳٬۰۰۰ ریال');
+    expect(formatRial('invalid')).toBe('—');
     expect(formatCount(1_250)).toBe('۱٬۲۵۰');
   });
 });

@@ -1,3 +1,4 @@
+import type { Money } from '@iranyaragh/contracts';
 import type { StatusTone } from '@/components/ui/StatusChip';
 import type {
   AdminFulfillmentStatus,
@@ -6,18 +7,15 @@ import type {
 } from './orders-types';
 
 const ORDER_STATUS_META: Record<AdminOrderStatus, { label: string; tone: StatusTone }> = {
-  PENDING: { label: 'در انتظار', tone: 'warning' },
-  CONFIRMED: { label: 'تأییدشده', tone: 'info' },
-  PROCESSING: { label: 'در حال پردازش', tone: 'warning' },
-  COMPLETED: { label: 'تکمیل‌شده', tone: 'success' },
-  CANCELLED: { label: 'لغو شده', tone: 'error' },
+  DRAFT: { label: 'پیش‌نویس', tone: 'neutral' },
+  PENDING_PAYMENT: { label: 'در انتظار پرداخت', tone: 'warning' },
+  PAID: { label: 'پرداخت‌شده', tone: 'success' },
+  CANCELLED: { label: 'لغوشده', tone: 'error' },
+  RETURNED: { label: 'مرجوع‌شده', tone: 'neutral' },
 };
 
 export const ORDER_STATUS_LABELS = Object.fromEntries(
-  (Object.keys(ORDER_STATUS_META) as AdminOrderStatus[]).map((status) => [
-    status,
-    ORDER_STATUS_META[status].label,
-  ]),
+  (Object.keys(ORDER_STATUS_META) as AdminOrderStatus[]).map((status) => [status, ORDER_STATUS_META[status].label]),
 ) as Record<AdminOrderStatus, string>;
 
 export function orderStatusLabel(status: AdminOrderStatus): string {
@@ -29,61 +27,59 @@ export function orderStatusTone(status: AdminOrderStatus): StatusTone {
 }
 
 const PAYMENT_STATUS_META: Record<AdminPaymentStatus, { label: string; tone: StatusTone }> = {
-  UNPAID: { label: 'پرداخت نشده', tone: 'warning' },
-  PENDING: { label: 'در انتظار پرداخت', tone: 'warning' },
+  PENDING: { label: 'در انتظار', tone: 'warning' },
   PAID: { label: 'پرداخت‌شده', tone: 'success' },
+  FAILED: { label: 'ناموفق', tone: 'error' },
+  CANCELLED: { label: 'لغوشده', tone: 'neutral' },
+  REFUNDED: { label: 'مستردشده', tone: 'neutral' },
   PARTIALLY_REFUNDED: { label: 'استرداد جزئی', tone: 'info' },
-  REFUNDED: { label: 'استردادشده', tone: 'neutral' },
 };
 
 export const PAYMENT_STATUS_LABELS = Object.fromEntries(
-  (Object.keys(PAYMENT_STATUS_META) as AdminPaymentStatus[]).map((status) => [
-    status,
-    PAYMENT_STATUS_META[status].label,
-  ]),
+  (Object.keys(PAYMENT_STATUS_META) as AdminPaymentStatus[]).map((status) => [status, PAYMENT_STATUS_META[status].label]),
 ) as Record<AdminPaymentStatus, string>;
 
-export function paymentStatusLabel(status: AdminPaymentStatus): string {
-  return PAYMENT_STATUS_META[status].label;
+export function paymentStatusLabel(status: AdminPaymentStatus | null): string {
+  return status ? PAYMENT_STATUS_META[status].label : 'بدون تلاش پرداخت';
 }
 
-export function paymentStatusTone(status: AdminPaymentStatus): StatusTone {
-  return PAYMENT_STATUS_META[status].tone;
+export function paymentStatusTone(status: AdminPaymentStatus | null): StatusTone {
+  return status ? PAYMENT_STATUS_META[status].tone : 'neutral';
 }
 
 const FULFILLMENT_STATUS_META: Record<AdminFulfillmentStatus, { label: string; tone: StatusTone }> = {
-  UNFULFILLED: { label: 'تخصیص‌نیافته', tone: 'neutral' },
-  ALLOCATED: { label: 'تخصیص‌یافته', tone: 'info' },
-  PICKING: { label: 'در حال چیدن', tone: 'warning' },
-  PACKED: { label: 'بسته‌بندی‌شده', tone: 'info' },
+  PENDING: { label: 'در انتظار پردازش', tone: 'warning' },
+  PROCESSING: { label: 'در حال پردازش', tone: 'info' },
+  READY_TO_SHIP: { label: 'آماده ارسال', tone: 'info' },
   SHIPPED: { label: 'ارسال‌شده', tone: 'info' },
   DELIVERED: { label: 'تحویل‌شده', tone: 'success' },
+  RETURNED: { label: 'مرجوع‌شده', tone: 'neutral' },
+  CANCELLED: { label: 'لغوشده', tone: 'error' },
 };
 
 export const FULFILLMENT_STATUS_LABELS = Object.fromEntries(
-  (Object.keys(FULFILLMENT_STATUS_META) as AdminFulfillmentStatus[]).map((status) => [
-    status,
-    FULFILLMENT_STATUS_META[status].label,
-  ]),
+  (Object.keys(FULFILLMENT_STATUS_META) as AdminFulfillmentStatus[]).map((status) => [status, FULFILLMENT_STATUS_META[status].label]),
 ) as Record<AdminFulfillmentStatus, string>;
 
-export function fulfillmentStatusLabel(status: AdminFulfillmentStatus): string {
-  return FULFILLMENT_STATUS_META[status].label;
+export function fulfillmentStatusLabel(status: AdminFulfillmentStatus | null): string {
+  return status ? FULFILLMENT_STATUS_META[status].label : 'شروع نشده';
 }
 
-export function fulfillmentStatusTone(status: AdminFulfillmentStatus): StatusTone {
-  return FULFILLMENT_STATUS_META[status].tone;
+export function fulfillmentStatusTone(status: AdminFulfillmentStatus | null): StatusTone {
+  return status ? FULFILLMENT_STATUS_META[status].tone : 'neutral';
 }
 
 const faNumber = new Intl.NumberFormat('fa-IR');
 
-/** Format an integer Rial amount with Persian digits: `۱۲٬۳۴۵٬۶۷۸ ریال`. */
-export function formatRial(amount: number): string {
-  if (!Number.isFinite(amount)) return '—';
-  return `${faNumber.format(amount)} ریال`;
+export function formatRial(value: Money | string | bigint): string {
+  const amount = typeof value === 'object' ? value.amount : value;
+  try {
+    return `${faNumber.format(BigInt(amount))} ریال`;
+  } catch {
+    return '—';
+  }
 }
 
-/** Compact representation of an amount's numeric digits (percentages, counts). */
 export function formatCount(value: number): string {
   return faNumber.format(value);
 }

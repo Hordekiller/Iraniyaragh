@@ -16,10 +16,11 @@ merged via #247 (closing #238).
 The repository has a credible platform baseline and substantial authentication,
 security and test infrastructure. The authenticated storefront Cart, Checkout and
 customer Order lifecycle now uses real HTTP APIs through #268, while #270 closes
-#269 with the Guest Cart API/data/security runtime. It is not yet a complete
-commerce product: anonymous Cart Web handoff, Order commands, verified
-Payment, fulfillment and production operations remain open, and the operational
-Admin modules are still advancing separately.
+#269 with the Guest Cart API/data/security runtime and #273 binds its Web handoff.
+It is not yet a complete
+commerce product: Order commands, verified Payment, fulfillment and production
+operations remain open. The operational Admin Order queue/detail is now bound to
+the masked, permissioned #238 read API through #257.
 
 Current delivery confidence:
 
@@ -378,12 +379,12 @@ security/query review, OpenAPI drift confirmation and merge.
 | Staff Auth    | Runtime, privileged lifecycle, double-submit CSRF logout fix (#190) and real HTTP login (#191) merged                                                               | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                      |
 | Catalog       | Advanced API, Product Media M1–M5 runtime, live storefront discovery, Admin authoring (#229) and API-level publish-to-discovery E2E (#240)                          | Admin-UI-driven publish acceptance, durable parsed-import storage and production media acceptance                                              |
 | Inventory     | Ledger; inventory HTTP (#222), public availability (#231), batched expiry (#232), typed operator read/mutation contracts and merged Checkout allocation (#246/#237) | Admin operator mutation UX, reconciliation UI, compensation and worker rollout                                                                 |
-| Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup and explicit OTP-login merge (#270/#269)                                  | Anonymous storefront adapter and OTP handoff                                                                                                   |
-| Checkout      | Merged preview/create API, configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence (#246/#237)              | Shipping operations, compensation/cleanup, Web binding and production acceptance                                                               |
-| Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation and #247/#238 customer/staff read API                                                                | Commands, compensation, live clients and lifecycle-operation evidence                                                                          |
+| Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup, explicit OTP-login merge (#270/#269) and Web handoff (#273)                 | Production acceptance and long-running cleanup operations                                                                                       |
+| Checkout      | Merged preview/create API and live Web binding with configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence    | Shipping operations, compensation/cleanup, verified Payment and production acceptance                                                          |
+| Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API and live read-only Admin client (#257)                            | Commands, compensation and lifecycle-operation evidence                                                                                        |
 | Payments      | Schema/state foundation                                                                                                                                             | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
-| Web           | Accessible routed storefront with live Catalog/media/availability plus authenticated Cart/Checkout/Order HTTP lifecycle (#268)                                      | Anonymous Cart adapter/OTP merge handoff; verified Payment API/result lifecycle                                                                |
-| Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229) and read-only Orders/Settings modules                          | Live inventory/order operations and publish E2E                                                                                                |
+| Web           | Accessible routed storefront with live Catalog/media/availability, authenticated Cart/Checkout/Order lifecycle (#268) and Guest Cart handoff (#273)                    | Verified Payment API/result lifecycle and production acceptance                                                                                |
+| Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)                     | Inventory UX, order commands and Admin-driven publish acceptance                                                                               |
 | Operations    | CI and local Compose                                                                                                                                                | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
@@ -406,14 +407,13 @@ security/query review, OpenAPI drift confirmation and merge.
 - Inventory Admin/operator modules, reconciliation UI, cancellation/expiry
   compensation and production expiry-worker rollout. Core inventory HTTP,
   optimized expiry batching and Checkout allocation are merged.
-- Anonymous Web Cart binding and its low-friction OTP handoff remain. The Guest
-  token/idle-TTL and explicit login-merge runtime is merged via #270/#269, while
-  authenticated Cart/Checkout/Order pages already use real HTTP clients through
-  #268.
+- Guest Cart and its low-friction OTP handoff are merged end-to-end through
+  #270/#269 and #273; production-session acceptance and verified Payment remain.
 - Shipping-method administration/provisioning and the global 24-hour Checkout
   idempotency cleanup job.
-- Order command lifecycle and a live Admin experience. The #247/#238 read API is
-  merged and #268 binds its customer Web client; the Admin client remains open.
+- Order command lifecycle. The #247/#238 read API is merged, #268 binds its
+  customer Web client and #257 binds its masked read-only Admin consumer; all
+  mutation workflows remain open.
 - Payment gateway, verified callback, refunds and reconciliation.
 - Shipment/tracking, outbox dispatcher/workers and notifications. #246/#237
   persists the first transactional `ORDER_CREATED` event but does not publish it.
@@ -588,8 +588,9 @@ guarding.
 
 The current baseline includes #246/#237, the independently reviewed #247/#238
 read-only Order API boundary, #251 authenticated Cart hardening, #268 authenticated
-Web commerce and #270/#269 Guest Cart/login merge. Order commands, compensation,
-anonymous Web handoff and live Admin Order consumption remain open work.
+Web commerce, #270/#269 Guest Cart/login merge, #273 Web Guest Cart handoff and
+#257 live read-only Admin Order consumption. Order commands, compensation and
+verified Payment remain open work.
 
 Issue #267 was delivered by #268. The storefront connects authenticated product
 variants, Cart mutations, Checkout preview/create and customer Order reads to the
@@ -692,8 +693,8 @@ recorded above and still does not prove production media acceptance.
 ```text
 Authenticated Cart correctness (#251)
   → guest Cart token/TTL and explicit login merge (merged #270/#269)
-  → bind the guest Cart and OTP merge to the live Web client (#258 follow-up)
-  → bind Checkout and Order reads to live Web/Admin clients
+  → guest Cart/OTP handoff and live Web commerce (merged #273/#268)
+  → live read-only Admin Order binding (merged by #257)
   → unpaid-Order expiry/cancellation compensation + outbox dispatch
   → server-verified Payment and reconciliation/refund boundary
   → Fulfillment/shipping and reservation consumption
