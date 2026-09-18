@@ -1,6 +1,6 @@
 # Detailed Development Plan
 
-Last reviewed: 2026-09-17
+Last reviewed: 2026-09-18
 
 This document schedules the MVP sequence. `COMMERCE_EXPANSION_PLAN.md` is the
 authoritative complete-scope plan for V1, operational maturity and governed growth;
@@ -21,10 +21,11 @@ not followed clean sprint boundaries. At this review:
   implementation through #240; Admin-driven publish acceptance and production
   media acceptance remain.
 - Sprint 4/5 Inventory core and protected HTTP are merged through #222/#231/#232;
-  Admin operator UX, Checkout allocation and production worker rollout remain.
-- Sprint 6 has a partial authenticated Cart runtime through #244. Guest/merge and
-  live Web binding remain; Checkout/Order (#237/#238) and Sprints 7–11 have not
-  reached their integrated exit criteria.
+  #246/#237 also merged Checkout allocation. Admin operator UX, compensation and
+  production worker rollout remain.
+- Sprint 6 has authenticated Cart through #244 and Checkout-to-reserved-Order
+  through #246/#237. Guest/merge and live Web binding remain; #238 Order reads are
+  branch-local and Sprints 7–11 have not reached their integrated exit criteria.
 
 Do not infer completion from sprint number or schema presence. Use
 `PROJECT_STATUS.md` for facts, `EXECUTION_STATUS.md` for the next ten working days,
@@ -227,6 +228,12 @@ Exit: manipulated client totals are ignored; double-submit creates at most one
 order; stock/price changes are communicated before confirmation.
 
 ### Sprint 7 — Order and admin operations (`0.4`)
+
+Status note (2026-09-18): #246/#237 merged the Checkout-to-reserved-Order and
+transactional outbox-persistence foundation. The current #238 candidate adds only
+customer-owned and `orders.read` staff query/detail APIs; cancellation/expiry
+compensation remains separately scoped because it mutates both lifecycle and
+inventory state.
 
 Developer A:
 

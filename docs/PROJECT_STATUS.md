@@ -10,14 +10,15 @@ scope. A feature is not called complete merely because code exists on a branch.
 
 Iraniyaragh is in **pre-release commerce integration**, after catalog/media,
 public discovery, inventory HTTP and the authenticated server-cart runtime have
-merged. The first atomic Checkout-to-Order runtime exists only in the local #237
-changeset and is awaiting commit, independent review and merge.
+merged. The first atomic Checkout-to-Order runtime is merged via #246 (closing
+#237). Customer-owned Order reads and the permissioned staff queue/detail are the
+current branch-local #238 review candidate.
 The repository has a credible platform baseline and substantial authentication,
 security and test infrastructure. It is not yet a usable commerce product: the
 storefront Cart/Checkout/Orders still use fixture clients, the operational admin
 has only fixture-backed read-only Orders/Settings modules, and the new Checkout
-API has no live Web consumer, Order query/operations API, payment, fulfillment or
-production operations yet.
+API has no live Web consumer, Order command API, payment, fulfillment or production
+operations yet. The #238 query API is not counted as delivered until review/merge.
 
 Current delivery confidence:
 
@@ -35,26 +36,24 @@ Current delivery confidence:
 | Public availability            | Merged slice                                | #231 exposes fail-closed variant availability without warehouse internals                                                                                                                                                 |
 | Reservation expiry             | Merged optimization                         | #232 processes bounded expiry batches transactionally with race-safe rechecks                                                                                                                                             |
 | Cart runtime                   | Partial                                     | #239/#241–#244 deliver authenticated ownership, persistence and read/add/set/remove APIs with server pricing; guest/merge, scoped retention and storefront binding remain                                                 |
-| Checkout runtime               | Local review candidate                      | #237 locally implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                    |
-| Order operations/payment       | Foundation only                             | Main has state persistence/helper only; after #237 merges, #238 still owns customer/Admin queries, compensation, payment and fulfillment workflows                                                                        |
+| Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
+| Order read API                 | Local review candidate                      | #238 adds ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                               |
+| Order commands/payment         | Foundation only                             | Cancellation/expiry compensation, payment and fulfillment application workflows remain separate follow-up scope                                                                                                           |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
 G2 is at acceptance reconciliation, G3 has an integrated Catalog/Media foundation,
-G4 has protected Inventory HTTP and a local Checkout-allocation candidate without
-operator UX, G5 has merged Cart plus local Checkout/Order-creation work, and
+G4 has protected Inventory HTTP and merged Checkout allocation without operator
+UX, G5 has merged Cart and Checkout/Order creation plus a local Order-read candidate, and
 G6–G10 have not reached integrated completion.
 
 ## Repository snapshot
 
 - Default branch: `main`.
-- Baseline before the #237 changeset: `origin/main` commit
-  `2569f61a18492535296e0f7329f6a0580e617254`. Since the former `0a7faba`
-  checkpoint, `main` added Product Media M4/M5 (#240), explicit User↔Customer
-  linkage (#239), Cart contracts (#235), persistence (#241), authenticated
-  read/add (#242), remove (#243) and absolute quantity update (#244). No pull
-  request was open at the 2026-09-17 reconciliation; #237 is the scoped runtime
-  change documented here.
+- Current branch baseline: `origin/main` commit
+  `b53de29f5f9d99b86f7e0371ba98e16109bb75a7`, the protected squash merge of
+  #246 which closed #237. The current changeset is scoped to #238 Order read APIs;
+  no schema migration or Order/payment/fulfillment mutation is included.
 - The baseline also contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
@@ -159,7 +158,7 @@ G6–G10 have not reached integrated completion.
 | Core domain            | Merged            | Ledger, balance invariants, reservations, consume/release/expire, transfers, optimistic versions, idempotency/replay and serializable retry with PostgreSQL concurrency tests |
 | HTTP/API               | Merged foundation | Protected warehouse/location, balance/movement/adjustment, reservation and transfer routes plus anonymous coarse availability                                                 |
 | Admin UX               | Planned           | Navigation entries are marked `planned`; no live operator Inventory module is present                                                                                         |
-| Checkout-integrated    | Local changeset   | #237 atomically allocates active locations and creates Order-linked reservations, but is not delivered until review/merge; compensation and live integration remain          |
+| Checkout-integrated    | Merged foundation | #246/#237 atomically allocates active locations and creates Order-linked reservations; compensation and live client integration remain                                        |
 | Production-operational | Partial           | Expiry batching exists, but scheduled worker rollout, metrics/DLQ, reconciliation UI and operational acceptance do not                                                        |
 
 ### Product clients and accessibility
@@ -272,9 +271,7 @@ malware scanner also remain production-acceptance work.
   route-scoped idempotency, 24-hour mutation cleanup, side-effect-free empty Cart
   reads, line-limit concurrency hardening and live Web integration.
 
-## Local changes awaiting review
-
-### Checkout to reserved Order runtime (#237, branch-local/unmerged)
+### Checkout to reserved Order runtime (merged via #246; closes #237)
 
 - `POST /api/v1/checkout/preview` normalizes and validates an inline Iranian
   delivery address, reprices the authenticated Customer Cart and issues 15-minute
@@ -299,8 +296,31 @@ malware scanner also remain production-acceptance work.
   concurrent identical checkout.
 - This is not a complete Order journey: shipping-method administration/provisioning,
   global retention cleanup, expiry/cancellation compensation, outbox dispatch,
-  #238 Order read/Admin APIs, Web binding, Payment and Fulfillment remain open.
+  Web binding, Payment and Fulfillment remain open.
   ADR-0014 G4–G6 taxation/disclosure is also a hard gate before any real sale.
+
+## Local changes awaiting review
+
+### Customer and staff Order reads (#238, branch-local/unmerged)
+
+- `GET /api/v1/orders` and `GET /api/v1/orders/:id` require Customer OTP and
+  derive ownership through `Customer.userId`; absent and foreign IDs return the
+  same `NOT_FOUND` response.
+- `GET /api/v1/orders/admin` and `GET /api/v1/orders/admin/:id` require Staff MFA
+  plus `orders.read`. Lists are bounded to 100 rows and support allowlisted status,
+  date, search and sort filters with stable pagination.
+- Public contracts keep Order, Payment and Fulfillment states separate, transport
+  integer Rial values as strings and return immutable line/address/shipping
+  snapshots rather than mutable Catalog or Prisma records.
+- Customer timelines omit actor, reason, request and audit data. Staff detail
+  exposes typed transition evidence and a bounded audit projection, never raw
+  `before`/`after`/`metadata`, payment authority, provider idempotency or warehouse
+  internals. Staff customer/contact/address fields are explicitly masked and queue
+  search is order-number-only until a narrower PII reveal/search permission is
+  accepted. PostgreSQL integration coverage proves these non-disclosure boundaries.
+- This slice is intentionally read-only. Cancellation/expiry compensation remains
+  a separate critical mutation requiring state, inventory, idempotency and
+  concurrency policy/evidence before implementation.
 
 ## Recently merged capability
 
@@ -334,20 +354,20 @@ security/query review, OpenAPI drift confirmation and merge.
 
 ## Partial capabilities and exact boundaries
 
-| Capability    | What exists                                                                                                                                        | What prevents completion                                                                                                                       |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| RBAC          | Roles, seed and guard machinery                                                                                                                    | Every domain route still needs explicit allow/deny policy tests                                                                                |
-| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                                                                              | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
-| Staff Auth    | Runtime, privileged lifecycle, double-submit CSRF logout fix (#190) and real HTTP login (#191) merged                                              | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                      |
-| Catalog       | Advanced API, Product Media M1–M5 runtime, live storefront discovery, Admin authoring (#229) and API-level publish-to-discovery E2E (#240)         | Admin-UI-driven publish acceptance, durable parsed-import storage and production media acceptance                                              |
-| Inventory     | Ledger; inventory HTTP (#222), public availability (#231), batched expiry (#232), plus branch-local Checkout allocation (#237) | Merge #237; Admin operator UX, reconciliation UI, compensation and worker rollout                                      |
-| Cart          | Authenticated persistence and protected read/add/set/remove runtime (#239/#241–#244), server pricing and informational availability                | Guest/merge, scoped retention, fully serializable concurrency, HTTP integration coverage and live storefront binding                           |
-| Checkout      | Branch-local preview/create API, configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence (#237) | Commit/review/merge; shipping operations, compensation/cleanup, Web binding and production acceptance                  |
-| Orders        | Generic state helper and fixture-backed read-only Admin UI are merged; #237 locally creates transitioned `PENDING_PAYMENT` Orders          | Merge #237; #238 customer/Admin reads, commands, compensation, live UI and lifecycle evidence                              |
-| Payments      | Schema/state foundation                                                                                                                            | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
-| Web           | Accessible routed storefront with live Catalog/media/availability HTTP adapter                                                                     | Cart/checkout/order/payment pages remain fixture-backed and are not connected to the merged Cart API                                           |
-| Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229) and read-only Orders/Settings modules         | Live inventory/order operations and publish E2E                                                                                                |
-| Operations    | CI and local Compose                                                                                                                               | Deploy/staging, observability, recovery and rollback proof                                                                                     |
+| Capability    | What exists                                                                                                                                            | What prevents completion                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| RBAC          | Roles, seed and guard machinery                                                                                                                        | Every domain route still needs explicit allow/deny policy tests                                                                                |
+| Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                                                                                  | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
+| Staff Auth    | Runtime, privileged lifecycle, double-submit CSRF logout fix (#190) and real HTTP login (#191) merged                                                  | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                      |
+| Catalog       | Advanced API, Product Media M1–M5 runtime, live storefront discovery, Admin authoring (#229) and API-level publish-to-discovery E2E (#240)             | Admin-UI-driven publish acceptance, durable parsed-import storage and production media acceptance                                              |
+| Inventory     | Ledger; inventory HTTP (#222), public availability (#231), batched expiry (#232) and merged Checkout allocation (#246/#237)                            | Admin operator UX, reconciliation UI, compensation and worker rollout                                                                          |
+| Cart          | Authenticated persistence and protected read/add/set/remove runtime (#239/#241–#244), server pricing and informational availability                    | Guest/merge, scoped retention, fully serializable concurrency, HTTP integration coverage and live storefront binding                           |
+| Checkout      | Merged preview/create API, configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence (#246/#237) | Shipping operations, compensation/cleanup, Web binding and production acceptance                                                               |
+| Orders        | Merged state/transition foundation and `PENDING_PAYMENT` creation; #238 customer/staff read API is branch-local                                        | Review/merge #238; commands, compensation, live clients and lifecycle-operation evidence                                                       |
+| Payments      | Schema/state foundation                                                                                                                                | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
+| Web           | Accessible routed storefront with live Catalog/media/availability HTTP adapter                                                                         | Cart/checkout/order/payment pages remain fixture-backed and are not connected to the merged Cart API                                           |
+| Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229) and read-only Orders/Settings modules             | Live inventory/order operations and publish E2E                                                                                                |
+| Operations    | CI and local Compose                                                                                                                                   | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
 
@@ -368,15 +388,16 @@ security/query review, OpenAPI drift confirmation and merge.
   G1–G3 slices land.
 - Inventory Admin/operator modules, reconciliation UI, cancellation/expiry
   compensation and production expiry-worker rollout. Core inventory HTTP,
-  optimized expiry batching are merged; Checkout allocation is local #237 work.
+  optimized expiry batching and Checkout allocation are merged.
 - Guest Cart/login merge, Cart scoped-retention/cleanup and live Web Cart/Checkout
-  binding. Authenticated address/quote/Checkout/Order creation exists only in the
-  unmerged #237 changeset.
+  binding. Authenticated address/quote/Checkout/Order creation is merged but has no
+  live Web consumer.
 - Shipping-method administration/provisioning and the global 24-hour Checkout
   idempotency cleanup job.
-- Order application lifecycle and customer/admin Order APIs/experiences (#238).
+- Order command lifecycle and customer/admin experiences. The #238 read API is
+  branch-local and awaiting review.
 - Payment gateway, verified callback, refunds and reconciliation.
-- Shipment/tracking, outbox dispatcher/workers and notifications. #237 locally
+- Shipment/tracking, outbox dispatcher/workers and notifications. #246/#237
   persists the first transactional `ORDER_CREATED` event but does not publish it.
 - Purchasing, stocktake, returns and operational reporting.
 - Production deploy/rollback, monitoring/alerts, backup/restore, load budgets, UAT
@@ -540,9 +561,9 @@ guarding.
 
 ## Open work (not yet on main)
 
-The reviewed baseline had no open pull request. This changeset implements #237;
-the next commerce runtime issue is #238 (Order API/Admin). Open issues alone are
-still planning or acceptance evidence, not delivered code.
+The current `origin/main` baseline includes #246/#237. This changeset implements
+the read-only #238 Order API boundary; until its PR is independently reviewed and
+merged, it remains branch-local evidence rather than delivered capability.
 
 ADR-0014 is accepted via #185 (`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` records
 the audited RBAC and money/financial-policy state and the G1–G8 slice plan). The
@@ -560,20 +581,20 @@ activation, a controlled provider-bound test destination and sanitized
 sandbox/production acceptance evidence.
 
 The review-handoff docs reconciliation (#218) is merged; this file was reconciled
-against `origin/main` `2569f61a18492535296e0f7329f6a0580e617254`
-before the scoped #237 changes on 2026-09-18.
+against `origin/main` `b53de29f5f9d99b86f7e0371ba98e16109bb75a7`
+before the scoped #238 changes on 2026-09-18.
 
 ## Decisions and blockers
 
 1. **Resolved by ADR-0011/#79:** SMS.ir is the initial provider behind the
    vendor-neutral `SmsProvider` boundary; #114/#115 own implementation.
 2. Payment provider and verification/refund contract.
-3. Shipping geography and production rates remain a business decision. The local
-   #237 changeset establishes database-configured server pricing and quote-policy
+3. Shipping geography and production rates remain a business decision. Merged
+   #246/#237 establishes database-configured server pricing and quote-policy
    revisioning without inventing a production rate.
 4. Reservation TTL and deterministic multi-location allocation are accepted in
-   ADR-0015 and implemented locally by #237; review/merge, cancellation/expiry
-   compensation and production worker rollout remain.
+   ADR-0015 and implemented by #246/#237; cancellation/expiry compensation and
+   production worker rollout remain.
 5. Guest Cart/login merge is accepted in ADR-0015; runtime and broader customer
    privacy/anonymization remain.
 6. Product variants/attributes and import format (policy and core services resolved by
@@ -628,7 +649,7 @@ recorded above and still does not prove production media acceptance.
   on current internal PRs, but `sonar` is not a required branch-protection context.
 - Payment-provider, production shipping-rate/geography and deployment RPO/RTO
   decisions are required before their production acceptance can close. They do
-  not invalidate the configured quote/Checkout runtime proposed by #237.
+  not invalidate the configured quote/Checkout runtime implemented by #246/#237.
 
 ## Current commerce critical path
 
@@ -644,9 +665,9 @@ Harden and bind the authenticated Cart runtime
   → UAT and supervised launch
 ```
 
-After review and merge, #237 creates the authoritative reserved Order and outbox
-row. #238 is the next runtime boundary; Payment/Fulfillment must not be promoted
-ahead of owned Order queries, lifecycle commands and compensation guarantees.
+#246/#237 creates the authoritative reserved Order and outbox row. #238 now adds
+owned and permissioned reads only; Payment/Fulfillment must not be promoted ahead
+of review/merge, lifecycle commands and compensation guarantees.
 
 ## Status update protocol
 
