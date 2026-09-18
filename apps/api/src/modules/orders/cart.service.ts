@@ -61,37 +61,12 @@ export class CartService {
       CART_SCOPES.add,
       idempotencyKey,
       { variantId, quantity: input.quantity },
-      async (tx) => {
-        await this.requireSellableVariant(tx, variantId);
-        const cart = await tx.cart.upsert({
-          where: { customerId: customer.id },
-          create: { customerId: customer.id },
-          update: {},
-        });
-        const line = await tx.cartItem.findUnique({
-          where: { cartId_variantId: { cartId: cart.id, variantId } },
-        });
-        if (
-          !line &&
-          (await tx.cartItem.count({ where: { cartId: cart.id } })) >= MAX_LINES
-        ) {
-          throw lineLimitExceeded();
-        }
-
-        const nextQuantity = (line?.quantity ?? 0) + input.quantity;
-        validateQuantity(nextQuantity);
-        await tx.cartItem.upsert({
-          where: { cartId_variantId: { cartId: cart.id, variantId } },
-          create: { cartId: cart.id, variantId, quantity: nextQuantity },
-          update: { quantity: nextQuantity },
-        });
-        await tx.cart.update({
-          where: { id: cart.id },
-          data: { version: { increment: 1 } },
-        });
-
-        return this.persistedCartResult(tx, cart.id);
-      },
+      (tx) =>
+        this.writeLine(tx, customer.id, variantId, (currentQuantity) =>
+          currentQuantity === null
+            ? input.quantity
+            : currentQuantity + input.quantity,
+        ),
     );
   }
 
@@ -151,39 +126,49 @@ export class CartService {
       CART_SCOPES.set,
       idempotencyKey,
       { variantId, quantity },
-      async (tx) => {
-        await this.requireSellableVariant(tx, variantId);
-        const cart = await tx.cart.upsert({
-          where: { customerId: customer.id },
-          create: { customerId: customer.id },
-          update: {},
-        });
-        const line = await tx.cartItem.findUnique({
-          where: { cartId_variantId: { cartId: cart.id, variantId } },
-        });
-        if (
-          !line &&
-          (await tx.cartItem.count({ where: { cartId: cart.id } })) >= MAX_LINES
-        ) {
-          throw lineLimitExceeded();
-        }
-        if (line?.quantity === quantity) {
-          return this.persistedCartResult(tx, cart.id);
-        }
-
-        await tx.cartItem.upsert({
-          where: { cartId_variantId: { cartId: cart.id, variantId } },
-          create: { cartId: cart.id, variantId, quantity },
-          update: { quantity },
-        });
-        await tx.cart.update({
-          where: { id: cart.id },
-          data: { version: { increment: 1 } },
-        });
-
-        return this.persistedCartResult(tx, cart.id);
-      },
+      (tx) => this.writeLine(tx, customer.id, variantId, () => quantity),
     );
+  }
+
+  private async writeLine(
+    tx: Prisma.TransactionClient,
+    customerId: string,
+    variantId: string,
+    resolveQuantity: (currentQuantity: number | null) => number,
+  ): Promise<CartMutationResult> {
+    await this.requireSellableVariant(tx, variantId);
+    const cart = await tx.cart.upsert({
+      where: { customerId },
+      create: { customerId },
+      update: {},
+    });
+    const line = await tx.cartItem.findUnique({
+      where: { cartId_variantId: { cartId: cart.id, variantId } },
+    });
+    if (
+      !line &&
+      (await tx.cartItem.count({ where: { cartId: cart.id } })) >= MAX_LINES
+    ) {
+      throw lineLimitExceeded();
+    }
+
+    const quantity = resolveQuantity(line?.quantity ?? null);
+    validateQuantity(quantity);
+    if (line?.quantity === quantity) {
+      return this.persistedCartResult(tx, cart.id);
+    }
+
+    await tx.cartItem.upsert({
+      where: { cartId_variantId: { cartId: cart.id, variantId } },
+      create: { cartId: cart.id, variantId, quantity },
+      update: { quantity },
+    });
+    await tx.cart.update({
+      where: { id: cart.id },
+      data: { version: { increment: 1 } },
+    });
+
+    return this.persistedCartResult(tx, cart.id);
   }
 
   private async runMutation(
