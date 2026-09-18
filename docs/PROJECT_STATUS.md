@@ -15,11 +15,10 @@ merged. The first atomic Checkout-to-Order runtime is merged via #246 (closing
 merged via #247 (closing #238).
 The repository has a credible platform baseline and substantial authentication,
 security and test infrastructure. It is not yet a usable commerce product: the
-storefront Cart/Checkout/Orders still use fixture clients, the operational admin
-has only fixture-backed read-only Orders/Settings modules, and the new Checkout
-API has no live Web consumer, Order command API, payment, fulfillment or production
-operations yet. The #238 query API is delivered, but its Web/Admin consumers are
-not yet bound to the live API.
+storefront Cart/Checkout/Orders still use fixture clients, while the operational
+admin Order queue/detail is now bound to the masked, permissioned #238 read API.
+The new Checkout API still has no live Web consumer, Order command API, payment,
+fulfillment or production operations.
 
 Current delivery confidence:
 
@@ -366,10 +365,10 @@ security/query review, OpenAPI drift confirmation and merge.
 | Inventory     | Ledger; inventory HTTP (#222), public availability (#231), batched expiry (#232) and merged Checkout allocation (#246/#237)                            | Admin operator UX, reconciliation UI, compensation and worker rollout                                                                          |
 | Cart          | Authenticated runtime (#239/#241–#244/#251), server pricing, side-effect-free empty reads, scoped 24-hour replay and concurrency-safe limits           | Guest token/TTL, explicit login merge and live storefront binding                                                                              |
 | Checkout      | Merged preview/create API, configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence (#246/#237) | Shipping operations, compensation/cleanup, Web binding and production acceptance                                                               |
-| Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation and #247/#238 customer/staff read API                                                   | Commands, compensation, live clients and lifecycle-operation evidence                                                                          |
+| Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API and live read-only Admin client (#257)                  | Commands, compensation, live customer client and lifecycle-operation evidence                                                                  |
 | Payments      | Schema/state foundation                                                                                                                                | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
 | Web           | Accessible routed storefront with live Catalog/media/availability HTTP adapter                                                                         | Cart/checkout/order/payment pages remain fixture-backed and are not connected to the merged Cart API                                           |
-| Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229) and read-only Orders/Settings modules             | Live inventory/order operations and publish E2E                                                                                                |
+| Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)         | Inventory UX, order commands and Admin-driven publish acceptance                                                                                |
 | Operations    | CI and local Compose                                                                                                                                   | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
 ## Not implemented
@@ -397,8 +396,9 @@ security/query review, OpenAPI drift confirmation and merge.
   address/quote/Checkout/Order creation are merged but have no live Web consumer.
 - Shipping-method administration/provisioning and the global 24-hour Checkout
   idempotency cleanup job.
-- Order command lifecycle and live customer/admin experiences. The #247/#238 read
-  API is merged, but its Web/Admin clients remain fixture-backed.
+- Order command lifecycle and live customer experience. The #247/#238 read API and
+  its masked read-only Admin consumer are merged; the Web customer client and all
+  mutation workflows remain open.
 - Payment gateway, verified callback, refunds and reconciliation.
 - Shipment/tracking, outbox dispatcher/workers and notifications. #246/#237
   persists the first transactional `ORDER_CREATED` event but does not publish it.
@@ -567,9 +567,9 @@ guarding.
 ## Open work (not yet on main)
 
 The current baseline includes #246/#237, the independently reviewed #247/#238
-read-only Order API boundary and the #251 authenticated Cart hardening slice.
-Guest Cart/login merge, Order commands, compensation and live Web/Admin consumers
-remain open work.
+read-only Order API boundary, the #251 authenticated Cart hardening slice and the
+#257 live read-only Admin Order consumer. Guest Cart/login merge, Order commands,
+compensation and live Web consumers remain open work.
 
 ADR-0014 is accepted via #185 (`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` records
 the audited RBAC and money/financial-policy state and the G1–G8 slice plan). The
@@ -663,7 +663,7 @@ recorded above and still does not prove production media acceptance.
 Authenticated Cart correctness (#251)
   → guest Cart token/TTL and explicit login merge
   → bind the hardened Cart to the live Web client
-  → bind Checkout and Order reads to live Web/Admin clients
+  → bind Checkout and Order reads to the live Web client (Admin read binding: #257)
   → unpaid-Order expiry/cancellation compensation + outbox dispatch
   → server-verified Payment and reconciliation/refund boundary
   → Fulfillment/shipping and reservation consumption
