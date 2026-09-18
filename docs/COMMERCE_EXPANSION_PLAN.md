@@ -3,7 +3,7 @@
 Status: authoritative expansion plan; implementation status remains in
 `PROJECT_STATUS.md`.
 
-Last reviewed: 2026-09-17
+Last reviewed: 2026-09-18
 
 Owners: Developer A — Platform/API/Data/Operations; Developer B —
 Product/Web/Admin/E2E. Every critical change requires independent review by the
@@ -592,14 +592,16 @@ platform, a second ORM or multiple payment/search abstractions merely for novelt
 
 ## 12. Current next sequence
 
-As of the 2026-09-17 reconciliation (`origin/main` = `c3bb20b`), Catalog/media,
-live public discovery, protected Inventory HTTP/public availability and a partial
-authenticated Cart runtime are merged. The immediate path is:
+As of the 2026-09-18 reconciliation (`origin/main` = `b220e01`), Catalog/media,
+live public discovery, protected Inventory HTTP/public availability, authenticated
+Cart, Checkout-to-reserved-Order creation and customer/staff Order reads are merged.
+The immediate path is:
 
 1. finish ADR-0015 Cart gaps and bind the Web Cart to the real API;
-2. implement #237 atomically: address/shipping quote, repricing, deterministic
-   allocation/reservation, immutable Order snapshot and outbox;
-3. implement #238 customer Order queries and permissioned Admin operations;
+2. bind Checkout/Order Web and Admin reads to #246/#247 without moving authority
+   into UI clients;
+3. implement unpaid-Order expiry/cancellation commands, reservation compensation
+   and outbox dispatch with idempotency and concurrency evidence;
 4. proceed through verified Payment, Fulfillment and notifications, followed by
    production operations and UAT, without skipping integrated exit evidence.
 

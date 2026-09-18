@@ -1,6 +1,6 @@
 # Zero-to-Production Execution Backlog
 
-Status: active work-breakdown baseline; reconciled 2026-09-17
+Status: active work-breakdown baseline; reconciled 2026-09-18
 
 Developer A: [@Hordekiller](https://github.com/Hordekiller)
 
@@ -23,15 +23,15 @@ the agreed scope in `PRODUCT_SPEC.md`.
 
 ### Current gate assessment
 
-| Gate (EXEC_G#) | Assessment                      | Why it is not closed                                                                                                                                                                                                               |
-| -------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G0             | Substantially complete          | provider/business decisions and team agreement remain                                                                                                                                                                              |
-| G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                                                                                                                          |
-| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158) plus admin logout CSRF #190, real staff-auth client #191 and live nav flags #192; refresh/CSRF parity #186/#188 closed via #190/#195                                                |
-| G3             | Integrated foundation           | Catalog variants/pricing/import, Admin authoring, live storefront discovery and Product Media M1–M5 are merged through #240; Admin-driven publish and production media acceptance remain                                           |
-| G4             | Protected HTTP foundation       | inventory HTTP (#222), public availability (#231) and batched expiry (#232) are merged; #237 adds deterministic Checkout allocation in a local changeset awaiting review                                      |
-| G5             | Partial Cart runtime            | Cart runtime through #244 is merged; #237 locally adds quote/repricing/reservation, immutable Order creation and outbox persistence but is not delivered until review/merge                                  |
-| G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                                                                                                                              |
+| Gate (EXEC_G#) | Assessment                      | Why it is not closed                                                                                                                                                                       |
+| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| G0             | Substantially complete          | provider/business decisions and team agreement remain                                                                                                                                      |
+| G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                                                                                  |
+| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158) plus admin logout CSRF #190, real staff-auth client #191 and live nav flags #192; refresh/CSRF parity #186/#188 closed via #190/#195        |
+| G3             | Integrated foundation           | Catalog variants/pricing/import, Admin authoring, live storefront discovery and Product Media M1–M5 are merged through #240; Admin-driven publish and production media acceptance remain   |
+| G4             | Protected HTTP foundation       | inventory HTTP (#222), public availability (#231), batched expiry (#232) and deterministic Checkout allocation (#246/#237) are merged; operator UI, compensation and worker rollout remain |
+| G5             | Cart + Checkout + Order reads   | Cart through #244, Checkout/Order creation through #246/#237 and customer/staff Order reads through #247/#238 are merged; clients, commands and compensation remain                        |
+| G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                                                                                      |
 
 This table is qualitative. A numeric delivery percentage is intentionally withheld
 until each row has accepted exit evidence.
@@ -81,7 +81,7 @@ Closed as delivered: #216 (storefront coverage gate, #207 evidence); #189 (parit
 #186 and #188 (auth/refresh parity, via #190/#195). The former #215 Inventory
 contract slice subsequently merged through #222.
 
-### Dated status delta — 2026-09-16/17
+### Dated status delta — 2026-09-16/18
 
 | PR        | Main head           | Content                                                                          |
 | --------- | ------------------- | -------------------------------------------------------------------------------- |
@@ -91,11 +91,12 @@ contract slice subsequently merged through #222.
 | #240      | `ce04cce`           | Product Media M4 gallery and M5 real-infrastructure publish-to-discovery E2E     |
 | #235/#239 | `85a8ed2`/`97854ec` | Cart/Checkout contracts and explicit User↔Customer linkage                       |
 | #241–#244 | `9f3ccf7`…`c3bb20b` | Authenticated Cart persistence and read/add/remove/absolute-set runtime          |
-| #237      | current changeset      | Atomic Checkout, deterministic reservation, immutable Order snapshot and outbox |
+| #246/#237 | `b53de29`           | Atomic Checkout, deterministic reservation, immutable Order snapshot and outbox  |
+| #247/#238 | `b220e01`           | Customer-owned Order reads and permissioned staff queue/detail/timeline          |
 
-No PR was open at the `c3bb20b` reconciliation baseline. #237 is implemented by
-the current scoped changeset; #238 is the next commerce issue. Schema or fixture
-UI alone is never counted as delivery.
+At the `b220e01` reconciliation baseline, #237 and #238 are merged and their issues
+closed. Live clients, Order commands and compensation remain separate delivery;
+schema or fixture UI alone is never counted as delivery.
 
 ## 2. Completion map
 

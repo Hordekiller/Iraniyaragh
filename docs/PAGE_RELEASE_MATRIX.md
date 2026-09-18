@@ -1,6 +1,6 @@
 # Page, Content and Release Matrix
 
-Status: authoritative page inventory and release boundary; reviewed 2026-09-17.
+Status: authoritative page inventory and release boundary; reviewed 2026-09-18.
 
 Implementation truth remains in `PROJECT_STATUS.md`. An entry in this matrix means
 required scope, not delivered code. Only reviewed evidence merged to `main` changes a
@@ -8,14 +8,14 @@ capability to delivered.
 
 ## 1. Current truth checkpoint
 
-| Area         | State on `main`                                                                                                                                                     | Open work, not delivered                                                                                 |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Customer web | Accessible responsive Vite app with real-HTTP Auth, live Catalog/media/availability discovery and the merged M4 gallery; Cart/Checkout/Orders remain fixture-backed | #126 rendered pages; live Cart binding; #140 dynamic page/content outcome                                |
-| Admin        | Next.js RTL shell, Auth/session management, SMS settings, Catalog workflow and Product Media authoring; no live Inventory/Order operations                          | Admin-driven publish acceptance and remaining operational commerce modules                               |
-| API          | Auth/RBAC, Catalog/Media, protected Inventory HTTP/public availability and authenticated Cart read/add/set/remove are merged                                        | #114 provider acceptance; Cart guest/merge hardening; #237 Checkout/Order snapshot; #238 Order API/Admin |
-| Discovery    | ADR-0012 and the complete SEO/GEO plan are merged                                                                                                                   | #129 sitemap/robots/IndexNow and #126 rendered templates                                                 |
-| Commerce     | Authenticated server Cart runtime exists; the Web Cart is not bound to it and no real Checkout, Order, Payment or Fulfillment journey exists                        | #237/#238, then Payment/Fulfillment/notifications                                                        |
-| Operations   | CI and local dependencies exist                                                                                                                                     | #136 logging/telemetry plus deploy, restore, alerts and production drills                                |
+| Area         | State on `main`                                                                                                                                                     | Open work, not delivered                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Customer web | Accessible responsive Vite app with real-HTTP Auth, live Catalog/media/availability discovery and the merged M4 gallery; Cart/Checkout/Orders remain fixture-backed | #126 rendered pages; live Cart binding; #140 dynamic page/content outcome                    |
+| Admin        | Next.js RTL shell, Auth/session management, SMS settings, Catalog workflow and Product Media authoring; no live Inventory/Order operations                          | Admin-driven publish acceptance and remaining operational commerce modules                   |
+| API          | Auth/RBAC, Catalog/Media, Inventory HTTP/availability, authenticated Cart, #246 Checkout/Order creation and #247 customer/staff Order reads are merged              | #114 provider acceptance; Cart guest/merge; Order commands/compensation; Payment/Fulfillment |
+| Discovery    | ADR-0012 and the complete SEO/GEO plan are merged                                                                                                                   | #129 sitemap/robots/IndexNow and #126 rendered templates                                     |
+| Commerce     | Server Cart, Checkout/Order creation and Order read APIs exist; Web/Admin remain fixture-backed and no Payment/Fulfillment journey exists                           | Live Cart/Checkout/Order clients; commands/compensation; Payment/Fulfillment/notifications   |
+| Operations   | CI and local dependencies exist                                                                                                                                     | #136 logging/telemetry plus deploy, restore, alerts and production drills                    |
 
 PR screenshots, fixtures, schemas and green branch tests are evidence of progress,
 not proof of an integrated customer journey.
