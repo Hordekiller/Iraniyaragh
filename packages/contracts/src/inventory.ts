@@ -195,6 +195,9 @@ export type InventoryLifecycleRequest = {
 
 export type TransferStatus = 'DRAFT' | 'REQUESTED' | 'APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'CANCELLED';
 
+/** Upper bound for one operator-created transfer command. */
+export const MAX_TRANSFER_ITEMS = 100;
+
 export type TransferItem = {
   id: string;
   variantId: string;

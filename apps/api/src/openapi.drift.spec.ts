@@ -248,6 +248,7 @@ describe('OpenAPI document drift and contract', () => {
     expect(createRequest).toContain('sourceWarehouseId');
     expect(createRequest).toContain('targetWarehouseId');
     expect(createRequest).toContain('minItems');
+    expect(createRequest).toContain('maxItems');
 
     const actionRequest = JSON.stringify(dispatch?.requestBody);
     expect(actionRequest).toContain('expectedVersion');

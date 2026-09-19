@@ -1,5 +1,6 @@
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { InventoryMovementType, ReservationStatus, TransferStatus } from '@prisma/client';
+import { MAX_TRANSFER_ITEMS } from '@iranyaragh/contracts';
 
 const inventoryMovementTypes = Object.values(InventoryMovementType);
 const reservationStatuses = Object.values(ReservationStatus);
@@ -234,7 +235,12 @@ const transferCreate: SchemaObject = {
     code: { type: 'string', maxLength: 64 },
     sourceWarehouseId: { type: 'string' },
     targetWarehouseId: { type: 'string' },
-    items: { type: 'array', minItems: 1, items: transferItemCreate },
+    items: {
+      type: 'array',
+      minItems: 1,
+      maxItems: MAX_TRANSFER_ITEMS,
+      items: transferItemCreate,
+    },
   },
 };
 

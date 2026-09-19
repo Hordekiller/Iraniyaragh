@@ -137,6 +137,10 @@ aggregate version. This scalar never represents the versions of multiple invento
 balance rows; those rows remain protected by the serializable transaction and ledger
 invariants.
 
+Operator-created transfers are bounded to 100 items. SKU existence is validated
+with one batched query at creation time; dispatch and receive remain transactional
+and preserve one immutable ledger movement per item.
+
 API surface is exposed through `inventory` endpoints; permission mapping is documented under Contracts & Permissions below.
 
 ## Inventory HTTP contracts

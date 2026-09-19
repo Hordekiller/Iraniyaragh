@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
@@ -14,17 +15,18 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { InventoryMovementType, ReservationStatus, TransferStatus } from '@prisma/client';
-import type {
-  InventoryChangeRequest,
-  InventoryLifecycleRequest,
-  ReservationCreateRequest,
-  TransferActionRequest,
-  TransferCreateRequest,
-  TransferItemCreateRequest,
-  WarehouseCreateRequest,
-  WarehouseLocationCreateRequest,
-  WarehouseLocationUpdateRequest,
-  WarehouseUpdateRequest,
+import {
+  MAX_TRANSFER_ITEMS,
+  type InventoryChangeRequest,
+  type InventoryLifecycleRequest,
+  type ReservationCreateRequest,
+  type TransferActionRequest,
+  type TransferCreateRequest,
+  type TransferItemCreateRequest,
+  type WarehouseCreateRequest,
+  type WarehouseLocationCreateRequest,
+  type WarehouseLocationUpdateRequest,
+  type WarehouseUpdateRequest,
 } from '@iranyaragh/contracts';
 
 export class InventorySnapshotQueryDto {
@@ -127,7 +129,7 @@ export class TransferCreateDto implements TransferCreateRequest {
   @IsOptional() @IsString() @MaxLength(64) code?: string;
   @IsString() sourceWarehouseId!: string;
   @IsString() targetWarehouseId!: string;
-  @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true })
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(MAX_TRANSFER_ITEMS) @ValidateNested({ each: true })
   @Type(() => TransferItemCreateDto)
   items!: TransferItemCreateDto[];
 }
