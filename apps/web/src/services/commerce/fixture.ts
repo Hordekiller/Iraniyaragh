@@ -39,8 +39,7 @@ export class CommerceFixtureClient implements CommerceApi {
     )
   }
 
-  async previewCheckout(address: CheckoutAddress) {
-    void address
+  async previewCheckout() {
     if (this.cart.lines.length === 0)
       throw this.failure('CART_EMPTY', 'سبد خرید خالی است.', 422)
     const now = new Date()
@@ -64,7 +63,7 @@ export class CommerceFixtureClient implements CommerceApi {
   }
 
   async createCheckout(address: CheckoutAddress, shippingQuoteId: string) {
-    if (!this.quote || this.quote.quoteId !== shippingQuoteId) {
+    if (this.quote?.quoteId !== shippingQuoteId) {
       throw this.failure('CONFLICT', 'پیشنهاد ارسال معتبر نیست.', 409)
     }
     if (new Date(this.quote.expiresAt).getTime() <= Date.now()) {
