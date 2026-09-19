@@ -5,23 +5,24 @@
   width: min(420px, 34vw);
   height: 44px;
   padding: 0 14px;
-  color: #8b97a9;
+  color: var(--admin-text-secondary);
   font: inherit;
   text-align: right;
-  background: #f4f6f9;
-  border: 1px solid #e8edf4;
-  border-radius: 14px;
+  background: var(--admin-action-hover);
+  border: 1px solid transparent;
+  border-radius: 6px;
   cursor: pointer;
   transition: border-color 150ms ease, background-color 150ms ease;
 }
 
 .trigger:hover {
-  border-color: #d6dde7;
+  color: var(--admin-text-primary);
+  border-color: var(--admin-divider);
 }
 
 .icon {
   display: grid;
-  color: #8b97a9;
+  color: var(--admin-text-secondary);
   place-items: center;
 }
 
@@ -32,28 +33,12 @@
 
 .kbd {
   padding: 3px 8px;
-  color: #8d98a8;
+  color: var(--admin-text-secondary);
   font-size: 0.62rem;
   font-family: inherit;
-  background: #fff;
-  border: 1px solid #dfe4ec;
-  border-radius: 7px;
-}
-
-html[data-admin-mode='dark'] .trigger {
-  color: #9aa8c0;
-  background: #1b2438;
-  border-color: rgb(255 255 255 / 8%);
-}
-
-html[data-admin-mode='dark'] .trigger:hover {
-  border-color: rgb(255 255 255 / 16%);
-}
-
-html[data-admin-mode='dark'] .kbd {
-  color: #9aa8c0;
-  background: #222c44;
-  border-color: rgb(255 255 255 / 10%);
+  background: var(--admin-paper);
+  border: 1px solid var(--admin-divider);
+  border-radius: 5px;
 }
 
 @media (max-width: 640px) {

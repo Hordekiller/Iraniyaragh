@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Box, Button, Paper, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, TextField, Typography } from '@mui/material';
 import { useSyncExternalStore } from 'react';
+import { AuthSurface } from '@/components/auth/AuthSurface';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { isFixtureAuthEnabled } from '@/lib/auth/staff-fixture-guard';
 import { createStaffAuth } from '@/lib/auth/staff-http';
@@ -64,76 +65,27 @@ export default function StaffLoginPage() {
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-        p: 2,
-      }}
+    <AuthSurface
+      title="ورود کارکنان"
+      description="با شناسه، رمز عبور و کد تأیید دومرحله‌ای وارد مرکز عملیات شوید."
+      footer={
+        enabled
+          ? 'حالت fixture فقط با پرچم صریح توسعه/آزمایش فعال است؛ استیجینگ و تولید همیشه از سرور واقعی استفاده می‌کنند.'
+          : 'ورود، نشست و سطح دسترسی از سرور احراز هویت واقعی دریافت می‌شود.'
+      }
     >
-      <Paper
-        elevation={0}
-        sx={{
-          width: '100%',
-          maxWidth: 420,
-          p: { xs: 3, sm: 4 },
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Box sx={{ mb: 3, textAlign: 'center' }}>
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              mx: 'auto',
-              mb: 1.5,
-              borderRadius: 2,
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: '1.25rem',
-            }}
-            aria-hidden="true"
-          >
-            آی
-          </Box>
-          <Typography variant="h5" fontWeight={700}>
-            ورود کارکنان
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            ایران یراق — ورود امن با رمز عبور و کد تایید دومرحله‌ای
-          </Typography>
-        </Box>
-
-        {state.phase === 'session-expired' || state.phase === 'forbidden' ? (
-          <SessionStatePanel
-            phase={state.phase}
-            onRetry={() => {
-              controller.resetToPassword();
-              controller.open();
-            }}
-          />
-        ) : (
-          <LoginSteps state={state} controller={controller} />
-        )}
-
-        <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.secondary">
-            {enabled
-              ? 'این نسخه با کلید آزمایشی (`NEXT_PUBLIC_FIXTURE_AUTH=true`) فعال شده و صرفاً برای توسعه و آزمایش در دسترس است؛ در استیجینگ و تولید از سرور واقعی استفاده می‌شود.'
-              : 'ورود کارکنان با سرور احراز هویت واقعی انجام می‌شود.'}
-          </Typography>
-        </Box>
-      </Paper>
-    </Box>
+      {state.phase === 'session-expired' || state.phase === 'forbidden' ? (
+        <SessionStatePanel
+          phase={state.phase}
+          onRetry={() => {
+            controller.resetToPassword();
+            controller.open();
+          }}
+        />
+      ) : (
+        <LoginSteps state={state} controller={controller} />
+      )}
+    </AuthSurface>
   );
 }
 

@@ -84,19 +84,19 @@ describe('AdminShell', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens the notifications menu with fixture rows', () => {
+  it('opens an honest empty notifications state without runtime fixtures', () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: /اعلان‌ها/ }));
-    expect(screen.getByText(/دادهٔ آزمایشی/)).toBeInTheDocument();
-    expect(screen.getByText(/بررسی کالای جدید/)).toBeInTheDocument();
+    expect(screen.getByText('جریان اعلان متصل نیست').closest('[role="status"]')).toBeInTheDocument();
+    expect(screen.queryByText(/مشتری نمونه/)).not.toBeInTheDocument();
   });
 
   it('signs out from the profile menu and redirects to /login', async () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'منوی حساب کاربری' }));
-    expect(screen.getByText('مدیر سیستم')).toBeInTheDocument();
+    expect(screen.getByText('کاربر کارکنان')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('menuitem', { name: /خروج از حساب/ }));
     await Promise.resolve();
@@ -154,6 +154,16 @@ describe('AdminShell', () => {
       'id',
       'admin-main-content',
     );
+  });
+
+  it('marks the active route and exposes a polite route announcement', () => {
+    renderShell();
+
+    expect(screen.getByRole('link', { name: /داشبورد/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
   });
 
   it('renders a horizontal nav bar instead of a sidebar for the horizontal layout', () => {
