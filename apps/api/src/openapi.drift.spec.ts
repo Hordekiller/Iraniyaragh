@@ -36,8 +36,40 @@ describe('OpenAPI document drift and contract', () => {
       'inventory',
       'cart',
       'orders',
+      'reports',
     ]) {
       expect(document.tags?.map((tag) => tag.name)).toContain(expected);
+    }
+  });
+
+  it('documents the bounded, permissioned, PII-free admin dashboard', () => {
+    const operation = document.paths?.['/reports/admin/dashboard']?.get;
+    expect(operation).toBeDefined();
+    const parameterNames = (operation?.parameters ?? []).map((parameter) =>
+      '$ref' in parameter ? parameter.$ref : parameter.name,
+    );
+    expect(parameterNames).toEqual(['createdToExclusive', 'createdFrom']);
+    expect(Object.keys(operation?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '400', '401', '403']),
+    );
+
+    const serialized = JSON.stringify(operation);
+    for (const fact of [
+      'grossOrderValue',
+      'paymentAttemptsByStatus',
+      'zeroAvailableBalances',
+      'presentationTimezone',
+    ]) {
+      expect(serialized).toContain(fact);
+    }
+    for (const forbidden of [
+      'mobile',
+      'email',
+      'address',
+      'authority',
+      'idempotencyKey',
+    ]) {
+      expect(serialized.toLowerCase()).not.toContain(forbidden.toLowerCase());
     }
   });
 
