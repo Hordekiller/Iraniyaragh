@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Self-hosted variable Vazirmatn (OFL-1.1) — replaces the Google Fonts CSS
    reference so the storefront routes zero external asset requests. */
@@ -8,6 +8,15 @@
   font-weight: 100 900;
   font-display: swap;
   src: url('/fonts/Vazirmatn[wght].woff2') format('woff2');
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+main:focus {
+  outline: none;
 }
 
 @layer utilities {

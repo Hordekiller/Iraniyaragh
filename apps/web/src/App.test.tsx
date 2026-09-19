@@ -34,13 +34,13 @@ const routes: Array<[string, () => Promise<void> | void]> = [
   [
     '/cart',
     async () => {
-      expect(await screen.findByRole('heading', { name: 'سبد خرید شما خالی است' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'برای مشاهده سبد خرید وارد شوید' })).toBeInTheDocument()
     },
   ],
   [
     '/checkout',
     async () => {
-      expect(await screen.findByRole('heading', { name: 'سبد خرید خالی است' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'برای تکمیل سفارش وارد شوید' })).toBeInTheDocument()
     },
   ],
   [
@@ -52,13 +52,13 @@ const routes: Array<[string, () => Promise<void> | void]> = [
   [
     '/orders/IR-9999-1',
     async () => {
-      expect(await screen.findByRole('heading', { name: 'سفارش یافت نشد' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'برای مشاهده سفارش وارد شوید' })).toBeInTheDocument()
     },
   ],
   [
     '/payment/IR-9999-1',
     async () => {
-      expect(await screen.findByRole('heading', { name: 'سفارش یافت نشد' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'برای بررسی پرداخت وارد شوید' })).toBeInTheDocument()
     },
   ],
   [

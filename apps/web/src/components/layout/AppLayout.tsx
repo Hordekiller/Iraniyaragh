@@ -1,11 +1,12 @@
-import { useCallback, useState } from 'react'
-import { Outlet, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Outlet, useLocation, useSearchParams } from 'react-router-dom'
 import { TopBar } from './TopBar'
 import { SiteHeader } from './SiteHeader'
 import { MobileBottomNav } from './MobileBottomNav'
 import { SiteFooter } from './SiteFooter'
 import { LoginDialog } from '../auth/LoginDialog'
 import { SECTION_IDS } from '../../lib/site-config'
+import { useAuth } from '../../state/auth-context'
 
 /**
  * Shared storefront shell. Owns the login dialog and header search state, and
@@ -13,10 +14,11 @@ import { SECTION_IDS } from '../../lib/site-config'
  * wrap this layout in App.
  */
 export function AppLayout() {
-  const [loginOpen, setLoginOpen] = useState(false)
+  const auth = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const urlQuery = searchParams.get('q') ?? ''
 
   const [resolvedUrlQuery, setResolvedUrlQuery] = useState(urlQuery)
@@ -25,8 +27,10 @@ export function AppLayout() {
     setSearchQuery(urlQuery)
   }
 
-  const openLogin = useCallback(() => setLoginOpen(true), [])
-  const closeLogin = useCallback(() => setLoginOpen(false), [])
+  const loginOpen =
+    auth.state.phase === 'mobile' ||
+    auth.state.phase === 'code' ||
+    auth.state.phase === 'session-expired'
 
   return (
     <>
@@ -41,16 +45,38 @@ export function AppLayout() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         showSearch={showSearch}
-        onToggleSearch={() => setShowSearch(s => !s)}
-        onOpenLogin={openLogin}
+        onToggleSearch={() => setShowSearch((s) => !s)}
+        onOpenLogin={auth.open}
       />
-      <main id={SECTION_IDS.mainContent}>
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {routeAnnouncement(location.pathname)}
+      </div>
+      <main id={SECTION_IDS.mainContent} tabIndex={-1}>
         <Outlet />
       </main>
       <SiteFooter />
 
-      <MobileBottomNav onOpenSearch={() => setShowSearch(true)} onOpenLogin={openLogin} />
-      <LoginDialog open={loginOpen} onClose={closeLogin} />
+      <MobileBottomNav
+        onOpenSearch={() => setShowSearch(true)}
+        onOpenLogin={auth.open}
+      />
+      <LoginDialog open={loginOpen} onClose={auth.close} />
     </>
   )
+}
+
+function routeAnnouncement(pathname: string): string {
+  if (pathname === '/') return 'صفحه خانه'
+  if (pathname === '/cart') return 'صفحه سبد خرید'
+  if (pathname === '/checkout') return 'صفحه تکمیل سفارش'
+  if (pathname === '/orders') return 'صفحه سفارش‌های من'
+  if (pathname.startsWith('/orders/')) return 'صفحه جزئیات سفارش'
+  if (pathname.startsWith('/payment/')) return 'صفحه وضعیت پرداخت'
+  if (pathname.startsWith('/product/')) return 'صفحه محصول'
+  return 'صفحه جدید'
 }

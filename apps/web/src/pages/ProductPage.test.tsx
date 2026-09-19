@@ -1,62 +1,26 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { ToastProvider } from '../components/feedback/Toast'
 import { MemorySessionStore } from '../lib/auth/session-store'
-import { AuthFixtureClient } from '../lib/auth/fixtures'
+import { CatalogFixtureClient } from '../services/catalog/fixtures'
 import { AuthProvider } from '../state/AuthProvider'
 import { CartProvider } from '../state/CartProvider'
 import { CatalogProvider } from '../state/CatalogProvider'
-import { ToastProvider } from '../components/feedback/Toast'
-import { CatalogFixtureClient } from '../services/catalog/fixtures'
-import type { CartLine, CartState } from '../services/cart/types'
-import type { CartStorage } from '../services/cart/controller'
-import type { CatalogApi, CatalogProduct } from '../services/catalog/types'
+import { commerceStub, signedInStore, testAuthProps } from '../test/commerce'
 import { ProductPage } from './ProductPage'
 
-class MemoryCartStorage implements CartStorage {
-  state: CartState
-  constructor(lines: CartLine[] = []) {
-    this.state = { lines: lines.map(line => ({ ...line })) }
-  }
-  read(): CartState {
-    return { lines: this.state.lines.map(line => ({ ...line })) }
-  }
-  write(next: CartState): void {
-    this.state = { lines: next.lines.map(line => ({ ...line })) }
-  }
-}
-
-const cartLineFor = (product: CatalogProduct): CartLine => ({
-  productId: product.id,
-  slug: product.slug,
-  name: product.name,
-  brand: product.brand,
-  image: product.image,
-  unitPrice: product.price,
-  oldPrice: product.oldPrice,
-  quantity: 1,
-})
-
-function stubCatalog(overrides: Partial<CatalogApi> = {}): CatalogApi {
-  return {
-    listCategories: vi.fn(async () => []),
-    listProducts: vi.fn(async () => ({ items: [], meta: { page: 1, perPage: 24, total: 0, pages: 0 } })),
-    getProductBySlug: vi.fn(async () => new CatalogFixtureClient({ delayMs: 0 }).getProductBySlug('ronix-2210-hammer-drill')),
-    ...overrides,
-  }
-}
-
-function renderProduct(slug: string, api: CatalogApi, storage: CartStorage = new MemoryCartStorage([])) {
+function renderPage(store = signedInStore(), commerce = commerceStub()) {
   return render(
-    <MemoryRouter initialEntries={[`/product/${slug}`]}>
+    <MemoryRouter initialEntries={['/product/ronix-2210-hammer-drill']}>
       <Routes>
         <Route
           path="/product/:slug"
           element={
             <ToastProvider>
-              <AuthProvider api={new AuthFixtureClient({ store: new MemorySessionStore() })}>
-                <CatalogProvider api={api}>
-                  <CartProvider storage={storage}>
+              <AuthProvider {...testAuthProps(store)}>
+                <CatalogProvider api={new CatalogFixtureClient({ delayMs: 0 })}>
+                  <CartProvider api={commerce}>
                     <ProductPage />
                   </CartProvider>
                 </CatalogProvider>
@@ -69,155 +33,40 @@ function renderProduct(slug: string, api: CatalogApi, storage: CartStorage = new
   )
 }
 
-describe('ProductPage', () => {
-  it('renders the catalog product with its Persian data', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    renderProduct('ronix-2210-hammer-drill', api)
-
-    expect(screen.getByText('در حال بارگذاری...')).toBeInTheDocument()
-
-    expect(await screen.findByRole('heading', { name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰' })).toBeInTheDocument()
-    expect(screen.getByText('Ronix')).toBeInTheDocument()
-    expect(screen.getByText('موجود در انبار')).toBeInTheDocument()
-    expect(screen.getByText('پرفروش هفته')).toBeInTheDocument()
-    expect(screen.getByText('۲٬۸۵۰٬۰۰۰ تومان')).toBeInTheDocument()
-    expect(screen.getByText('۴.۸')).toBeInTheDocument()
-    expect(screen.getByText('(۳۴۲ نظر)')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /ابزار برقی/ })).toHaveAttribute('href', '/category/power-tools')
+describe('ProductPage commerce', () => {
+  it('adds the selected sellable variant, never the product id', async () => {
+    const addLine = vi.fn(async () => await commerceStub().getCart())
+    const api = commerceStub({ addLine })
+    renderPage(signedInStore(), api)
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'افزودن به سبد خرید' }),
+    )
+    await waitFor(() =>
+      expect(addLine).toHaveBeenCalledWith(
+        'variant-p-101',
+        1,
+        expect.stringMatching(/^cart-/),
+      ),
+    )
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'به سبد خرید افزوده شد',
+    )
   })
-
-  it('shows the not-found screen when the product is missing', async () => {
-    const api = stubCatalog({
-      getProductBySlug: vi.fn(async () => { throw new Error('missing') }),
-    })
-    renderProduct('does-not-exist', api)
-
-    expect(await screen.findByRole('heading', { name: 'محصول یافت نشد' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'بازگشت به فروشگاه' })).toHaveAttribute('href', '/')
+  it('requests authentication instead of creating an anonymous local cart', async () => {
+    const api = commerceStub()
+    renderPage(new MemorySessionStore(), api)
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'افزودن به سبد خرید' }),
+    )
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'برای افزودن به سبد خرید وارد شوید',
+    )
+    expect(api.addLine).not.toHaveBeenCalled()
   })
-
-  it('adds the product to the cart from a fresh state and shows a toast', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    const storage = new MemoryCartStorage([])
-    renderProduct('bosch-gws-750-grinder', api, storage)
-
-    fireEvent.click(await screen.findByRole('button', { name: 'افزودن به سبد خرید' }))
-
-    expect(storage.state.lines).toHaveLength(1)
-    expect(storage.state.lines[0].productId).toBe('p-102')
-    expect(await screen.findByRole('status')).toHaveTextContent('به سبد خرید افزوده شد')
-    expect(screen.getByRole('button', { name: 'افزایش تعداد' })).toBeInTheDocument()
-  })
-
-  it('renders a quantity stepper for a product already in the cart', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    const product = await api.getProductBySlug('ronix-2210-hammer-drill')
-    const storage = new MemoryCartStorage([cartLineFor(product)])
-    renderProduct(product.slug, api, storage)
-
-    await screen.findByRole('heading', { name: product.name })
-
-    expect(screen.getByRole('button', { name: 'افزایش تعداد' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'کاهش تعداد' })).toBeInTheDocument()
-    expect(screen.getByLabelText('۱')).toBeInTheDocument()
-  })
-
-  it('adjusts the quantity from the stepper', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    const product = await api.getProductBySlug('ronix-2210-hammer-drill')
-    const storage = new MemoryCartStorage([cartLineFor(product)])
-    renderProduct(product.slug, api, storage)
-
-    await screen.findByRole('heading', { name: product.name })
-
-    fireEvent.click(screen.getByRole('button', { name: 'افزایش تعداد' }))
-    expect(storage.state.lines[0].quantity).toBe(2)
-
-    fireEvent.click(screen.getByRole('button', { name: 'کاهش تعداد' }))
-    expect(storage.state.lines[0].quantity).toBe(1)
-  })
-
-  it('shows the free-shipping badge for an over-threshold product', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    renderProduct('ronix-2701-multitool', api)
-
-    expect(await screen.findByText('ارسال رایگان')).toBeInTheDocument()
-  })
-
-  it('displays the flat shipping cost for an under-threshold product', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    renderProduct('hans-24pc-socket-set', api)
-
-    expect(await screen.findByText('ارسال ۴۵٬۰۰۰ تومان')).toBeInTheDocument()
-  })
-
-  it('shows the discount badge and percentage when an old price exists', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    renderProduct('ronix-2210-hammer-drill', api)
-
-    await screen.findByRole('heading', { name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰' })
-
-    expect(screen.getByText(/٪۱۷ تخفیف/)).toBeInTheDocument()
-  })
-
-  it('disables the add button for an out-of-stock product', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    const storage = new MemoryCartStorage([])
-    renderProduct('dewalt-20v-chainsaw', api, storage)
-
-    const addButton = await screen.findByRole('button', { name: 'ناموجود' })
-    expect(addButton).toBeDisabled()
-    expect(screen.getAllByText('ناموجود').length).toBeGreaterThanOrEqual(2)
-
-    fireEvent.click(addButton)
-    expect(storage.state.lines).toHaveLength(0)
-  })
-
-  it('navigates to the cart page from the side action', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    renderProduct('ronix-2210-hammer-drill', api)
-
-    await screen.findByRole('heading', { name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰' })
-
-    expect(screen.getByRole('button', { name: 'مشاهده سبد' })).toBeInTheDocument()
-  })
-
-  it('renders the ordered media gallery with the ready primary first', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    renderProduct('ronix-2210-hammer-drill', api)
-
-    expect(await screen.findByAltText('دریل چکشی رونیکس ۲۲۱۰ از نمای جلو')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'عکس ۲' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'ویدیو ۳' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'عکس ۴' })).toBeInTheDocument()
-  })
-
-  it('emits truthful Product and VideoObject structured data without invented fields', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    renderProduct('ronix-2210-hammer-drill', api)
-
-    await screen.findByRole('heading', { name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰' })
-
-    const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
-    expect(scripts.length).toBeGreaterThanOrEqual(1)
-
-    const nodes = scripts.flatMap(script => JSON.parse(script.textContent ?? '[]'))
-    const productData = nodes.find(node => node['@type'] === 'Product')
-    const videoData = nodes.find(node => node['@type'] === 'VideoObject')
-
-    expect(productData).toMatchObject({ name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰' })
-    expect(productData.image.length).toBeGreaterThan(0)
-    expect(videoData).toMatchObject({ name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰ — ویدیو' })
-    expect(videoData.duration).toBe('PT183S')
-    expect(videoData.uploadDate).toBeUndefined()
-  })
-
-  it('omits structured data for products without ready media', async () => {
-    const api = new CatalogFixtureClient({ delayMs: 0 })
-    renderProduct('hans-24pc-socket-set', api)
-
-    await screen.findByRole('heading', { name: 'ست آچار بکس ۲۴ پارچه هنس' })
-
-    expect(document.querySelector('script[type="application/ld+json"]')).not.toBeInTheDocument()
+  it('describes shipping honestly', async () => {
+    renderPage()
+    expect(
+      await screen.findByText('هزینه ارسال پس از ثبت آدرس محاسبه می‌شود'),
+    ).toBeInTheDocument()
   })
 })

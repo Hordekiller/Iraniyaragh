@@ -1,54 +1,70 @@
-import { useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
-import { CartController, LocalCartStorage } from '../services/cart/controller'
-import type { CartStorage } from '../services/cart/controller'
-import type { CartLine } from '../services/cart/types'
+import { CommerceCartController } from '../services/commerce/controller'
+import { CommerceFixtureClient } from '../services/commerce/fixture'
+import { CommerceHttpClient } from '../services/commerce/http'
+import type { CommerceApi } from '../services/commerce/types'
 import { CartContext } from './cart-context'
-import type { CartContextValue } from './cart-context'
 import { useAuth } from './auth-context'
 
-/**
- * React shell around the client-side `CartController`.
- *
- * The cart is in-memory and mirrored to `localStorage` (per the pre-backend
- * phase; see `services/cart/types.ts`). The controller is created once per
- * provider mount; the snapshot updates through `useSyncExternalStore`.
- */
+const fixtureCommerceEnabled = import.meta.env.VITE_FIXTURE_CATALOG === 'true'
+
 export function CartProvider({
   children,
-  storage,
+  api,
 }: {
   children: ReactNode
-  storage?: CartStorage
+  api?: CommerceApi
 }) {
-  const { state: authState } = useAuth()
-  const ownerKey = authState.principal?.userId ?? 'guest'
-  const controller = useMemo(
-    () => new CartController(storage ?? new LocalCartStorage(`iranyaragh.cart.v1.${ownerKey}`)),
-    [ownerKey, storage],
-  )
-
-  const snapshots = useSyncExternalStore(
-    controller.subscribe.bind(controller),
-    () => controller.getState(),
-    () => controller.getState(),
-  )
-
-  const value = useMemo<CartContextValue>(() => {
-    const value: CartContextValue = {
-      state: snapshots,
-      controller,
-      totals: controller.getTotals(),
-      add: (line: CartLine) => controller.add(line),
-      setQuantity: (productId: string, quantity: number) =>
-        controller.setQuantity(productId, quantity),
-      remove: (productId: string) => controller.remove(productId),
-      clear: () => controller.clear(),
-      isInCart: (productId: string) => controller.isInCart(productId),
-      quantityOf: (productId: string) => controller.quantityOf(productId),
+  const auth = useAuth()
+  const value = useMemo(() => {
+    const commerceApi =
+      api ??
+      (fixtureCommerceEnabled
+        ? new CommerceFixtureClient()
+        : new CommerceHttpClient(
+            auth.request,
+            import.meta.env.VITE_API_BASE_URL,
+          ))
+    return {
+      api: commerceApi,
+      controller: new CommerceCartController(commerceApi),
     }
-    return value
-  }, [snapshots, controller])
+    // api and auth.request are stable provider dependencies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
+  const snapshot = useSyncExternalStore(
+    value.controller.subscribe,
+    value.controller.getState,
+    value.controller.getState,
+  )
+
+  useEffect(() => {
+    value.controller.setAuthenticated(auth.state.phase === 'authenticated')
+  }, [auth.state.phase, value.controller])
+
+  const contextValue = useMemo(
+    () => ({
+      state: snapshot,
+      api: value.api,
+      reload: () => value.controller.load(),
+      add: (variantId: string, quantity = 1) =>
+        value.controller.add(variantId, quantity),
+      setQuantity: (variantId: string, quantity: number) =>
+        value.controller.setQuantity(variantId, quantity),
+      remove: (variantId: string) => value.controller.remove(variantId),
+      clear: () => value.controller.clear(),
+      isInCart: (variantId: string) =>
+        snapshot.cart.lines.some((line) => line.variantId === variantId),
+      quantityOf: (variantId: string) =>
+        snapshot.cart.lines.find((line) => line.variantId === variantId)
+          ?.quantity ?? 0,
+    }),
+    [snapshot, value],
+  )
+
+  return (
+    <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>
+  )
 }

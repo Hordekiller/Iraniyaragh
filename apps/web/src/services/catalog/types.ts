@@ -1,4 +1,10 @@
-import type { Money, ProductListMeta, CategorySummary, PublicProductMedia } from '@iranyaragh/contracts'
+import type {
+  Money,
+  ProductListMeta,
+  CategorySummary,
+  PublicProductMedia,
+  VariantAttributeValue,
+} from '@iranyaragh/contracts'
 
 /**
  * Storefront-facing catalog view types.
@@ -12,6 +18,15 @@ import type { Money, ProductListMeta, CategorySummary, PublicProductMedia } from
 
 export type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'UNKNOWN'
 
+export type CatalogVariant = {
+  id: string
+  sku: string
+  title: string | null
+  price: Money
+  attributes: VariantAttributeValue[]
+  stockStatus: StockStatus
+}
+
 export type CatalogProduct = {
   id: string
   slug: string
@@ -21,6 +36,8 @@ export type CatalogProduct = {
   image: string
   /** Ordered ready media gallery for the product detail page (contract union). */
   media: PublicProductMedia[]
+  /** Sellable choices. List projections omit these; detail projections populate them. */
+  variants: CatalogVariant[]
   description: string | null
   /** Lowest active-variant sale price, in IRR (Rial). */
   price: Money

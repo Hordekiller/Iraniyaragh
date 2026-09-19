@@ -18,7 +18,7 @@ type SiteHeaderProps = {
 export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSearch, onOpenLogin }: SiteHeaderProps) {
   const navigate = useNavigate()
   const { state } = useCart()
-  const itemCount = state.lines.reduce((sum, line) => sum + line.quantity, 0)
+  const itemCount = state.cart.lines.reduce((sum, line) => sum + line.quantity, 0)
 
   function submitSearch() {
     if (!searchQuery.trim()) return

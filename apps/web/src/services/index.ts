@@ -3,11 +3,12 @@ export { CatalogFixtureClient } from './catalog/fixtures'
 export { CatalogHttpClient } from './catalog/http'
 export { CatalogError } from './catalog/errors'
 
-export * from './cart/types'
-export { CartController, LocalCartStorage } from './cart/controller'
-export type { CartStorage } from './cart/controller'
-export { OrderFixture, LocalOrderStore } from './cart/order-fixtures'
-export type { OrderStore } from './cart/order-fixtures'
+export * from './commerce/types'
+export { CommerceCartController } from './commerce/controller'
+export { CommerceHttpClient } from './commerce/http'
 
-export { NewsletterFixture, isValidNewsletterContact } from './newsletter/newsletter-fixture'
+export {
+  NewsletterFixture,
+  isValidNewsletterContact,
+} from './newsletter/newsletter-fixture'
 export type { NewsletterPort } from './newsletter/newsletter-fixture'

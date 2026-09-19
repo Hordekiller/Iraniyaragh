@@ -4,7 +4,6 @@ import { ToastProvider } from './components/feedback/Toast'
 import { AuthProvider } from './state/AuthProvider'
 import { CatalogProvider } from './state/CatalogProvider'
 import { CartProvider } from './state/CartProvider'
-import { OrderProvider } from './state/OrderProvider'
 import { AppLayout } from './components/layout/AppLayout'
 import { HomePage } from './pages/HomePage'
 import { ROUTE_PATHS } from './lib/routes'
@@ -36,7 +35,6 @@ export default function App() {
         <AuthProvider>
           <CatalogProvider>
             <CartProvider>
-              <OrderProvider>
                 <Suspense fallback={<RouteLoading />}>
                   <Routes>
                     <Route element={<AppLayout />}>
@@ -55,7 +53,6 @@ export default function App() {
                     </Route>
                   </Routes>
                 </Suspense>
-              </OrderProvider>
             </CartProvider>
           </CatalogProvider>
         </AuthProvider>

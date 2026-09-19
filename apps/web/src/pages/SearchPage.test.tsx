@@ -16,6 +16,7 @@ function result(): CatalogListResult {
         category: { id: 'cat-power', name: 'ابزار برقی', slug: 'power-tools' },
         image: '/images/hero1.jpg',
         media: [],
+        variants: [],
         description: null,
         price: { amount: '28500000', currency: 'IRR' },
         oldPrice: null,
