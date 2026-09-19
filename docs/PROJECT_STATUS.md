@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-20
+Last reviewed: 2026-09-21
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -22,12 +22,11 @@ commerce product: Order commands, verified Payment, fulfillment and production
 operations remain open. The operational Admin Order queue/detail is now bound to
 the masked, permissioned #238 read API through #257.
 
-Open PR #265 is the contract-first backend prerequisite for the factual Admin
-operations dashboard: a `reports.read`-guarded, PII-free summary with an explicit
-maximum 90-day Order range and a current commerce/inventory snapshot. It is not
-counted as delivered until merged. Accessible Admin charts and their textual/table
-fallback remain the next stacked #264 slice; neither runtime fixture metrics nor
-licensed Vuexy source/assets are part of #265.
+The factual Admin operations dashboard backend is merged via #265: a
+`reports.read`-guarded, PII-free summary with an explicit maximum 90-day Order
+range and a current commerce/inventory snapshot. The Admin UI consumes that live
+contract directly with accessible CSS visualizations and exact table fallbacks;
+it contains no runtime fixture metrics or licensed Vuexy source/assets.
 
 Current delivery confidence:
 
@@ -47,6 +46,7 @@ Current delivery confidence:
 | Cart runtime                   | Authenticated + Guest API runtime merged    | #239/#241–#244/#251 deliver authenticated ownership and correctness; #270/#269 adds opaque Guest ownership, rolling TTL, abuse controls, bounded cleanup and explicit OTP-login merge                                     |
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
+| Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
 | Order commands/payment         | Foundation only                             | Cancellation/expiry compensation, payment and fulfillment application workflows remain separate follow-up scope                                                                                                           |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
@@ -627,14 +627,14 @@ The review-handoff docs reconciliation (#218) and commerce reconciliation #249 a
 merged; #251 advances the authenticated Cart boundary and updates this evidence on
 2026-09-18.
 
-PR #265 (issue #264, not yet on `main`) adds the dashboard summary contract and
-real PostgreSQL aggregation endpoint. The range is explicit and capped at 90 days;
-the current snapshot covers Order, Payment-attempt, Fulfillment, Reservation and
-Transfer status counts plus exact zero-availability balances. The request uses one
-repeatable-read transaction with a fixed nine-operation aggregate budget and no
-row hydration or loop-driven queries. The subsequent Admin UI must consume this
-contract directly and provide accessible chart alternatives; it must not invent
-low-stock thresholds, SLA policy, revenue semantics or sample operational data.
+#265 adds the merged dashboard summary contract and real PostgreSQL aggregation
+endpoint. The range is explicit and capped at 90 days; the current snapshot covers
+Order, Payment-attempt, Fulfillment, Reservation and Transfer status counts plus
+exact zero-availability balances. The request uses one repeatable-read transaction
+with a fixed nine-operation aggregate budget and no row hydration or loop-driven
+queries. The #264 Admin UI consumes this contract directly and exposes exact table
+alternatives for every visualization without inventing low-stock thresholds, SLA
+policy, revenue semantics or sample operational data.
 
 ## Decisions and blockers
 

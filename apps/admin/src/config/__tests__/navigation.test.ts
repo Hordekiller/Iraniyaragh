@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterNavigationByPermissions, type NavigationGroup } from '../navigation';
+import { filterNavigationByPermissions, navigation, type NavigationGroup } from '../navigation';
 
 const groups: NavigationGroup[] = [
   {
@@ -34,5 +34,17 @@ describe('filterNavigationByPermissions', () => {
     const before = JSON.stringify(groups);
     filterNavigationByPermissions(groups, ['payments.read']);
     expect(JSON.stringify(groups)).toBe(before);
+  });
+
+  it('gates the operational dashboard with the canonical reports permission', () => {
+    const dashboard = navigation
+      .flatMap((group) => group.items)
+      .find((item) => item.href === '/dashboard');
+
+    expect(dashboard?.permission).toBe('reports.read');
+    expect(filterNavigationByPermissions(navigation, []).flatMap((group) => group.items))
+      .not.toContainEqual(expect.objectContaining({ href: '/dashboard' }));
+    expect(filterNavigationByPermissions(navigation, ['reports.read']).flatMap((group) => group.items))
+      .toContainEqual(expect.objectContaining({ href: '/dashboard' }));
   });
 });

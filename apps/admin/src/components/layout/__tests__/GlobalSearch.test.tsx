@@ -1,8 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GlobalSearch } from '../GlobalSearch';
 
-const mocks = vi.hoisted(() => ({ push: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  push: vi.fn(),
+  permissions: [] as string[],
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mocks.push }),
@@ -11,12 +14,22 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({
-    user: { permissions: ['orders.read', 'catalog.read', 'payments.read', 'settings.manage'] },
+    user: { permissions: mocks.permissions },
     isAuthenticated: true,
   }),
 }));
 
 describe('GlobalSearch', () => {
+  beforeEach(() => {
+    mocks.permissions = [
+      'orders.read',
+      'catalog.read',
+      'payments.read',
+      'settings.manage',
+      'reports.read',
+    ];
+  });
+
   afterEach(() => {
     mocks.push.mockReset();
   });
@@ -73,6 +86,7 @@ describe('GlobalSearch', () => {
   });
 
   it('does not expose or navigate a page without the required permission', () => {
+    mocks.permissions = mocks.permissions.filter((permission) => permission !== 'reports.read');
     render(<GlobalSearch />);
     fireEvent.click(screen.getByRole('button', { name: 'جستجوی سریع در پنل' }));
 

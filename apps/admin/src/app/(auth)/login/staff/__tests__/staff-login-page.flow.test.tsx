@@ -68,7 +68,7 @@ describe('StaffLoginPage full flow (fixture)', () => {
     }];
     expect(session.accessToken).toMatch(/^fixture-staff-at\./);
     expect(session.principal.userId).toBe('ops@iranyaragh.local');
-    expect(session.principal.permissions).toEqual(['admin.dashboard.read']);
+    expect(session.principal.permissions).toEqual(['reports.read']);
 
     // storage must stay completely untouched by the memory-only slice.
     expect(localStorage.length).toBe(0);

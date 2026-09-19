@@ -140,7 +140,7 @@ describe('StaffAuthFixtureClient totpVerify', () => {
     expect(data.expiresInSeconds).toBe(600);
     expect(data.principal.userId).toBe(IDENTIFIER);
     expect(data.principal.authenticationLevel).toBe('STAFF_MFA');
-    expect(data.principal.permissions).toContain('admin.dashboard.read');
+    expect(data.principal.permissions).toContain('reports.read');
     expect(data.accessToken.startsWith('fixture-staff-at.')).toBe(true);
   });
 });

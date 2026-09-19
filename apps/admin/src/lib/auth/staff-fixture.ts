@@ -143,7 +143,7 @@ export class StaffAuthFixtureClient {
       userId: this.identifier,
       sessionId: `fixture-staff-session-${globalThis.crypto.randomUUID()}`,
       authenticationLevel: 'STAFF_MFA',
-      permissions: ['admin.dashboard.read'],
+      permissions: ['reports.read'],
       authenticatedAt: new Date(issuedAt).toISOString(),
       accessExpiresAt: new Date(issuedAt + 600_000).toISOString(),
     };
