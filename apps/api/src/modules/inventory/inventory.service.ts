@@ -6,6 +6,7 @@ import type {
   InventoryBalanceSnapshot,
   InventoryMovement as InventoryMovementContract,
   InventoryMovementListResponse,
+  StockTransfer,
 } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -35,7 +36,8 @@ type TransferRowLike = {
   code: string;
   sourceWarehouseId: string;
   targetWarehouseId: string;
-  status: string;
+  status: StockTransfer['status'];
+  version: number;
   items: TransferItemRowLike[];
   createdAt: Date;
   updatedAt: Date;
@@ -163,16 +165,7 @@ export type TransferItemDto = {
   targetLocationId: string | null;
 };
 
-export type TransferDto = {
-  id: string;
-  code: string;
-  sourceWarehouseId: string;
-  targetWarehouseId: string;
-  status: string;
-  items: TransferItemDto[];
-  createdAt: Date;
-  updatedAt: Date;
-};
+export type TransferDto = StockTransfer;
 
 export type WarehouseDto = {
   id: string;
@@ -681,7 +674,7 @@ export class InventoryService {
               include: { items: true },
             });
             if (existing) {
-              if (this.transferMatches(existing, command)) return existing;
+              if (this.transferMatches(existing, command)) return this.toTransferDto(existing);
               throw new ConflictException(
                 `Idempotency conflict: key '${command.idempotencyKey}' was already used with a different payload.`,
               );
@@ -1174,6 +1167,12 @@ export class InventoryService {
               message: `Transfer cannot be ${action}ed from status '${transfer.status}'.`,
             });
           }
+          if (context.expectedVersion !== undefined && context.expectedVersion !== transfer.version) {
+            throw new ConflictException({
+              code: 'TRANSFER_VERSION_CONFLICT',
+              message: 'Transfer version conflict. Refresh and retry.',
+            });
+          }
 
           if (action === 'dispatch') {
             for (const item of transfer.items) {
@@ -1183,7 +1182,7 @@ export class InventoryService {
                   message: `Dispatch requires a source location for item '${item.variantId}'.`,
                 });
               }
-              await this.applyTransferOut(tx, transfer, item, context);
+              await this.applyTransferOut(tx, transfer, item);
             }
           }
 
@@ -1195,14 +1194,14 @@ export class InventoryService {
                   message: `Receive requires a target location for item '${item.variantId}'.`,
                 });
               }
-              await this.applyTransferIn(tx, transfer, item, context);
+              await this.applyTransferIn(tx, transfer, item);
             }
           }
 
           const nextStatus = this.nextTransferStatus(action);
           const updated = await tx.stockTransfer.update({
             where: { id },
-            data: { status: nextStatus },
+            data: { status: nextStatus, version: { increment: 1 } },
             include: { items: true },
           });
           if (context.idempotencyKey) {
@@ -1259,7 +1258,6 @@ export class InventoryService {
     tx: Prisma.TransactionClient,
     transfer: { sourceWarehouseId: string; code: string },
     item: { variantId: string; quantity: number; sourceLocationId: string | null },
-    context: TransferContext,
   ) {
     if (!item.sourceLocationId) {
       throw new ConflictException({ code: 'TRANSFER_ITEM_LOCATION_REQUIRED', message: 'Source location is required to dispatch.' });
@@ -1277,7 +1275,6 @@ export class InventoryService {
       delta: -item.quantity,
       type: InventoryMovementType.TRANSFER_OUT,
       referenceId: transfer.code,
-      expectedVersion: context.expectedVersion,
     });
   }
 
@@ -1285,7 +1282,6 @@ export class InventoryService {
     tx: Prisma.TransactionClient,
     transfer: { targetWarehouseId: string; code: string },
     item: { variantId: string; quantity: number; targetLocationId: string | null },
-    context: TransferContext,
   ) {
     if (!item.targetLocationId) {
       throw new ConflictException({ code: 'TRANSFER_ITEM_LOCATION_REQUIRED', message: 'Target location is required to receive.' });
@@ -1303,7 +1299,6 @@ export class InventoryService {
       delta: item.quantity,
       type: InventoryMovementType.TRANSFER_IN,
       referenceId: transfer.code,
-      expectedVersion: context.expectedVersion,
     });
   }
 
@@ -1419,6 +1414,7 @@ export class InventoryService {
       sourceWarehouseId: transfer.sourceWarehouseId,
       targetWarehouseId: transfer.targetWarehouseId,
       status: transfer.status,
+      version: transfer.version,
       items: transfer.items.map((item) => ({
         id: item.id,
         variantId: item.variantId,
@@ -1426,8 +1422,8 @@ export class InventoryService {
         sourceLocationId: item.sourceLocationId ?? null,
         targetLocationId: item.targetLocationId ?? null,
       })),
-      createdAt: transfer.createdAt,
-      updatedAt: transfer.updatedAt,
+      createdAt: transfer.createdAt.toISOString(),
+      updatedAt: transfer.updatedAt.toISOString(),
     };
   }
 

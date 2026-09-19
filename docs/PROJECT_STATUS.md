@@ -154,11 +154,14 @@ G6–G10 have not reached integrated completion.
 - Bounded serializable retry and real PostgreSQL concurrency coverage.
 - Shared, OpenAPI-documented balance and sanitized movement read projections;
   persistence-only replay keys are not exposed to operator clients.
+- Shared mutation request contracts and exact OpenAPI request/response schemas;
+  transfer transitions use their own optimistic aggregate version instead of
+  incorrectly reusing one balance version across multiple transfer lines.
 
 | Inventory layer        | State             | Evidence/boundary                                                                                                                                                             |
 | ---------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Core domain            | Merged            | Ledger, balance invariants, reservations, consume/release/expire, transfers, optimistic versions, idempotency/replay and serializable retry with PostgreSQL concurrency tests |
-| HTTP/API               | Merged foundation | Protected warehouse/location, balance/movement/adjustment, reservation and transfer routes plus anonymous coarse availability                                                 |
+| HTTP/API               | Merged foundation | Protected warehouse/location, balance/movement/adjustment, reservation and transfer routes, typed mutation contracts and anonymous coarse availability                     |
 | Admin UX               | Planned           | Navigation entries are marked `planned`; no live operator Inventory module is present                                                                                         |
 | Checkout-integrated    | Merged foundation | #246/#237 atomically allocates active locations and creates Order-linked reservations; compensation and live client integration remain                                        |
 | Production-operational | Partial           | Expiry batching exists, but scheduled worker rollout, metrics/DLQ, reconciliation UI and operational acceptance do not                                                        |
@@ -364,7 +367,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Customer Auth | API runtime, real HTTP storefront client and provider dispatch merged                                                                                  | Cross-tab restore and OTP failure/rate surfaces are covered; live SMS.ir credentials/template and provider-backed happy-path acceptance remain |
 | Staff Auth    | Runtime, privileged lifecycle, double-submit CSRF logout fix (#190) and real HTTP login (#191) merged                                                  | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                      |
 | Catalog       | Advanced API, Product Media M1–M5 runtime, live storefront discovery, Admin authoring (#229) and API-level publish-to-discovery E2E (#240)             | Admin-UI-driven publish acceptance, durable parsed-import storage and production media acceptance                                              |
-| Inventory     | Ledger; inventory HTTP (#222), public availability (#231), batched expiry (#232) and merged Checkout allocation (#246/#237)                            | Admin operator UX, reconciliation UI, compensation and worker rollout                                                                          |
+| Inventory     | Ledger; inventory HTTP (#222), public availability (#231), batched expiry (#232), typed operator read/mutation contracts and merged Checkout allocation (#246/#237) | Admin operator mutation UX, reconciliation UI, compensation and worker rollout                                                               |
 | Cart          | Authenticated runtime (#239/#241–#244/#251), server pricing, side-effect-free empty reads, scoped 24-hour replay and concurrency-safe limits           | Guest token/TTL, explicit login merge and live storefront binding                                                                              |
 | Checkout      | Merged preview/create API, configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence (#246/#237) | Shipping operations, compensation/cleanup, Web binding and production acceptance                                                               |
 | Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation and #247/#238 customer/staff read API                                                   | Commands, compensation, live clients and lifecycle-operation evidence                                                                          |

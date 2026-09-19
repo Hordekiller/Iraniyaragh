@@ -210,4 +210,50 @@ describe('OpenAPI document drift and contract', () => {
     expect(readContract).toContain('"minimum":0');
     expect(readContract).toContain('pricePolicyRevision');
   });
+
+  it('documents bounded inventory reads and optimistic transfer commands without replay-key leakage', () => {
+    const paths = document.paths ?? {};
+    const transferList = paths['/inventory/transfers']?.get;
+    const transferCreate = paths['/inventory/transfers']?.post;
+    const transferDetail = paths['/inventory/transfers/{id}']?.get;
+    const dispatch = paths['/inventory/transfers/{id}/dispatch']?.post;
+
+    expect(transferList).toBeDefined();
+    expect(transferCreate).toBeDefined();
+    expect(transferDetail).toBeDefined();
+    expect(dispatch).toBeDefined();
+
+    const listParameters = (transferList?.parameters ?? []).map((parameter) =>
+      '$ref' in parameter ? parameter.$ref : parameter.name,
+    );
+    expect(listParameters).toEqual(
+      expect.arrayContaining([
+        'status',
+        'sourceWarehouseId',
+        'targetWarehouseId',
+        'offset',
+        'limit',
+      ]),
+    );
+
+    for (const operation of [transferCreate, dispatch]) {
+      const idempotencyHeader = operation?.parameters?.find(
+        (parameter) =>
+          !('$ref' in parameter) && parameter.name === 'Idempotency-Key',
+      );
+      expect(idempotencyHeader).toMatchObject({ in: 'header' });
+    }
+
+    const createRequest = JSON.stringify(transferCreate?.requestBody);
+    expect(createRequest).toContain('sourceWarehouseId');
+    expect(createRequest).toContain('targetWarehouseId');
+    expect(createRequest).toContain('minItems');
+
+    const actionRequest = JSON.stringify(dispatch?.requestBody);
+    expect(actionRequest).toContain('expectedVersion');
+
+    const responseContract = JSON.stringify(transferDetail?.responses?.['200']);
+    expect(responseContract).toContain('"version"');
+    expect(responseContract).not.toContain('idempotencyKey');
+  });
 });

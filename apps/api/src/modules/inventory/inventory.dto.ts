@@ -8,25 +8,38 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { InventoryMovementType, ReservationStatus, TransferStatus } from '@prisma/client';
+import type {
+  InventoryChangeRequest,
+  InventoryLifecycleRequest,
+  ReservationCreateRequest,
+  TransferActionRequest,
+  TransferCreateRequest,
+  TransferItemCreateRequest,
+  WarehouseCreateRequest,
+  WarehouseLocationCreateRequest,
+  WarehouseLocationUpdateRequest,
+  WarehouseUpdateRequest,
+} from '@iranyaragh/contracts';
 
 export class InventorySnapshotQueryDto {
   @IsOptional() @IsString() warehouseId?: string;
   @IsOptional() @IsString() locationId?: string;
   @IsOptional() @IsString() variantId?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 50;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 50;
 }
 
 export class InventoryMovementQueryDto extends InventorySnapshotQueryDto {
   @IsOptional() @IsEnum(InventoryMovementType) type?: InventoryMovementType;
 }
 
-export class InventoryChangeDto {
+export class InventoryChangeDto implements InventoryChangeRequest {
   @IsString() warehouseId!: string;
   @IsString() locationId!: string;
   @IsString() variantId!: string;
@@ -38,14 +51,14 @@ export class InventoryChangeDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) expectedVersion?: number;
 }
 
-export class WarehouseCreateDto {
+export class WarehouseCreateDto implements WarehouseCreateRequest {
   @IsString() @MaxLength(64) code!: string;
   @IsString() @MaxLength(200) name!: string;
   @IsOptional() @IsString() @MaxLength(100) city?: string;
   @IsOptional() @IsString() @MaxLength(400) address?: string;
 }
 
-export class WarehouseUpdateDto {
+export class WarehouseUpdateDto implements WarehouseUpdateRequest {
   @IsOptional() @IsString() @MaxLength(200) name?: string;
   @IsOptional() @IsString() @MaxLength(100) city?: string;
   @IsOptional() @IsString() @MaxLength(400) address?: string;
@@ -56,12 +69,12 @@ export class WarehouseListQueryDto {
   @IsOptional() @Type(() => Boolean) @IsBoolean() isActive?: boolean;
   @IsOptional() @Type(() => Boolean) @IsBoolean() isInactive?: boolean;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 50;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 50;
 }
 
 export class LocationListQueryDto extends WarehouseListQueryDto {}
 
-export class LocationCreateDto {
+export class LocationCreateDto implements WarehouseLocationCreateRequest {
   @IsString() @MaxLength(64) code!: string;
   @IsOptional() @IsString() @MaxLength(200) name?: string;
   @IsOptional() @IsString() @MaxLength(64) zone?: string;
@@ -71,7 +84,7 @@ export class LocationCreateDto {
   @IsOptional() @IsString() @MaxLength(64) bin?: string;
 }
 
-export class LocationUpdateDto {
+export class LocationUpdateDto implements WarehouseLocationUpdateRequest {
   @IsOptional() @IsString() @MaxLength(200) name?: string;
   @IsOptional() @IsString() @MaxLength(64) zone?: string;
   @IsOptional() @IsString() @MaxLength(64) aisle?: string;
@@ -81,7 +94,7 @@ export class LocationUpdateDto {
   @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
-export class InventoryReservationDto {
+export class InventoryReservationDto implements ReservationCreateRequest {
   @IsString() warehouseId!: string;
   @IsString() locationId!: string;
   @IsString() variantId!: string;
@@ -96,21 +109,21 @@ export class ReservationListQueryDto {
   @IsOptional() @IsString() variantId?: string;
   @IsOptional() @IsEnum(ReservationStatus) status?: ReservationStatus;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 50;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 50;
 }
 
-export class InventoryLifecycleDto {
+export class InventoryLifecycleDto implements InventoryLifecycleRequest {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) expectedVersion?: number;
 }
 
-export class TransferItemCreateDto {
+export class TransferItemCreateDto implements TransferItemCreateRequest {
   @IsString() variantId!: string;
   @IsInt() @Min(1) quantity!: number;
   @IsOptional() @IsString() sourceLocationId?: string;
   @IsOptional() @IsString() targetLocationId?: string;
 }
 
-export class TransferCreateDto {
+export class TransferCreateDto implements TransferCreateRequest {
   @IsOptional() @IsString() @MaxLength(64) code?: string;
   @IsString() sourceWarehouseId!: string;
   @IsString() targetWarehouseId!: string;
@@ -124,9 +137,9 @@ export class TransferListQueryDto {
   @IsOptional() @IsString() sourceWarehouseId?: string;
   @IsOptional() @IsString() targetWarehouseId?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) limit = 50;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 50;
 }
 
-export class TransferActionDto {
+export class TransferActionDto implements TransferActionRequest {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) expectedVersion?: number;
 }

@@ -628,6 +628,7 @@ function transferRow(overrides: Record<string, unknown> = {}) {
     sourceWarehouseId: 'src',
     targetWarehouseId: 'dst',
     status: 'DRAFT',
+    version: 0,
     idempotencyKey: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -968,6 +969,29 @@ describe('InventoryService transfer lifecycle', () => {
     expect(ctx.tx.stockTransfer.update).not.toHaveBeenCalled();
   });
 
+  it('rejects reuse of a transfer transition key with a different aggregate version', async () => {
+    ctx.tx.stockTransfer.findUnique.mockResolvedValue(
+      transferRow({ status: 'APPROVED', version: 3 }),
+    );
+    ctx.tx.stockTransferTransition.findUnique.mockResolvedValue({
+      transferId: 'tr-1',
+      action: 'dispatch',
+      expectedVersion: 2,
+    });
+
+    await expect(
+      ctx.service.dispatchTransfer('tr-1', {
+        actorId: 'actor',
+        requestId: 'request',
+        idempotencyKey: 'dispatch-1',
+        expectedVersion: 3,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_CONFLICT' } });
+
+    expect(ctx.tx.inventoryMovement.create).not.toHaveBeenCalled();
+    expect(ctx.tx.stockTransfer.update).not.toHaveBeenCalled();
+  });
+
   it('rejects an illegal transition with TRANSFER_STATE_CONFLICT', async () => {
     ctx.tx.stockTransfer.findUnique.mockResolvedValue(transferRow({ status: 'DRAFT' }));
 
@@ -976,6 +1000,51 @@ describe('InventoryService transfer lifecycle', () => {
     ).rejects.toMatchObject({ response: { code: 'TRANSFER_STATE_CONFLICT' } });
 
     expect(ctx.tx.stockTransfer.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a stale transfer aggregate version before applying side effects', async () => {
+    ctx.tx.stockTransfer.findUnique.mockResolvedValue(
+      transferRow({ status: 'APPROVED', version: 3 }),
+    );
+
+    await expect(
+      ctx.service.dispatchTransfer('tr-1', {
+        actorId: 'actor',
+        requestId: 'request',
+        expectedVersion: 2,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'TRANSFER_VERSION_CONFLICT' } });
+
+    expect(ctx.tx.inventoryBalance.findUnique).not.toHaveBeenCalled();
+    expect(ctx.tx.inventoryMovement.create).not.toHaveBeenCalled();
+    expect(ctx.tx.stockTransfer.update).not.toHaveBeenCalled();
+  });
+
+  it('increments the transfer aggregate version without applying it to balance rows', async () => {
+    ctx.tx.stockTransfer.findUnique.mockResolvedValue(
+      transferRow({ status: 'APPROVED', version: 3 }),
+    );
+    ctx.tx.inventoryBalance.findUnique.mockResolvedValue({
+      version: 11,
+      onHand: 10,
+      reserved: 0,
+      available: 10,
+    });
+    ctx.tx.stockTransfer.update.mockResolvedValue(
+      transferRow({ status: 'IN_TRANSIT', version: 4 }),
+    );
+
+    await expect(
+      ctx.service.dispatchTransfer('tr-1', {
+        actorId: 'actor',
+        requestId: 'request',
+        expectedVersion: 3,
+      }),
+    ).resolves.toEqual(expect.objectContaining({ status: 'IN_TRANSIT', version: 4 }));
+
+    expect(ctx.tx.stockTransfer.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: 'IN_TRANSIT', version: { increment: 1 } } }),
+    );
   });
 
   it('rejects dispatching without a source location', async () => {

@@ -130,6 +130,13 @@ Invalid transitions and unknown transfer ids are rejected with `TRANSFER_STATE_C
 
 Once dispatched, source stock has physically moved; receiving creates the destination movement. Direct balance reassignment is never used. Dispatch and receive run in serializable transactions and re-check the stock identity at the item location before applying the movement, so concurrent dispatches cannot over-draw stock.
 
+Every transfer exposes a nonnegative aggregate `version`. A transition may send
+`expectedVersion`; a stale value fails with `TRANSFER_VERSION_CONFLICT` before any
+ledger or balance side effect, and every successful transition increments the
+aggregate version. This scalar never represents the versions of multiple inventory
+balance rows; those rows remain protected by the serializable transaction and ledger
+invariants.
+
 API surface is exposed through `inventory` endpoints; permission mapping is documented under Contracts & Permissions below.
 
 ## Inventory HTTP contracts
@@ -157,7 +164,16 @@ Exposed under `/api/v1/inventory` (staff-MFA authenticated routes).
 
 Permissions fail closed: a caller needs the exact permission listed; `inventory.read` alone never allows mutations, and acting on a transfer requires `inventory.transfer` while approval additionally requires `inventory.approve`.
 
-DTO and error contracts (including `WAREHOUSE_CODE_CONFLICT`, `LOCATION_CODE_CONFLICT`, `TRANSFER_NOT_FOUND`, `TRANSFER_STATE_CONFLICT`, `TRANSFER_NO_ITEMS`, `TRANSFER_ITEM_LOCATION_REQUIRED`) live in `packages/contracts`. Balance and movement list responses include stable warehouse, location and variant identifiers for operator clients. Movement timestamps are ISO 8601 strings, while persistence-only replay keys such as `idempotencyKey` are never returned. The committed OpenAPI artifact describes these projections and their bounded filters. Prisma models are never exposed as public contracts.
+Read and mutation contracts (including warehouse/location writes, adjustments,
+reservations and transfer lifecycle requests) live in `packages/contracts`. Stable
+errors include `WAREHOUSE_CODE_CONFLICT`, `LOCATION_CODE_CONFLICT`,
+`TRANSFER_NOT_FOUND`, `TRANSFER_VERSION_CONFLICT`, `TRANSFER_STATE_CONFLICT`,
+`TRANSFER_NO_ITEMS` and `TRANSFER_ITEM_LOCATION_REQUIRED`. Balance and movement list
+responses include stable warehouse, location and variant identifiers for operator
+clients. Movement timestamps are ISO 8601 strings, while persistence-only replay keys
+such as `idempotencyKey` are never returned. The committed OpenAPI artifact describes
+these projections, bounded filters and exact command bodies. Prisma models are never
+exposed as public contracts.
 
 ## Stocktake
 Stocktake should support:

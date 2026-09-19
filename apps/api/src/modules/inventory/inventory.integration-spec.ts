@@ -1051,6 +1051,43 @@ describe.sequential('InventoryService database integration', () => {
     expect(outMovements).toBe(0);
   });
 
+  it('uses the transfer aggregate version for optimistic transition concurrency', async () => {
+    const requestId = `${requestIdPrefix}-transfer-version`;
+    const transfer = await inventory.createTransfer({
+      sourceWarehouseId,
+      targetWarehouseId,
+      items: [{ variantId: transferVariantId, quantity: 1, sourceLocationId, targetLocationId }],
+      actorId,
+      requestId: `${requestId}-create`,
+    });
+    expect(transfer.version).toBe(0);
+
+    const requested = await inventory.requestTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-request`,
+      expectedVersion: 0,
+    });
+    expect(requested).toMatchObject({ status: 'REQUESTED', version: 1 });
+
+    await expect(
+      inventory.approveTransfer(transfer.id, {
+        actorId,
+        requestId: `${requestId}-stale-approve`,
+        expectedVersion: 0,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'TRANSFER_VERSION_CONFLICT' } });
+
+    const unchanged = await inventory.getTransfer(transfer.id);
+    expect(unchanged).toMatchObject({ status: 'REQUESTED', version: 1 });
+
+    const approved = await inventory.approveTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-approve`,
+      expectedVersion: 1,
+    });
+    expect(approved).toMatchObject({ status: 'APPROVED', version: 2 });
+  });
+
   it('requires locations when dispatching and receiving', async () => {
     const requestId = `${requestIdPrefix}-transfer-no-loc`;
     const withoutLocations = await inventory.createTransfer({

@@ -20,6 +20,7 @@ describe('inventory public error contract', () => {
       'RESERVATION_EXPIRED',
       'RESERVATION_STATE_CONFLICT',
       'TRANSFER_NOT_FOUND',
+      'TRANSFER_VERSION_CONFLICT',
       'TRANSFER_STATE_CONFLICT',
       'TRANSFER_NO_ITEMS',
       'TRANSFER_ITEM_LOCATION_REQUIRED',
