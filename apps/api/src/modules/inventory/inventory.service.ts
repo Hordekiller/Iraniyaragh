@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InventoryMovementType, Prisma } from '@prisma/client';
 import {
-  MAX_TRANSFER_ITEMS,
   type InventoryBalanceListResponse,
   type InventoryBalanceSnapshot,
   type InventoryMovement as InventoryMovementContract,
@@ -11,6 +10,7 @@ import {
 } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { MAX_TRANSFER_ITEMS } from './inventory.constants';
 
 type StockKey = {
   warehouseId: string;

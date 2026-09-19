@@ -1,6 +1,6 @@
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { InventoryMovementType, ReservationStatus, TransferStatus } from '@prisma/client';
-import { MAX_TRANSFER_ITEMS } from '@iranyaragh/contracts';
+import { MAX_TRANSFER_ITEMS } from './inventory.constants';
 
 const inventoryMovementTypes = Object.values(InventoryMovementType);
 const reservationStatuses = Object.values(ReservationStatus);

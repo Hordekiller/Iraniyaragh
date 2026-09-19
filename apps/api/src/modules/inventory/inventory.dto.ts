@@ -16,7 +16,6 @@ import {
 } from 'class-validator';
 import { InventoryMovementType, ReservationStatus, TransferStatus } from '@prisma/client';
 import {
-  MAX_TRANSFER_ITEMS,
   type InventoryChangeRequest,
   type InventoryLifecycleRequest,
   type ReservationCreateRequest,
@@ -28,6 +27,7 @@ import {
   type WarehouseLocationUpdateRequest,
   type WarehouseUpdateRequest,
 } from '@iranyaragh/contracts';
+import { MAX_TRANSFER_ITEMS } from './inventory.constants';
 
 export class InventorySnapshotQueryDto {
   @IsOptional() @IsString() warehouseId?: string;

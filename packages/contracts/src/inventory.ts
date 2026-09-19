@@ -195,8 +195,11 @@ export type InventoryLifecycleRequest = {
 
 export type TransferStatus = 'DRAFT' | 'REQUESTED' | 'APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'CANCELLED';
 
+/** Literal contract used to keep API validation and OpenAPI bounds in sync. */
+export type MaxTransferItems = 100;
+
 /** Upper bound for one operator-created transfer command. */
-export const MAX_TRANSFER_ITEMS = 100;
+export const MAX_TRANSFER_ITEMS: MaxTransferItems = 100;
 
 export type TransferItem = {
   id: string;
