@@ -1,25 +1,12 @@
 import { expect, test } from '@playwright/test'
-import type { Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { createExternalRequestsTracker, isMobile, tap } from './helpers'
-
-async function authenticateCustomer(page: Page) {
-  await page.goto('/')
-  if (isMobile(page)) {
-    await tap(
-      page
-        .getByRole('navigation', { name: 'ناوبری پایین' })
-        .getByRole('button', { name: 'حساب کاربری' }),
-    )
-  } else {
-    await tap(page.getByRole('button', { name: 'ورود به حساب کاربری' }))
-  }
-  await page.locator('#login-mobile').fill('09123456789')
-  await tap(page.getByRole('button', { name: 'دریافت کد تایید', exact: true }))
-  await page.locator('#login-otp-code').fill('123456')
-  await tap(page.getByRole('button', { name: 'ورود به حساب', exact: true }))
-  await expect(page.getByRole('dialog')).toBeHidden()
-}
+import type { Page } from '@playwright/test'
+import {
+  createExternalRequestsTracker,
+  isMobile,
+  signInFixtureCustomer,
+  tap,
+} from './helpers'
 
 async function addFirstProduct(page: Page) {
   await tap(page.locator('section#popular button[class*="snap-start"]').first())
@@ -36,7 +23,7 @@ test.describe('web: fixture purchase journey', () => {
   }) => {
     const network = createExternalRequestsTracker(page)
 
-    await authenticateCustomer(page)
+    await signInFixtureCustomer(page)
     await addFirstProduct(page)
     await tap(page.getByRole('link', { name: /سبد خرید،/ }).first())
     await expect(page.getByRole('heading', { name: 'سبد خرید' })).toBeVisible()
@@ -85,7 +72,7 @@ test.describe('web: fixture purchase journey', () => {
     page,
   }) => {
     test.setTimeout(60_000)
-    await authenticateCustomer(page)
+    await signInFixtureCustomer(page)
     await addFirstProduct(page)
 
     await tap(page.getByRole('link', { name: /سبد خرید،/ }).first())
