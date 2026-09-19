@@ -27,6 +27,14 @@ export const INVENTORY_MOVEMENT_TYPES = [
 
 export type InventoryMovementType = (typeof INVENTORY_MOVEMENT_TYPES)[number];
 
+export const INVENTORY_CHANGE_TYPES = [
+  'RECEIPT',
+  'ADJUSTMENT_IN',
+  'ADJUSTMENT_OUT',
+] as const satisfies readonly InventoryMovementType[];
+
+export type InventoryChangeType = (typeof INVENTORY_CHANGE_TYPES)[number];
+
 export type InventoryPageQuery = {
   warehouseId?: string;
   locationId?: string;
@@ -75,6 +83,18 @@ export type InventoryMovementListResponse = {
   count: number;
 };
 
+export type InventoryChangeRequest = {
+  warehouseId: string;
+  locationId: string;
+  variantId: string;
+  delta: number;
+  type: InventoryChangeType;
+  reason?: string;
+  referenceType?: string;
+  referenceId?: string;
+  expectedVersion?: number;
+};
+
 export type WarehouseStatus = 'ACTIVE' | 'INACTIVE';
 
 export type Warehouse = {
@@ -94,6 +114,20 @@ export type WarehouseListResponse = {
 };
 
 export type WarehouseResponse = Warehouse;
+
+export type WarehouseCreateRequest = {
+  code: string;
+  name: string;
+  city?: string;
+  address?: string;
+};
+
+export type WarehouseUpdateRequest = {
+  name?: string;
+  city?: string;
+  address?: string;
+  isActive?: boolean;
+};
 
 export type WarehouseLocation = {
   id: string;
@@ -117,6 +151,20 @@ export type WarehouseLocationListResponse = {
 
 export type WarehouseLocationResponse = WarehouseLocation;
 
+export type WarehouseLocationCreateRequest = {
+  code: string;
+  name?: string;
+  zone?: string;
+  aisle?: string;
+  rack?: string;
+  shelf?: string;
+  bin?: string;
+};
+
+export type WarehouseLocationUpdateRequest = Omit<WarehouseLocationCreateRequest, 'code'> & {
+  isActive?: boolean;
+};
+
 export type ReservationStatus = 'ACTIVE' | 'CONSUMED' | 'RELEASED' | 'EXPIRED';
 
 export type Reservation = {
@@ -139,7 +187,27 @@ export type ReservationListResponse = {
 
 export type ReservationResponse = Reservation;
 
+export type ReservationCreateRequest = {
+  warehouseId: string;
+  locationId: string;
+  variantId: string;
+  orderId?: string;
+  quantity: number;
+  expiresAt: string;
+  expectedVersion?: number;
+};
+
+export type InventoryLifecycleRequest = {
+  expectedVersion?: number;
+};
+
 export type TransferStatus = 'DRAFT' | 'REQUESTED' | 'APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'CANCELLED';
+
+/** Literal contract used to keep API validation and OpenAPI bounds in sync. */
+export type MaxTransferItems = 100;
+
+/** Upper bound for one operator-created transfer command. */
+export const MAX_TRANSFER_ITEMS: MaxTransferItems = 100;
 
 export type TransferItem = {
   id: string;
@@ -155,6 +223,7 @@ export type StockTransfer = {
   sourceWarehouseId: string;
   targetWarehouseId: string;
   status: TransferStatus;
+  version: number;
   items: TransferItem[];
   createdAt: string;
   updatedAt: string;
@@ -166,3 +235,22 @@ export type TransferListResponse = {
 };
 
 export type TransferResponse = StockTransfer;
+
+export type TransferItemCreateRequest = {
+  variantId: string;
+  quantity: number;
+  sourceLocationId?: string;
+  targetLocationId?: string;
+};
+
+export type TransferCreateRequest = {
+  code?: string;
+  sourceWarehouseId: string;
+  targetWarehouseId: string;
+  items: TransferItemCreateRequest[];
+};
+
+/** Optimistic version of the transfer aggregate, not an inventory-balance version. */
+export type TransferActionRequest = {
+  expectedVersion?: number;
+};

@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InventoryMovementType, Prisma } from '@prisma/client';
-import type {
-  InventoryBalanceListResponse,
-  InventoryBalanceSnapshot,
-  InventoryMovement as InventoryMovementContract,
-  InventoryMovementListResponse,
+import {
+  type InventoryBalanceListResponse,
+  type InventoryBalanceSnapshot,
+  type InventoryChangeType,
+  type InventoryMovement as InventoryMovementContract,
+  type InventoryMovementListResponse,
+  type StockTransfer,
 } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { INVENTORY_CHANGE_TYPES, MAX_TRANSFER_ITEMS } from './inventory.constants';
 
 type StockKey = {
   warehouseId: string;
@@ -35,7 +38,8 @@ type TransferRowLike = {
   code: string;
   sourceWarehouseId: string;
   targetWarehouseId: string;
-  status: string;
+  status: StockTransfer['status'];
+  version: number;
   items: TransferItemRowLike[];
   createdAt: Date;
   updatedAt: Date;
@@ -53,7 +57,7 @@ export type ActorContext = {
 export type ChangeStockCommand = StockKey &
   ActorContext & {
     delta: number;
-    type: InventoryMovementType;
+    type: InventoryChangeType;
     reason?: string;
     referenceType?: string;
     referenceId?: string;
@@ -163,16 +167,7 @@ export type TransferItemDto = {
   targetLocationId: string | null;
 };
 
-export type TransferDto = {
-  id: string;
-  code: string;
-  sourceWarehouseId: string;
-  targetWarehouseId: string;
-  status: string;
-  items: TransferItemDto[];
-  createdAt: Date;
-  updatedAt: Date;
-};
+export type TransferDto = StockTransfer;
 
 export type WarehouseDto = {
   id: string;
@@ -220,9 +215,10 @@ export type MovementQuery = {
 const SERIALIZABLE_RETRIES = 3;
 const EXPIRY_BATCH_SIZE = 100;
 const MAX_OFFSET = 50_000;
+const INVENTORY_CHANGE_TYPE_SET = new Set<InventoryMovementType>(INVENTORY_CHANGE_TYPES);
 const ADJUSTMENT_TYPES = new Set<InventoryMovementType>([
-  'ADJUSTMENT_IN',
-  'ADJUSTMENT_OUT',
+  InventoryMovementType.ADJUSTMENT_IN,
+  InventoryMovementType.ADJUSTMENT_OUT,
 ]);
 
 @Injectable()
@@ -236,6 +232,19 @@ export class InventoryService {
     this.assertTracked(command);
     if (!Number.isInteger(command.delta) || command.delta === 0) {
       throw new BadRequestException('Inventory delta must be a non-zero integer.');
+    }
+    if (!INVENTORY_CHANGE_TYPE_SET.has(command.type)) {
+      throw new BadRequestException({
+        code: 'INVALID_REQUEST',
+        message: 'This endpoint only accepts receipts and manual adjustments.',
+      });
+    }
+    const isOutboundAdjustment = command.type === InventoryMovementType.ADJUSTMENT_OUT;
+    if ((isOutboundAdjustment && command.delta > 0) || (!isOutboundAdjustment && command.delta < 0)) {
+      throw new BadRequestException({
+        code: 'INVALID_REQUEST',
+        message: 'Inventory movement type and delta direction do not match.',
+      });
     }
     if (ADJUSTMENT_TYPES.has(command.type) && !command.reason?.trim()) {
       throw new BadRequestException('Manual corrections require a reason.');
@@ -668,6 +677,12 @@ export class InventoryService {
     if (!command.items.length) {
       throw new BadRequestException({ code: 'TRANSFER_NO_ITEMS', message: 'A transfer requires at least one item.' });
     }
+    if (command.items.length > MAX_TRANSFER_ITEMS) {
+      throw new BadRequestException({
+        code: 'INVALID_REQUEST',
+        message: `A transfer cannot contain more than ${MAX_TRANSFER_ITEMS} items.`,
+      });
+    }
     if (command.items.some((item) => !Number.isInteger(item.quantity) || item.quantity <= 0)) {
       throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'Transfer item quantity must be greater than zero.' });
     }
@@ -681,7 +696,7 @@ export class InventoryService {
               include: { items: true },
             });
             if (existing) {
-              if (this.transferMatches(existing, command)) return existing;
+              if (this.transferMatches(existing, command)) return this.toTransferDto(existing);
               throw new ConflictException(
                 `Idempotency conflict: key '${command.idempotencyKey}' was already used with a different payload.`,
               );
@@ -689,9 +704,7 @@ export class InventoryService {
           }
 
           await this.assertWarehousePair(tx, command.sourceWarehouseId, command.targetWarehouseId);
-          for (const item of command.items) {
-            await this.assertVariant(tx, item.variantId);
-          }
+          await this.assertVariants(tx, command.items.map(({ variantId }) => variantId));
 
           const code = (command.code?.trim() || `TRF-${randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`);
           const transfer = await tx.stockTransfer.create({
@@ -860,8 +873,13 @@ export class InventoryService {
   async listLocations(warehouseId: string, query: WarehouseQuery): Promise<{ items: LocationDto[]; count: number }> {
     const limit = clampInt(query.limit, 1, 100, 50);
     const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
+    const activeOnly = query.isActive === true && query.isInactive !== true;
+    const inactiveOnly = query.isInactive === true && query.isActive !== true;
 
-    const where: Prisma.WarehouseLocationWhereInput = { warehouseId };
+    const where: Prisma.WarehouseLocationWhereInput = {
+      warehouseId,
+      ...(activeOnly || inactiveOnly ? { isActive: activeOnly } : {}),
+    };
 
     const [rows, count] = await Promise.all([
       this.prisma.warehouseLocation.findMany({
@@ -1174,35 +1192,39 @@ export class InventoryService {
               message: `Transfer cannot be ${action}ed from status '${transfer.status}'.`,
             });
           }
+          if (context.expectedVersion !== undefined && context.expectedVersion !== transfer.version) {
+            throw new ConflictException({
+              code: 'TRANSFER_VERSION_CONFLICT',
+              message: 'Transfer version conflict. Refresh and retry.',
+            });
+          }
 
           if (action === 'dispatch') {
-            for (const item of transfer.items) {
-              if (!item.sourceLocationId) {
-                throw new ConflictException({
-                  code: 'TRANSFER_ITEM_LOCATION_REQUIRED',
-                  message: `Dispatch requires a source location for item '${item.variantId}'.`,
-                });
-              }
-              await this.applyTransferOut(tx, transfer, item, context);
+            const missingLocation = transfer.items.find((item) => !item.sourceLocationId);
+            if (missingLocation) {
+              throw new ConflictException({
+                code: 'TRANSFER_ITEM_LOCATION_REQUIRED',
+                message: `Dispatch requires a source location for item '${missingLocation.variantId}'.`,
+              });
             }
+            await this.applyTransferMovements(tx, transfer, transfer.items, 'out');
           }
 
           if (action === 'receive') {
-            for (const item of transfer.items) {
-              if (!item.targetLocationId) {
-                throw new ConflictException({
-                  code: 'TRANSFER_ITEM_LOCATION_REQUIRED',
-                  message: `Receive requires a target location for item '${item.variantId}'.`,
-                });
-              }
-              await this.applyTransferIn(tx, transfer, item, context);
+            const missingLocation = transfer.items.find((item) => !item.targetLocationId);
+            if (missingLocation) {
+              throw new ConflictException({
+                code: 'TRANSFER_ITEM_LOCATION_REQUIRED',
+                message: `Receive requires a target location for item '${missingLocation.variantId}'.`,
+              });
             }
+            await this.applyTransferMovements(tx, transfer, transfer.items, 'in');
           }
 
           const nextStatus = this.nextTransferStatus(action);
           const updated = await tx.stockTransfer.update({
             where: { id },
-            data: { status: nextStatus },
+            data: { status: nextStatus, version: { increment: 1 } },
             include: { items: true },
           });
           if (context.idempotencyKey) {
@@ -1255,114 +1277,136 @@ export class InventoryService {
     }
   }
 
-  private async applyTransferOut(
+  private async applyTransferMovements(
     tx: Prisma.TransactionClient,
-    transfer: { sourceWarehouseId: string; code: string },
-    item: { variantId: string; quantity: number; sourceLocationId: string | null },
-    context: TransferContext,
-  ) {
-    if (!item.sourceLocationId) {
-      throw new ConflictException({ code: 'TRANSFER_ITEM_LOCATION_REQUIRED', message: 'Source location is required to dispatch.' });
-    }
-    await this.assertStockIdentity(tx, {
-      warehouseId: transfer.sourceWarehouseId,
-      locationId: item.sourceLocationId,
-      variantId: item.variantId,
-    });
-
-    return this.applyTransferMovement(tx, {
-      warehouseId: transfer.sourceWarehouseId,
-      locationId: item.sourceLocationId,
-      variantId: item.variantId,
-      delta: -item.quantity,
-      type: InventoryMovementType.TRANSFER_OUT,
-      referenceId: transfer.code,
-      expectedVersion: context.expectedVersion,
-    });
-  }
-
-  private async applyTransferIn(
-    tx: Prisma.TransactionClient,
-    transfer: { targetWarehouseId: string; code: string },
-    item: { variantId: string; quantity: number; targetLocationId: string | null },
-    context: TransferContext,
-  ) {
-    if (!item.targetLocationId) {
-      throw new ConflictException({ code: 'TRANSFER_ITEM_LOCATION_REQUIRED', message: 'Target location is required to receive.' });
-    }
-    await this.assertStockIdentity(tx, {
-      warehouseId: transfer.targetWarehouseId,
-      locationId: item.targetLocationId,
-      variantId: item.variantId,
-    });
-
-    return this.applyTransferMovement(tx, {
-      warehouseId: transfer.targetWarehouseId,
-      locationId: item.targetLocationId,
-      variantId: item.variantId,
-      delta: item.quantity,
-      type: InventoryMovementType.TRANSFER_IN,
-      referenceId: transfer.code,
-      expectedVersion: context.expectedVersion,
-    });
-  }
-
-  private async applyTransferMovement(
-    tx: Prisma.TransactionClient,
-    command: StockKey & {
-      delta: number;
-      type: InventoryMovementType;
-      referenceId: string;
-      expectedVersion?: number;
+    transfer: {
+      sourceWarehouseId: string;
+      targetWarehouseId: string;
+      code: string;
     },
-  ) {
-    const key = this.balanceKey(command);
-    const balance = await tx.inventoryBalance.findUnique({ where: key });
-    const version = balance?.version ?? 0;
-    const expectedVersion = command.expectedVersion;
-    this.assertVersion(expectedVersion, version);
-
-    const beforeOnHand = balance?.onHand ?? 0;
-    const reserved = balance?.reserved ?? 0;
-    const afterOnHand = beforeOnHand + command.delta;
-    const available = afterOnHand - reserved;
-
-    if (afterOnHand < 0 || available < 0) {
-      throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: 'Insufficient stock for this operation.' });
+    items: Array<{
+      variantId: string;
+      quantity: number;
+      sourceLocationId: string | null;
+      targetLocationId: string | null;
+    }>,
+    direction: 'out' | 'in',
+  ): Promise<void> {
+    const warehouseId =
+      direction === 'out'
+        ? transfer.sourceWarehouseId
+        : transfer.targetWarehouseId;
+    const movementType =
+      direction === 'out'
+        ? InventoryMovementType.TRANSFER_OUT
+        : InventoryMovementType.TRANSFER_IN;
+    const stockKeys = items.map((item) => {
+      const locationId =
+        direction === 'out'
+          ? item.sourceLocationId
+          : item.targetLocationId;
+      if (!locationId) {
+        throw new ConflictException({
+          code: 'TRANSFER_ITEM_LOCATION_REQUIRED',
+          message: `${direction === 'out' ? 'Source' : 'Target'} location is required for transfer movements.`,
+        });
+      }
+      return { warehouseId, locationId, variantId: item.variantId };
+    });
+    const locationIds = [...new Set(stockKeys.map(({ locationId }) => locationId))];
+    const locations = await tx.warehouseLocation.findMany({
+      where: { id: { in: locationIds }, warehouseId, isActive: true },
+      select: { id: true },
+    });
+    if (locations.length !== locationIds.length) {
+      throw new NotFoundException({
+        code: 'LOCATION_NOT_FOUND',
+        message: 'One or more active warehouse locations were not found.',
+      });
     }
 
-    await tx.inventoryBalance.upsert({
-      where: key,
-      create: {
-        warehouseId: command.warehouseId,
-        locationId: command.locationId,
-        variantId: command.variantId,
-        onHand: afterOnHand,
-        reserved,
-        available,
-        version: 1,
-      },
-      update: {
-        onHand: afterOnHand,
-        available,
-        version: { increment: 1 },
+    const uniqueKeys = [...new Map(
+      stockKeys.map((key) => [`${key.locationId}\u0000${key.variantId}`, key]),
+    ).values()];
+    const balances = await tx.inventoryBalance.findMany({
+      where: {
+        OR: uniqueKeys.map(({ locationId, variantId }) => ({
+          warehouseId,
+          locationId,
+          variantId,
+        })),
       },
     });
-
-    await tx.inventoryMovement.create({
-      data: {
-        warehouseId: command.warehouseId,
-        locationId: command.locationId,
-        variantId: command.variantId,
-        type: command.type,
-        quantity: command.delta,
+    const balancesByKey = new Map(
+      balances.map((balance) => [
+        `${balance.locationId}\u0000${balance.variantId}`,
+        balance,
+      ]),
+    );
+    const projected = new Map<string, StockKey & { onHand: number; reserved: number }>(
+      uniqueKeys.map((key) => {
+        const balance = balancesByKey.get(`${key.locationId}\u0000${key.variantId}`);
+        return [
+          `${key.locationId}\u0000${key.variantId}`,
+          {
+            ...key,
+            onHand: balance?.onHand ?? 0,
+            reserved: balance?.reserved ?? 0,
+          },
+        ];
+      }),
+    );
+    const movements = items.map((item, index) => {
+      const key = stockKeys[index];
+      const projectedKey = `${key.locationId}\u0000${key.variantId}`;
+      const balance = projected.get(projectedKey);
+      if (!balance) {
+        throw new Error(`Projected inventory balance '${projectedKey}' was not initialized.`);
+      }
+      const delta = direction === 'out' ? -item.quantity : item.quantity;
+      const beforeOnHand = balance.onHand;
+      const afterOnHand = beforeOnHand + delta;
+      const available = afterOnHand - balance.reserved;
+      if (afterOnHand < 0 || available < 0) {
+        throw new ConflictException({ code: 'INSUFFICIENT_STOCK', message: 'Insufficient stock for this operation.' });
+      }
+      balance.onHand = afterOnHand;
+      return {
+        warehouseId,
+        locationId: key.locationId,
+        variantId: key.variantId,
+        type: movementType,
+        quantity: delta,
         beforeOnHand,
         afterOnHand,
         referenceType: 'stock-transfer',
-        referenceId: command.referenceId,
-        reason: command.type === InventoryMovementType.TRANSFER_OUT ? 'Transfer dispatch' : 'Transfer receive',
-      },
+        referenceId: transfer.code,
+        reason: direction === 'out' ? 'Transfer dispatch' : 'Transfer receive',
+      };
     });
+
+    for (const balance of projected.values()) {
+      const available = balance.onHand - balance.reserved;
+      await tx.inventoryBalance.upsert({
+        where: this.balanceKey(balance),
+        create: {
+          warehouseId,
+          locationId: balance.locationId,
+          variantId: balance.variantId,
+          onHand: balance.onHand,
+          reserved: balance.reserved,
+          available,
+          version: 1,
+        },
+        update: {
+          onHand: balance.onHand,
+          available,
+          version: { increment: 1 },
+        },
+      });
+    }
+
+    await tx.inventoryMovement.createMany({ data: movements });
   }
 
   private async assertWarehousePair(
@@ -1385,10 +1429,14 @@ export class InventoryService {
     }
   }
 
-  private async assertVariant(tx: Prisma.TransactionClient, variantId: string) {
-    const variant = await tx.productVariant.findUnique({ where: { id: variantId }, select: { id: true } });
-    if (!variant) {
-      throw new NotFoundException({ code: 'SKU_NOT_FOUND', message: 'SKU not found.' });
+  private async assertVariants(tx: Prisma.TransactionClient, variantIds: readonly string[]) {
+    const uniqueIds = [...new Set(variantIds)];
+    const variants = await tx.productVariant.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true },
+    });
+    if (variants.length !== uniqueIds.length) {
+      throw new NotFoundException({ code: 'SKU_NOT_FOUND', message: 'One or more SKUs were not found.' });
     }
   }
 
@@ -1419,6 +1467,7 @@ export class InventoryService {
       sourceWarehouseId: transfer.sourceWarehouseId,
       targetWarehouseId: transfer.targetWarehouseId,
       status: transfer.status,
+      version: transfer.version,
       items: transfer.items.map((item) => ({
         id: item.id,
         variantId: item.variantId,
@@ -1426,8 +1475,8 @@ export class InventoryService {
         sourceLocationId: item.sourceLocationId ?? null,
         targetLocationId: item.targetLocationId ?? null,
       })),
-      createdAt: transfer.createdAt,
-      updatedAt: transfer.updatedAt,
+      createdAt: transfer.createdAt.toISOString(),
+      updatedAt: transfer.updatedAt.toISOString(),
     };
   }
 

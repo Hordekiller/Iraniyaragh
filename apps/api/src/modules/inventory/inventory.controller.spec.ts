@@ -96,14 +96,14 @@ describe('InventoryController', () => {
   it('passes bounded read queries through without exposing service internals', async () => {
     await expect(controller.balances({ limit: 10, offset: 0 })).resolves.toEqual({ items: [], count: 0 });
     await expect(controller.movements({ limit: 10, offset: 0 })).resolves.toEqual({ items: [], count: 0 });
-    await expect(controller.warehouses({ limit: 10, offset: 0 })).resolves.toEqual({ items: [], count: 0 });
-    await expect(controller.locations('wh-1', { limit: 10, offset: 0 })).resolves.toEqual({ items: [], count: 0 });
+    await expect(controller.warehouses({ limit: 10, offset: 0, isActive: false, isInactive: true })).resolves.toEqual({ items: [], count: 0 });
+    await expect(controller.locations('wh-1', { limit: 10, offset: 0, isActive: true, isInactive: false })).resolves.toEqual({ items: [], count: 0 });
     await expect(controller.reservations({ limit: 10, offset: 0 })).resolves.toEqual({ items: [], count: 0 });
     await expect(controller.transfers({ limit: 10, offset: 0 })).resolves.toEqual({ items: [], count: 0 });
     expect(service.getSnapshots).toHaveBeenCalledWith({ limit: 10, offset: 0 });
     expect(service.getMovements).toHaveBeenCalledWith({ limit: 10, offset: 0 });
-    expect(service.listWarehouses).toHaveBeenCalledWith({ limit: 10, offset: 0 });
-    expect(service.listLocations).toHaveBeenCalledWith('wh-1', { limit: 10, offset: 0 });
+    expect(service.listWarehouses).toHaveBeenCalledWith({ limit: 10, offset: 0, isActive: false, isInactive: true });
+    expect(service.listLocations).toHaveBeenCalledWith('wh-1', { limit: 10, offset: 0, isActive: true, isInactive: false });
     expect(service.getReservations).toHaveBeenCalledWith({ limit: 10, offset: 0 });
     expect(service.getTransfers).toHaveBeenCalledWith({ limit: 10, offset: 0 });
   });

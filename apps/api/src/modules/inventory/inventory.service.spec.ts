@@ -15,16 +15,31 @@ function createFakeClient(overrides: Record<string, unknown> = {}) {
     warehouseLocation: {
       findFirst: vi.fn().mockResolvedValue({ id: 'loc' }),
       findUnique: vi.fn().mockResolvedValue({ id: 'loc', warehouseId: 'wh' }),
-      findMany: vi.fn().mockResolvedValue([]),
+      findMany: vi.fn().mockImplementation(({ where }) =>
+        Promise.resolve(where.id.in.map((id: string) => ({ id }))),
+      ),
       count: vi.fn().mockResolvedValue(0),
       create: vi.fn(),
       update: vi.fn(),
     },
     productVariant: {
       findUnique: vi.fn().mockResolvedValue({ id: 'variant' }),
-      findMany: vi.fn().mockResolvedValue([]),
+      findMany: vi.fn().mockImplementation(({ where }) =>
+        Promise.resolve(where.id.in.map((id: string) => ({ id }))),
+      ),
     },
     inventoryBalance: {
+      findMany: vi.fn().mockResolvedValue([
+        {
+          warehouseId: 'src',
+          locationId: 'loc',
+          variantId: 'variant',
+          onHand: 10,
+          reserved: 0,
+          available: 10,
+          version: 1,
+        },
+      ]),
       findUnique: vi.fn().mockResolvedValue({ version: 1 }),
       upsert: vi.fn(),
       update: vi.fn(),
@@ -32,6 +47,7 @@ function createFakeClient(overrides: Record<string, unknown> = {}) {
     inventoryMovement: {
       findUnique: vi.fn().mockResolvedValue(null),
       create: vi.fn(),
+      createMany: vi.fn(),
     },
     stockReservation: {
       findMany: vi.fn(),
@@ -139,6 +155,40 @@ describe('InventoryService guards and queries', () => {
     expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it.each([
+    InventoryMovementType.SALE,
+    InventoryMovementType.RETURN_IN,
+    InventoryMovementType.RETURN_OUT,
+    InventoryMovementType.TRANSFER_IN,
+    InventoryMovementType.TRANSFER_OUT,
+    InventoryMovementType.STOCKTAKE,
+    InventoryMovementType.RESERVATION,
+    InventoryMovementType.RELEASE,
+  ])('rejects protected workflow movement type %s before opening a transaction', async (type) => {
+    await expect(
+      ctx.service.changeOnHand({
+        ...base,
+        delta: 1,
+        type,
+        reason: 'must use dedicated workflow',
+      } as never),
+    ).rejects.toMatchObject({ response: { code: 'INVALID_REQUEST' } });
+
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [InventoryMovementType.RECEIPT, -1],
+    [InventoryMovementType.ADJUSTMENT_IN, -1],
+    [InventoryMovementType.ADJUSTMENT_OUT, 1],
+  ])('rejects %s with mismatched delta %i before opening a transaction', async (type, delta) => {
+    await expect(
+      ctx.service.changeOnHand({ ...base, type, delta, reason: 'direction test' }),
+    ).rejects.toMatchObject({ response: { code: 'INVALID_REQUEST' } });
+
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('rejects non-positive reservation quantities', async () => {
     await expect(
       ctx.service.reserve({
@@ -225,6 +275,7 @@ describe('InventoryService guards and queries', () => {
       ctx.service.changeOnHand({
         ...base,
         delta: -6,
+        type: InventoryMovementType.ADJUSTMENT_OUT,
         reason: 'negative available test',
         expectedVersion: 1,
       }),
@@ -628,6 +679,7 @@ function transferRow(overrides: Record<string, unknown> = {}) {
     sourceWarehouseId: 'src',
     targetWarehouseId: 'dst',
     status: 'DRAFT',
+    version: 0,
     idempotencyKey: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -742,6 +794,33 @@ describe('InventoryService warehouse and location management', () => {
     );
   });
 
+  it.each([
+    [{ isActive: true }, true],
+    [{ isInactive: true }, false],
+  ])('filters locations by active state for query %j', async (query, isActive) => {
+    ctx.prisma.warehouseLocation.findMany.mockResolvedValue([]);
+    ctx.prisma.warehouseLocation.count.mockResolvedValue(0);
+
+    await ctx.service.listLocations('w1', query);
+
+    const where = { warehouseId: 'w1', isActive };
+    expect(ctx.prisma.warehouseLocation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where }),
+    );
+    expect(ctx.prisma.warehouseLocation.count).toHaveBeenCalledWith({ where });
+  });
+
+  it('does not constrain location activity when both filters are selected', async () => {
+    ctx.prisma.warehouseLocation.findMany.mockResolvedValue([]);
+    ctx.prisma.warehouseLocation.count.mockResolvedValue(0);
+
+    await ctx.service.listLocations('w1', { isActive: true, isInactive: true });
+
+    expect(ctx.prisma.warehouseLocation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { warehouseId: 'w1' } }),
+    );
+  });
+
   it('creates a location and records an audit trail', async () => {
     ctx.tx.warehouse.findUnique.mockResolvedValue({ id: 'w1' });
     ctx.tx.warehouseLocation.findUnique.mockResolvedValue(null);
@@ -830,6 +909,21 @@ describe('InventoryService transfer lifecycle', () => {
     expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('rejects an oversized transfer before opening a transaction', async () => {
+    await expect(ctx.service.createTransfer({
+      sourceWarehouseId: 'src',
+      targetWarehouseId: 'dst',
+      items: Array.from({ length: 101 }, (_, index) => ({
+        variantId: `variant-${index}`,
+        quantity: 1,
+      })),
+      actorId: 'actor',
+      requestId: 'request',
+    })).rejects.toMatchObject({ response: { code: 'INVALID_REQUEST' } });
+
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('rejects a transfer whose source and target warehouses are the same', async () => {
     await expect(
       ctx.service.createTransfer({
@@ -855,7 +949,7 @@ describe('InventoryService transfer lifecycle', () => {
   });
 
   it('rejects a transfer with an unknown SKU', async () => {
-    ctx.tx.productVariant.findUnique.mockResolvedValue(null);
+    ctx.tx.productVariant.findMany.mockResolvedValue([]);
 
     await expect(
       ctx.service.createTransfer({
@@ -906,6 +1000,33 @@ describe('InventoryService transfer lifecycle', () => {
     expect(ctx.tx.stockTransfer.create).not.toHaveBeenCalled();
   });
 
+  it('validates all transfer SKUs with one batched query', async () => {
+    ctx.tx.productVariant.findMany.mockResolvedValue([
+      { id: 'variant-a' },
+      { id: 'variant-b' },
+    ]);
+    ctx.tx.stockTransfer.create.mockResolvedValue(transferRow());
+
+    await ctx.service.createTransfer({
+      sourceWarehouseId: 'src',
+      targetWarehouseId: 'dst',
+      items: [
+        { variantId: 'variant-a', quantity: 1 },
+        { variantId: 'variant-b', quantity: 2 },
+        { variantId: 'variant-a', quantity: 3 },
+      ],
+      actorId: 'actor',
+      requestId: 'request',
+    });
+
+    expect(ctx.tx.productVariant.findMany).toHaveBeenCalledOnce();
+    expect(ctx.tx.productVariant.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['variant-a', 'variant-b'] } },
+      select: { id: true },
+    });
+    expect(ctx.tx.productVariant.findUnique).not.toHaveBeenCalled();
+  });
+
   it('rejects an idempotency key reused with a different payload', async () => {
     ctx.tx.stockTransfer.findUnique.mockResolvedValue(
       transferRow({ idempotencyKey: 'idem-1', quantity: 99 }),
@@ -936,22 +1057,20 @@ describe('InventoryService transfer lifecycle', () => {
       .mockResolvedValueOnce(transferRow({ status: 'IN_TRANSIT' }))
       .mockResolvedValueOnce(transferRow({ status: 'RECEIVED' }));
 
-    ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ version: 1, onHand: 10, reserved: 0, available: 10 });
-
     await ctx.service.requestTransfer('tr-1', { actorId: 'actor', requestId: 'request' });
     await ctx.service.approveTransfer('tr-1', { actorId: 'actor', requestId: 'request' });
     await ctx.service.dispatchTransfer('tr-1', { actorId: 'actor', requestId: 'request' });
     const received = await ctx.service.receiveTransfer('tr-1', { actorId: 'actor', requestId: 'request' });
 
     expect(received).toEqual(expect.objectContaining({ status: 'RECEIVED' }));
-    expect(ctx.tx.inventoryMovement.create).toHaveBeenCalledTimes(2);
-    expect(ctx.tx.inventoryMovement.create).toHaveBeenNthCalledWith(
+    expect(ctx.tx.inventoryMovement.createMany).toHaveBeenCalledTimes(2);
+    expect(ctx.tx.inventoryMovement.createMany).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ data: expect.objectContaining({ type: InventoryMovementType.TRANSFER_OUT, quantity: -2 }) }),
+      { data: [expect.objectContaining({ type: InventoryMovementType.TRANSFER_OUT, quantity: -2 })] },
     );
-    expect(ctx.tx.inventoryMovement.create).toHaveBeenNthCalledWith(
+    expect(ctx.tx.inventoryMovement.createMany).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ data: expect.objectContaining({ type: InventoryMovementType.TRANSFER_IN, quantity: 2 }) }),
+      { data: [expect.objectContaining({ type: InventoryMovementType.TRANSFER_IN, quantity: 2 })] },
     );
     expect(ctx.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'inventory.transfer.dispatched' }),
@@ -964,7 +1083,30 @@ describe('InventoryService transfer lifecycle', () => {
     ctx.tx.stockTransferTransition.findUnique.mockResolvedValue({ transferId: 'tr-1', action: 'dispatch', expectedVersion: null });
     const result = await ctx.service.dispatchTransfer('tr-1', { actorId: 'actor', requestId: 'request', idempotencyKey: 'dispatch-1' });
     expect(result).toEqual(expect.objectContaining({ id: 'tr-1', status: 'APPROVED' }));
-    expect(ctx.tx.inventoryMovement.create).not.toHaveBeenCalled();
+    expect(ctx.tx.inventoryMovement.createMany).not.toHaveBeenCalled();
+    expect(ctx.tx.stockTransfer.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects reuse of a transfer transition key with a different aggregate version', async () => {
+    ctx.tx.stockTransfer.findUnique.mockResolvedValue(
+      transferRow({ status: 'APPROVED', version: 3 }),
+    );
+    ctx.tx.stockTransferTransition.findUnique.mockResolvedValue({
+      transferId: 'tr-1',
+      action: 'dispatch',
+      expectedVersion: 2,
+    });
+
+    await expect(
+      ctx.service.dispatchTransfer('tr-1', {
+        actorId: 'actor',
+        requestId: 'request',
+        idempotencyKey: 'dispatch-1',
+        expectedVersion: 3,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_CONFLICT' } });
+
+    expect(ctx.tx.inventoryMovement.createMany).not.toHaveBeenCalled();
     expect(ctx.tx.stockTransfer.update).not.toHaveBeenCalled();
   });
 
@@ -976,6 +1118,80 @@ describe('InventoryService transfer lifecycle', () => {
     ).rejects.toMatchObject({ response: { code: 'TRANSFER_STATE_CONFLICT' } });
 
     expect(ctx.tx.stockTransfer.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a stale transfer aggregate version before applying side effects', async () => {
+    ctx.tx.stockTransfer.findUnique.mockResolvedValue(
+      transferRow({ status: 'APPROVED', version: 3 }),
+    );
+
+    await expect(
+      ctx.service.dispatchTransfer('tr-1', {
+        actorId: 'actor',
+        requestId: 'request',
+        expectedVersion: 2,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'TRANSFER_VERSION_CONFLICT' } });
+
+    expect(ctx.tx.inventoryBalance.findMany).not.toHaveBeenCalled();
+    expect(ctx.tx.inventoryMovement.createMany).not.toHaveBeenCalled();
+    expect(ctx.tx.stockTransfer.update).not.toHaveBeenCalled();
+  });
+
+  it('increments the transfer aggregate version without applying it to balance rows', async () => {
+    ctx.tx.stockTransfer.findUnique.mockResolvedValue(
+      transferRow({ status: 'APPROVED', version: 3 }),
+    );
+    ctx.tx.stockTransfer.update.mockResolvedValue(
+      transferRow({ status: 'IN_TRANSIT', version: 4 }),
+    );
+
+    await expect(
+      ctx.service.dispatchTransfer('tr-1', {
+        actorId: 'actor',
+        requestId: 'request',
+        expectedVersion: 3,
+      }),
+    ).resolves.toEqual(expect.objectContaining({ status: 'IN_TRANSIT', version: 4 }));
+
+    expect(ctx.tx.stockTransfer.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: 'IN_TRANSIT', version: { increment: 1 } } }),
+    );
+  });
+
+  it('batches transfer identity, balance and movement work instead of querying per item', async () => {
+    const items = [
+      { id: 'item-1', variantId: 'variant-a', quantity: 2, sourceLocationId: 'loc-a', targetLocationId: 'target-a' },
+      { id: 'item-2', variantId: 'variant-b', quantity: 3, sourceLocationId: 'loc-b', targetLocationId: 'target-b' },
+    ];
+    ctx.tx.stockTransfer.findUnique.mockResolvedValue(
+      transferRow({ status: 'APPROVED', items }),
+    );
+    ctx.tx.stockTransfer.update.mockResolvedValue(
+      transferRow({ status: 'IN_TRANSIT', version: 1, items }),
+    );
+    ctx.tx.inventoryBalance.findMany.mockResolvedValue([
+      { warehouseId: 'src', locationId: 'loc-a', variantId: 'variant-a', onHand: 5, reserved: 0, available: 5, version: 1 },
+      { warehouseId: 'src', locationId: 'loc-b', variantId: 'variant-b', onHand: 5, reserved: 0, available: 5, version: 1 },
+    ]);
+
+    await ctx.service.dispatchTransfer('tr-1', {
+      actorId: 'actor',
+      requestId: 'request',
+      expectedVersion: 0,
+    });
+
+    expect(ctx.tx.warehouseLocation.findMany).toHaveBeenCalledOnce();
+    expect(ctx.tx.inventoryBalance.findMany).toHaveBeenCalledOnce();
+    expect(ctx.tx.inventoryBalance.findUnique).not.toHaveBeenCalled();
+    expect(ctx.tx.inventoryBalance.upsert).toHaveBeenCalledTimes(2);
+    expect(ctx.tx.inventoryMovement.createMany).toHaveBeenCalledOnce();
+    expect(ctx.tx.inventoryMovement.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ variantId: 'variant-a', quantity: -2, beforeOnHand: 5, afterOnHand: 3 }),
+        expect.objectContaining({ variantId: 'variant-b', quantity: -3, beforeOnHand: 5, afterOnHand: 2 }),
+      ],
+    });
   });
 
   it('rejects dispatching without a source location', async () => {
@@ -1004,13 +1220,21 @@ describe('InventoryService transfer lifecycle', () => {
 
   it('rejects a dispatch that would drive source stock negative', async () => {
     ctx.tx.stockTransfer.findUnique.mockResolvedValue(transferRow({ status: 'APPROVED' }));
-    ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ version: 1, onHand: 1, reserved: 0, available: 1 });
+    ctx.tx.inventoryBalance.findMany.mockResolvedValue([{
+      warehouseId: 'src',
+      locationId: 'loc',
+      variantId: 'variant',
+      version: 1,
+      onHand: 1,
+      reserved: 0,
+      available: 1,
+    }]);
 
     await expect(
       ctx.service.dispatchTransfer('tr-1', { actorId: 'actor', requestId: 'request' }),
     ).rejects.toBeInstanceOf(ConflictException);
 
-    expect(ctx.tx.inventoryMovement.create).not.toHaveBeenCalled();
+    expect(ctx.tx.inventoryMovement.createMany).not.toHaveBeenCalled();
   });
 
   it('cancels a transfer from DRAFT, REQUESTED and APPROVED', async () => {

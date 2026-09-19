@@ -1017,6 +1017,144 @@ describe.sequential('InventoryService database integration', () => {
     ]);
   });
 
+  it('applies a multi-line transfer to one balance with an exact ledger chain', async () => {
+    const requestId = `${requestIdPrefix}-transfer-multi-line`;
+    const seeded = await inventory.changeOnHand({
+      warehouseId: sourceWarehouseId,
+      locationId: sourceLocationId,
+      variantId: transferVariantId,
+      delta: 5,
+      type: InventoryMovementType.RECEIPT,
+      actorId,
+      requestId: `${requestId}-seed`,
+    });
+    const before = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: {
+        warehouseId_locationId_variantId: {
+          warehouseId: sourceWarehouseId,
+          locationId: sourceLocationId,
+          variantId: transferVariantId,
+        },
+      },
+    });
+
+    const transfer = await inventory.createTransfer({
+      sourceWarehouseId,
+      targetWarehouseId,
+      items: [
+        { variantId: transferVariantId, quantity: 2, sourceLocationId, targetLocationId },
+        { variantId: transferVariantId, quantity: 1, sourceLocationId, targetLocationId },
+      ],
+      actorId,
+      requestId: `${requestId}-create`,
+    });
+    const requested = await inventory.requestTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-request`,
+    });
+    const approved = await inventory.approveTransfer(requested.id, {
+      actorId,
+      requestId: `${requestId}-approve`,
+    });
+    await inventory.dispatchTransfer(approved.id, {
+      actorId,
+      requestId: `${requestId}-dispatch`,
+    });
+
+    const after = await prisma.inventoryBalance.findUniqueOrThrow({
+      where: {
+        warehouseId_locationId_variantId: {
+          warehouseId: sourceWarehouseId,
+          locationId: sourceLocationId,
+          variantId: transferVariantId,
+        },
+      },
+    });
+    expect(after.onHand).toBe(before.onHand - 3);
+    expect(after.version).toBe(before.version + 1);
+    expect(seeded.afterOnHand).toBe(before.onHand);
+
+    const movements = await prisma.inventoryMovement.findMany({
+      where: {
+        referenceType: 'stock-transfer',
+        referenceId: transfer.code,
+        type: InventoryMovementType.TRANSFER_OUT,
+      },
+    });
+    expect(movements).toHaveLength(2);
+    expect(movements).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        quantity: -2,
+        beforeOnHand: before.onHand,
+        afterOnHand: before.onHand - 2,
+      }),
+      expect.objectContaining({
+        quantity: -1,
+        beforeOnHand: before.onHand - 2,
+        afterOnHand: before.onHand - 3,
+      }),
+    ]));
+  });
+
+  it('replays concurrent identical transition keys without duplicate side effects', async () => {
+    const requestId = `${requestIdPrefix}-transfer-transition-idempotency`;
+    const key = `test-transfer-transition-${runId}`;
+    await inventory.changeOnHand({
+      warehouseId: sourceWarehouseId,
+      locationId: sourceLocationId,
+      variantId: transferVariantId,
+      delta: 2,
+      type: InventoryMovementType.RECEIPT,
+      actorId,
+      requestId: `${requestId}-seed`,
+    });
+    const transfer = await inventory.createTransfer({
+      sourceWarehouseId,
+      targetWarehouseId,
+      items: [{ variantId: transferVariantId, quantity: 1, sourceLocationId, targetLocationId }],
+      actorId,
+      requestId: `${requestId}-create`,
+    });
+    const requested = await inventory.requestTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-request`,
+    });
+    const approved = await inventory.approveTransfer(requested.id, {
+      actorId,
+      requestId: `${requestId}-approve`,
+    });
+
+    const results = await Promise.all([
+      inventory.dispatchTransfer(approved.id, {
+        actorId,
+        requestId: `${requestId}-dispatch-a`,
+        idempotencyKey: key,
+        expectedVersion: approved.version,
+      }),
+      inventory.dispatchTransfer(approved.id, {
+        actorId,
+        requestId: `${requestId}-dispatch-b`,
+        idempotencyKey: key,
+        expectedVersion: approved.version,
+      }),
+    ]);
+
+    expect(results).toEqual([
+      expect.objectContaining({ id: approved.id, status: 'IN_TRANSIT' }),
+      expect.objectContaining({ id: approved.id, status: 'IN_TRANSIT' }),
+    ]);
+    await expect(prisma.stockTransferTransition.count({
+      where: { idempotencyKey: key },
+    })).resolves.toBe(1);
+    await expect(prisma.inventoryMovement.count({
+      where: {
+        referenceType: 'stock-transfer',
+        referenceId: transfer.code,
+        type: InventoryMovementType.TRANSFER_OUT,
+      },
+    })).resolves.toBe(1);
+  });
+
   it('rejects illegal transfer transitions and records no movement', async () => {
     const requestId = `${requestIdPrefix}-transfer-illegal`;
     const transfer = await inventory.createTransfer({
@@ -1049,6 +1187,43 @@ describe.sequential('InventoryService database integration', () => {
       where: { referenceType: 'stock-transfer', referenceId: transfer.code, type: InventoryMovementType.TRANSFER_OUT },
     });
     expect(outMovements).toBe(0);
+  });
+
+  it('uses the transfer aggregate version for optimistic transition concurrency', async () => {
+    const requestId = `${requestIdPrefix}-transfer-version`;
+    const transfer = await inventory.createTransfer({
+      sourceWarehouseId,
+      targetWarehouseId,
+      items: [{ variantId: transferVariantId, quantity: 1, sourceLocationId, targetLocationId }],
+      actorId,
+      requestId: `${requestId}-create`,
+    });
+    expect(transfer.version).toBe(0);
+
+    const requested = await inventory.requestTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-request`,
+      expectedVersion: 0,
+    });
+    expect(requested).toMatchObject({ status: 'REQUESTED', version: 1 });
+
+    await expect(
+      inventory.approveTransfer(transfer.id, {
+        actorId,
+        requestId: `${requestId}-stale-approve`,
+        expectedVersion: 0,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'TRANSFER_VERSION_CONFLICT' } });
+
+    const unchanged = await inventory.getTransfer(transfer.id);
+    expect(unchanged).toMatchObject({ status: 'REQUESTED', version: 1 });
+
+    const approved = await inventory.approveTransfer(transfer.id, {
+      actorId,
+      requestId: `${requestId}-approve`,
+      expectedVersion: 1,
+    });
+    expect(approved).toMatchObject({ status: 'APPROVED', version: 2 });
   });
 
   it('requires locations when dispatching and receiving', async () => {

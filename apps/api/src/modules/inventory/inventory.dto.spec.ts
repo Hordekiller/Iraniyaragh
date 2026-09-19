@@ -11,10 +11,12 @@ import {
   InventoryReservationDto,
   InventorySnapshotQueryDto,
   LocationCreateDto,
+  LocationListQueryDto,
   LocationUpdateDto,
   TransferCreateDto,
   TransferItemCreateDto,
   WarehouseCreateDto,
+  WarehouseListQueryDto,
   WarehouseUpdateDto,
 } from './inventory.dto';
 
@@ -71,6 +73,22 @@ describe('Inventory DTO validation', () => {
   it('accepts a valid change payload', async () => {
     const dto = plainToInstance(InventoryChangeDto, CHANGE);
     expect(await validate(dto)).toEqual([]);
+  });
+
+  it.each([
+    InventoryMovementType.SALE,
+    InventoryMovementType.RETURN_IN,
+    InventoryMovementType.RETURN_OUT,
+    InventoryMovementType.TRANSFER_IN,
+    InventoryMovementType.TRANSFER_OUT,
+    InventoryMovementType.STOCKTAKE,
+    InventoryMovementType.RESERVATION,
+    InventoryMovementType.RELEASE,
+  ])('rejects protected workflow movement type %s on the general change DTO', async (type) => {
+    const dto = plainToInstance(InventoryChangeDto, { ...CHANGE, type });
+    await expect(validate(dto)).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ property: 'type' })]),
+    );
   });
 
   it('rejects a change payload with missing required fields', async () => {
@@ -140,6 +158,26 @@ describe('Inventory DTO validation', () => {
       expect.arrayContaining([expect.objectContaining({ property: 'isActive' })]),
     );
   });
+
+  it.each([
+    [WarehouseListQueryDto, { isActive: 'false', isInactive: 'true' }],
+    [LocationListQueryDto, { isActive: 'false', isInactive: 'true' }],
+  ])('parses exact Boolean strings for %s', async (Dto, input) => {
+    const dto = plainToInstance(Dto, input);
+    expect(await validate(dto)).toEqual([]);
+    expect(dto.isActive).toBe(false);
+    expect(dto.isInactive).toBe(true);
+  });
+
+  it.each([WarehouseListQueryDto, LocationListQueryDto])(
+    'rejects ambiguous Boolean query values for %s',
+    async (Dto) => {
+      const dto = plainToInstance(Dto, { isActive: 'yes', isInactive: '0' });
+      expect((await validate(dto)).map((error) => error.property)).toEqual(
+        expect.arrayContaining(['isActive', 'isInactive']),
+      );
+    },
+  );
 
   it('accepts valid location create and update payloads', async () => {
     const create = plainToInstance(LocationCreateDto, { code: 'A1', zone: 'Zone B' });
