@@ -255,7 +255,21 @@ describe('InventoryService guards and queries', () => {
 
   it('writes a movement and an audit row on a successful adjustment', async () => {
     ctx.tx.inventoryBalance.findUnique.mockResolvedValue(null);
-    ctx.tx.inventoryMovement.create.mockResolvedValue({ id: 'movement' });
+    ctx.tx.inventoryMovement.create.mockResolvedValue({
+      id: 'movement',
+      warehouseId: 'wh',
+      locationId: 'loc',
+      variantId: 'variant',
+      type: InventoryMovementType.ADJUSTMENT_IN,
+      quantity: 4,
+      beforeOnHand: 0,
+      afterOnHand: 4,
+      reason: 'cycle count',
+      referenceType: null,
+      referenceId: null,
+      idempotencyKey: 'internal-only',
+      createdAt: new Date('2026-09-18T10:00:00.000Z'),
+    });
 
     const result = await ctx.service.changeOnHand({
       ...base,
@@ -263,7 +277,21 @@ describe('InventoryService guards and queries', () => {
       reason: 'cycle count',
     });
 
-    expect(result).toEqual({ id: 'movement' });
+    expect(result).toEqual({
+      id: 'movement',
+      warehouseId: 'wh',
+      locationId: 'loc',
+      variantId: 'variant',
+      type: InventoryMovementType.ADJUSTMENT_IN,
+      quantity: 4,
+      beforeOnHand: 0,
+      afterOnHand: 4,
+      reason: 'cycle count',
+      referenceType: null,
+      referenceId: null,
+      createdAt: '2026-09-18T10:00:00.000Z',
+    });
+    expect(result).not.toHaveProperty('idempotencyKey');
     expect(ctx.tx.inventoryBalance.upsert).toHaveBeenCalledOnce();
     expect(ctx.tx.inventoryMovement.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -341,7 +369,23 @@ describe('InventoryService guards and queries', () => {
   });
 
   it('maps movements with filtered records, count and clamped paging', async () => {
-    ctx.prisma.inventoryMovement.findMany.mockResolvedValue([{ id: 'm', type: 'RECEIPT' }]);
+    ctx.prisma.inventoryMovement.findMany.mockResolvedValue([
+      {
+        id: 'm',
+        warehouseId: 'wh',
+        locationId: 'loc',
+        variantId: 'variant',
+        type: InventoryMovementType.RECEIPT,
+        quantity: 5,
+        beforeOnHand: 2,
+        afterOnHand: 7,
+        reason: null,
+        referenceType: 'purchase-order',
+        referenceId: 'po-1',
+        idempotencyKey: 'internal-only',
+        createdAt: new Date('2026-09-18T10:00:00.000Z'),
+      },
+    ]);
     ctx.prisma.inventoryMovement.count.mockResolvedValue(1);
 
     const result = await ctx.service.getMovements({
@@ -351,9 +395,25 @@ describe('InventoryService guards and queries', () => {
     });
 
     expect(result).toEqual({
-      items: [expect.objectContaining({ id: 'm', type: 'RECEIPT' })],
+      items: [
+        {
+          id: 'm',
+          warehouseId: 'wh',
+          locationId: 'loc',
+          variantId: 'variant',
+          type: InventoryMovementType.RECEIPT,
+          quantity: 5,
+          beforeOnHand: 2,
+          afterOnHand: 7,
+          reason: null,
+          referenceType: 'purchase-order',
+          referenceId: 'po-1',
+          createdAt: '2026-09-18T10:00:00.000Z',
+        },
+      ],
       count: 1,
     });
+    expect(result.items[0]).not.toHaveProperty('idempotencyKey');
     expect(ctx.prisma.inventoryMovement.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { type: InventoryMovementType.RECEIPT },
