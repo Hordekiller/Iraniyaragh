@@ -8,6 +8,10 @@ import {
 import { AuthFixtureClient } from "../lib/auth/fixtures";
 import { AuthHttpClient } from "../lib/auth/api";
 import { readCsrfCookie } from "../lib/auth/csrf";
+import { AuthApiError } from "../lib/auth/errors";
+import { jsonRequest } from "../lib/auth/request";
+import type { RequestOptions } from "../lib/auth/request";
+import type { ApiSuccess } from "../lib/auth/types";
 import { CustomerOtpController } from "../lib/auth/ui";
 import type { AuthApi } from "../lib/auth/api";
 import type { RefreshCoordinator } from "../lib/auth/session-store";
@@ -64,9 +68,35 @@ export function AuthProvider({ children, api, store, bus, refreshCoordinator }: 
       sessionBus,
       refreshCoordinator ?? new BrowserRefreshCoordinator(),
     );
+    const request = async <T,>(
+      path: string,
+      options: Omit<RequestOptions, "accessToken"> = {},
+    ): Promise<ApiSuccess<T>> => {
+      const send = () => {
+        const accessToken = sessionStore.getAccessToken();
+        if (!accessToken) {
+          throw new AuthApiError({
+            code: "AUTH_SESSION_INVALID",
+            message: "Authenticated request requires a live customer session.",
+            statusCode: 401,
+          });
+        }
+        return jsonRequest<T>(path, { ...options, accessToken });
+      };
+
+      try {
+        return await send();
+      } catch (error) {
+        if (!(error instanceof AuthApiError) || error.statusCode !== 401) throw error;
+        const refreshed = await controller.refreshSession();
+        if (!refreshed) throw error;
+        return send();
+      }
+    };
     return {
       state: controller.getState(),
       controller,
+      request,
       open: () => controller.open(),
       close: () => controller.close(),
     };

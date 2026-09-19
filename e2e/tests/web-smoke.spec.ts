@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { createExternalRequestsTracker, isMobile, tap } from './helpers';
+import {
+  createExternalRequestsTracker,
+  isMobile,
+  signInFixtureCustomer,
+  tap,
+} from './helpers';
 
 test.describe('web: storefront shell', () => {
   test('renders the RTL storefront with landmarks and core content', async ({ page }) => {
@@ -56,7 +61,7 @@ test.describe('web: storefront shell', () => {
   test('product card opens its route and adds to cart with a toast', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
-    await page.goto('/');
+    await signInFixtureCustomer(page);
 
     await tap(page.locator('section#popular button[class*="snap-start"]').first());
 

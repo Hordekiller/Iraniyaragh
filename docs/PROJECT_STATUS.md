@@ -571,6 +571,16 @@ read-only Order API boundary and the #251 authenticated Cart hardening slice.
 Guest Cart/login merge, Order commands, compensation and live Web/Admin consumers
 remain open work.
 
+Issue #267 is the open storefront integration slice (not yet counted as delivered
+on `main`). Its branch connects authenticated product variants, Cart mutations,
+Checkout preview/create and customer Order reads to the accepted HTTP contracts;
+uses server-owned prices, availability, shipping quotes and immutable Order totals;
+and replaces the former local Cart/Order plus simulated-payment path. Until a
+payment provider and verification contract are accepted, its Payment Result UI
+reports only server-recorded Order/Payment state and leaves unpaid Orders honestly
+at `PENDING_PAYMENT`. Guest Cart merge, payment initiation/callback verification,
+refunds and compensation remain outside that Web-only slice.
+
 ADR-0014 is accepted via #185 (`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` records
 the audited RBAC and money/financial-policy state and the G1–G8 slice plan). The
 runtime slices it plans are not yet merged.

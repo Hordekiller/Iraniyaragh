@@ -9,7 +9,7 @@ export type RequestOptions = {
   baseUrl?: string;
   accessToken?: string;
   json?: unknown;
-  method?: 'DELETE' | 'GET' | 'POST';
+  method?: 'DELETE' | 'GET' | 'POST' | 'PUT';
   timeoutMs?: number;
   /** Send credentialed (cookies) so refresh/CSRF cookies and CORS apply. */
   credentials?: RequestCredentials;

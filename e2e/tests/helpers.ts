@@ -37,6 +37,30 @@ export async function signInDiAsAdmin(page: Page) {
 }
 
 /**
+ * Signs a storefront customer in through the fixture-mode OTP UI.
+ *
+ * Customer access tokens are memory-only, so each isolated browser page must
+ * establish its own session through the UI instead of injecting storage state.
+ */
+export async function signInFixtureCustomer(page: Page) {
+  await page.goto('/');
+  if (isMobile(page)) {
+    await tap(
+      page
+        .getByRole('navigation', { name: 'ناوبری پایین' })
+        .getByRole('button', { name: 'حساب کاربری' }),
+    );
+  } else {
+    await tap(page.getByRole('button', { name: 'ورود به حساب کاربری' }));
+  }
+  await page.locator('#login-mobile').fill('09123456789');
+  await tap(page.getByRole('button', { name: 'دریافت کد تایید', exact: true }));
+  await page.locator('#login-otp-code').fill('123456');
+  await tap(page.getByRole('button', { name: 'ورود به حساب', exact: true }));
+  await expect(page.getByRole('dialog')).toBeHidden();
+}
+
+/**
  * Fires a (synthetic) click on the element. Used instead of `locator.click()`
  * for pointer interactions: Chromium reports a negative `scrollLeft` for RTL
  * pages, which Playwright's hit-target maths mis-handles on mobile emulation
