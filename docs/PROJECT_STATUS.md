@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-18
+Last reviewed: 2026-09-19
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -20,6 +20,13 @@ has only fixture-backed read-only Orders/Settings modules, and the new Checkout
 API has no live Web consumer, Order command API, payment, fulfillment or production
 operations yet. The #238 query API is delivered, but its Web/Admin consumers are
 not yet bound to the live API.
+
+Open PR #265 is the contract-first backend prerequisite for the factual Admin
+operations dashboard: a `reports.read`-guarded, PII-free summary with an explicit
+maximum 90-day Order range and a current commerce/inventory snapshot. It is not
+counted as delivered until merged. Accessible Admin charts and their textual/table
+fallback remain the next stacked #264 slice; neither runtime fixture metrics nor
+licensed Vuexy source/assets are part of #265.
 
 Current delivery confidence:
 
@@ -589,6 +596,15 @@ sandbox/production acceptance evidence.
 The review-handoff docs reconciliation (#218) and commerce reconciliation #249 are
 merged; #251 advances the authenticated Cart boundary and updates this evidence on
 2026-09-18.
+
+PR #265 (issue #264, not yet on `main`) adds the dashboard summary contract and
+real PostgreSQL aggregation endpoint. The range is explicit and capped at 90 days;
+the current snapshot covers Order, Payment-attempt, Fulfillment, Reservation and
+Transfer status counts plus exact zero-availability balances. The request uses one
+repeatable-read transaction with a fixed nine-operation aggregate budget and no
+row hydration or loop-driven queries. The subsequent Admin UI must consume this
+contract directly and provide accessible chart alternatives; it must not invent
+low-stock thresholds, SLA policy, revenue semantics or sample operational data.
 
 ## Decisions and blockers
 

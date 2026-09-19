@@ -23,6 +23,7 @@ export function createApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('suppliers', 'Supplier records')
     .addTag('audit', 'Audit trail')
     .addTag('notifications', 'SMS provider operational settings and diagnostics')
+    .addTag('reports', 'Permissioned operational reports and dashboard summaries')
     .build();
 
   return SwaggerModule.createDocument(app, config);
