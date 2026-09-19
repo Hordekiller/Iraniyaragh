@@ -1,6 +1,6 @@
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { InventoryMovementType, ReservationStatus, TransferStatus } from '@prisma/client';
-import { MAX_TRANSFER_ITEMS } from './inventory.constants';
+import { INVENTORY_CHANGE_TYPES, MAX_TRANSFER_ITEMS } from './inventory.constants';
 
 const inventoryMovementTypes = Object.values(InventoryMovementType);
 const reservationStatuses = Object.values(ReservationStatus);
@@ -55,8 +55,11 @@ const inventoryChange: SchemaObject = {
     warehouseId: { type: 'string' },
     locationId: { type: 'string' },
     variantId: { type: 'string' },
-    delta: { type: 'integer', description: 'Non-zero signed quantity.' },
-    type: { type: 'string', enum: inventoryMovementTypes },
+    delta: {
+      type: 'integer',
+      description: 'Positive for RECEIPT/ADJUSTMENT_IN; negative for ADJUSTMENT_OUT.',
+    },
+    type: { type: 'string', enum: [...INVENTORY_CHANGE_TYPES] },
     reason: { type: 'string', maxLength: 500 },
     referenceType: { type: 'string', maxLength: 100 },
     referenceId: { type: 'string', maxLength: 128 },

@@ -168,6 +168,12 @@ Exposed under `/api/v1/inventory` (staff-MFA authenticated routes).
 
 Permissions fail closed: a caller needs the exact permission listed; `inventory.read` alone never allows mutations, and acting on a transfer requires `inventory.transfer` while approval additionally requires `inventory.approve`.
 
+The general stock-change command is restricted to positive `RECEIPT` and
+`ADJUSTMENT_IN` movements or negative `ADJUSTMENT_OUT` movements. Transfer,
+sale, return, reservation, release and stocktake movements can only be produced
+by their dedicated workflows; callers cannot select those ledger types through
+the `inventory.adjust` endpoint.
+
 Read and mutation contracts (including warehouse/location writes, adjustments,
 reservations and transfer lifecycle requests) live in `packages/contracts`. Stable
 errors include `WAREHOUSE_CODE_CONFLICT`, `LOCATION_CODE_CONFLICT`,

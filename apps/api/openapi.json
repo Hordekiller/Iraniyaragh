@@ -4469,22 +4469,14 @@
                   },
                   "delta": {
                     "type": "integer",
-                    "description": "Non-zero signed quantity."
+                    "description": "Positive for RECEIPT/ADJUSTMENT_IN; negative for ADJUSTMENT_OUT."
                   },
                   "type": {
                     "type": "string",
                     "enum": [
                       "RECEIPT",
-                      "SALE",
-                      "RETURN_IN",
-                      "RETURN_OUT",
-                      "TRANSFER_IN",
-                      "TRANSFER_OUT",
                       "ADJUSTMENT_IN",
-                      "ADJUSTMENT_OUT",
-                      "STOCKTAKE",
-                      "RESERVATION",
-                      "RELEASE"
+                      "ADJUSTMENT_OUT"
                     ]
                   },
                   "reason": {

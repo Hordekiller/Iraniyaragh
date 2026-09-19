@@ -1,5 +1,9 @@
 import { InventoryMovementType } from '@prisma/client';
-import { API_ERROR_CODES, INVENTORY_MOVEMENT_TYPES } from '@iranyaragh/contracts';
+import {
+  API_ERROR_CODES,
+  INVENTORY_CHANGE_TYPES,
+  INVENTORY_MOVEMENT_TYPES,
+} from '@iranyaragh/contracts';
 import { describe, expect, it } from 'vitest';
 
 describe('inventory public error contract', () => {
@@ -7,6 +11,16 @@ describe('inventory public error contract', () => {
     expect([...INVENTORY_MOVEMENT_TYPES].sort()).toEqual(
       Object.values(InventoryMovementType).sort(),
     );
+  });
+
+  it('exposes only receipt and manual adjustment types to the general change command', () => {
+    expect(INVENTORY_CHANGE_TYPES).toEqual([
+      InventoryMovementType.RECEIPT,
+      InventoryMovementType.ADJUSTMENT_IN,
+      InventoryMovementType.ADJUSTMENT_OUT,
+    ]);
+    expect(INVENTORY_CHANGE_TYPES).not.toContain(InventoryMovementType.SALE);
+    expect(INVENTORY_CHANGE_TYPES).not.toContain(InventoryMovementType.TRANSFER_OUT);
   });
 
   it('registers the inventory codes in the shared error code union', () => {

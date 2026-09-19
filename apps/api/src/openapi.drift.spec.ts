@@ -257,4 +257,17 @@ describe('OpenAPI document drift and contract', () => {
     expect(responseContract).toContain('"version"');
     expect(responseContract).not.toContain('idempotencyKey');
   });
+
+  it('restricts the general inventory change contract to receipt and manual adjustment movements', () => {
+    const change = document.paths?.['/inventory/changes']?.post;
+    const request = JSON.stringify(change?.requestBody);
+
+    expect(change).toBeDefined();
+    expect(request).toContain('RECEIPT');
+    expect(request).toContain('ADJUSTMENT_IN');
+    expect(request).toContain('ADJUSTMENT_OUT');
+    expect(request).not.toContain('TRANSFER_OUT');
+    expect(request).not.toContain('SALE');
+    expect(request).toContain('Positive for RECEIPT/ADJUSTMENT_IN; negative for ADJUSTMENT_OUT.');
+  });
 });

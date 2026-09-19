@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type, type TransformFnParams } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -27,7 +28,13 @@ import {
   type WarehouseLocationUpdateRequest,
   type WarehouseUpdateRequest,
 } from '@iranyaragh/contracts';
-import { MAX_TRANSFER_ITEMS } from './inventory.constants';
+import { INVENTORY_CHANGE_TYPES, MAX_TRANSFER_ITEMS } from './inventory.constants';
+
+function parseOptionalBoolean({ value }: TransformFnParams): unknown {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
+}
 
 export class InventorySnapshotQueryDto {
   @IsOptional() @IsString() warehouseId?: string;
@@ -46,7 +53,7 @@ export class InventoryChangeDto implements InventoryChangeRequest {
   @IsString() locationId!: string;
   @IsString() variantId!: string;
   @IsInt() delta!: number;
-  @IsEnum(InventoryMovementType) type!: InventoryMovementType;
+  @IsIn(INVENTORY_CHANGE_TYPES) type!: InventoryChangeRequest['type'];
   @IsOptional() @IsString() @MaxLength(500) reason?: string;
   @IsOptional() @IsString() @MaxLength(100) referenceType?: string;
   @IsOptional() @IsString() @MaxLength(128) referenceId?: string;
@@ -68,8 +75,8 @@ export class WarehouseUpdateDto implements WarehouseUpdateRequest {
 }
 
 export class WarehouseListQueryDto {
-  @IsOptional() @Type(() => Boolean) @IsBoolean() isActive?: boolean;
-  @IsOptional() @Type(() => Boolean) @IsBoolean() isInactive?: boolean;
+  @IsOptional() @Transform(parseOptionalBoolean) @IsBoolean() isActive?: boolean;
+  @IsOptional() @Transform(parseOptionalBoolean) @IsBoolean() isInactive?: boolean;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 50;
 }

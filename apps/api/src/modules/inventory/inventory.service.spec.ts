@@ -155,6 +155,40 @@ describe('InventoryService guards and queries', () => {
     expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it.each([
+    InventoryMovementType.SALE,
+    InventoryMovementType.RETURN_IN,
+    InventoryMovementType.RETURN_OUT,
+    InventoryMovementType.TRANSFER_IN,
+    InventoryMovementType.TRANSFER_OUT,
+    InventoryMovementType.STOCKTAKE,
+    InventoryMovementType.RESERVATION,
+    InventoryMovementType.RELEASE,
+  ])('rejects protected workflow movement type %s before opening a transaction', async (type) => {
+    await expect(
+      ctx.service.changeOnHand({
+        ...base,
+        delta: 1,
+        type,
+        reason: 'must use dedicated workflow',
+      } as never),
+    ).rejects.toMatchObject({ response: { code: 'INVALID_REQUEST' } });
+
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [InventoryMovementType.RECEIPT, -1],
+    [InventoryMovementType.ADJUSTMENT_IN, -1],
+    [InventoryMovementType.ADJUSTMENT_OUT, 1],
+  ])('rejects %s with mismatched delta %i before opening a transaction', async (type, delta) => {
+    await expect(
+      ctx.service.changeOnHand({ ...base, type, delta, reason: 'direction test' }),
+    ).rejects.toMatchObject({ response: { code: 'INVALID_REQUEST' } });
+
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('rejects non-positive reservation quantities', async () => {
     await expect(
       ctx.service.reserve({
@@ -241,6 +275,7 @@ describe('InventoryService guards and queries', () => {
       ctx.service.changeOnHand({
         ...base,
         delta: -6,
+        type: InventoryMovementType.ADJUSTMENT_OUT,
         reason: 'negative available test',
         expectedVersion: 1,
       }),
@@ -756,6 +791,33 @@ describe('InventoryService warehouse and location management', () => {
     expect(result.count).toBe(1);
     expect(ctx.prisma.warehouseLocation.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { warehouseId: 'w1' }, take: 50, skip: 0 }),
+    );
+  });
+
+  it.each([
+    [{ isActive: true }, true],
+    [{ isInactive: true }, false],
+  ])('filters locations by active state for query %j', async (query, isActive) => {
+    ctx.prisma.warehouseLocation.findMany.mockResolvedValue([]);
+    ctx.prisma.warehouseLocation.count.mockResolvedValue(0);
+
+    await ctx.service.listLocations('w1', query);
+
+    const where = { warehouseId: 'w1', isActive };
+    expect(ctx.prisma.warehouseLocation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where }),
+    );
+    expect(ctx.prisma.warehouseLocation.count).toHaveBeenCalledWith({ where });
+  });
+
+  it('does not constrain location activity when both filters are selected', async () => {
+    ctx.prisma.warehouseLocation.findMany.mockResolvedValue([]);
+    ctx.prisma.warehouseLocation.count.mockResolvedValue(0);
+
+    await ctx.service.listLocations('w1', { isActive: true, isInactive: true });
+
+    expect(ctx.prisma.warehouseLocation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { warehouseId: 'w1' } }),
     );
   });
 

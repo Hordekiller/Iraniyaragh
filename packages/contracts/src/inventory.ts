@@ -27,6 +27,14 @@ export const INVENTORY_MOVEMENT_TYPES = [
 
 export type InventoryMovementType = (typeof INVENTORY_MOVEMENT_TYPES)[number];
 
+export const INVENTORY_CHANGE_TYPES = [
+  'RECEIPT',
+  'ADJUSTMENT_IN',
+  'ADJUSTMENT_OUT',
+] as const satisfies readonly InventoryMovementType[];
+
+export type InventoryChangeType = (typeof INVENTORY_CHANGE_TYPES)[number];
+
 export type InventoryPageQuery = {
   warehouseId?: string;
   locationId?: string;
@@ -80,7 +88,7 @@ export type InventoryChangeRequest = {
   locationId: string;
   variantId: string;
   delta: number;
-  type: InventoryMovementType;
+  type: InventoryChangeType;
   reason?: string;
   referenceType?: string;
   referenceId?: string;

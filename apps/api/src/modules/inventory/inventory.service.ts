@@ -4,13 +4,14 @@ import { InventoryMovementType, Prisma } from '@prisma/client';
 import {
   type InventoryBalanceListResponse,
   type InventoryBalanceSnapshot,
+  type InventoryChangeType,
   type InventoryMovement as InventoryMovementContract,
   type InventoryMovementListResponse,
   type StockTransfer,
 } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import { MAX_TRANSFER_ITEMS } from './inventory.constants';
+import { INVENTORY_CHANGE_TYPES, MAX_TRANSFER_ITEMS } from './inventory.constants';
 
 type StockKey = {
   warehouseId: string;
@@ -56,7 +57,7 @@ export type ActorContext = {
 export type ChangeStockCommand = StockKey &
   ActorContext & {
     delta: number;
-    type: InventoryMovementType;
+    type: InventoryChangeType;
     reason?: string;
     referenceType?: string;
     referenceId?: string;
@@ -214,9 +215,10 @@ export type MovementQuery = {
 const SERIALIZABLE_RETRIES = 3;
 const EXPIRY_BATCH_SIZE = 100;
 const MAX_OFFSET = 50_000;
+const INVENTORY_CHANGE_TYPE_SET = new Set<InventoryMovementType>(INVENTORY_CHANGE_TYPES);
 const ADJUSTMENT_TYPES = new Set<InventoryMovementType>([
-  'ADJUSTMENT_IN',
-  'ADJUSTMENT_OUT',
+  InventoryMovementType.ADJUSTMENT_IN,
+  InventoryMovementType.ADJUSTMENT_OUT,
 ]);
 
 @Injectable()
@@ -230,6 +232,19 @@ export class InventoryService {
     this.assertTracked(command);
     if (!Number.isInteger(command.delta) || command.delta === 0) {
       throw new BadRequestException('Inventory delta must be a non-zero integer.');
+    }
+    if (!INVENTORY_CHANGE_TYPE_SET.has(command.type)) {
+      throw new BadRequestException({
+        code: 'INVALID_REQUEST',
+        message: 'This endpoint only accepts receipts and manual adjustments.',
+      });
+    }
+    const isOutboundAdjustment = command.type === InventoryMovementType.ADJUSTMENT_OUT;
+    if ((isOutboundAdjustment && command.delta > 0) || (!isOutboundAdjustment && command.delta < 0)) {
+      throw new BadRequestException({
+        code: 'INVALID_REQUEST',
+        message: 'Inventory movement type and delta direction do not match.',
+      });
     }
     if (ADJUSTMENT_TYPES.has(command.type) && !command.reason?.trim()) {
       throw new BadRequestException('Manual corrections require a reason.');
@@ -858,8 +873,13 @@ export class InventoryService {
   async listLocations(warehouseId: string, query: WarehouseQuery): Promise<{ items: LocationDto[]; count: number }> {
     const limit = clampInt(query.limit, 1, 100, 50);
     const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
+    const activeOnly = query.isActive === true && query.isInactive !== true;
+    const inactiveOnly = query.isInactive === true && query.isActive !== true;
 
-    const where: Prisma.WarehouseLocationWhereInput = { warehouseId };
+    const where: Prisma.WarehouseLocationWhereInput = {
+      warehouseId,
+      ...(activeOnly || inactiveOnly ? { isActive: activeOnly } : {}),
+    };
 
     const [rows, count] = await Promise.all([
       this.prisma.warehouseLocation.findMany({
