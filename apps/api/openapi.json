@@ -16649,6 +16649,430 @@
           "notifications"
         ]
       }
+    },
+    "/reports/admin/dashboard": {
+      "get": {
+        "operationId": "DashboardController_getSummary",
+        "parameters": [
+          {
+            "name": "createdToExclusive",
+            "required": true,
+            "in": "query",
+            "description": "Exclusive UTC instant; the range must not exceed 90 days.",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdFrom",
+            "required": true,
+            "in": "query",
+            "description": "Inclusive UTC instant for range-scoped order metrics.",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "summary"
+                      ],
+                      "properties": {
+                        "summary": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "generatedAt",
+                            "presentationTimezone",
+                            "range",
+                            "rangeMetrics",
+                            "commerceSnapshot",
+                            "inventorySnapshot"
+                          ],
+                          "properties": {
+                            "generatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "presentationTimezone": {
+                              "type": "string",
+                              "enum": [
+                                "Asia/Tehran"
+                              ]
+                            },
+                            "range": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "createdFrom",
+                                "createdToExclusive"
+                              ],
+                              "properties": {
+                                "createdFrom": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "createdToExclusive": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            "rangeMetrics": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "ordersCreated",
+                                "grossOrderValue"
+                              ],
+                              "properties": {
+                                "ordersCreated": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "grossOrderValue": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^[0-9]+$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "commerceSnapshot": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "ordersByStatus",
+                                "paymentAttemptsByStatus",
+                                "fulfillmentsByStatus",
+                                "ordersWithoutPaymentAttempts",
+                                "ordersWithoutFulfillment"
+                              ],
+                              "properties": {
+                                "ordersByStatus": {
+                                  "type": "array",
+                                  "minItems": 5,
+                                  "maxItems": 5,
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "status",
+                                      "count"
+                                    ],
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "DRAFT",
+                                          "PENDING_PAYMENT",
+                                          "PAID",
+                                          "CANCELLED",
+                                          "RETURNED"
+                                        ]
+                                      },
+                                      "count": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      }
+                                    }
+                                  }
+                                },
+                                "paymentAttemptsByStatus": {
+                                  "type": "array",
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "status",
+                                      "count"
+                                    ],
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "PENDING",
+                                          "PAID",
+                                          "FAILED",
+                                          "CANCELLED",
+                                          "REFUNDED",
+                                          "PARTIALLY_REFUNDED"
+                                        ]
+                                      },
+                                      "count": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      }
+                                    }
+                                  }
+                                },
+                                "fulfillmentsByStatus": {
+                                  "type": "array",
+                                  "minItems": 7,
+                                  "maxItems": 7,
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "status",
+                                      "count"
+                                    ],
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "PENDING",
+                                          "PROCESSING",
+                                          "READY_TO_SHIP",
+                                          "SHIPPED",
+                                          "DELIVERED",
+                                          "RETURNED",
+                                          "CANCELLED"
+                                        ]
+                                      },
+                                      "count": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      }
+                                    }
+                                  }
+                                },
+                                "ordersWithoutPaymentAttempts": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "ordersWithoutFulfillment": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              }
+                            },
+                            "inventorySnapshot": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "zeroAvailableBalances",
+                                "activeReservations",
+                                "reservationsByStatus",
+                                "transfersByStatus"
+                              ],
+                              "properties": {
+                                "zeroAvailableBalances": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "activeReservations": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "reservationsByStatus": {
+                                  "type": "array",
+                                  "minItems": 4,
+                                  "maxItems": 4,
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "status",
+                                      "count"
+                                    ],
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ACTIVE",
+                                          "CONSUMED",
+                                          "RELEASED",
+                                          "EXPIRED"
+                                        ]
+                                      },
+                                      "count": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      }
+                                    }
+                                  }
+                                },
+                                "transfersByStatus": {
+                                  "type": "array",
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "status",
+                                      "count"
+                                    ],
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "DRAFT",
+                                          "REQUESTED",
+                                          "APPROVED",
+                                          "IN_TRANSIT",
+                                          "RECEIVED",
+                                          "CANCELLED"
+                                        ]
+                                      },
+                                      "count": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The required dashboard range is invalid or exceeds 90 days.",
+                  "additionalProperties": true,
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "A valid live staff access token is required.",
+                  "additionalProperties": true,
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The reports.read permission is missing.",
+                  "additionalProperties": true,
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read a bounded, PII-free operational dashboard snapshot",
+        "tags": [
+          "reports"
+        ]
+      }
     }
   },
   "info": {
@@ -16701,6 +17125,10 @@
     {
       "name": "notifications",
       "description": "SMS provider operational settings and diagnostics"
+    },
+    {
+      "name": "reports",
+      "description": "Permissioned operational reports and dashboard summaries"
     }
   ],
   "servers": [],

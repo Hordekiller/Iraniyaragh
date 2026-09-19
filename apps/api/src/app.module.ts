@@ -15,6 +15,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { validateEnvironment } from './config/environment';
 import { RedisModule } from './modules/redis/redis.module';
 import { MediaModule } from './modules/media/media.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { MediaModule } from './modules/media/media.module';
     CustomersModule,
     NotificationsModule,
     SuppliersModule,
+    ReportsModule,
     AuditModule,
   ],
 })
