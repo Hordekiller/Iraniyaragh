@@ -87,7 +87,7 @@ export function HeroSlider() {
               {heroSlides[activeSlide].desc}
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
-              <button type="button" onClick={() => navigate(ROUTES.category(heroSlides[activeSlide].ctaSlug))} className="h-12 px-7 rounded-full bg-[#C2410C] text-white font-extrabold text-sm hover:bg-[#A83509] transition flex items-center gap-2 shadow-lg shadow-[#C2410C]/25">
+              <button type="button" onClick={() => navigate(ROUTES.category(heroSlides[activeSlide].ctaSlug))} className="h-12 px-7 rounded-full bg-[#A83509] text-white font-extrabold text-sm hover:bg-[#8F2D07] transition flex items-center gap-2 shadow-lg shadow-[#A83509]/25">
                 {heroSlides[activeSlide].cta} <ArrowLeft size={18} className="bg-white/20 rounded-full p-0.5" />
               </button>
             </div>
