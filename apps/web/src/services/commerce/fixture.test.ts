@@ -35,7 +35,7 @@ describe('CommerceFixtureClient', () => {
   it('starts empty and returns isolated cart snapshots', async () => {
     const client: CommerceApi = new CommerceFixtureClient()
 
-    const first = await client.getCart()
+    const first = await client.getCart('guest')
     first.lines.push({
       variantId: 'external-mutation',
       quantity: 1,
@@ -46,7 +46,7 @@ describe('CommerceFixtureClient', () => {
       available: 1,
     })
 
-    await expect(client.getCart()).resolves.toMatchObject({
+    await expect(client.getCart('guest')).resolves.toMatchObject({
       id: null,
       version: 0,
       lines: [],
@@ -60,7 +60,7 @@ describe('CommerceFixtureClient', () => {
   it('maintains quantities and server-derived totals while enforcing the fixture stock rules', async () => {
     const client: CommerceApi = new CommerceFixtureClient()
 
-    const added = await client.addLine(SELLABLE_VARIANT, 2, 'add-1')
+    const added = await client.addLine('guest', SELLABLE_VARIANT, 2, 'add-1')
     expect(added).toMatchObject({
       id: 'fixture-cart',
       version: 1,
@@ -71,25 +71,35 @@ describe('CommerceFixtureClient', () => {
       },
     })
 
-    const incremented = await client.addLine(SELLABLE_VARIANT, 1, 'add-2')
+    const incremented = await client.addLine(
+      'guest',
+      SELLABLE_VARIANT,
+      1,
+      'add-2',
+    )
     expect(incremented.lines[0]?.quantity).toBe(3)
 
-    const capped = await client.setLine(SELLABLE_VARIANT, 200, 'set-1')
+    const capped = await client.setLine('guest', SELLABLE_VARIANT, 200, 'set-1')
     expect(capped.lines[0]?.quantity).toBe(99)
 
     const withSecondLine = await client.addLine(
+      'guest',
       SECOND_SELLABLE_VARIANT,
       1,
       'add-3',
     )
     expect(withSecondLine.lines).toHaveLength(2)
 
-    const removed = await client.removeLine(SECOND_SELLABLE_VARIANT, 'remove-1')
+    const removed = await client.removeLine(
+      'guest',
+      SECOND_SELLABLE_VARIANT,
+      'remove-1',
+    )
     expect(removed.lines.map((line) => line.variantId)).toEqual([
       SELLABLE_VARIANT,
     ])
 
-    const emptied = await client.setLine(SELLABLE_VARIANT, 0, 'set-2')
+    const emptied = await client.setLine('guest', SELLABLE_VARIANT, 0, 'set-2')
     expect(emptied).toMatchObject({
       id: null,
       lines: [],
@@ -97,12 +107,12 @@ describe('CommerceFixtureClient', () => {
     })
 
     await expectApiFailure(
-      client.addLine('variant-does-not-exist', 1, 'missing'),
+      client.addLine('guest', 'variant-does-not-exist', 1, 'missing'),
       'SKU_NOT_FOUND',
       404,
     )
     await expectApiFailure(
-      client.addLine(OUT_OF_STOCK_VARIANT, 1, 'unavailable'),
+      client.addLine('guest', OUT_OF_STOCK_VARIANT, 1, 'unavailable'),
       'CART_QUANTITY_INVALID',
       422,
     )
@@ -111,12 +121,8 @@ describe('CommerceFixtureClient', () => {
   it('rejects checkout without a cart or a matching live shipping quote', async () => {
     const client: CommerceApi = new CommerceFixtureClient()
 
-    await expectApiFailure(
-      client.previewCheckout(ADDRESS),
-      'CART_EMPTY',
-      422,
-    )
-    await client.addLine(SELLABLE_VARIANT, 1, 'add-1')
+    await expectApiFailure(client.previewCheckout(ADDRESS), 'CART_EMPTY', 422)
+    await client.addLine('customer', SELLABLE_VARIANT, 1, 'add-1')
     await expectApiFailure(
       client.createCheckout(ADDRESS, 'unknown-quote', 'checkout-1'),
       'CONFLICT',
@@ -129,11 +135,7 @@ describe('CommerceFixtureClient', () => {
     vi.advanceTimersByTime(15 * 60_000 + 1)
 
     await expectApiFailure(
-      client.createCheckout(
-        ADDRESS,
-        preview.shipping[0].quoteId,
-        'checkout-2',
-      ),
+      client.createCheckout(ADDRESS, preview.shipping[0].quoteId, 'checkout-2'),
       'CONFLICT',
       409,
     )
@@ -143,7 +145,7 @@ describe('CommerceFixtureClient', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-09-19T10:00:00.000Z'))
     const client: CommerceApi = new CommerceFixtureClient()
-    await client.addLine(SELLABLE_VARIANT, 2, 'add-1')
+    await client.addLine('customer', SELLABLE_VARIANT, 2, 'add-1')
 
     const preview = await client.previewCheckout(ADDRESS)
     expect(preview).toMatchObject({
@@ -175,7 +177,10 @@ describe('CommerceFixtureClient', () => {
       total: { amount: '57590000', currency: 'IRR' },
       items: [{ variantId: SELLABLE_VARIANT, quantity: 2 }],
     })
-    await expect(client.getCart()).resolves.toMatchObject({ id: null, lines: [] })
+    await expect(client.getCart('customer')).resolves.toMatchObject({
+      id: null,
+      lines: [],
+    })
 
     const orders = await client.listOrders()
     expect(orders).toMatchObject({

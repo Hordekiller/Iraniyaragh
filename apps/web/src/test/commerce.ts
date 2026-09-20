@@ -166,6 +166,7 @@ export function commerceStub(
     addLine: vi.fn(async () => CART),
     setLine: vi.fn(async () => CART),
     removeLine: vi.fn(async () => ({ ...CART, lines: [] })),
+    mergeGuestCart: vi.fn(async () => ({ cart: CART, warnings: [] })),
     previewCheckout: vi.fn(async () => preview),
     createCheckout: vi.fn(async () => checkoutOrder),
     listOrders: vi.fn(async () => ({

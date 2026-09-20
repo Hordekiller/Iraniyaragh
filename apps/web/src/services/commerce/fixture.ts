@@ -9,6 +9,7 @@ import type {
 import { AuthApiError } from '../../lib/auth/errors'
 import { fixtureAllProducts } from '../catalog/fixture-data'
 import type { CommerceApi } from './types'
+import type { CartOwner } from './types'
 import { EMPTY_CART } from './types'
 
 /** Explicit development/E2E adapter. Production builds never construct this class. */
@@ -18,25 +19,30 @@ export class CommerceFixtureClient implements CommerceApi {
   private sequence = 0
   private quote: ShippingQuote | null = null
 
-  async getCart() {
+  async getCart(_owner: CartOwner) {
+    void _owner
     return structuredClone(this.cart)
   }
 
-  async addLine(variantId: string, quantity: number) {
+  async addLine(_owner: CartOwner, variantId: string, quantity: number) {
     const existing = this.cart.lines.find(
       (line) => line.variantId === variantId,
     )
     return this.setFixtureLine(variantId, (existing?.quantity ?? 0) + quantity)
   }
 
-  async setLine(variantId: string, quantity: number) {
+  async setLine(_owner: CartOwner, variantId: string, quantity: number) {
     return this.setFixtureLine(variantId, quantity)
   }
 
-  async removeLine(variantId: string) {
+  async removeLine(_owner: CartOwner, variantId: string) {
     return this.commit(
       this.cart.lines.filter((line) => line.variantId !== variantId),
     )
+  }
+
+  async mergeGuestCart() {
+    return { cart: structuredClone(this.cart), warnings: [] }
   }
 
   async previewCheckout() {

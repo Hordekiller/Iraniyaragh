@@ -1,4 +1,4 @@
-import type { CommerceApi, CommerceCartState } from './types'
+import type { CartOwner, CommerceApi, CommerceCartState } from './types'
 import { EMPTY_CART } from './types'
 
 type CryptoWithRandomUuid = Pick<Crypto, 'randomUUID'>
@@ -6,13 +6,15 @@ type CryptoWithRandomUuid = Pick<Crypto, 'randomUUID'>
 export class CommerceCartController {
   private state: CommerceCartState = {
     cart: EMPTY_CART,
-    phase: 'anonymous',
+    phase: 'idle',
+    owner: 'guest',
     error: null,
+    mergeWarnings: [],
     pendingVariantIds: [],
   }
   private readonly listeners = new Set<() => void>()
   private readonly retryKeys = new Map<string, string>()
-  private authenticated = false
+  private authenticated: boolean | null = null
   private authEpoch = 0
   private requestSequence = 0
   private lastAppliedRequest = 0
@@ -35,26 +37,34 @@ export class CommerceCartController {
     this.authenticated = authenticated
     this.authEpoch += 1
     this.retryKeys.clear()
-    if (!authenticated) {
-      this.patch({
-        cart: EMPTY_CART,
-        phase: 'anonymous',
-        error: null,
-        pendingVariantIds: [],
-      })
-      return
+    this.lastAppliedRequest = 0
+    this.patch({ error: null, pendingVariantIds: [] })
+    if (authenticated) void this.mergeGuest().catch(() => undefined)
+    else {
+      this.patch({ cart: EMPTY_CART, owner: 'guest', mergeWarnings: [] })
+      void this.loadOwner('guest')
     }
-    void this.load()
   }
 
   async load(): Promise<void> {
-    if (!this.authenticated) return
+    if (this.authenticated === null) return
+    return this.loadOwner(this.authenticated ? 'customer' : 'guest')
+  }
+
+  async retry(): Promise<void> {
+    if (this.authenticated && this.state.owner === 'guest') {
+      return this.mergeGuest()
+    }
+    return this.load()
+  }
+
+  private async loadOwner(owner: CartOwner): Promise<void> {
     const epoch = this.authEpoch
     const requestId = ++this.requestSequence
-    this.patch({ phase: 'loading', error: null })
+    this.patch({ phase: 'loading', owner, error: null, mergeWarnings: [] })
     try {
-      const cart = await this.api.getCart()
-      this.applyCart(cart, requestId, epoch)
+      const cart = await this.api.getCart(owner)
+      this.applyCart(cart, requestId, epoch, owner)
     } catch (error) {
       if (this.isActive(epoch)) this.patch({ phase: 'error', error })
     }
@@ -62,20 +72,20 @@ export class CommerceCartController {
 
   async add(variantId: string, quantity = 1): Promise<void> {
     return this.mutate(variantId, `add:${variantId}:${quantity}`, (key) =>
-      this.api.addLine(variantId, quantity, key),
+      this.api.addLine(this.state.owner, variantId, quantity, key),
     )
   }
 
   async setQuantity(variantId: string, quantity: number): Promise<void> {
     if (quantity <= 0) return this.remove(variantId)
     return this.mutate(variantId, `set:${variantId}:${quantity}`, (key) =>
-      this.api.setLine(variantId, quantity, key),
+      this.api.setLine(this.state.owner, variantId, quantity, key),
     )
   }
 
   async remove(variantId: string): Promise<void> {
     return this.mutate(variantId, `remove:${variantId}`, (key) =>
-      this.api.removeLine(variantId, key),
+      this.api.removeLine(this.state.owner, variantId, key),
     )
   }
 
@@ -89,9 +99,14 @@ export class CommerceCartController {
     fingerprint: string,
     operation: (key: string) => Promise<CommerceCartState['cart']>,
   ): Promise<void> {
-    if (!this.authenticated || this.state.pendingVariantIds.includes(variantId))
+    if (
+      this.authenticated === null ||
+      this.state.phase === 'merging' ||
+      this.state.pendingVariantIds.includes(variantId)
+    )
       return
     const epoch = this.authEpoch
+    const owner = this.state.owner
     const requestId = ++this.requestSequence
     const key = this.retryKeys.get(fingerprint) ?? this.newKey()
     this.retryKeys.set(fingerprint, key)
@@ -102,7 +117,7 @@ export class CommerceCartController {
     try {
       const cart = await operation(key)
       if (this.isActive(epoch)) this.retryKeys.delete(fingerprint)
-      this.applyCart(cart, requestId, epoch)
+      this.applyCart(cart, requestId, epoch, owner)
     } catch (error) {
       if (this.isActive(epoch)) this.patch({ error, phase: 'error' })
       throw error
@@ -121,21 +136,51 @@ export class CommerceCartController {
     cart: CommerceCartState['cart'],
     requestId: number,
     epoch: number,
+    owner: CartOwner,
   ): void {
     if (!this.isActive(epoch) || requestId < this.lastAppliedRequest) return
     this.lastAppliedRequest = requestId
-    this.patch({ cart, phase: 'ready', error: null })
+    this.patch({ cart, phase: 'ready', owner, error: null })
   }
 
   private isActive(epoch: number): boolean {
-    return this.authenticated && epoch === this.authEpoch
+    return this.authenticated !== null && epoch === this.authEpoch
   }
 
-  private newKey(): string {
+  private async mergeGuest(): Promise<void> {
+    if (!this.authenticated) return
+    const epoch = this.authEpoch
+    const requestId = ++this.requestSequence
+    const fingerprint = 'merge-guest'
+    const key = this.retryKeys.get(fingerprint) ?? this.newKey('cart-merge')
+    this.retryKeys.set(fingerprint, key)
+    this.patch({ phase: 'merging', error: null, pendingVariantIds: [] })
+    try {
+      const result = await this.api.mergeGuestCart(key)
+      if (!this.isActive(epoch) || !this.authenticated) return
+      this.retryKeys.delete(fingerprint)
+      if (requestId < this.lastAppliedRequest) return
+      this.lastAppliedRequest = requestId
+      this.patch({
+        cart: result.cart,
+        phase: 'ready',
+        owner: 'customer',
+        error: null,
+        mergeWarnings: result.warnings,
+      })
+    } catch (error) {
+      if (this.isActive(epoch) && this.authenticated) {
+        this.patch({ phase: 'error', error })
+      }
+      throw error
+    }
+  }
+
+  private newKey(prefix = 'cart'): string {
     if (typeof this.cryptoSource?.randomUUID !== 'function') {
       throw new Error('Secure random UUID generation is unavailable')
     }
-    return `cart-${this.cryptoSource.randomUUID()}`
+    return `${prefix}-${this.cryptoSource.randomUUID()}`
   }
 
   private patch(partial: Partial<CommerceCartState>): void {

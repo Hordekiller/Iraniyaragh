@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isApiFailure, isApiSuccess, jsonRequest } from './request';
 
-function stubFetch(impl: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> | Response) {
+function stubFetch(
+  impl: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => Promise<Response> | Response,
+) {
   vi.stubGlobal('fetch', vi.fn(impl));
 }
 
@@ -22,20 +27,53 @@ function okJson<T>(data: T): Response {
 }
 
 describe('jsonRequest', () => {
+  it('accepts an explicitly declared 204 response without fabricating domain data', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
+
+    await expect(
+      jsonRequest<void>('/api/v1/guest-cart/session', {
+        method: 'POST',
+        credentials: 'include',
+        allowNoContent: true,
+      }),
+    ).resolves.toEqual({ data: undefined });
+  });
+
   it('returns the flat { data } success envelope', async () => {
-    stubFetch(() => okJson({ challengeId: 'c1', expiresInSeconds: 300, resendAfterSeconds: 60 }));
-    const result = await jsonRequest<{ challengeId: string }>('/api/v1/auth/customer/otp/request', {
-      json: { mobile: '+989123456789', client: 'CUSTOMER_WEB' },
+    stubFetch(() =>
+      okJson({
+        challengeId: 'c1',
+        expiresInSeconds: 300,
+        resendAfterSeconds: 60,
+      }),
+    );
+    const result = await jsonRequest<{ challengeId: string }>(
+      '/api/v1/auth/customer/otp/request',
+      {
+        json: { mobile: '+989123456789', client: 'CUSTOMER_WEB' },
+      },
+    );
+    expect(result.data).toEqual({
+      challengeId: 'c1',
+      expiresInSeconds: 300,
+      resendAfterSeconds: 60,
     });
-    expect(result.data).toEqual({ challengeId: 'c1', expiresInSeconds: 300, resendAfterSeconds: 60 });
   });
 
   it('throws AuthApiError on a non-2xx envelope', async () => {
-    stubFetch(() =>
-      new Response(
-        JSON.stringify({ code: 'AUTH_CHALLENGE_INVALID', message: 'bad', statusCode: 401 }),
-        { status: 401, headers: { 'content-type': 'application/json' } },
-      ),
+    stubFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            code: 'AUTH_CHALLENGE_INVALID',
+            message: 'bad',
+            statusCode: 401,
+          }),
+          { status: 401, headers: { 'content-type': 'application/json' } },
+        ),
     );
     await expect(jsonRequest('/x')).rejects.toMatchObject({
       name: 'AuthApiError',
@@ -52,7 +90,9 @@ describe('jsonRequest', () => {
       headers: { 'X-Extra': '1' },
     });
     const init = fetchInit(fetchMock.mock.calls[0])!;
-    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer at-secret');
+    expect((init.headers as Record<string, string>).Authorization).toBe(
+      'Bearer at-secret',
+    );
   });
 
   it('uses POST + JSON body for payload requests, GET by default, and honors an explicit method', async () => {
@@ -64,8 +104,12 @@ describe('jsonRequest', () => {
     });
     const withBody = fetchInit(fetchMock.mock.calls[0])!;
     expect(withBody.method).toBe('POST');
-    expect(withBody.body).toBe(JSON.stringify({ challengeId: 'c1', code: '123456' }));
-    expect((withBody.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    expect(withBody.body).toBe(
+      JSON.stringify({ challengeId: 'c1', code: '123456' }),
+    );
+    expect((withBody.headers as Record<string, string>)['Content-Type']).toBe(
+      'application/json',
+    );
 
     await jsonRequest('/api/v1/auth/me');
     const noBody = fetchInit(fetchMock.mock.calls[1])!;
@@ -103,13 +147,15 @@ describe('jsonRequest', () => {
         );
       });
     });
-    await expect(
-      jsonRequest('/x', { timeoutMs: 5 }),
-    ).rejects.toMatchObject({ code: 'TIMEOUT' });
+    await expect(jsonRequest('/x', { timeoutMs: 5 })).rejects.toMatchObject({
+      code: 'TIMEOUT',
+    });
   });
 
   it('treats a 2xx body without { data } as PARSE_ERROR', async () => {
-    stubFetch(() => new Response(JSON.stringify({ hello: 'world' }), { status: 200 }));
+    stubFetch(
+      () => new Response(JSON.stringify({ hello: 'world' }), { status: 200 }),
+    );
     await expect(jsonRequest('/x')).rejects.toMatchObject({
       name: 'AuthApiError',
       code: 'PARSE_ERROR',
@@ -129,7 +175,11 @@ describe('response type guards', () => {
 
   it('isApiFailure() recognizes the error envelope', () => {
     expect(
-      isApiFailure({ code: 'AUTH_CHALLENGE_INVALID', message: 'bad', statusCode: 401 }),
+      isApiFailure({
+        code: 'AUTH_CHALLENGE_INVALID',
+        message: 'bad',
+        statusCode: 401,
+      }),
     ).toBe(true);
     expect(isApiFailure({ error: { code: 'X' } })).toBe(false);
     expect(isApiFailure(null)).toBe(false);
