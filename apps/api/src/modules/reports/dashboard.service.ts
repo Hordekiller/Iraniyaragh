@@ -37,7 +37,9 @@ export class DashboardService {
     const generatedAt = new Date();
 
     // Keep each Prisma promise independently inferred before composing the transaction.
-    // This also makes the fixed nine-query budget explicit and reviewable.
+    // The fixed nine-query budget is below the repository's 20-query page norm;
+    // every range/equality/grouping path has a leading-column index verified by
+    // the PostgreSQL integration suite. There is no row hydration or N+1 loop.
     const rangeOrdersQuery = this.prisma.order.aggregate({
       where: { createdAt: { gte: range.from, lt: range.toExclusive } },
       _count: { _all: true },

@@ -711,6 +711,7 @@ model InventoryBalance {
   @@unique([warehouseId, locationId, variantId])
   @@index([warehouseId, variantId])
   @@index([variantId, available])
+  @@index([available])
 }
 
 model InventoryMovement {
@@ -753,6 +754,7 @@ model StockReservation {
   updatedAt      DateTime          @updatedAt
 
   @@index([warehouseId, variantId, status, expiresAt])
+  @@index([status])
 }
 
 model StockTransfer {
@@ -769,6 +771,8 @@ model StockTransfer {
   transitions       StockTransferTransition[]
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
+
+  @@index([status])
 }
 
 model StockTransferTransition {
@@ -1006,6 +1010,7 @@ model Order {
 
   @@index([customerId, createdAt])
   @@index([status, createdAt])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -1115,6 +1120,7 @@ model Payment {
   updatedAt      DateTime            @updatedAt
 
   @@index([orderId, status])
+  @@index([status])
 }
 
 model OrderTransition {

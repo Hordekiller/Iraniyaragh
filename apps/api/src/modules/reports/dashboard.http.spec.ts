@@ -34,7 +34,9 @@ const customerPrincipal: AuthPrincipalContext = Object.freeze({
   ...principalBase,
   userId: 'customer-dashboard-http',
   authenticationLevel: 'CUSTOMER_OTP',
-  permissions: new Set<string>(),
+  // Deliberately carries the domain permission so this principal proves the
+  // STAFF_MFA requirement independently of the permission guard.
+  permissions: new Set(['reports.read']),
 });
 
 const staffPrincipal: AuthPrincipalContext = Object.freeze({
