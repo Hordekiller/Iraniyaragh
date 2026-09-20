@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Box, Button, Paper, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, TextField, Typography } from '@mui/material';
 import { useSyncExternalStore } from 'react';
+import { AuthSurface } from '@/components/auth/AuthSurface';
+import { AuthTransition } from '@/components/auth/AuthTransition';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { isFixtureAuthEnabled } from '@/lib/auth/staff-fixture-guard';
 import { createStaffAuth } from '@/lib/auth/staff-http';
@@ -13,8 +15,8 @@ import { createMemoryStaffTokenStore } from '@/lib/auth/token-store';
 /**
  * Staff sign-in (admin login slice, #50).
  *
- * Route split per #50 decision A: `/login/staff` stays separate so the existing
- * dev-only `/login` and `signInDiAsAdmin` e2e path remain untouched. The real
+ * `/login` is the canonical operational entry point and `/login/staff` remains
+ * a backwards-compatible alias. The real
  * `StaffAuthHttpClient` against `/auth/staff/password` -> `/auth/staff/totp/verify`
  * is the default (parallel-work handoff, AUTH_CONTRACT §17); the deterministic
  * fixture is the only data source when `NEXT_PUBLIC_FIXTURE_AUTH=true` is baked
@@ -60,80 +62,31 @@ export default function StaffLoginPage() {
   }, [state.phase, state.principal, controller, establishSession, router]);
 
   if (state.phase === 'authenticated') {
-    return null;
+    return <AuthTransition title="تأیید دومرحله‌ای کامل شد" description="در حال انتقال امن به داشبورد عملیات هستید." />;
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-        p: 2,
-      }}
+    <AuthSurface
+      title="ورود کارکنان"
+      description="با شناسه، رمز عبور و کد تأیید دومرحله‌ای وارد مرکز عملیات شوید."
+      footer={
+        enabled
+          ? 'حالت fixture فقط با پرچم صریح توسعه/آزمایش فعال است؛ استیجینگ و تولید همیشه از سرور واقعی استفاده می‌کنند.'
+          : 'ورود، نشست و سطح دسترسی از سرور احراز هویت واقعی دریافت می‌شود.'
+      }
     >
-      <Paper
-        elevation={0}
-        sx={{
-          width: '100%',
-          maxWidth: 420,
-          p: { xs: 3, sm: 4 },
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Box sx={{ mb: 3, textAlign: 'center' }}>
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              mx: 'auto',
-              mb: 1.5,
-              borderRadius: 2,
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: '1.25rem',
-            }}
-            aria-hidden="true"
-          >
-            آی
-          </Box>
-          <Typography variant="h5" fontWeight={700}>
-            ورود کارکنان
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            ایران یراق — ورود امن با رمز عبور و کد تایید دومرحله‌ای
-          </Typography>
-        </Box>
-
-        {state.phase === 'session-expired' || state.phase === 'forbidden' ? (
-          <SessionStatePanel
-            phase={state.phase}
-            onRetry={() => {
-              controller.resetToPassword();
-              controller.open();
-            }}
-          />
-        ) : (
-          <LoginSteps state={state} controller={controller} />
-        )}
-
-        <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.secondary">
-            {enabled
-              ? 'این نسخه با کلید آزمایشی (`NEXT_PUBLIC_FIXTURE_AUTH=true`) فعال شده و صرفاً برای توسعه و آزمایش در دسترس است؛ در استیجینگ و تولید از سرور واقعی استفاده می‌شود.'
-              : 'ورود کارکنان با سرور احراز هویت واقعی انجام می‌شود.'}
-          </Typography>
-        </Box>
-      </Paper>
-    </Box>
+      {state.phase === 'session-expired' || state.phase === 'forbidden' ? (
+        <SessionStatePanel
+          phase={state.phase}
+          onRetry={() => {
+            controller.resetToPassword();
+            controller.open();
+          }}
+        />
+      ) : (
+        <LoginSteps state={state} controller={controller} />
+      )}
+    </AuthSurface>
   );
 }
 

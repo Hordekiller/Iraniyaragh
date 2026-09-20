@@ -13,8 +13,9 @@ test.describe('admin: authentication gate', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 
-    await expect(page.getByRole('heading', { name: 'ورود به پنل عملیات' })).toBeVisible();
-    await expect(page.getByLabel('کد دسترسی توسعه‌دهنده')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ورود کارکنان' })).toBeVisible();
+    await expect(page.getByLabel('شناسه کارکن')).toBeVisible();
+    await expect(page.getByLabel('رمز عبور')).toBeVisible();
 
     await network.assertNone();
   });
@@ -24,18 +25,18 @@ test.describe('admin: authentication gate', () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test('renders the dev-only sign-in notice and no external assets on /login', async ({ page }) => {
+  test('renders the real staff sign-in and no external assets on /login', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
     await page.goto('/login');
 
-    await expect(page.getByText(/صرفاً برای محیط توسعه و آزمایش فعال است/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'ورود' })).toBeVisible();
+    await expect(page.getByText(/سرور احراز هویت واقعی دریافت می‌شود/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'ادامه' })).toBeVisible();
 
     await network.assertNone();
   });
 
-test('staff login route renders the real endpoint-backed form in a ship build', async ({ page }) => {
+  test('staff login alias renders the real endpoint-backed form in a ship build', async ({ page }) => {
     // The CI/ship build is compiled without NEXT_PUBLIC_FIXTURE_AUTH=true, so the
     // real staff-auth API is the default against /api/v1/auth/* (parallel-work
     // handoff, AUTH_CONTRACT §17); /login/staff renders the live password form.
@@ -69,14 +70,15 @@ test.describe('admin: authenticated shell', () => {
     }
   });
 
-  test('shows the developer profile, version and an actionable notifications bell (fixture)', async ({ page }) => {
+  test('shows the active profile, version and an honest disconnected notifications state', async ({ page }) => {
     await signInDiAsAdmin(page);
 
-    // Phase A: the bell is enabled and opens the clearly-labeled fixture panel.
+    // The bell remains actionable but never presents synthetic notifications.
     const bell = page.getByRole('button', { name: /اعلان‌ها/ });
     await expect(bell).toBeVisible();
     await bell.click();
-    await expect(page.getByText('دادهٔ آزمایشی — جریان واقعی اعلان هنوز متصل نشده است.')).toBeVisible();
+    await expect(page.getByText('جریان اعلان متصل نیست')).toBeVisible();
+    await expect(page.getByText(/هیچ ردیف نمونه‌ای نمایش داده نمی‌شود/)).toBeVisible();
     await page.keyboard.press('Escape');
 
     if (isMobile(page)) {
@@ -86,7 +88,8 @@ test.describe('admin: authenticated shell', () => {
     } else {
       // The developer identity now lives inside the account menu behind the avatar.
       await page.getByRole('button', { name: 'منوی حساب کاربری' }).click();
-      await expect(page.getByText('مدیر سیستم')).toBeVisible();
+      await expect(page.getByText('کاربر کارکنان')).toBeVisible();
+      await expect(page.getByText(/· STAFF_MFA/)).toBeVisible();
       await expect(adminSidebar(page).getByText(/نسخهٔ پایه/)).toBeVisible();
     }
   });

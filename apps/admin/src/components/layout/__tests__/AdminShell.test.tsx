@@ -12,6 +12,20 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   push: vi.fn(),
   signOut: vi.fn(async () => undefined),
+  auth: {
+    isAuthenticated: true,
+    user: {
+      userId: 'dev-admin',
+      sessionId: 's-1',
+      authenticationLevel: 'STAFF_MFA',
+      permissions: ['catalog.read'],
+    } as {
+      userId: string;
+      sessionId: string;
+      authenticationLevel: string;
+      permissions: string[];
+    } | null,
+  },
 }));
 
 vi.mock('next/navigation', () => ({
@@ -25,13 +39,8 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({
-    user: {
-      userId: 'dev-admin',
-      sessionId: 's-1',
-      authenticationLevel: 'STAFF_MFA',
-      permissions: ['catalog.read'],
-    },
-    isAuthenticated: true,
+    user: mocks.auth.user,
+    isAuthenticated: mocks.auth.isAuthenticated,
     signIn: vi.fn(),
     signOut: mocks.signOut,
   }),
@@ -56,6 +65,28 @@ describe('AdminShell', () => {
     mocks.refresh.mockReset();
     mocks.push.mockReset();
     mocks.signOut.mockReset();
+    mocks.auth.isAuthenticated = true;
+    mocks.auth.user = {
+      userId: 'dev-admin',
+      sessionId: 's-1',
+      authenticationLevel: 'STAFF_MFA',
+      permissions: ['catalog.read'],
+    };
+  });
+
+  it('renders an accessible redirect state instead of a blank page without a session', () => {
+    mocks.auth.isAuthenticated = false;
+    mocks.auth.user = null;
+
+    renderShell();
+
+    expect(
+      screen.getByRole('heading', { name: 'نشست فعال یافت نشد' }),
+    ).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'لطفاً چند لحظه منتظر بمانید',
+    );
+    expect(mocks.replace).toHaveBeenCalledWith('/login');
   });
 
   it('renders the authenticated sidebar and dashboard link', () => {
@@ -84,19 +115,21 @@ describe('AdminShell', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens the notifications menu with fixture rows', () => {
+  it('opens an honest empty notifications state without runtime fixtures', () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: /اعلان‌ها/ }));
-    expect(screen.getByText(/دادهٔ آزمایشی/)).toBeInTheDocument();
-    expect(screen.getByText(/بررسی کالای جدید/)).toBeInTheDocument();
+    expect(
+      screen.getByText('جریان اعلان متصل نیست').closest('[role="status"]'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/مشتری نمونه/)).not.toBeInTheDocument();
   });
 
   it('signs out from the profile menu and redirects to /login', async () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'منوی حساب کاربری' }));
-    expect(screen.getByText('مدیر سیستم')).toBeInTheDocument();
+    expect(screen.getByText('کاربر کارکنان')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('menuitem', { name: /خروج از حساب/ }));
     await Promise.resolve();
@@ -154,6 +187,16 @@ describe('AdminShell', () => {
       'id',
       'admin-main-content',
     );
+  });
+
+  it('marks the active route and exposes a polite route announcement', () => {
+    renderShell();
+
+    expect(screen.getByRole('link', { name: /داشبورد/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
   });
 
   it('renders a horizontal nav bar instead of a sidebar for the horizontal layout', () => {
