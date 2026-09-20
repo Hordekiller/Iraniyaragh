@@ -14,7 +14,8 @@ export const isMobile = (page: Page): boolean => (page.viewportSize()?.width ?? 
 export const adminSidebar = (page: Page): Locator => page.locator('aside[aria-label="منوی اصلی"]');
 
 /**
- * Signs the dev admin into the admin panel by driving the real login UI.
+ * Signs the dev admin into the admin panel through the dedicated non-production
+ * test harness. The primary `/login` route always remains the real staff MFA UI.
  *
  * The admin token is held in memory only (AUTH_CONTRACT §7: no
  * localStorage/sessionStorage/document.cookie), so it cannot be replayed via
@@ -30,7 +31,7 @@ export async function signInDiAsAdmin(page: Page) {
     throw new Error('AUTH_DEV_CODE must be set to sign in to the admin panel in e2e.');
   }
 
-  await page.goto('/login');
+  await page.goto('/login/dev');
   await page.getByLabel('کد دسترسی توسعه‌دهنده').fill(devCode);
   await page.getByRole('button', { name: 'ورود' }).click();
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });

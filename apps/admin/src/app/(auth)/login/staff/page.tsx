@@ -15,8 +15,8 @@ import { createMemoryStaffTokenStore } from '@/lib/auth/token-store';
 /**
  * Staff sign-in (admin login slice, #50).
  *
- * Route split per #50 decision A: `/login/staff` stays separate so the existing
- * dev-only `/login` and `signInDiAsAdmin` e2e path remain untouched. The real
+ * `/login` is the canonical operational entry point and `/login/staff` remains
+ * a backwards-compatible alias. The real
  * `StaffAuthHttpClient` against `/auth/staff/password` -> `/auth/staff/totp/verify`
  * is the default (parallel-work handoff, AUTH_CONTRACT §17); the deterministic
  * fixture is the only data source when `NEXT_PUBLIC_FIXTURE_AUTH=true` is baked

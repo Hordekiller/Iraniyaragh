@@ -13,8 +13,9 @@ test.describe('admin: authentication gate', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 
-    await expect(page.getByRole('heading', { name: 'ورود توسعه‌دهنده' })).toBeVisible();
-    await expect(page.getByLabel('کد دسترسی توسعه‌دهنده')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ورود کارکنان' })).toBeVisible();
+    await expect(page.getByLabel('شناسه کارکن')).toBeVisible();
+    await expect(page.getByLabel('رمز عبور')).toBeVisible();
 
     await network.assertNone();
   });
@@ -24,18 +25,18 @@ test.describe('admin: authentication gate', () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test('renders the dev-only sign-in notice and no external assets on /login', async ({ page }) => {
+  test('renders the real staff sign-in and no external assets on /login', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
     await page.goto('/login');
 
-    await expect(page.getByText(/فقط در محیط توسعه و آزمایش فعال است/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'ورود به پنل' })).toBeVisible();
+    await expect(page.getByText(/سرور احراز هویت واقعی دریافت می‌شود/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'ادامه' })).toBeVisible();
 
     await network.assertNone();
   });
 
-test('staff login route renders the real endpoint-backed form in a ship build', async ({ page }) => {
+  test('staff login alias renders the real endpoint-backed form in a ship build', async ({ page }) => {
     // The CI/ship build is compiled without NEXT_PUBLIC_FIXTURE_AUTH=true, so the
     // real staff-auth API is the default against /api/v1/auth/* (parallel-work
     // handoff, AUTH_CONTRACT §17); /login/staff renders the live password form.

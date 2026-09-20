@@ -53,7 +53,7 @@ function SmsSettingsContent() {
           title="نشست شما منقضی شده است"
           description="برای ادامهٔ مدیریت سرویس پیامک، لازم است دوباره با حساب مدیریتی خود وارد شوید."
           action={
-            <Button variant="contained" href="/login/staff" component="a">
+            <Button variant="contained" href="/login" component="a">
               ورود مجدد به پنل
             </Button>
           }
