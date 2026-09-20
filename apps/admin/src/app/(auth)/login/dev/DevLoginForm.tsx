@@ -9,7 +9,8 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 
 /**
  * Development/test harness for the env-gated `/auth/dev/signin` endpoint.
- * The server route enclosing this client component returns 404 in production.
+ * The server route enclosing this client component returns 404 unless the same
+ * server-only AUTH_DEV_CODE gate as the API has been explicitly configured.
  */
 export function DevLoginForm() {
   const router = useRouter();
@@ -51,7 +52,7 @@ export function DevLoginForm() {
     <AuthSurface
       title="ورود توسعه‌دهنده"
       description="این مسیر فقط برای آزمون محلیِ کنترل‌شده است. ورود عملیاتی از مسیر اصلی انجام می‌شود."
-      footer={<>این صفحه در build تولیدی وجود عملیاتی ندارد و با پاسخ ۴۰۴ بسته می‌شود.</>}
+      footer={<>این صفحه بدون فعال‌سازی صریح محیط توسعه/آزمایش با پاسخ ۴۰۴ بسته می‌شود.</>}
     >
       <form onSubmit={handleSubmit} noValidate>
         <TextField
