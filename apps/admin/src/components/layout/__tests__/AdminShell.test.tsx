@@ -12,6 +12,20 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   push: vi.fn(),
   signOut: vi.fn(async () => undefined),
+  auth: {
+    isAuthenticated: true,
+    user: {
+      userId: 'dev-admin',
+      sessionId: 's-1',
+      authenticationLevel: 'STAFF_MFA',
+      permissions: ['catalog.read'],
+    } as {
+      userId: string;
+      sessionId: string;
+      authenticationLevel: string;
+      permissions: string[];
+    } | null,
+  },
 }));
 
 vi.mock('next/navigation', () => ({
@@ -25,13 +39,8 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({
-    user: {
-      userId: 'dev-admin',
-      sessionId: 's-1',
-      authenticationLevel: 'STAFF_MFA',
-      permissions: ['catalog.read'],
-    },
-    isAuthenticated: true,
+    user: mocks.auth.user,
+    isAuthenticated: mocks.auth.isAuthenticated,
     signIn: vi.fn(),
     signOut: mocks.signOut,
   }),
@@ -56,6 +65,28 @@ describe('AdminShell', () => {
     mocks.refresh.mockReset();
     mocks.push.mockReset();
     mocks.signOut.mockReset();
+    mocks.auth.isAuthenticated = true;
+    mocks.auth.user = {
+      userId: 'dev-admin',
+      sessionId: 's-1',
+      authenticationLevel: 'STAFF_MFA',
+      permissions: ['catalog.read'],
+    };
+  });
+
+  it('renders an accessible redirect state instead of a blank page without a session', () => {
+    mocks.auth.isAuthenticated = false;
+    mocks.auth.user = null;
+
+    renderShell();
+
+    expect(
+      screen.getByRole('heading', { name: 'نشست فعال یافت نشد' }),
+    ).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'لطفاً چند لحظه منتظر بمانید',
+    );
+    expect(mocks.replace).toHaveBeenCalledWith('/login');
   });
 
   it('renders the authenticated sidebar and dashboard link', () => {
@@ -88,7 +119,9 @@ describe('AdminShell', () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: /اعلان‌ها/ }));
-    expect(screen.getByText('جریان اعلان متصل نیست').closest('[role="status"]')).toBeInTheDocument();
+    expect(
+      screen.getByText('جریان اعلان متصل نیست').closest('[role="status"]'),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/مشتری نمونه/)).not.toBeInTheDocument();
   });
 

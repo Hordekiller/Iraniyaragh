@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, Button, TextField } from '@mui/material';
 import { AuthSurface } from '@/components/auth/AuthSurface';
+import { AuthTransition } from '@/components/auth/AuthTransition';
 import { useAuth } from '@/lib/auth/AuthProvider';
 
 export default function LoginPage() {
@@ -20,7 +21,7 @@ export default function LoginPage() {
   }, [isAuthenticated, router]);
 
   if (isAuthenticated) {
-    return null;
+    return <AuthTransition title="ورود با موفقیت انجام شد" description="در حال انتقال امن به داشبورد عملیات هستید." />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -37,10 +38,7 @@ export default function LoginPage() {
     const result = await signIn(trimmed);
     setBusy(false);
 
-    if (result.ok) {
-      router.replace('/dashboard');
-      router.refresh();
-    } else {
+    if (!result.ok) {
       setError(result.error);
     }
   }

@@ -59,6 +59,8 @@ describe('StaffLoginPage full flow (fixture)', () => {
 
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/dashboard'));
     await waitFor(() => expect(mocks.establishSession).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('heading', { name: 'تأیید دومرحله‌ای کامل شد' })).toBeVisible();
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
 
     const [session] = mocks.establishSession.mock.calls[0] as [{
       accessToken: string;

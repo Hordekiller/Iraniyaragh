@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { AuthTransition } from '@/components/auth/AuthTransition';
 import { filterNavigationByPermissions, navigation } from '@/config/navigation';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useAdminPreferences } from '@/lib/preferences/AdminPreferencesProvider';
@@ -146,7 +147,12 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   }, [mobileMenuOpen]);
 
   if (!isAuthenticated) {
-    return null;
+    return (
+      <AuthTransition
+        title="نشست فعال یافت نشد"
+        description="برای حفاظت از پنل، در حال انتقال به صفحه ورود هستید."
+      />
+    );
   }
 
   const shellClass = [

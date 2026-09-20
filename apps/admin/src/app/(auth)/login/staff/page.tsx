@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Alert, Box, Button, TextField, Typography } from '@mui/material';
 import { useSyncExternalStore } from 'react';
 import { AuthSurface } from '@/components/auth/AuthSurface';
+import { AuthTransition } from '@/components/auth/AuthTransition';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { isFixtureAuthEnabled } from '@/lib/auth/staff-fixture-guard';
 import { createStaffAuth } from '@/lib/auth/staff-http';
@@ -61,7 +62,7 @@ export default function StaffLoginPage() {
   }, [state.phase, state.principal, controller, establishSession, router]);
 
   if (state.phase === 'authenticated') {
-    return null;
+    return <AuthTransition title="تأیید دومرحله‌ای کامل شد" description="در حال انتقال امن به داشبورد عملیات هستید." />;
   }
 
   return (
