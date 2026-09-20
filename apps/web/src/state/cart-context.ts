@@ -5,7 +5,7 @@ export type CartContextValue = {
   state: CommerceCartState
   api: CommerceApi
   reload: () => Promise<void>
-  add: (variantId: string, quantity?: number) => Promise<void>
+  add: (variantId: string, quantity?: number) => Promise<boolean>
   setQuantity: (variantId: string, quantity: number) => Promise<void>
   remove: (variantId: string) => Promise<void>
   clear: () => Promise<void>

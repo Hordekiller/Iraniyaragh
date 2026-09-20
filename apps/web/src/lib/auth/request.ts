@@ -14,6 +14,8 @@ export type RequestOptions = {
   /** Send credentialed (cookies) so refresh/CSRF cookies and CORS apply. */
   credentials?: RequestCredentials;
   headers?: Record<string, string>;
+  /** Explicit opt-in for successful endpoints whose contract is HTTP 204. */
+  allowNoContent?: boolean;
 };
 
 export const DEFAULT_TIMEOUT_MS = 15_000;
@@ -39,6 +41,7 @@ export async function jsonRequest<T>(
     timeoutMs = DEFAULT_TIMEOUT_MS,
     credentials = 'same-origin',
     headers,
+    allowNoContent = false,
   } = options;
 
   const controller = new AbortController();
@@ -78,8 +81,16 @@ export async function jsonRequest<T>(
     throw await authApiErrorFromResponse(response);
   }
 
+  if (allowNoContent && response.status === 204) {
+    return { data: undefined as T };
+  }
+
   const body = (await response.json().catch(() => null)) as unknown;
-  if (body && typeof body === 'object' && 'data' in (body as Record<string, unknown>)) {
+  if (
+    body &&
+    typeof body === 'object' &&
+    'data' in (body as Record<string, unknown>)
+  ) {
     return body as ApiSuccess<T>;
   }
 
@@ -99,16 +110,16 @@ export async function jsonRequest<T>(
 export function isApiSuccess<T>(value: unknown): value is ApiSuccess<T> {
   return Boolean(
     value &&
-      typeof value === 'object' &&
-      'data' in (value as Record<string, unknown>),
+    typeof value === 'object' &&
+    'data' in (value as Record<string, unknown>),
   );
 }
 
 export function isApiFailure(value: unknown): value is ApiFailure {
   return Boolean(
     value &&
-      typeof value === 'object' &&
-      typeof (value as ApiFailure).code === 'string' &&
-      typeof (value as ApiFailure).statusCode === 'number',
+    typeof value === 'object' &&
+    typeof (value as ApiFailure).code === 'string' &&
+    typeof (value as ApiFailure).statusCode === 'number',
   );
 }

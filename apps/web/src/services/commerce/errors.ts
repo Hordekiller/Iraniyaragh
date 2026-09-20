@@ -7,6 +7,12 @@ export function commerceErrorMessage(error: unknown): string {
     case 'AUTH_SESSION_INVALID':
     case 'AUTH_REAUTHENTICATION_REQUIRED':
       return 'نشست شما پایان یافته است. دوباره وارد شوید.'
+    case 'AUTH_CSRF_INVALID':
+      return 'نشست امن سبد منقضی شده است. دوباره تلاش کنید.'
+    case 'RATE_LIMITED':
+      return 'درخواست‌های زیادی ثبت شده است. کمی بعد دوباره تلاش کنید.'
+    case 'UPSTREAM_UNAVAILABLE':
+      return 'سرویس سبد خرید موقتاً در دسترس نیست. کمی بعد تلاش کنید.'
     case 'CART_QUANTITY_INVALID':
       return 'تعداد درخواستی با موجودی فعلی سازگار نیست. سبد را به‌روزرسانی کنید.'
     case 'SKU_NOT_FOUND':

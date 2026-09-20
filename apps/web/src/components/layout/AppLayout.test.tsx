@@ -55,7 +55,9 @@ describe('AppLayout', () => {
     )
 
     fireEvent.click(
-      await screen.findByRole('button', { name: 'ورود / ثبت‌نام' }),
+      await screen.findByRole('button', {
+        name: 'ورود با موبایل و ادامه خرید',
+      }),
     )
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument()

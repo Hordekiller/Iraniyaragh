@@ -7,7 +7,12 @@ import { CatalogFixtureClient } from '../services/catalog/fixtures'
 import { AuthProvider } from '../state/AuthProvider'
 import { CartProvider } from '../state/CartProvider'
 import { CatalogProvider } from '../state/CatalogProvider'
-import { commerceStub, signedInStore, testAuthProps } from '../test/commerce'
+import {
+  CART,
+  commerceStub,
+  signedInStore,
+  testAuthProps,
+} from '../test/commerce'
 import { ProductPage } from './ProductPage'
 
 function renderPage(store = signedInStore(), commerce = commerceStub()) {
@@ -35,7 +40,7 @@ function renderPage(store = signedInStore(), commerce = commerceStub()) {
 
 describe('ProductPage commerce', () => {
   it('adds the selected sellable variant, never the product id', async () => {
-    const addLine = vi.fn(async () => await commerceStub().getCart())
+    const addLine = vi.fn(async () => await commerceStub().getCart('customer'))
     const api = commerceStub({ addLine })
     renderPage(signedInStore(), api)
     fireEvent.click(
@@ -43,6 +48,7 @@ describe('ProductPage commerce', () => {
     )
     await waitFor(() =>
       expect(addLine).toHaveBeenCalledWith(
+        'customer',
         'variant-p-101',
         1,
         expect.stringMatching(/^cart-/),
@@ -52,15 +58,34 @@ describe('ProductPage commerce', () => {
       'به سبد خرید افزوده شد',
     )
   })
-  it('requests authentication instead of creating an anonymous local cart', async () => {
+  it('adds to the real Guest Cart without forcing early authentication', async () => {
     const api = commerceStub()
     renderPage(new MemorySessionStore(), api)
     fireEvent.click(
       await screen.findByRole('button', { name: 'افزودن به سبد خرید' }),
     )
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'برای افزودن به سبد خرید وارد شوید',
+    await waitFor(() =>
+      expect(api.addLine).toHaveBeenCalledWith(
+        'guest',
+        'variant-p-101',
+        1,
+        expect.stringMatching(/^cart-/),
+      ),
     )
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'به سبد خرید افزوده شد',
+    )
+  })
+  it('does not claim success while the server Cart is still initializing', async () => {
+    const api = commerceStub({
+      getCart: vi.fn(() => new Promise<typeof CART>(() => undefined)),
+    })
+    renderPage(new MemorySessionStore(), api)
+
+    expect(
+      await screen.findByRole('button', { name: 'در حال آماده‌سازی سبد…' }),
+    ).toBeDisabled()
+    expect(screen.queryByText('به سبد خرید افزوده شد')).not.toBeInTheDocument()
     expect(api.addLine).not.toHaveBeenCalled()
   })
   it('describes shipping honestly', async () => {

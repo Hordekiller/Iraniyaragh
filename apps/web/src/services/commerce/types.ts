@@ -1,4 +1,5 @@
 import type {
+  CartMergeResponse,
   CartView,
   CheckoutAddress,
   CheckoutOrder,
@@ -9,20 +10,29 @@ import type {
 
 export type CheckoutPreview = CheckoutPreviewResponse['data']
 export type CustomerOrderPage = CustomerOrderListResponse['data']
+export type CartMergeResult = CartMergeResponse['data']
+export type CartOwner = 'guest' | 'customer'
 
 export interface CommerceApi {
-  getCart(): Promise<CartView>
+  getCart(owner: CartOwner): Promise<CartView>
   addLine(
+    owner: CartOwner,
     variantId: string,
     quantity: number,
     idempotencyKey: string,
   ): Promise<CartView>
   setLine(
+    owner: CartOwner,
     variantId: string,
     quantity: number,
     idempotencyKey: string,
   ): Promise<CartView>
-  removeLine(variantId: string, idempotencyKey: string): Promise<CartView>
+  removeLine(
+    owner: CartOwner,
+    variantId: string,
+    idempotencyKey: string,
+  ): Promise<CartView>
+  mergeGuestCart(idempotencyKey: string): Promise<CartMergeResult>
   previewCheckout(address: CheckoutAddress): Promise<CheckoutPreview>
   createCheckout(
     address: CheckoutAddress,
@@ -33,12 +43,14 @@ export interface CommerceApi {
   getOrder(id: string): Promise<OrderDetail>
 }
 
-export type CartPhase = 'anonymous' | 'loading' | 'ready' | 'error'
+export type CartPhase = 'idle' | 'loading' | 'ready' | 'merging' | 'error'
 
 export type CommerceCartState = {
   cart: CartView
   phase: CartPhase
+  owner: CartOwner
   error: unknown | null
+  mergeWarnings: CartMergeResult['warnings']
   pendingVariantIds: string[]
 }
 

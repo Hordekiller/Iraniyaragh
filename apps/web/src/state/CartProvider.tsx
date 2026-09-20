@@ -48,7 +48,7 @@ export function CartProvider({
     () => ({
       state: snapshot,
       api: value.api,
-      reload: () => value.controller.load(),
+      reload: () => value.controller.retry(),
       add: (variantId: string, quantity = 1) =>
         value.controller.add(variantId, quantity),
       setQuantity: (variantId: string, quantity: number) =>
