@@ -21,24 +21,24 @@ day-to-day assignments.
 
 ## Current position
 
-| Gate                  | State                                  | Current evidence                                                                                                                                | Exit blocker                                                                            |
-| --------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `0.1` Foundation/Auth | Acceptance closed                      | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                              | private #114 acceptance                                                                 |
-| `0.2` Catalog         | Integrated foundation                  | Catalog/Admin/public discovery plus Product Media M1–M5 are merged through #240, including the real-infrastructure API publish-to-discovery E2E | Admin-UI publish acceptance, video processing and production storage/scanner acceptance |
-| `0.3` Inventory       | Protected HTTP foundation              | #222 inventory HTTP, #231 availability, #232 expiry batching and #246/#237 Checkout allocation are merged                                       | Admin operator UX, compensation/reconciliation UI and worker rollout                    |
-| `0.4` Commerce        | Authenticated Cart + live customer lifecycle | #235/#239/#241–#244/#251 Cart, #246/#237 Checkout-to-reserved-Order, #247/#238 Order reads and #268 authenticated Web binding | #269 guest runtime, anonymous Web handoff, commands, Payment and compensation            |
-| `0.5+`                | Not started as integrated gates        | Payment/Fulfillment persistence foundations only                                                                                                | Application workflows, provider evidence and all production operations                  |
+| Gate                  | State                                 | Current evidence                                                                                                                                                  | Exit blocker                                                                            |
+| --------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `0.1` Foundation/Auth | Acceptance closed                     | Auth runtime merged (#48/#49/#74/#50); #50/#91 closed 2026-09-11; #78 working agreement closed 2026-09-12 via #172                                                | private #114 acceptance                                                                 |
+| `0.2` Catalog         | Integrated foundation                 | Catalog/Admin/public discovery plus Product Media M1–M5 are merged through #240, including the real-infrastructure API publish-to-discovery E2E                   | Admin-UI publish acceptance, video processing and production storage/scanner acceptance |
+| `0.3` Inventory       | Protected HTTP foundation             | #222 inventory HTTP, #231 availability, #232 expiry batching and #246/#237 Checkout allocation are merged                                                         | Admin operator UX, compensation/reconciliation UI and worker rollout                    |
+| `0.4` Commerce        | Server Cart + live customer lifecycle | #235/#239/#241–#244/#251 authenticated Cart, #270/#269 Guest Cart, #246/#237 Checkout-to-reserved-Order, #247/#238 Order reads and #268 authenticated Web binding | Anonymous Web handoff, commands, Payment and compensation                               |
+| `0.5+`                | Not started as integrated gates       | Payment/Fulfillment persistence foundations only                                                                                                                  | Application workflows, provider evidence and all production operations                  |
 
 ## Active issue queue
 
-| Priority | Work                                   | State                                                      | Required reviewer focus                                                                                            | Exit action                                                                        |
-| -------: | -------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-|        1 | Guest Cart and Web binding             | #269 API/data/security implementation is under review; #268 authenticated Web commerce is merged | Verify token/TTL/merge, then bind anonymous ownership and OTP recovery in Web | Keep the Web follow-up independently reviewable; Cart exit needs browser evidence   |
-|        2 | Issue #237 / PR #246                   | Complete/merged                                            | independently approved serializable Checkout, privacy-safe contracts, DB constraints, rollback and replay evidence | Closed by protected squash merge `b53de29`                                         |
-|        3 | Issue #238 / PR #247                   | Complete/merged                                            | independently approved ownership/IDOR, staff permission, bounded queries and persistence-safe DTOs                 | Closed by protected squash merge `b220e01`                                         |
-|        4 | Issue #114                             | Private production acceptance                              | adapter/runtime exists; no secret/PII exposure and mutations fail closed                                           | Provision account/line/template/key; controlled provider-backed evidence           |
-|        5 | Discovery #126/#129 and telemetry #136 | Ready/backlog                                              | server-rendered pages, sitemap/robots/IndexNow and telemetry                                                       | Parallel work only when it does not displace the commerce critical path            |
-|        6 | Issue #213                             | External admin confirmation open                           | current PRs execute real Sonar scans and Quality Gates; `sonar` is not a required branch-protection context        | SonarCloud admin clears/confirms organization suspension, then protect the context |
+| Priority | Work                                   | State                                                                                                 | Required reviewer focus                                                                                            | Exit action                                                                        |
+| -------: | -------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+|        1 | Guest Cart Web binding                 | #270 closes #269 with the merged API/data/security runtime; #268 authenticated Web commerce is merged | Bind anonymous ownership and low-friction OTP recovery in Web                                                      | Keep the Web follow-up independently reviewable; Cart exit needs browser evidence  |
+|        2 | Issue #237 / PR #246                   | Complete/merged                                                                                       | independently approved serializable Checkout, privacy-safe contracts, DB constraints, rollback and replay evidence | Closed by protected squash merge `b53de29`                                         |
+|        3 | Issue #238 / PR #247                   | Complete/merged                                                                                       | independently approved ownership/IDOR, staff permission, bounded queries and persistence-safe DTOs                 | Closed by protected squash merge `b220e01`                                         |
+|        4 | Issue #114                             | Private production acceptance                                                                         | adapter/runtime exists; no secret/PII exposure and mutations fail closed                                           | Provision account/line/template/key; controlled provider-backed evidence           |
+|        5 | Discovery #126/#129 and telemetry #136 | Ready/backlog                                                                                         | server-rendered pages, sitemap/robots/IndexNow and telemetry                                                       | Parallel work only when it does not displace the commerce critical path            |
+|        6 | Issue #213                             | External admin confirmation open                                                                      | current PRs execute real Sonar scans and Quality Gates; `sonar` is not a required branch-protection context        | SonarCloud admin clears/confirms organization suspension, then protect the context |
 
 ## Resolved since the 2026-09-14 review
 
@@ -83,10 +83,11 @@ A real runtime defect is also fixed there: missing `esModuleInterop` made
 
 Cart contracts (#235), explicit User↔Customer ownership (#239), persistence
 (#241), authenticated read/add (#242), remove (#243) and absolute set (#244) are
-joined by #251 authenticated Cart correctness. #269 is the open opaque-token Guest
-Cart, rolling-expiry, abuse-limit, cleanup and audited-login-merge slice. #268 binds
-the authenticated Web Cart, Checkout and customer Order lifecycle to the live APIs;
-anonymous Web ownership and OTP merge recovery remain. Address/shipping quote,
+joined by #251 authenticated Cart correctness. #270 closes #269 with opaque-token
+Guest Cart ownership, rolling expiry, abuse limits, bounded cleanup and audited
+OTP-login merge. #268 binds the authenticated Web Cart, Checkout and customer Order
+lifecycle to the live APIs; anonymous Web ownership and OTP merge recovery remain.
+Address/shipping quote,
 reservation/Order creation and outbox persistence are delivered by #246/#237;
 dispatch and compensation are not.
 
@@ -175,9 +176,10 @@ Exit: one thin vertical journey is demonstrable; broad CRUD breadth is secondary
 
 ## Current 10 working-day direction
 
-1. Treat #251 as the merged customer Cart correctness baseline and #268 as the
-   authenticated Web baseline; land #269, then bind anonymous Cart plus OTP merge
-   with ownership, expiry and failure-recovery evidence.
+1. Treat #251 as the merged customer Cart correctness baseline, #270/#269 as the
+   merged Guest Cart API/security baseline and #268 as the authenticated Web
+   baseline; bind anonymous Cart plus OTP merge with ownership, expiry and
+   failure-recovery evidence.
 2. Treat merged #246/#237 as the atomic Checkout → reservation → immutable
    Order/outbox-persistence baseline.
 3. Treat merged #247/#238 customer Order queries and permissioned Admin queue/detail
@@ -192,8 +194,8 @@ Exit: one thin vertical journey is demonstrable; broad CRUD breadth is secondary
 
 1. #251 closes operation-scoped retention, side-effect-free reads and concurrent
    quantity/line-limit safety for authenticated Cart mutations.
-2. Complete and independently verify #269 guest token/TTL and explicit login merge.
-3. Then bind anonymous Web Cart and the OTP merge handoff; authenticated Cart is already
+2. Use merged #270/#269 as the guest token/TTL and explicit login-merge authority.
+3. Bind anonymous Web Cart and the OTP merge handoff; authenticated Cart is already
    live through #268 and fixtures remain explicit test/development adapters only.
 4. #246/#237 is merged: address validation, server shipping quote, Checkout
    repricing, deterministic allocation/reservation, immutable Order snapshot and
