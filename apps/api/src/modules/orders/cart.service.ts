@@ -9,21 +9,18 @@ import { Prisma } from '@prisma/client';
 import { createHash, randomInt } from 'node:crypto';
 import type { CartResponse } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
+import {
+  CART_EXPIRED_CLEANUP_BATCH,
+  CART_REPLAY_TTL_MS,
+  CART_RETRY_BASE_DELAY_MS,
+  CART_SERIALIZABLE_RETRIES,
+  CUSTOMER_CART_SCOPES,
+  MAX_CART_LINES,
+  MAX_CART_QUANTITY,
+} from './cart.constants';
 import { buildCartView, buildEmptyCartView, cartInclude } from './cart-view';
 
-const MAX_LINES = 100;
-const MAX_QUANTITY = 99;
 const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
-const MUTATION_TTL_MS = 24 * 60 * 60 * 1000;
-const EXPIRED_CLEANUP_BATCH = 100;
-const SERIALIZABLE_RETRIES = 5;
-const RETRY_BASE_DELAY_MS = 5;
-
-const CART_SCOPES = {
-  add: 'cart.add:/api/v1/cart/lines',
-  set: 'cart.set:/api/v1/cart/lines/:variantId',
-  remove: 'cart.remove:/api/v1/cart/lines/:variantId',
-} as const;
 
 type CartMutationResult = {
   cartId: string | null;
@@ -58,7 +55,7 @@ export class CartService {
 
     return this.runMutation(
       customer.id,
-      CART_SCOPES.add,
+      CUSTOMER_CART_SCOPES.add,
       idempotencyKey,
       { variantId, quantity: input.quantity },
       (tx) =>
@@ -81,7 +78,7 @@ export class CartService {
 
     return this.runMutation(
       customer.id,
-      CART_SCOPES.remove,
+      CUSTOMER_CART_SCOPES.remove,
       idempotencyKey,
       { variantId },
       async (tx, now) => {
@@ -123,7 +120,7 @@ export class CartService {
 
     return this.runMutation(
       customer.id,
-      CART_SCOPES.set,
+      CUSTOMER_CART_SCOPES.set,
       idempotencyKey,
       { variantId, quantity },
       (tx) => this.writeLine(tx, customer.id, variantId, () => quantity),
@@ -147,7 +144,7 @@ export class CartService {
     });
     if (
       !line &&
-      (await tx.cartItem.count({ where: { cartId: cart.id } })) >= MAX_LINES
+      (await tx.cartItem.count({ where: { cartId: cart.id } })) >= MAX_CART_LINES
     ) {
       throw lineLimitExceeded();
     }
@@ -173,7 +170,7 @@ export class CartService {
 
   private async runMutation(
     customerId: string,
-    scope: (typeof CART_SCOPES)[keyof typeof CART_SCOPES],
+    scope: (typeof CUSTOMER_CART_SCOPES)[keyof typeof CUSTOMER_CART_SCOPES],
     idempotencyKey: string,
     payload: Record<string, unknown>,
     operation: (
@@ -222,7 +219,7 @@ export class CartService {
               keyHash,
               fingerprint,
               responseJson: result.response as unknown as Prisma.InputJsonValue,
-              expiresAt: new Date(now.getTime() + MUTATION_TTL_MS),
+              expiresAt: new Date(now.getTime() + CART_REPLAY_TTL_MS),
             },
           });
           return result.response;
@@ -274,7 +271,7 @@ export class CartService {
       where: { customerId, expiresAt: { lte: now } },
       orderBy: [{ expiresAt: 'asc' }, { id: 'asc' }],
       select: { id: true },
-      take: EXPIRED_CLEANUP_BATCH,
+      take: CART_EXPIRED_CLEANUP_BATCH,
     });
     if (expired.length > 0) {
       await tx.cartMutation.deleteMany({
@@ -336,12 +333,12 @@ export class CartService {
   private async withSerializableRetry<T>(
     operation: () => Promise<T>,
   ): Promise<T> {
-    for (let attempt = 1; attempt <= SERIALIZABLE_RETRIES; attempt += 1) {
+    for (let attempt = 1; attempt <= CART_SERIALIZABLE_RETRIES; attempt += 1) {
       try {
         return await operation();
       } catch (error) {
         if (!isRetryableContention(error)) throw error;
-        if (attempt === SERIALIZABLE_RETRIES) {
+        if (attempt === CART_SERIALIZABLE_RETRIES) {
           throw new ConflictException({
             code: 'CONFLICT',
             message:
@@ -386,7 +383,7 @@ function normalizeVariantId(value: string): string {
 }
 
 function validateQuantity(quantity: number): void {
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) {
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_CART_QUANTITY) {
     throw new UnprocessableEntityException({
       code: 'CART_QUANTITY_INVALID',
       message: 'Quantity must be between 1 and 99.',
@@ -423,10 +420,10 @@ function isRetryableContention(error: unknown): boolean {
 }
 
 async function waitForRetry(attempt: number): Promise<void> {
-  const exponential = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+  const exponential = CART_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
   const delayMs = Math.min(
     100,
-    exponential + randomInt(RETRY_BASE_DELAY_MS + 1),
+    exponential + randomInt(CART_RETRY_BASE_DELAY_MS + 1),
   );
   await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 }

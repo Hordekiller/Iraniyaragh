@@ -16,7 +16,7 @@ export function createApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('auth', 'Authentication and token lifecycle')
     .addTag('catalog', 'Products, categories and variants')
     .addTag('inventory', 'Stocks and ledgers')
-    .addTag('cart', 'Authenticated customer cart')
+    .addTag('cart', 'Anonymous and authenticated customer carts')
     .addTag('orders', 'Order lifecycle state machine')
     .addTag('payments', 'Payment lifecycle state machine')
     .addTag('customers', 'Customer records')
