@@ -2,7 +2,11 @@ export const RATE_LIMIT_KEY_VERSION = 1;
 
 export const RATE_LIMITER_UNAVAILABLE = 'UPSTREAM_UNAVAILABLE';
 
-export type RateLimitKind = 'otp-request' | 'otp-verify' | 'refresh';
+export type RateLimitKind =
+  | 'otp-request'
+  | 'otp-verify'
+  | 'refresh'
+  | 'guest-cart';
 
 /**
  * Fixed-window limits from AUTH_CONTRACT §9. Every key is versioned and, for
@@ -29,6 +33,18 @@ export const RATE_LIMIT_DEFINITIONS = Object.freeze({
   'staff-mfa:ip': Object.freeze({ limit: 5, windowSeconds: 300 }),
   /** Token refresh attempts per safe IP hash (AUTH_CONTRACT §9). */
   'refresh:ip': Object.freeze({ limit: 30, windowSeconds: 60 }),
+  /** Anonymous Cart mutations per trusted proxy-derived IP. */
+  'guest-cart:ip-minute': Object.freeze({ limit: 60, windowSeconds: 60 }),
+  /** Anonymous Cart mutations per IP over a wider abuse-control window. */
+  'guest-cart:ip-hour': Object.freeze({
+    limit: 120,
+    windowSeconds: 3_600,
+  }),
+  /** Guest-session issuance per trusted proxy-derived IP. */
+  'guest-cart:bootstrap-ip-hour': Object.freeze({
+    limit: 120,
+    windowSeconds: 3_600,
+  }),
 } as const);
 
 export type RateLimitDefinition = Readonly<{ limit: number; windowSeconds: number }>;

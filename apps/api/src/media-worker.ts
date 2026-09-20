@@ -5,12 +5,14 @@ import { AppModule } from './app.module';
 import type { EnvironmentVariables } from './config/environment';
 import { ProductMediaImageProcessor } from './modules/media/image-processor.service';
 import { ProductMediaCleanupService } from './modules/media/media-cleanup.service';
+import { GuestCartService } from './modules/orders/guest-cart.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
   const config = app.get(ConfigService<EnvironmentVariables, true>);
   const processor = app.get(ProductMediaImageProcessor);
   const cleanup = app.get(ProductMediaCleanupService);
+  const guestCarts = app.get(GuestCartService);
   const connection = { url: config.get('REDIS_URL', { infer: true }) };
   const worker = new Worker<{ mediaId: string }>(
     'product-media-processing',
@@ -37,8 +39,34 @@ async function bootstrap(): Promise<void> {
     },
     { connection, prefix: 'iranyaragh', concurrency: 1 },
   );
+  const commerceMaintenanceQueue = new Queue('commerce-maintenance', {
+    connection,
+    prefix: 'iranyaragh',
+  });
+  await commerceMaintenanceQueue.upsertJobScheduler(
+    'guest-cart-cleanup',
+    { every: 15 * 60 * 1000 },
+    {
+      name: 'guest-cart-cleanup',
+      data: {},
+      opts: { removeOnComplete: { count: 100 }, removeOnFail: false },
+    },
+  );
+  const commerceMaintenanceWorker = new Worker(
+    'commerce-maintenance',
+    async job => {
+      if (job.name !== 'guest-cart-cleanup') {
+        throw new Error('Unsupported commerce maintenance job.');
+      }
+      await guestCarts.sweepExpired();
+    },
+    { connection, prefix: 'iranyaragh', concurrency: 1 },
+  );
   worker.on('error', () => process.stderr.write('Product media worker infrastructure error.\n'));
   maintenanceWorker.on('error', () => process.stderr.write('Product media maintenance worker error.\n'));
+  commerceMaintenanceWorker.on('error', () =>
+    process.stderr.write('Commerce maintenance worker error.\n'),
+  );
 
   let closing = false;
   const close = async () => {
@@ -46,7 +74,9 @@ async function bootstrap(): Promise<void> {
     closing = true;
     await worker.close();
     await maintenanceWorker.close();
+    await commerceMaintenanceWorker.close();
     await maintenanceQueue.close();
+    await commerceMaintenanceQueue.close();
     await app.close();
   };
   process.once('SIGTERM', () => void close());

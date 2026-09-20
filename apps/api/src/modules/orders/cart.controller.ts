@@ -24,6 +24,11 @@ import type { CartResponse } from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { CartLineDto } from './cart.dto';
+import {
+  cartIdempotencyHeader,
+  normalizeCartIdempotencyKey,
+  normalizeCartVariantId,
+} from './cart-http';
 import { openApiCart } from './cart.openapi';
 import { CartService } from './cart.service';
 
@@ -52,7 +57,7 @@ export class CartController {
 
   @Post('lines')
   @ApiOperation({ summary: 'Add quantity to one authenticated cart line' })
-  @ApiHeader(idempotencyHeader())
+  @ApiHeader(cartIdempotencyHeader())
   @ApiBody({ schema: openApiCart.mutationBody })
   @ApiCreatedResponse({ schema: openApiCart.response })
   @ApiResponse({ status: 400, schema: openApiCart.failures.validation })
@@ -69,13 +74,13 @@ export class CartController {
     return this.cart.addForUser(
       principal.userId,
       body,
-      normalizeIdempotencyKey(key),
+      normalizeCartIdempotencyKey(key),
     );
   }
 
   @Put('lines/:variantId')
   @ApiOperation({ summary: 'Set the absolute quantity of one cart line' })
-  @ApiHeader(idempotencyHeader())
+  @ApiHeader(cartIdempotencyHeader())
   @ApiParam({
     name: 'variantId',
     schema: { type: 'string', minLength: 1, maxLength: 191 },
@@ -94,7 +99,7 @@ export class CartController {
     @Param('variantId') variantId: string,
     @Body() body: CartLineDto,
   ): Promise<CartResponse> {
-    const normalizedVariantId = normalizeVariantId(variantId);
+    const normalizedVariantId = normalizeCartVariantId(variantId);
     if (body.variantId !== normalizedVariantId) {
       throw new BadRequestException({
         code: 'INVALID_REQUEST',
@@ -105,13 +110,13 @@ export class CartController {
       principal.userId,
       normalizedVariantId,
       body.quantity,
-      normalizeIdempotencyKey(key),
+      normalizeCartIdempotencyKey(key),
     );
   }
 
   @Delete('lines/:variantId')
   @ApiOperation({ summary: 'Remove one authenticated cart line' })
-  @ApiHeader(idempotencyHeader())
+  @ApiHeader(cartIdempotencyHeader())
   @ApiParam({
     name: 'variantId',
     schema: { type: 'string', minLength: 1, maxLength: 191 },
@@ -128,46 +133,8 @@ export class CartController {
   ): Promise<CartResponse> {
     return this.cart.removeForUser(
       principal.userId,
-      normalizeVariantId(variantId),
-      normalizeIdempotencyKey(key),
+      normalizeCartVariantId(variantId),
+      normalizeCartIdempotencyKey(key),
     );
   }
-}
-
-function idempotencyHeader() {
-  return {
-    name: 'Idempotency-Key',
-    required: true,
-    description: 'Opaque operation-scoped retry key, maximum 128 characters.',
-    schema: { type: 'string', minLength: 1, maxLength: 128 },
-  } as const;
-}
-
-function normalizeIdempotencyKey(value: string | undefined): string {
-  const key = value?.trim();
-  if (!key || key.length > 128 || hasControlCharacter(key)) {
-    throw new BadRequestException({
-      code: 'INVALID_REQUEST',
-      message: 'A valid Idempotency-Key of at most 128 characters is required.',
-    });
-  }
-  return key;
-}
-
-function normalizeVariantId(value: string): string {
-  const variantId = value.trim();
-  if (!variantId || variantId.length > 191 || hasControlCharacter(variantId)) {
-    throw new BadRequestException({
-      code: 'INVALID_REQUEST',
-      message: 'A valid variantId is required.',
-    });
-  }
-  return variantId;
-}
-
-function hasControlCharacter(value: string): boolean {
-  return [...value].some((character) => {
-    const codePoint = character.codePointAt(0) ?? 0;
-    return codePoint < 32 || codePoint === 127;
-  });
 }

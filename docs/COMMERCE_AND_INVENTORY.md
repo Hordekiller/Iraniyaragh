@@ -63,6 +63,40 @@ Expired/cancelled reservations release available stock. Fulfillment consumes the
 
 Reservation writes are idempotent via an optional `idempotency-key` header (`StockReservation.idempotencyKey`); replaying the same key with the same payload returns the original reservation, while a conflicting payload is rejected. Expiry runs in a serializable transaction and makes each reservation expire exactly once, restoring `available` stock.
 
+## Cart runtime
+
+Authenticated Carts are owned by `Customer.id`. Anonymous Carts use a random
+256-bit browser token transported only in a first-party HttpOnly, Secure-in-
+staging/production, SameSite=Strict cookie; persistence contains only its SHA-256
+digest. A database constraint permits exactly one owner kind per Cart.
+
+Anonymous Cart reads and writes use `/api/v1/guest-cart`. Before the first mutation,
+the Web client calls trusted-origin `POST /api/v1/guest-cart/session`, which issues
+random token and separate client-readable CSRF cookies without creating database
+state. Every mutation then requires the exact double-submit `X-CSRF-Token` proof;
+same-key concurrent first mutations converge on the one cookie-owned Cart.
+Session issuance and anonymous writes consume fail-closed Redis/IP limits and expose
+stable `429 RATE_LIMITED` and `503 UPSTREAM_UNAVAILABLE` failures.
+
+The server refreshes a 24-hour idle deadline on valid activity; unknown, malformed
+or expired ownership returns an empty Cart without revealing whether another Cart
+exists. A bounded 15-minute maintenance job deletes expired guest owners and their
+cascading lines/replay records, rechecking the deadline at deletion to preserve a
+concurrent refresh. Prices, availability and totals are always recalculated from
+server data.
+
+Both owner types enforce 99 units per line, 100 distinct lines, operation-scoped
+hashed `Idempotency-Key` replay and serializable contention retry. Adding to a Cart
+never creates an Inventory reservation.
+
+After successful Customer OTP authentication, `POST /api/v1/cart/merge-guest`
+merges the anonymous Cart into the Customer Cart in one serializable transaction.
+Equal variants are summed and capped at 99; capacity conflicts return stable
+`QUANTITY_CAPPED` or `LINE_LIMIT_REACHED` warnings. The guest owner is atomically
+invalidated, the browser cookies are cleared and a privacy-safe audit event is
+recorded. A same-key retry can replay the stored response even when the successful
+response already cleared the guest cookies. Checkout remains Customer-OTP-only.
+
 ## Checkout runtime
 
 The authenticated Checkout boundary exposes:

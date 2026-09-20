@@ -914,15 +914,20 @@ model Customer {
 }
 
 model Cart {
-  id             String          @id @default(cuid())
-  customerId     String          @unique
-  version        Int             @default(1)
-  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id             String              @id @default(cuid())
+  customerId     String?             @unique
+  guestTokenHash String?             @unique @db.Char(64)
+  guestExpiresAt DateTime?
+  version        Int                 @default(1)
+  customer       Customer?           @relation(fields: [customerId], references: [id], onDelete: Cascade)
   items          CartItem[]
   mutations      CartMutation[]
+  guestMutations GuestCartMutation[]
   shippingQuotes ShippingQuote[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([guestExpiresAt])
 }
 
 model CartItem {
@@ -940,21 +945,36 @@ model CartItem {
 }
 
 model CartMutation {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   cartId         String?
   customerId     String
-  scope          String    @db.VarChar(100)
+  scope          String   @db.VarChar(100)
   idempotencyKey String?
-  keyHash        String?   @db.Char(64)
-  fingerprint    String    @db.VarChar(64)
+  keyHash        String?  @db.Char(64)
+  fingerprint    String   @db.VarChar(64)
   responseJson   Json
   expiresAt      DateTime
-  createdAt      DateTime  @default(now())
-  cart           Cart?     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  cart           Cart?    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@unique([customerId, idempotencyKey])
   @@unique([customerId, scope, keyHash])
+  @@index([expiresAt])
+}
+
+model GuestCartMutation {
+  id           String   @id @default(cuid())
+  cartId       String
+  scope        String   @db.VarChar(100)
+  keyHash      String   @db.Char(64)
+  fingerprint  String   @db.VarChar(64)
+  responseJson Json
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  cart         Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, scope, keyHash])
   @@index([expiresAt])
 }
 
