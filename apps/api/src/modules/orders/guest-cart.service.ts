@@ -3,10 +3,8 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { createHash, randomInt } from 'node:crypto';
 import type {
   CartMergeResponse,
   CartMergeWarning,
@@ -17,17 +15,23 @@ import { AuditLogService } from '../audit/audit-log.service';
 import {
   CART_EXPIRED_CLEANUP_BATCH,
   CART_REPLAY_TTL_MS,
-  CART_RETRY_BASE_DELAY_MS,
-  CART_SERIALIZABLE_RETRIES,
   CUSTOMER_CART_SCOPES,
   GUEST_CART_IDLE_TTL_MS,
   GUEST_CART_SCOPES,
   MAX_CART_LINES,
   MAX_CART_QUANTITY,
 } from './cart.constants';
+import {
+  cartLineLimitExceeded,
+  cleanupCustomerCartMutations,
+  hashCartValue,
+  normalizeCartMutationKey,
+  normalizeCartServiceVariantId,
+  runCartSerializable,
+  validateCartQuantity,
+} from './cart-runtime';
 import { buildCartView, buildEmptyCartView, cartInclude } from './cart-view';
 
-const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 
 type GuestMutationResult = Readonly<{
@@ -59,7 +63,7 @@ export class GuestCartService {
     if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 500) {
       throw new RangeError('Guest Cart cleanup batch size must be 1..500.');
     }
-    return this.withSerializableRetry(() =>
+    return runCartSerializable(() =>
       this.prisma.$transaction(
         async (tx) => {
           const candidates = await tx.cart.findMany({
@@ -95,7 +99,7 @@ export class GuestCartService {
     }
     requireTokenHash(tokenHash);
 
-    return this.withSerializableRetry(() =>
+    return runCartSerializable(() =>
       this.prisma.$transaction(
         async (tx) => {
           const now = new Date();
@@ -139,13 +143,13 @@ export class GuestCartService {
     input: { variantId: string; quantity: number },
     key: string,
   ): Promise<GuestMutationResult> {
-    const variantId = normalizeVariantId(input.variantId);
-    validateQuantity(input.quantity);
+    const variantId = normalizeCartServiceVariantId(input.variantId);
+    validateCartQuantity(input.quantity);
     return this.runGuestMutation(
       currentTokenHash,
       replacementTokenHashes,
       GUEST_CART_SCOPES.add,
-      normalizeIdempotencyKey(key),
+      normalizeCartMutationKey(key),
       { variantId, quantity: input.quantity },
       (tx, cartId, now) =>
         this.writeLine(
@@ -168,13 +172,13 @@ export class GuestCartService {
     quantity: number,
     key: string,
   ): Promise<GuestMutationResult> {
-    const variantId = normalizeVariantId(variantIdInput);
-    validateQuantity(quantity);
+    const variantId = normalizeCartServiceVariantId(variantIdInput);
+    validateCartQuantity(quantity);
     return this.runGuestMutation(
       currentTokenHash,
       replacementTokenHashes,
       GUEST_CART_SCOPES.set,
-      normalizeIdempotencyKey(key),
+      normalizeCartMutationKey(key),
       { variantId, quantity },
       (tx, cartId, now) =>
         this.writeLine(tx, cartId, variantId, () => quantity, now),
@@ -187,12 +191,12 @@ export class GuestCartService {
     variantIdInput: string,
     key: string,
   ): Promise<GuestMutationResult> {
-    const variantId = normalizeVariantId(variantIdInput);
+    const variantId = normalizeCartServiceVariantId(variantIdInput);
     return this.runGuestMutation(
       currentTokenHash,
       replacementTokenHashes,
       GUEST_CART_SCOPES.remove,
-      normalizeIdempotencyKey(key),
+      normalizeCartMutationKey(key),
       { variantId },
       async (tx, cartId, now) => {
         const deleted = await tx.cartItem.deleteMany({
@@ -219,7 +223,7 @@ export class GuestCartService {
     requestId: string,
   ): Promise<CartMergeResponse> {
     if (guestTokenHash !== null) requireTokenHash(guestTokenHash);
-    const idempotencyKey = normalizeIdempotencyKey(key);
+    const idempotencyKey = normalizeCartMutationKey(key);
     const customer = await this.prisma.customer.findUnique({
       where: { userId },
       select: { id: true },
@@ -232,16 +236,16 @@ export class GuestCartService {
     }
 
     const scope = CUSTOMER_CART_SCOPES.mergeGuest;
-    const keyHash = hash(idempotencyKey);
-    const fingerprint = hash(
+    const keyHash = hashCartValue(idempotencyKey);
+    const fingerprint = hashCartValue(
       JSON.stringify({ scope, payload: { guestTokenHash } }),
     );
 
-    return this.withSerializableRetry(() =>
+    return runCartSerializable(() =>
       this.prisma.$transaction(
         async (tx) => {
           const now = new Date();
-          await this.cleanupCustomerMutations(tx, customer.id, now);
+          await cleanupCustomerCartMutations(tx, customer.id, now);
           const prior = await tx.cartMutation.findUnique({
             where: {
               customerId_scope_keyHash: {
@@ -425,10 +429,10 @@ export class GuestCartService {
       });
     }
     replacementTokenHashes.forEach(requireTokenHash);
-    const keyHash = hash(idempotencyKey);
-    const fingerprint = hash(JSON.stringify({ scope, payload }));
+    const keyHash = hashCartValue(idempotencyKey);
+    const fingerprint = hashCartValue(JSON.stringify({ scope, payload }));
 
-    return this.withSerializableRetry(() =>
+    return runCartSerializable(() =>
       this.prisma.$transaction(
         async (tx) => {
           const now = new Date();
@@ -560,10 +564,10 @@ export class GuestCartService {
       !line &&
       (await tx.cartItem.count({ where: { cartId } })) >= MAX_CART_LINES
     ) {
-      throw lineLimitExceeded();
+      throw cartLineLimitExceeded();
     }
     const quantity = resolveQuantity(line?.quantity ?? null);
-    validateQuantity(quantity);
+    validateCartQuantity(quantity);
     if (line?.quantity !== quantity) {
       await tx.cartItem.upsert({
         where: { cartId_variantId: { cartId, variantId } },
@@ -632,91 +636,6 @@ export class GuestCartService {
     }
   }
 
-  private async cleanupCustomerMutations(
-    tx: Prisma.TransactionClient,
-    customerId: string,
-    now: Date,
-  ): Promise<void> {
-    const expired = await tx.cartMutation.findMany({
-      where: { customerId, expiresAt: { lte: now } },
-      orderBy: [{ expiresAt: 'asc' }, { id: 'asc' }],
-      select: { id: true },
-      take: CART_EXPIRED_CLEANUP_BATCH,
-    });
-    if (expired.length > 0) {
-      await tx.cartMutation.deleteMany({
-        where: { id: { in: expired.map(({ id }) => id) } },
-      });
-    }
-  }
-
-  private async withSerializableRetry<T>(
-    operation: () => Promise<T>,
-  ): Promise<T> {
-    for (
-      let attempt = 1;
-      attempt <= CART_SERIALIZABLE_RETRIES;
-      attempt += 1
-    ) {
-      try {
-        return await operation();
-      } catch (error) {
-        if (!isRetryableContention(error)) throw error;
-        if (attempt === CART_SERIALIZABLE_RETRIES) {
-          throw new ConflictException({
-            code: 'CONFLICT',
-            message:
-              'Cart changed concurrently; retry with the same idempotency key.',
-          });
-        }
-        await waitForRetry(attempt);
-      }
-    }
-    throw new Error('Unreachable guest Cart retry state.');
-  }
-}
-
-function normalizeIdempotencyKey(value: string): string {
-  const normalized = value.trim();
-  if (
-    normalized.length === 0 ||
-    normalized.length > IDEMPOTENCY_KEY_MAX_LENGTH ||
-    hasControlCharacter(normalized)
-  ) {
-    throw new BadRequestException({
-      code: 'INVALID_REQUEST',
-      message: 'A valid Idempotency-Key of at most 128 characters is required.',
-    });
-  }
-  return normalized;
-}
-
-function normalizeVariantId(value: string): string {
-  const normalized = value.trim();
-  if (
-    normalized.length === 0 ||
-    normalized.length > 191 ||
-    hasControlCharacter(normalized)
-  ) {
-    throw new BadRequestException({
-      code: 'INVALID_REQUEST',
-      message: 'A valid variantId is required.',
-    });
-  }
-  return normalized;
-}
-
-function validateQuantity(quantity: number): void {
-  if (
-    !Number.isInteger(quantity) ||
-    quantity < 1 ||
-    quantity > MAX_CART_QUANTITY
-  ) {
-    throw new UnprocessableEntityException({
-      code: 'CART_QUANTITY_INVALID',
-      message: 'Quantity must be between 1 and 99.',
-    });
-  }
 }
 
 function requireTokenHash(value: string): void {
@@ -728,46 +647,9 @@ function requireTokenHash(value: string): void {
   }
 }
 
-function lineLimitExceeded(): ConflictException {
-  return new ConflictException({
-    code: 'CART_LINE_LIMIT_EXCEEDED',
-    message: 'Cart line limit exceeded.',
-  });
-}
-
 function idempotencyConflict(): ConflictException {
   return new ConflictException({
     code: 'IDEMPOTENCY_CONFLICT',
     message: 'Idempotency key payload conflict.',
   });
-}
-
-function hash(value: string): string {
-  return createHash('sha256').update(value).digest('hex');
-}
-
-function hasControlCharacter(value: string): boolean {
-  return [...value].some((character) => {
-    const codePoint = character.codePointAt(0) ?? 0;
-    return codePoint < 32 || codePoint === 127;
-  });
-}
-
-function isRetryableContention(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    ((error as { code?: unknown }).code === 'P2034' ||
-      (error as { code?: unknown }).code === 'P2002')
-  );
-}
-
-async function waitForRetry(attempt: number): Promise<void> {
-  const exponential = CART_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
-  const delayMs = Math.min(
-    100,
-    exponential + randomInt(CART_RETRY_BASE_DELAY_MS + 1),
-  );
-  await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 }
