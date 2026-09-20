@@ -35,7 +35,7 @@ function renderPage(store = signedInStore(), commerce = commerceStub()) {
 
 describe('ProductPage commerce', () => {
   it('adds the selected sellable variant, never the product id', async () => {
-    const addLine = vi.fn(async () => await commerceStub().getCart())
+    const addLine = vi.fn(async () => await commerceStub().getCart('customer'))
     const api = commerceStub({ addLine })
     renderPage(signedInStore(), api)
     fireEvent.click(
@@ -43,6 +43,7 @@ describe('ProductPage commerce', () => {
     )
     await waitFor(() =>
       expect(addLine).toHaveBeenCalledWith(
+        'customer',
         'variant-p-101',
         1,
         expect.stringMatching(/^cart-/),
@@ -52,16 +53,23 @@ describe('ProductPage commerce', () => {
       'به سبد خرید افزوده شد',
     )
   })
-  it('requests authentication instead of creating an anonymous local cart', async () => {
+  it('adds to the real Guest Cart without forcing early authentication', async () => {
     const api = commerceStub()
     renderPage(new MemorySessionStore(), api)
     fireEvent.click(
       await screen.findByRole('button', { name: 'افزودن به سبد خرید' }),
     )
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'برای افزودن به سبد خرید وارد شوید',
+    await waitFor(() =>
+      expect(api.addLine).toHaveBeenCalledWith(
+        'guest',
+        'variant-p-101',
+        1,
+        expect.stringMatching(/^cart-/),
+      ),
     )
-    expect(api.addLine).not.toHaveBeenCalled()
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'به سبد خرید افزوده شد',
+    )
   })
   it('describes shipping honestly', async () => {
     renderPage()

@@ -1,5 +1,14 @@
 import { Link } from 'react-router-dom'
-import { Minus, Plus, RefreshCw, ShoppingBag, Trash2 } from 'lucide-react'
+import {
+  Info,
+  LogIn,
+  Minus,
+  Plus,
+  RefreshCw,
+  ShoppingBag,
+  Trash2,
+  TriangleAlert,
+} from 'lucide-react'
 import { useCart } from '../state/cart-context'
 import { useAuth } from '../state/auth-context'
 import { formatToman, toPersianDigits } from '../lib/format'
@@ -12,21 +21,7 @@ export function CartPage() {
   const lines = state.cart.lines
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0)
 
-  if (auth.state.phase !== 'authenticated') {
-    return (
-      <CommerceNotice
-        title="برای مشاهده سبد خرید وارد شوید"
-        description="سبد خرید روی حساب شما و با قیمت و موجودی لحظه‌ای نگهداری می‌شود."
-        action={
-          <button type="button" onClick={auth.open} className={primaryButton}>
-            ورود / ثبت‌نام
-          </button>
-        }
-      />
-    )
-  }
-
-  if (state.phase === 'loading') {
+  if (state.phase === 'idle' || state.phase === 'loading') {
     return (
       <div
         className="mx-auto max-w-[1280px] px-4 py-20 text-center text-slate-500"
@@ -35,6 +30,28 @@ export function CartPage() {
       >
         در حال دریافت سبد خرید…
       </div>
+    )
+  }
+
+  if (state.phase === 'merging' && lines.length === 0) {
+    return (
+      <CommerceNotice
+        title="در حال اتصال سبد به حساب شما"
+        description="پس از ورود با موبایل، کالاهای سبد مهمان با سبد حساب شما ادغام می‌شوند."
+        action={
+          <span
+            className={`${primaryButton} cursor-wait opacity-70`}
+            role="status"
+            aria-live="polite"
+          >
+            <RefreshCw
+              size={16}
+              className="animate-spin motion-reduce:animate-none"
+            />{' '}
+            در حال ادغام…
+          </span>
+        }
+      />
     )
   }
 
@@ -88,11 +105,64 @@ export function CartPage() {
         <button
           type="button"
           onClick={() => void clear()}
-          className="text-sm font-bold text-red-700 hover:text-red-800"
+          disabled={state.phase === 'merging'}
+          className="text-sm font-bold text-red-700 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           حذف همه
         </button>
       </div>
+
+      {state.owner === 'guest' && auth.state.phase !== 'authenticated' && (
+        <div className="mt-5 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-7 text-amber-950">
+          <Info
+            className="mt-1 shrink-0 text-amber-700"
+            size={18}
+            aria-hidden="true"
+          />
+          <p>
+            این سبد به‌صورت امن روی سرور و برای همین مرورگر نگهداری می‌شود. فقط
+            هنگام ادامه خرید، ورود سریع با شماره موبایل لازم است و کالاها خودکار
+            به حساب شما منتقل می‌شوند.
+          </p>
+        </div>
+      )}
+
+      {state.phase === 'merging' && (
+        <div
+          className="mt-5 flex items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm font-bold text-sky-900"
+          role="status"
+          aria-live="polite"
+        >
+          <RefreshCw
+            size={17}
+            className="shrink-0 animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+          در حال ادغام امن سبد مهمان با حساب شما…
+        </div>
+      )}
+
+      {state.mergeWarnings.length > 0 && (
+        <div
+          className="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+          role="status"
+          aria-live="polite"
+        >
+          <p className="flex items-center gap-2 font-black">
+            <TriangleAlert size={17} aria-hidden="true" />
+            سبدها ادغام شدند؛ چند مورد نیاز به توجه دارد
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pr-5 leading-7">
+            {state.mergeWarnings.map((warning) => (
+              <li key={`${warning.variantId}:${warning.code}`}>
+                {warning.code === 'QUANTITY_CAPPED'
+                  ? 'تعداد یکی از کالاهای مشترک به سقف ۹۹ عدد رسید.'
+                  : 'به‌دلیل سقف ۱۰۰ ردیف، یکی از کالاهای سبد مهمان اضافه نشد.'}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {Boolean(state.error) && (
         <div
@@ -106,7 +176,10 @@ export function CartPage() {
             onClick={() => void reload()}
             className="inline-flex items-center gap-2 underline"
           >
-            <RefreshCw size={15} /> به‌روزرسانی سبد
+            <RefreshCw size={15} />
+            {auth.state.phase === 'authenticated' && state.owner === 'guest'
+              ? 'تلاش دوباره برای ادغام'
+              : 'به‌روزرسانی سبد'}
           </button>
         </div>
       )}
@@ -140,7 +213,7 @@ export function CartPage() {
                   </div>
                   <button
                     type="button"
-                    disabled={pending}
+                    disabled={pending || state.phase === 'merging'}
                     onClick={() => void remove(line.variantId)}
                     aria-label={`حذف ${line.title}`}
                     className="h-9 w-9 shrink-0 rounded-full text-red-700 hover:bg-red-50 disabled:opacity-50"
@@ -160,7 +233,7 @@ export function CartPage() {
                       type="button"
                       disabled={
                         pending ||
-                        line.quantity >= line.available ||
+                        state.phase === 'merging' ||
                         line.quantity >= 99
                       }
                       onClick={() =>
@@ -179,7 +252,7 @@ export function CartPage() {
                     </span>
                     <button
                       type="button"
-                      disabled={pending}
+                      disabled={pending || state.phase === 'merging'}
                       onClick={() =>
                         void setQuantity(line.variantId, line.quantity - 1)
                       }
@@ -215,12 +288,33 @@ export function CartPage() {
               قیمت، موجودی و هزینه ارسال در مرحله بعد دوباره توسط سرور بررسی
               می‌شود.
             </p>
-            <Link
-              to={ROUTES.checkout}
-              className="mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-            >
-              ادامه فرایند خرید
-            </Link>
+            {state.owner === 'customer' ? (
+              <Link
+                to={ROUTES.checkout}
+                className="mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              >
+                ادامه فرایند خرید
+              </Link>
+            ) : auth.state.phase === 'authenticated' ? (
+              <button
+                type="button"
+                onClick={() => void reload()}
+                disabled={state.phase === 'merging'}
+                className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              >
+                <RefreshCw size={17} aria-hidden="true" />
+                تلاش دوباره برای اتصال سبد
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={auth.open}
+                className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              >
+                <LogIn size={17} aria-hidden="true" />
+                ورود با موبایل و ادامه خرید
+              </button>
+            )}
           </div>
         </aside>
       </div>

@@ -60,17 +60,53 @@ export function CheckoutPage() {
   if (auth.state.phase !== 'authenticated') {
     return (
       <Centered
-        title="برای تکمیل سفارش وارد شوید"
-        description="آدرس و سفارش فقط به حساب احراز‌شده شما متصل می‌شود."
+        title="برای ادامه خرید، شماره موبایل را تأیید کنید"
+        description="کالاهای سبد شما حفظ می‌شوند؛ پس از ورود سریع، سبد مهمان به حساب شما منتقل و مرحله آدرس باز می‌شود."
         action={
           <button type="button" onClick={auth.open} className={primaryButton}>
-            ورود / ثبت‌نام
+            ورود سریع با موبایل
           </button>
         }
       />
     )
   }
-  if (state.phase === 'loading')
+  if (state.phase === 'merging')
+    return (
+      <Centered
+        title="در حال اتصال سبد به حساب شما"
+        description="ادغام امن سبد فقط چند لحظه زمان می‌برد. این صفحه را نبندید."
+        action={
+          <span
+            className={`${primaryButton} cursor-wait opacity-70`}
+            role="status"
+            aria-live="polite"
+          >
+            <RefreshCw
+              size={17}
+              className="animate-spin motion-reduce:animate-none"
+            />{' '}
+            در حال ادغام…
+          </span>
+        }
+      />
+    )
+  if (state.phase === 'error' && state.owner === 'guest')
+    return (
+      <Centered
+        title="اتصال سبد کامل نشد"
+        description={commerceErrorMessage(state.error)}
+        action={
+          <button
+            type="button"
+            onClick={() => void reload()}
+            className={primaryButton}
+          >
+            <RefreshCw size={17} /> تلاش دوباره
+          </button>
+        }
+      />
+    )
+  if (state.phase === 'idle' || state.phase === 'loading')
     return (
       <div
         role="status"
@@ -452,6 +488,7 @@ function Field({
         <p
           id={`${id}-error`}
           role="alert"
+          aria-live="assertive"
           className="mt-1 text-xs font-bold text-red-700"
         >
           {error}

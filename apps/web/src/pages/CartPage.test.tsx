@@ -25,20 +25,25 @@ function renderPage(api = commerceStub(), store = signedInStore()) {
 }
 
 describe('CartPage', () => {
-  it('prompts an anonymous customer instead of using a browser cart', () => {
+  it('renders the server-owned Guest Cart and defers OTP until checkout', async () => {
     const api = commerceStub()
     renderPage(api, new MemorySessionStore())
     expect(
-      screen.getByRole('heading', { name: 'برای مشاهده سبد خرید وارد شوید' }),
+      await screen.findByRole('heading', { name: 'سبد خرید' }),
     ).toBeInTheDocument()
-    expect(api.getCart).not.toHaveBeenCalled()
+    expect(api.getCart).toHaveBeenCalledWith('guest')
+    expect(
+      screen.getByRole('button', { name: 'ورود با موبایل و ادامه خرید' }),
+    ).toBeInTheDocument()
   })
 
   it('renders the authoritative server cart and updates quantity through the API', async () => {
-    const setLine = vi.fn(async (_id: string, quantity: number) => ({
-      ...CART,
-      lines: [{ ...CART.lines[0], quantity }],
-    }))
+    const setLine = vi.fn(
+      async (_owner: 'guest' | 'customer', _id: string, quantity: number) => ({
+        ...CART,
+        lines: [{ ...CART.lines[0], quantity }],
+      }),
+    )
     const api = commerceStub({ setLine })
     renderPage(api)
     expect(await screen.findByText('دریل رونیکس ۲۲۱۰')).toBeInTheDocument()
@@ -50,6 +55,7 @@ describe('CartPage', () => {
     )
     await waitFor(() =>
       expect(setLine).toHaveBeenCalledWith(
+        'customer',
         'variant-1',
         3,
         expect.stringMatching(/^cart-/),
@@ -57,18 +63,45 @@ describe('CartPage', () => {
     )
   })
 
-  it('disables increments at the server-provided availability bound', async () => {
+  it('treats availability as informational and enforces only the 99-unit Cart cap', async () => {
     const api = commerceStub({
-      getCart: vi.fn(async () => ({
-        ...CART,
-        lines: [{ ...CART.lines[0], quantity: 5, available: 5 }],
+      mergeGuestCart: vi.fn(async () => ({
+        cart: {
+          ...CART,
+          lines: [{ ...CART.lines[0], quantity: 5, available: 5 }],
+        },
+        warnings: [],
       })),
     })
     renderPage(api)
-    expect(
-      await screen.findByRole('button', {
-        name: 'افزایش تعداد دریل رونیکس ۲۲۱۰',
-      }),
-    ).toBeDisabled()
+    const increment = await screen.findByRole('button', {
+      name: 'افزایش تعداد دریل رونیکس ۲۲۱۰',
+    })
+    expect(increment).toBeEnabled()
+  })
+
+  it('announces deterministic merge warnings without exposing internal identifiers', async () => {
+    const api = commerceStub({
+      mergeGuestCart: vi.fn(async () => ({
+        cart: CART,
+        warnings: [
+          { variantId: 'variant-1', code: 'QUANTITY_CAPPED' as const },
+          {
+            variantId: 'internal-variant-2',
+            code: 'LINE_LIMIT_REACHED' as const,
+          },
+        ],
+      })),
+    })
+
+    renderPage(api)
+
+    const warningTitle = await screen.findByText(/سبدها ادغام شدند/)
+    const status = warningTitle.closest('[role="status"]')
+    expect(status).toHaveTextContent(
+      'تعداد یکی از کالاهای مشترک به سقف ۹۹ عدد رسید',
+    )
+    expect(status).toHaveTextContent('به‌دلیل سقف ۱۰۰ ردیف')
+    expect(screen.queryByText('internal-variant-2')).not.toBeInTheDocument()
   })
 })

@@ -11,12 +11,12 @@ import {
 } from 'lucide-react'
 import { useCatalogApi } from '../state/catalog-context'
 import { useCart } from '../state/cart-context'
-import { useAuth } from '../state/auth-context'
 import { useToast } from '../components/feedback/toast-context'
 import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { MediaGallery } from '../components/product/MediaGallery'
 import type { CatalogProduct } from '../services/catalog/types'
+import { commerceErrorMessage } from '../services/commerce/errors'
 
 const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود در انبار',
@@ -28,7 +28,6 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
 export function ProductPage() {
   const api = useCatalogApi()
   const { add, setQuantity, quantityOf, isInCart } = useCart()
-  const auth = useAuth()
   const { show } = useToast()
   const navigate = useNavigate()
   const { slug = '' } = useParams<{ slug: string }>()
@@ -117,17 +116,12 @@ export function ProductPage() {
       : 0
 
   async function handleAdd() {
-    if (auth.state.phase !== 'authenticated') {
-      auth.open()
-      show('برای افزودن به سبد خرید وارد شوید')
-      return
-    }
     if (!available || !selectedVariant) return
     try {
       await add(selectedVariant.id)
       show('به سبد خرید افزوده شد')
-    } catch {
-      show('افزودن به سبد انجام نشد؛ دوباره تلاش کنید')
+    } catch (error) {
+      show(commerceErrorMessage(error))
     }
   }
 

@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from '../state/AuthProvider'
 import { CartProvider } from '../state/CartProvider'
+import { MemorySessionStore } from '../lib/auth/session-store'
 import {
   ORDER,
   commerceStub,
@@ -11,8 +12,7 @@ import {
 } from '../test/commerce'
 import { CheckoutPage } from './CheckoutPage'
 
-function renderPage(api = commerceStub()) {
-  const store = signedInStore()
+function renderPage(api = commerceStub(), store = signedInStore()) {
   return render(
     <MemoryRouter initialEntries={['/checkout']}>
       <Routes>
@@ -57,6 +57,35 @@ function fillValidAddress() {
 }
 
 describe('CheckoutPage', () => {
+  it('defers OTP until Checkout and explains that the Guest Cart is preserved', async () => {
+    renderPage(commerceStub(), new MemorySessionStore())
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'برای ادامه خرید، شماره موبایل را تأیید کنید',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/کالاهای سبد شما حفظ می‌شوند/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'ورود سریع با موبایل' }),
+    ).toBeInTheDocument()
+  })
+
+  it('blocks Checkout while the Guest Cart merge is still in flight', async () => {
+    const api = commerceStub({
+      mergeGuestCart: vi.fn(() => new Promise<never>(() => undefined)),
+    })
+
+    renderPage(api)
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'در حال اتصال سبد به حساب شما',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('نام تحویل‌گیرنده')).not.toBeInTheDocument()
+  })
+
   it('validates the address before asking the server for quotes', async () => {
     const api = commerceStub()
     renderPage(api)
