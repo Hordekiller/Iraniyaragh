@@ -21,6 +21,8 @@ type PublicJsonRequest = <T>(
 ) => Promise<ApiSuccess<T>>
 
 export class CommerceHttpClient implements CommerceApi {
+  private guestSessionPromise: Promise<string> | null = null
+
   constructor(
     private readonly request: AuthenticatedJsonRequest,
     private readonly baseUrl = '',
@@ -202,6 +204,17 @@ export class CommerceHttpClient implements CommerceApi {
   private async ensureGuestSession(): Promise<string> {
     const existing = this.readGuestCsrf()
     if (existing) return existing
+    const pending =
+      this.guestSessionPromise ??
+      (this.guestSessionPromise = this.bootstrapGuestSession())
+    try {
+      return await pending
+    } finally {
+      if (this.guestSessionPromise === pending) this.guestSessionPromise = null
+    }
+  }
+
+  private async bootstrapGuestSession(): Promise<string> {
     await this.publicRequest<void>('/api/v1/guest-cart/session', {
       baseUrl: this.baseUrl,
       method: 'POST',

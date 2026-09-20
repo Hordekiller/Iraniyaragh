@@ -158,6 +158,55 @@ describe('CommerceHttpClient', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
+  it('single-flights concurrent first-mutation Guest session bootstrap', async () => {
+    const request = requestStub()
+    const cookieDocument = { cookie: '' }
+    let finishSession: (() => void) | undefined
+    const sessionBarrier = new Promise<void>((resolve) => {
+      finishSession = resolve
+    })
+    const publicRequest = vi.fn(
+      async (path: string, options?: RequestOptions) => {
+        void options
+        if (path === '/api/v1/guest-cart/session') {
+          await sessionBarrier
+          cookieDocument.cookie = 'iranyaragh_guest_csrf=shared-csrf'
+          return { data: undefined }
+        }
+        return { data: { cart: CART } }
+      },
+    )
+    const client = new CommerceHttpClient(
+      request as unknown as AuthenticatedJsonRequest,
+      '',
+      cookieDocument,
+      publicRequest as unknown as PublicRequest,
+    )
+
+    const first = client.addLine('guest', 'variant-1', 1, 'first-key')
+    const second = client.addLine('guest', 'variant-2', 1, 'second-key')
+    await vi.waitFor(() =>
+      expect(
+        publicRequest.mock.calls.filter(
+          ([path]) => path === '/api/v1/guest-cart/session',
+        ),
+      ).toHaveLength(1),
+    )
+
+    finishSession?.()
+    await Promise.all([first, second])
+    const mutationCalls = publicRequest.mock.calls.filter(([path]) =>
+      path.startsWith('/api/v1/guest-cart/lines'),
+    )
+    expect(mutationCalls).toHaveLength(2)
+    expect(mutationCalls[0]?.[1]?.headers).toMatchObject({
+      'X-CSRF-Token': 'shared-csrf',
+    })
+    expect(mutationCalls[1]?.[1]?.headers).toMatchObject({
+      'X-CSRF-Token': 'shared-csrf',
+    })
+  })
+
   it('recovers an invalid Guest proof once without changing the mutation key', async () => {
     const request = requestStub()
     const cookieDocument = { cookie: 'iranyaragh_guest_csrf=stale-csrf' }

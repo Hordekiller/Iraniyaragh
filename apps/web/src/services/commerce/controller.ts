@@ -14,6 +14,7 @@ export class CommerceCartController {
   }
   private readonly listeners = new Set<() => void>()
   private readonly retryKeys = new Map<string, string>()
+  private readonly inflightMutations = new Set<Promise<unknown>>()
   private authenticated: boolean | null = null
   private authEpoch = 0
   private requestSequence = 0
@@ -39,7 +40,8 @@ export class CommerceCartController {
     this.retryKeys.clear()
     this.lastAppliedRequest = 0
     this.patch({ error: null, pendingVariantIds: [] })
-    if (authenticated) void this.mergeGuest().catch(() => undefined)
+    if (authenticated)
+      void this.mergeAfterGuestMutations(this.authEpoch).catch(() => undefined)
     else {
       this.patch({ cart: EMPTY_CART, owner: 'guest', mergeWarnings: [] })
       void this.loadOwner('guest')
@@ -70,22 +72,28 @@ export class CommerceCartController {
     }
   }
 
-  async add(variantId: string, quantity = 1): Promise<void> {
-    return this.mutate(variantId, `add:${variantId}:${quantity}`, (key) =>
-      this.api.addLine(this.state.owner, variantId, quantity, key),
+  add(variantId: string, quantity = 1): Promise<boolean> {
+    return this.trackMutation(
+      this.mutate(variantId, `add:${variantId}:${quantity}`, (key) =>
+        this.api.addLine(this.state.owner, variantId, quantity, key),
+      ),
     )
   }
 
   async setQuantity(variantId: string, quantity: number): Promise<void> {
     if (quantity <= 0) return this.remove(variantId)
-    return this.mutate(variantId, `set:${variantId}:${quantity}`, (key) =>
-      this.api.setLine(this.state.owner, variantId, quantity, key),
+    await this.trackMutation(
+      this.mutate(variantId, `set:${variantId}:${quantity}`, (key) =>
+        this.api.setLine(this.state.owner, variantId, quantity, key),
+      ),
     )
   }
 
   async remove(variantId: string): Promise<void> {
-    return this.mutate(variantId, `remove:${variantId}`, (key) =>
-      this.api.removeLine(this.state.owner, variantId, key),
+    await this.trackMutation(
+      this.mutate(variantId, `remove:${variantId}`, (key) =>
+        this.api.removeLine(this.state.owner, variantId, key),
+      ),
     )
   }
 
@@ -98,13 +106,13 @@ export class CommerceCartController {
     variantId: string,
     fingerprint: string,
     operation: (key: string) => Promise<CommerceCartState['cart']>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     if (
       this.authenticated === null ||
       this.state.phase === 'merging' ||
       this.state.pendingVariantIds.includes(variantId)
     )
-      return
+      return false
     const epoch = this.authEpoch
     const owner = this.state.owner
     const requestId = ++this.requestSequence
@@ -118,6 +126,7 @@ export class CommerceCartController {
       const cart = await operation(key)
       if (this.isActive(epoch)) this.retryKeys.delete(fingerprint)
       this.applyCart(cart, requestId, epoch, owner)
+      return true
     } catch (error) {
       if (this.isActive(epoch)) this.patch({ error, phase: 'error' })
       throw error
@@ -130,6 +139,14 @@ export class CommerceCartController {
         })
       }
     }
+  }
+
+  private trackMutation<T>(operation: Promise<T>): Promise<T> {
+    this.inflightMutations.add(operation)
+    void operation
+      .finally(() => this.inflightMutations.delete(operation))
+      .catch(() => undefined)
+    return operation
   }
 
   private applyCart(
@@ -145,6 +162,13 @@ export class CommerceCartController {
 
   private isActive(epoch: number): boolean {
     return this.authenticated !== null && epoch === this.authEpoch
+  }
+
+  private async mergeAfterGuestMutations(epoch: number): Promise<void> {
+    this.patch({ phase: 'merging', error: null })
+    await Promise.allSettled([...this.inflightMutations])
+    if (!this.isActive(epoch) || !this.authenticated) return
+    return this.mergeGuest()
   }
 
   private async mergeGuest(): Promise<void> {

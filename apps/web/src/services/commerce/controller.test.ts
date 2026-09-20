@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { CART, commerceStub } from '../../test/commerce'
 import { CommerceCartController } from './controller'
+import type { CartMergeResult } from './types'
 
 const cryptoSource = {
   randomUUID: vi.fn(() => '00000000-0000-4000-8000-000000000001' as const),
@@ -53,7 +54,7 @@ describe('CommerceCartController', () => {
     const { controller } = await guestController(api)
 
     await expect(controller.add('variant-1', 2)).rejects.toThrow('network')
-    await expect(controller.add('variant-1', 2)).resolves.toBeUndefined()
+    await expect(controller.add('variant-1', 2)).resolves.toBe(true)
 
     expect(api.addLine).toHaveBeenCalledTimes(2)
     expect(vi.mocked(api.addLine).mock.calls[0]?.[3]).toBe(
@@ -83,6 +84,42 @@ describe('CommerceCartController', () => {
     finish?.(CART)
     await first
     expect(controller.getState().pendingVariantIds).toEqual([])
+  })
+
+  it('waits for an in-flight Guest mutation before merging after authentication', async () => {
+    let finishMutation: ((cart: typeof CART) => void) | undefined
+    const mutation = new Promise<typeof CART>((resolve) => {
+      finishMutation = resolve
+    })
+    const api = commerceStub({ addLine: vi.fn(() => mutation) })
+    const { controller } = await guestController(api)
+
+    const add = controller.add('variant-1')
+    await vi.waitFor(() => expect(api.addLine).toHaveBeenCalledOnce())
+    controller.setAuthenticated(true)
+
+    expect(controller.getState().phase).toBe('merging')
+    expect(api.mergeGuestCart).not.toHaveBeenCalled()
+
+    finishMutation?.(CART)
+    await expect(add).resolves.toBe(true)
+    await vi.waitFor(() => expect(api.mergeGuestCart).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(controller.getState().owner).toBe('customer'))
+  })
+
+  it('reports a skipped add instead of fabricating success during merge', async () => {
+    let finishMerge: ((result: CartMergeResult) => void) | undefined
+    const merge = new Promise<CartMergeResult>((resolve) => {
+      finishMerge = resolve
+    })
+    const api = commerceStub({ mergeGuestCart: vi.fn(() => merge) })
+    const controller = new CommerceCartController(api, cryptoSource)
+    controller.setAuthenticated(true)
+
+    await expect(controller.add('variant-1')).resolves.toBe(false)
+    expect(api.addLine).not.toHaveBeenCalled()
+    finishMerge?.({ cart: CART, warnings: [] })
+    await vi.waitFor(() => expect(controller.getState().phase).toBe('ready'))
   })
 
   it('does not let a late initial load overwrite a newer mutation response', async () => {

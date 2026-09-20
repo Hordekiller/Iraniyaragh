@@ -27,7 +27,7 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
 
 export function ProductPage() {
   const api = useCatalogApi()
-  const { add, setQuantity, quantityOf, isInCart } = useCart()
+  const { state: cartState, add, setQuantity, quantityOf, isInCart } = useCart()
   const { show } = useToast()
   const navigate = useNavigate()
   const { slug = '' } = useParams<{ slug: string }>()
@@ -105,6 +105,12 @@ export function ProductPage() {
     selectedVariant != null &&
     (selectedVariant.stockStatus === 'IN_STOCK' ||
       selectedVariant.stockStatus === 'LOW_STOCK')
+  const cartBusy =
+    cartState.phase === 'idle' ||
+    cartState.phase === 'loading' ||
+    cartState.phase === 'merging' ||
+    (selectedVariant != null &&
+      cartState.pendingVariantIds.includes(selectedVariant.id))
   const discountPercent =
     product.oldPrice && Number(product.oldPrice.amount) > 0
       ? Math.round(
@@ -118,8 +124,8 @@ export function ProductPage() {
   async function handleAdd() {
     if (!available || !selectedVariant) return
     try {
-      await add(selectedVariant.id)
-      show('به سبد خرید افزوده شد')
+      const added = await add(selectedVariant.id)
+      if (added) show('به سبد خرید افزوده شد')
     } catch (error) {
       show(commerceErrorMessage(error))
     }
@@ -331,16 +337,18 @@ export function ProductPage() {
               <button
                 type="button"
                 onClick={() => void handleAdd()}
-                disabled={!available}
+                disabled={!available || cartBusy}
                 className="flex-1 h-12 rounded-full bg-[#FF4D00] text-white font-black hover:bg-[#E54400] disabled:bg-slate-300 disabled:cursor-not-allowed transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
               >
                 <span className="inline-flex items-center gap-2">
                   <ShoppingBag size={18} aria-hidden="true" />
-                  {!selectedVariant
-                    ? 'تنوع قابل فروش موجود نیست'
-                    : available
-                      ? 'افزودن به سبد خرید'
-                      : 'ناموجود'}
+                  {cartBusy
+                    ? 'در حال آماده‌سازی سبد…'
+                    : !selectedVariant
+                      ? 'تنوع قابل فروش موجود نیست'
+                      : available
+                        ? 'افزودن به سبد خرید'
+                        : 'ناموجود'}
                 </span>
               </button>
             )}
