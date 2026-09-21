@@ -20,6 +20,31 @@ describe('sanitizeDescriptionFragment', () => {
     expect(result.imageIds).toEqual([]);
   });
 
+  it('strips style tags, remaining event handlers and dangerous URL schemes', () => {
+    const input =
+      '<style>body{display:none}</style><p onload="alert(1)" onmouseover="steal()">x</p><a href="data:text/html,<script>alert(1)</script>">d</a><a href="vbscript:msgbox(1)">v</a>';
+    const result = sanitizeDescriptionFragment(input);
+    expect(result.html).toBe('<p>x</p><a>d</a><a>v</a>');
+    expect(result.html).not.toMatch(/<style/i);
+    expect(result.html).not.toMatch(/onload|onmouseover/i);
+  });
+
+  it('drops embed, object and video fallback elements', () => {
+    const input =
+      '<p>ok</p><embed src="https://evil.example/a.swf"><object data="https://evil.example/b"><param name="x"></object><video src="https://evil.example/c.mp4"></video>';
+    const result = sanitizeDescriptionFragment(input);
+    expect(result.html).toContain('<p>ok</p>');
+    expect(result.html).not.toMatch(/embed|object|video|param|src=/i);
+  });
+
+  it('rejects dangerous style values (url, expression and image backgrounds)', () => {
+    const input =
+      '<span style="background-image:url(https://evil.example/x.png);color:expression(alert(1));width:100%">x</span>';
+    const result = sanitizeDescriptionFragment(input);
+    expect(result.html).toBe('<span>x</span>');
+    expect(result.html).not.toMatch(/url\(|expression|background/i);
+  });
+
   it('keeps allowed formatting elements and inline styles', () => {
     const input = '<h2 style="color:#ff0000;text-align:center">عنوان</h2><p><strong>bold</strong> <em>italic</em></p><ul><li>one</li></ul>';
     const result = sanitizeDescriptionFragment(input);

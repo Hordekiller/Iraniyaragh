@@ -430,6 +430,41 @@ malware scanner also remain production-acceptance work.
   the `beforeunload` unsaved-change guard. Not verifiable here: real-browser
   interaction evidence.
 
+### Assembled rich-text description stack — real-browser E2E journey (in review — #279 fused stack)
+
+- The six #279 PRs are fused on the review head `feat/279-e2e-verify` (main
+  `eef2a8a` + contract-hardening, storefront-render, editor, media-picker and
+  description slices) and now carry a Playwright journey
+  (`e2e/tests/admin-279-journey.spec.ts`, serial, real API + real MinIO + real
+  worker) that drives the whole feature through a real browser: create a draft,
+  upload an image through the Admin and wait for READY, compose rich HTML in
+  Jodit with the hostile-payload cases, insert a real product image, save via
+  the versioned PATCH, reload in a fresh session and assert the server-sanitized
+  description with re-written media URLs, publish, then render the description
+  on the storefront and assert only trusted network origins are contacted.
+- Security cases were pinned in the API suites: `content-sanitizer.spec.ts`
+  (19 unit cases: style tags, event handlers, data:/vbscript: URL sinks,
+  unsafe style values, embed/object/video drop) and
+  `product-description.integration-spec.ts` (13 DB-backed cases: non-READY
+  media 422, foreign media 422, dangerous payload persists sanitized, and the
+  public projections never leak object keys or signed parameters).
+- The Admin CSP hook now accepts an env-driven public media origin
+  (`NEXT_PUBLIC_MEDIA_ORIGIN`) in `connect-src` and `img-src`
+  (`apps/admin/next.config.ts`) so a real browser can PUT to and display MinIO
+  without loosening the origin list.
+- Verified on the review head: journey 6/6 on `admin-desktop` and
+  `admin-mobile` (isolated); full e2e suite green (75 passed / 5 skipped,
+  exit 0; the browser→MinIO upload PUT can stall once under the parallel
+  suite-load and is allowed one bounded retry); Admin 561, Web 337 and API 849
+  isolated unit tests; lint/typecheck/build exit 0 per package.
+- Known gap: with the storefront served from `vite preview`, a freshly-visited
+  Product/Catalog page can silently miss the catalog HTTP client's fetch unless
+  a fetch shim is injected at boot (product then renders correctly with the
+  rich description; home behaves the same, so this is an app-boot/preview
+  artifact, not a description defect). The real-storefront capstone evidence was
+  captured under that shim; verify once against a real deployment before the
+  storefront preview is treated as authoritative.
+
 ### Server Cart runtime (authenticated via #239/#241–#244/#251; Guest via #270/#269)
 
 - `Customer.userId` provides explicit authenticated ownership; Cart lookup does

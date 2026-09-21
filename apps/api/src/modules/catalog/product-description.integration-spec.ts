@@ -157,6 +157,105 @@ describe.sequential('ProductDescription database integration', () => {
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 
+  it('rejects description images owned by another product', async () => {
+    await prisma.auditLog.deleteMany({
+      where: { entityId: productId, action: { startsWith: 'catalog.product.' } },
+    });
+    await prisma.productMedia.deleteMany({ where: { productId } });
+    await prisma.product.update({ where: { id: productId }, data: { version: 1 } });
+
+    const foreign = await prisma.product.create({
+      data: { name: 'Foreign Product', slug: `foreign-${runId}` },
+    });
+    const foreignMedia = await createReadyImage(foreign.id, 'foreign');
+    try {
+      await expect(
+        catalog.updateProductDescription(actorId, key('foreign-media'), productId, {
+          description: `<p>تخلف <img data-media-id="${foreignMedia.id}"></p>`,
+          expectedVersion: 1,
+        }),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    } finally {
+      await prisma.productMediaRendition.deleteMany({ where: { mediaId: foreignMedia.id } });
+      await prisma.productMedia.deleteMany({ where: { productId: foreign.id } });
+      await prisma.product.deleteMany({ where: { id: foreign.id } });
+    }
+  });
+
+  it('rejects description images that are not READY', async () => {
+    await prisma.auditLog.deleteMany({
+      where: { entityId: productId, action: { startsWith: 'catalog.product.' } },
+    });
+    await prisma.productMedia.deleteMany({ where: { productId } });
+    await prisma.product.update({ where: { id: productId }, data: { version: 1 } });
+
+    const processing = await prisma.productMedia.create({
+      data: {
+        productId, kind: 'IMAGE', state: 'PROCESSING', role: 'GALLERY', position: 0,
+        objectKey: `products/${productId}/${randomUUID()}/source.webp`,
+        originalFilename: 'source.webp', declaredMime: 'image/webp', declaredBytes: 100n,
+        detectedMime: 'image/webp', bytes: 100n, createdById: actorId,
+        uploadExpiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    try {
+      await expect(
+        catalog.updateProductDescription(actorId, key('non-ready'), productId, {
+          description: `<p>عجله <img data-media-id="${processing.id}"></p>`,
+          expectedVersion: 1,
+        }),
+      ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    } finally {
+      await prisma.productMedia.deleteMany({ where: { id: processing.id } });
+    }
+  });
+
+  it('persists only sanitized html on save: no script/style/embed/video, handlers, js/data/vbscript urls or unsafe styles', async () => {
+    await prisma.auditLog.deleteMany({
+      where: { entityId: productId, action: { startsWith: 'catalog.product.' } },
+    });
+    await prisma.productMedia.deleteMany({ where: { productId } });
+    await prisma.product.update({ where: { id: productId }, data: { description: null, version: 1 } });
+
+    const saved = await catalog.updateProductDescription(actorId, key('dangerous'), productId, {
+      description:
+        '<style>body{display:none}</style><script>alert(1)</script>' +
+        '<iframe src="https://evil.example"></iframe><embed src="https://evil.example/a.swf">' +
+        '<object data="https://evil.example/b"><param name="x"></object>' +
+        '<video src="https://evil.example/c.mp4"></video>' +
+        '<p onmouseover="steal()" style="background-image:url(https://evil.example/x.png);position:fixed">متن <a href="javascript:alert(1)">a</a> <a href="data:text/html,x">b</a> <a href="vbscript:msgbox(1)">c</a></p>',
+      expectedVersion: 1,
+    });
+
+    expect(saved.data.product.description).toBe('<p>متن <a>a</a> <a>b</a> <a>c</a></p>');
+    const dbRow = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+    expect(dbRow.description).toBe(saved.data.product.description);
+  });
+
+  it('never exposes object keys or signed parameters in the description projection', async () => {
+    await prisma.auditLog.deleteMany({
+      where: { entityId: productId, action: { startsWith: 'catalog.product.' } },
+    });
+    await prisma.productMedia.deleteMany({ where: { productId } });
+    await prisma.product.update({ where: { id: productId }, data: { description: null, version: 1 } });
+    const media = await createReadyImage(productId, 'alt text');
+
+    const saved = await catalog.updateProductDescription(actorId, key('no-leak'), productId, {
+      description: `<p><img data-media-id="${media.id}"></p>`,
+      expectedVersion: 1,
+    });
+
+    const projection = saved.data.product.description ?? '';
+    const srcs = projection.match(/src="[^"]+"/g) ?? [];
+    expect(srcs).toHaveLength(1);
+    expect(projection).toContain(`http://localhost:9000/products/${media.widestRendition.objectKey}`);
+    expect(projection).not.toMatch(/X-Amz-|AWSAccessKeyId|signature|presign|credential=/i);
+    expect(projection).not.toContain('source.webp');
+
+    await prisma.product.update({ where: { id: productId }, data: { description: null, version: 1 } });
+    await prisma.productMedia.deleteMany({ where: { productId } });
+  });
+
   it('rejects stale versions with a conflict', async () => {
     await expect(
       catalog.updateProductDescription(actorId, key('stale'), productId, {
