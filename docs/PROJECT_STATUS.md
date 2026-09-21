@@ -278,6 +278,13 @@ malware scanner also remain production-acceptance work.
   media, so a client can never dictate image URLs or dimensions.
 - `GET /catalog/admin/products/:productId/media/picker` exposes a ready-image,
   widest-rendition projection for the editor without leaking object keys.
+- Hardening (merged head of #279): description `data-media-id` values are no
+  longer shape-gated; upload-created media rows carry `randomUUID()` ids with
+  hyphens, so reference validation is exclusively DB-backed against READY IMAGE
+  rows of the product (`DESCRIPTION_MEDIA_INVALID` for unresolved ids). The
+  picker and both description projections share one `widestRenditionProjection`
+  helper, so the emitted `src`, `width` and `height` all describe the same
+  selected rendition (never source dimensions of a smaller rendition).
 - Create and Excel-import paths sanitize descriptions and drop image markup; empty
   or cleared descriptions persist as `NULL`. Description projections re-sanitize
   stored HTML on every read and drop nodes whose media can no longer be resolved.

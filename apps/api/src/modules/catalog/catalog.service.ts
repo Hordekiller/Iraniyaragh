@@ -10,7 +10,7 @@ import { getRequestId } from '../../common/request-context';
 import type { EnvironmentVariables } from '../../config/environment';
 import { PrismaService } from '../../database/prisma.service';
 import { ContentTooLargeError, rewriteDescriptionImages, sanitizeDescriptionFragment, type ResolvedContentImage } from '../content/content-sanitizer';
-import { widestRenditionUrl } from '../media/media-url';
+import { widestRenditionProjection } from '../media/media-url';
 import { AuditLogService } from '../audit/audit-log.service';
 import type { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductDescriptionDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
 import { CatalogIdempotencyService } from './catalog-idempotency.service';
@@ -227,7 +227,11 @@ export class CatalogService {
               const byId = new Map(rows.map(row => [row.id, row]));
               const invalidMediaIds = sanitized.imageIds.filter(mediaId => !byId.has(mediaId));
               if (invalidMediaIds.length > 0) throw new UnprocessableEntityException({ code: 'DESCRIPTION_MEDIA_INVALID', message: 'A description image references product media that is not a ready image of this product.', details: { mediaIds: invalidMediaIds } });
-              images = rows.map(row => ({ id: row.id, url: widestRenditionUrl(this.mediaOrigin(), row.renditions) ?? '', width: row.width!, height: row.height!, alt: row.altText ?? '' }));
+              images = rows.flatMap(row => {
+                const projection = widestRenditionProjection(this.mediaOrigin(), row.renditions);
+                if (projection === null) return [];
+                return [{ id: row.id, url: projection.url, width: projection.width, height: projection.height, alt: row.altText ?? '' }];
+              });
             }
             stored = rewriteDescriptionImages(sanitized.html, images);
           }
@@ -477,7 +481,12 @@ export class CatalogService {
     if (fragment === null) return null;
     const sanitized = this.sanitizeDescription(fragment, { images: 'preserve' });
     if (sanitized.html === null) return null;
-    const images: ResolvedContentImage[] = (media ?? []).filter(mediaItem => mediaItem.kind === 'IMAGE' && mediaItem.width !== null && mediaItem.height !== null).map(mediaItem => ({ id: mediaItem.id, url: widestRenditionUrl(this.mediaOrigin(), mediaItem.renditions) ?? '', width: mediaItem.width!, height: mediaItem.height!, alt: mediaItem.altText ?? '' }));
+    const images: ResolvedContentImage[] = (media ?? []).flatMap(mediaItem => {
+      if (mediaItem.kind !== 'IMAGE') return [];
+      const projection = widestRenditionProjection(this.mediaOrigin(), mediaItem.renditions);
+      if (projection === null) return [];
+      return [{ id: mediaItem.id, url: projection.url, width: projection.width, height: projection.height, alt: mediaItem.altText ?? '' }];
+    });
     return rewriteDescriptionImages(sanitized.html, images);
   }
   private sanitizeDescription(input: string, options: { images: 'drop' | 'preserve' }) {
