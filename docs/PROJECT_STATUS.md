@@ -22,6 +22,13 @@ commerce product: Order commands, verified Payment, fulfillment and production
 operations remain open. The operational Admin Order queue/detail is now bound to
 the masked, permissioned #238 read API through #257.
 
+Open PR #265 is the contract-first backend prerequisite for the factual Admin
+operations dashboard: a `reports.read`-guarded, PII-free summary with an explicit
+maximum 90-day Order range and a current commerce/inventory snapshot. It is not
+counted as delivered until merged. Accessible Admin charts and their textual/table
+fallback remain the next stacked #264 slice; neither runtime fixture metrics nor
+licensed Vuexy source/assets are part of #265.
+
 Current delivery confidence:
 
 | Area                           | State                                       | Evidence-based assessment                                                                                                                                                                                                 |
@@ -619,6 +626,15 @@ sandbox/production acceptance evidence.
 The review-handoff docs reconciliation (#218) and commerce reconciliation #249 are
 merged; #251 advances the authenticated Cart boundary and updates this evidence on
 2026-09-18.
+
+PR #265 (issue #264, not yet on `main`) adds the dashboard summary contract and
+real PostgreSQL aggregation endpoint. The range is explicit and capped at 90 days;
+the current snapshot covers Order, Payment-attempt, Fulfillment, Reservation and
+Transfer status counts plus exact zero-availability balances. The request uses one
+repeatable-read transaction with a fixed nine-operation aggregate budget and no
+row hydration or loop-driven queries. The subsequent Admin UI must consume this
+contract directly and provide accessible chart alternatives; it must not invent
+low-stock thresholds, SLA policy, revenue semantics or sample operational data.
 
 ## Decisions and blockers
 
