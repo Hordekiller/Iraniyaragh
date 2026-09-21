@@ -261,7 +261,24 @@ that is not evidence of a working video-processing pipeline: confirmed videos
 currently remain `UPLOADED`. Production S3/CORS/CDN configuration and a real
 malware scanner also remain production-acceptance work.
 
-### Rich-text description contract and admin media picker (in review — #279 contract slice)
+### Rich-text description contract and admin media picker (delivered — #279 contract slice)
+
+- The storefront now renders the sanitized description HTML as markup via a
+  single sanctioned `RichText` component (`data-rich-text`), inside the Web app
+  (`ProductPage`), and no longer escapes it as literal text. The plain-text
+  projection (`richTextToPlainText`, Web) supplies a non-markup `description`
+  for the Product structured-data (Schema.org) node; images with `alt` keep
+  their text in reading order and block elements are separated by spaces.
+- Delivery scope: strict `dangerouslySetInnerHTML` (admin-sanitized, re-sanitized
+  projection), escaped plain-text fallback only for the Schema.org/SEO field and
+  for consumers that must never receive markup. Verified locally on
+  `feat/279-storefront-render` before the PR: RichText, plain-text projection
+  and ProductPage rich-description specs (16 new assertions across 3 files), dry
+  `CI=true` Web suite (337 tests) with the coverage gate (Statements 85.62%,
+  Branches 78.14%, Functions 81.84%, Lines 88.4%) and `pnpm lint`, `pnpm
+  typecheck`, `pnpm build` for the Web package. The Web lint passed with 3
+  pre-existing unused `eslint-disable` warnings (not from this slice). Only the
+  Admin/moderator rich-text editing UI remains, in a later slice.
 
 - ADR-0016 fixes the integration approach for Product description rich text and
   self-hosted media; Jodit and the Admin/Web UI adapters are follow-up slices and
