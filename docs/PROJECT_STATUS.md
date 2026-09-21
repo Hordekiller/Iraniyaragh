@@ -261,6 +261,36 @@ that is not evidence of a working video-processing pipeline: confirmed videos
 currently remain `UPLOADED`. Production S3/CORS/CDN configuration and a real
 malware scanner also remain production-acceptance work.
 
+### Rich-text description contract and admin media picker (in review — #279 contract slice)
+
+- ADR-0016 fixes the integration approach for Product description rich text and
+  self-hosted media; Jodit and the Admin/Web UI adapters are follow-up slices and
+  are not part of this PR.
+- A server-side content sanitizer (`modules/content/content-sanitizer.ts`) is the
+  security boundary for description writes: it allowlists tags/attributes/styles,
+  forbids external URL schemes on `img`, strips script/event/`javascript:` sinks,
+  re-checks byte/size accounting after sanitization against a 100,000-UTF-16 limit
+  and carries images exclusively as `<img data-media-id>`.
+- `PATCH /catalog/admin/products/:id/description` is an idempotent,
+  optimistic-versioned save (`expectedVersion` + `version` increment); the server
+  validates every referenced media id against READY IMAGE rows owned by the product
+  with renditions and rewrites `src`/`width`/`height`/`alt` from authoritative
+  media, so a client can never dictate image URLs or dimensions.
+- `GET /catalog/admin/products/:productId/media/picker` exposes a ready-image,
+  widest-rendition projection for the editor without leaking object keys.
+- Create and Excel-import paths sanitize descriptions and drop image markup; empty
+  or cleared descriptions persist as `NULL`. Description projections re-sanitize
+  stored HTML on every read and drop nodes whose media can no longer be resolved.
+- Audit rows for the description command store only a safe summary (`version`,
+  UTF-16 length, SHA-256 of the stored HTML, media count) — never raw HTML.
+- Verified locally before the contract PR: `git fetch && git log` confirmed the
+  branch baselines cleanly on `origin/main` (`b9e2b60`). The full API integration
+  job (17 files / 135 tests, isolation `_test` database, dedicated test Redis),
+  the unit suite (72 files / 848 tests), the OpenAPI drift check and the
+  `CI=true` coverage gates (lines 83.87%) all pass on this slice, as do
+  `pnpm lint`, `pnpm typecheck`, `pnpm build` and the unaffected Web (325) and
+  Admin (506) test suites. Only the Admin rich-text UI remains, in a later slice.
+
 ### Server Cart runtime (authenticated via #239/#241–#244/#251; Guest via #270/#269)
 
 - `Customer.userId` provides explicit authenticated ownership; Cart lookup does

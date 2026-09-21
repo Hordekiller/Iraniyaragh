@@ -45,11 +45,16 @@ export class ProductVariantDto {
 export class ProductCreateDto {
   @IsString() @MaxLength(250) name!: string;
   @IsString() @Matches(SLUG) @MaxLength(250) slug!: string;
-  @IsOptional() @IsString() @MaxLength(10_000) description?: string;
+  @IsOptional() @IsString() @MaxLength(100_000) description?: string;
   @IsOptional() @IsString() @MaxLength(128) brandId?: string;
   @IsOptional() @IsString() @MaxLength(128) categoryId?: string;
   @IsOptional() @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED']) status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   @IsOptional() @ValidateNested({ each: true }) @Type(() => ProductVariantDto) variants?: ProductVariantDto[];
+}
+
+export class ProductDescriptionDto {
+  @IsOptional() @IsString() @MaxLength(100_000) description?: string | null;
+  @IsInt() @Min(0) expectedVersion!: number;
 }
 
 export class ProductAttributeConfigurationDto {

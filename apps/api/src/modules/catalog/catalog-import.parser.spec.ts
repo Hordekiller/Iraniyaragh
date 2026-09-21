@@ -48,6 +48,21 @@ describe('catalog workbook parser', () => {
     expect(empty.variants[0].barcode).toBeUndefined();
   });
 
+  it('sanitizes product descriptions and drops image markup', async () => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await workbookBuffer());
+    workbook.getWorksheet('Products')!.getCell('C2').value = '<p onclick="alert(1)">یک <script>alert(1)</script><img data-media-id="f1c3m2" alt="x"></p>';
+    const parsed = await parseCatalogWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()));
+    expect(parsed.products[0].description).toBe('<p>یک </p>');
+  });
+
+  it('rejects product descriptions beyond the 100,000 character limit', async () => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await workbookBuffer());
+    workbook.getWorksheet('Products')!.getCell('C2').value = 'x'.repeat(100_001);
+    await expect(parseCatalogWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()))).rejects.toMatchObject({ response: { code: 'IMPORT_VALIDATION' } });
+  });
+
   it.each([
     ['Attributes', ['color', 'Color', '', 'ARCHIVED']],
     ['AttributeOptions', ['color', 'red', 'Red', 'ARCHIVED']],
