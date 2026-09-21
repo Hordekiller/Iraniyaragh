@@ -365,6 +365,47 @@ malware scanner also remain production-acceptance work.
   `useProductMediaPicker` on the product detail page (description persistence is
   the next slice and needs the admin `updateProductDescription` function).
 
+### Admin product description authoring (in review — #279 description slice)
+
+- The Product Detail/Edit page now hosts the real rich-text description editor.
+  For accounts with `catalog.write`, `ProductDescriptionEditor` mounts the Jodit
+  editor seeded from `product.description`, with the product media picker wired
+  through `useProductMediaPicker`; accounts with `catalog.read` only see a
+  read-only preview card (`fail-closed` — the editor never renders without write
+  permission, and a 403 from the API is surfaced as `catalog.write` missing).
+- Persistence is the real command, not a fixture: `updateProductDescription` in
+  `lib/catalog/catalog-api.ts` calls
+  `PATCH /api/v1/catalog/admin/products/:id/description` with the bearer token, a
+  stable `Idempotency-Key` (`product-description-<uuid>`) and the body
+  `{ description, expectedVersion }` where `expectedVersion` is the product's
+  current `version`. Empty content saves as `description: null` (per the admin
+  DTO / ADR-0016). After a successful save the UI adopts the fresh product from
+  the response (its `version` and server-sanitized description) as the new source
+  of truth for both the editor and the parent detail state.
+- Save state is a machine: `idle → saving → saved | error`. The key is generated
+  once per mutation and — because the server dedupes by key+payload — reused
+  verbatim on the retry path for ambiguous failures (network error, abort, 5xx),
+  while terminal rejections (validation, 403) drop it. A `STALE_VERSION` 409 is
+  never over-written silently: the user's draft is preserved, a warning explains
+  that the product changed, and an explicit «بارگذاری نسخهٔ تازه» action reloads
+  the fresh product into the editor.
+- Unsaved-change protection: edits beyond the persisted snapshot show a visible
+  «تغییرات ذخیرهنشده» banner and arm a `beforeunload` guard so the browser
+  prompts before leaving the page.
+- Read-only preview renders `product.description` with `dangerouslySetInnerHTML`;
+  this is safe because the description is authoritatively sanitized on write and
+  re-sanitized on every read projection (server is the sanitizer, the admin never
+  renders unsanitized input).
+- Verified locally on this slice: Admin typescript, ESLint (`--max-warnings=0`)
+  plus the runtime-asset scanner, the full suite (561 tests) and `CI=true`
+  coverage gates (Statements 88.78 / Branches 78.73 / Functions 87.36 / Lines
+  91.67) and `next build`. Tests cover initial seeding, successful save (state
+  transitions + adopting the fresh server product), clear-to-`null`, same-key
+  replay on retry after a network error and an abort, `STALE_VERSION`
+  preservation + explicit reload, permission-denied fail-closed behavior, and
+  the `beforeunload` unsaved-change guard. Not verifiable here: real-browser
+  interaction evidence.
+
 ### Server Cart runtime (authenticated via #239/#241–#244/#251; Guest via #270/#269)
 
 - `Customer.userId` provides explicit authenticated ownership; Cart lookup does
