@@ -1,14 +1,13 @@
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedbackProvider } from '@/components/ui/FeedbackProvider';
-import { ORDERS_READ, ORDERS_WRITE } from '@/lib/orders/orders-permissions';
+import { ORDERS_READ } from '@/lib/orders/orders-permissions';
 import { OrdersView, type OrdersUrlQuery } from '../OrdersView';
 
 const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   user: null as { permissions: string[] } | null,
   listOrders: vi.fn(),
-  getOrder: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -19,20 +18,27 @@ vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({ user: mocks.user, isAuthenticated: true, signIn: vi.fn(), signOut: vi.fn() }),
 }));
 
-vi.mock('@/lib/orders/orders-fixture', () => ({
-  ordersApi: { listOrders: mocks.listOrders, getOrder: mocks.getOrder },
+vi.mock('@/lib/orders/orders-api', () => ({
+  ordersApi: { listOrders: mocks.listOrders, getOrder: vi.fn() },
 }));
 
 const item = {
-  id: 'ord-1001',
-  orderNumber: 'IR-10-4821',
-  createdAt: '2026-09-08T10:00:00Z',
-  updatedAt: '2026-09-08T11:00:00Z',
-  customer: { fullName: 'مشتری نمونهٔ یک', mobile: '09120000001' },
-  totalRials: 4_650_000,
-  orderStatus: 'PROCESSING' as const,
-  paymentStatus: 'PAID' as const,
-  fulfillmentStatus: 'ALLOCATED' as const,
+  id: 'order-1042',
+  number: 'IR-2026-1042',
+  status: 'PENDING_PAYMENT' as const,
+  payment: { latestStatus: 'PENDING' as const, attemptCount: 1 },
+  fulfillmentStatus: 'PROCESSING' as const,
+  itemCount: 2,
+  totals: {
+    subtotal: { amount: '4570000', currency: 'IRR' as const },
+    discount: { amount: '0', currency: 'IRR' as const },
+    shipping: { amount: '80000', currency: 'IRR' as const },
+    total: { amount: '4650000', currency: 'IRR' as const },
+  },
+  reservationExpiresAt: '2026-09-18T12:30:00Z',
+  createdAt: '2026-09-18T10:00:00Z',
+  updatedAt: '2026-09-18T11:00:00Z',
+  customer: { id: 'customer-1', displayNameMasked: 'م*** ر***', mobileMasked: '0912*****67' },
 };
 
 function renderView(initialQuery: OrdersUrlQuery = {}) {
@@ -45,7 +51,7 @@ function renderView(initialQuery: OrdersUrlQuery = {}) {
 
 describe('OrdersView', () => {
   beforeEach(() => {
-    mocks.user = { permissions: [ORDERS_READ, ORDERS_WRITE] };
+    mocks.user = { permissions: [ORDERS_READ] };
     mocks.listOrders.mockResolvedValue({
       items: [item],
       meta: { page: 1, perPage: 10, total: 1, pages: 1 },
@@ -53,82 +59,78 @@ describe('OrdersView', () => {
     mocks.replace.mockReset();
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
+  afterEach(() => vi.clearAllMocks());
 
-  it('renders the order queue with the three separated status badges', async () => {
+  it('renders live contract fields and all three independent lifecycles', async () => {
     renderView();
 
-    expect(await screen.findByText('IR-10-4821')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'IR-2026-1042' })).toBeInTheDocument();
+    expect(screen.getByText('م*** ر***')).toBeInTheDocument();
+    expect(screen.getByText(/در انتظار پرداخت/)).toBeInTheDocument();
+    expect(screen.getByText(/^در انتظار$/)).toBeInTheDocument();
     expect(screen.getByText(/در حال پردازش/)).toBeInTheDocument();
-    expect(screen.getByText(/پرداخت‌شده/)).toBeInTheDocument();
-    expect(screen.getByText(/تخصیص‌یافته/)).toBeInTheDocument();
-    expect(screen.getByText(/۴٬۶۵۰٬۰۰۰ ریال/)).toBeInTheDocument();
+    expect(screen.getByText('۴٬۶۵۰٬۰۰۰ ریال')).toBeInTheDocument();
   });
 
-  it('shows a forbidden state without orders.read', async () => {
+  it('shows a forbidden state and never requests data without orders.read', async () => {
     mocks.user = { permissions: [] };
     renderView();
 
     expect(await screen.findByText('دسترسی ندارید')).toBeInTheDocument();
-    expect(screen.queryByText('IR-10-4821')).not.toBeInTheDocument();
+    expect(mocks.listOrders).not.toHaveBeenCalled();
   });
 
-  it('shows the read-only notice for readers without orders.write', async () => {
-    mocks.user = { permissions: [ORDERS_READ] };
+  it('states the read-only API boundary truthfully', async () => {
     renderView();
 
-    await screen.findByText('IR-10-4821');
-    expect(screen.getByText(/فقط دسترسی خواندن/)).toBeInTheDocument();
+    await screen.findByRole('link', { name: 'IR-2026-1042' });
+    expect(screen.getByText(/API خواندنی سفارش‌ها/)).toBeInTheDocument();
   });
 
-  it('debounces the search box into a URL update', async () => {
+  it('debounces order-number search into a URL update', async () => {
     renderView();
 
     const searchBox = await screen.findByRole('textbox', { name: 'جستجو' });
-    fireEvent.change(searchBox, { target: { value: 'IR-10' } });
+    expect(searchBox).toHaveAttribute('placeholder', 'جستجو فقط با شماره سفارش…');
+    fireEvent.change(searchBox, { target: { value: 'IR-2026' } });
 
     await waitFor(
-      () => expect(mocks.replace).toHaveBeenCalledWith('/orders?search=IR-10', { scroll: false }),
+      () => expect(mocks.replace).toHaveBeenCalledWith('/orders?search=IR-2026', { scroll: false }),
       { timeout: 2000 },
     );
   });
 
-  it('updates the URL when an order status filter is selected', async () => {
+  it('updates the URL with a contract order status', async () => {
     renderView();
-    await screen.findByText('IR-10-4821');
+    await screen.findByRole('link', { name: 'IR-2026-1042' });
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'فیلتر وضعیت سفارش' }));
-    fireEvent.click(within(screen.getByRole('listbox')).getByText('تکمیل‌شده'));
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('پیش‌نویس'));
 
-    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/orders?orderStatus=COMPLETED', { scroll: false }));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/orders?orderStatus=DRAFT', { scroll: false }));
   });
 
-  it('reflects the initial query values from the URL', async () => {
-    renderView({ page: '2', search: 'IR', paymentStatus: 'PAID' });
+  it('maps initial URL values into the API query', async () => {
+    renderView({ page: '2', search: 'IR', paymentStatus: 'PAID', sortBy: 'grandTotal', sortDir: 'asc' });
 
-    await screen.findByText('IR-10-4821');
+    await screen.findByRole('link', { name: 'IR-2026-1042' });
     expect(mocks.listOrders).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 2, search: 'IR', paymentStatus: 'PAID' }),
+      expect.objectContaining({ page: 2, search: 'IR', paymentStatus: 'PAID', sortBy: 'grandTotal', sortDir: 'asc' }),
+      expect.any(AbortSignal),
     );
   });
 
-  it('shows the empty state when nothing matches', async () => {
-    mocks.listOrders.mockResolvedValue({
-      items: [],
-      meta: { page: 1, perPage: 10, total: 0, pages: 0 },
-    });
-    renderView();
+  it('shows the contextual empty state when no order matches', async () => {
+    mocks.listOrders.mockResolvedValue({ items: [], meta: { page: 1, perPage: 10, total: 0, pages: 0 } });
+    renderView({ orderStatus: 'RETURNED' });
 
     expect(await screen.findByText('سفارشی یافت نشد')).toBeInTheDocument();
-    expect(screen.getByText(/۰ سفارش/)).toBeInTheDocument();
+    expect(screen.getByText(/فیلترهای فعلی/)).toBeInTheDocument();
   });
 
-  it('links each row to its detail page', async () => {
+  it('links each row to the real detail route', async () => {
     renderView();
 
-    await screen.findByText('IR-10-4821');
-    expect(screen.getByRole('link', { name: /IR-10-4821/ })).toHaveAttribute('href', '/orders/ord-1001');
+    expect(await screen.findByRole('link', { name: 'IR-2026-1042' })).toHaveAttribute('href', '/orders/order-1042');
   });
 });
