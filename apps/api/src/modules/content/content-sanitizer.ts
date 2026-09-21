@@ -10,7 +10,6 @@ import sanitizeHtml from 'sanitize-html';
  * authoritative Product Media rows by the caller.
  */
 export const CONTENT_HTML_LIMIT_UTF16 = 100_000;
-export const CONTENT_MEDIA_ID_PATTERN = /^[A-Za-z0-9]{6,128}$/u;
 
 const HEX_OR_FUNCTIONAL_COLOR =
   /^(?:#[0-9a-fA-F]{3,8}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(?:,\s*(?:0|1|0?\.\d+)\s*)?\))$/u;
@@ -172,9 +171,8 @@ export function sanitizeDescriptionFragment(
 
   const imageIds: string[] = [];
   for (const match of trimmed.matchAll(IMG_TAG_PATTERN)) {
-    const tag = match[0];
-    const mediaId = extractMediaId(tag);
-    if (mediaId === null || !CONTENT_MEDIA_ID_PATTERN.test(mediaId)) continue;
+    const mediaId = extractMediaId(match[0]);
+    if (mediaId === null || mediaId === '') continue;
     if (!imageIds.includes(mediaId)) imageIds.push(mediaId);
   }
   return { html: trimmed, imageIds };

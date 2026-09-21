@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   CONTENT_HTML_LIMIT_UTF16,
-  CONTENT_MEDIA_ID_PATTERN,
   ContentTooLargeError,
   rewriteDescriptionImages,
   sanitizeDescriptionFragment,
@@ -46,6 +45,19 @@ describe('sanitizeDescriptionFragment', () => {
     const result = sanitizeDescriptionFragment('<p><img data-media-id="f1c3m2" alt="one"><img data-media-id="f1c3m2" alt="again"><img data-media-id="mediaB7"></p>');
     expect(result.html).toBe('<p><img data-media-id="f1c3m2" alt="one" /><img data-media-id="f1c3m2" alt="again" /><img data-media-id="mediaB7" /></p>');
     expect(result.imageIds).toEqual(['f1c3m2', 'mediaB7']);
+  });
+
+  it('collects upload-style UUID media ids and lets the caller resolve them authoritatively', () => {
+    const uuid = '7264490f-29a5-4b5a-a3ad-6c70d8d2853f';
+    const result = sanitizeDescriptionFragment(`<p><img data-media-id="${uuid}"></p>`);
+    expect(result.html).toBe(`<p><img data-media-id="${uuid}" /></p>`);
+    expect(result.imageIds).toEqual([uuid]);
+  });
+
+  it('does not collect empty data-media-id values', () => {
+    const result = sanitizeDescriptionFragment('<p><img data-media-id=""></p>');
+    expect(result.imageIds).toEqual([]);
+    expect(result.html).toBe('<p><img data-media-id /></p>');
   });
 
   it('drops src, width, height and event attributes from preserved images', () => {
@@ -96,15 +108,5 @@ describe('rewriteDescriptionImages', () => {
 
   it('returns html unchanged when it has no image tags', () => {
     expect(rewriteDescriptionImages('<p>plain</p>', images)).toBe('<p>plain</p>');
-  });
-});
-
-describe('CONTENT_MEDIA_ID_PATTERN', () => {
-  it('accepts canonical media ids and rejects malicious shapes', () => {
-    expect(CONTENT_MEDIA_ID_PATTERN.test('f1c3m2')).toBe(true);
-    expect(CONTENT_MEDIA_ID_PATTERN.test('abc')).toBe(false);
-    expect(CONTENT_MEDIA_ID_PATTERN.test('x'.repeat(129))).toBe(false);
-    expect(CONTENT_MEDIA_ID_PATTERN.test('has space')).toBe(false);
-    expect(CONTENT_MEDIA_ID_PATTERN.test('drop--it')).toBe(false);
   });
 });

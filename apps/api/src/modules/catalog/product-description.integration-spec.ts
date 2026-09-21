@@ -19,25 +19,43 @@ describe.sequential('ProductDescription database integration', () => {
   const productSlug = `description-product-${runId}`;
   const key = (name: string) => `catalog-description-${name}-${runId}`;
 
-  async function createReadyImage(targetId: string, altText: string): Promise<{ id: string; widestRenditionObjectKey: string }> {
+  async function createReadyImage(
+    targetId: string,
+    altText: string,
+    options: {
+      id?: string;
+      sourceWidth?: number;
+      sourceHeight?: number;
+      widestWidth?: number;
+      widestHeight?: number;
+    } = {},
+  ): Promise<{ id: string; widestRendition: { objectKey: string; width: number; height: number } }> {
     const objectPrefix = `products/${targetId}/${randomUUID()}`;
+    const sourceWidth = options.sourceWidth ?? 1200;
+    const sourceHeight = options.sourceHeight ?? 900;
+    const widestWidth = options.widestWidth ?? 1200;
+    const widestHeight = options.widestHeight ?? 900;
     const media = await prisma.productMedia.create({
       data: {
+        ...(options.id ? { id: options.id } : {}),
         productId: targetId, kind: 'IMAGE', state: 'READY', role: 'GALLERY', position: 0,
         objectKey: `${objectPrefix}/source.webp`, originalFilename: 'source.webp',
         declaredMime: 'image/webp', declaredBytes: 100n, detectedMime: 'image/webp', bytes: 100n,
-        width: 1200, height: 900, altText, caption: 'کپشن',
+        width: sourceWidth, height: sourceHeight, altText, caption: 'کپشن',
         checksumSha256: 'ab'.repeat(32), createdById: actorId,
         uploadExpiresAt: new Date(Date.now() + 60_000),
         renditions: {
           create: [
             { purpose: 'DETAIL_MD', format: 'webp', objectKey: `${objectPrefix}/r-600.webp`, bytes: 100n, width: 600, height: 450, checksumSha256: 'ab'.repeat(32) },
-            { purpose: 'DETAIL_LG', format: 'webp', objectKey: `${objectPrefix}/r-1200.webp`, bytes: 200n, width: 1200, height: 900, checksumSha256: 'ab'.repeat(32) },
+            { purpose: 'DETAIL_LG', format: 'webp', objectKey: `${objectPrefix}/r-${widestWidth}.webp`, bytes: 200n, width: widestWidth, height: widestHeight, checksumSha256: 'ab'.repeat(32) },
           ],
         },
       },
     });
-    return { id: media.id, widestRenditionObjectKey: `${objectPrefix}/r-1200.webp` };
+    return {
+      id: media.id,
+      widestRendition: { objectKey: `${objectPrefix}/r-${widestWidth}.webp`, width: widestWidth, height: widestHeight },
+    };
   }
 
   beforeAll(async () => {
@@ -79,7 +97,7 @@ describe.sequential('ProductDescription database integration', () => {
 
   it('sanitizes rich text and rewrites description images from authoritative media', async () => {
     const media = await createReadyImage(productId, 'توضیح تصویر');
-    const expectedUrl = `http://localhost:9000/products/${media.widestRenditionObjectKey}`;
+    const expectedUrl = `http://localhost:9000/products/${media.widestRendition.objectKey}`;
 
     const saved = await catalog.updateProductDescription(actorId, key('rewrite'), productId, {
       description: `<p onclick="alert(1)">متن <img data-media-id="${media.id}" src="https://evil.example/x.png" width="10"> ضمیمه</p>`,
@@ -92,6 +110,34 @@ describe.sequential('ProductDescription database integration', () => {
     expect(saved.data.product.description).not.toContain('onclick');
     expect(saved.data.product.version).toBe(2);
 
+    const dbRow = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+    expect(dbRow.description).toBe(saved.data.product.description);
+  });
+
+  it('keeps upload-style UUID media ids and rewrites dimensions from the selected rendition', async () => {
+    await prisma.auditLog.deleteMany({
+      where: { entityId: productId, action: { startsWith: 'catalog.product.' } },
+    });
+    await prisma.productMedia.deleteMany({ where: { productId } });
+    await prisma.product.update({ where: { id: productId }, data: { version: 1 } });
+    const media = await createReadyImage(productId, 'عکس آپلودی', {
+      id: randomUUID(),
+      sourceWidth: 1200,
+      sourceHeight: 900,
+      widestWidth: 800,
+      widestHeight: 600,
+    });
+
+    const saved = await catalog.updateProductDescription(actorId, key('uuid-media'), productId, {
+      description: `<p>پس از آپلود <img data-media-id="${media.id}" src="https://evil.example/original.webp" width="10" height="10"> باقی می‌ماند</p>`,
+      expectedVersion: 1,
+    });
+
+    expect(saved.data.product.description).toContain(
+      `<img data-media-id="${media.id}" src="http://localhost:9000/products/${media.widestRendition.objectKey}" width="${media.widestRendition.width}" height="${media.widestRendition.height}" alt="عکس آپلودی">`,
+    );
+    expect(saved.data.product.description).not.toContain('https://evil.example/');
+    expect(saved.data.product.description).not.toContain('width="10"');
     const dbRow = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
     expect(dbRow.description).toBe(saved.data.product.description);
   });
