@@ -291,6 +291,43 @@ malware scanner also remain production-acceptance work.
   `pnpm lint`, `pnpm typecheck`, `pnpm build` and the unaffected Web (325) and
   Admin (506) test suites. Only the Admin rich-text UI remains, in a later slice.
 
+### Admin rich-text editor (in review — #279 editor slice)
+
+- `apps/admin` now ships a reusable, non-product-specific `RichTextEditor`
+  component built directly against the exact-pinned, self-hosted `jodit@4.15.1`
+  (ADR-0016): no React wrapper, no CDN/API key/license/remote asset, and all
+  Jodit JS/CSS/icons/language data are bundled by the Next app.
+- The component is `use client` and loads Jodit and the ESM `indent`/`justify`
+  plugin modules only inside a client-side effect, so Jodit never executes during
+  Next SSR. It owns the lifecycle (create once, external `value`/`onChange`
+  synchronization without caret loss, `destruct()` on unmount with a re-init
+  guard) and exposes loading and error fallbacks with an `onError` callback.
+- The Jodit content profile is a pure, unit-tested builder: Persian content
+  direction (`rtl`), explicit toolbar (undo/redo, H1-H6 via the `paragraph`
+  control, bold/italic/underline/strikethrough, lists, indent/outdent,
+  alignment, brush/colors, link, table, blockquote), paste-HTML kept enabled,
+  `uploader.url` emptied and `insertImageAsBase64URI` disabled, and the
+  uploader / file browser / native image dialog, plus `about`, `powered-by-jodit`,
+  `iframe`, `source`, `fullsize`, `preview`, `print`, `video`, `media`,
+  `ai-assistant` and `speech-recognize` plugins disabled.
+- The media integration boundary is interface-only: `lib/editor/media-picker.ts`
+  defines `MediaPickerItem` (the `AdminProductMediaPickerItem` contract shape),
+  `MediaPickerRequest`/`MediaPickerAdapter`/`MediaPickerHandle` and the
+  `useMediaPicker` hook. No Media Manager dialog is wired in this slice. When a
+  handle is provided, the editor shows an image toolbar control that saves the
+  current selection, opens the picker, and inserts an attribute-escaped
+  `<img data-media-id src width height alt>` on selection — the server still
+  rewrites `src`/`width`/`height` from authoritative media on save.
+- A demo mounts the editor on the Admin showcase forms page so `next build`
+  actually bundles Jodit and its CSS through the real Next pipeline.
+- Verified locally on this slice: Admin suite green including the new
+  `RichTextEditor`, `jodit-profile` and `media-picker` tests, the `CI=true`
+  coverage gates, `pnpm lint` (ESLint `--max-warnings=0` plus the runtime-asset
+  scanner — no `http(s):` literal or remote CSS/font anywhere in `apps/admin`),
+  `pnpm typecheck` and `pnpm build`. Not verifiable in this slice: real-browser
+  interaction evidence (Playwright is not configured for Admin) and the actual
+  Media Manager dialog, which remain for the product-wiring slice.
+
 ### Server Cart runtime (authenticated via #239/#241–#244/#251; Guest via #270/#269)
 
 - `Customer.userId` provides explicit authenticated ownership; Cart lookup does
