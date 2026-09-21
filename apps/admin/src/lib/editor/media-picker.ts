@@ -43,5 +43,6 @@ export function buildMediaImageHtml(item: MediaPickerItem): string {
   const id = escapeAttribute(item.id);
   const alt = escapeAttribute(item.alt);
   const url = escapeAttribute(item.url);
-  return `<img data-media-id="${id}" src="${url}" alt="${alt}" width="${item.width}" height="${item.height}" />`;
+  const caption = item.caption ? ` title="${escapeAttribute(item.caption)}"` : '';
+  return `<img data-media-id="${id}" src="${url}" alt="${alt}"${caption} width="${item.width}" height="${item.height}" />`;
 }

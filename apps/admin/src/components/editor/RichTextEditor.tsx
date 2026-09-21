@@ -68,10 +68,12 @@ export function RichTextEditor({
         onInsert: (item) => {
           snapshot.s.restore();
           snapshot.s.insertHTML(buildMediaImageHtml(item));
+          snapshot.focus();
           onChangeRef.current(snapshot.value);
         },
         onCancel: () => {
           snapshot.s.restore();
+          snapshot.focus();
         },
       });
     };

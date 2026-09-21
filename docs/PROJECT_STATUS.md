@@ -325,8 +325,45 @@ malware scanner also remain production-acceptance work.
   coverage gates, `pnpm lint` (ESLint `--max-warnings=0` plus the runtime-asset
   scanner — no `http(s):` literal or remote CSS/font anywhere in `apps/admin`),
   `pnpm typecheck` and `pnpm build`. Not verifiable in this slice: real-browser
-  interaction evidence (Playwright is not configured for Admin) and the actual
-  Media Manager dialog, which remain for the product-wiring slice.
+  interaction evidence (Playwright is not configured for Admin).
+
+### Admin product media picker wired to the real endpoint (in review — #279 media-picker slice)
+
+- The Jodit **Image** toolbar button is now overridden end-to-end: clicking it
+  captures the editor selection (`s.save()`), opens only the IranYaragh product
+  media picker, and on choice restores the selection, inserts the image at the
+  cursor (`s.insertHTML()`) and returns focus (`editor.focus()`); cancel restores
+  selection/focus without touching the content. The native `image` plugin stays
+  disabled and the override is an `exec`-only control (no `list`), so no Jodit
+  modal, file browser, uploader dialog or base64 path can ever open.
+- The picker is real, not interface-only: `listProductMediaPicker` in
+  `lib/catalog/media-api.ts` calls the existing
+  `GET /api/v1/catalog/admin/products/:productId/media/picker` with the bearer
+  token and returns the READY IMAGE projection. `ProductMediaPickerDialog`
+  renders a single top-level MUI dialog (MUI Portal — no nested modal, no manual
+  z-index, no fragile DOM manipulation) with loading, error with retry,
+  permission (403 `catalog.media.read`), not-found and empty states; clicking an
+  image calls back the request's `onInsert`. `useProductMediaPicker(productId)`
+  returns `{ handle, host }` so a page can mount the editor next to the dialog
+  host with MinIO/Product Media remaining the source of truth.
+- Inserted HTML is `<img data-media-id … src … alt … title … width … height />`:
+  `data-media-id` keys the server-side rewrite, `src` is the canonical public
+  projection URL only (never object keys or presigned/Signed-URL parameters),
+  and `alt`/`width`/`height` plus the optional caption (as `title`) come verbatim
+  from the picker contract with attribute escaping. The description sanitizer
+  still drops all but `data-media-id`/`alt` on save and the server rewrites the
+  rest from authoritative media; caption has no dedicated persistence field and
+  is presentational.
+- Verified locally on this slice: Admin typescript, ESLint (`--max-warnings=0`)
+  plus the runtime-asset scanner, the full suite (551 tests) and `CI=true`
+  coverage gates (Statements 88.72 / Branches 78.63 / Functions 87.18 / Lines
+  91.58) and `next build`. Tests cover insert-at-cursor, cancel-leaves-content,
+  focus restore, no nested modal (no `role="dialog"` from the editor; single
+  picker dialog), public-URL-only rendering, 403/error/empty/retry states and
+  the hook wiring. Not verifiable here: real-browser interaction evidence and
+  the description edit screen that will consume
+  `useProductMediaPicker` on the product detail page (description persistence is
+  the next slice and needs the admin `updateProductDescription` function).
 
 ### Server Cart runtime (authenticated via #239/#241–#244/#251; Guest via #270/#269)
 

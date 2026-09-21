@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Jodit } from 'jodit';
 import { RichTextEditor } from './RichTextEditor';
 import type { JoditProfile } from './jodit-profile';
@@ -11,6 +11,7 @@ const state = vi.hoisted(() => {
   const destruct = vi.fn();
   const execCommand = vi.fn();
   const setReadOnly = vi.fn();
+  const focus = vi.fn();
   const save = vi.fn();
   const restore = vi.fn();
   const insertHTML = vi.fn();
@@ -20,6 +21,7 @@ const state = vi.hoisted(() => {
     destruct,
     execCommand,
     setReadOnly,
+    focus,
     s: { save, restore, insertHTML },
   };
   return {
@@ -28,6 +30,7 @@ const state = vi.hoisted(() => {
     destruct,
     execCommand,
     setReadOnly,
+    focus,
     save,
     restore,
     insertHTML,
@@ -46,7 +49,34 @@ const renderEditor = (props: Partial<Parameters<typeof RichTextEditor>[0]> = {})
 
 const settle = async () => waitFor(() => expect(state.make).toHaveBeenCalled());
 
+const imageItem: MediaPickerItem = {
+  id: 'm1',
+  url: '/cdn/m1.webp',
+  alt: 'alt & quote',
+  caption: 'توضیح <i>بلند</i>',
+  width: 800,
+  height: 600,
+};
+
+const triggerImageButton = (): void => {
+  const profile = state.make.mock.calls[0][1] as JoditProfile;
+  const picker = profile.extraButtons?.find((button) => button.name === 'image');
+  expect(picker).toBeDefined();
+  picker?.exec?.(state.editor as unknown as Jodit);
+};
+
+const openRequest = <T extends Record<string, unknown>>(
+  open: ReturnType<typeof vi.fn>,
+): T => open.mock.calls[0][0] as T;
+
 describe('RichTextEditor', () => {
+  beforeEach(() => {
+    state.focus.mockClear();
+    state.save.mockClear();
+    state.restore.mockClear();
+    state.insertHTML.mockClear();
+  });
+
   it('shows a loading placeholder before the editor initializes', () => {
     state.make.mockReturnValue(state.editor);
     renderEditor();
@@ -62,7 +92,7 @@ describe('RichTextEditor', () => {
     expect(profile.direction).toBe('rtl');
     expect(profile.uploader?.url).toBe('');
     expect(profile.disablePlugins).toContain('image');
-    expect(profile.extraButtons?.some((button) => button.name === 'imagePicker')).toBe(true);
+    expect(profile.extraButtons?.some((button) => button.name === 'image')).toBe(true);
     await waitFor(() => expect(screen.queryByTestId('rich-text-editor-loading')).toBeNull());
   });
 
@@ -115,42 +145,60 @@ describe('RichTextEditor', () => {
     expect(state.setReadOnly).toHaveBeenCalledWith(true);
   });
 
-  it('opens the media picker with a captured selection and inserts the returned image', async () => {
+  it('captures the selection, opens the picker and inserts the public image at the cursor with focus restored', async () => {
     state.make.mockReturnValue(state.editor);
     const open = vi.fn();
     const onChange = vi.fn();
     renderEditor({ mediaPicker: { productId: 'p1', open }, onChange });
     await settle();
 
-    const profile = state.make.mock.calls[0][1] as JoditProfile;
-    const picker = profile.extraButtons?.find((button) => button.name === 'imagePicker');
-    expect(picker).toBeDefined();
-    picker?.exec?.(state.editor as unknown as Jodit);
+    triggerImageButton();
 
     expect(state.save).toHaveBeenCalledTimes(1);
     expect(open).toHaveBeenCalledTimes(1);
 
-    const request = open.mock.calls[0][0] as {
-      onInsert: (item: MediaPickerItem) => void;
-      onCancel: () => void;
-    };
-    state.editor.value = '<img alt="x">';
-    const item: MediaPickerItem = {
-      id: 'm1',
-      url: '/cdn/m1.webp',
-      alt: 'alt & quote',
-      caption: null,
-      width: 800,
-      height: 600,
-    };
-    request.onInsert(item);
+    const request = openRequest<{ onInsert: (item: MediaPickerItem) => void; onCancel: () => void }>(open);
+    state.editor.value = '<p>متن</p>';
+    request.onInsert(imageItem);
 
     expect(state.restore).toHaveBeenCalledTimes(1);
-    expect(state.insertHTML).toHaveBeenCalledWith(
-      expect.stringContaining('data-media-id="m1"'),
-    );
-    expect(state.insertHTML).toHaveBeenCalledWith(expect.stringContaining('alt="alt &amp; quote"'));
-    expect(onChange).toHaveBeenCalledWith('<img alt="x">');
+    expect(state.focus).toHaveBeenCalledTimes(1);
+    const inserted = state.insertHTML.mock.calls[0][0] as string;
+    expect(inserted).toContain('data-media-id="m1"');
+    expect(inserted).toContain('src="/cdn/m1.webp"');
+    expect(inserted).toContain('alt="alt &amp; quote"');
+    expect(inserted).toContain('title="توضیح &lt;i&gt;بلند&lt;/i&gt;"');
+    expect(inserted).toContain('width="800" height="600"');
+    expect(inserted).not.toMatch(/X-Amz-|signature|presign|AWSAccessKeyId/i);
+    expect(onChange).toHaveBeenCalledWith('<p>متن</p>');
+  });
+
+  it('cancelling the picker leaves the content untouched and restores selection and focus', async () => {
+    state.make.mockReturnValue(state.editor);
+    const open = vi.fn();
+    renderEditor({ mediaPicker: { productId: 'p1', open } });
+    await settle();
+
+    triggerImageButton();
+    const request = openRequest<{ onInsert: (item: MediaPickerItem) => void; onCancel: () => void }>(open);
+    request.onCancel();
+
+    expect(state.insertHTML).not.toHaveBeenCalled();
+    expect(state.focus).toHaveBeenCalledTimes(1);
+    expect(state.restore).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the adapter directly with no Jodit popup or nested modal', async () => {
+    state.make.mockReturnValue(state.editor);
+    const open = vi.fn();
+    renderEditor({ mediaPicker: { productId: 'p1', open } });
+    await settle();
+
+    triggerImageButton();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(state.execCommand).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('is a no-op on the media toolbar without a media picker handle', async () => {
@@ -158,22 +206,7 @@ describe('RichTextEditor', () => {
     renderEditor();
     await settle();
     const profile = state.make.mock.calls[0][1] as JoditProfile;
-    expect(profile.extraButtons?.some((button) => button.name === 'imagePicker')).toBe(false);
-  });
-
-  it('restores the selection when the picker is cancelled', async () => {
-    state.make.mockReturnValue(state.editor);
-    const open = vi.fn();
-    renderEditor({ mediaPicker: { productId: 'p1', open } });
-    await settle();
-
-    const profile = state.make.mock.calls[0][1] as JoditProfile;
-    const picker = profile.extraButtons?.find((button) => button.name === 'imagePicker');
-    picker?.exec?.(state.editor as unknown as Jodit);
-
-    const request = open.mock.calls[0][0] as { onCancel: () => void };
-    request.onCancel();
-    expect(state.restore).toHaveBeenCalledTimes(1);
+    expect(profile.extraButtons?.some((button) => button.name === 'image')).toBe(false);
   });
 
   it('renders an error fallback and reports init failures when Jodit throws', async () => {

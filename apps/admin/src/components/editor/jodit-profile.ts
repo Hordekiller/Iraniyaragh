@@ -14,6 +14,7 @@ export type JoditProfile = {
     tooltip?: string;
     icon?: string;
     exec?: (editor: Jodit) => void;
+    list?: unknown;
   }>;
   events?: Record<string, (...args: unknown[]) => void>;
   controls?: { paragraph?: { list?: Record<string, string> } };
@@ -91,9 +92,9 @@ export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfi
 
   if (options.onInsertMedia) {
     extraButtons.push({
-      name: 'imagePicker',
+      name: 'image',
       icon: 'image',
-      tooltip: 'Insert media from the IranYaragh library',
+      tooltip: 'Insert image from the IranYaragh product library',
       exec: (editor) => {
         options.onInsertMedia?.(editor);
       },

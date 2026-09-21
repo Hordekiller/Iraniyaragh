@@ -78,4 +78,20 @@ describe('buildMediaImageHtml', () => {
     expect(html).toContain('src="/cdn/x?a=1&amp;b=2"');
     expect(html).toContain('alt="&lt;b&gt;alt&lt;/b&gt;"');
   });
+
+  it('adds the picker caption as an escaped title attribute, or omits it', () => {
+    const withCaption: MediaPickerItem = {
+      id: 'm1',
+      url: '/cdn/m1.webp',
+      alt: 'alt',
+      caption: 'عکس & «فروش» <i>ویژه</i>',
+      width: 100,
+      height: 100,
+    };
+    const html = buildMediaImageHtml(withCaption);
+    expect(html).toContain('title="عکس &amp; «فروش» &lt;i&gt;ویژه&lt;/i&gt;"');
+
+    const withoutCaption = buildMediaImageHtml({ ...withCaption, caption: null });
+    expect(withoutCaption).not.toContain('title=');
+  });
 });

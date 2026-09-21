@@ -65,24 +65,27 @@ describe('buildJoditProfile', () => {
     expect(editor.execCommand).toHaveBeenCalledWith('formatBlock', false, 'blockquote');
   });
 
-  it('adds the media picker control only when an insert handler is provided', () => {
+  it('overrides the default image toolbar button with the library picker only when a handler is provided', () => {
     const without = buildJoditProfile();
-    expect(without.extraButtons?.some((button) => button.name === 'imagePicker')).toBe(false);
+    expect(without.extraButtons?.some((button) => button.name === 'image')).toBe(false);
 
     const onInsertMedia = vi.fn();
     const withHandler = buildJoditProfile({ onInsertMedia });
-    const picker = withHandler.extraButtons?.find((button) => button.name === 'imagePicker');
+    const picker = withHandler.extraButtons?.find((button) => button.name === 'image');
     expect(picker).toBeDefined();
     const editor = makeEditor();
     picker?.exec?.(editor);
     expect(onInsertMedia).toHaveBeenCalledWith(editor);
-  });
-
-  it('brands the media control and confirms upload plugins stay disabled', () => {
-    const profile = buildJoditProfile({ onInsertMedia: vi.fn() });
-    const picker = profile.extraButtons?.find((button) => button.name === 'imagePicker');
     expect(picker?.icon).toBe('image');
     expect(picker?.tooltip).toContain('IranYaragh');
+  });
+
+  it('keeps the image control as a plain exec action with no popup or sub-commands', () => {
+    const profile = buildJoditProfile({ onInsertMedia: vi.fn() });
+    const picker = profile.extraButtons?.find((button) => button.name === 'image');
+    expect(picker).toBeDefined();
+    expect(picker?.list).toBeUndefined();
+    expect(picker?.exec).toBeTypeOf('function');
   });
 
   it('keeps paste-HTML enabled while dropping the paste confirmation prompt', () => {
