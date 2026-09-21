@@ -515,3 +515,54 @@ describe("MediaService primary selection", () => {
     }));
   });
 });
+
+describe("MediaService listPicker", () => {
+  const readyImage = {
+    id: "media-image", productId: "product-1", kind: "IMAGE", state: "READY", role: "GALLERY", position: 0,
+    altText: "یک عکس", caption: "عنوان", width: 1200, height: 900,
+    renditions: [
+      { productMediaId: "media-image", objectKey: "products/product-1/media-image/r-600.jpg", format: "jpeg", width: 600, height: 450, bytes: 100n, status: "READY", createdAt: now, updatedAt: now },
+      { productMediaId: "media-image", objectKey: "products/product-1/media-image/r-1200.jpg", format: "jpeg", width: 1200, height: 900, bytes: 200n, status: "READY", createdAt: now, updatedAt: now },
+    ],
+  };
+  const notFound = { ...readyImage, id: "media-no-rendition", width: 800, height: 600, renditions: [] };
+  const withoutIntrinsic = { ...readyImage, id: "media-no-intrinsic", width: null, height: null };
+
+  function pickerSetup(items: object[]) {
+    const prisma = {
+      product: { findUnique: vi.fn().mockResolvedValue({ id: "product-1" }) },
+      productMedia: { findMany: vi.fn().mockResolvedValue(items) },
+    };
+    const service = new MediaService(prisma as never, { record: vi.fn() } as never, { run: vi.fn() } as never, {} as never, {} as never, new MediaPolicyService());
+    return { service, prisma };
+  }
+
+  it("exposes pickable ready images with the widest rendition URL in position order", async () => {
+    const { service, prisma } = pickerSetup([readyImage, notFound, withoutIntrinsic]);
+
+    const response = await service.listPicker("product-1");
+
+    expect(prisma.productMedia.findMany).toHaveBeenCalledWith({
+      where: { productId: "product-1", state: "READY", kind: "IMAGE" },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      include: { renditions: true },
+    });
+    expect(response.data.items).toEqual([
+      {
+        id: "media-image",
+        url: "http://localhost:9000/products/products/product-1/media-image/r-1200.jpg",
+        alt: "یک عکس",
+        caption: "عنوان",
+        width: 1200,
+        height: 900,
+      },
+    ]);
+  });
+
+  it("throws NotFound for unknown products", async () => {
+    const { service, prisma } = pickerSetup([]);
+    prisma.product.findUnique.mockResolvedValue(null);
+
+    await expect(service.listPicker("missing-product")).rejects.toMatchObject({ response: { code: "NOT_FOUND" } });
+  });
+});

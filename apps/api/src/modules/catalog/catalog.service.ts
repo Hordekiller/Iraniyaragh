@@ -1,6 +1,7 @@
-import { ConflictException, Injectable, NotFoundException, Optional, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, ProductStatus } from '@prisma/client';
+import { createHash } from 'node:crypto';
 import type {
   AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse,
   ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, PublicProductMediaImage, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse,
@@ -8,8 +9,10 @@ import type {
 import { getRequestId } from '../../common/request-context';
 import type { EnvironmentVariables } from '../../config/environment';
 import { PrismaService } from '../../database/prisma.service';
+import { ContentTooLargeError, rewriteDescriptionImages, sanitizeDescriptionFragment, type ResolvedContentImage } from '../content/content-sanitizer';
+import { widestRenditionUrl } from '../media/media-url';
 import { AuditLogService } from '../audit/audit-log.service';
-import type { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
+import type { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductDescriptionDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
 import { CatalogIdempotencyService } from './catalog-idempotency.service';
 import { EMPTY_AXIS_SIGNATURE, canonicalizeSku, combinationSignature, legacyCombinationSignature, pendingCombinationSignature } from './variant-identifiers';
 
@@ -159,7 +162,8 @@ export class CatalogService {
     if (input.status === 'PUBLISHED' && (!input.variants || input.variants.length === 0)) {
       throw new ConflictException({ code: 'CONFLICT', message: 'A product must have a SKU before publishing.' });
     }
-    const normalized = { ...input, name: input.name.trim(), description: input.description?.trim() };
+    const sanitized = input.description === undefined ? undefined : this.sanitizeDescription(input.description, { images: 'drop' });
+    const normalized = { ...input, name: input.name.trim(), description: sanitized?.html ?? undefined };
     const idempotencyPayload = {
       name: normalized.name,
       slug: normalized.slug,
@@ -195,6 +199,44 @@ export class CatalogService {
         }
         await this.audit.record({ actorId, action: 'catalog.product.created', entityType: 'Product', entityId: created.id, requestId: getRequestId(), after: { productId: created.id, status: created.status, variantCount: created.variants.length } }, tx);
         return { response: { data: { product: this.productDetail(created) } }, resourceType: 'Product', resourceId: created.id };
+      },
+    });
+  }
+
+  async updateProductDescription(actorId: string, idempotencyKey: string, id: string, input: ProductDescriptionDto): Promise<ProductDetailResponse> {
+    const target = input.description;
+    if (target === undefined) throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'description must be a string or null.' });
+    return this.idempotency.run({
+      actorId, scope: `catalog.product.description:${id}`, key: idempotencyKey, payload: { description: target, expectedVersion: input.expectedVersion },
+      execute: async tx => {
+        const current = await tx.product.findUnique({ where: { id }, include: this.adminProductInclude() });
+        if (!current) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
+        if (current.version !== input.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+        let stored: string | null = null;
+        let mediaCount = 0;
+        if (target !== null) {
+          const sanitized = this.sanitizeDescription(target, { images: 'preserve' });
+          if (sanitized.html !== null) {
+            mediaCount = sanitized.imageIds.length;
+            let images: ResolvedContentImage[] = [];
+            if (mediaCount > 0) {
+              const rows = await tx.productMedia.findMany({
+                where: { id: { in: sanitized.imageIds }, productId: id, state: 'READY', kind: 'IMAGE', width: { not: null }, height: { not: null }, renditions: { some: {} } },
+                include: { renditions: true },
+              });
+              const byId = new Map(rows.map(row => [row.id, row]));
+              const invalidMediaIds = sanitized.imageIds.filter(mediaId => !byId.has(mediaId));
+              if (invalidMediaIds.length > 0) throw new UnprocessableEntityException({ code: 'DESCRIPTION_MEDIA_INVALID', message: 'A description image references product media that is not a ready image of this product.', details: { mediaIds: invalidMediaIds } });
+              images = rows.map(row => ({ id: row.id, url: widestRenditionUrl(this.mediaOrigin(), row.renditions) ?? '', width: row.width!, height: row.height!, alt: row.altText ?? '' }));
+            }
+            stored = rewriteDescriptionImages(sanitized.html, images);
+          }
+        }
+        const changed = await tx.product.updateMany({ where: { id, version: input.expectedVersion }, data: { description: stored, version: { increment: 1 } } });
+        if (changed.count !== 1) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
+        const updated = await tx.product.findUniqueOrThrow({ where: { id }, include: this.adminProductInclude() });
+        await this.audit.record({ actorId, action: 'catalog.product.description_updated', entityType: 'Product', entityId: id, requestId: getRequestId(), before: { version: current.version }, after: { version: updated.version, length: stored?.length ?? 0, sha256: stored ? createHash('sha256').update(stored, 'utf8').digest('hex') : null, mediaCount } }, tx);
+        return { response: { data: { product: this.productDetail(updated) } }, resourceType: 'Product', resourceId: id };
       },
     });
   }
@@ -415,19 +457,36 @@ export class CatalogService {
   }
 
   private productInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, variants: true } as const; }
-  private adminProductInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, attributes: { include: { attribute: { select: { code: true, name: true } } }, orderBy: { attribute: { code: 'asc' as const } } }, variants: { include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } } } as const; }
+  private adminProductInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, media: { where: { state: 'READY' as const, kind: 'IMAGE' as const }, orderBy: { position: 'asc' as const }, include: { renditions: true } }, attributes: { include: { attribute: { select: { code: true, name: true } } }, orderBy: { attribute: { code: 'asc' as const } } }, variants: { include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } } } as const; }
   private publicImageMediaFilter() { return { state: 'READY' as const, kind: 'IMAGE' as const, altText: { not: null }, width: { not: null }, height: { not: null } } as const; }
   private publicListMediaInclude() { return { variants: { where: { isActive: true }, select: { salePrice: true } }, media: { where: { ...this.publicImageMediaFilter(), role: 'PRIMARY' as const }, take: 1, include: { renditions: { where: { purpose: 'CARD' }, orderBy: { format: 'asc' as const } } } } } as const; }
   private publicProductInclude() { return { brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, variants: { where: { isActive: true } }, media: { where: this.publicImageMediaFilter(), orderBy: { position: 'asc' as const }, include: { renditions: { orderBy: { width: 'asc' as const } } } } } as const; }
   private categoryInclude() { return { children: true } as const; }
-  private productListItem(row: { id: string; name: string; slug: string; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; media?: PublicMediaRow[]; variants?: Array<{ salePrice: bigint }> }) { const prices = row.variants?.map(variant => variant.salePrice) ?? []; const startingPrice = prices.length ? { amount: prices.reduce((lowest, price) => price < lowest ? price : lowest, prices[0]!).toString(), currency: 'IRR' as const } : null; return { id: row.id, name: row.name, slug: row.slug, status: statusToApi(row.status), brandId: row.brandId, categoryId: row.categoryId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), ...(row.media ? { primaryMedia: row.media[0] ? this.publicImage(row.media[0]) : null } : {}), ...(row.variants ? { startingPrice } : {}) }; }
+  private productListItem(row: { id: string; name: string; slug: string; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; media?: PublicMediaRow[]; variants?: Array<{ salePrice: bigint }> }) { const prices = row.variants?.map(variant => variant.salePrice) ?? []; const startingPrice = prices.length ? { amount: prices.reduce((lowest, price) => price < lowest ? price : lowest, prices[0]!).toString(), currency: 'IRR' as const } : null; const primary = row.media && row.media[0] && row.media[0].kind === 'IMAGE' && row.media[0].altText !== null && row.media[0].width !== null && row.media[0].height !== null ? this.publicImage(row.media[0]) : null; return { id: row.id, name: row.name, slug: row.slug, status: statusToApi(row.status), brandId: row.brandId, categoryId: row.categoryId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), ...(row.media ? { primaryMedia: primary } : {}), ...(row.variants ? { startingPrice } : {}) }; }
   private categoryNode(row: CategoryInput): CategoryTreeNode { return { id: row.id, name: row.name, slug: row.slug, parentId: row.parentId, children: (row.children ?? []).map(child => this.categoryNode(child)), createdAt: new Date(row.createdAt).toISOString(), updatedAt: new Date(row.updatedAt).toISOString() }; }
-  private productDetail(row: ProductDetailRow) { return { ...this.productListItem(row), version: row.version, description: row.description, brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, attributes: row.attributes?.map(attribute => ({ attributeCode: attribute.attribute.code, attributeName: attribute.attribute.name, isVariantAxis: attribute.isVariantAxis, isRequired: attribute.isRequired })), variants: row.variants.map(variant => this.productVariantPrivateDetail(variant)) }; }
-  private productDetailPublic(row: ProductDetailRow) { return { ...this.productListItem(row), description: row.description, brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantPublic(variant)), media: (row.media ?? []).filter(media => media.kind === 'IMAGE').map(media => this.publicImage(media)) }; }
+  private productDetail(row: ProductDetailRow) { return { ...this.productListItem(row), version: row.version, description: this.descriptionProjection(row.description, row.media), brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, attributes: row.attributes?.map(attribute => ({ attributeCode: attribute.attribute.code, attributeName: attribute.attribute.name, isVariantAxis: attribute.isVariantAxis, isRequired: attribute.isRequired })), variants: row.variants.map(variant => this.productVariantPrivateDetail(variant)) }; }
+  private productDetailPublic(row: ProductDetailRow) { return { ...this.productListItem(row), description: this.descriptionProjection(row.description, row.media), brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantPublic(variant)), media: (row.media ?? []).filter(media => media.kind === 'IMAGE').map(media => this.publicImage(media)) }; }
   private publicImage(media: PublicMediaRow): PublicProductMediaImage {
     if (media.kind !== 'IMAGE' || media.width === null || media.height === null || media.altText === null) throw new Error('Invalid ready public image projection.');
-    const origin = this.config?.get('PUBLIC_MEDIA_ORIGIN', { infer: true }) ?? 'http://localhost:9000/products';
-    return { id: media.id, kind: 'IMAGE', position: media.position, role: media.role as PublicProductMediaImage['role'], alt: media.altText, caption: media.caption, width: media.width, height: media.height, sources: media.renditions.map(rendition => ({ url: `${origin.replace(/\/$/u, '')}/${rendition.objectKey.split('/').map(encodeURIComponent).join('/')}`, width: rendition.width, height: rendition.height, type: rendition.format === 'jpeg' ? 'image/jpeg' : `image/${rendition.format}` })) };
+    return { id: media.id, kind: 'IMAGE', position: media.position, role: media.role as PublicProductMediaImage['role'], alt: media.altText, caption: media.caption, width: media.width, height: media.height, sources: media.renditions.map(rendition => ({ url: `${this.mediaOrigin().replace(/\/$/u, '')}/${rendition.objectKey.split('/').map(encodeURIComponent).join('/')}`, width: rendition.width, height: rendition.height, type: rendition.format === 'jpeg' ? 'image/jpeg' : `image/${rendition.format}` })) };
+  }
+  private mediaOrigin(): string {
+    return this.config?.get('PUBLIC_MEDIA_ORIGIN', { infer: true }) ?? 'http://localhost:9000/products';
+  }
+  private descriptionProjection(fragment: string | null, media: PublicMediaRow[] | undefined): string | null {
+    if (fragment === null) return null;
+    const sanitized = this.sanitizeDescription(fragment, { images: 'preserve' });
+    if (sanitized.html === null) return null;
+    const images: ResolvedContentImage[] = (media ?? []).filter(mediaItem => mediaItem.kind === 'IMAGE' && mediaItem.width !== null && mediaItem.height !== null).map(mediaItem => ({ id: mediaItem.id, url: widestRenditionUrl(this.mediaOrigin(), mediaItem.renditions) ?? '', width: mediaItem.width!, height: mediaItem.height!, alt: mediaItem.altText ?? '' }));
+    return rewriteDescriptionImages(sanitized.html, images);
+  }
+  private sanitizeDescription(input: string, options: { images: 'drop' | 'preserve' }) {
+    try {
+      return sanitizeDescriptionFragment(input, options);
+    } catch (error) {
+      if (error instanceof ContentTooLargeError) throw new UnprocessableEntityException({ code: 'DESCRIPTION_TOO_LARGE', message: error.message });
+      throw error;
+    }
   }
   private productVariantPublic(variant: VariantRow) { return { id: variant.id, sku: variant.sku, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }
   private productVariantBase(variant: VariantRow) { return { id: variant.id, sku: variant.sku, barcode: variant.barcode ?? undefined, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }

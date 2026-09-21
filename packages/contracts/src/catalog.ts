@@ -131,6 +131,17 @@ export type ProductUpdateRequest = Partial<Omit<ProductPayload, 'variants'>> & {
   expectedVersion: number;
 };
 
+/**
+ * Product description authoring command. `description` is `null` to clear the
+ * content, otherwise a sanitized HTML fragment (see ADR-0016). Images carried
+ * in the fragment must reference `READY` product-owned media via
+ * `data-media-id`; the server rewrites embedded image nodes authoritatively.
+ */
+export type ProductDescriptionUpdateRequest = {
+  description: string | null;
+  expectedVersion: number;
+};
+
 export type ProductListItem = {
   id: string;
   name: string;
