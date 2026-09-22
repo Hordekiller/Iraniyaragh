@@ -755,6 +755,7 @@ model StockReservation {
 
   @@index([warehouseId, variantId, status, expiresAt])
   @@index([status])
+  @@index([orderId, status])
 }
 
 model StockTransfer {
@@ -1005,6 +1006,7 @@ model Order {
   transitions                OrderTransition[]
   shippingQuote              ShippingQuote?
   checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
+  commandIdempotencyRecords  OrderCommandIdempotencyRecord[]
   createdAt                  DateTime                    @default(now())
   updatedAt                  DateTime                    @updatedAt
 
@@ -1086,6 +1088,21 @@ model CheckoutIdempotencyRecord {
   createdAt    DateTime @default(now())
 
   @@unique([customerId, scope, keyHash])
+  @@index([expiresAt])
+}
+
+model OrderCommandIdempotencyRecord {
+  id           String   @id @default(cuid())
+  orderId      String
+  scope        String   @db.VarChar(100)
+  keyHash      String   @db.Char(64)
+  fingerprint  String   @db.Char(64)
+  responseJson Json?
+  expiresAt    DateTime
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now())
+
+  @@unique([orderId, scope, keyHash])
   @@index([expiresAt])
 }
 
