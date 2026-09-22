@@ -175,3 +175,15 @@ export type AdminOrderListResponse = ApiSuccess<{
 }>;
 
 export type AdminOrderDetailResponse = ApiSuccess<{ order: AdminOrderDetail }>;
+
+export type OrderCommandResult = {
+  id: string;
+  number: string;
+  status: Extract<OrderStatus, 'CANCELLED'>;
+  releasedReservations: number;
+  cancelledAt: string;
+};
+
+export type OrderCancelResponse = ApiSuccess<{ order: OrderCommandResult }>;
+
+export type OrderExpiryRunResponse = ApiSuccess<{ expired: number }>;
