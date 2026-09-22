@@ -54,10 +54,10 @@ const principalService = {
 };
 
 const commandService = {
-  cancelAsCustomer: vi.fn(async (_userId: string, id: string, _opts: unknown) => ({
+  cancelAsCustomer: vi.fn(async (userId: string, id: string) => ({
     data: { order: { id, status: 'CANCELLED' } },
   })),
-  cancelAsStaff: vi.fn(async (_userId: string, id: string, _opts: unknown) => ({
+  cancelAsStaff: vi.fn(async (userId: string, id: string) => ({
     data: { order: { id, status: 'CANCELLED' } },
   })),
 };
