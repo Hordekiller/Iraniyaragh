@@ -36,7 +36,12 @@ vi.mock('@/lib/catalog/catalog-api', () => ({
   getAttribute: mocks.getAttribute,
   previewVariantGeneration: mocks.previewVariantGeneration,
   generateVariants: mocks.generateVariants,
+  updateProductDescription: vi.fn(),
   createIdempotencyKey: (prefix: string) => `${prefix}-key`,
+}));
+
+vi.mock('@/components/editor/RichTextEditor', () => ({
+  RichTextEditor: ({ value }: { value: string }) => <textarea data-testid="rte" readOnly value={value} />,
 }));
 
 const colorAttribute: AttributeDefinitionSummary = {
@@ -118,7 +123,7 @@ describe('ProductDetailView', () => {
     expect(screen.getByText('آبان لک')).toBeInTheDocument();
     expect(screen.getByText('قفل‌ها')).toBeInTheDocument();
     expect(screen.getByText('lock-handle')).toBeInTheDocument();
-    expect(screen.getByText('توضیح نمونه')).toBeInTheDocument();
+    expect(screen.getByTestId('rte')).toHaveValue('توضیح نمونه');
     expect(screen.getByText('LOCK-RED-M')).toBeInTheDocument();
     expect(screen.getByText('رنگ: قرمز')).toBeInTheDocument();
   });

@@ -8,7 +8,7 @@ import { getRequestId } from "../../common/request-context";
 import { PrismaService } from "../../database/prisma.service";
 import { AuditLogService } from "../audit/audit-log.service";
 import { CatalogIdempotencyService } from "../catalog/catalog-idempotency.service";
-import { widestRenditionUrl } from "./media-url";
+import { widestRenditionProjection } from "./media-url";
 import type { ProductMediaArchiveDto, ProductMediaConfirmDto, ProductMediaMetadataDto, ProductMediaPrimaryDto, ProductMediaReorderDto, ProductMediaUploadDto } from "./media.dto";
 import { MediaPolicyService } from "./media-policy.service";
 import { PRODUCT_MEDIA_STORAGE, mediaSourceObjectKey, type ProductMediaStorage } from "./storage.port";
@@ -91,15 +91,15 @@ export class MediaService {
     return {
       data: {
         items: items.flatMap((item) => {
-          const url = widestRenditionUrl(origin, item.renditions);
-          if (url === null || item.width === null || item.height === null) return [];
+          const projection = widestRenditionProjection(origin, item.renditions);
+          if (projection === null) return [];
           return [{
             id: item.id,
-            url,
+            url: projection.url,
             alt: item.altText ?? "",
             caption: item.caption,
-            width: item.width,
-            height: item.height,
+            width: projection.width,
+            height: projection.height,
           }];
         }),
       },

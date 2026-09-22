@@ -36,6 +36,7 @@ import {
 import { canReadCatalog, canWriteCatalog } from '@/lib/catalog/catalog-permissions';
 import { getProduct, listAttributes } from '@/lib/catalog/catalog-api';
 import { AttributeConfigEditor } from './AttributeConfigEditor';
+import { ProductDescriptionEditor, ProductDescriptionPreview } from './ProductDescriptionEditor';
 import { ProductStatusActions } from './ProductStatusActions';
 import { VariantGenerateDialog } from './VariantGenerateDialog';
 import { VariantRowActions } from './VariantRowActions';
@@ -99,7 +100,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
         loading={loading}
         title={product?.name ?? 'کالا'}
         eyebrow="کاتالوگ"
-        description="جزئیات کالا: ویژگی‌ها، تنوع‌ها و قیمت‌ها. فرادادهٔ اصلی کالا در این نسخه از طریق «واردات» یا بازآفرینی کاتالوگ ویرایش می‌شود."
+        description="جزئیات کالا: ویژگی‌ها، تنوع‌ها، قیمت‌ها و توضیحات غنی. نام، برند و دسته‌بندی در این نسخه از طریق «واردات» یا بازآفرینی کاتالوگ ویرایش می‌شود."
         breadcrumbs={[
           { label: 'کالا و انبار' },
           { label: 'کالا و SKU', href: '/catalog' },
@@ -163,15 +164,36 @@ export function ProductDetailView({ productId }: { productId: string }) {
                     {product.slug}
                   </Typography>
                 </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    توضیحات
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {product.description || '—'}
-                  </Typography>
-                </Grid>
               </Grid>
+            </CardContent>
+          </Card>
+
+          <Card variant="outlined">
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 1 }}>
+                <Typography variant="subtitle1" fontWeight={800}>
+                  توضیحات
+                </Typography>
+                {canWrite ? (
+                  <Chip size="small" label="ویرایشگر غنی" variant="outlined" color="info" />
+                ) : null}
+              </Box>
+              {canWrite ? (
+                <ProductDescriptionEditor
+                  productId={productId}
+                  description={product.description}
+                  version={product.version ?? 0}
+                  canWrite={canWrite}
+                  onServerProduct={setProduct}
+                />
+              ) : (
+                <Stack spacing={2}>
+                  <Alert severity="info">
+                    حساب شما فقط دسترسی خواندن دارد؛ توضیحات به‌صورت پیش‌نمایش نمایش داده می‌شود.
+                  </Alert>
+                  <ProductDescriptionPreview description={product.description} />
+                </Stack>
+              )}
             </CardContent>
           </Card>
 

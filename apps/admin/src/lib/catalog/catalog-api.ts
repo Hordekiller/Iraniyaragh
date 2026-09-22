@@ -23,6 +23,7 @@ import type {
   CategoryUpdateRequest,
   ProductAttributeConfigurationPayload,
   ProductCreateRequest,
+  ProductDescriptionUpdateRequest,
   ProductDetailResponse,
   ProductListQuery,
   ProductListResponse,
@@ -97,6 +98,20 @@ export async function changeProductStatus(
   const response = await apiFetch<ProductStatusResponse['data']>(`/catalog/admin/products/${id}/status`, {
     method: 'POST',
     body: { action },
+    token: authToken(),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function updateProductDescription(
+  id: string,
+  input: ProductDescriptionUpdateRequest,
+  idempotencyKey: string,
+): Promise<ProductDetailResponse['data']> {
+  const response = await apiFetch<ProductDetailResponse['data']>(`/catalog/admin/products/${id}/description`, {
+    method: 'PATCH',
+    body: input,
     token: authToken(),
     headers: { 'Idempotency-Key': idempotencyKey },
   });

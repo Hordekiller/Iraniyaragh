@@ -261,7 +261,24 @@ that is not evidence of a working video-processing pipeline: confirmed videos
 currently remain `UPLOADED`. Production S3/CORS/CDN configuration and a real
 malware scanner also remain production-acceptance work.
 
-### Rich-text description contract and admin media picker (in review — #279 contract slice)
+### Rich-text description contract and admin media picker (delivered — #279 contract slice)
+
+- The storefront now renders the sanitized description HTML as markup via a
+  single sanctioned `RichText` component (`data-rich-text`), inside the Web app
+  (`ProductPage`), and no longer escapes it as literal text. The plain-text
+  projection (`richTextToPlainText`, Web) supplies a non-markup `description`
+  for the Product structured-data (Schema.org) node; images with `alt` keep
+  their text in reading order and block elements are separated by spaces.
+- Delivery scope: strict `dangerouslySetInnerHTML` (admin-sanitized, re-sanitized
+  projection), escaped plain-text fallback only for the Schema.org/SEO field and
+  for consumers that must never receive markup. Verified locally on
+  `feat/279-storefront-render` before the PR: RichText, plain-text projection
+  and ProductPage rich-description specs (16 new assertions across 3 files), dry
+  `CI=true` Web suite (337 tests) with the coverage gate (Statements 85.62%,
+  Branches 78.14%, Functions 81.84%, Lines 88.4%) and `pnpm lint`, `pnpm
+  typecheck`, `pnpm build` for the Web package. The Web lint passed with 3
+  pre-existing unused `eslint-disable` warnings (not from this slice). Only the
+  Admin/moderator rich-text editing UI remains, in a later slice.
 
 - ADR-0016 fixes the integration approach for Product description rich text and
   self-hosted media; Jodit and the Admin/Web UI adapters are follow-up slices and
@@ -278,6 +295,13 @@ malware scanner also remain production-acceptance work.
   media, so a client can never dictate image URLs or dimensions.
 - `GET /catalog/admin/products/:productId/media/picker` exposes a ready-image,
   widest-rendition projection for the editor without leaking object keys.
+- Hardening (merged head of #279): description `data-media-id` values are no
+  longer shape-gated; upload-created media rows carry `randomUUID()` ids with
+  hyphens, so reference validation is exclusively DB-backed against READY IMAGE
+  rows of the product (`DESCRIPTION_MEDIA_INVALID` for unresolved ids). The
+  picker and both description projections share one `widestRenditionProjection`
+  helper, so the emitted `src`, `width` and `height` all describe the same
+  selected rendition (never source dimensions of a smaller rendition).
 - Create and Excel-import paths sanitize descriptions and drop image markup; empty
   or cleared descriptions persist as `NULL`. Description projections re-sanitize
   stored HTML on every read and drop nodes whose media can no longer be resolved.
@@ -290,6 +314,156 @@ malware scanner also remain production-acceptance work.
   `CI=true` coverage gates (lines 83.87%) all pass on this slice, as do
   `pnpm lint`, `pnpm typecheck`, `pnpm build` and the unaffected Web (325) and
   Admin (506) test suites. Only the Admin rich-text UI remains, in a later slice.
+
+### Admin rich-text editor (in review — #279 editor slice)
+
+- `apps/admin` now ships a reusable, non-product-specific `RichTextEditor`
+  component built directly against the exact-pinned, self-hosted `jodit@4.15.1`
+  (ADR-0016): no React wrapper, no CDN/API key/license/remote asset, and all
+  Jodit JS/CSS/icons/language data are bundled by the Next app.
+- The component is `use client` and loads Jodit and the ESM `indent`/`justify`
+  plugin modules only inside a client-side effect, so Jodit never executes during
+  Next SSR. It owns the lifecycle (create once, external `value`/`onChange`
+  synchronization without caret loss, `destruct()` on unmount with a re-init
+  guard) and exposes loading and error fallbacks with an `onError` callback.
+- The Jodit content profile is a pure, unit-tested builder: Persian content
+  direction (`rtl`), explicit toolbar (undo/redo, H1-H6 via the `paragraph`
+  control, bold/italic/underline/strikethrough, lists, indent/outdent,
+  alignment, brush/colors, link, table, blockquote), paste-HTML kept enabled,
+  `uploader.url` emptied and `insertImageAsBase64URI` disabled, and the
+  uploader / file browser / native image dialog, plus `about`, `powered-by-jodit`,
+  `iframe`, `source`, `fullsize`, `preview`, `print`, `video`, `media`,
+  `ai-assistant` and `speech-recognize` plugins disabled.
+- The media integration boundary is interface-only: `lib/editor/media-picker.ts`
+  defines `MediaPickerItem` (the `AdminProductMediaPickerItem` contract shape),
+  `MediaPickerRequest`/`MediaPickerAdapter`/`MediaPickerHandle` and the
+  `useMediaPicker` hook. No Media Manager dialog is wired in this slice. When a
+  handle is provided, the editor shows an image toolbar control that saves the
+  current selection, opens the picker, and inserts an attribute-escaped
+  `<img data-media-id src width height alt>` on selection — the server still
+  rewrites `src`/`width`/`height` from authoritative media on save.
+- A demo mounts the editor on the Admin showcase forms page so `next build`
+  actually bundles Jodit and its CSS through the real Next pipeline.
+- Verified locally on this slice: Admin suite green including the new
+  `RichTextEditor`, `jodit-profile` and `media-picker` tests, the `CI=true`
+  coverage gates, `pnpm lint` (ESLint `--max-warnings=0` plus the runtime-asset
+  scanner — no `http(s):` literal or remote CSS/font anywhere in `apps/admin`),
+  `pnpm typecheck` and `pnpm build`. Not verifiable in this slice: real-browser
+  interaction evidence (Playwright is not configured for Admin).
+
+### Admin product media picker wired to the real endpoint (in review — #279 media-picker slice)
+
+- The Jodit **Image** toolbar button is now overridden end-to-end: clicking it
+  captures the editor selection (`s.save()`), opens only the IranYaragh product
+  media picker, and on choice restores the selection, inserts the image at the
+  cursor (`s.insertHTML()`) and returns focus (`editor.focus()`); cancel restores
+  selection/focus without touching the content. The native `image` plugin stays
+  disabled and the override is an `exec`-only control (no `list`), so no Jodit
+  modal, file browser, uploader dialog or base64 path can ever open.
+- The picker is real, not interface-only: `listProductMediaPicker` in
+  `lib/catalog/media-api.ts` calls the existing
+  `GET /api/v1/catalog/admin/products/:productId/media/picker` with the bearer
+  token and returns the READY IMAGE projection. `ProductMediaPickerDialog`
+  renders a single top-level MUI dialog (MUI Portal — no nested modal, no manual
+  z-index, no fragile DOM manipulation) with loading, error with retry,
+  permission (403 `catalog.media.read`), not-found and empty states; clicking an
+  image calls back the request's `onInsert`. `useProductMediaPicker(productId)`
+  returns `{ handle, host }` so a page can mount the editor next to the dialog
+  host with MinIO/Product Media remaining the source of truth.
+- Inserted HTML is `<img data-media-id … src … alt … title … width … height />`:
+  `data-media-id` keys the server-side rewrite, `src` is the canonical public
+  projection URL only (never object keys or presigned/Signed-URL parameters),
+  and `alt`/`width`/`height` plus the optional caption (as `title`) come verbatim
+  from the picker contract with attribute escaping. The description sanitizer
+  still drops all but `data-media-id`/`alt` on save and the server rewrites the
+  rest from authoritative media; caption has no dedicated persistence field and
+  is presentational.
+- Verified locally on this slice: Admin typescript, ESLint (`--max-warnings=0`)
+  plus the runtime-asset scanner, the full suite (551 tests) and `CI=true`
+  coverage gates (Statements 88.72 / Branches 78.63 / Functions 87.18 / Lines
+  91.58) and `next build`. Tests cover insert-at-cursor, cancel-leaves-content,
+  focus restore, no nested modal (no `role="dialog"` from the editor; single
+  picker dialog), public-URL-only rendering, 403/error/empty/retry states and
+  the hook wiring. Not verifiable here: real-browser interaction evidence and
+  the description edit screen that will consume
+  `useProductMediaPicker` on the product detail page (description persistence is
+  the next slice and needs the admin `updateProductDescription` function).
+
+### Admin product description authoring (in review — #279 description slice)
+
+- The Product Detail/Edit page now hosts the real rich-text description editor.
+  For accounts with `catalog.write`, `ProductDescriptionEditor` mounts the Jodit
+  editor seeded from `product.description`, with the product media picker wired
+  through `useProductMediaPicker`; accounts with `catalog.read` only see a
+  read-only preview card (`fail-closed` — the editor never renders without write
+  permission, and a 403 from the API is surfaced as `catalog.write` missing).
+- Persistence is the real command, not a fixture: `updateProductDescription` in
+  `lib/catalog/catalog-api.ts` calls
+  `PATCH /api/v1/catalog/admin/products/:id/description` with the bearer token, a
+  stable `Idempotency-Key` (`product-description-<uuid>`) and the body
+  `{ description, expectedVersion }` where `expectedVersion` is the product's
+  current `version`. Empty content saves as `description: null` (per the admin
+  DTO / ADR-0016). After a successful save the UI adopts the fresh product from
+  the response (its `version` and server-sanitized description) as the new source
+  of truth for both the editor and the parent detail state.
+- Save state is a machine: `idle → saving → saved | error`. The key is generated
+  once per mutation and — because the server dedupes by key+payload — reused
+  verbatim on the retry path for ambiguous failures (network error, abort, 5xx),
+  while terminal rejections (validation, 403) drop it. A `STALE_VERSION` 409 is
+  never over-written silently: the user's draft is preserved, a warning explains
+  that the product changed, and an explicit «بارگذاری نسخهٔ تازه» action reloads
+  the fresh product into the editor.
+- Unsaved-change protection: edits beyond the persisted snapshot show a visible
+  «تغییرات ذخیرهنشده» banner and arm a `beforeunload` guard so the browser
+  prompts before leaving the page.
+- Read-only preview renders `product.description` with `dangerouslySetInnerHTML`;
+  this is safe because the description is authoritatively sanitized on write and
+  re-sanitized on every read projection (server is the sanitizer, the admin never
+  renders unsanitized input).
+- Verified locally on this slice: Admin typescript, ESLint (`--max-warnings=0`)
+  plus the runtime-asset scanner, the full suite (561 tests) and `CI=true`
+  coverage gates (Statements 88.78 / Branches 78.73 / Functions 87.36 / Lines
+  91.67) and `next build`. Tests cover initial seeding, successful save (state
+  transitions + adopting the fresh server product), clear-to-`null`, same-key
+  replay on retry after a network error and an abort, `STALE_VERSION`
+  preservation + explicit reload, permission-denied fail-closed behavior, and
+  the `beforeunload` unsaved-change guard. Not verifiable here: real-browser
+  interaction evidence.
+
+### Assembled rich-text description stack — real-browser E2E journey (in review — #279 fused stack)
+
+- The six #279 PRs are fused on the review head `feat/279-e2e-verify` (main
+  `eef2a8a` + contract-hardening, storefront-render, editor, media-picker and
+  description slices) and now carry a Playwright journey
+  (`e2e/tests/admin-279-journey.spec.ts`, serial, real API + real MinIO + real
+  worker) that drives the whole feature through a real browser: create a draft,
+  upload an image through the Admin and wait for READY, compose rich HTML in
+  Jodit with the hostile-payload cases, insert a real product image, save via
+  the versioned PATCH, reload in a fresh session and assert the server-sanitized
+  description with re-written media URLs, publish, then render the description
+  on the storefront and assert only trusted network origins are contacted.
+- Security cases were pinned in the API suites: `content-sanitizer.spec.ts`
+  (19 unit cases: style tags, event handlers, data:/vbscript: URL sinks,
+  unsafe style values, embed/object/video drop) and
+  `product-description.integration-spec.ts` (13 DB-backed cases: non-READY
+  media 422, foreign media 422, dangerous payload persists sanitized, and the
+  public projections never leak object keys or signed parameters).
+- The Admin CSP hook now accepts an env-driven public media origin
+  (`NEXT_PUBLIC_MEDIA_ORIGIN`) in `connect-src` and `img-src`
+  (`apps/admin/next.config.ts`) so a real browser can PUT to and display MinIO
+  without loosening the origin list.
+- Verified on the review head: journey 6/6 on `admin-desktop` and
+  `admin-mobile` (isolated); full e2e suite green (75 passed / 5 skipped,
+  exit 0; the browser→MinIO upload PUT can stall once under the parallel
+  suite-load and is allowed one bounded retry); Admin 561, Web 337 and API 849
+  isolated unit tests; lint/typecheck/build exit 0 per package.
+- Known gap: with the storefront served from `vite preview`, a freshly-visited
+  Product/Catalog page can silently miss the catalog HTTP client's fetch unless
+  a fetch shim is injected at boot (product then renders correctly with the
+  rich description; home behaves the same, so this is an app-boot/preview
+  artifact, not a description defect). The real-storefront capstone evidence was
+  captured under that shim; verify once against a real deployment before the
+  storefront preview is treated as authoritative.
 
 ### Server Cart runtime (authenticated via #239/#241–#244/#251; Guest via #270/#269)
 
