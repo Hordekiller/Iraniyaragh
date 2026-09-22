@@ -18,6 +18,7 @@ import {
   listProducts,
   updateBrand,
   updateCategory,
+  updateProductDescription,
 } from '../catalog-api';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
@@ -140,6 +141,39 @@ describe('catalog-api', () => {
     expect(init.method).toBe('POST');
     expect(init.headers).toEqual(expect.objectContaining({ 'Idempotency-Key': 'catalog-test-status' }));
     expect(JSON.parse(String(init.body))).toEqual({ action: 'archive' });
+  });
+
+  it('patches a product description with an idempotency key and expected version', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        data: {
+          product: {
+            id: 'p1',
+            name: 'قفل',
+            slug: 'lock',
+            status: 'PUBLISHED',
+            description: '<p>متن تازه</p>',
+            version: 2,
+            brandId: null,
+            categoryId: null,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          },
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    setAccessToken('at');
+
+    const result = await updateProductDescription('p1', { description: '<p>متن تازه</p>', expectedVersion: 1 }, 'catalog-test-description');
+
+    const [url, init] = callsOf(fetchMock)[0];
+    expect(url).toBe(`${baseUrl}/catalog/admin/products/p1/description`);
+    expect(init.method).toBe('PATCH');
+    expect(init.headers).toEqual(expect.objectContaining({ 'Idempotency-Key': 'catalog-test-description' }));
+    expect(JSON.parse(String(init.body))).toEqual({ description: '<p>متن تازه</p>', expectedVersion: 1 });
+    expect(result.product.id).toBe('p1');
+    expect(result.product.version).toBe(2);
   });
 
   it('reads brands and categories from the public endpoints', async () => {

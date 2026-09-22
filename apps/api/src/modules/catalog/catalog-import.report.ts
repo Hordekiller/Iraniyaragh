@@ -96,7 +96,7 @@ function classifyValues(sk: Sink, rows: ParsedCatalogWorkbook['values'], variant
 function detectDuplicateCombinations(sk: Sink, workbook: ParsedCatalogWorkbook): void {
   const signatures = new Set<string>();
   for (const row of workbook.variants) {
-    const values = workbook.values.filter(value => value.sku === row.sku).map(value => `${value.attributeCode}:${value.optionCode}`).sort();
+    const values = workbook.values.filter(value => value.sku === row.sku).map(value => `${value.attributeCode}:${value.optionCode}`).sort((a, b) => a.localeCompare(b));
     const signature = `${row.productSlug}|${values.join('|')}`;
     if (signatures.has(signature)) sk.issue('Variants', workbook.variants.indexOf(row) + 2, row.sku, 'DUPLICATE_VARIANT_COMBINATION', 'The product has a duplicate variant combination.');
     signatures.add(signature);

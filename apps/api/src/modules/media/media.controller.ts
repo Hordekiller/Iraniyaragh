@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post } from "@nestjs/common";
-import { ApiBody, ApiHeader, ApiParam } from "@nestjs/swagger";
-import type { AdminProductMediaListResponse, AdminProductMediaResponse, ProductMediaConfirmResponse, ProductMediaUploadResponse } from "@iranyaragh/contracts";
+import { ApiBody, ApiHeader, ApiOkResponse, ApiParam } from "@nestjs/swagger";
+import type { AdminProductMediaListResponse, AdminProductMediaPickerResponse, AdminProductMediaResponse, ProductMediaConfirmResponse, ProductMediaUploadResponse } from "@iranyaragh/contracts";
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from "../auth/auth.guard";
 import type { AuthPrincipalContext } from "../auth/auth-principal.service";
 import { ProductMediaArchiveDto, ProductMediaConfirmDto, ProductMediaMetadataDto, ProductMediaPrimaryDto, ProductMediaReorderDto, ProductMediaUploadDto } from "./media.dto";
@@ -22,6 +22,18 @@ export class MediaController {
   @RequirePermission("catalog.media.read")
   list(@Param("productId") productId: string): Promise<AdminProductMediaListResponse> {
     return this.media.listAdmin(productId);
+  }
+
+  @Get("picker")
+  @ApiParam({ name: "productId", type: String })
+  @ApiOkResponse({
+    description:
+      "Safe editor picker projection: READY image media with the canonical public URL only. Private object keys, upload credentials and processing metadata are never exposed.",
+  })
+  @RequireAuthentication("STAFF_MFA")
+  @RequirePermission("catalog.media.read")
+  picker(@Param("productId") productId: string): Promise<AdminProductMediaPickerResponse> {
+    return this.media.listPicker(productId);
   }
 
   @Post("uploads")

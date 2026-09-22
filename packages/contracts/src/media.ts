@@ -102,6 +102,19 @@ export type PublicProductMediaImage = {
   sources: Array<{ url: string; width: number; height: number; type: string }>;
 };
 
+export type AdminProductMediaPickerItem = {
+  id: string;
+  url: string;
+  alt: string;
+  caption: string | null;
+  width: number;
+  height: number;
+};
+
+export type AdminProductMediaPickerResponse = ApiSuccess<{
+  items: AdminProductMediaPickerItem[];
+}>;
+
 export type PublicProductMedia =
   | PublicProductMediaImage
   | {

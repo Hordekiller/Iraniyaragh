@@ -1487,6 +1487,278 @@
         ]
       }
     },
+    "/catalog/admin/products/{id}/description": {
+      "patch": {
+        "operationId": "CatalogController_description",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Request body failed schema validation, or the Idempotency-Key header is missing or malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST",
+                        "VALIDATION_ERROR"
+                      ],
+                      "example": "INVALID_REQUEST"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Request validation failed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ],
+                      "example": 400
+                    }
+                  },
+                  "description": "Request body failed schema validation, or the Idempotency-Key header is missing or malformed."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated but lacking the required permission or authentication level.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested product does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "NOT_FOUND"
+                      ],
+                      "example": "NOT_FOUND"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Product not found."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ],
+                      "example": 404
+                    }
+                  },
+                  "description": "The requested product does not exist."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The description version is stale, or the Idempotency-Key was already used for a different command.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "STALE_VERSION",
+                        "IDEMPOTENCY_CONFLICT",
+                        "CONFLICT"
+                      ],
+                      "example": "STALE_VERSION"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "version conflict"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ],
+                      "example": 409
+                    }
+                  },
+                  "description": "The description version is stale, or the Idempotency-Key was already used for a different command."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The description references product media that is not a ready image of this product, or exceeds the sanitized content limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "DESCRIPTION_MEDIA_INVALID",
+                        "DESCRIPTION_TOO_LARGE"
+                      ],
+                      "example": "DESCRIPTION_MEDIA_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A description image references unavailable product media."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "The description references product media that is not a ready image of this product, or exceeds the sanitized content limit."
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/catalog/admin/products/{id}/status": {
       "post": {
         "operationId": "CatalogController_status",
@@ -3846,6 +4118,29 @@
         "responses": {
           "200": {
             "description": ""
+          }
+        },
+        "tags": [
+          "Media"
+        ]
+      }
+    },
+    "/catalog/admin/products/{productId}/media/picker": {
+      "get": {
+        "operationId": "MediaController_picker",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Safe editor picker projection: READY image media with the canonical public URL only. Private object keys, upload credentials and processing metadata are never exposed."
           }
         },
         "tags": [

@@ -4,6 +4,7 @@ import { MediaController } from './media.controller';
 
 describe('MediaController', () => {
   const service = {
+    listPicker: vi.fn(),
     listAdmin: vi.fn(),
     initiateUpload: vi.fn(),
     confirmUpload: vi.fn(),
@@ -20,12 +21,19 @@ describe('MediaController', () => {
   it('declares separate read and write permissions', () => {
     expect(Reflect.getMetadata(REQUIRE_AUTH_LEVEL, MediaController.prototype.list)).toBe('STAFF_MFA');
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.list)).toBe('catalog.media.read');
+    expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.picker)).toBe('catalog.media.read');
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.initiateUpload)).toBe('catalog.media.write');
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.confirmUpload)).toBe('catalog.media.write');
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.updateMetadata)).toBe('catalog.media.write');
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.reorder)).toBe('catalog.media.write');
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.archive)).toBe('catalog.media.write');
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, MediaController.prototype.setPrimary)).toBe('catalog.media.write');
+  });
+
+  it('delegates the picker projection to the service', async () => {
+    service.listPicker.mockResolvedValue({ data: { items: [] } });
+    await controller.picker('product-1');
+    expect(service.listPicker).toHaveBeenCalledWith('product-1');
   });
 
   it('passes actor, idempotency key and route ownership to upload commands', async () => {
