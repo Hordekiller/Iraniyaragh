@@ -9,12 +9,17 @@ import {
   canonicalizeSku,
   combinationSignature,
 } from '../catalog/variant-identifiers';
-import { CheckoutService } from './checkout.service';
-import { ConfiguredShippingQuoteAdapter } from './configured-shipping-quote.adapter';
 import { OrderCommandService } from './order-command.service';
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function numericSuffix(value: string, increment: number): string {
+  const packed = (BigInt(`0x${value}`) % 10_000_000_000n + BigInt(increment))
+    .toString()
+    .padStart(10, '0');
+  return packed;
 }
 
 describe.sequential('OrderCommandService database integration', () => {
@@ -31,24 +36,12 @@ describe.sequential('OrderCommandService database integration', () => {
   const warehouseId = `ordcmd_warehouse_${runId}`;
   const locationAId = `ordcmd_location_a_${runId}`;
   const locationBId = `ordcmd_location_b_${runId}`;
-  const shippingMethodId = `ordcmd_shipping_${runId}`;
   const requestIdPrefix = `ordcmd-${runId}`;
   const prisma = new PrismaService();
   const audit = new AuditLogService(prisma);
-  const shipping = new ConfiguredShippingQuoteAdapter(prisma);
-  const checkout = new CheckoutService(prisma, audit, shipping);
   const inventory = new InventoryService(prisma, audit);
   const commands = new OrderCommandService(prisma, audit, inventory);
   let connected = false;
-
-  const address = {
-    provinceCode: 'teh',
-    city: ' تهران ',
-    address: 'خیابان آزادی، پلاک ۱۰',
-    postalCode: '۱۲۳۴۵۶۷۸۹۰',
-    recipient: 'گیرنده دستور سفارش',
-    mobile: '۰۹۱۲۳۴۵۶۷۸۹',
-  };
 
   beforeAll(async () => {
     assertIsolatedTestDatabase({
@@ -90,9 +83,6 @@ describe.sequential('OrderCommandService database integration', () => {
         { id: locationBId, warehouseId, code: 'B-01', name: 'B' },
       ],
     });
-    await prisma.shippingMethod.create({
-      data: { id: shippingMethodId, code: 'STANDARD', title: 'Standard shipping', amount: 50000n, policyRevision: 'shipping-standard-v1' },
-    });
   });
 
   beforeEach(async () => {
@@ -102,7 +92,6 @@ describe.sequential('OrderCommandService database integration', () => {
   afterAll(async () => {
     if (!connected) return;
     await resetState();
-    await prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } });
     await prisma.inventoryBalance.deleteMany({ where: { variantId: { in: [variantAId, variantBId] } } });
     await prisma.warehouseLocation.deleteMany({ where: { warehouseId } });
     await prisma.warehouse.deleteMany({ where: { id: warehouseId } });
@@ -114,14 +103,11 @@ describe.sequential('OrderCommandService database integration', () => {
   });
 
   it('cancels an owned pending order and compensates every reservation exactly once', async () => {
-    await seedCart(customerId, [
-      { variantId: variantAId, quantity: 3 },
-      { variantId: variantBId, quantity: 1 },
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 2 },
+      { variantId: variantAId, locationId: locationBId, quantity: 1 },
+      { variantId: variantBId, locationId: locationBId, quantity: 1 },
     ]);
-    await seedBalance(variantAId, locationAId, 2);
-    await seedBalance(variantAId, locationBId, 3);
-    await seedBalance(variantBId, locationBId, 1);
-    const order = await createPendingOrder(customerUser, customerId);
     const key = `cancel-${runId}`;
     const requestId = `${requestIdPrefix}-cancel`;
 
@@ -194,9 +180,9 @@ describe.sequential('OrderCommandService database integration', () => {
   });
 
   it('replays the cached cancel response without touching transitions, inventory or outbox', async () => {
-    await seedCart(customerId, [{ variantId: variantAId, quantity: 1 }]);
-    await seedBalance(variantAId, locationAId, 2);
-    const order = await createPendingOrder(customerUser, customerId);
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
     const key = `replay-${runId}`;
 
     const first = await commands.cancelAsCustomer(customerUser, order.id, {
@@ -209,16 +195,16 @@ describe.sequential('OrderCommandService database integration', () => {
     });
 
     expect(replay).toEqual(first);
-    await expect(prisma.orderTransition.count({ where: { orderId: order.id } })).resolves.toBe(2);
+    await expect(prisma.orderTransition.count({ where: { orderId: order.id } })).resolves.toBe(1);
     await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: 'ORDER_CANCELLED' } })).resolves.toBe(1);
     await expect(prisma.auditLog.count({ where: { action: 'order.cancelled', entityId: order.id } })).resolves.toBe(1);
     await expect(prisma.stockReservation.count({ where: { orderId: order.id, status: 'RELEASED' } })).resolves.toBe(1);
   });
 
   it('rejects reusing a staff cancel key with a different actor payload', async () => {
-    await seedCart(otherCustomerId, [{ variantId: variantAId, quantity: 1 }]);
-    await seedBalance(variantAId, locationAId, 2);
-    const order = await createPendingOrder(otherUser, otherCustomerId);
+    const order = await createPendingOrderWithLines(otherCustomerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
     const key = `staff-key-${runId}`;
 
     const first = await commands.cancelAsStaff(staffUser, order.id, {
@@ -236,9 +222,9 @@ describe.sequential('OrderCommandService database integration', () => {
   });
 
   it('hides a foreign order behind an ownership 404 with no side effects', async () => {
-    await seedCart(customerId, [{ variantId: variantAId, quantity: 1 }]);
-    await seedBalance(variantAId, locationAId, 2);
-    const order = await createPendingOrder(customerUser, customerId);
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
 
     await expect(
       commands.cancelAsCustomer(otherUser, order.id, {
@@ -249,14 +235,14 @@ describe.sequential('OrderCommandService database integration', () => {
 
     await expect(prisma.order.findUniqueOrThrow({ where: { id: order.id } })).resolves.toMatchObject({ status: 'PENDING_PAYMENT' });
     await expect(prisma.stockReservation.count({ where: { orderId: order.id, status: 'ACTIVE' } })).resolves.toBe(1);
-    await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id } })).resolves.toBe(1);
+    await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id } })).resolves.toBe(0);
     await expect(prisma.orderCommandIdempotencyRecord.count({ where: { orderId: order.id } })).resolves.toBe(0);
   });
 
   it('lets staff cancel a pending order without a customer profile link', async () => {
-    await seedCart(otherCustomerId, [{ variantId: variantBId, quantity: 1 }]);
-    await seedBalance(variantBId, locationBId, 1);
-    const order = await createPendingOrder(otherUser, otherCustomerId);
+    const order = await createPendingOrderWithLines(otherCustomerId, [
+      { variantId: variantBId, locationId: locationBId, quantity: 1 },
+    ]);
     const requestId = `${requestIdPrefix}-staff-cancel`;
 
     const result = await commands.cancelAsStaff(staffUser, order.id, {
@@ -278,17 +264,10 @@ describe.sequential('OrderCommandService database integration', () => {
   });
 
   it('rejects cancelling an order that already moved on', async () => {
-    await seedCart(customerId, [{ variantId: variantAId, quantity: 1 }]);
-    await seedBalance(variantAId, locationAId, 2);
-    const order = await createPendingOrder(customerUser, customerId);
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { reservationExpiresAt: new Date(Date.now() - 60_000) },
-    });
-    await commands.expirePendingPaymentOrders(
-      { actorId: staffUser, requestId: `${requestIdPrefix}-expire-first` },
-      { now: new Date() },
-    );
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await runExpiry(order.id);
 
     await expect(
       commands.cancelAsCustomer(customerUser, order.id, {
@@ -300,13 +279,10 @@ describe.sequential('OrderCommandService database integration', () => {
   });
 
   it('expires overdue pending orders once and idempotently returns zero on a later run', async () => {
-    await seedCart(customerId, [{ variantId: variantAId, quantity: 1 }]);
-    await seedBalance(variantAId, locationAId, 2);
-    const order = await createPendingOrder(customerUser, customerId);
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { reservationExpiresAt: new Date(Date.now() - 60_000) },
-    });
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await makeOverdue(order.id);
     const runRequestId = `${requestIdPrefix}-expiry-run`;
 
     const first = await commands.expirePendingPaymentOrders(
@@ -337,13 +313,10 @@ describe.sequential('OrderCommandService database integration', () => {
   });
 
   it('coalesces a concurrent cancel vs expiry into exactly one cancellation', async () => {
-    await seedCart(customerId, [{ variantId: variantAId, quantity: 1 }]);
-    await seedBalance(variantAId, locationAId, 2);
-    const order = await createPendingOrder(customerUser, customerId);
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { reservationExpiresAt: new Date(Date.now() - 60_000) },
-    });
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await makeOverdue(order.id);
 
     const settle = await Promise.allSettled([
       commands.cancelAsCustomer(customerUser, order.id, {
@@ -369,24 +342,85 @@ describe.sequential('OrderCommandService database integration', () => {
     await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: { in: ['ORDER_CANCELLED', 'ORDER_EXPIRED'] } } })).resolves.toBe(1);
   });
 
-  async function createPendingOrder(
-    forUserId: string,
-    forCustomerId: string,
-  ) {
-    const quote = await preview(forUserId);
-    const result = await checkout.createForUser(
-      forUserId,
-      { address, shippingQuoteId: quote.quoteId },
-      `${forCustomerId}-${runId}`,
-      `${requestIdPrefix}-${forCustomerId}`,
-    );
-    return result.data.order;
+  async function makeOverdue(orderId: string) {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { reservationExpiresAt: new Date(Date.now() - 60_000) },
+    });
   }
 
-  async function preview(forUserId: string) {
-    const result = await checkout.previewForUser(forUserId, address);
-    expect(result.data.shipping).toHaveLength(1);
-    return result.data.shipping[0];
+  async function runExpiry(orderId: string) {
+    await makeOverdue(orderId);
+    await commands.expirePendingPaymentOrders(
+      { actorId: staffUser, requestId: `${requestIdPrefix}-expire-fixture` },
+      { now: new Date() },
+    );
+  }
+
+  async function createPendingOrderWithLines(
+    ownerCustomerId: string,
+    lines: Array<{ variantId: string; locationId: string; quantity: number }>,
+  ) {
+    const suffix = ownerCustomerId === customerId ? 'a' : 'b';
+    const orderId = `${requestIdPrefix}-order-${suffix}`;
+    const number = `ORDCMD-${runId}-${suffix}`;
+    const future = new Date(Date.now() + 1_800_000);
+    await prisma.order.create({
+      data: {
+        id: orderId,
+        number,
+        customerId: ownerCustomerId,
+        status: 'PENDING_PAYMENT',
+        subtotal: 100n,
+        discount: 0n,
+        shipping: 50n,
+        grandTotal: 150n,
+        addressSnapshot: { test: true },
+        shippingMethod: 'STANDARD',
+        shippingMethodTitle: 'Standard shipping',
+        shippingPolicyRevision: 'shipping-standard-v1',
+        pricePolicyRevision: 'catalog-sale-price-v1',
+        reservationExpiresAt: future,
+      },
+    });
+    for (const line of lines) {
+      await prisma.inventoryBalance.upsert({
+        where: {
+          warehouseId_locationId_variantId: {
+            warehouseId,
+            locationId: line.locationId,
+            variantId: line.variantId,
+          },
+        },
+        create: {
+          warehouseId,
+          locationId: line.locationId,
+          variantId: line.variantId,
+          onHand: line.quantity,
+          reserved: line.quantity,
+          available: 0,
+          version: 1,
+        },
+        update: {
+          onHand: line.quantity,
+          reserved: line.quantity,
+          available: 0,
+          version: { increment: 1 },
+        },
+      });
+      await prisma.stockReservation.create({
+        data: {
+          orderId,
+          warehouseId,
+          locationId: line.locationId,
+          variantId: line.variantId,
+          quantity: line.quantity,
+          status: 'ACTIVE',
+          expiresAt: future,
+        },
+      });
+    }
+    return { id: orderId, number };
   }
 
   async function reservedIds(orderId: string): Promise<string[]> {
@@ -397,79 +431,29 @@ describe.sequential('OrderCommandService database integration', () => {
     return reservations.map((reservation) => reservation.id);
   }
 
-  async function seedCart(
-    ownerCustomerId: string,
-    items: Array<{ variantId: string; quantity: number }>,
-  ) {
-    const cart = await prisma.cart.upsert({
-      where: { customerId: ownerCustomerId },
-      create: { customerId: ownerCustomerId },
-      update: { version: { increment: 1 } },
-    });
-    await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
-    await prisma.cartItem.createMany({
-      data: items.map((item) => ({ cartId: cart.id, ...item })),
-    });
-    return cart;
-  }
-
-  async function seedBalance(
-    variantId: string,
-    locationId: string,
-    onHand: number,
-  ) {
-    await prisma.inventoryBalance.upsert({
-      where: {
-        warehouseId_locationId_variantId: {
-          warehouseId,
-          locationId,
-          variantId,
-        },
-      },
-      create: {
-        warehouseId,
-        locationId,
-        variantId,
-        onHand,
-        reserved: 0,
-        available: onHand,
-        version: 1,
-      },
-      update: {
-        onHand,
-        reserved: 0,
-        available: onHand,
-        version: { increment: 1 },
-      },
-    });
-  }
-
   async function resetState() {
-    await prisma.outboxEvent.deleteMany({
-      where: { aggregateId: { startsWith: 'ordcmd' } },
-    });
-    await prisma.auditLog.deleteMany({
-      where: { requestId: { startsWith: requestIdPrefix } },
-    });
     await prisma.orderTransition.deleteMany({
       where: { order: { customerId: { in: [customerId, otherCustomerId] } } },
     });
     await prisma.orderCommandIdempotencyRecord.deleteMany({
       where: { order: { customerId: { in: [customerId, otherCustomerId] } } },
     });
-    await prisma.cartItem.deleteMany({
-      where: { cart: { customerId: { in: [customerId, otherCustomerId] } } },
-    });
-    await prisma.cart.deleteMany({
-      where: { customerId: { in: [customerId, otherCustomerId] } },
-    });
     await prisma.stockReservation.deleteMany({
-      where: {
-        OR: [
-          { orderId: { startsWith: 'ordcmd' } },
-          { variantId: { in: [variantAId, variantBId] } },
-        ],
-      },
+      where: { order: { customerId: { in: [customerId, otherCustomerId] } } },
+    });
+    const orderIds = (
+      await prisma.order.findMany({
+        where: { customerId: { in: [customerId, otherCustomerId] } },
+        select: { id: true },
+      })
+    ).map((order) => order.id);
+    if (orderIds.length > 0) {
+      await prisma.outboxEvent.deleteMany({
+        where: { aggregateId: { in: orderIds } },
+      });
+    }
+    await prisma.auditLog.deleteMany({
+      where: { requestId: { startsWith: requestIdPrefix } },
     });
     await prisma.inventoryBalance.upsert({
       where: {
@@ -482,6 +466,25 @@ describe.sequential('OrderCommandService database integration', () => {
       create: {
         warehouseId,
         locationId: locationAId,
+        variantId: variantAId,
+        onHand: 0,
+        reserved: 0,
+        available: 0,
+        version: 1,
+      },
+      update: { onHand: 0, reserved: 0, available: 0, version: { increment: 1 } },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: {
+        warehouseId_locationId_variantId: {
+          warehouseId,
+          locationId: locationBId,
+          variantId: variantAId,
+        },
+      },
+      create: {
+        warehouseId,
+        locationId: locationBId,
         variantId: variantAId,
         onHand: 0,
         reserved: 0,
@@ -509,18 +512,8 @@ describe.sequential('OrderCommandService database integration', () => {
       },
       update: { onHand: 0, reserved: 0, available: 0, version: { increment: 1 } },
     });
-    await prisma.checkoutIdempotencyRecord.deleteMany({
-      where: { customerId: { in: [customerId, otherCustomerId] } },
-    });
-    await prisma.shippingQuote.deleteMany({
-      where: { customerId: { in: [customerId, otherCustomerId] } },
-    });
     await prisma.order.deleteMany({
       where: { customerId: { in: [customerId, otherCustomerId] } },
     });
   }
 });
-
-function numericSuffix(value: string, increment: number): string {
-  return String(parseInt(value, 10) + increment).padStart(10, '0');
-}
