@@ -73,6 +73,40 @@ describe('OpenAPI document drift and contract', () => {
     }
   });
 
+  it('documents idempotent order cancellation commands with scoped failure surfaces', () => {
+    const paths = document.paths ?? {};
+    const customerCancel = paths['/orders/{id}/cancel']?.post;
+    const staffCancel = paths['/orders/admin/{id}/cancel']?.post;
+
+    expect(customerCancel).toBeDefined();
+    expect(staffCancel).toBeDefined();
+
+    for (const operation of [customerCancel, staffCancel]) {
+      const idempotencyHeader = operation?.parameters?.find(
+        (parameter) =>
+          !('$ref' in parameter) && parameter.name === 'Idempotency-Key',
+      );
+      expect(idempotencyHeader).toMatchObject({
+        in: 'header',
+        required: true,
+        description: expect.stringContaining('128'),
+      });
+      expect(Object.keys(operation?.responses ?? {})).toEqual(
+        expect.arrayContaining(['200', '400', '401', '403', '404', '409']),
+      );
+      const serialized = JSON.stringify(operation);
+      expect(serialized).toContain('releasedReservations');
+      expect(serialized.toLowerCase()).not.toContain('idempotencykey:');
+      expect(serialized.toLowerCase()).not.toContain('fingerprint');
+    }
+
+    expect(JSON.stringify(customerCancel?.summary)).toContain('owned');
+    expect(JSON.stringify(staffCancel?.summary)).toContain('staff');
+    const artifact = JSON.stringify(document);
+    expect(artifact).not.toContain('orders.manage');
+    expect(artifact).not.toContain('STAFF_MFA');
+  });
+
   it('matches the committed openapi.json artifact (CI drift check)', () => {
     const committed = JSON.parse(
       readFileSync(OPENAPI_ARTIFACT_PATH, 'utf8'),
