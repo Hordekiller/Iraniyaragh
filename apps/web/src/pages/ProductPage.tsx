@@ -16,6 +16,7 @@ import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { MediaGallery } from '../components/product/MediaGallery'
 import { RichText } from '../components/product/RichText'
+import { serializeJsonLd } from '../lib/json-ld'
 import { richTextToPlainText } from '../lib/rich-text'
 import type { CatalogProduct } from '../services/catalog/types'
 import { commerceErrorMessage } from '../services/commerce/errors'
@@ -171,7 +172,7 @@ export function ProductPage() {
       {structuredData.length > 0 && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }}
         />
       )}
       <nav aria-label="مسیر محصول" className="text-xs text-slate-400 mb-4">
