@@ -94,10 +94,18 @@ databases: `iraniyaragh_ci_test` and `ci_shadow_test`. It fails when:
 
 Inventory database coverage proves sequential and concurrent idempotency behavior,
 rollback, stale-version conflicts, reservation lifecycle, parallel reservations and
-reservation-versus-stock-change contention. Bounded serializable retries are
-implemented. The next inventory gaps are protected HTTP authorization, transfer
-semantics and batched expiry-worker behavior, each of which needs its own database
-and concurrency evidence.
+reservation-versus-stock-change contention. Single-balance mutations
+(`changeOnHand`, `reserve`, `transitionReservation`, expiry) acquire a deterministic
+per-balance `pg_advisory_xact_lock` as the first transaction statement, so
+contenders serialize on the balance key; a loser that read a stale snapshot aborts
+with `P2034` and re-runs under a fresh snapshot via bounded serializable retries
+(jittered backoff, max 3 attempts). The catalog idempotency slice uses the same
+advisory-lock-first pattern per `(actor, scope, key)` so identical concurrent
+requests deterministically converge on one committed mutation. Repeating the
+inventory and catalog-idempotency integration suites 5× each yields 5/5 green runs.
+The next inventory gaps are protected HTTP authorization, transfer semantics and
+batched expiry-worker behavior, each of which needs its own database and
+concurrency evidence.
 
 ## Production dependency audit
 

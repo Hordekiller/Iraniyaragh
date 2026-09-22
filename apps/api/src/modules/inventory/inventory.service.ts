@@ -10,6 +10,8 @@ import {
   type StockTransfer,
 } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
+import { retryDelayMs, sleep } from '../../common/retry';
+import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { AuditLogService } from '../audit/audit-log.service';
 import { INVENTORY_CHANGE_TYPES, MAX_TRANSFER_ITEMS } from './inventory.constants';
 
@@ -253,6 +255,8 @@ export class InventoryService {
     const movement = await this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
+          await this.acquireBalanceLock(tx, command);
+
           if (command.idempotencyKey) {
             const existing = await tx.inventoryMovement.findUnique({
               where: { idempotencyKey: command.idempotencyKey },
@@ -346,6 +350,8 @@ export class InventoryService {
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
+          await this.acquireBalanceLock(tx, command);
+
           if (command.idempotencyKey) {
             const existing = await tx.stockReservation.findUnique({
               where: { idempotencyKey: command.idempotencyKey },
@@ -516,6 +522,8 @@ export class InventoryService {
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
+          await this.acquireBalanceLock(tx, reservation);
+
           const recheck = await tx.stockReservation.findUnique({ where: { id: reservationId } });
           const replayState = this.reservationReplay(recheck, reservation);
           if (replayState !== null) {
@@ -1045,6 +1053,7 @@ export class InventoryService {
   ): Promise<number> {
     const reservation = await tx.stockReservation.findUnique({ where: { id: reservationId } });
     if (!reservation || reservation.status !== 'ACTIVE') return 0;
+    await this.acquireBalanceLock(tx, reservation);
     const quantity = reservation.quantity;
     const balance = await tx.inventoryBalance.findUnique({
       where: this.balanceKey({
@@ -1085,6 +1094,11 @@ export class InventoryService {
         variantId: key.variantId,
       },
     } as const;
+  }
+
+  private async acquireBalanceLock(tx: Prisma.TransactionClient, key: StockKey): Promise<void> {
+    const [lockHi, lockLo] = advisoryLockIdKey('balance', key.warehouseId, key.locationId, key.variantId);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockHi}::int, ${lockLo}::int)`;
   }
 
   private reservationReplay<R extends { id: string; status: string }, T extends { id: string }>(
@@ -1566,6 +1580,7 @@ export class InventoryService {
           'code' in error &&
           (error as { code?: unknown }).code === 'P2034';
         if (isSerializationAbort && attempt < SERIALIZABLE_RETRIES - 1) {
+          await sleep(retryDelayMs(attempt + 1));
           continue;
         }
         if (isSerializationAbort) {

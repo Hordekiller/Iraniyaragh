@@ -5,6 +5,7 @@ import { InventoryService } from './inventory.service';
 
 function createFakeClient(overrides: Record<string, unknown> = {}) {
   return {
+    $executeRaw: vi.fn().mockResolvedValue(1),
     warehouse: {
       findUnique: vi.fn().mockResolvedValue({ id: 'wh' }),
       findMany: vi.fn().mockResolvedValue([]),
