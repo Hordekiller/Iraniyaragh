@@ -522,11 +522,13 @@ describe("MediaService listPicker", () => {
     altText: "یک عکس", caption: "عنوان", width: 1200, height: 900,
     renditions: [
       { productMediaId: "media-image", objectKey: "products/product-1/media-image/r-600.jpg", format: "jpeg", width: 600, height: 450, bytes: 100n, status: "READY", createdAt: now, updatedAt: now },
-      { productMediaId: "media-image", objectKey: "products/product-1/media-image/r-1200.jpg", format: "jpeg", width: 1200, height: 900, bytes: 200n, status: "READY", createdAt: now, updatedAt: now },
+      { productMediaId: "media-image", objectKey: "products/product-1/media-image/r-800.jpg", format: "jpeg", width: 800, height: 600, bytes: 200n, status: "READY", createdAt: now, updatedAt: now },
     ],
   };
   const notFound = { ...readyImage, id: "media-no-rendition", width: 800, height: 600, renditions: [] };
-  const withoutIntrinsic = { ...readyImage, id: "media-no-intrinsic", width: null, height: null };
+  const withoutIntrinsic = { ...readyImage, id: "media-no-intrinsic", width: null, height: null, renditions: [
+      { productMediaId: "media-no-intrinsic", objectKey: "products/product-1/media-no-intrinsic/r-800.jpg", format: "jpeg", width: 800, height: 600, bytes: 200n, status: "READY", createdAt: now, updatedAt: now },
+    ] };
 
   function pickerSetup(items: object[]) {
     const prisma = {
@@ -537,7 +539,7 @@ describe("MediaService listPicker", () => {
     return { service, prisma };
   }
 
-  it("exposes pickable ready images with the widest rendition URL in position order", async () => {
+  it("exposes pickable ready images from the widest rendition with matching url and dimensions", async () => {
     const { service, prisma } = pickerSetup([readyImage, notFound, withoutIntrinsic]);
 
     const response = await service.listPicker("product-1");
@@ -550,11 +552,19 @@ describe("MediaService listPicker", () => {
     expect(response.data.items).toEqual([
       {
         id: "media-image",
-        url: "http://localhost:9000/products/products/product-1/media-image/r-1200.jpg",
+        url: "http://localhost:9000/products/products/product-1/media-image/r-800.jpg",
         alt: "یک عکس",
         caption: "عنوان",
-        width: 1200,
-        height: 900,
+        width: 800,
+        height: 600,
+      },
+      {
+        id: "media-no-intrinsic",
+        url: "http://localhost:9000/products/products/product-1/media-no-intrinsic/r-800.jpg",
+        alt: "یک عکس",
+        caption: "عنوان",
+        width: 800,
+        height: 600,
       },
     ]);
   });
