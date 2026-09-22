@@ -379,7 +379,7 @@ malware scanner also remain production-acceptance work.
   a separate critical mutation requiring state, inventory, idempotency and
   concurrency policy/evidence before implementation.
 
-### Order cancellation and expiry with reservation compensation (Epic-5 command slice)
+### Order cancellation and expiry with reservation compensation (Epic-5 command slice, open PR)
 
 - `POST /api/v1/orders/:id/cancel` (Customer OTP, ownership-scoped) and
   `POST /api/v1/orders/admin/:id/cancel` (Staff MFA plus `orders.manage`)
@@ -486,8 +486,9 @@ security/query review, OpenAPI drift confirmation and merge.
   customer Web client and #257 binds its masked read-only Admin consumer; the
   authenticated `POST /orders/:id/cancel`, `POST /orders/admin/:id/cancel` and
   the expiry worker (with exactly-once reservation compensation, transactional
-  outbox events and Postgres integration/concurrency evidence) are merged in the
-  Epic-5 command slice. Payment-linked lifecycle operations remain open.
+  outbox events and Postgres integration/concurrency evidence) are implemented
+  and green on the open `feat/epic5-order-lifecycle` branch, pending the Epic-5
+  command PR. Payment-linked lifecycle operations remain open.
 - Payment gateway, verified callback, refunds and reconciliation.
 - Shipment/tracking, outbox dispatcher/workers and notifications. #246/#237
   persists the first transactional `ORDER_CREATED` event but does not publish it.
@@ -725,8 +726,9 @@ low-stock thresholds, SLA policy, revenue semantics or sample operational data.
    revisioning without inventing a production rate.
 4. Reservation TTL and deterministic multi-location allocation are accepted in
    ADR-0015 and implemented by #246/#237; the order cancellation/expiry command
-   slice (incl. exactly-once reservation release) is merged; production expiry-
-   worker rollout and scheduling remain.
+   slice (incl. exactly-once reservation release) is implemented and green on the
+   open `feat/epic5-order-lifecycle` branch; production expiry-worker rollout and
+   scheduling remain.
 5. Guest Cart/login merge is accepted in ADR-0015 and merged via #270/#269 with
    hashed ownership, rolling TTL, CSRF/origin protection, fail-closed abuse limits,
    bounded cleanup and privacy-safe audit. Anonymous Web handoff remains separate.
