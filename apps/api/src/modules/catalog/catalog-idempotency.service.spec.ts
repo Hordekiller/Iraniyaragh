@@ -15,6 +15,7 @@ function serviceWithRecord(record: {
   expiresAt: Date;
 }) {
   const tx = {
+    $executeRaw: vi.fn().mockResolvedValue(1),
     catalogIdempotencyRecord: {
       findUnique: vi.fn().mockResolvedValue(null),
       create: vi.fn(),

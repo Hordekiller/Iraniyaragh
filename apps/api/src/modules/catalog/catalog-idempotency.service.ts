@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
+import { advisoryLockIdKey } from '../../common/advisory-lock';
+import { retryDelayMs, sleep } from '../../common/retry';
 import { PrismaService } from '../../database/prisma.service';
 
 const KEY_PATTERN = /^[A-Za-z0-9_-]{8,96}$/u;
@@ -29,8 +31,9 @@ type IdempotentCommand<T> = {
 function stableJson(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
   return `{${Object.keys(value as Record<string, unknown>)
-    .sort()
+    .sort(byCodeUnit)
     .map(key => `${JSON.stringify(key)}:${stableJson((value as Record<string, unknown>)[key])}`)
     .join(',')}}`;
 }
@@ -64,6 +67,9 @@ export class CatalogIdempotencyService {
     for (let attempt = 1; attempt <= SERIALIZABLE_RETRIES; attempt += 1) {
       try {
         return await this.prisma.$transaction(async tx => {
+          const [lockKeyHi, lockKeyLo] = advisoryLockIdKey('idempotency', actorId, scope, keyHash);
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKeyHi}::int, ${lockKeyLo}::int)`;
+
           const existing = await tx.catalogIdempotencyRecord.findUnique({
             where: { actorId_scope_keyHash: { actorId, scope, keyHash } },
           });
@@ -98,6 +104,7 @@ export class CatalogIdempotencyService {
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034' && attempt < SERIALIZABLE_RETRIES) {
+          await sleep(retryDelayMs(attempt));
           continue;
         }
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {

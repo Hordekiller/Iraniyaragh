@@ -1,6 +1,8 @@
 import type {
   AdminProductMedia,
   AdminProductMediaListResponse,
+  AdminProductMediaPickerItem,
+  AdminProductMediaPickerResponse,
   AdminProductMediaResponse,
   ProductMediaMetadataRequest,
   ProductMediaPrimaryRequest,
@@ -22,6 +24,17 @@ export async function listProductMedia(
 ): Promise<AdminProductMedia[]> {
   const response = await apiFetch<AdminProductMediaListResponse["data"]>(
     root(productId),
+    { token: token(), signal },
+  );
+  return response.data.items;
+}
+
+export async function listProductMediaPicker(
+  productId: string,
+  signal?: AbortSignal,
+): Promise<AdminProductMediaPickerItem[]> {
+  const response = await apiFetch<AdminProductMediaPickerResponse["data"]>(
+    `${root(productId)}/picker`,
     { token: token(), signal },
   );
   return response.data.items;

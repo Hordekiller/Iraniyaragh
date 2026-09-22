@@ -1,11 +1,14 @@
-import { ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, NotFoundException, Optional, UnprocessableEntityException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "node:crypto";
-import type { AdminProductMedia, ProductMediaConfirmResponse, ProductMediaUploadResponse } from "@iranyaragh/contracts";
+import type { AdminProductMedia, AdminProductMediaPickerResponse, ProductMediaConfirmResponse, ProductMediaUploadResponse } from "@iranyaragh/contracts";
 import { Prisma, type ProductMedia } from "@prisma/client";
+import type { EnvironmentVariables } from "../../config/environment";
 import { getRequestId } from "../../common/request-context";
 import { PrismaService } from "../../database/prisma.service";
 import { AuditLogService } from "../audit/audit-log.service";
 import { CatalogIdempotencyService } from "../catalog/catalog-idempotency.service";
+import { widestRenditionProjection } from "./media-url";
 import type { ProductMediaArchiveDto, ProductMediaConfirmDto, ProductMediaMetadataDto, ProductMediaPrimaryDto, ProductMediaReorderDto, ProductMediaUploadDto } from "./media.dto";
 import { MediaPolicyService } from "./media-policy.service";
 import { PRODUCT_MEDIA_STORAGE, mediaSourceObjectKey, type ProductMediaStorage } from "./storage.port";
@@ -63,7 +66,45 @@ export class MediaService {
     @Inject(PRODUCT_MEDIA_PROCESSING_QUEUE)
     private readonly processingQueue: ProductMediaProcessingQueue,
     @Inject(MediaPolicyService) private readonly policy: MediaPolicyService,
+    @Optional() @Inject(ConfigService)
+    private readonly config?: ConfigService<EnvironmentVariables, true>,
   ) {}
+
+  async listPicker(productId: string): Promise<AdminProductMediaPickerResponse> {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true },
+    });
+    if (!product)
+      throw new NotFoundException({
+        code: "NOT_FOUND",
+        message: "Product not found.",
+      });
+    const items = await this.prisma.productMedia.findMany({
+      where: { productId, state: "READY", kind: "IMAGE" },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      include: { renditions: true },
+    });
+    const origin =
+      this.config?.get("PUBLIC_MEDIA_ORIGIN", { infer: true }) ??
+      "http://localhost:9000/products";
+    return {
+      data: {
+        items: items.flatMap((item) => {
+          const projection = widestRenditionProjection(origin, item.renditions);
+          if (projection === null) return [];
+          return [{
+            id: item.id,
+            url: projection.url,
+            alt: item.altText ?? "",
+            caption: item.caption,
+            width: projection.width,
+            height: projection.height,
+          }];
+        }),
+      },
+    };
+  }
 
   async listAdmin(productId: string): Promise<{ data: { items: AdminProductMedia[] } }> {
     const product = await this.prisma.product.findUnique({

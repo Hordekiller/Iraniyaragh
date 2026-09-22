@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
 import { UnprocessableEntityException, PayloadTooLargeException } from '@nestjs/common';
+import { CONTENT_HTML_LIMIT_UTF16, ContentTooLargeError, sanitizeDescriptionFragment } from '../content/content-sanitizer';
 
 export const CATALOG_WORKBOOK_VERSION = '1';
 export const CATALOG_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
@@ -32,6 +33,17 @@ function workbookStatus(value: unknown, sheet: string, allowed: readonly string[
   const upper = parsed.toUpperCase();
   if (!allowed.includes(upper)) invalid(`${sheet}.status must be one of ${allowed.map(a => `'${a}'`).join(', ')} — got ${JSON.stringify(parsed)}.`);
   return upper;
+}
+
+function importDescription(value: unknown): string | undefined {
+  const raw = text(value, false, 'Products.description');
+  if (raw === undefined) return undefined;
+  try {
+    return sanitizeDescriptionFragment(raw, { images: 'drop' }).html ?? undefined;
+  } catch (error) {
+    if (error instanceof ContentTooLargeError) invalid(`Products.description exceeds the ${CONTENT_HTML_LIMIT_UTF16} character limit.`);
+    throw error;
+  }
 }
 
 function text(value: unknown, required: boolean, field: string): string | undefined {
@@ -84,7 +96,7 @@ export async function parseCatalogWorkbook(buffer: Buffer): Promise<ParsedCatalo
     invalid('Workbook is not a valid .xlsx file.');
   }
   if (workbook.worksheets.length !== CATALOG_SHEETS.length || workbook.worksheets.some((sheet, index) => sheet.name !== CATALOG_SHEETS[index])) invalid('Workbook sheets must match the catalog v1 order exactly.');
-  const products = parseSheet(workbook.getWorksheet('Products')!, HEADERS.Products, ([slug, name, description, brandSlug, categorySlug, status]) => ({ slug: text(slug, true, 'Products.slug')!, name: text(name, true, 'Products.name')!, description: text(description, false, 'Products.description'), brandSlug: text(brandSlug, false, 'Products.brandSlug'), categorySlug: text(categorySlug, false, 'Products.categorySlug'), status: workbookStatus(status, 'Products', ['DRAFT','PUBLISHED','ARCHIVED']) }), new Set([0]));
+  const products = parseSheet(workbook.getWorksheet('Products')!, HEADERS.Products, ([slug, name, description, brandSlug, categorySlug, status]) => ({ slug: text(slug, true, 'Products.slug')!, name: text(name, true, 'Products.name')!, description: importDescription(description), brandSlug: text(brandSlug, false, 'Products.brandSlug'), categorySlug: text(categorySlug, false, 'Products.categorySlug'), status: workbookStatus(status, 'Products', ['DRAFT','PUBLISHED','ARCHIVED']) }), new Set([0]));
   const variants = parseSheet(workbook.getWorksheet('Variants')!, HEADERS.Variants, ([productSlug, sku, barcode, title, costPrice, salePrice, weightGrams, status]) => ({ productSlug: text(productSlug, true, 'Variants.productSlug')!, sku: text(sku, true, 'Variants.sku')!, barcode: text(barcode, false, 'Variants.barcode'), title: text(title, false, 'Variants.title'), costPrice: text(costPrice, true, 'Variants.costPrice')!, salePrice: text(salePrice, true, 'Variants.salePrice')!, weightGrams: text(weightGrams, false, 'Variants.weightGrams'), status: workbookStatus(status, 'Variants', ['ACTIVE','INACTIVE','ARCHIVED']) }), new Set([0, 1, 2]));
   const attributes = parseSheet(workbook.getWorksheet('Attributes')!, HEADERS.Attributes, ([code, name, description, status]) => ({ code: text(code, true, 'Attributes.code')!, name: text(name, true, 'Attributes.name')!, description: text(description, false, 'Attributes.description'), status: workbookStatus(status, 'Attributes', ['ACTIVE','INACTIVE']) }), new Set([0]));
   const options = parseSheet(workbook.getWorksheet('AttributeOptions')!, HEADERS.AttributeOptions, ([attributeCode, code, label, status]) => ({ attributeCode: text(attributeCode, true, 'AttributeOptions.attributeCode')!, code: text(code, true, 'AttributeOptions.code')!, label: text(label, true, 'AttributeOptions.label')!, status: workbookStatus(status, 'AttributeOptions', ['ACTIVE','INACTIVE']) }), new Set([0, 1]));
