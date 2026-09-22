@@ -4,6 +4,11 @@ import { IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsNotIn, IsObjec
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const AMOUNT = /^\d{1,15}$/u;
 const ATTRIBUTE_CODE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+// Mirrors the DB CHECK `[[:ascii:]]` (0x00-0x7F) from ADR-0016 exactly,
+// allowing empty strings so the JSON API accepts the same grammar the DB
+// enforces (the DB CHECK remains the authoritative backstop, never relaxed).
+// eslint-disable-next-line no-control-regex -- intentional: ASCII-boundary range (matches DB SKU_ASCII_ONLY CHECK)
+const SKU_ASCII_ONLY = /^[\x00-\x7F]*$/u;
 
 export class MoneyDto {
   @IsString() @Matches(AMOUNT) amount!: string;
@@ -33,7 +38,7 @@ export class BrandUpdateDto {
 }
 
 export class ProductVariantDto {
-  @IsString() @MaxLength(100) sku!: string;
+  @IsString() @MaxLength(100) @Matches(SKU_ASCII_ONLY) sku!: string;
   @IsOptional() @IsString() @MaxLength(100) barcode?: string;
   @IsOptional() @IsString() @MaxLength(150) title?: string;
   @ValidateNested() @Type(() => MoneyDto) costPrice!: MoneyDto;
@@ -116,7 +121,7 @@ export class AttributeOptionUpdateDto {
 }
 
 export class ProductVariantUpdateDto {
-  @IsOptional() @IsString() sku?: string;
+  @IsOptional() @IsString() @Matches(SKU_ASCII_ONLY) sku?: string;
   @IsOptional() @IsString() barcode?: string | null;
   @IsOptional() @IsString() @MaxLength(150) title?: string | null;
   @IsOptional() @IsInt() @Min(0) weightGrams?: number | null;
@@ -138,3 +143,4 @@ export class VariantPriceUpdateDto {
   @IsOptional() @IsDateString() effectiveAt?: string;
   @IsInt() @Min(0) expectedVersion!: number;
 }
+

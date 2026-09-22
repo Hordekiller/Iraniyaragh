@@ -1,26 +1,27 @@
 # Team, Ownership and Onboarding
 
-Last updated: 2026-09-13
+Last updated: 2026-09-19
 
-## Current working item — RBAC and financial-policy governance (2026-09-13)
+## Current working item — RBAC and financial-policy governance
 
-A documentation-only proposal is under review on branch
-`audit/rbac-financial-policy-config`: **ADR-0014** and
-`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`. It audits the current RBAC and
+**ADR-0014 and `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` are accepted (adopted via
+merged review #185, `2e137d2`, 2026-09-14).** The ADR audits the RBAC and
 money/financial-policy state, records the Iranian legal baseline (Electronic
 Commerce Law 1382, permanent VAT Law 1400 with the 10 % budget rate, and
 پایانههای فروشگاهی و سامانه مؤدیان 1398), and specifies what must be
 admin-configurable (roles/permissions/approved actions; VAT rates, discount and
-refund thresholds, seller legal block) with a G1–G8 slice plan. Owner and
-proposed author: `@Hordekiller`; independent required reviewer: `@Maddyrampant`.
-No `schema.prisma` change may merge before this ADR is accepted.
+refund thresholds, seller legal block) with a G1–G8 slice plan. The G1–G3
+runtime slices (settings store, admin RBAC API/UI) are accepted but **not yet
+merged**; the G-slice plan and current status live in
+`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` and `docs/PROJECT_STATUS.md`. Owner:
+`@Hordekiller`; independent required reviewer: `@Maddyrampant`.
 
 ## Members
 
 | Member | Proposed track | Repository role | Status |
 | --- | --- | --- | --- |
 | [@Hordekiller](https://github.com/Hordekiller) | Developer A — Platform/API/Data/Operations | Owner/release driver | Active |
-| [@Maddyrampant](https://github.com/Maddyrampant) | Developer B — Product/Web/Admin/E2E | Write collaborator/reviewer | Active; onboarding review complete |
+| [@Maddyrampant](https://github.com/Maddyrampant) | Developer B — Product/Web/E2E | Write collaborator/reviewer | Active; onboarding review complete |
 
 Onboarding response is now complete. Maddyrampant reports approximately 35 hours
 per week in Iran time, normally same-day communication and a maximum one-working-day
@@ -52,9 +53,12 @@ as an external customer or throw work over the wall.
 
 ### Maddyrampant — Developer B
 
-- Product discovery and customer/admin experience
+- Product discovery and customer UX contribution (the admin UI slice stays
+  Hordekiller-owned per `docs/PROJECT_STATUS.md`; Developer B contributes
+  coordination/planning input on that slice but does not own it)
 - Web architecture, routes, components, state and API client integration
-- Admin operational workflows and accessibility/responsive behavior
+- Admin accessibility/responsive behavior and workflow usability input (the admin
+  slice ownership is not transferred by this document)
 - Contract fixtures, browser E2E, visual regression and UAT material
 - SEO/content/performance and operator-facing documentation
 - Initial release-verifier role
