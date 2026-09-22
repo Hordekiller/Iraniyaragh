@@ -567,6 +567,24 @@ export class InventoryService {
     ));
   }
 
+  async releaseReservationsForOrder(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    context: ActorContext,
+  ): Promise<number> {
+    this.assertTracked(context);
+    const reservations = await tx.stockReservation.findMany({
+      where: { orderId, status: 'ACTIVE' },
+      orderBy: [{ id: 'asc' }],
+    });
+
+    let released = 0;
+    for (const reservation of reservations) {
+      released += await this.releaseSingleReservation(tx, reservation, context);
+    }
+    return released;
+  }
+
   async getSnapshots(query: SnapshotQuery): Promise<InventoryBalanceListResponse> {
     const limit = clampInt(query.limit, 1, 100, 50);
     const offset = clampInt(query.offset, 0, MAX_OFFSET, 0);
@@ -1076,6 +1094,50 @@ export class InventoryService {
         action: 'inventory.reservation.expired',
         entityType: 'stock-reservation',
         entityId: reservationId,
+        before: { reserved: balance.reserved, available: balance.available },
+        after: { reserved: balance.reserved - quantity, available: balance.available + quantity },
+        actorId: context.actorId,
+        requestId: context.requestId,
+      },
+      tx,
+    );
+    return 1;
+  }
+
+  private async releaseSingleReservation(
+    tx: Prisma.TransactionClient,
+    reservation: StockReservationRow,
+    context: ActorContext,
+  ): Promise<number> {
+    await this.acquireBalanceLock(tx, reservation);
+    const current = await tx.stockReservation.findUnique({ where: { id: reservation.id } });
+    if (!current || current.status !== 'ACTIVE') return 0;
+
+    const quantity = current.quantity;
+    const balance = await tx.inventoryBalance.findUnique({
+      where: this.balanceKey({
+        warehouseId: current.warehouseId,
+        locationId: current.locationId,
+        variantId: current.variantId,
+      }),
+    });
+    if (!balance || balance.reserved < quantity) {
+      throw new ConflictException({ code: 'RESERVATION_STATE_CONFLICT', message: 'Reservation balance is inconsistent.' });
+    }
+
+    await tx.inventoryBalance.update({
+      where: { id: balance.id },
+      data: { reserved: { decrement: quantity }, available: { increment: quantity }, version: { increment: 1 } },
+    });
+    await tx.stockReservation.update({
+      where: { id: current.id },
+      data: { status: 'RELEASED' },
+    });
+    await this.auditLog.record(
+      {
+        action: 'inventory.reservation.released',
+        entityType: 'stock-reservation',
+        entityId: current.id,
         before: { reserved: balance.reserved, available: balance.available },
         after: { reserved: balance.reserved - quantity, available: balance.available + quantity },
         actorId: context.actorId,
