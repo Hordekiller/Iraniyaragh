@@ -629,6 +629,18 @@ Web commerce, #270/#269 Guest Cart/login merge, #273 Web Guest Cart handoff and
 #257 live read-only Admin Order consumption. Order commands, compensation and
 verified Payment remain open work.
 
+Concurrency hardening for the CI instability (#213 Sonar quality gate, #248
+inventory retry exhaustion) is under review on branch
+`fix/ci-stability-idempotency` (not yet on `main`): catalog idempotency commands
+acquire a per-`(actor, scope, key)` `pg_advisory_xact_lock` as the first
+transaction statement under SERIALIZABLE isolation, and single-balance inventory
+mutations (`changeOnHand`, `reserve`, `transitionReservation`, expiry) acquire a
+per-balance advisory lock, so concurrent identical commands deterministically
+serialize instead of racing the uniqueness constraint. Serializable retries stay
+bounded (max 3) with jittered backoff. Unit (848) and integration (135) suites are
+green, with the catalog-idempotency and inventory integration suites passing 5/5
+repeated local runs against the test Postgres.
+
 Issue #267 was delivered by #268. The storefront connects authenticated product
 variants, Cart mutations, Checkout preview/create and customer Order reads to the
 accepted HTTP contracts; uses server-owned prices, availability, shipping quotes
