@@ -149,6 +149,7 @@ jobs:
       OBJECT_STORAGE_BUCKET: products
       PUBLIC_MEDIA_ORIGIN: http://127.0.0.1:9000/products
       NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4000
+      NEXT_PUBLIC_MEDIA_ORIGIN: http://127.0.0.1:9000/products
     services:
       postgres:
         image: postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2

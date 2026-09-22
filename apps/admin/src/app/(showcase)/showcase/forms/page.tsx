@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Button, Stack, TextField, Typography, Box, Paper, Alert } from '@mui/material';
 import { FormField } from '@/components/ui/FormField';
 import {
@@ -11,6 +12,7 @@ import {
   pattern,
 } from '@/components/ui/useInHouseForm';
 import { FeedbackProvider, useFeedback } from '@/components/ui/FeedbackProvider';
+import { RichTextEditor } from '@/components/editor/RichTextEditor';
 
 type ProductForm = {
   name: string;
@@ -92,6 +94,30 @@ function ProductForm() {
   );
 }
 
+function RichTextEditorDemo() {
+  const [html, setHtml] = useState(
+    '<h2>توضیحات نمونه</h2><p>متن <strong>توصیف</strong> محصول با راست‌به‌چپ و ویرایشگر خودمیزبان.</p><ul><li>مورد اول</li><li>مورد دوم</li></ul>',
+  );
+
+  return (
+    <Paper sx={{ p: 3, maxWidth: 860 }}>
+      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+        ویرایشگر متن غنی (Jodit)
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        ادیتور خودمیزبان برای توضیح محصول؛ خروجی HTML است و در لایه API پاک‌سازی می‌شود (ADR-0016).
+      </Typography>
+      <RichTextEditor
+        value={html}
+        onChange={setHtml}
+        height={280}
+        placeholder="متن توضیحات را بنویسید…"
+        ariaLabel="ویرایشگر متن غنی (نمایش)"
+      />
+    </Paper>
+  );
+}
+
 export default function FormsShowcasePage() {
   return (
     <FeedbackProvider>
@@ -108,6 +134,7 @@ export default function FormsShowcasePage() {
           دکمه «ثبت محصول» را با فیلدهای خالی امتحان کنید تا خطاهای اعتبارسنجی نمایش داده شوند.
         </Alert>
         <ProductForm />
+        <RichTextEditorDemo />
       </Stack>
     </FeedbackProvider>
   );

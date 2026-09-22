@@ -33,6 +33,12 @@ logged or written to audit metadata; diagnostics may use a SHA-256 hash.
   uniqueness race reads and returns the winner record.
 - Concurrent conflicting requests commit at most one payload; every loser returns
   `IDEMPOTENCY_CONFLICT`.
+- A shared-key transaction-level advisory lock is the first statement of the
+  write transaction (`pg_advisory_xact_lock` on a key derived from actor, scope and
+  key hash). Under SERIALIZABLE isolation a contender that starts after the winner
+  blocks at the lock, then reads the already-committed winner record instead of a
+  stale snapshot — deterministically converging on the stored outcome rather than
+  racing the uniqueness constraint.
 - Validation, authentication and authorization happen before reservation of a key.
   Failed commands are not stored in this slice and may be retried with the same key.
 - An unexpected commit outcome is never guessed. A retry uses the same key and lets

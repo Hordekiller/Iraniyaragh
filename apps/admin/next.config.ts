@@ -12,6 +12,28 @@ function getConnectSources() {
     }
   }
 
+  const mediaOrigin = process.env.NEXT_PUBLIC_MEDIA_ORIGIN;
+  if (mediaOrigin) {
+    try {
+      sources.push(new URL(mediaOrigin).origin);
+    } catch {
+      throw new Error('NEXT_PUBLIC_MEDIA_ORIGIN must be an absolute URL.');
+    }
+  }
+
+  return sources.join(' ');
+}
+
+function getImageSources() {
+  const sources = ["'self'", 'data:', 'blob:'];
+  const mediaOrigin = process.env.NEXT_PUBLIC_MEDIA_ORIGIN;
+  if (mediaOrigin) {
+    try {
+      sources.push(new URL(mediaOrigin).origin);
+    } catch {
+      throw new Error('NEXT_PUBLIC_MEDIA_ORIGIN must be an absolute URL.');
+    }
+  }
   return sources.join(' ');
 }
 
@@ -21,7 +43,7 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "img-src 'self' data: blob:",
+  `img-src ${getImageSources()}`,
   "font-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline'",

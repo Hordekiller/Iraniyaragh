@@ -15,6 +15,9 @@ import { useToast } from '../components/feedback/toast-context'
 import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { MediaGallery } from '../components/product/MediaGallery'
+import { RichText } from '../components/product/RichText'
+import { serializeJsonLd } from '../lib/json-ld'
+import { richTextToPlainText } from '../lib/rich-text'
 import type { CatalogProduct } from '../services/catalog/types'
 import { commerceErrorMessage } from '../services/commerce/errors'
 
@@ -145,7 +148,8 @@ export function ProductPage() {
       url: ROUTES.product(product.slug),
       image: imageUrls.length > 0 ? imageUrls : undefined,
     }
-    if (product.description) productData.description = product.description
+    if (product.description)
+      productData.description = richTextToPlainText(product.description)
     structuredData.push(productData)
   }
   for (const media of product.media) {
@@ -168,7 +172,7 @@ export function ProductPage() {
       {structuredData.length > 0 && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }}
         />
       )}
       <nav aria-label="مسیر محصول" className="text-xs text-slate-400 mb-4">
@@ -244,9 +248,10 @@ export function ProductPage() {
           )}
 
           {product.description && (
-            <p className="mt-4 text-[13px] leading-7 text-slate-500">
-              {product.description}
-            </p>
+            <RichText
+              html={product.description}
+              className="mt-4 text-[13px] text-slate-500"
+            />
           )}
 
           {product.variants.length > 1 && (

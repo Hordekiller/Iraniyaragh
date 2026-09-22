@@ -17,18 +17,30 @@ export function publicMediaUrl(origin: string, objectKey: string): string {
     .join('/')}`;
 }
 
+export type PublicMediaRenditionProjection = {
+  url: string;
+  width: number;
+  height: number;
+};
+
 /**
- * Resolves the widest rendition as the canonical full-view URL, mirroring the
- * picker and description image projections. Returns `null` when no rendition is
- * available for a ready item.
+ * Resolves the widest rendition as the canonical full-view projection. URL,
+ * width and height all originate from that single chosen rendition, so the
+ * rendered dimensions always describe the artifact the URL points to. This is
+ * the shared projection behind the media picker and the description image
+ * rewrite. Returns `null` when no rendition is available for a ready item.
  */
-export function widestRenditionUrl(
+export function widestRenditionProjection(
   origin: string,
   renditions: readonly PublicMediaRenditionUrlInfo[],
-): string | null {
+): PublicMediaRenditionProjection | null {
   if (renditions.length === 0) return null;
   const widest = renditions.reduce((current, rendition) =>
     rendition.width >= current.width ? rendition : current,
   );
-  return publicMediaUrl(origin, widest.objectKey);
+  return {
+    url: publicMediaUrl(origin, widest.objectKey),
+    width: widest.width,
+    height: widest.height,
+  };
 }

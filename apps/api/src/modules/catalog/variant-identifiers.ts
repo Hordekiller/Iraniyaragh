@@ -24,7 +24,7 @@ export function combinationSignature(
 ): string {
   const pairs = axisValues
     .map((axis) => `${axis.attributeId}:${axis.optionId}`)
-    .sort()
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
     .join('|');
   return createHash('sha256').update(pairs).digest('hex');
 }

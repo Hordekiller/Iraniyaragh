@@ -71,7 +71,12 @@ S6571/S7744/S7760/S7773/S7755 (low value, 1 each).
   is a parser base URI, not an insecure network call. → False Positive.
 - **typescript:S2871** on canonical/signature sorting: deterministic lexical ordering is
   *intended* for hash identity (locale-aware `localeCompare` would break idempotency
-  signatures). → Won't Fix (canonicalized identity must be locale-independent).
+  signatures). Resolved with explicit code-unit comparators (`a < b ? -1 : a > b ? 1 : 0`)
+  in `variant-identifiers.ts` and `catalog-idempotency.service.ts` `stableJson`, which
+  satisfy the Sonar "explicit comparator" expectation without introducing locale
+  dependence. The report-only duplicate-detection sort in
+  `catalog-import.report.ts` uses `localeCompare`; it is not a persisted
+  canonical identity.
 - **Security findings only in fixtures/specs** (fixture-* SMS codes, `fixture-challenge-…`):
   not real credentials, OTPs or sessions. Do not degrade product grade over spec fixtures.
 

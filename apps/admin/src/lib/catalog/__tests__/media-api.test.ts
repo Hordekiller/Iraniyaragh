@@ -5,6 +5,7 @@ import {
   confirmMediaUpload,
   initiateMediaUpload,
   listProductMedia,
+  listProductMediaPicker,
   reorderMedia,
   setPrimaryMedia,
   updateMediaMetadata,
@@ -35,6 +36,31 @@ describe("media-api", () => {
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: "Bearer media-token",
+        }),
+      }),
+    );
+  });
+
+  it("reads the ready-image picker projection from the picker endpoint", async () => {
+    setAccessToken("picker-token");
+    const items = [
+      {
+        id: "m1",
+        url: "http://localhost:9000/products/p1/r-1200.webp",
+        alt: "قفل",
+        caption: null,
+        width: 1200,
+        height: 900,
+      },
+    ];
+    const fetchMock = vi.fn(async () => response({ items }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(listProductMediaPicker("p1")).resolves.toEqual(items);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${baseUrl}/picker`,
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer picker-token",
         }),
       }),
     );
