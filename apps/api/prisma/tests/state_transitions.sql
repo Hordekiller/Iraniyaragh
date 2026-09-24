@@ -36,9 +36,11 @@ INSERT INTO "Order" (
 );
 
 INSERT INTO "Payment" (
-  "id", "orderId", "provider", "amount", "status", "idempotencyKey", "updatedAt"
+  "id", "orderId", "provider", "amount", "status", "idempotencyKey",
+  "idempotencyFingerprint", "updatedAt"
 ) VALUES (
-  'st_payment', 'st_order', 'test-provider', 125000, 'PENDING', 'st-idem-1', CURRENT_TIMESTAMP
+  'st_payment', 'st_order', 'test-provider', 125000, 'PENDING', 'st-idem-1',
+  repeat('a', 64), CURRENT_TIMESTAMP
 );
 
 INSERT INTO "Fulfillment" ("id", "orderId", "status", "updatedAt")
