@@ -25,6 +25,11 @@ export type EnvironmentVariables = {
   SMS_IR_API_KEY?: string;
   SMS_IR_OTP_TEMPLATE_ID?: number;
   SMS_IR_TIMEOUT_MS?: number;
+  PAYMENT_PROVIDER_MODE?: string;
+  ZARINPAL_MERCHANT_ID?: string;
+  ZARINPAL_SANDBOX_MERCHANT_ID?: string;
+  ZARINPAL_CALLBACK_URL?: string;
+  ZARINPAL_TIMEOUT_MS?: number;
   OBJECT_STORAGE_ENDPOINT: string;
   OBJECT_STORAGE_ACCESS_KEY: string;
   OBJECT_STORAGE_SECRET_KEY: string;
@@ -328,6 +333,29 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     config.SMS_IR_TIMEOUT_MS === undefined || config.SMS_IR_TIMEOUT_MS === null || config.SMS_IR_TIMEOUT_MS === ''
       ? undefined
       : parseBoundedInteger(config.SMS_IR_TIMEOUT_MS, 'SMS_IR_TIMEOUT_MS', 500, 10_000);
+  const rawPaymentMode = config.PAYMENT_PROVIDER_MODE;
+  const paymentMode =
+    rawPaymentMode === undefined || rawPaymentMode === null || rawPaymentMode === ''
+      ? ['staging', 'production'].includes(environment)
+        ? 'live'
+        : 'sandbox'
+      : (() => {
+          const mode = String(rawPaymentMode).trim();
+          if (mode !== 'sandbox' && mode !== 'live') {
+            throw new Error('PAYMENT_PROVIDER_MODE must be either sandbox or live.');
+          }
+          return mode;
+        })();
+  if (['staging', 'production'].includes(environment) && paymentMode !== 'live') {
+    throw new Error('PAYMENT_PROVIDER_MODE must be live in staging and production.');
+  }
+  if (paymentMode === 'live') {
+    const merchant = optionalOpaqueSecret(config.ZARINPAL_MERCHANT_ID, 'ZARINPAL_MERCHANT_ID');
+    if (merchant === undefined) throw new Error('ZARINPAL_MERCHANT_ID is required when the payment gateway is live.');
+    if (typeof config.ZARINPAL_CALLBACK_URL !== 'string' || !config.ZARINPAL_CALLBACK_URL.trim()) {
+      throw new Error('ZARINPAL_CALLBACK_URL is required when the payment gateway is live.');
+    }
+  }
   if (
     ['staging', 'production'].includes(environment) &&
     (!totpEncryptionKey || Buffer.byteLength(totpEncryptionKey, 'utf8') < 32)
@@ -374,6 +402,23 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     SMS_IR_API_KEY: smsApiKey,
     SMS_IR_OTP_TEMPLATE_ID: smsTemplateId,
     SMS_IR_TIMEOUT_MS: smsTimeoutMs,
+    PAYMENT_PROVIDER_MODE: paymentMode,
+    ZARINPAL_MERCHANT_ID:
+      typeof config.ZARINPAL_MERCHANT_ID === 'string' && config.ZARINPAL_MERCHANT_ID.trim()
+        ? config.ZARINPAL_MERCHANT_ID.trim()
+        : undefined,
+    ZARINPAL_SANDBOX_MERCHANT_ID:
+      typeof config.ZARINPAL_SANDBOX_MERCHANT_ID === 'string' && config.ZARINPAL_SANDBOX_MERCHANT_ID.trim()
+        ? config.ZARINPAL_SANDBOX_MERCHANT_ID.trim()
+        : undefined,
+    ZARINPAL_CALLBACK_URL:
+      typeof config.ZARINPAL_CALLBACK_URL === 'string' && config.ZARINPAL_CALLBACK_URL.trim()
+        ? config.ZARINPAL_CALLBACK_URL.trim()
+        : undefined,
+    ZARINPAL_TIMEOUT_MS:
+      config.ZARINPAL_TIMEOUT_MS === undefined || config.ZARINPAL_TIMEOUT_MS === null || config.ZARINPAL_TIMEOUT_MS === ''
+        ? undefined
+        : parseBoundedInteger(config.ZARINPAL_TIMEOUT_MS, 'ZARINPAL_TIMEOUT_MS', 500, 10_000),
     OBJECT_STORAGE_ENDPOINT: objectStorageEndpoint,
     OBJECT_STORAGE_ACCESS_KEY: requiredString(config, 'OBJECT_STORAGE_ACCESS_KEY'),
     OBJECT_STORAGE_SECRET_KEY: objectStorageSecret,

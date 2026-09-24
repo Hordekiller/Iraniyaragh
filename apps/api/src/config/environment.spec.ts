@@ -29,6 +29,9 @@ const validProductionEnvironment = {
   SMS_IR_API_KEY: 'production-sms-ir-api-key',
   SMS_IR_OTP_TEMPLATE_ID: '123456',
   SMS_IR_TIMEOUT_MS: '5000',
+  ZARINPAL_MERCHANT_ID: '11111111-2222-3333-4444-555555555555',
+  ZARINPAL_CALLBACK_URL: 'https://pay.example.com/api/v1/payments/zarinpal/callback',
+  ZARINPAL_TIMEOUT_MS: '5000',
   PRODUCT_MEDIA_IMAGE_MAX_BYTES: '20971520',
   PRODUCT_MEDIA_MAX_IMAGE_PIXELS: '40000000',
 };
@@ -197,6 +200,8 @@ describe('validateEnvironment', () => {
         OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
         SMS_IR_API_KEY: validProductionEnvironment.SMS_IR_API_KEY,
         SMS_IR_OTP_TEMPLATE_ID: validProductionEnvironment.SMS_IR_OTP_TEMPLATE_ID,
+        ZARINPAL_MERCHANT_ID: validProductionEnvironment.ZARINPAL_MERCHANT_ID,
+        ZARINPAL_CALLBACK_URL: validProductionEnvironment.ZARINPAL_CALLBACK_URL,
         PRODUCT_MEDIA_IMAGE_MAX_BYTES: validProductionEnvironment.PRODUCT_MEDIA_IMAGE_MAX_BYTES,
         PRODUCT_MEDIA_MAX_IMAGE_PIXELS: validProductionEnvironment.PRODUCT_MEDIA_MAX_IMAGE_PIXELS,
       }),
@@ -213,6 +218,8 @@ describe('validateEnvironment', () => {
         JWT_ACCESS_SECRET: 'access-secret-with-at-least-32-characters',
         AUTH_HASH_SECRET: 'hash-secret-with-at-least-32-characters',
         OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
+        ZARINPAL_MERCHANT_ID: validProductionEnvironment.ZARINPAL_MERCHANT_ID,
+        ZARINPAL_CALLBACK_URL: validProductionEnvironment.ZARINPAL_CALLBACK_URL,
       }),
     ).toThrow('AUTH_HASH_KEY_VERSION');
   });
@@ -225,6 +232,8 @@ describe('validateEnvironment', () => {
         CORS_ORIGINS: 'https://staging-admin.example.com',
         JWT_ACCESS_SECRET: 'change-me-access',
         AUTH_HASH_SECRET: 'hash-secret-with-at-least-32-characters',
+        ZARINPAL_MERCHANT_ID: validProductionEnvironment.ZARINPAL_MERCHANT_ID,
+        ZARINPAL_CALLBACK_URL: validProductionEnvironment.ZARINPAL_CALLBACK_URL,
       }),
     ).toThrow('JWT_ACCESS_SECRET');
   });

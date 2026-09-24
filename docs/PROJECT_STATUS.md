@@ -47,7 +47,7 @@ Current delivery confidence:
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
-| Order commands/payment         | Foundation only                             | Cancellation/expiry compensation, payment and fulfillment application workflows remain separate follow-up scope                                                                                                           |
+| Order commands/payment         | Command foundation merged, payment verification foundation in review | Cancellation/expiry compensation merged (Epic-5 command slice); Zarinpal initiation + server-side verification foundation in PR #294 (Epic-6); refunds, outbox dispatch and storefront payment UX remain |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
@@ -587,6 +587,48 @@ malware scanner also remain production-acceptance work.
   leaking the idempotency hash, fingerprints, `orders.manage` names or `STAFF_MFA`
   mechanics into the machine-readable contract.
 
+### Zarinpal payment initiation + server-side verification foundation (Epic-6, in review — PR #294)
+
+- `POST /api/v1/orders/:id/pay` (Customer OTP, ownership-scoped, gated by a
+  bounded `Idempotency-Key`) initiates payment. The amount is always the server
+  `Order.grandTotal` (integer Rial); a short SERIALIZABLE transaction registers
+  one `Payment` row (`PENDING`, provider, hashed idempotency key + payload
+  fingerprint, correlation ID, `gatewayEnvironment`) with "one active pending per
+  order" before the provider is contacted. The Zarinpal adapter is the only V1
+  adapter behind the vendor-neutral `PaymentProvider` port (ADR-0017); sandbox/
+  live base URLs, bounded timeout, abort/5xx/4xx/malformed mapping and
+  `unknown_result` (never auto-retried, never a definitive FAILED) are covered.
+- Verification is now implemented (ADR-0018): `GET
+  /api/v1/payments/zarinpal/callback` treats the `Authority`/`Status` query
+  parameters as intent, never proof. `Status=NOK` deterministically records
+  `Payment PENDING → FAILED` (`gateway_not_paid`); otherwise the **provider
+  `verify` call runs outside any DB transaction** and only a `verified` result
+  (Zarinpal `code 100`/`101` + `ref_id`) moves money.
+- A successful purchase is applied in one short SERIALIZABLE transaction under
+  the shared per-order advisory lock: `Payment PENDING → PAID` (reference ID
+  persisted), `Order PENDING_PAYMENT → PAID`, idempotent
+  `InventoryService.consumeReservationsForOrder` (only `ACTIVE` reservations,
+  per-balance lock, `SALE` movements, `RESERVATION → CONSUMED`,
+  `inventory.reservation.consumed` audits), a `Fulfillment` row (`PENDING`) and
+  one deduplicated `PAYMENT_VERIFIED` outbox event plus `payment.paid`/`order.paid`
+  audits — atomically or not at all.
+- Idempotency and race safety are DB-proven with PostgreSQL integration tests:
+  duplicate callbacks (sequential and concurrent) coalesce to one settlement and
+  one stock consume; verify-versus-cancellation and verify-versus-expiry produce
+  `Payment PAID` with no consumed stock and a `PAYMENT_VERIFIED_AFTER_CANCELLED`
+  reconciliation event; provider `unavailable` persists nothing and returns 503;
+  `unknown_result` keeps the payment `PENDING` and emits exactly one
+  `PAYMENT_VERIFICATION_UNCONFIRMED` reconciliation event; forged authorities,
+  wrong settled amounts and cross-environment authorities are rejected
+  (`404`/`409`/`400`).
+- Verification: payments unit 71/71 (provider verify semantics + service
+  orchestration), full API unit 950/950 (79 files), full integration
+  167/167 (20 files, verification suite 12/12), OpenAPI generated + drift green,
+  contracts/API typecheck, `pnpm lint` (4/4 with `--max-warnings=0`) and
+  `pnpm build` (3/3) all pass locally on `feat/epic6-payment-initiation`.
+- Not in this slice (explicitly open): outbox dispatch/worker, refunds,
+  multi-provider routing (#141) and the storefront/admin payment UX.
+
 ### PR #109 — Auth privileged lifecycle
 
 - password change with current-password verification and policy errors;
@@ -627,7 +669,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup, explicit OTP-login merge (#270/#269) and Web handoff (#273)                 | Production acceptance and long-running cleanup operations                                                                                       |
 | Checkout      | Merged preview/create API and live Web binding with configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence    | Shipping operations, compensation/cleanup, verified Payment and production acceptance                                                          |
 | Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API, live read-only Admin client (#257) and idempotent `POST` cancel + expiry-worker compensation with reservation release | Verified Payment, shipment operations and lifecycle-operation evidence in production |
-| Payments      | Schema/state foundation                                                                                                                                             | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
+| Payments      | Zarinpal v4 adapter, sandbox/live separation, server-initiated payment and server-side verified settlement in review (#294) | Verified settlement, duplicate/concurrent callback coalescing and reconciliation hooks exist in the open slice; refunds, outbox dispatch and provider fallback routing remain                                                                              |
 | Web           | Accessible routed storefront with live Catalog/media/availability, authenticated Cart/Checkout/Order lifecycle (#268) and Guest Cart handoff (#273)                    | Verified Payment API/result lifecycle and production acceptance                                                                                |
 | Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)                     | Inventory UX, order commands and Admin-driven publish acceptance                                                                               |
 | Operations    | CI and local Compose                                                                                                                                                | Deploy/staging, observability, recovery and rollback proof                                                                                     |

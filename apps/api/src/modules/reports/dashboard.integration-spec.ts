@@ -339,6 +339,8 @@ describe.sequential('DashboardService database integration', () => {
           amount: 200n,
           status: 'PAID',
           idempotencyKey: `dashboard-payment-paid-${ids.suffix}`,
+          idempotencyFingerprint: 'a'.repeat(64),
+          gatewayEnvironment: 'sandbox',
         },
         {
           id: ids.payments[1]!,
@@ -347,6 +349,8 @@ describe.sequential('DashboardService database integration', () => {
           amount: 200n,
           status: 'FAILED',
           idempotencyKey: `dashboard-payment-failed-${ids.suffix}`,
+          idempotencyFingerprint: 'a'.repeat(64),
+          gatewayEnvironment: 'sandbox',
         },
       ],
     });

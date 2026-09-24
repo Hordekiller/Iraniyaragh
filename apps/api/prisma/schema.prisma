@@ -1123,18 +1123,21 @@ model OutboxEvent {
 }
 
 model Payment {
-  id             String              @id @default(cuid())
-  orderId        String
-  provider       String
-  amount         BigInt
-  status         PaymentStatus       @default(PENDING)
-  authority      String?
-  referenceId    String?
-  idempotencyKey String              @unique
-  order          Order               @relation(fields: [orderId], references: [id])
-  transitions    PaymentTransition[]
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  id                     String              @id @default(cuid())
+  orderId                String
+  provider               String
+  amount                 BigInt
+  status                 PaymentStatus       @default(PENDING)
+  authority              String?
+  referenceId            String?
+  idempotencyKey         String              @unique
+  idempotencyFingerprint String              @db.Char(64)
+  correlationId          String?             @db.VarChar(128)
+  gatewayEnvironment     String              @db.VarChar(20) @default("sandbox")
+  order                  Order               @relation(fields: [orderId], references: [id])
+  transitions            PaymentTransition[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
   @@index([orderId, status])
   @@index([status])
