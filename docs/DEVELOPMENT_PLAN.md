@@ -236,6 +236,13 @@ and `orders.read` staff query/detail APIs; cancellation/expiry
 compensation remains separately scoped because it mutates both lifecycle and
 inventory state.
 
+Status update (2026-09-22): the Epic-5 order command slice is implemented and
+green on `feat/epic5-order-lifecycle` (PR pending) — idempotent customer/staff
+cancel, the overdue-expiry worker with exactly-once reservation release,
+transactional `ORDER_CANCELLED`/`ORDER_EXPIRED` outbox events and
+OpenAPI/contract/migration/concurrency evidence. Exit criteria below hold for
+the command surface on that branch; payment-linked lifecycle remains Sprint 8.
+
 Developer A:
 
 - Separate order, payment and fulfillment state machines (foundation landed via

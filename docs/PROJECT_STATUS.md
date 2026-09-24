@@ -553,6 +553,40 @@ malware scanner also remain production-acceptance work.
   a separate critical mutation requiring state, inventory, idempotency and
   concurrency policy/evidence before implementation.
 
+### Order cancellation and expiry with reservation compensation (Epic-5 command slice, open PR)
+
+- `POST /api/v1/orders/:id/cancel` (Customer OTP, ownership-scoped) and
+  `POST /api/v1/orders/admin/:id/cancel` (Staff MFA plus `orders.manage`)
+  cancel a `PENDING_PAYMENT` order idempotently. A 128-char max, control-free
+  `Idempotency-Key` header gates every command.
+- Commands run in a SERIALIZABLE transaction under a per-order
+  `pg_advisory_xact_lock('order', …)` taken as the first statement. Claims live
+  in `OrderCommandIdempotencyRecord` keyed `(orderId, scope, keyHash)` with a
+  payload `fingerprint`; a matching retry replays the stored response, and a
+  changed payload under the same key returns `IDEMPOTENCY_CONFLICT`. Customer and
+  staff scopes are independent, so one retry key may be reused across them.
+- Only `PENDING_PAYMENT` is cancellable; any other state returns
+  `ORDER_STATE_CONFLICT`. Foreign ownership returns the same `ORDER_NOT_FOUND`
+  as a missing ID. Transitions are written through the guarded state-machine
+  helper (`CUSTOMER_CANCELLED`, `STAFF_CANCELLED`, `RESERVATION_EXPIRED`).
+- Every `ACTIVE` reservation is released through the inventory ledger (a
+  `RELEASED` status, reserved/available rebalance with balance-lock recheck and a
+  per-reservation `inventory.reservation.released` audit row in the same
+  transaction). `ORDER_CANCELLED`/`ORDER_EXPIRED` outbox events are deduplicated
+  per order and `order.cancelled`/`order.expired` audits are recorded.
+- The expiry worker selects overdue `PENDING_PAYMENT` orders in bounded batches,
+  writes no claim, and per-order skips concurrent `ORDER_STATE_CONFLICT`s so a
+  later run is idempotent (`expired: 0`). Concurrent cancel-vs-expiry on one
+  order coalesces into exactly one `CANCELLED` transition and one compensation.
+- Verification: 12 service-unit + 6 controller + 5 HTTP authorization tests,
+  8 Postgres integration tests (incl. replay, fingerprint conflict, ownership
+  404, staff cancel and the cancel/expiry race), OpenAPI drift contract, schema
+  migration tests and a `prisma migrate diff` drift check. Full API gates green:
+  875 unit, 143 integration, 15 migration tests, lint, typecheck and build.
+- The OpenAPI artifact documents both commands (200/400/401/403/404/409) without
+  leaking the idempotency hash, fingerprints, `orders.manage` names or `STAFF_MFA`
+  mechanics into the machine-readable contract.
+
 ### PR #109 — Auth privileged lifecycle
 
 - password change with current-password verification and policy errors;
@@ -592,7 +626,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Inventory     | Ledger; inventory HTTP (#222), public availability (#231), batched expiry (#232), typed operator read/mutation contracts and merged Checkout allocation (#246/#237) | Admin operator mutation UX, reconciliation UI, compensation and worker rollout                                                                 |
 | Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup, explicit OTP-login merge (#270/#269) and Web handoff (#273)                 | Production acceptance and long-running cleanup operations                                                                                       |
 | Checkout      | Merged preview/create API and live Web binding with configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence    | Shipping operations, compensation/cleanup, verified Payment and production acceptance                                                          |
-| Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API and live read-only Admin client (#257)                            | Commands, compensation and lifecycle-operation evidence                                                                                        |
+| Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API, live read-only Admin client (#257) and idempotent `POST` cancel + expiry-worker compensation with reservation release | Verified Payment, shipment operations and lifecycle-operation evidence in production |
 | Payments      | Schema/state foundation                                                                                                                                             | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
 | Web           | Accessible routed storefront with live Catalog/media/availability, authenticated Cart/Checkout/Order lifecycle (#268) and Guest Cart handoff (#273)                    | Verified Payment API/result lifecycle and production acceptance                                                                                |
 | Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)                     | Inventory UX, order commands and Admin-driven publish acceptance                                                                               |
@@ -623,8 +657,12 @@ security/query review, OpenAPI drift confirmation and merge.
 - Shipping-method administration/provisioning and the global 24-hour Checkout
   idempotency cleanup job.
 - Order command lifecycle. The #247/#238 read API is merged, #268 binds its
-  customer Web client and #257 binds its masked read-only Admin consumer; all
-  mutation workflows remain open.
+  customer Web client and #257 binds its masked read-only Admin consumer; the
+  authenticated `POST /orders/:id/cancel`, `POST /orders/admin/:id/cancel` and
+  the expiry worker (with exactly-once reservation compensation, transactional
+  outbox events and Postgres integration/concurrency evidence) are implemented
+  and green on the open `feat/epic5-order-lifecycle` branch, pending the Epic-5
+  command PR. Payment-linked lifecycle operations remain open.
 - Payment gateway, verified callback, refunds and reconciliation.
 - Shipment/tracking, outbox dispatcher/workers and notifications. #246/#237
   persists the first transactional `ORDER_CREATED` event but does not publish it.
@@ -861,8 +899,10 @@ low-stock thresholds, SLA policy, revenue semantics or sample operational data.
    #246/#237 establishes database-configured server pricing and quote-policy
    revisioning without inventing a production rate.
 4. Reservation TTL and deterministic multi-location allocation are accepted in
-   ADR-0015 and implemented by #246/#237; cancellation/expiry compensation and
-   production worker rollout remain.
+   ADR-0015 and implemented by #246/#237; the order cancellation/expiry command
+   slice (incl. exactly-once reservation release) is implemented and green on the
+   open `feat/epic5-order-lifecycle` branch; production expiry-worker rollout and
+   scheduling remain.
 5. Guest Cart/login merge is accepted in ADR-0015 and merged via #270/#269 with
    hashed ownership, rolling TTL, CSRF/origin protection, fail-closed abuse limits,
    bounded cleanup and privacy-safe audit. Anonymous Web handoff remains separate.

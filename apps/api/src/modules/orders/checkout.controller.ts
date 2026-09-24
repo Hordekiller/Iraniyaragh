@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Headers,
@@ -21,6 +20,7 @@ import type {
   CheckoutResponse,
 } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
+import { normalizeIdempotencyKey } from '../../common/idempotency-key';
 import { CurrentPrincipal, RequireAuthentication } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { CheckoutCreateDto, CheckoutPreviewDto } from './checkout.dto';
@@ -89,19 +89,4 @@ export class CheckoutController {
       getRequestId(),
     );
   }
-}
-
-function normalizeIdempotencyKey(value: string | undefined): string {
-  const key = value?.trim();
-  const hasControlCharacter = [...(key ?? '')].some((character) => {
-    const codePoint = character.codePointAt(0) ?? 0;
-    return codePoint < 32 || codePoint === 127;
-  });
-  if (!key || key.length > 128 || hasControlCharacter) {
-    throw new BadRequestException({
-      code: 'INVALID_REQUEST',
-      message: 'A valid Idempotency-Key of at most 128 characters is required.',
-    });
-  }
-  return key;
 }
