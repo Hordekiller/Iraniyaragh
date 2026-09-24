@@ -51,10 +51,14 @@ are never copied as commerce truth.
 - client-side permission enforcement, financial calculations or inventory state
   transitions.
 
+## Delivered from a measured requirement
+
+- the operations dashboard uses dependency-free CSS status bars plus an exact
+  textual/table fallback for every series; the live Reports API remains the sole
+  source of values and no sample Vuexy chart data is bundled;
+
 ## Deferred until a real page needs them
 
-- chart library selected from measured dashboard requirements and accessible table
-  fallback;
 - rich-text editor after the governed content schema, sanitizer, revision/reviewer and
   preview contracts land;
 - date picker after UTC/Tehran/Jalali input/output behavior is specified and tested;

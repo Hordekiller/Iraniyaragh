@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
       userId: 'dev-admin',
       sessionId: 's-1',
       authenticationLevel: 'STAFF_MFA',
-      permissions: ['catalog.read'],
+      permissions: ['catalog.read', 'reports.read'],
     } as {
       userId: string;
       sessionId: string;
@@ -70,7 +70,7 @@ describe('AdminShell', () => {
       userId: 'dev-admin',
       sessionId: 's-1',
       authenticationLevel: 'STAFF_MFA',
-      permissions: ['catalog.read'],
+      permissions: ['catalog.read', 'reports.read'],
     };
   });
 

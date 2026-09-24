@@ -65,7 +65,7 @@ export function PageHeader({
 
       <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+          <Typography component="h1" variant="h4" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
             {title}
           </Typography>
           {description ? (

@@ -52,7 +52,14 @@ export function filterNavigationByPermissions(
 export const navigation: NavigationGroup[] = [
   {
     label: 'نمای کلی',
-    items: [{ label: 'داشبورد عملیات', href: '/dashboard', icon: Gauge }],
+    items: [
+      {
+        label: 'داشبورد عملیات',
+        href: '/dashboard',
+        icon: Gauge,
+        permission: 'reports.read',
+      },
+    ],
   },
   {
     label: 'فروش و مشتری',
