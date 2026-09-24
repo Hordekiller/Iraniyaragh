@@ -659,6 +659,37 @@ export class InventoryService {
     return released;
   }
 
+  /**
+   * Consumes every still-active reservation of an order inside the caller's
+   * transaction: one SALE inventory movement and a RESERVATION → CONSUMED
+   * transition per reservation. Idempotent by design: reservations that already
+   * left ACTIVE (consumed/released/expired) are left untouched, and the balance
+   * advisory lock serializes against the reservation-expiry worker, so stock is
+   * never consumed twice. `actorId` is optional because payment verification is
+   * system-originated; `requestId` still traces and satisfies the audit record.
+   */
+  async consumeReservationsForOrder(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    context: { actorId?: string | null; requestId: string },
+  ): Promise<number> {
+    if (!context.requestId?.trim()) {
+      throw new BadRequestException(
+        "requestId is required for payment-driven inventory consumption.",
+      );
+    }
+    const reservations = await tx.stockReservation.findMany({
+      where: { orderId, status: "ACTIVE" },
+      orderBy: [{ id: "asc" }],
+    });
+
+    let consumed = 0;
+    for (const reservation of reservations) {
+      consumed += await this.consumeSingleReservation(tx, reservation, context);
+    }
+    return consumed;
+  }
+
   async getSnapshots(
     query: SnapshotQuery,
   ): Promise<InventoryBalanceListResponse> {
@@ -1323,6 +1354,78 @@ export class InventoryService {
       "inventory.reservation.released",
       context,
     );
+  }
+
+  private async consumeSingleReservation(
+    tx: Prisma.TransactionClient,
+    reservation: StockReservationRow,
+    context: { actorId?: string | null; requestId: string },
+  ): Promise<number> {
+    await this.acquireBalanceLock(tx, reservation);
+    const current = await tx.stockReservation.findUnique({
+      where: { id: reservation.id },
+    });
+    if (current?.status !== "ACTIVE") return 0;
+
+    const quantity = current.quantity;
+    const balance = await tx.inventoryBalance.findUnique({
+      where: this.balanceKey({
+        warehouseId: current.warehouseId,
+        locationId: current.locationId,
+        variantId: current.variantId,
+      }),
+    });
+    if (!balance || balance.reserved < quantity) {
+      throw new ConflictException({
+        code: "RESERVATION_STATE_CONFLICT",
+        message: "Reservation balance is inconsistent.",
+      });
+    }
+
+    const beforeOnHand = balance.onHand;
+    const afterOnHand = beforeOnHand - quantity;
+    const afterReserved = balance.reserved - quantity;
+    await tx.inventoryBalance.update({
+      where: { id: balance.id },
+      data: {
+        onHand: afterOnHand,
+        reserved: afterReserved,
+        available: afterOnHand - afterReserved,
+        version: { increment: 1 },
+      },
+    });
+    await tx.inventoryMovement.create({
+      data: {
+        warehouseId: current.warehouseId,
+        locationId: current.locationId,
+        variantId: current.variantId,
+        type: InventoryMovementType.SALE,
+        quantity: -quantity,
+        beforeOnHand,
+        afterOnHand,
+        referenceType: current.orderId ? "order" : "stock-reservation",
+        referenceId: current.orderId ?? current.id,
+        reason: "Reservation consumed",
+      },
+    });
+    await tx.stockReservation.update({
+      where: { id: current.id },
+      data: { status: "CONSUMED" },
+    });
+    await this.auditLog.record(
+      {
+        action: "inventory.reservation.consumed",
+        entityType: "stock-reservation",
+        entityId: current.id,
+        before: { onHand: beforeOnHand, reserved: balance.reserved },
+        after: { onHand: afterOnHand, reserved: afterReserved, available: afterOnHand - afterReserved },
+        metadata: { orderId: current.orderId },
+        actorId: context.actorId ?? null,
+        requestId: context.requestId,
+      },
+      tx,
+    );
+    return 1;
   }
 
   private async rebalanceReservationRelease(

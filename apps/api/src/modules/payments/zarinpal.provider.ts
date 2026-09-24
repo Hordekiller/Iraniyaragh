@@ -4,6 +4,8 @@ import type {
   PaymentGatewayEnvironment,
   PaymentProvider,
   PaymentRejectionReason,
+  PaymentVerifyRequest,
+  PaymentVerifyResult,
 } from './payment-provider.port';
 
 // Zarinpal v4 REST: the payment gateway host differs between environments. The
@@ -13,6 +15,8 @@ const SANDBOX_REQUEST_URL = 'https://sandbox.zarinpal.com/pg/v4/payment/request.
 const LIVE_REQUEST_URL = 'https://payment.zarinpal.com/pg/v4/payment/request.json';
 const SANDBOX_REDIRECT_BASE_URL = 'https://sandbox.zarinpal.com/pg/StartPay/';
 const LIVE_REDIRECT_BASE_URL = 'https://payment.zarinpal.com/pg/StartPay/';
+const SANDBOX_VERIFY_URL = 'https://sandbox.zarinpal.com/pg/v4/payment/verify.json';
+const LIVE_VERIFY_URL = 'https://payment.zarinpal.com/pg/v4/payment/verify.json';
 
 const MAX_RESPONSE_BYTES = 32 * 1024;
 const CONTROL_CHARACTER = /\s/u;
@@ -45,6 +49,29 @@ function rejectionReason(code: number): PaymentRejectionReason {
   if (code === 101) return 'authentication';
   if (code === 102) return 'amount';
   if (code >= 10 && code <= 99) return 'invalid_request';
+  return 'unknown';
+}
+
+// Verify-phase settlements. A transaction is settled only when the verify call
+// repeats a recorded `ref_id`: the first verify is `code: 100`, every later
+// repeat of the same transaction is `code: 101` ("already verified") and is
+// still a success, never a credential failure.
+function parseVerifiedReference(body: unknown): string | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const record = body as Record<string, unknown>;
+  const data = (record.data ?? record) as Record<string, unknown> | undefined;
+  const rawCode = data?.code ?? record.status;
+  const code = typeof rawCode === 'number' ? rawCode : 0;
+  if (code !== 100 && code !== 101) return null;
+  const referenceId =
+    typeof data?.ref_id === 'string' && data.ref_id.length > 0 ? data.ref_id : null;
+  // A success-shaped code without a reference id is an unproved settlement:
+  // reported to the caller so it can be routed to reconciliation.
+  return referenceId;
+}
+
+function verifyRejectionReason(code: number): PaymentRejectionReason {
+  if (code === 102) return 'amount';
   return 'unknown';
 }
 
@@ -142,6 +169,10 @@ export class ZarinpalProvider implements PaymentProvider {
     return this.config.mode === 'live' ? LIVE_REQUEST_URL : SANDBOX_REQUEST_URL;
   }
 
+  private get verifyUrl(): string {
+    return this.config.mode === 'live' ? LIVE_VERIFY_URL : SANDBOX_VERIFY_URL;
+  }
+
   private get redirectBaseUrl(): string {
     return this.config.mode === 'live' ? LIVE_REDIRECT_BASE_URL : SANDBOX_REDIRECT_BASE_URL;
   }
@@ -214,5 +245,69 @@ export class ZarinpalProvider implements PaymentProvider {
         order_id: request.orderId,
       },
     };
+  }
+
+  async verify(request: PaymentVerifyRequest): Promise<PaymentVerifyResult> {
+    if (
+      request.amountMinorUnits.length === 0 ||
+      !/^[0-9]+$/u.test(request.amountMinorUnits) ||
+      request.authority.length === 0 ||
+      request.authority.length > 128 ||
+      request.correlationId.length === 0 ||
+      request.correlationId.length > 128
+    ) {
+      return { status: 'failed', reason: 'invalid_request' };
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+    try {
+      const response = await this.fetcher(this.verifyUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json',
+        },
+        body: JSON.stringify({
+          merchant_id: this.config.merchantId,
+          amount: request.amountMinorUnits,
+          authority: request.authority,
+        }),
+        signal: controller.signal,
+      });
+
+      if (response.status >= 500) return { status: 'unavailable' };
+
+      const body = await readBoundedBody(response);
+      if (response.status < 200 || response.status >= 300) {
+        return { status: 'failed', reason: 'invalid_request' };
+      }
+
+      const referenceId = parseVerifiedReference(body);
+      if (referenceId !== null) {
+        return { status: 'verified', referenceId };
+      }
+
+      const record = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
+      const data = (record.data ?? record) as Record<string, unknown> | undefined;
+      const rawCode = data?.code ?? record.status;
+      const code = typeof rawCode === 'number' ? rawCode : 0;
+      // A settlement-shaped code (100/101) without a reference id claims a paid
+      // transaction but cannot prove it: routed to reconciliation, never to a
+      // definitive FAILED.
+      if (code === 100 || code === 101) return { status: 'unknown_result' };
+      if (code !== 0) return { status: 'failed', reason: verifyRejectionReason(code) };
+      return { status: 'unknown_result' };
+    } catch (error) {
+      if (
+        controller.signal.aborted ||
+        (error instanceof Error && error.name === 'AbortError')
+      ) {
+        return { status: 'unknown_result' };
+      }
+      return { status: 'unavailable' };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 }

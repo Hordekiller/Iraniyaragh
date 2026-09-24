@@ -84,7 +84,7 @@ and future gateway choices are explicitly open.
   `metadata.order_id`. A `code: 100` with a non-empty `authority` is the only
   proved redirect; the live/sandbox trust boundary relies on the persisted
   `gatewayEnvironment`, never on the authority prefix.
-- Callback (future verification slice, not this ADR): Zarinpal redirects the buyer
+- Callback (verification implemented in ADR-0018, not this ADR): Zarinpal redirects the buyer
   to `callback_url` with `Authority` and a `Status` query parameter that is exactly
   `OK` (paid) or `NOK` (failed/cancelled). Verify is `POST
   https://payment.zarinpal.com/pg/v4/payment/verify.json` with

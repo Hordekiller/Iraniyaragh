@@ -229,4 +229,143 @@ describe("ZarinpalProvider", () => {
       }).authorize(request),
     ).toEqual({ status: "unavailable" });
   });
+
+  describe("verify", () => {
+    const verifyRequest = {
+      amountMinorUnits: "250000",
+      currency: "IRR" as const,
+      authority: "A000000000000000000000000001234567",
+      correlationId: "req-1",
+    };
+
+    it("sends the server-composed merchant payload for verification", async () => {
+      const fetcher = vi.fn(async () =>
+        response(200, { data: { code: 100, message: "paid", ref_id: "R123" } }),
+      );
+      const result = await new ZarinpalProvider(config, fetcher).verify(verifyRequest);
+      expect(result).toEqual({ status: "verified", referenceId: "R123" });
+      expect(String(fetcher.mock.calls[0]?.[0])).toBe(
+        "https://sandbox.zarinpal.com/pg/v4/payment/verify.json",
+      );
+      const sent = JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body)) as Record<string, unknown>;
+      expect(sent).toEqual({
+        merchant_id: config.merchantId,
+        amount: "250000",
+        authority: verifyRequest.authority,
+      });
+    });
+
+    it("reports the first verify (code 100) as settled", async () => {
+      const result = await new ZarinpalProvider(
+        config,
+        async () => response(200, { data: { code: 100, message: "Success", ref_id: "REF-1" } }),
+      ).verify(verifyRequest);
+      expect(result).toEqual({ status: "verified", referenceId: "REF-1" });
+    });
+
+    it("reports a repeat verify (code 101 already-verified) as settled, not as a credential failure", async () => {
+      const result = await new ZarinpalProvider(
+        config,
+        async () => response(200, { data: { code: 101, message: "Already verified", ref_id: "REF-1" } }),
+      ).verify(verifyRequest);
+      expect(result).toEqual({ status: "verified", referenceId: "REF-1" });
+    });
+
+    it("supports a top-level status envelope", async () => {
+      const result = await new ZarinpalProvider(
+        config,
+        async () => response(200, { status: 100, ref_id: "REF-1" }),
+      ).verify(verifyRequest);
+      expect(result).toEqual({ status: "verified", referenceId: "REF-1" });
+    });
+
+    it("routes a success-shaped code without a reference id to unknown_result", async () => {
+      const result = await new ZarinpalProvider(
+        config,
+        async () => response(200, { data: { code: 100, message: "paid" } }),
+      ).verify(verifyRequest);
+      expect(result).toEqual({ status: "unknown_result" });
+    });
+
+    it("maps deterministic non-settlement codes to failed with a sanitized reason", async () => {
+      const result = await new ZarinpalProvider(
+        config,
+        async () => response(200, { data: { code: 102, message: "stale amount", ref_id: null } }),
+      ).verify(verifyRequest);
+      expect(result).toEqual({ status: "failed", reason: "amount" });
+      expect(JSON.stringify(result)).not.toContain("stale amount");
+      expect(
+        await new ZarinpalProvider(
+          config,
+          async () => response(200, { data: { code: 202, message: "canceled" } }),
+        ).verify(verifyRequest),
+      ).toEqual({ status: "failed", reason: "unknown" });
+    });
+
+    it.each([[500, null], [502, { data: {} }], [503, { errors: [] }]])(
+      "maps HTTP %s during verify to unavailable, never failed",
+      async (status, body) => {
+        expect(
+          await new ZarinpalProvider(config, async () => response(status, body)).verify(
+            verifyRequest,
+          ),
+        ).toEqual({ status: "unavailable" });
+      },
+    );
+
+    it("maps malformed or unprovable verify responses to unknown_result", async () => {
+      const malformed = new Response("{", { status: 200 });
+      expect(
+        await new ZarinpalProvider(config, async () => malformed).verify(verifyRequest),
+      ).toEqual({ status: "unknown_result" });
+      expect(
+        await new ZarinpalProvider(config, async () => response(200, { data: {} })).verify(
+          verifyRequest,
+        ),
+      ).toEqual({ status: "unknown_result" });
+    });
+
+    it("maps a verify timeout to unknown_result and never retries", async () => {
+      const fetcher = vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) =>
+            init.signal?.addEventListener("abort", () =>
+              reject(Object.assign(new Error("aborted"), { name: "AbortError" })),
+            ),
+          ),
+      );
+      expect(
+        await new ZarinpalProvider({ ...config, timeoutMs: 1 }, fetcher).verify(verifyRequest),
+      ).toEqual({ status: "unknown_result" });
+      expect(fetcher).toHaveBeenCalledOnce();
+    });
+
+    it("maps pre-response transport failure during verify to unavailable", async () => {
+      expect(
+        await new ZarinpalProvider(config, async () => {
+          throw new Error("network");
+        }).verify(verifyRequest),
+      ).toEqual({ status: "unavailable" });
+    });
+
+    it("rejects invalid verify input without network I/O", async () => {
+      const fetcher = vi.fn();
+      for (const change of [
+        { amountMinorUnits: "" },
+        { amountMinorUnits: "12.5" },
+        { amountMinorUnits: "-10" },
+        { authority: "" },
+        { authority: "x".repeat(129) },
+        { correlationId: "" },
+        { correlationId: "x".repeat(129) },
+      ]) {
+        const result = await new ZarinpalProvider(config, fetcher).verify({
+          ...verifyRequest,
+          ...change,
+        });
+        expect(result).toEqual({ status: "failed", reason: "invalid_request" });
+      }
+      expect(fetcher).not.toHaveBeenCalled();
+    });
+  });
 });

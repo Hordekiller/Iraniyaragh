@@ -15534,6 +15534,297 @@
         ]
       }
     },
+    "/payments/zarinpal/callback": {
+      "get": {
+        "operationId": "ZarinpalCallbackController_callback",
+        "parameters": [
+          {
+            "name": "Authority",
+            "required": true,
+            "in": "query",
+            "description": "Gateway authority token echoed by the redirect.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Status",
+            "required": false,
+            "in": "query",
+            "description": "Gateway-reported intent, re-verified server-side.",
+            "schema": {
+              "enum": [
+                "OK",
+                "NOK"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification outcome.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "verification"
+                      ],
+                      "properties": {
+                        "verification": {
+                          "type": "object",
+                          "required": [
+                            "paymentId",
+                            "status",
+                            "provider",
+                            "amount",
+                            "authority",
+                            "outcome",
+                            "orderId",
+                            "orderStatus"
+                          ],
+                          "properties": {
+                            "paymentId": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PAID",
+                                "PENDING",
+                                "FAILED"
+                              ]
+                            },
+                            "provider": {
+                              "type": "string",
+                              "enum": [
+                                "zarinpal"
+                              ]
+                            },
+                            "amount": {
+                              "type": "object",
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "description": "Integer minor units (Rial)."
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "authority": {
+                              "type": "string"
+                            },
+                            "referenceId": {
+                              "type": "string",
+                              "description": "Gateway settlement reference."
+                            },
+                            "outcome": {
+                              "type": "string",
+                              "enum": [
+                                "VERIFIED",
+                                "REPLAY",
+                                "VERIFIED_AFTER_CANCELLED",
+                                "NOT_PAID",
+                                "ACCEPTED_UNCONFIRMED"
+                              ],
+                              "description": "VERIFIED the provider settled this payment; REPLAY the callback duplicates an already settled/terminal payment; VERIFIED_AFTER_CANCELLED money arrived after the order was closed (reconciliation); NOT_PAID the provider deterministically reported the purchase was not settled; ACCEPTED_UNCONFIRMED the provider answer was ambiguous and was routed to reconciliation, the payment stays PENDING."
+                            },
+                            "orderId": {
+                              "type": "string"
+                            },
+                            "orderStatus": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING_PAYMENT",
+                                "PAID",
+                                "CANCELLED"
+                              ]
+                            },
+                            "consumedReservations": {
+                              "type": "number",
+                              "description": "Reservations consumed into sales."
+                            },
+                            "fulfillmentId": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "NOT_FOUND"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "PAYMENT_STATE_CONFLICT",
+                        "ORDER_STATE_CONFLICT",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UPSTREAM_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        503
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Zarinpal redirect callback — always verified server-side; the callback parameters are never treated as payment proof",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/notifications/admin/sms-settings": {
       "get": {
         "operationId": "NotificationsAdminController_getSettings",

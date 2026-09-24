@@ -22,3 +22,37 @@ export type PaymentInitiation = {
 export type PaymentInitiationResponse = ApiSuccess<{
   payment: PaymentInitiation;
 }>;
+
+/**
+ * Server-side payment verification result after gateway confirmation. The
+ * gateway callback itself is never treated as proof; only a provider `verify`
+ * outcome moves the financial state machine. `outcome` tells a client or the
+ * operations team whether the money path settled, replayed, or still needs
+ * reconciliation (`ACCEPTED_UNCONFIRMED` / `VERIFIED_AFTER_CANCELLED`).
+ */
+export type PaymentVerificationStatus = 'PAID' | 'PENDING' | 'FAILED';
+
+export type PaymentVerificationOutcome =
+  | 'VERIFIED'
+  | 'REPLAY'
+  | 'VERIFIED_AFTER_CANCELLED'
+  | 'NOT_PAID'
+  | 'ACCEPTED_UNCONFIRMED';
+
+export type PaymentVerification = {
+  paymentId: string;
+  status: PaymentVerificationStatus;
+  provider: PaymentProviderName;
+  amount: Money;
+  authority: string;
+  referenceId?: string;
+  outcome: PaymentVerificationOutcome;
+  orderId: string;
+  orderStatus: 'PENDING_PAYMENT' | 'PAID' | 'CANCELLED';
+  consumedReservations?: number;
+  fulfillmentId?: string;
+};
+
+export type PaymentVerificationResponse = ApiSuccess<{
+  verification: PaymentVerification;
+}>;
