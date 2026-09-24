@@ -140,6 +140,9 @@ describe.sequential('OrderReadService database integration', () => {
         authority: 'sensitive-authority-not-public',
         referenceId: 'sensitive-reference-not-public',
         idempotencyKey: `order-read-payment-${runId}`,
+        idempotencyFingerprint: 'a'.repeat(64),
+        correlationId: `order-read-payment-correlation-${runId}`,
+        gatewayEnvironment: 'sandbox',
         createdAt: new Date(baseDate.getTime() + 70_000),
       },
     });
