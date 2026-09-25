@@ -123,23 +123,35 @@ is implied by outbox consumption.
 
 Queue jobs retry eight times with exponential backoff. Completed and failed job
 retention is bounded to 1,000 each; database `deadLetteredAt` and
-`processingDeadLetteredAt` remain durable. Operators must monitor both counts
+`processingDeadLetteredAt` remain durable. A failed job stores only a fixed
+sanitized reason, so the actionable error class stays in
+`lastProcessingErrorCode`. Operators must monitor both counts, stranded events
 and pending effect age, and alert on any dead letter or growing backlog:
 
 ```sql
 SELECT count(*) FROM "OutboxEvent" WHERE "publishedAt" IS NULL AND "deadLetteredAt" IS NULL;
 SELECT count(*) FROM "OutboxEvent" WHERE "deadLetteredAt" IS NOT NULL OR "processingDeadLetteredAt" IS NOT NULL;
+SELECT count(*) FROM "OutboxEvent" WHERE "publishedAt" IS NOT NULL AND "consumedAt" IS NULL;
 SELECT kind, count(*) FROM "OutboxEffect" WHERE status = 'PENDING' GROUP BY kind;
 ```
 
-Replay only an investigated dead-letter event. From a privileged operations
-shell, set `ALLOW_OUTBOX_REPLAY=true`, `OUTBOX_REPLAY_ACTOR_ID` to an active user
-with `settings.manage`, `OUTBOX_REPLAY_TICKET` to a non-sensitive incident ID,
-plus `DATABASE_URL` and `REDIS_URL`, then run
-`pnpm --filter @iranyaragh/api outbox:replay <event-id>`. The command refuses
-active/queued jobs, removes a terminal retained job, resets durable state and
-writes an audit record. The relay picks up the reset row. Never replay a consumed
-event or execute against an unverified environment.
+A `PAYMENT_VERIFICATION_FAILED` event is emitted whenever an ambiguous payment
+deterministically resolves as not paid, so a `PAYMENT_RECONCILIATION` effect can
+never stay open for a payment that is no longer pending.
+
+Replay only an investigated event that is either dead-lettered or stranded.
+Build the API first, then from a privileged operations shell set
+`ALLOW_OUTBOX_REPLAY=true`, `OUTBOX_REPLAY_ACTOR_ID` to an active user holding
+`settings.manage`, `OUTBOX_REPLAY_TICKET` to a non-sensitive incident ID, plus
+`DATABASE_URL` and `REDIS_URL`, then run
+`pnpm --filter @iranyaragh/api outbox:replay <event-id>`. The command refuses a
+consumed event, an event that is neither dead-lettered nor stranded, and any
+queued or active job; it removes a terminal retained job, resets durable relay
+state and writes its acceptance audit in the same transaction. Every refusal is
+also audited with its reason and a non-zero exit code. The relay picks up the
+reset row. This is a deliberate break-glass database-level tool rather than a
+request-scoped one, so it has no session MFA step; never replay a consumed event
+or execute against an unverified environment.
 
 Before sales, verify the complete chain on staging: database event → queue →
 consumer → effect → sender/provider outcome or staff resolution, including unknown

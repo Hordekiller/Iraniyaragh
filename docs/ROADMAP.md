@@ -59,7 +59,7 @@ before the previous PR merges. Never rewrite a shared migration; add a forward o
 
 | Step | Next deliverable | Exit evidence before moving on |
 | --- | --- | --- |
-| 1 | Finish #300 Outbox worker/effect projection | Final-SHA CI and migration drift green; failed jobs visible and replay tested; pending effects explicitly not counted as delivered notifications. |
+| 1 | Finish #300 Outbox worker/effect projection | Final-SHA CI and migration drift green; failed jobs visible and replay tested; pending effects explicitly not counted as delivered notifications. Delivered: topic-aware projection, `consumedAt` only after the effect, reconciliation effects closed by every settled payment topic, sanitized failure reasons, and an audited break-glass replay that also recovers stranded events. |
 | 2 | Payment refund, in a separate PR | Provider/refund state machine, staff permission + fresh MFA, audit, idempotency, duplicate/concurrent/failure-path tests and financial reconciliation. No browser or operator can forge a paid/refunded state. |
 | 3 | Paid Order → Fulfillment | One paid Order creates exactly one fulfillment; pick/pack commands enforce transition, actor, inventory truth and audit. |
 | 4 | Shipment → Tracking → essential notifications | Real shipment/tracking persistence and customer/staff views; pending outbox effects dispatched through a provider with explicit accepted/unknown/failed states and safe replay. Complete one fixture-free staging purchase through tracking. |
