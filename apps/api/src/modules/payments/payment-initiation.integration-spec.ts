@@ -30,6 +30,21 @@ class FakeProvider {
   );
 }
 
+function createBarrier(parties: number): { wait: () => Promise<void> } {
+  let arrived = 0;
+  let release: (() => void) | null = null;
+  const open = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    wait: async () => {
+      arrived += 1;
+      if (arrived >= parties) release?.();
+      await open;
+    },
+  };
+}
+
 describe.sequential('PaymentInitiationService database integration', () => {
   const runId = randomUUID().replaceAll('-', '').slice(0, 20);
   const userId = `payment_init_user_${runId}`;
@@ -232,6 +247,57 @@ describe.sequential('PaymentInitiationService database integration', () => {
     expect(second.data.payment.authority).toBe(`S${runId}-active-1-authority`);
     expect(provider.authorize).not.toHaveBeenCalled();
     await expect(prisma.payment.count({ where: { orderId: id, status: 'PENDING' } })).resolves.toBe(1);
+  });
+
+  it('never lets a slow concurrent authorization overwrite the stored authority', async () => {
+    const { id } = await createOrder('raceauthority', customerId);
+    const gate = createBarrier(2);
+    const concurrent = new FakeProvider();
+    concurrent.authorize.mockImplementation(async (request: PaymentAuthorizeRequest) => {
+      // Both in-flight authorizations are held until the second one is also
+      // waiting, so the slower response is guaranteed to write last.
+      await gate.wait();
+      return {
+        status: 'redirect' as const,
+        authority: `S${request.correlationId}-authority`,
+        redirectUrl: `https://sandbox.zarinpal.com/pg/StartPay/S${request.correlationId}-authority`,
+      };
+    });
+    const racing = new PaymentInitiationService(
+      prisma,
+      concurrent as never,
+      gatewayConfig as never,
+    );
+
+    const [slow, fast] = await Promise.all([
+      racing.initiate({
+        userId,
+        orderId: id,
+        idempotencyKey: `key-${runId}-race-slow`,
+        requestId: `${runId}-race-slow`,
+      }),
+      racing.initiate({
+        userId,
+        orderId: id,
+        idempotencyKey: `key-${runId}-race-fast`,
+        requestId: `${runId}-race-fast`,
+      }),
+    ]);
+
+    const stored = await prisma.payment.findFirstOrThrow({
+      where: { orderId: id, status: 'PENDING' },
+      select: { id: true, authority: true },
+    });
+    await expect(prisma.payment.count({ where: { orderId: id } })).resolves.toBe(1);
+    // Exactly one authority is persisted, and both responses point at it, so the
+    // authority the buyer actually paid with can still be matched to this payment.
+    expect([slow.data.payment.authority, fast.data.payment.authority]).toContain(
+      stored.authority,
+    );
+    expect(new Set([slow.data.payment.paymentId, fast.data.payment.paymentId])).toEqual(
+      new Set([stored.id]),
+    );
+    expect(new Set([slow.data.payment.authority, fast.data.payment.authority]).size).toBe(1);
   });
 
   it('does not expose a foreign order to the caller', async () => {

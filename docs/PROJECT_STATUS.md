@@ -627,6 +627,17 @@ malware scanner also remain production-acceptance work.
   under the CI coverage gates), full API integration 170/170 (22 files), migration
   status up to date and `prisma migrate diff` with no difference. No schema,
   migration, contract or OpenAPI change was required.
+- The authority claim is now a compare-and-set (open PR): two concurrent
+  initiations of the same order both authorize the same `Payment` row, and the
+  unconditional write let the slower response overwrite the authority the faster
+  response had already returned to the buyer. That authority then matched no
+  payment row, so the gateway callback for a real capture answered `404` and the
+  captured money could never be settled. The winner's authority is now the only
+  one persisted and the loser replays it; the losing gateway transaction is
+  orphaned and unreachable because its URL is never returned. Proven with a
+  PostgreSQL concurrency test that fails without the guard (two distinct
+  authorities were handed out), plus unit tests for the lost-CAS replay and for
+  the terminal-payment `409`.
 - A successful purchase is applied in one short SERIALIZABLE transaction under
   the shared per-order advisory lock: `Payment PENDING → PAID` (reference ID
   persisted), `Order PENDING_PAYMENT → PAID`, idempotent

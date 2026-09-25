@@ -80,15 +80,18 @@ export class PaymentInitiationService {
     });
 
     if (authorizeResult.status === 'redirect') {
-      const updated = await this.prisma.payment.updateMany({
-        where: { id: attempt.paymentId, status: 'PENDING' },
+      // The authority is claimed with a compare-and-set: the row must still be
+      // PENDING *and* must not have an authority yet. Two concurrent
+      // initiations of the same order both authorize the same row, and without
+      // this guard the slower response would overwrite the authority the faster
+      // response already handed to the buyer. The overwritten authority would
+      // then match no payment, so a real capture could never be settled.
+      const claimed = await this.prisma.payment.updateMany({
+        where: { id: attempt.paymentId, status: 'PENDING', authority: null },
         data: { authority: authorizeResult.authority },
       });
-      if (updated.count !== 1) {
-        throw new ConflictException({
-          code: ORDER_STATE_CONFLICT_ERROR,
-          message: 'Order changed concurrently while authorizing the payment.',
-        });
+      if (claimed.count !== 1) {
+        return this.asClaimedElsewhere(attempt.paymentId);
       }
       return {
         data: this.asOutcome({
@@ -253,6 +256,30 @@ export class PaymentInitiationService {
         gatewayEnvironment: payment.gatewayEnvironment,
       },
     };
+  }
+
+  private async asClaimedElsewhere(paymentId: string): Promise<PaymentInitiationResponse> {
+    const stored = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: { status: true, authority: true, amount: true, gatewayEnvironment: true },
+    });
+    // Another in-flight initiation of the same payment claimed the authority
+    // first. Its outcome is the only one that can be settled, so this response
+    // replays it instead of leaking an authority that will never be stored.
+    if (stored?.status === 'PENDING' && stored.authority !== null) {
+      return {
+        data: this.asOutcome({
+          paymentId,
+          authority: stored.authority,
+          amount: stored.amount,
+          gatewayEnvironment: stored.gatewayEnvironment,
+        }),
+      };
+    }
+    throw new ConflictException({
+      code: ORDER_STATE_CONFLICT_ERROR,
+      message: 'Order changed concurrently while authorizing the payment.',
+    });
   }
 
   private async markFailed(paymentId: string, requestId: string, reason: string): Promise<void> {
