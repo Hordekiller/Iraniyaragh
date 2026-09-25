@@ -1,31 +1,29 @@
 # Canonical PR, Review and Merge Workflow
 
-Reviewed: 2026-09-17
+Reviewed: 2026-09-25
 Applies to: all contributors and agents
 
-## Repository protection (observed)
+## Repository protection and merge policy
 
-`main` currently has no additional ruleset. Classic branch protection is enabled
-(observed via the REST API on 2026-09-15):
+On 2026-09-25 the GitHub API returned 404 (`Branch not protected`) for
+`/branches/main/protection` and an empty list for `/rules/branches/main`.
+The protection settings observed on 2026-09-15 are therefore historical, not
+currently enforced. Until protection is restored, apply the following checks
+and review gates manually for every PR and do not push directly to `main`:
 
 - Required checks are exact contexts: `quality`, `database`, `e2e`,
   `dependency-review`, `Analyze (actions)`, `Analyze (javascript-typescript)`
-  and `production-audit`. Sonar is not yet a required context on `main`; #212 is
-  merged and current internal PRs execute real scans and Quality Gates (for
-  example #244 passed). Issue #213 remains open only for SonarCloud organization-
-  admin suspension confirmation; the gate must not be weakened meanwhile.
-- `strict` (up-to-date-before-merge) is disabled so already-green PRs are not
-  re-blocked by every concurrent merge; merge conflicts are still detected.
-- Required approving reviews: `0`; code-owner review: off; stale-review
-  dismissal: off; last-push approval: off.
-- Required linear history: on (merge commits are rejected, use squash).
-- Required conversation resolution: on. Administrator enforcement: on.
-- Force-push and deletion on `main`: off.
+  and `production-audit`. Sonar is also a manual merge gate for internal PRs;
+  #212 is merged and these PRs run real scans and Quality Gates. Issue #213
+  remains open for SonarCloud organization-admin confirmation.
+- The checks listed above must be green on the exact head, including a real
+  Sonar scan for an internal PR; a skipped check is not evidence of success.
+- Resolve every review conversation, obtain the independent review required for
+  sensitive work, and use a squash merge after confirming no conflicts.
+- Restoring enforced branch protection with these gates is an operations gap;
+  no PR may claim that GitHub enforced them while the API reports no protection.
 
-These settings are security controls. Do not bypass them, self-approve sensitive
-work or merge a skipped check as if it passed. The checks listed above must all
-be green on the exact head being merged; disabling `strict` never means merging
-with failing or absent required checks.
+Do not self-approve sensitive work or merge a skipped check as if it passed.
 
 ### Single-developer review handoff
 
@@ -80,11 +78,10 @@ coverage thresholds or valid PostgreSQL to hide an infrastructure problem.
 
 #212 (Sonar token at job scope) is merged and trusted internal PR scans now upload
 the exact head and enforce the Quality Gate. #213 remains open until an organization
-admin confirms the suspension banner is cleared. When that account state is stable,
-add the exact `sonar` check context to branch
-protection and verify it on a test PR. Until then the absence of the `sonar`
-required context is a known protection gap, not evidence of analysis — a failing
-`sonar` run must still be investigated, not ignored.
+admin confirms the suspension banner is cleared. Restore branch protection with
+the listed contexts, including `sonar` after account confirmation, and verify the
+rules on a test PR. The current absence of required contexts is a protection gap;
+a failing `sonar` run must still be investigated, not ignored.
 
 ## Final review checklist
 
