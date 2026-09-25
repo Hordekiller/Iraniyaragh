@@ -69,7 +69,7 @@ function collectFiles(target) {
 }
 
 function isTestSource(file) {
-  return /(?:^|\/)src\/test\/|\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file);
+  return file.includes('/src/test/') || /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file);
 }
 
 const violations = [];
