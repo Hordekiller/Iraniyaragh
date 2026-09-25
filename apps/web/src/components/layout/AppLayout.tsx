@@ -77,6 +77,7 @@ function routeAnnouncement(pathname: string): string {
   if (pathname === '/orders') return 'صفحه سفارش‌های من'
   if (pathname.startsWith('/orders/')) return 'صفحه جزئیات سفارش'
   if (pathname.startsWith('/payment/')) return 'صفحه وضعیت پرداخت'
+  if (pathname === '/payment-return') return 'صفحه نتیجه پرداخت'
   if (pathname.startsWith('/product/')) return 'صفحه محصول'
   return 'صفحه جدید'
 }

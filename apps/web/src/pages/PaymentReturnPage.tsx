@@ -5,7 +5,7 @@ import { ROUTES } from '../lib/routes'
 /** Shown only when the API cannot safely identify or verify a gateway return. */
 export function PaymentReturnPage() {
   return (
-    <main className="mx-auto max-w-[620px] px-4 py-20 text-center" aria-labelledby="payment-return-title">
+    <section className="mx-auto max-w-[620px] px-4 py-20 text-center" aria-labelledby="payment-return-title">
       <ShieldAlert size={36} className="mx-auto text-amber-700" aria-hidden="true" />
       <h1 id="payment-return-title" className="mt-5 text-2xl font-black text-slate-950">
         نتیجهٔ پرداخت هنوز تأیید نشده است
@@ -20,6 +20,6 @@ export function PaymentReturnPage() {
       >
         مشاهده سفارش‌ها
       </Link>
-    </main>
+    </section>
   )
 }
