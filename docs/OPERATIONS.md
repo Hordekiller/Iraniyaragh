@@ -109,6 +109,22 @@ storefront self-hosts its Vazirmatn variable font for this reason.
 
 Production deployments should be reproducible and Docker-based.
 
+## Commerce outbox activation gate
+
+`OutboxEvent` is the durable transactional record. The relay foundation can claim
+bounded batches with PostgreSQL `SKIP LOCKED`, lease each claim, enqueue only an
+opaque event ID to BullMQ, and retry bounded queue failures before dead-lettering.
+`publishedAt` means **accepted by the queue**, not delivered to a customer or
+processed by a downstream handler. Queue job IDs are stable across relay replay.
+
+The relay is deliberately **not scheduled** by the runtime yet. Do not enable it
+or describe notifications as working until a topic-aware consumer, bounded job
+retention, replay procedure, monitoring/alerts and end-to-end failure tests are
+landed. This keeps the existing outbox records recoverable instead of draining
+them into an unconsumed queue. Before sales, verify the complete chain on staging:
+database event → queue → consumer → provider outcome/operations evidence, including
+unknown provider results and dead-letter replay.
+
 ## Database migrations
 
 - Schema changes use reviewed migrations.

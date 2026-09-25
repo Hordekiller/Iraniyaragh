@@ -47,7 +47,7 @@ Current delivery confidence:
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
-| Order commands/payment         | Payment result and staff evidence merged | Cancellation/expiry compensation, Zarinpal settlement, Web result and staff reads merged through #297; reconciliation is in progress, with refund/outbox still open |
+| Order commands/payment         | Reconciliation merged | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence and manual reconciliation merged through #298; refund/outbox delivery still open |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
@@ -59,9 +59,10 @@ G6–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Current payment base: `origin/main` commit `807a6bc`, the squash merge of
-  #297. Payment foundation, Web initiation/result and staff evidence reads are
-  merged; reconciliation, outbox delivery, refund and shipment operations remain open.
+- Current payment base: `origin/main` commit `86c97f5`, the squash merge of
+  #298. Payment foundation, Web initiation/result, staff evidence reads and
+  guarded manual reconciliation are merged; outbox delivery, refund and shipment
+  operations remain open.
 - The baseline also contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
