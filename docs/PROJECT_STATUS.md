@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-21
+Last reviewed: 2026-09-25
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -18,7 +18,7 @@ security and test infrastructure. The authenticated storefront Cart, Checkout an
 customer Order lifecycle now uses real HTTP APIs through #268, while #270 closes
 #269 with the Guest Cart API/data/security runtime and #273 binds its Web handoff.
 It is not yet a complete
-commerce product: Order commands, verified Payment, fulfillment and production
+commerce product: browser payment result handling, fulfillment operations and production
 operations remain open. The operational Admin Order queue/detail is now bound to
 the masked, permissioned #238 read API through #257.
 
@@ -47,7 +47,7 @@ Current delivery confidence:
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
-| Order commands/payment         | Command foundation merged, payment verification foundation in review | Cancellation/expiry compensation merged (Epic-5 command slice); Zarinpal initiation + server-side verification foundation in PR #294 (Epic-6); refunds, outbox dispatch and storefront payment UX remain |
+| Order commands/payment         | Command and payment verification foundations merged | Cancellation/expiry compensation and Zarinpal initiation + server-side verification merged via #292/#294; refunds, outbox dispatch and storefront payment result UX remain |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
@@ -59,10 +59,9 @@ G6–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Current Guest Cart reconciliation base: `origin/main` commit `ec6b2a3`, the
-  protected squash merge of #270 closing #269. No anonymous Web binding,
-  Order/payment/fulfillment mutation or simulated Payment success is inferred from
-  that server-runtime merge.
+- Current payment foundation base: `origin/main` commit `44dff65`, the
+  squash merge of #294. No storefront result UX, outbox delivery, refund or
+  shipment operation is inferred from that API foundation.
 - The baseline also contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
@@ -587,7 +586,7 @@ malware scanner also remain production-acceptance work.
   leaking the idempotency hash, fingerprints, `orders.manage` names or `STAFF_MFA`
   mechanics into the machine-readable contract.
 
-### Zarinpal payment initiation + server-side verification foundation (Epic-6, in review — PR #294)
+### Zarinpal payment initiation + server-side verification foundation (Epic-6, merged — PR #294)
 
 - `POST /api/v1/orders/:id/pay` (Customer OTP, ownership-scoped, gated by a
   bounded `Idempotency-Key`) initiates payment. The amount is always the server
@@ -597,7 +596,9 @@ malware scanner also remain production-acceptance work.
   order" before the provider is contacted. The Zarinpal adapter is the only V1
   adapter behind the vendor-neutral `PaymentProvider` port (ADR-0017); sandbox/
   live base URLs, bounded timeout, abort/5xx/4xx/malformed mapping and
-  `unknown_result` (never auto-retried, never a definitive FAILED) are covered.
+  `unknown_result` (recorded as `FAILED` with an unconfirmed reason and never
+  auto-retried) are covered. This is an uncertain gateway authorization outcome,
+  not evidence of a settled customer payment.
 - Verification is now implemented (ADR-0018): `GET
   /api/v1/payments/zarinpal/callback` treats the `Authority`/`Status` query
   parameters as intent, never proof. `Status=NOK` deterministically records
@@ -625,9 +626,19 @@ malware scanner also remain production-acceptance work.
   orchestration), full API unit 950/950 (79 files), full integration
   167/167 (20 files, verification suite 12/12), OpenAPI generated + drift green,
   contracts/API typecheck, `pnpm lint` (4/4 with `--max-warnings=0`) and
-  `pnpm build` (3/3) all pass locally on `feat/epic6-payment-initiation`.
+  `pnpm build` (3/3) passed on the merged PR; all GitHub checks were green.
 - Not in this slice (explicitly open): outbox dispatch/worker, refunds,
-  multi-provider routing (#141) and the storefront/admin payment UX.
+  storefront/admin payment UX. Multi-provider routing (#141) is deferred.
+
+### Local Web payment initiation slice (not merged)
+
+- The customer payment page now calls the authenticated `POST /orders/:id/pay`
+  with a secure idempotency key after an explicit click, checks the returned
+  amount and Zarinpal redirect destination, and then leaves for the gateway.
+  Timeout, malformed responses and unconfirmed initiation never show success or
+  auto-repeat the request. Development fixtures still have no gateway.
+- Browser-friendly callback/result handling, reconciliation and payment status
+  refresh are separate follow-up work. The API callback currently returns JSON.
 
 ### PR #109 — Auth privileged lifecycle
 
@@ -669,7 +680,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup, explicit OTP-login merge (#270/#269) and Web handoff (#273)                 | Production acceptance and long-running cleanup operations                                                                                       |
 | Checkout      | Merged preview/create API and live Web binding with configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence    | Shipping operations, compensation/cleanup, verified Payment and production acceptance                                                          |
 | Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API, live read-only Admin client (#257) and idempotent `POST` cancel + expiry-worker compensation with reservation release | Verified Payment, shipment operations and lifecycle-operation evidence in production |
-| Payments      | Zarinpal v4 adapter, sandbox/live separation, server-initiated payment and server-side verified settlement in review (#294) | Verified settlement, duplicate/concurrent callback coalescing and reconciliation hooks exist in the open slice; refunds, outbox dispatch and provider fallback routing remain                                                                              |
+| Payments      | Zarinpal v4 adapter, sandbox/live separation, server-initiated payment and server-side verified settlement merged (#294) | Browser result handling, refunds, outbox dispatch and operational reconciliation remain |
 | Web           | Accessible routed storefront with live Catalog/media/availability, authenticated Cart/Checkout/Order lifecycle (#268) and Guest Cart handoff (#273)                    | Verified Payment API/result lifecycle and production acceptance                                                                                |
 | Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)                     | Inventory UX, order commands and Admin-driven publish acceptance                                                                               |
 | Operations    | CI and local Compose                                                                                                                                                | Deploy/staging, observability, recovery and rollback proof                                                                                     |

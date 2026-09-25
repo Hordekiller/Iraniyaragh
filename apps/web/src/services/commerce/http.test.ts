@@ -30,6 +30,20 @@ function requestStub() {
         return { data: { cart: CART, shipping: [] } }
       }
       if (path === '/api/v1/checkout') return { data: { order: ORDER } }
+      if (path.endsWith('/pay')) {
+        return {
+          data: {
+            payment: {
+              paymentId: 'payment-1',
+              status: 'PENDING' as const,
+              provider: 'zarinpal' as const,
+              amount: ORDER.totals.total,
+              authority: 'authority-1',
+              redirectUrl: 'https://sandbox.zarinpal.com/pg/StartPay/authority-1',
+            },
+          },
+        }
+      }
       if (path.startsWith('/api/v1/orders?')) {
         return {
           data: {
@@ -394,6 +408,24 @@ describe('CommerceHttpClient', () => {
     expect(request).toHaveBeenNthCalledWith(2, '/api/v1/orders/order%2F1', {
       baseUrl: '',
       credentials: 'include',
+    })
+  })
+
+  it('initiates an owned order payment with the provided retry key and no client amount', async () => {
+    const request = requestStub()
+    const client = new CommerceHttpClient(
+      request as unknown as AuthenticatedJsonRequest,
+      '/backend',
+    )
+
+    await expect(client.initiatePayment('order/1', 'payment-key')).resolves.toMatchObject({
+      paymentId: 'payment-1',
+    })
+    expect(request).toHaveBeenCalledWith('/api/v1/orders/order%2F1/pay', {
+      baseUrl: '/backend',
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Idempotency-Key': 'payment-key' },
     })
   })
 })

@@ -25,13 +25,16 @@ resolve the discrepancy; do not silently choose one.
   audit requirements or idempotency rules for convenience.
 - Do not generate or commit secrets, real personal data or production dumps.
 
-## Coordination for two contributors
+## Single-developer delivery
 
-- Before editing shared hotspots (`schema.prisma`, root configs, shared contracts,
-  navigation), check the active issue/branch ownership and communicate the change.
-- Prefer a contract PR before parallel API/UI implementation.
+- Follow `docs/SOLO_CRITICAL_PATH.md`. Complete one product slice, its full
+  affected-package checks, review and merge before starting the next slice.
+- Keep at most one product PR open. Before editing shared hotspots
+  (`schema.prisma`, migrations, root configs, shared contracts, OpenAPI and
+  navigation), confirm the previous product PR is merged and check existing
+  worktree ownership. Preserve unrelated local work.
 - Do not edit already-shared migrations; add a forward migration.
-- Keep changes small enough for the other contributor to review reliably.
+- Keep each PR small enough for reliable review.
 
 ## Verification
 

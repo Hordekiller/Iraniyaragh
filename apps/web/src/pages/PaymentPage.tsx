@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -14,6 +14,12 @@ import { useAuth } from '../state/auth-context'
 import { formatTimestamp, formatToman } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { commerceErrorMessage } from '../services/commerce/errors'
+import { AuthApiError } from '../lib/auth/errors'
+import {
+  newPaymentIdempotencyKey,
+  paymentRedirectUrl,
+  redirectToPaymentGateway,
+} from '../services/commerce/payment'
 import { PAYMENT_STATUS_LABEL } from '../services/commerce/presentation'
 
 export function PaymentPage() {
@@ -21,6 +27,14 @@ export function PaymentPage() {
   const auth = useAuth()
   const { id = '' } = useParams<{ id: string }>()
   const [reload, setReload] = useState(0)
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<{
+    orderId: string
+    cause: unknown
+  } | null>(null)
+  const [uncertainOrderId, setUncertainOrderId] = useState<string | null>(null)
+  const paymentKey = useRef<{ orderId: string; key: string } | null>(null)
+  const inFlight = useRef(false)
   const requestKey = `${auth.state.phase}:${id}:${reload}`
   const [result, setResult] = useState<{
     key: string
@@ -46,6 +60,47 @@ export function PaymentPage() {
 
   const order = result.key === requestKey ? result.order : null
   const error = result.key === requestKey ? result.error : null
+  const busy = busyOrderId === id
+  const uncertain = uncertainOrderId === id
+  const currentPaymentError = paymentError?.orderId === id ? paymentError.cause : null
+
+  async function handlePayment() {
+    if (!order || order.status !== 'PENDING_PAYMENT' || inFlight.current || uncertain) return
+    inFlight.current = true
+    setBusyOrderId(id)
+    setPaymentError(null)
+    try {
+      if (paymentKey.current?.orderId !== id)
+        paymentKey.current = { orderId: id, key: newPaymentIdempotencyKey() }
+      const payment = await api.initiatePayment(order.id, paymentKey.current.key)
+      const redirectUrl = paymentRedirectUrl(
+        payment,
+        order.totals.total.amount,
+      )
+      if (!redirectUrl) {
+        setUncertainOrderId(id)
+        throw new Error('The gateway response did not match this order.')
+      }
+      redirectToPaymentGateway(redirectUrl)
+    } catch (cause) {
+      setPaymentError({ orderId: id, cause })
+      if (cause instanceof AuthApiError) {
+        if (
+          ['PAYMENT_RESULT_UNCONFIRMED', 'TIMEOUT', 'NETWORK_ERROR', 'PARSE_ERROR'].includes(
+            cause.code,
+          )
+        )
+          setUncertainOrderId(id)
+        if (['UPSTREAM_UNAVAILABLE', 'UNPROCESSABLE'].includes(cause.code))
+          paymentKey.current = null
+      } else {
+        setUncertainOrderId(id)
+      }
+    } finally {
+      inFlight.current = false
+      setBusyOrderId((current) => (current === id ? null : current))
+    }
+  }
 
   if (auth.state.phase !== 'authenticated')
     return (
@@ -108,6 +163,21 @@ export function PaymentPage() {
       />
     )
 
+  if (order.status !== 'PENDING_PAYMENT')
+    return (
+      <ResultCard
+        tone="error"
+        icon={<ShieldAlert size={31} />}
+        title="وضعیت پرداخت نیازمند بررسی است"
+        description="وضعیت سفارش و پرداخت با هم تأیید نشده‌اند. پرداخت تازه‌ای آغاز نکنید و جزئیات سفارش را بررسی کنید."
+        action={
+          <Link to={ROUTES.order(order.id)} className={primaryButton}>
+            مشاهده جزئیات سفارش
+          </Link>
+        }
+      />
+    )
+
   return (
     <ResultCard
       tone={failed ? 'error' : 'pending'}
@@ -116,11 +186,29 @@ export function PaymentPage() {
       description={
         failed
           ? `آخرین تلاش پرداخت «${latest ? PAYMENT_STATUS_LABEL[latest] : 'نامشخص'}» ثبت شده است. وضعیت سفارش تغییر نکرده است.`
-          : 'درگاه پرداخت عملیاتی هنوز به این نسخه متصل نشده است؛ هیچ مبلغی از این صفحه دریافت و هیچ پرداختی موفق فرض نمی‌شود.'
+          : 'برای پرداخت، به درگاه زرین‌پال هدایت می‌شوید. موفقیت پرداخت فقط پس از تأیید سرور نمایش داده می‌شود.'
       }
       details={`سفارش ${order.number} · ${formatToman(order.totals.total.amount)}`}
       action={
         <div className="mt-6 flex flex-col gap-3">
+          {Boolean(currentPaymentError) && (
+            <p role="alert" className="text-sm font-bold text-red-700">
+              {uncertain
+                ? 'نتیجه آغاز پرداخت نامشخص است. پیش از تلاش دوباره، وضعیت سفارش را بررسی کنید و در صورت نیاز با پشتیبانی تماس بگیرید.'
+                : paymentErrorMessage(currentPaymentError)}
+            </p>
+          )}
+          {order.status === 'PENDING_PAYMENT' && !uncertain && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handlePayment()}
+              className={primaryButton}
+            >
+              <CreditCard size={16} />
+              {busy ? 'در حال اتصال به درگاه…' : 'پرداخت با زرین‌پال'}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setReload((value) => value + 1)}
@@ -138,6 +226,21 @@ export function PaymentPage() {
       }
     />
   )
+}
+
+function paymentErrorMessage(error: unknown): string {
+  if (error instanceof AuthApiError) {
+    switch (error.code) {
+      case 'UPSTREAM_UNAVAILABLE':
+        return 'درگاه پرداخت موقتاً در دسترس نیست. کمی بعد وضعیت سفارش را بررسی کنید.'
+      case 'UNPROCESSABLE':
+        return 'درگاه درخواست پرداخت را نپذیرفت. وضعیت سفارش را بررسی کنید.'
+      case 'ORDER_STATE_CONFLICT':
+      case 'PAYMENT_STATE_CONFLICT':
+        return 'وضعیت سفارش یا پرداخت تغییر کرده است. وضعیت سفارش را دوباره بررسی کنید.'
+    }
+  }
+  return commerceErrorMessage(error)
 }
 
 const primaryButton =
