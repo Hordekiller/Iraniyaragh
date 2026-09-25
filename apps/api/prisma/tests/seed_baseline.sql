@@ -17,6 +17,7 @@ DECLARE
     'orders.manage',
     'orders.read',
     'payments.read',
+    'payments.reconcile',
     'payments.refund',
     'pricing.read',
     'pricing.write',
@@ -76,6 +77,18 @@ BEGIN
        AND "entityId" = system_role_id
   ) THEN
     RAISE EXCEPTION 'Seed bootstrap audit marker is missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM "AuditLog"
+     WHERE "id" = 'migration_audit_payments_reconcile'
+       AND "action" = 'permission.registered'
+       AND "entityId" = (
+         SELECT "id" FROM "Permission" WHERE "key" = 'payments.reconcile'
+       )
+  ) THEN
+    RAISE EXCEPTION 'Payment reconciliation permission migration audit is missing';
   END IF;
 END $$;
 

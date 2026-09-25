@@ -16181,7 +16181,8 @@
                             "createdAt",
                             "updatedAt",
                             "transitions",
-                            "transitionsTruncated"
+                            "transitionsTruncated",
+                            "reconciliationEligible"
                           ],
                           "properties": {
                             "id": {
@@ -16316,6 +16317,9 @@
                             },
                             "transitionsTruncated": {
                               "type": "boolean"
+                            },
+                            "reconciliationEligible": {
+                              "type": "boolean"
                             }
                           }
                         }
@@ -16423,6 +16427,259 @@
           }
         ],
         "summary": "Read staff-safe payment detail and state history",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/payments/admin/{id}/reconcile": {
+      "post": {
+        "operationId": "AdminPaymentReconciliationController_recheck",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "reconciliation"
+                      ],
+                      "properties": {
+                        "reconciliation": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "paymentId",
+                            "status",
+                            "outcome",
+                            "referenceId",
+                            "orderId",
+                            "orderStatus"
+                          ],
+                          "properties": {
+                            "paymentId": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PAID",
+                                "PENDING",
+                                "FAILED"
+                              ]
+                            },
+                            "outcome": {
+                              "type": "string",
+                              "enum": [
+                                "VERIFIED",
+                                "REPLAY",
+                                "VERIFIED_AFTER_CANCELLED",
+                                "NOT_PAID",
+                                "ACCEPTED_UNCONFIRMED"
+                              ]
+                            },
+                            "referenceId": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "orderId": {
+                              "type": "string"
+                            },
+                            "orderStatus": {
+                              "type": "string",
+                              "enum": [
+                                "DRAFT",
+                                "PENDING_PAYMENT",
+                                "PAID",
+                                "CANCELLED",
+                                "RETURNED"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Manually re-query an unconfirmed pending payment at the gateway",
         "tags": [
           "payments"
         ]

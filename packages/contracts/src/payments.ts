@@ -81,6 +81,7 @@ export type AdminPaymentTransition = {
 export type AdminPaymentDetail = AdminPaymentSummary & {
   transitions: AdminPaymentTransition[];
   transitionsTruncated: boolean;
+  reconciliationEligible: boolean;
 };
 
 export type AdminPaymentListResponse = ApiSuccess<{
@@ -89,3 +90,17 @@ export type AdminPaymentListResponse = ApiSuccess<{
 }>;
 
 export type AdminPaymentDetailResponse = ApiSuccess<{ payment: AdminPaymentDetail }>;
+
+/** Manual re-query result: no gateway authority or redirect target is exposed. */
+export type AdminPaymentReconciliation = {
+  paymentId: string;
+  status: PaymentVerificationStatus;
+  outcome: PaymentVerificationOutcome;
+  referenceId: string | null;
+  orderId: string;
+  orderStatus: OrderStatus;
+};
+
+export type AdminPaymentReconciliationResponse = ApiSuccess<{
+  reconciliation: AdminPaymentReconciliation;
+}>;

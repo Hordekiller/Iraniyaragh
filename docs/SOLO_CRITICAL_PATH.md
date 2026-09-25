@@ -23,12 +23,13 @@ worktrees and uncommitted files.
    #295** (`2a578de`, 2026-09-25); its final SHA passed quality, database, E2E,
    CodeQL, dependency review, production audit, Actions analysis and Sonar.
    **Payment Result merged in PR #296** (`68aa581`, 2026-09-25), with the final
-   SHA passing quality, database, E2E, security and Sonar checks. The active
-   slice is now **Admin payment evidence** on `feat/epic6-admin-payment`:
-   staff-only `payments.read` list/detail, order-number and status filters,
-   bounded transition history, no financial mutation. Complete review and CI,
-   merge this sole product PR, then implement manual reconciliation in a
-   separate PR, followed by durable outbox dispatch and refund.
+   SHA passing quality, database, E2E, security and Sonar checks. **Admin
+   payment evidence merged in PR #297** (`807a6bc`, 2026-09-25), with all
+   final-SHA checks green. The active slice is **manual reconciliation** on
+   `feat/epic6-payment-reconciliation`: a privileged re-query of a recorded
+   unconfirmed payment through the existing server verifier, with staff audit
+   and replay-safe terminal results. Merge this PR after full review and CI;
+   then do durable outbox dispatch and refund as separate PRs.
 3. **Fulfillment, shipping, notifications:** move `PAID` Orders through guarded
    picking/packing, shipment and tracking states; deliver deduplicated, observable
    notifications. Exit with a real, fixture-free purchase-to-tracking test.

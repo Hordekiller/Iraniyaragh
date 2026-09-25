@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAccessToken } from '@/lib/auth/token-store';
-import { getPayment, listPayments } from '../payments-api';
+import { getPayment, listPayments, reconcilePayment } from '../payments-api';
 
 function response(data: unknown): Response {
   return { ok: true, status: 200, text: vi.fn(async () => JSON.stringify({ data })) } as unknown as Response;
@@ -25,5 +25,17 @@ describe('admin payments API client', () => {
     vi.stubGlobal('fetch', fetchMock);
     await expect(getPayment('payment/1')).resolves.toEqual({ id: 'payment/1' });
     expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toContain('/payments/admin/payment%2F1');
+  });
+
+  it('posts a manually confirmed recheck without sending gateway authority', async () => {
+    setAccessToken('staff-token');
+    const fetchMock = vi.fn(async () => response({ reconciliation: { paymentId: 'payment/1', status: 'PENDING' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(reconcilePayment('payment/1')).resolves.toMatchObject({ paymentId: 'payment/1' });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain('/payments/admin/payment%2F1/reconcile');
+    expect(init.method).toBe('POST');
+    expect(init.body).toBeUndefined();
+    expect(init.headers).toEqual(expect.objectContaining({ Authorization: 'Bearer staff-token' }));
   });
 });

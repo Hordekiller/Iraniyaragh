@@ -19,6 +19,7 @@ function setup() {
       from: 'PENDING', to: 'PAID', reason: 'verified', requestId: 'request-1',
       createdAt: new Date('2026-09-20T10:01:00.000Z'),
     }]) },
+    outboxEvent: { findUnique: vi.fn(async () => ({ id: 'unconfirmed-1' })) },
     $transaction: vi.fn(async (queries: Promise<unknown>[]) => Promise.all(queries)),
   };
   return { prisma, service: new AdminPaymentReadService(prisma as unknown as PrismaService) };
@@ -48,6 +49,7 @@ describe('AdminPaymentReadService', () => {
       createdAt: '2026-09-20T10:01:00.000Z',
     }]);
     expect(prisma.paymentTransition.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 101 }));
+    expect(result.data.payment.reconciliationEligible).toBe(false);
     expect(JSON.stringify(result)).not.toMatch(/authority|idempotency|fingerprint/);
   });
 

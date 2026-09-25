@@ -71,7 +71,7 @@ Example permission groups:
 - `inventory.read`, `inventory.adjust`, `inventory.transfer`
 - `orders.read`, `orders.manage`
 - `shipments.read`, `shipments.manage`
-- `payments.read`, `payments.refund`
+- `payments.read`, `payments.reconcile`, `payments.refund`
 - `customers.read`, `customers.manage`
 - `users.manage`, `roles.manage`
 - `reports.read`
