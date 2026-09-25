@@ -83,6 +83,58 @@ describe('OutboxConsumerService', () => {
     });
   });
 
+  it('closes an open reconciliation effect when the payment settled as failed', async () => {
+    const { tx, consumer } = setup('PAYMENT_VERIFICATION_FAILED', 'payment');
+    tx.payment.findUnique.mockResolvedValue({ id: 'aggregate-1', orderId: 'order-1', status: 'FAILED' });
+    await consumer.consume('event-1');
+    expect(tx.outboxEffect.updateMany).toHaveBeenCalledWith({
+      where: {
+        kind: OutboxEffectKind.PAYMENT_RECONCILIATION,
+        subjectId: 'aggregate-1',
+        status: OutboxEffectStatus.PENDING,
+      },
+      data: { status: OutboxEffectStatus.COMPLETED },
+    });
+    expect(tx.outboxEffect.createMany).toHaveBeenCalledWith({
+      data: [{
+        eventId: 'event-1', kind: OutboxEffectKind.PAYMENT_RECONCILIATION,
+        subjectId: 'aggregate-1', status: OutboxEffectStatus.COMPLETED,
+      }],
+      skipDuplicates: true,
+    });
+  });
+
+  it('does not leave an open effect when the payment settled during consumption', async () => {
+    const { tx, consumer } = setup('PAYMENT_VERIFICATION_UNCONFIRMED', 'payment');
+    tx.payment.findUnique
+      .mockResolvedValueOnce({ id: 'aggregate-1', orderId: 'order-1', status: 'PENDING' })
+      .mockResolvedValueOnce({ id: 'aggregate-1', orderId: 'order-1', status: 'PAID' });
+    await consumer.consume('event-1');
+    expect(tx.outboxEffect.createMany).toHaveBeenCalledWith({
+      data: [{
+        eventId: 'event-1', kind: OutboxEffectKind.PAYMENT_RECONCILIATION,
+        subjectId: 'aggregate-1', status: OutboxEffectStatus.PENDING,
+      }],
+      skipDuplicates: true,
+    });
+    expect(tx.outboxEffect.updateMany).toHaveBeenCalledWith({
+      where: { eventId: 'event-1', status: OutboxEffectStatus.PENDING },
+      data: { status: OutboxEffectStatus.COMPLETED },
+    });
+  });
+
+  it('leaves a customer effect pending for a paid order', async () => {
+    const { tx, consumer } = setup('PAYMENT_VERIFIED', 'payment');
+    await consumer.consume('event-1');
+    expect(tx.outboxEffect.createMany).toHaveBeenCalledWith({
+      data: [{
+        eventId: 'event-1', kind: OutboxEffectKind.CUSTOMER_ORDER_PAID,
+        subjectId: 'order-1', status: OutboxEffectStatus.PENDING,
+      }],
+      skipDuplicates: true,
+    });
+  });
+
   it('does not acknowledge unknown or mismatched topics', async () => {
     const unknown = setup('FUTURE_TOPIC');
     await expect(unknown.consumer.consume('event-1')).rejects.toThrow('Unsupported outbox');

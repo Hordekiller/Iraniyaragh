@@ -8,6 +8,7 @@ import { ProductMediaCleanupService } from './modules/media/media-cleanup.servic
 import { GuestCartService } from './modules/orders/guest-cart.service';
 import { OutboxConsumerService } from './modules/outbox/outbox-consumer.service';
 import { OutboxRelayService } from './modules/outbox/outbox-relay.service';
+import { OUTBOX_QUEUE_NAME, OUTBOX_QUEUE_PREFIX } from './modules/outbox/outbox-queue.port';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
@@ -67,23 +68,26 @@ async function bootstrap(): Promise<void> {
     { connection, prefix: 'iranyaragh', concurrency: 1 },
   );
   const outboxWorker = new Worker<{ eventId: string }>(
-    'commerce-outbox',
+    OUTBOX_QUEUE_NAME,
     async job => {
-      if (job.name !== 'deliver' || typeof job.data.eventId !== 'string') {
-        throw new Error('Unsupported commerce outbox job.');
-      }
       try {
+        if (job.name !== 'deliver' || typeof job.data.eventId !== 'string') {
+          throw new Error('Unsupported commerce outbox job.');
+        }
         await outboxConsumer.consume(job.data.eventId);
       } catch (error) {
-        await outboxConsumer.recordFailure(
-          job.data.eventId,
-          error,
-          job.attemptsMade + 1 >= (job.opts.attempts ?? 1),
-        );
-        throw error;
+        if (typeof job.data.eventId === 'string') {
+          await outboxConsumer.recordFailure(
+            job.data.eventId,
+            error,
+            job.attemptsMade + 1 >= (job.opts.attempts ?? 1),
+          );
+        }
+        // BullMQ retains the failure reason, so never forward raw error text.
+        throw new Error('Commerce outbox job failed; inspect lastProcessingErrorCode.');
       }
     },
-    { connection, prefix: 'iranyaragh', concurrency: 4 },
+    { connection, prefix: OUTBOX_QUEUE_PREFIX, concurrency: 4 },
   );
   worker.on('error', () => process.stderr.write('Product media worker infrastructure error.\n'));
   maintenanceWorker.on('error', () => process.stderr.write('Product media maintenance worker error.\n'));

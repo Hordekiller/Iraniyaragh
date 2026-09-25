@@ -419,6 +419,21 @@ export class PaymentVerificationService {
               requestId,
               reason: REASON_NOT_PAID,
             });
+            await tx.outboxEvent.create({
+              data: {
+                topic: 'PAYMENT_VERIFICATION_FAILED',
+                aggregateType: 'payment',
+                aggregateId: payment.id,
+                deduplicationKey: `payment-verification-failed:${payment.id}`,
+                payload: {
+                  paymentId: payment.id,
+                  orderId,
+                  provider: payment.provider,
+                  reason: REASON_NOT_PAID,
+                  paymentStatus: 'FAILED',
+                },
+              },
+            });
             await this.auditLog.record(
               {
                 action: 'payment.failed',
