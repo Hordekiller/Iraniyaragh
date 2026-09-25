@@ -27,24 +27,22 @@ work or merge a skipped check as if it passed. The checks listed above must all
 be green on the exact head being merged; disabling `strict` never means merging
 with failing or absent required checks.
 
-### Two-person review handoff protocol
+### Single-developer review handoff
 
-This repository has two contributors. To prevent two-person review deadlocks
-(the author pushing the branch that the co-contributor then has to review and
-push again):
+The delivery owner implements one product PR at a time. Independent review for
+critical domains still applies; the reviewer does not implement a parallel
+product slice. For each sensitive PR:
 
-1. Declare who will perform the final push before the final review.
-2. The final pusher must be the contributor who is not providing final approval.
-3. After that push, wait for every required check, obtain approval from the
-   other contributor on the exact head, and freeze the branch.
+1. The implementer makes the final push and waits for every required check.
+2. A qualified independent reviewer examines the exact head and records approval
+   or actionable findings. The implementer does not self-approve sensitive work.
+3. Freeze the branch after final approval; if changes are needed, rerun CI and
+   review on the new head.
 4. Do not use empty commits or repeated rebases to repair attribution.
-5. If GitHub reports a different last-pusher identity than the audit log, stop
-   and record the discrepancy; do not weaken protection or merge by bypass.
 
-This is a coordination protocol, not a branch-protection rule: with
-`require_last_push_approval` currently off at the repository level, GitHub does
-not enforce it automatically — the two contributors enforce it as a working
-agreement until the owner re-enables last-push approval.
+This independent-review requirement is a repository workflow policy, even if
+GitHub does not enforce an approving review. If a reviewer is unavailable,
+leave the PR open and do not start the next product slice.
 
 ## PR state machine
 
