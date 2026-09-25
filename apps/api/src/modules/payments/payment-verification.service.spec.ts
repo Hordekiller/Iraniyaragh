@@ -273,7 +273,22 @@ describe('PaymentVerificationService', () => {
         data: expect.objectContaining({ from: 'PENDING', to: 'FAILED' }),
       }),
     );
-    expect(ctx.tx.outboxEvent.create).not.toHaveBeenCalled();
+    expect(ctx.tx.outboxEvent.create).toHaveBeenCalledWith({
+      data: {
+        topic: 'PAYMENT_VERIFICATION_FAILED',
+        aggregateType: 'payment',
+        aggregateId: 'payment-1',
+        deduplicationKey: 'payment-verification-failed:payment-1',
+        payload: {
+          paymentId: 'payment-1',
+          orderId: 'order-1',
+          provider: 'zarinpal',
+          reason: expect.any(String),
+          paymentStatus: 'FAILED',
+        },
+      },
+    });
+    expect(ctx.tx.outboxEvent.create).toHaveBeenCalledTimes(1);
     expect(ctx.inventory.consumeReservationsForOrder).not.toHaveBeenCalled();
     expect(result.data.verification).toMatchObject({ outcome: 'NOT_PAID', status: 'FAILED' });
   });

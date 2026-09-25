@@ -6,6 +6,9 @@ import type { EnvironmentVariables } from './config/environment';
 import { ProductMediaImageProcessor } from './modules/media/image-processor.service';
 import { ProductMediaCleanupService } from './modules/media/media-cleanup.service';
 import { GuestCartService } from './modules/orders/guest-cart.service';
+import { OutboxConsumerService } from './modules/outbox/outbox-consumer.service';
+import { OutboxRelayService } from './modules/outbox/outbox-relay.service';
+import { OUTBOX_QUEUE_NAME, OUTBOX_QUEUE_PREFIX } from './modules/outbox/outbox-queue.port';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
@@ -13,6 +16,8 @@ async function bootstrap(): Promise<void> {
   const processor = app.get(ProductMediaImageProcessor);
   const cleanup = app.get(ProductMediaCleanupService);
   const guestCarts = app.get(GuestCartService);
+  const outboxConsumer = app.get(OutboxConsumerService);
+  const outboxRelay = app.get(OutboxRelayService);
   const connection = { url: config.get('REDIS_URL', { infer: true }) };
   const worker = new Worker<{ mediaId: string }>(
     'product-media-processing',
@@ -62,16 +67,64 @@ async function bootstrap(): Promise<void> {
     },
     { connection, prefix: 'iranyaragh', concurrency: 1 },
   );
+  const outboxWorker = new Worker<{ eventId: string }>(
+    OUTBOX_QUEUE_NAME,
+    async job => {
+      try {
+        if (job.name !== 'deliver' || typeof job.data.eventId !== 'string') {
+          throw new Error('Unsupported commerce outbox job.');
+        }
+        await outboxConsumer.consume(job.data.eventId);
+      } catch (error) {
+        if (typeof job.data.eventId === 'string') {
+          await outboxConsumer.recordFailure(
+            job.data.eventId,
+            error,
+            job.attemptsMade + 1 >= (job.opts.attempts ?? 1),
+          );
+        }
+        // BullMQ retains the failure reason, so never forward raw error text.
+        throw new Error('Commerce outbox job failed; inspect lastProcessingErrorCode.');
+      }
+    },
+    { connection, prefix: OUTBOX_QUEUE_PREFIX, concurrency: 4 },
+  );
   worker.on('error', () => process.stderr.write('Product media worker infrastructure error.\n'));
   maintenanceWorker.on('error', () => process.stderr.write('Product media maintenance worker error.\n'));
   commerceMaintenanceWorker.on('error', () =>
     process.stderr.write('Commerce maintenance worker error.\n'),
   );
+  outboxWorker.on('error', () => process.stderr.write('Commerce outbox worker error.\n'));
+  outboxWorker.on('failed', job => {
+    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+      process.stderr.write('Commerce outbox processing dead-lettered; inspect database evidence.\n');
+    }
+  });
+
+  let outboxPass: Promise<void> | null = null;
+  const runOutbox = () => {
+    if (outboxPass) return;
+    outboxPass = outboxRelay.dispatchBatch()
+      .then(result => {
+        if (result.claimed > 0) {
+          process.stdout.write(
+            `Outbox relay claimed=${result.claimed} published=${result.published} dead_lettered=${result.deadLettered}\n`,
+          );
+        }
+      })
+      .catch(() => { process.stderr.write('Outbox relay pass failed.\n'); })
+      .finally(() => { outboxPass = null; });
+  };
+  const outboxTimer = setInterval(runOutbox, 5_000);
+  runOutbox();
 
   let closing = false;
   const close = async () => {
     if (closing) return;
     closing = true;
+    clearInterval(outboxTimer);
+    await outboxPass;
+    await outboxWorker.close();
     await worker.close();
     await maintenanceWorker.close();
     await commerceMaintenanceWorker.close();

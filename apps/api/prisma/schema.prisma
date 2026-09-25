@@ -1118,10 +1118,43 @@ model OutboxEvent {
   attempts         Int       @default(0)
   deadLetteredAt   DateTime?
   lastErrorCode    String?   @db.VarChar(100)
+  consumedAt       DateTime?
+  processingDeadLetteredAt DateTime?
+  lastProcessingErrorCode String? @db.VarChar(100)
+  effect           OutboxEffect?
   createdAt        DateTime  @default(now())
 
   @@index([publishedAt, deadLetteredAt, availableAt])
   @@index([aggregateType, aggregateId])
+}
+
+enum OutboxEffectKind {
+  CUSTOMER_ORDER_CREATED
+  CUSTOMER_ORDER_CANCELLED
+  CUSTOMER_ORDER_EXPIRED
+  CUSTOMER_ORDER_PAID
+  PAYMENT_RECONCILIATION
+  PAYMENT_REFUND_REVIEW
+}
+
+enum OutboxEffectStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model OutboxEffect {
+  id        String             @id @default(cuid())
+  eventId   String             @unique
+  kind      OutboxEffectKind
+  subjectId String             @db.VarChar(128)
+  status    OutboxEffectStatus @default(PENDING)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  event     OutboxEvent        @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@index([status, kind, createdAt])
+  @@index([subjectId, createdAt])
 }
 
 model Payment {

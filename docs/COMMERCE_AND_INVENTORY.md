@@ -132,9 +132,11 @@ Public Checkout responses intentionally omit warehouse/location allocation and
 internal idempotency fields. PostgreSQL checks enforce positive reservation and
 Order-line quantities, balance consistency and exact Order/line money equations.
 
-The outbox row is persistence only: dispatch/retry/DLQ/metrics remain a later
-worker slice. Shipping methods also require an operational provisioning/Admin
-flow before production; the repository does not guess a production shipping rate.
+The outbox row is persistence plus an activated bounded relay, queue retry,
+dead-letter and effect projection (`#299`/`#300`); a real sender, staff workflow
+and delivery outcome remain a later slice. Shipping methods also require an
+operational provisioning/Admin flow before production; the repository does not
+guess a production shipping rate.
 Order reads/Admin operations, expiry/cancellation compensation, Payment and
 Fulfillment are separate downstream workflows.
 

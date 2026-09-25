@@ -48,6 +48,7 @@ Current delivery confidence:
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
 | Order commands/payment         | Reconciliation merged | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence and manual reconciliation merged through #298; refund/outbox delivery still open |
+| Commerce outbox                | Relay and effect projection implemented | #299 adds recoverable relay primitives; #300 activates a topic-aware worker and pending customer/operations effects, but no external notification or shipment delivery. Every settled payment topic closes its open reconciliation effect, and a published-but-unconsumed event can be recovered by the audited operator replay. |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
@@ -59,10 +60,10 @@ G6–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Current payment base: `origin/main` commit `86c97f5`, the squash merge of
-  #298. Payment foundation, Web initiation/result, staff evidence reads and
-  guarded manual reconciliation are merged; outbox delivery, refund and shipment
-  operations remain open.
+- Payment baseline through #299 includes the foundation, Web initiation/result,
+  staff evidence, guarded manual reconciliation and recoverable outbox relay
+  primitives. #300 adds topic-aware effect projection and worker activation;
+  customer notification delivery, refund and shipment operations remain open.
 - The baseline also contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
