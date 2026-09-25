@@ -21,6 +21,11 @@ const LIVE_VERIFY_URL = 'https://payment.zarinpal.com/pg/v4/payment/verify.json'
 const MAX_RESPONSE_BYTES = 32 * 1024;
 const CONTROL_CHARACTER = /\s/u;
 
+// HTTP answers that describe our transport rather than the request itself. They
+// never mean "the request was invalid", so the adapter must not turn them into a
+// deterministic gateway rejection.
+const TRANSIENT_HTTP_STATUS = new Set([408, 425, 429]);
+
 export type ZarinpalGatewayConfig = Readonly<{
   merchantId: string;
   mode: PaymentGatewayEnvironment;
@@ -63,11 +68,18 @@ function parseVerifiedReference(body: unknown): string | null {
   const rawCode = data?.code ?? record.status;
   const code = typeof rawCode === 'number' ? rawCode : 0;
   if (code !== 100 && code !== 101) return null;
-  const referenceId =
-    typeof data?.ref_id === 'string' && data.ref_id.length > 0 ? data.ref_id : null;
-  // A success-shaped code without a reference id is an unproved settlement:
-  // reported to the caller so it can be routed to reconciliation.
-  return referenceId;
+  // Zarinpal v4 returns `ref_id` as a JSON number, not a string. A successful
+  // settlement is only persisted when the reference id can be read, so the
+  // numeric form has to be normalised to the string the contract stores.
+  // Anything that is not a positive safe integer stays unproved and is routed to
+  // reconciliation, so a malformed value can never become a definitive FAILED.
+  const rawReference = data?.ref_id;
+  if (typeof rawReference === 'number') {
+    return Number.isSafeInteger(rawReference) && rawReference > 0
+      ? String(rawReference)
+      : null;
+  }
+  return typeof rawReference === 'string' && rawReference.length > 0 ? rawReference : null;
 }
 
 function verifyRejectionReason(code: number): PaymentRejectionReason {
@@ -204,6 +216,7 @@ export class ZarinpalProvider implements PaymentProvider {
 
       if (response.status === 401) return { status: 'rejected', reason: 'authentication' };
       if (response.status >= 500) return { status: 'unavailable' };
+      if (TRANSIENT_HTTP_STATUS.has(response.status)) return { status: 'unavailable' };
 
       const body = await readBoundedBody(response);
       if (response.status < 200 || response.status >= 300) {
@@ -279,8 +292,15 @@ export class ZarinpalProvider implements PaymentProvider {
       if (response.status >= 500) return { status: 'unavailable' };
 
       const body = await readBoundedBody(response);
+      // Zarinpal reports business outcomes with HTTP 200 and a `code` in the
+      // body, so any non-2xx HTTP answer carries no statement about whether the
+      // transaction settled: 401/403 is a credential problem, 408/425/429 is
+      // transport throttling and 4xx in general is our own request being
+      // refused. Reporting those as `failed` would record a definitive FAILED for
+      // a payment the buyer may already have made, which the provider port
+      // forbids, so they stay `unavailable` and go to reconciliation.
       if (response.status < 200 || response.status >= 300) {
-        return { status: 'failed', reason: 'invalid_request' };
+        return { status: 'unavailable' };
       }
 
       const referenceId = parseVerifiedReference(body);

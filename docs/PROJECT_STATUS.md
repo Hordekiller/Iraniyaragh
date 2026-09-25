@@ -554,7 +554,7 @@ malware scanner also remain production-acceptance work.
   a separate critical mutation requiring state, inventory, idempotency and
   concurrency policy/evidence before implementation.
 
-### Order cancellation and expiry with reservation compensation (Epic-5 command slice, open PR)
+### Order cancellation and expiry with reservation compensation (Epic-5 command slice, merged — PR #292)
 
 - `POST /api/v1/orders/:id/cancel` (Customer OTP, ownership-scoped) and
   `POST /api/v1/orders/admin/:id/cancel` (Staff MFA plus `orders.manage`)
@@ -607,6 +607,26 @@ malware scanner also remain production-acceptance work.
   `Payment PENDING → FAILED` (`gateway_not_paid`); otherwise the **provider
   `verify` call runs outside any DB transaction** and only a `verified` result
   (Zarinpal `code 100`/`101` + `ref_id`) moves money.
+- Zarinpal live-path classification corrected (open PR, adapter only): the v4
+  API returns `ref_id` as a **JSON number**, and the adapter only accepted a
+  string, so a genuinely settled transaction produced no reference id and was
+  routed to reconciliation instead of being recorded as paid. A positive safe
+  integer is now normalised to the decimal string the contract already stores
+  (`Payment.referenceId`), so no schema or contract change was needed; `0`,
+  negative, fractional, unsafe or non-numeric values stay unproved. Separately,
+  the verify phase no longer turns a non-2xx HTTP answer (401/403 credentials,
+  408/425/429 transport, other 4xx) into a definitive `failed`: Zarinpal reports
+  business outcomes with HTTP 200 and a body `code`, so an HTTP-level error
+  carries no statement about settlement and is `unavailable` (nothing persisted,
+  503, routed to reconciliation) exactly like a 5xx. The authorize phase keeps
+  `401` as a deterministic `authentication` rejection but reports the transport
+  statuses 408/425/429 as `unavailable` instead of a rejected request, so the
+  recorded reason is `gateway_unavailable` rather than a false `invalid_request`.
+- Verification of that adapter slice: 62 provider-adapter unit tests, payments
+  module 105/105, full API unit 1029/1029 (84.66% statements / 73.64% branches
+  under the CI coverage gates), full API integration 170/170 (22 files), migration
+  status up to date and `prisma migrate diff` with no difference. No schema,
+  migration, contract or OpenAPI change was required.
 - A successful purchase is applied in one short SERIALIZABLE transaction under
   the shared per-order advisory lock: `Payment PENDING → PAID` (reference ID
   persisted), `Order PENDING_PAYMENT → PAID`, idempotent
@@ -666,15 +686,15 @@ malware scanner also remain production-acceptance work.
 - The final SHA passed quality, database, E2E, CodeQL, dependency review,
   production audit and Sonar. Review was a documented solo self-review.
 
-### Manual payment reconciliation (in progress — `feat/epic6-payment-reconciliation`)
+### Manual payment reconciliation (merged — PR #298)
 
 - A fresh-MFA, `payments.reconcile` staff command re-queries only payment attempts
   with recorded unconfirmed verification evidence. It uses the existing
   server-side verifier and settlement locks, records the initiating staff actor,
   and returns a staff-safe result without gateway authority. The Admin action
   appears only when the server reports eligibility.
-- This is not yet merged. Outbox dispatch, refunds and production acceptance
-  remain separate work.
+- Outbox relay and effect projection merged afterwards in #299/#300. Refunds,
+  notification delivery and production acceptance remain separate work.
 
 ### PR #109 — Auth privileged lifecycle
 

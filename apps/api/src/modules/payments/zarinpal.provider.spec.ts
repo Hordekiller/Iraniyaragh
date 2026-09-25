@@ -183,6 +183,17 @@ describe("ZarinpalProvider", () => {
     },
   );
 
+  it.each([408, 425, 429])(
+    "does not report a transport-level HTTP %s as a rejected request",
+    async (status) => {
+      expect(
+        await new ZarinpalProvider(config, async () => response(status, { data: {} })).authorize(
+          request,
+        ),
+      ).toEqual({ status: "unavailable" });
+    },
+  );
+
   it("maps malformed or unprovable success responses to unknown_result", async () => {
     const malformed = new Response("{", { status: 200 });
     expect(
@@ -285,6 +296,57 @@ describe("ZarinpalProvider", () => {
         async () => response(200, { data: { code: 100, message: "paid" } }),
       ).verify(verifyRequest);
       expect(result).toEqual({ status: "unknown_result" });
+    });
+
+    it("normalises the numeric ref_id the live v4 API returns", async () => {
+      const result = await new ZarinpalProvider(
+        config,
+        async () => response(200, { data: { code: 100, message: "Success", ref_id: 123456789 } }),
+      ).verify(verifyRequest);
+      expect(result).toEqual({ status: "verified", referenceId: "123456789" });
+    });
+
+    it("normalises a numeric ref_id on a repeat verify (code 101) too", async () => {
+      const result = await new ZarinpalProvider(
+        config,
+        async () => response(200, { data: { code: 101, message: "Already verified", ref_id: 42 } }),
+      ).verify(verifyRequest);
+      expect(result).toEqual({ status: "verified", referenceId: "42" });
+    });
+
+    it.each([
+      ["zero", 0],
+      ["negative", -7],
+      ["fractional", 1.5],
+      ["unsafe", Number.MAX_SAFE_INTEGER + 2],
+      ["boolean", true],
+      ["object", { value: 5 }],
+      ["empty string", ""],
+    ])("refuses a %s ref_id and keeps the settlement unproved", async (_label, refId) => {
+      const result = await new ZarinpalProvider(
+        config,
+        async () => response(200, { data: { code: 100, message: "paid", ref_id: refId } }),
+      ).verify(verifyRequest);
+      expect(result).toEqual({ status: "unknown_result" });
+    });
+
+    it.each([400, 401, 403, 404, 408, 425, 429])(
+      "never reports HTTP %s as a definitive non-settlement",
+      async (status) => {
+        const result = await new ZarinpalProvider(
+          config,
+          async () => response(status, { data: {} }),
+        ).verify(verifyRequest);
+        expect(result).toEqual({ status: "unavailable" });
+      },
+    );
+
+    it("does not read a success body sent with a non-2xx HTTP status", async () => {
+      const result = await new ZarinpalProvider(
+        config,
+        async () => response(429, { data: { code: 100, message: "paid", ref_id: 555 } }),
+      ).verify(verifyRequest);
+      expect(result).toEqual({ status: "unavailable" });
     });
 
     it("maps deterministic non-settlement codes to failed with a sanitized reason", async () => {
