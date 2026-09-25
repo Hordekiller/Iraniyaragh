@@ -47,7 +47,7 @@ Current delivery confidence:
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
-| Order commands/payment         | Payment result and staff evidence merged | Cancellation/expiry compensation, Zarinpal settlement, Web result and staff reads merged through #297; reconciliation is in progress, with refund/outbox still open |
+| Order commands/payment         | Reconciliation merged | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence and manual reconciliation merged through #298; refund/outbox delivery still open |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
@@ -59,9 +59,10 @@ G6–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Current payment base: `origin/main` commit `807a6bc`, the squash merge of
-  #297. Payment foundation, Web initiation/result and staff evidence reads are
-  merged; reconciliation, outbox delivery, refund and shipment operations remain open.
+- Current payment base: `origin/main` commit `86c97f5`, the squash merge of
+  #298. Payment foundation, Web initiation/result, staff evidence reads and
+  guarded manual reconciliation are merged; outbox delivery, refund and shipment
+  operations remain open.
 - The baseline also contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
@@ -641,7 +642,8 @@ malware scanner also remain production-acceptance work.
   authorized a documented solo self-review because no independent reviewer was
   available; this is not independent assurance.
 - Browser callback/result handling is merged in #296; staff evidence reads
-  followed in #297. Reconciliation, outbox dispatch and refunds remain.
+  followed in #297, and guarded staff reconciliation merged in #298. Outbox
+  dispatch and refunds remain.
 
 ### Browser Payment Result (merged — PR #296)
 
@@ -713,7 +715,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup, explicit OTP-login merge (#270/#269) and Web handoff (#273)                 | Production acceptance and long-running cleanup operations                                                                                       |
 | Checkout      | Merged preview/create API and live Web binding with configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence    | Shipping operations, compensation/cleanup, verified Payment and production acceptance                                                          |
 | Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API, live read-only Admin client (#257) and idempotent `POST` cancel + expiry-worker compensation with reservation release | Verified Payment, shipment operations and lifecycle-operation evidence in production |
-| Payments      | Zarinpal adapter, server-side settlement (#294), Web initiation/result (#295/#296) and staff read-only evidence (#297) merged | Manual reconciliation is in progress; refunds, outbox dispatch and production acceptance remain |
+| Payments      | Zarinpal adapter, server-side settlement (#294), Web initiation/result (#295/#296), staff evidence (#297) and guarded reconciliation (#298) merged | Refunds, outbox dispatch and production acceptance remain |
 | Web           | Accessible routed storefront with live Catalog/media/availability, authenticated Cart/Checkout/Order lifecycle (#268) and Guest Cart handoff (#273)                    | Verified Payment API/result lifecycle and production acceptance                                                                                |
 | Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)                     | Inventory UX, order commands and Admin-driven publish acceptance                                                                               |
 | Operations    | CI and local Compose                                                                                                                                                | Deploy/staging, observability, recovery and rollback proof                                                                                     |

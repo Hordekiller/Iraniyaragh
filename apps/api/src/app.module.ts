@@ -16,6 +16,7 @@ import { validateEnvironment } from './config/environment';
 import { RedisModule } from './modules/redis/redis.module';
 import { MediaModule } from './modules/media/media.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { OutboxModule } from './modules/outbox/outbox.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     NotificationsModule,
     SuppliersModule,
     ReportsModule,
+    OutboxModule,
     AuditModule,
   ],
 })

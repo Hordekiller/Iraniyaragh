@@ -1116,9 +1116,11 @@ model OutboxEvent {
   availableAt      DateTime  @default(now())
   publishedAt      DateTime?
   attempts         Int       @default(0)
+  deadLetteredAt   DateTime?
+  lastErrorCode    String?   @db.VarChar(100)
   createdAt        DateTime  @default(now())
 
-  @@index([publishedAt, availableAt])
+  @@index([publishedAt, deadLetteredAt, availableAt])
   @@index([aggregateType, aggregateId])
 }
 
