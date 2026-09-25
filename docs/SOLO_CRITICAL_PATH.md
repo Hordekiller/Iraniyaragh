@@ -22,11 +22,9 @@ worktrees and uncommitted files.
 2. **Payment completion:** Web initiation and safe redirect is **merged in PR
    #295** (`2a578de`, 2026-09-25); its final SHA passed quality, database, E2E,
    CodeQL, dependency review, production audit, Actions analysis and Sonar.
-   The next slice is **Payment Result**. A local draft exists on
-   `feat/epic6-payment-result` but is intentionally **not committed, pushed or
-   opened as a PR** after the owner paused implementation. When work resumes,
-   first review and finish that draft, run API/Web tests plus full CI, then open
-   and merge exactly one PR. It must keep server-side verification authoritative,
+   The active slice is **Payment Result** on `feat/epic6-payment-result`.
+   Review and finish it, run API/Web tests plus full CI, then merge its single
+   PR before moving to the next slice. It must keep server-side verification authoritative,
    redirect browser returns to a safe storefront result, never trust gateway
    query parameters, and cover unknown/unavailable/error/replay paths. Only
    after that merge proceed to Admin payment evidence/reconciliation, durable

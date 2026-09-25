@@ -22,6 +22,15 @@ explicit `API_PORT`. Auth requires an exact `AUTH_JWT_ISSUER`, a minimum 32-byte
 and production. Surrounding whitespace is rejected rather than silently
 changing key material. Staging/production reject known placeholder values.
 
+Payment browser returns require `STOREFRONT_ORIGIN` in staging and production.
+It must be the HTTPS origin of the customer Web app, without a path, query,
+fragment or credentials; development/test default to `http://localhost:5173`.
+Configure `ZARINPAL_CALLBACK_URL` to the public API callback route. After the
+server verifies the gateway result, browser requests receive a 303 to the
+storefront result route; JSON callers retain the verification envelope. The
+redirect omits gateway parameters and is sent with `Cache-Control: no-store`
+and `Referrer-Policy: no-referrer`.
+
 Hash-key rotation is bounded to two keys: deploy the new current version/secret and
 temporarily retain the old pair as `AUTH_HASH_PREVIOUS_KEY_VERSION` and
 `AUTH_HASH_PREVIOUS_SECRET`. New hashes use only the current key; lookup/verification
