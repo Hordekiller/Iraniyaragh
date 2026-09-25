@@ -22,7 +22,7 @@ worktrees and uncommitted files.
 2. **Payment completion:** Web initiation and safe redirect is **merged in PR
    #295** (`2a578de`, 2026-09-25); its final SHA passed quality, database, E2E,
    CodeQL, dependency review, production audit, Actions analysis and Sonar.
-   The active slice is **Payment Result** on `feat/epic6-payment-result`.
+   The active slice is **Payment Result**, PR #296 on `feat/epic6-payment-result`.
    Review and finish it, run API/Web tests plus full CI, then merge its single
    PR before moving to the next slice. It must keep server-side verification authoritative,
    redirect browser returns to a safe storefront result, never trust gateway

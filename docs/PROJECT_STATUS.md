@@ -643,9 +643,9 @@ malware scanner also remain production-acceptance work.
 - Browser-friendly callback/result handling is the next separate slice; Admin
   reconciliation, outbox dispatch and refunds follow it.
 
-### Browser Payment Result (local draft — not merged)
+### Browser Payment Result (in review — PR #296)
 
-- The local `feat/epic6-payment-result` branch adds a browser redirect from the
+- The `feat/epic6-payment-result` branch adds a browser redirect from the
   server-verified Zarinpal callback to an owned Order result route. API clients
   retain the JSON response. An unknown or unavailable browser return goes to a
   neutral result page. The return route reads Order state from the API and offers
