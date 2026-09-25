@@ -60,6 +60,13 @@ and future gateway choices are explicitly open.
      `PaymentTransition` (`PENDING → FAILED`) with the reason and request ID.
      `unknown_result` is persisted as a distinct failure reason (`unconfirmed`)
      so reconciliation can distinguish it and no automatic retry occurs.
+     The `authority` write is a compare-and-set on `status = PENDING AND
+     authority IS NULL`: two concurrent initiations of one order both authorize
+     the same row, so the slower response replays the authority the faster
+     response already stored instead of overwriting it. An overwritten authority
+     would match no payment row, so a real capture could never be settled. The
+     gateway transaction created by the losing call is orphaned and can never be
+     paid, because its URL is never returned to the caller.
 - Idempotent replay: the same hashed idempotency key and payload fingerprint
   returns the stored initiation outcome; a different payload under the same key is
   `IDEMPOTENCY_CONFLICT`.

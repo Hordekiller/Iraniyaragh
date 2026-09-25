@@ -96,6 +96,7 @@ function setup(overrides: {
   const prisma = {
     payment: {
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findUnique: vi.fn().mockResolvedValue(null),
     },
     customer: { findUnique: vi.fn().mockResolvedValue({ id: 'customer-1' }) },
     $transaction: vi.fn().mockImplementation(async (fn: (client: unknown) => Promise<unknown>) => fn(tx as never)),
@@ -382,6 +383,12 @@ describe('PaymentInitiationService', () => {
     (ctx.prisma.payment as Record<string, ReturnType<typeof vi.fn>>).updateMany.mockResolvedValue({
       count: 0,
     });
+    (ctx.prisma.payment as Record<string, ReturnType<typeof vi.fn>>).findUnique.mockResolvedValue({
+      status: 'FAILED',
+      authority: null,
+      amount: 1000n,
+      gatewayEnvironment: 'sandbox',
+    });
     await expect(
       ctx.service.initiate({
         userId: 'user-1',
@@ -390,5 +397,28 @@ describe('PaymentInitiationService', () => {
         requestId: 'req-1',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('replays the authority a concurrent initiation already claimed', async () => {
+    ctx = setup({ authorizeResult: { status: 'redirect', authority: 'LOSER', redirectUrl: 'R' } });
+    (ctx.prisma.payment as Record<string, ReturnType<typeof vi.fn>>).updateMany.mockResolvedValue({
+      count: 0,
+    });
+    (ctx.prisma.payment as Record<string, ReturnType<typeof vi.fn>>).findUnique.mockResolvedValue({
+      status: 'PENDING',
+      authority: 'WINNER',
+      amount: 1000n,
+      gatewayEnvironment: 'sandbox',
+    });
+
+    const result = await ctx.service.initiate({
+      userId: 'user-1',
+      orderId: 'order-1',
+      idempotencyKey: 'key-1',
+      requestId: 'req-1',
+    });
+
+    expect(result.data.payment.authority).toBe('WINNER');
+    expect(JSON.stringify(result)).not.toContain('LOSER');
   });
 });
