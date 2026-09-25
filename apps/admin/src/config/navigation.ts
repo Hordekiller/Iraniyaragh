@@ -65,7 +65,7 @@ export const navigation: NavigationGroup[] = [
     label: 'فروش و مشتری',
     items: [
       { label: 'سفارش‌ها', href: '/orders', icon: ShoppingBag, permission: 'orders.read' },
-      { label: 'پرداخت‌ها', href: '/payments', icon: CreditCard, permission: 'payments.read', status: 'planned' },
+      { label: 'پرداخت‌ها', href: '/payments', icon: CreditCard, permission: 'payments.read' },
       { label: 'مشتریان', href: '/customers', icon: Users, permission: 'customers.read', status: 'planned' },
       { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'shipments.read', status: 'planned' },
     ],
