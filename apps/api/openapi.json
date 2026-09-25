@@ -15563,7 +15563,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Verification outcome.",
+            "description": "JSON verification outcome for non-browser clients.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15671,6 +15671,9 @@
                 }
               }
             }
+          },
+          "303": {
+            "description": "Browser navigation to the configured storefront, without gateway query parameters."
           },
           "400": {
             "description": "",

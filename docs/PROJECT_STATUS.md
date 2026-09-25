@@ -59,9 +59,9 @@ G6–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Current payment foundation base: `origin/main` commit `44dff65`, the
-  squash merge of #294. No storefront result UX, outbox delivery, refund or
-  shipment operation is inferred from that API foundation.
+- Current payment base: `origin/main` commit `2a578de`, the squash merge of
+  #295 on top of #294. Browser initiation is merged; browser return/result,
+  outbox delivery, refund and shipment operations remain open.
 - The baseline also contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
@@ -630,15 +630,29 @@ malware scanner also remain production-acceptance work.
 - Not in this slice (explicitly open): outbox dispatch/worker, refunds,
   storefront/admin payment UX. Multi-provider routing (#141) is deferred.
 
-### Local Web payment initiation slice (not merged)
+### Web payment initiation (merged — PR #295)
 
 - The customer payment page now calls the authenticated `POST /orders/:id/pay`
   with a secure idempotency key after an explicit click, checks the returned
   amount and Zarinpal redirect destination, and then leaves for the gateway.
   Timeout, malformed responses and unconfirmed initiation never show success or
   auto-repeat the request. Development fixtures still have no gateway.
-- Browser-friendly callback/result handling, reconciliation and payment status
-  refresh are separate follow-up work. The API callback currently returns JSON.
+- All PR checks passed on the final SHA, including full E2E and Sonar. The owner
+  authorized a documented solo self-review because no independent reviewer was
+  available; this is not independent assurance.
+- Browser-friendly callback/result handling is the next separate slice; Admin
+  reconciliation, outbox dispatch and refunds follow it.
+
+### Browser Payment Result (in review — PR #296)
+
+- The `feat/epic6-payment-result` branch adds a browser redirect from the
+  server-verified Zarinpal callback to an owned Order result route. API clients
+  retain the JSON response. An unknown or unavailable browser return goes to a
+  neutral result page. The return route reads Order state from the API and offers
+  no second payment initiation.
+- `STOREFRONT_ORIGIN` is validated as the redirect destination. This draft must
+  pass the full API/Web and CI gates and be reviewed before it is counted as
+  delivered capability.
 
 ### PR #109 — Auth privileged lifecycle
 

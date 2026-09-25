@@ -13,6 +13,7 @@ export type EnvironmentVariables = {
   DATABASE_URL: string;
   REDIS_URL: string;
   CORS_ORIGINS: string;
+  STOREFRONT_ORIGIN: string;
   TRUST_PROXY: TrustProxySetting;
   AUTH_HASH_KEY_VERSION: number;
   AUTH_HASH_PREVIOUS_KEY_VERSION?: number;
@@ -112,6 +113,22 @@ function parsePublicMediaOrigin(value: string, environment: NodeEnvironment) {
     throw new Error('PUBLIC_MEDIA_ORIGIN must not contain credentials, a query, or a fragment.');
   }
   return url.toString().replace(/\/$/u, '');
+}
+
+function parseStorefrontOrigin(value: unknown, environment: NodeEnvironment): string {
+  const candidate = value === undefined || value === null || value === ''
+    ? ['development', 'test'].includes(environment) ? 'http://localhost:5173' : undefined
+    : value;
+  if (typeof candidate !== 'string' || !candidate.trim()) {
+    throw new Error('STOREFRONT_ORIGIN is required in staging and production.');
+  }
+  const normalized = parseUrl(candidate.trim(), 'STOREFRONT_ORIGIN',
+    ['staging', 'production'].includes(environment) ? ['https:'] : ['http:', 'https:']);
+  const url = new URL(normalized);
+  if (url.username || url.password || url.search || url.hash || url.pathname !== '/') {
+    throw new Error('STOREFRONT_ORIGIN must be an origin without credentials, path, query or fragment.');
+  }
+  return url.origin;
 }
 
 export function parseCorsOrigins(value: unknown, environment: NodeEnvironment) {
@@ -390,6 +407,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     DATABASE_URL: databaseUrl,
     REDIS_URL: redisUrl,
     CORS_ORIGINS: parseCorsOrigins(config.CORS_ORIGINS, environment).join(','),
+    STOREFRONT_ORIGIN: parseStorefrontOrigin(config.STOREFRONT_ORIGIN, environment),
     TRUST_PROXY: parseTrustProxy(config.TRUST_PROXY),
     AUTH_HASH_KEY_VERSION: hashKeyVersion,
     AUTH_HASH_PREVIOUS_KEY_VERSION: previousHashKeyVersion,

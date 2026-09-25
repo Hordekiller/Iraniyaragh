@@ -22,7 +22,7 @@ import {
 } from '../services/commerce/payment'
 import { PAYMENT_STATUS_LABEL } from '../services/commerce/presentation'
 
-export function PaymentPage() {
+export function PaymentPage({ returnMode = false }: { returnMode?: boolean }) {
   const api = useOrderApi()
   const auth = useAuth()
   const { id = '' } = useParams<{ id: string }>()
@@ -66,6 +66,7 @@ export function PaymentPage() {
 
   async function handlePayment() {
     if (
+      returnMode ||
       !order ||
       order.status !== 'PENDING_PAYMENT' ||
       order.payment.latestStatus === 'PAID' ||
@@ -192,7 +193,9 @@ export function PaymentPage() {
       description={
         failed
           ? `آخرین تلاش پرداخت «${latest ? PAYMENT_STATUS_LABEL[latest] : 'نامشخص'}» ثبت شده است. وضعیت سفارش تغییر نکرده است.`
-          : 'برای پرداخت، به درگاه زرین‌پال هدایت می‌شوید. موفقیت پرداخت فقط پس از تأیید سرور نمایش داده می‌شود.'
+          : returnMode
+            ? 'نتیجهٔ بازگشت از درگاه قطعی نیست. وضعیت ثبت‌شده در سرور را بررسی کنید؛ در صورت کسر وجه بدون تأیید سفارش، با پشتیبانی تماس بگیرید.'
+            : 'برای پرداخت، به درگاه زرین‌پال هدایت می‌شوید. موفقیت پرداخت فقط پس از تأیید سرور نمایش داده می‌شود.'
       }
       details={`سفارش ${order.number} · ${formatToman(order.totals.total.amount)}`}
       action={
@@ -204,7 +207,7 @@ export function PaymentPage() {
                 : paymentErrorMessage(currentPaymentError)}
             </p>
           )}
-          {order.status === 'PENDING_PAYMENT' && !uncertain && (
+          {!returnMode && order.status === 'PENDING_PAYMENT' && !uncertain && (
             <button
               type="button"
               disabled={busy}

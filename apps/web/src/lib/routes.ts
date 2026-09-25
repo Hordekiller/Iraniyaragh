@@ -14,6 +14,8 @@ export const ROUTES = {
   orders: '/orders',
   order: (id: string) => `/orders/${id}`,
   payment: (id: string) => `/payment/${id}`,
+  paymentResult: (id: string) => `/payment/${id}/result`,
+  paymentReturn: '/payment-return',
 } as const
 
 /** Route path patterns for react-router `<Route path>` definitions. */
@@ -29,4 +31,6 @@ export const ROUTE_PATHS = {
   orders: '/orders',
   order: '/orders/:id',
   payment: '/payment/:id',
+  paymentResult: '/payment/:id/result',
+  paymentReturn: '/payment-return',
 } as const

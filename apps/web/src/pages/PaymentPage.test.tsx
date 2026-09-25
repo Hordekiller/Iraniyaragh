@@ -18,20 +18,20 @@ vi.mock('../services/commerce/payment', async (importOriginal) => {
   return { ...original, redirectToPaymentGateway: gateway.redirect }
 })
 
-function renderPage(order = ORDER, overrides = {}) {
+function renderPage(order = ORDER, overrides = {}, returnMode = false) {
   const store = signedInStore()
   const api = commerceStub({ getOrder: async () => order, ...overrides })
   return render(
-    <MemoryRouter initialEntries={['/payment/order-1']}>
+    <MemoryRouter initialEntries={[returnMode ? '/payment/order-1/result' : '/payment/order-1']}>
       <Routes>
         <Route
-          path="/payment/:id"
+          path={returnMode ? '/payment/:id/result' : '/payment/:id'}
           element={
             <AuthProvider {...testAuthProps(store)}>
               <OrderProvider
                 api={api}
               >
-                <PaymentPage />
+                <PaymentPage returnMode={returnMode} />
               </OrderProvider>
             </AuthProvider>
           }
@@ -53,6 +53,15 @@ describe('PaymentPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /پرداخت با زرین‌پال/ })).toBeInTheDocument()
     expect(screen.queryByText(/پرداخت توسط سرور تأیید شد/)).not.toBeInTheDocument()
+  })
+
+  it('shows a server-owned return result without offering a second payment', async () => {
+    const initiatePayment = vi.fn()
+    renderPage(ORDER, { initiatePayment }, true)
+    expect(await screen.findByRole('heading', { name: 'سفارش در انتظار پرداخت است' })).toBeInTheDocument()
+    expect(screen.getByText(/نتیجهٔ بازگشت از درگاه قطعی نیست/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
+    expect(initiatePayment).not.toHaveBeenCalled()
   })
 
   it('initiates once and redirects only to the validated provider URL', async () => {

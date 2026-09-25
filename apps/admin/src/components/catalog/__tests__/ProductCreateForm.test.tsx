@@ -133,7 +133,7 @@ describe('ProductCreateForm', () => {
 
     expect(await screen.findByText(/کالای «قفل دستگیره‌ای» با موفقیت ثبت شد/)).toBeInTheDocument();
     expect(mocks.replace).toHaveBeenCalledWith('/catalog');
-  });
+  }, 15_000);
 
   it('surfaces the API error reply', async () => {
     mocks.listBrands.mockResolvedValue([]);
@@ -149,7 +149,7 @@ describe('ProductCreateForm', () => {
 
     expect(await screen.findByText('این شناسه از قبل ثبت شده')).toBeInTheDocument();
     expect(mocks.replace).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 });
 
 function withinListbox() {

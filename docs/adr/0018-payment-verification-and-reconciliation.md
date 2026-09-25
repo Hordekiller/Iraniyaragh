@@ -134,6 +134,17 @@ never consumed twice.
 
 ## Consequences
 
+### Browser return presentation (2026-09-25 follow-up)
+
+The same callback keeps its JSON contract for API clients. A browser navigation
+requesting HTML receives a 303 to the configured `STOREFRONT_ORIGIN` and an
+owned Order result route after verification. The redirect carries only the opaque
+Order id, never `Authority` or `Status`. If verification cannot produce an Order
+result, the browser is sent to a neutral unconfirmed page. Both pages must read
+server-owned state; neither may infer success from the callback URL. This adds
+presentation behavior without changing the settlement transaction or retry
+semantics above.
+
 - The callback contract now satisfies `FOUNDATION.md` §3 (server-side
   verification, idempotency) and closes the last "payment simulation" gap: no
   code path treats a browser redirect or `Status` query parameter as a paid order.

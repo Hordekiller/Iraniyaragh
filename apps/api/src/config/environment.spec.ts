@@ -23,6 +23,7 @@ const validProductionEnvironment = {
   ...validDevelopmentEnvironment,
   NODE_ENV: 'production',
   CORS_ORIGINS: 'https://admin.example.com,https://shop.example.com',
+  STOREFRONT_ORIGIN: 'https://shop.example.com',
   JWT_ACCESS_SECRET: 'access-secret-with-at-least-32-characters',
   AUTH_HASH_SECRET: 'hash-secret-with-at-least-32-characters',
   OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
@@ -110,6 +111,15 @@ describe('parseTrustProxy', () => {
 });
 
 describe('validateEnvironment', () => {
+  it('requires a secure, path-free storefront origin in production', () => {
+    expect(() => validateEnvironment({ ...validProductionEnvironment, STOREFRONT_ORIGIN: undefined }))
+      .toThrow('STOREFRONT_ORIGIN is required');
+    for (const origin of ['http://shop.example.com', 'https://shop.example.com/checkout', 'https://user@shop.example.com']) {
+      expect(() => validateEnvironment({ ...validProductionEnvironment, STOREFRONT_ORIGIN: origin })).toThrow();
+    }
+    expect(validateEnvironment(validProductionEnvironment).STOREFRONT_ORIGIN).toBe('https://shop.example.com');
+  });
+
   it('parses and returns typed development configuration', () => {
     const result = validateEnvironment(validDevelopmentEnvironment);
     expect(result.API_PORT).toBe(4000);
