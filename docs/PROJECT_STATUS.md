@@ -48,6 +48,7 @@ Current delivery confidence:
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
 | Order commands/payment         | Reconciliation merged | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence and manual reconciliation merged through #298; refund/outbox delivery still open |
+| Commerce outbox                | Relay foundation merged; projection in progress | #299 adds inactive recoverable relay primitives. This branch adds a topic-aware worker and pending customer/operations effects, but no external notification or shipment delivery. |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
@@ -59,10 +60,11 @@ G6–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Current payment base: `origin/main` commit `86c97f5`, the squash merge of
-  #298. Payment foundation, Web initiation/result, staff evidence reads and
-  guarded manual reconciliation are merged; outbox delivery, refund and shipment
-  operations remain open.
+- Current payment base: `origin/main` commit `e869e75`, the squash merge of
+  #299. Payment foundation, Web initiation/result, staff evidence reads and
+  guarded manual reconciliation are merged. Recoverable outbox relay primitives
+  are merged but remain inactive pending a consumer; customer notification,
+  refund and shipment operations remain open.
 - The baseline also contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50

@@ -7,6 +7,7 @@
     "media:bucket": "node scripts/provision-media-bucket.mjs",
     "dev": "nest start --watch",
     "worker:media": "node dist/src/media-worker.js",
+    "outbox:replay": "node scripts/replay-outbox.mjs",
     "build": "nest build",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run && node --test prisma/*.test.mjs",

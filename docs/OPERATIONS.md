@@ -111,19 +111,40 @@ Production deployments should be reproducible and Docker-based.
 
 ## Commerce outbox activation gate
 
-`OutboxEvent` is the durable transactional record. The relay foundation can claim
-bounded batches with PostgreSQL `SKIP LOCKED`, lease each claim, enqueue only an
-opaque event ID to BullMQ, and retry bounded queue failures before dead-lettering.
-`publishedAt` means **accepted by the queue**, not delivered to a customer or
-processed by a downstream handler. Queue job IDs are stable across relay replay.
+`OutboxEvent` is the durable transactional record. When the separately deployed
+`worker:media` process is running, it schedules the
+relay in bounded batches with PostgreSQL `SKIP LOCKED`, a 60-second claim lease,
+ID-only BullMQ jobs and bounded queue retry/dead-letter state. `publishedAt` means
+**accepted by the queue**, not delivered to a customer. The topic-aware consumer
+records one `OutboxEffect` per known event and `consumedAt` in one transaction.
+Effect status `PENDING` explicitly means an operational/customer action still
+needs a sender or staff workflow. No SMS, shipment or customer-visible delivery
+is implied by outbox consumption.
 
-The relay is deliberately **not scheduled** by the runtime yet. Do not enable it
-or describe notifications as working until a topic-aware consumer, bounded job
-retention, replay procedure, monitoring/alerts and end-to-end failure tests are
-landed. This keeps the existing outbox records recoverable instead of draining
-them into an unconsumed queue. Before sales, verify the complete chain on staging:
-database event → queue → consumer → provider outcome/operations evidence, including
-unknown provider results and dead-letter replay.
+Queue jobs retry eight times with exponential backoff. Completed and failed job
+retention is bounded to 1,000 each; database `deadLetteredAt` and
+`processingDeadLetteredAt` remain durable. Operators must monitor both counts
+and pending effect age, and alert on any dead letter or growing backlog:
+
+```sql
+SELECT count(*) FROM "OutboxEvent" WHERE "publishedAt" IS NULL AND "deadLetteredAt" IS NULL;
+SELECT count(*) FROM "OutboxEvent" WHERE "deadLetteredAt" IS NOT NULL OR "processingDeadLetteredAt" IS NOT NULL;
+SELECT kind, count(*) FROM "OutboxEffect" WHERE status = 'PENDING' GROUP BY kind;
+```
+
+Replay only an investigated dead-letter event. From a privileged operations
+shell, set `ALLOW_OUTBOX_REPLAY=true`, `OUTBOX_REPLAY_ACTOR_ID` to an active user
+with `settings.manage`, `OUTBOX_REPLAY_TICKET` to a non-sensitive incident ID,
+plus `DATABASE_URL` and `REDIS_URL`, then run
+`pnpm --filter @iranyaragh/api outbox:replay <event-id>`. The command refuses
+active/queued jobs, removes a terminal retained job, resets durable state and
+writes an audit record. The relay picks up the reset row. Never replay a consumed
+event or execute against an unverified environment.
+
+Before sales, verify the complete chain on staging: database event → queue →
+consumer → effect → sender/provider outcome or staff resolution, including unknown
+provider results, dead-letter alerting and replay. The current projection alone
+does not satisfy that gate.
 
 ## Database migrations
 

@@ -29,9 +29,11 @@ export class BullMqOutboxQueue implements OutboxQueue, OnModuleDestroy {
   async enqueue(eventId: string): Promise<void> {
     await this.getQueue().add('deliver', { eventId }, {
       jobId: eventId,
-      // Keep completed job IDs so an acknowledgement race cannot enqueue twice.
-      removeOnComplete: false,
-      removeOnFail: false,
+      attempts: 8,
+      backoff: { type: 'exponential', delay: 1_000 },
+      // Database idempotency tolerates a replay after a retained job ages out.
+      removeOnComplete: { count: 1_000 },
+      removeOnFail: { count: 1_000 },
     });
   }
 
