@@ -26,6 +26,7 @@ const PERMISSIONS = [
   ["shipments.read", "Read shipments", "shipments"],
   ["shipments.manage", "Manage shipments", "shipments"],
   ["payments.read", "Read payments", "payments"],
+  ["payments.reconcile", "Recheck unconfirmed payments", "payments"],
   ["payments.refund", "Refund payments", "payments"],
   ["customers.read", "Read customers", "customers"],
   ["customers.manage", "Manage customers", "customers"],

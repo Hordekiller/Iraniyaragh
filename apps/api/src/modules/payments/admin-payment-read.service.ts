@@ -74,12 +74,18 @@ export class AdminPaymentReadService {
   async get(id: string): Promise<AdminPaymentDetailResponse> {
     const row = await this.prisma.payment.findUnique({ where: { id }, select: paymentSelect });
     if (!row) throw new NotFoundException('Payment not found');
-    const transitions = await this.prisma.paymentTransition.findMany({
-      where: { paymentId: id },
-      select: { from: true, to: true, reason: true, requestId: true, createdAt: true },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: HISTORY_LIMIT + 1,
-    });
+    const [transitions, unconfirmed] = await Promise.all([
+      this.prisma.paymentTransition.findMany({
+        where: { paymentId: id },
+        select: { from: true, to: true, reason: true, requestId: true, createdAt: true },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: HISTORY_LIMIT + 1,
+      }),
+      this.prisma.outboxEvent.findUnique({
+        where: { deduplicationKey: `payment-verification-unconfirmed:${id}` },
+        select: { id: true },
+      }),
+    ]);
     return {
       data: {
         payment: {
@@ -89,6 +95,7 @@ export class AdminPaymentReadService {
             createdAt: transition.createdAt.toISOString(),
           })),
           transitionsTruncated: transitions.length > HISTORY_LIMIT,
+          reconciliationEligible: row.status === 'PENDING' && Boolean(unconfirmed),
         },
       },
     };

@@ -144,7 +144,7 @@ credentials; do not copy a production `DATABASE_URL` into a developer shell.
 ### Development/test seed
 
 The deterministic seed is deliberately separate from deployment. It creates the
-20 canonical permission definitions, a `system-admin` role, its active grants and
+25 canonical permission definitions, a `system-admin` role, its active grants and
 one safe bootstrap audit marker. It never creates a user, password, session, OTP,
 customer or other PII-bearing fixture. A privileged user must later be created by a
 separate authenticated bootstrap workflow; default admin credentials are forbidden.
@@ -167,6 +167,11 @@ seed-owned RBAC baseline and creates no duplicate permissions, roles or grants. 
 does not delete unrelated operator data. CI migrates a fresh PostgreSQL database,
 runs the seed twice and verifies the durable result with
 `apps/api/prisma/tests/seed_baseline.sql`.
+
+The `payments.reconcile` permission is also registered by forward migration
+`20260925121000_payment_reconciliation_permission` in every environment. An
+existing system-admin role receives the grant; other staff roles require an
+explicit, audited operator grant. Deployment never runs the development seed.
 
 For Auth persistence changes, verify on a clean PostgreSQL database:
 

@@ -37,7 +37,7 @@ const payment: SchemaObject = {
 
 const detail: SchemaObject = {
   ...payment,
-  required: [...(payment.required ?? []), 'transitions', 'transitionsTruncated'],
+  required: [...(payment.required ?? []), 'transitions', 'transitionsTruncated', 'reconciliationEligible'],
   properties: {
     ...payment.properties,
     transitions: {
@@ -57,6 +57,7 @@ const detail: SchemaObject = {
       },
     },
     transitionsTruncated: { type: 'boolean' },
+    reconciliationEligible: { type: 'boolean' },
   },
 };
 

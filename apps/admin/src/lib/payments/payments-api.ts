@@ -1,6 +1,7 @@
 import type {
   AdminPaymentDetailResponse,
   AdminPaymentListResponse,
+  AdminPaymentReconciliationResponse,
   PaymentStatus,
 } from '@iranyaragh/contracts';
 import { apiFetch } from '@/lib/api/client';
@@ -29,4 +30,12 @@ export async function getPayment(id: string, signal?: AbortSignal) {
     { token: getAccessToken(), signal },
   );
   return response.data.payment;
+}
+
+export async function reconcilePayment(id: string) {
+  const response = await apiFetch<AdminPaymentReconciliationResponse['data']>(
+    `/payments/admin/${encodeURIComponent(id)}/reconcile`,
+    { method: 'POST', token: getAccessToken() },
+  );
+  return response.data.reconciliation;
 }

@@ -18,7 +18,7 @@ security and test infrastructure. The authenticated storefront Cart, Checkout an
 customer Order lifecycle now uses real HTTP APIs through #268, while #270 closes
 #269 with the Guest Cart API/data/security runtime and #273 binds its Web handoff.
 It is not yet a complete
-commerce product: browser payment result handling, fulfillment operations and production
+commerce product: fulfillment operations and production
 operations remain open. The operational Admin Order queue/detail is now bound to
 the masked, permissioned #238 read API through #257.
 
@@ -47,7 +47,7 @@ Current delivery confidence:
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
-| Order commands/payment         | Command and payment verification foundations merged | Cancellation/expiry compensation and Zarinpal initiation + server-side verification merged via #292/#294; refunds, outbox dispatch and storefront payment result UX remain |
+| Order commands/payment         | Payment result and staff evidence merged | Cancellation/expiry compensation, Zarinpal settlement, Web result and staff reads merged through #297; reconciliation is in progress, with refund/outbox still open |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
@@ -59,9 +59,9 @@ G6–G10 have not reached integrated completion.
 ## Repository snapshot
 
 - Default branch: `main`.
-- Current payment base: `origin/main` commit `2a578de`, the squash merge of
-  #295 on top of #294. Browser initiation is merged; browser return/result,
-  outbox delivery, refund and shipment operations remain open.
+- Current payment base: `origin/main` commit `807a6bc`, the squash merge of
+  #297. Payment foundation, Web initiation/result and staff evidence reads are
+  merged; reconciliation, outbox delivery, refund and shipment operations remain open.
 - The baseline also contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
@@ -640,8 +640,8 @@ malware scanner also remain production-acceptance work.
 - All PR checks passed on the final SHA, including full E2E and Sonar. The owner
   authorized a documented solo self-review because no independent reviewer was
   available; this is not independent assurance.
-- Browser-friendly callback/result handling is the next separate slice; Admin
-  reconciliation, outbox dispatch and refunds follow it.
+- Browser callback/result handling is merged in #296; staff evidence reads
+  followed in #297. Reconciliation, outbox dispatch and refunds remain.
 
 ### Browser Payment Result (merged — PR #296)
 
@@ -654,14 +654,24 @@ malware scanner also remain production-acceptance work.
   passed the full API/Web and CI gates; the owner documented a solo self-review,
   not an independent approval.
 
-### Admin payment evidence (in progress — `feat/epic6-admin-payment`)
+### Admin payment evidence (merged — PR #297)
 
 - Staff-only, MFA-guarded `payments.read` list/detail endpoints project payment
   attempt, order, reference and bounded state-transition evidence without
   gateway authority, idempotency key or fingerprint. The Admin page reads these
   endpoints with status/order-number filters and has no financial mutation.
-- This is not yet a merged capability. Manual reconciliation, outbox dispatch,
-  refunds and production payment acceptance remain separate work.
+- The final SHA passed quality, database, E2E, CodeQL, dependency review,
+  production audit and Sonar. Review was a documented solo self-review.
+
+### Manual payment reconciliation (in progress — `feat/epic6-payment-reconciliation`)
+
+- A fresh-MFA, `payments.reconcile` staff command re-queries only payment attempts
+  with recorded unconfirmed verification evidence. It uses the existing
+  server-side verifier and settlement locks, records the initiating staff actor,
+  and returns a staff-safe result without gateway authority. The Admin action
+  appears only when the server reports eligibility.
+- This is not yet merged. Outbox dispatch, refunds and production acceptance
+  remain separate work.
 
 ### PR #109 — Auth privileged lifecycle
 
@@ -703,7 +713,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup, explicit OTP-login merge (#270/#269) and Web handoff (#273)                 | Production acceptance and long-running cleanup operations                                                                                       |
 | Checkout      | Merged preview/create API and live Web binding with configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence    | Shipping operations, compensation/cleanup, verified Payment and production acceptance                                                          |
 | Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API, live read-only Admin client (#257) and idempotent `POST` cancel + expiry-worker compensation with reservation release | Verified Payment, shipment operations and lifecycle-operation evidence in production |
-| Payments      | Zarinpal v4 adapter, sandbox/live separation, server-initiated payment and server-side verified settlement (#294), Web initiation (#295) and browser result (#296) merged | Admin payment evidence is in progress; reconciliation, refunds, outbox dispatch and production acceptance remain |
+| Payments      | Zarinpal adapter, server-side settlement (#294), Web initiation/result (#295/#296) and staff read-only evidence (#297) merged | Manual reconciliation is in progress; refunds, outbox dispatch and production acceptance remain |
 | Web           | Accessible routed storefront with live Catalog/media/availability, authenticated Cart/Checkout/Order lifecycle (#268) and Guest Cart handoff (#273)                    | Verified Payment API/result lifecycle and production acceptance                                                                                |
 | Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)                     | Inventory UX, order commands and Admin-driven publish acceptance                                                                               |
 | Operations    | CI and local Compose                                                                                                                                                | Deploy/staging, observability, recovery and rollback proof                                                                                     |

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Card, CardContent, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Alert, Button, Card, CardContent, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { Lock } from 'lucide-react';
 import type { AdminPaymentDetail } from '@iranyaragh/contracts';
 import { ApiAbortError } from '@/lib/api/client';
@@ -11,16 +11,44 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { formatRial, orderStatusLabel, paymentStatusLabel, paymentStatusTone } from '@/lib/orders/orders-labels';
-import { getPayment } from '@/lib/payments/payments-api';
+import { getPayment, reconcilePayment } from '@/lib/payments/payments-api';
 
 const faDateTime = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' });
+const outcomeLabels = {
+  VERIFIED: 'تأیید و تسویه شد',
+  REPLAY: 'وضعیت ثبت‌شده بازخوانی شد',
+  VERIFIED_AFTER_CANCELLED: 'پرداخت پس از لغو سفارش تأیید شد؛ نیازمند بررسی استرداد',
+  NOT_PAID: 'درگاه پرداختی را تأیید نکرد',
+  ACCEPTED_UNCONFIRMED: 'پاسخ هنوز نامشخص است',
+} as const;
 
 export function PaymentDetailView({ paymentId }: { paymentId: string }) {
   const { user } = useAuth();
   const canRead = Boolean(user?.permissions.includes('payments.read'));
+  const canReconcile = Boolean(user?.permissions.includes('payments.reconcile'));
   const [payment, setPayment] = useState<AdminPaymentDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [rechecking, setRechecking] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  async function recheck() {
+    if (!payment || !canReconcile || !payment.reconciliationEligible || rechecking) return;
+    if (!window.confirm('فقط وضعیت نامشخص از درگاه دوباره پرس‌وجو می‌شود. در صورت تأیید درگاه، پرداخت و سفارش طبق قوانین سرور تسویه خواهند شد. ادامه می‌دهید؟')) return;
+    setRechecking(true);
+    setError(null);
+    setResult(null);
+    try {
+      const outcome = await reconcilePayment(payment.id);
+      const updated = await getPayment(payment.id);
+      setPayment(updated);
+      setResult(`نتیجهٔ بررسی درگاه: ${outcomeLabels[outcome.outcome]}؛ وضعیت پرداخت: ${paymentStatusLabel(outcome.status)}.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'بررسی دوبارهٔ درگاه انجام نشد.');
+    } finally {
+      setRechecking(false);
+    }
+  }
 
   useEffect(() => {
     if (!canRead) { setLoading(false); return; }
@@ -40,12 +68,17 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
     <EmptyState icon={<Lock size={28} />} title="دسترسی ندارید" description="مجوز مشاهدهٔ پرداخت‌ها برای این حساب فعال نیست." />
   </>;
   if (loading) return <Typography>در حال دریافت پرداخت…</Typography>;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error && !payment) return <Alert severity="error">{error}</Alert>;
   if (!payment) return <EmptyState title="پرداخت یافت نشد" description="رکورد پرداخت در دسترس نیست." />;
 
   return <>
-    <PageHeader title={`پرداخت سفارش ${payment.order.number}`} eyebrow="پرداخت‌ها" description="شواهد ثبت‌شده در سرور؛ بدون امکان تغییر وضعیت مالی." breadcrumbs={[{ label: 'پرداخت‌ها', href: '/payments' }, { label: payment.order.number }]} />
-    <Alert severity="info" sx={{ mb: 2 }}>وضعیت پرداخت و وضعیت سفارش مستقل‌اند. هر مورد نامنطبق باید در فرآیند تطبیق مالی بررسی شود؛ این صفحه دستور تطبیق یا استرداد صادر نمی‌کند.</Alert>
+    <PageHeader title={`پرداخت سفارش ${payment.order.number}`} eyebrow="پرداخت‌ها" description="شواهد ثبت‌شده در سرور و بررسی دوبارهٔ موارد نامشخص." breadcrumbs={[{ label: 'پرداخت‌ها', href: '/payments' }, { label: payment.order.number }]} />
+    <Alert severity="info" sx={{ mb: 2 }}>وضعیت پرداخت و سفارش مستقل‌اند. فقط برای پاسخ نامشخص، کاربر مجاز می‌تواند درگاه را دوباره بررسی کند؛ استرداد در این صفحه انجام نمی‌شود.</Alert>
+    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+    {result && <Alert severity="success" sx={{ mb: 2 }}>{result}</Alert>}
+    {canReconcile && payment.reconciliationEligible && <Button variant="contained" disabled={rechecking} onClick={recheck} sx={{ mb: 2 }}>
+      {rechecking ? 'در حال بررسی درگاه…' : 'بررسی دوبارهٔ وضعیت نامشخص در درگاه'}
+    </Button>}
     <Card sx={{ mb: 3 }}><CardContent>
       <Stack spacing={1}>
         <Typography>شناسه پرداخت: <span dir="ltr">{payment.id}</span></Typography>

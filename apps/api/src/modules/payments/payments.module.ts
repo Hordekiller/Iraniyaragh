@@ -8,10 +8,12 @@ import { PaymentVerificationService } from './payment-verification.service';
 import { ZarinpalCallbackController } from './zarinpal-callback.controller';
 import { AdminPaymentReadController } from './admin-payment-read.controller';
 import { AdminPaymentReadService } from './admin-payment-read.service';
+import { AdminPaymentReconciliationController } from './admin-payment-reconciliation.controller';
+import { AdminPaymentReconciliationService } from './admin-payment-reconciliation.service';
 
 @Module({
   imports: [PaymentProviderModule, AuditModule, InventoryModule],
-  controllers: [PaymentInitiationController, ZarinpalCallbackController, AdminPaymentReadController],
-  providers: [PaymentInitiationService, PaymentVerificationService, AdminPaymentReadService],
+  controllers: [PaymentInitiationController, ZarinpalCallbackController, AdminPaymentReadController, AdminPaymentReconciliationController],
+  providers: [PaymentInitiationService, PaymentVerificationService, AdminPaymentReadService, AdminPaymentReconciliationService],
 })
 export class PaymentsModule {}
