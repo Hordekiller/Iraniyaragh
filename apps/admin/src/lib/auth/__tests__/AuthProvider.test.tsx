@@ -96,7 +96,7 @@ describe('AuthProvider', () => {
     );
 
     fireEvent.click(screen.getByText('signin'));
-    expect(await screen.findByTestId('authed')).toHaveTextContent('yes');
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('yes'));
     expect(screen.getByTestId('email')).toHaveTextContent('dev-admin');
   });
 
@@ -137,7 +137,7 @@ describe('AuthProvider', () => {
     );
 
     fireEvent.click(screen.getByText('signin'));
-    await screen.findByTestId('authed');
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('yes'));
 
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
     fireEvent.click(screen.getByText('signout'));
