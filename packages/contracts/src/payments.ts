@@ -1,4 +1,4 @@
-import type { ApiSuccess, Money } from './index';
+import type { ApiSuccess, Money, OrderListMeta, OrderStatus, PaymentStatus } from './index';
 
 export const PAYMENT_PROVIDER_NAMES = ['zarinpal'] as const;
 
@@ -56,3 +56,36 @@ export type PaymentVerification = {
 export type PaymentVerificationResponse = ApiSuccess<{
   verification: PaymentVerification;
 }>;
+
+/** Staff-safe evidence. Gateway authority and idempotency material are excluded. */
+export type AdminPaymentSummary = {
+  id: string;
+  order: { id: string; number: string; status: OrderStatus };
+  provider: string;
+  amount: Money;
+  status: PaymentStatus;
+  referenceId: string | null;
+  gatewayEnvironment: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminPaymentTransition = {
+  from: PaymentStatus;
+  to: PaymentStatus;
+  reason: string | null;
+  requestId: string | null;
+  createdAt: string;
+};
+
+export type AdminPaymentDetail = AdminPaymentSummary & {
+  transitions: AdminPaymentTransition[];
+  transitionsTruncated: boolean;
+};
+
+export type AdminPaymentListResponse = ApiSuccess<{
+  items: AdminPaymentSummary[];
+  meta: OrderListMeta;
+}>;
+
+export type AdminPaymentDetailResponse = ApiSuccess<{ payment: AdminPaymentDetail }>;

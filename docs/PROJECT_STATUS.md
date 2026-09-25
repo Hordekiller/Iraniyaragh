@@ -643,16 +643,25 @@ malware scanner also remain production-acceptance work.
 - Browser-friendly callback/result handling is the next separate slice; Admin
   reconciliation, outbox dispatch and refunds follow it.
 
-### Browser Payment Result (in review — PR #296)
+### Browser Payment Result (merged — PR #296)
 
 - The `feat/epic6-payment-result` branch adds a browser redirect from the
   server-verified Zarinpal callback to an owned Order result route. API clients
   retain the JSON response. An unknown or unavailable browser return goes to a
   neutral result page. The return route reads Order state from the API and offers
   no second payment initiation.
-- `STOREFRONT_ORIGIN` is validated as the redirect destination. This draft must
-  pass the full API/Web and CI gates and be reviewed before it is counted as
-  delivered capability.
+- `STOREFRONT_ORIGIN` is validated as the redirect destination. The final SHA
+  passed the full API/Web and CI gates; the owner documented a solo self-review,
+  not an independent approval.
+
+### Admin payment evidence (in progress — `feat/epic6-admin-payment`)
+
+- Staff-only, MFA-guarded `payments.read` list/detail endpoints project payment
+  attempt, order, reference and bounded state-transition evidence without
+  gateway authority, idempotency key or fingerprint. The Admin page reads these
+  endpoints with status/order-number filters and has no financial mutation.
+- This is not yet a merged capability. Manual reconciliation, outbox dispatch,
+  refunds and production payment acceptance remain separate work.
 
 ### PR #109 — Auth privileged lifecycle
 
@@ -694,7 +703,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup, explicit OTP-login merge (#270/#269) and Web handoff (#273)                 | Production acceptance and long-running cleanup operations                                                                                       |
 | Checkout      | Merged preview/create API and live Web binding with configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence    | Shipping operations, compensation/cleanup, verified Payment and production acceptance                                                          |
 | Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API, live read-only Admin client (#257) and idempotent `POST` cancel + expiry-worker compensation with reservation release | Verified Payment, shipment operations and lifecycle-operation evidence in production |
-| Payments      | Zarinpal v4 adapter, sandbox/live separation, server-initiated payment and server-side verified settlement merged (#294) | Browser result handling, refunds, outbox dispatch and operational reconciliation remain |
+| Payments      | Zarinpal v4 adapter, sandbox/live separation, server-initiated payment and server-side verified settlement (#294), Web initiation (#295) and browser result (#296) merged | Admin payment evidence is in progress; reconciliation, refunds, outbox dispatch and production acceptance remain |
 | Web           | Accessible routed storefront with live Catalog/media/availability, authenticated Cart/Checkout/Order lifecycle (#268) and Guest Cart handoff (#273)                    | Verified Payment API/result lifecycle and production acceptance                                                                                |
 | Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)                     | Inventory UX, order commands and Admin-driven publish acceptance                                                                               |
 | Operations    | CI and local Compose                                                                                                                                                | Deploy/staging, observability, recovery and rollback proof                                                                                     |

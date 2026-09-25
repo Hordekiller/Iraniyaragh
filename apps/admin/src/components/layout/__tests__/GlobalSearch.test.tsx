@@ -50,6 +50,7 @@ describe('GlobalSearch', () => {
   });
 
   it('marks shipped module pages as live and keeps unimplemented sections disabled', () => {
+    mocks.permissions = [...mocks.permissions, 'customers.read'];
     render(<GlobalSearch />);
     fireEvent.click(screen.getByRole('button', { name: 'جستجوی سریع در پنل' }));
 
@@ -58,8 +59,8 @@ describe('GlobalSearch', () => {
     expect(screen.getByRole('button', { name: /کالا و SKU/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /تنظیمات/ })).toBeEnabled();
 
-    const payments = screen.getByRole('button', { name: /پرداخت‌ها/ });
-    expect(payments).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: /پرداخت‌ها/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /مشتریان/ })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('filters results and jumps to the selected page', () => {

@@ -22,13 +22,13 @@ worktrees and uncommitted files.
 2. **Payment completion:** Web initiation and safe redirect is **merged in PR
    #295** (`2a578de`, 2026-09-25); its final SHA passed quality, database, E2E,
    CodeQL, dependency review, production audit, Actions analysis and Sonar.
-   The active slice is **Payment Result**, PR #296 on `feat/epic6-payment-result`.
-   Review and finish it, run API/Web tests plus full CI, then merge its single
-   PR before moving to the next slice. It must keep server-side verification authoritative,
-   redirect browser returns to a safe storefront result, never trust gateway
-   query parameters, and cover unknown/unavailable/error/replay paths. Only
-   after that merge proceed to Admin payment evidence/reconciliation, durable
-   outbox dispatcher, and refund as separate PRs.
+   **Payment Result merged in PR #296** (`68aa581`, 2026-09-25), with the final
+   SHA passing quality, database, E2E, security and Sonar checks. The active
+   slice is now **Admin payment evidence** on `feat/epic6-admin-payment`:
+   staff-only `payments.read` list/detail, order-number and status filters,
+   bounded transition history, no financial mutation. Complete review and CI,
+   merge this sole product PR, then implement manual reconciliation in a
+   separate PR, followed by durable outbox dispatch and refund.
 3. **Fulfillment, shipping, notifications:** move `PAID` Orders through guarded
    picking/packing, shipment and tracking states; deliver deduplicated, observable
    notifications. Exit with a real, fixture-free purchase-to-tracking test.
