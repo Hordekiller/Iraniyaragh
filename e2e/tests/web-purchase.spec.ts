@@ -58,7 +58,10 @@ test.describe('web: fixture purchase journey', () => {
     await expect(
       page.getByRole('heading', { name: 'سفارش در انتظار پرداخت است' }),
     ).toBeVisible()
-    await expect(page.getByText(/هیچ پرداختی موفق فرض نمی‌شود/)).toBeVisible()
+    await expect(page.getByText(/موفقیت پرداخت فقط پس از تأیید سرور نمایش داده می‌شود/)).toBeVisible()
+    await tap(page.getByRole('button', { name: 'پرداخت با زرین‌پال' }))
+    await expect(page.getByRole('alert')).toContainText('درگاه پرداخت موقتاً در دسترس نیست')
+    await expect(page.getByRole('heading', { name: 'سفارش در انتظار پرداخت است' })).toBeVisible()
     await tap(page.getByRole('link', { name: 'جزئیات سفارش' }))
     await expect(
       page.getByRole('heading', { level: 1, name: /^سفارش DEV-/ }),
