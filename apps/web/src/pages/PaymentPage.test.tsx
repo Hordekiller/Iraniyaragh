@@ -170,4 +170,17 @@ describe('PaymentPage', () => {
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
   })
+
+  it('does not start another payment when a paid attempt conflicts with a pending order', async () => {
+    const initiatePayment = vi.fn()
+    renderPage({
+      ...ORDER,
+      payment: { latestStatus: 'PAID', attemptCount: 1 },
+    }, { initiatePayment })
+    expect(
+      await screen.findByRole('heading', { name: 'وضعیت پرداخت نیازمند بررسی است' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
+    expect(initiatePayment).not.toHaveBeenCalled()
+  })
 })

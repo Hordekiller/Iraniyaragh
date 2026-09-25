@@ -65,7 +65,13 @@ export function PaymentPage() {
   const currentPaymentError = paymentError?.orderId === id ? paymentError.cause : null
 
   async function handlePayment() {
-    if (!order || order.status !== 'PENDING_PAYMENT' || inFlight.current || uncertain) return
+    if (
+      !order ||
+      order.status !== 'PENDING_PAYMENT' ||
+      order.payment.latestStatus === 'PAID' ||
+      inFlight.current ||
+      uncertain
+    ) return
     inFlight.current = true
     setBusyOrderId(id)
     setPaymentError(null)
@@ -163,7 +169,7 @@ export function PaymentPage() {
       />
     )
 
-  if (order.status !== 'PENDING_PAYMENT')
+  if (order.status !== 'PENDING_PAYMENT' || latest === 'PAID')
     return (
       <ResultCard
         tone="error"
