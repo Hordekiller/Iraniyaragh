@@ -1,69 +1,72 @@
 # Canonical PR, Review and Merge Workflow
 
-Reviewed: 2026-09-17
+Reviewed: 2026-09-25
 Applies to: all contributors and agents
 
-## Repository protection (observed)
+## Repository protection and merge policy
 
-`main` currently has no additional ruleset. Classic branch protection is enabled
-(observed via the REST API on 2026-09-15):
+On 2026-09-25 the GitHub API returned 404 (`Branch not protected`) for
+`/branches/main/protection` and an empty list for `/rules/branches/main`.
+The protection settings observed on 2026-09-15 are therefore historical, not
+currently enforced. Until protection is restored, apply the following checks
+and review gates manually for every PR and do not push directly to `main`:
 
 - Required checks are exact contexts: `quality`, `database`, `e2e`,
   `dependency-review`, `Analyze (actions)`, `Analyze (javascript-typescript)`
-  and `production-audit`. Sonar is not yet a required context on `main`; #212 is
-  merged and current internal PRs execute real scans and Quality Gates (for
-  example #244 passed). Issue #213 remains open only for SonarCloud organization-
-  admin suspension confirmation; the gate must not be weakened meanwhile.
-- `strict` (up-to-date-before-merge) is disabled so already-green PRs are not
-  re-blocked by every concurrent merge; merge conflicts are still detected.
-- Required approving reviews: `0`; code-owner review: off; stale-review
-  dismissal: off; last-push approval: off.
-- Required linear history: on (merge commits are rejected, use squash).
-- Required conversation resolution: on. Administrator enforcement: on.
-- Force-push and deletion on `main`: off.
+  and `production-audit`. Sonar is also a manual merge gate for internal PRs;
+  #212 is merged and these PRs run real scans and Quality Gates. Issue #213
+  remains open for SonarCloud organization-admin confirmation.
+- The checks listed above must be green on the exact head, including a real
+  Sonar scan for an internal PR; a skipped check is not evidence of success.
+- Resolve every review conversation, apply the sensitive-work review rule below,
+  and use a squash merge after confirming no conflicts.
+- Restoring enforced branch protection with these gates is an operations gap;
+  no PR may claim that GitHub enforced them while the API reports no protection.
 
-These settings are security controls. Do not bypass them, self-approve sensitive
-work or merge a skipped check as if it passed. The checks listed above must all
-be green on the exact head being merged; disabling `strict` never means merging
-with failing or absent required checks.
+Do not claim that a self-review is independent, or merge a skipped check as if it passed.
 
-### Two-person review handoff protocol
+### Single-developer review handoff
 
-This repository has two contributors. To prevent two-person review deadlocks
-(the author pushing the branch that the co-contributor then has to review and
-push again):
+The delivery owner implements one product PR at a time. Independent review for
+critical domains is preferred; the reviewer does not implement a parallel
+product slice. For each sensitive PR:
 
-1. Declare who will perform the final push before the final review.
-2. The final pusher must be the contributor who is not providing final approval.
-3. After that push, wait for every required check, obtain approval from the
-   other contributor on the exact head, and freeze the branch.
+1. The implementer makes the final push and waits for every required check.
+2. A qualified independent reviewer examines the exact head and records approval
+   or actionable findings. If no reviewer is available and the repository owner
+   explicitly directs solo delivery, the implementer performs and records a
+   self-review on the exact head instead. The record must state that independence
+   was waived, list findings and fixes, and include critical failure-path,
+   authorization, idempotency and concurrency evidence as applicable. GitHub does
+   not permit a PR author to approve their own PR; a self-review is not an approval.
+3. Freeze the branch after final approval; if changes are needed, rerun CI and
+   review on the new head.
 4. Do not use empty commits or repeated rebases to repair attribution.
-5. If GitHub reports a different last-pusher identity than the audit log, stop
-   and record the discrepancy; do not weaken protection or merge by bypass.
 
-This is a coordination protocol, not a branch-protection rule: with
-`require_last_push_approval` currently off at the repository level, GitHub does
-not enforce it automatically — the two contributors enforce it as a working
-agreement until the owner re-enables last-push approval.
+The repository owner explicitly directed solo self-review on 2026-09-25 because
+no independent reviewer is currently available. This is a documented risk
+acceptance, not an assertion of independent assurance. Never bypass a failing or
+pending check, an unresolved review finding, or a required operational approval.
 
 ## PR state machine
 
 ```text
 DRAFT → IMPLEMENTATION → LOCAL VERIFICATION → PUSH → CI
-  → INDEPENDENT REVIEW → (changes? fix/push/CI/review latest SHA)
-  → APPROVED LATEST SHA → FREEZE → MERGE
+  → REVIEW (independent, or owner-authorized documented self-review)
+  → (changes? fix/push/CI/review latest SHA) → FREEZE → MERGE
 ```
 
-Approval is valid only for the final reviewable SHA. Any new reviewable push
-(including a rebase) must be treated as requiring fresh approval and fresh
-checks. After final approval, make no code push. If a change is unavoidable,
-reopen the review cycle explicitly.
+Review evidence is valid only for the final reviewable SHA. Any new reviewable
+push (including a rebase) requires fresh checks and updated review evidence.
+After final review, make no code push. If a change is unavoidable, reopen the
+review cycle explicitly.
 
 ## Roles and dependencies
 
 Every PR declares OWNER, IMPLEMENTER, REVIEWER and INTEGRATION OWNER. Auth,
 RBAC, migrations, money, inventory, checkout, orders, payment and financial
-changes require an independent code-owner review.
+changes require independent code-owner review when available, or the explicit
+owner-authorized solo exception and evidence above.
 
 Dependent PRs must state `Depends on #N` in the body. Review early if useful but
 label it preliminary. Merge the dependency first, update the dependent branch
@@ -82,11 +85,10 @@ coverage thresholds or valid PostgreSQL to hide an infrastructure problem.
 
 #212 (Sonar token at job scope) is merged and trusted internal PR scans now upload
 the exact head and enforce the Quality Gate. #213 remains open until an organization
-admin confirms the suspension banner is cleared. When that account state is stable,
-add the exact `sonar` check context to branch
-protection and verify it on a test PR. Until then the absence of the `sonar`
-required context is a known protection gap, not evidence of analysis — a failing
-`sonar` run must still be investigated, not ignored.
+admin confirms the suspension banner is cleared. Restore branch protection with
+the listed contexts, including `sonar` after account confirmation, and verify the
+rules on a test PR. The current absence of required contexts is a protection gap;
+a failing `sonar` run must still be investigated, not ignored.
 
 ## Final review checklist
 
@@ -96,7 +98,8 @@ required context is a known protection gap, not evidence of analysis — a faili
 - migration/OpenAPI drift checked where applicable;
 - authorization, idempotency, failure and concurrency evidence attached for
   critical mutations;
-- reviewer is eligible and independent of the implementer for sensitive work;
+- reviewer is eligible and independent for sensitive work, or the owner-authorized
+  self-review exception and its risk/evidence are recorded;
 - no unresolved conversations or changes requested;
 - no push after final approval.
 
@@ -104,5 +107,5 @@ required context is a known protection gap, not evidence of analysis — a faili
 
 Recently merged: Inventory through #222/#231/#232, Product Media M4/M5 #240 and
 Cart contracts/runtime #235/#239/#241–#244. No PR was open at the reviewed
-baseline. A branch is called READY only when the final SHA is approved and every
-required context is green.
+baseline. A branch is called READY only when the final SHA has completed the
+applicable review path and every required context is green.

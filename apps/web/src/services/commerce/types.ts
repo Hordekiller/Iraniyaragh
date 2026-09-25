@@ -6,6 +6,7 @@ import type {
   CheckoutPreviewResponse,
   CustomerOrderListResponse,
   OrderDetail,
+  PaymentInitiation,
 } from '@iranyaragh/contracts'
 
 export type CheckoutPreview = CheckoutPreviewResponse['data']
@@ -41,6 +42,7 @@ export interface CommerceApi {
   ): Promise<CheckoutOrder>
   listOrders(page?: number): Promise<CustomerOrderPage>
   getOrder(id: string): Promise<OrderDetail>
+  initiatePayment(id: string, idempotencyKey: string): Promise<PaymentInitiation>
 }
 
 export type CartPhase = 'idle' | 'loading' | 'ready' | 'merging' | 'error'

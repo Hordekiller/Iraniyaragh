@@ -68,10 +68,15 @@ function collectFiles(target) {
   return files;
 }
 
+function isTestSource(file) {
+  return file.includes('/src/test/') || /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file);
+}
+
 const violations = [];
 for (const root of ROOTS) {
   const target = fileURLToPath(new URL(`../${root}`, import.meta.url));
   for (const file of collectFiles(target)) {
+    if (isTestSource(file)) continue;
     if (BINARY_EXT.has(file.split('.').pop().toLowerCase())) continue;
     const content = contentToInspect(file, readFileSync(file, 'utf8'));
     for (const url of remoteUrls(content)) {

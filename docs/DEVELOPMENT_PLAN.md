@@ -1,6 +1,10 @@
 # Detailed Development Plan
 
-Last reviewed: 2026-09-18
+Last reviewed: 2026-09-25
+
+Current delivery order and capacity are defined by `SOLO_CRITICAL_PATH.md`.
+The two-developer sprint assignments and durations below are historical planning
+assumptions, not active execution instructions.
 
 This document schedules the MVP sequence. `COMMERCE_EXPANSION_PLAN.md` is the
 authoritative complete-scope plan for V1, operational maturity and governed growth;

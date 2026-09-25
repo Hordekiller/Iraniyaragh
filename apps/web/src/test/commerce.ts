@@ -174,6 +174,15 @@ export function commerceStub(
       meta: { page: 1, perPage: 25, total: 1, pages: 1 },
     })),
     getOrder: vi.fn(async () => ORDER),
+    initiatePayment: vi.fn(async () => ({
+      paymentId: 'payment-1',
+      status: 'PENDING' as const,
+      provider: 'zarinpal' as const,
+      amount: ORDER.totals.total,
+      authority: 'sandbox-authority-1',
+      redirectUrl:
+        'https://sandbox.zarinpal.com/pg/StartPay/sandbox-authority-1',
+    })),
     ...overrides,
   }
 }

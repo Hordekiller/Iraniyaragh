@@ -1,6 +1,10 @@
 # V1.0 Master Plan — ایران‌یاراغ
 
-Last updated: 2026-09-18
+Last updated: 2026-09-25
+
+`SOLO_CRITICAL_PATH.md` is the active V1 delivery sequence. The owners, duration
+estimates and three-lane method below describe the earlier two-contributor plan;
+capability and release acceptance requirements still apply.
 
 This is the V1 release checklist. The complete expansion scope and mandatory
 implementation method—including post-V1 operations and growth—live in

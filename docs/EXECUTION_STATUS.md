@@ -1,6 +1,10 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-20
+Last reviewed: 2026-09-25
+
+The active one-developer queue is `SOLO_CRITICAL_PATH.md`. The parallel lanes,
+assignments and queue snapshots below are retained as historical evidence; they
+do not authorize starting work ahead of the payment/fulfillment critical path.
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own

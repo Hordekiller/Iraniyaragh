@@ -6,6 +6,7 @@ import type {
   CheckoutResponse,
   CustomerOrderDetailResponse,
   CustomerOrderListResponse,
+  PaymentInitiationResponse,
 } from '@iranyaragh/contracts'
 import { AuthApiError } from '../../lib/auth/errors'
 import { jsonRequest } from '../../lib/auth/request'
@@ -155,6 +156,19 @@ export class CommerceHttpClient implements CommerceApi {
       { baseUrl: this.baseUrl, credentials: 'include' },
     )
     return response.data.order
+  }
+
+  async initiatePayment(id: string, idempotencyKey: string) {
+    const response = await this.request<PaymentInitiationResponse['data']>(
+      `/api/v1/orders/${encodeURIComponent(id)}/pay`,
+      {
+        baseUrl: this.baseUrl,
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Idempotency-Key': idempotencyKey },
+      },
+    )
+    return response.data.payment
   }
 
   private cartPath(owner: CartOwner): '/api/v1/cart' | '/api/v1/guest-cart' {

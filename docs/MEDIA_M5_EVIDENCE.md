@@ -68,9 +68,10 @@ detail returned 1 media item with 10 sources, and the origin served
 
 The `e2e` job in `.github/workflows/ci.yml` now:
 
-- starts `quay.io/minio/minio` (pinned by digest; the `minio/minio` Docker Hub
-  coordinate is no longer pullable) with `MINIO_ROOT_PASSWORD=change-me-now`
-  and waits on `/minio/health/live`;
+- builds the pinned official community MinIO source release
+  `RELEASE.2025-10-15T17-29-55Z` with Go 1.24.8, starts it with ephemeral
+  test credentials and waits on `/minio/health/live`. The earlier Quay digest
+  became inaccessible to anonymous CI runners on 2026-09-25;
 - runs `pnpm --filter @iranyaragh/api media:bucket`
   (`apps/api/scripts/provision-media-bucket.mjs`), which idempotently creates the
   `products` bucket and applies a public read-only `GetObject` policy;
