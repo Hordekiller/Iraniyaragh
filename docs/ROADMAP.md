@@ -1,6 +1,6 @@
 # Delivery Roadmap
 
-Last reviewed: 2026-09-18
+Last reviewed: 2026-09-25
 
 This is the executive view of delivery. The executable sprint backlog, owners,
 acceptance gates and dependencies live in `DEVELOPMENT_PLAN.md`.
@@ -29,32 +29,52 @@ store. Native mobile and advanced growth features are intentionally later.
 
 ## Current checkpoint
 
-- `0.1`: closed. Auth runtime, privileged lifecycle, sessions and RBAC are on
-  `main` (#109/#111/#150/#158); #49 is closed and #50/#91 acceptance reconciled.
-  Auth-parity follow-ups #186/#188 were delivered via #190/#195 (2026-09-15/13).
-- `0.2`: integrated Catalog/Media foundation. Attributes, variants/SKU identity,
-  price history and staged import are merged via #179–#184; Catalog parity and
-  typed contracts are merged through #214; Product Media M1–M5 and the
-  publish-to-discovery API journey are merged through #240; the storefront uses
-  live Catalog/media data. Admin-driven publish acceptance, video processing and
-  production storage/scanner acceptance remain.
-- `0.3`: protected Inventory HTTP foundation. Warehouse/location, balance,
-  immutable movement, adjustment, reservation and transfer APIs are merged through
-  #222; public availability and bounded reservation expiry followed in #231/#232.
-  #246/#237 adds deterministic Checkout allocation; Inventory Admin, compensation
-  and production worker operations remain.
-- `0.4`: hardened authenticated Cart runtime. #235/#239/#241–#244/#251 deliver
-  accepted contracts, explicit User↔Customer ownership, persistence, protected
-  read/add/set/remove endpoints, side-effect-free empty reads, scoped 24-hour replay
-  and concurrency-safe limits with server pricing. Guest token/merge and Web binding
-  remain. Checkout/Order creation is merged through #246/#237 and customer/staff
-  Order reads through #247/#238; live clients, commands and compensation remain.
-- `0.5`–`1.0`: planned. Payment, fulfillment, notifications and production
-  operations have not reached application-workflow delivery; persistence scaffolding
-  is not counted as an integrated capability.
+- `0.1` is closed; Auth/RBAC and privileged lifecycle are merged. Production OTP
+  and MFA acceptance still need environment evidence.
+- `0.2` has an integrated live Catalog/Media foundation, but production object
+  storage/scanner acceptance and remaining authoring gaps are open.
+- `0.3` has protected Inventory APIs, public availability and reservation expiry.
+  The Admin Inventory operator journey (#261) is not yet complete.
+- `0.4` has authenticated/guest Cart, Checkout/Order creation, customer/staff Order
+  reads and controlled cancellation/expiry compensation. A fixture-free purchase
+  from browser through shipment has not passed staging.
+- `0.5` Payment foundation is merged through #294–#298: Zarinpal verification,
+  Web initiation/result, staff evidence and guarded manual reconciliation. #299
+  merged the recoverable outbox relay foundation. #300 is the **only open product
+  PR**: topic-aware worker and durable pending effects. It is not SMS delivery,
+  fulfillment or a production acceptance result. Refund remains open.
+- `0.6`–`1.0` are not release-ready. No live sale or launch claim is justified by
+  green unit/CI alone.
 
 The detailed, dependency-ordered checklist is in `V1_MASTER_PLAN.md`. Factual code
 status is in `PROJECT_STATUS.md`.
+
+## One-developer critical path (authoritative execution order)
+
+Use exactly one principal task and at most one open product PR: implement → focused
+failure/authorization/idempotency/concurrency tests → full affected-package checks
+→ CI → documented solo review → merge → start the next task from `main`. Do not
+edit `schema.prisma`, migrations, shared contracts or OpenAPI for the next task
+before the previous PR merges. Never rewrite a shared migration; add a forward one.
+
+| Step | Next deliverable | Exit evidence before moving on |
+| --- | --- | --- |
+| 1 | Finish #300 Outbox worker/effect projection | Final-SHA CI and migration drift green; failed jobs visible and replay tested; pending effects explicitly not counted as delivered notifications. |
+| 2 | Payment refund, in a separate PR | Provider/refund state machine, staff permission + fresh MFA, audit, idempotency, duplicate/concurrent/failure-path tests and financial reconciliation. No browser or operator can forge a paid/refunded state. |
+| 3 | Paid Order → Fulfillment | One paid Order creates exactly one fulfillment; pick/pack commands enforce transition, actor, inventory truth and audit. |
+| 4 | Shipment → Tracking → essential notifications | Real shipment/tracking persistence and customer/staff views; pending outbox effects dispatched through a provider with explicit accepted/unknown/failed states and safe replay. Complete one fixture-free staging purchase through tracking. |
+| 5 | Admin Inventory #261 | Warehouse, Location, Balance, Movement, Adjustment, Reservation and Transfer connected to protected APIs; role/action states, conflicts and ledger invariants tested. |
+| 6 | SMS.ir acceptance #114 | Real account/key/sender/template in production-like staging; OTP delivery, timeout/error/unknown-result, rate limits, outage and rollback evidence. Do not commit credentials. |
+| 7 | Warehouse+ #7, one PR per slice | Supplier/PO → Receiving → Stocktake → Return/Refund → Reports; each mutation traces to ledger, actor and business reference. |
+| 8 | Web/Admin completion #252/#258 | Route-by-route inventory removes fixtures, fake KPI, unavailable actions and broken empty/error/permission states; close epics only after verified acceptance. |
+| 9 | Content + SEO #125/#126/#129/#127/#123/#130 | Content lifecycle, SSR, canonical, sitemap, structured data, Merchant feed and crawl/performance monitoring after commerce flow is stable. |
+| 10 | Production hardening #136 / Gate 0.9 | Deployment, secrets, metrics/tracing, alerts, backups with restore drill, rollback and load test plus owner runbooks. |
+| 11 | UAT → fixed V1.0 release candidate | On staging, execute Product → Guest Cart → OTP → Checkout → Zarinpal → Order → Inventory → Fulfillment → Tracking without fixtures; verify failure/retry/refund paths, reconcile money/stock, then launch only with signed-off gates. |
+
+Paused until after V1.0: #141 multi-provider, #128 AI/RAG and major dependency
+upgrades under #77. SEO must not displace Payment/Fulfillment on the critical path.
+External production-like acceptance requires owner-supplied accounts, credentials
+and deployment access; local code/CI cannot substitute for that evidence.
 
 ## Phase 0 — Repository and foundation
 
