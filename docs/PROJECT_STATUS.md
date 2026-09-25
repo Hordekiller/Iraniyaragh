@@ -642,7 +642,8 @@ malware scanner also remain production-acceptance work.
   authorized a documented solo self-review because no independent reviewer was
   available; this is not independent assurance.
 - Browser callback/result handling is merged in #296; staff evidence reads
-  followed in #297. Reconciliation, outbox dispatch and refunds remain.
+  followed in #297, and guarded staff reconciliation merged in #298. Outbox
+  dispatch and refunds remain.
 
 ### Browser Payment Result (merged — PR #296)
 
@@ -714,7 +715,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup, explicit OTP-login merge (#270/#269) and Web handoff (#273)                 | Production acceptance and long-running cleanup operations                                                                                       |
 | Checkout      | Merged preview/create API and live Web binding with configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence    | Shipping operations, compensation/cleanup, verified Payment and production acceptance                                                          |
 | Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API, live read-only Admin client (#257) and idempotent `POST` cancel + expiry-worker compensation with reservation release | Verified Payment, shipment operations and lifecycle-operation evidence in production |
-| Payments      | Zarinpal adapter, server-side settlement (#294), Web initiation/result (#295/#296) and staff read-only evidence (#297) merged | Manual reconciliation is in progress; refunds, outbox dispatch and production acceptance remain |
+| Payments      | Zarinpal adapter, server-side settlement (#294), Web initiation/result (#295/#296), staff evidence (#297) and guarded reconciliation (#298) merged | Refunds, outbox dispatch and production acceptance remain |
 | Web           | Accessible routed storefront with live Catalog/media/availability, authenticated Cart/Checkout/Order lifecycle (#268) and Guest Cart handoff (#273)                    | Verified Payment API/result lifecycle and production acceptance                                                                                |
 | Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)                     | Inventory UX, order commands and Admin-driven publish acceptance                                                                               |
 | Operations    | CI and local Compose                                                                                                                                                | Deploy/staging, observability, recovery and rollback proof                                                                                     |
