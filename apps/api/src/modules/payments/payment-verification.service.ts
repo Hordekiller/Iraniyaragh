@@ -259,6 +259,16 @@ export class PaymentVerificationService {
               create: { orderId },
               update: {},
             });
+            await tx.fulfillmentTransition.createMany({
+              data: [{
+                fulfillmentId: fulfillment.id,
+                from: null,
+                to: 'PENDING',
+                reason: REASON_ORDER_PAID,
+                requestId,
+              }],
+              skipDuplicates: true,
+            });
 
             await tx.outboxEvent.create({
               data: {

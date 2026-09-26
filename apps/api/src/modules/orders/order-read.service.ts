@@ -117,7 +117,7 @@ type AdminDetailRow = Prisma.OrderGetPayload<{
 }>;
 
 type TransitionRow = {
-  from: OrderStatus | PaymentStatus | FulfillmentStatus;
+  from: OrderStatus | PaymentStatus | FulfillmentStatus | null;
   to: OrderStatus | PaymentStatus | FulfillmentStatus;
   reason: string | null;
   requestId: string | null;

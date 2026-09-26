@@ -187,6 +187,8 @@ describe.sequential('PaymentVerificationService database integration', () => {
 
     const fulfillment = await prisma.fulfillment.findUniqueOrThrow({ where: { orderId: order.id } });
     expect(fulfillment.status).toBe('PENDING');
+    await expect(prisma.fulfillmentTransition.findMany({ where: { fulfillmentId: fulfillment.id } }))
+      .resolves.toMatchObject([{ from: null, to: 'PENDING', reason: 'PAYMENT_VERIFIED', requestId }]);
 
     await expect(
       prisma.outboxEvent.findFirstOrThrow({ where: { aggregateId: payment.id, topic: 'PAYMENT_VERIFIED' } }),
@@ -223,6 +225,7 @@ describe.sequential('PaymentVerificationService database integration', () => {
     const payment = await prisma.payment.findFirstOrThrow({ where: { orderId: order.id } });
     await expect(prisma.paymentTransition.count({ where: { paymentId: payment.id } })).resolves.toBe(1);
     await expect(prisma.orderTransition.count({ where: { orderId: order.id, to: 'PAID' } })).resolves.toBe(1);
+    await expect(prisma.fulfillmentTransition.count({ where: { fulfillment: { orderId: order.id }, from: null } })).resolves.toBe(1);
     await expect(prisma.outboxEvent.count({ where: { aggregateId: payment.id, topic: 'PAYMENT_VERIFIED' } })).resolves.toBe(1);
     await expect(prisma.stockReservation.count({ where: { orderId: order.id, status: 'CONSUMED' } })).resolves.toBe(1);
     await expect(prisma.inventoryMovement.count({ where: { referenceId: order.id, type: 'SALE' } })).resolves.toBe(1);
@@ -243,6 +246,7 @@ describe.sequential('PaymentVerificationService database integration', () => {
 
     const payment = await prisma.payment.findFirstOrThrow({ where: { orderId: order.id } });
     await expect(prisma.paymentTransition.count({ where: { paymentId: payment.id, to: 'PAID' } })).resolves.toBe(1);
+    await expect(prisma.fulfillmentTransition.count({ where: { fulfillment: { orderId: order.id }, from: null } })).resolves.toBe(1);
     await expect(prisma.outboxEvent.count({ where: { aggregateId: payment.id, topic: 'PAYMENT_VERIFIED' } })).resolves.toBe(1);
     await expect(prisma.stockReservation.count({ where: { orderId: order.id, status: 'CONSUMED' } })).resolves.toBe(1);
     await expect(prisma.inventoryMovement.count({ where: { referenceId: order.id, type: 'SALE' } })).resolves.toBe(1);
@@ -558,6 +562,7 @@ describe.sequential('PaymentVerificationService database integration', () => {
       await prisma.paymentTransition.deleteMany({ where: { paymentId: { in: paymentIds } } });
       await prisma.payment.deleteMany({ where: { id: { in: paymentIds } } });
     }
+    await prisma.fulfillmentTransition.deleteMany({ where: { fulfillment: { orderId: { in: orderIds } } } });
     await prisma.fulfillment.deleteMany({ where: { orderId: { in: orderIds } } });
     await prisma.orderTransition.deleteMany({ where: { orderId: { in: orderIds } } });
     await prisma.orderCommandIdempotencyRecord.deleteMany({ where: { orderId: { in: orderIds } } });

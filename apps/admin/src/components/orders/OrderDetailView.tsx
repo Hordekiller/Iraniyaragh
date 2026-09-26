@@ -54,8 +54,9 @@ function actorLabel(actor: AdminOrderDetail['audit'][number]['actor']): string {
 
 function timelineStatusLabel(
   domain: AdminOrderDetail['timeline'][number]['domain'],
-  status: AdminOrderDetail['timeline'][number]['to'],
+  status: AdminOrderDetail['timeline'][number]['from'],
 ): string {
+  if (status === null) return 'ایجاد اولیه';
   if (domain === 'ORDER') return orderStatusLabel(status as AdminOrderDetail['status']);
   if (domain === 'PAYMENT') {
     return paymentStatusLabel(status as NonNullable<AdminOrderDetail['payment']['latestStatus']>);

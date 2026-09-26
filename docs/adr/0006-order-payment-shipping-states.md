@@ -69,6 +69,14 @@ Every transition row records:
 - `requestId` (correlation ID) when available;
 - `createdAt` timestamp.
 
+Fulfillment is initialized at payment settlement with an explicit `NULL → PENDING`
+row in the same transaction. The forward migration for existing Fulfillments
+reconstructs the missing initial row with reason `LEGACY_INITIAL_BACKFILL`,
+unknown actor/request ID and the aggregate's creation timestamp. That marker
+distinguishes inferred legacy history from an event recorded at creation time.
+The database permits only one initial row per Fulfillment and only `PENDING`
+as its initial target.
+
 The single-column status field on each aggregate (`Order.status`,
 `Payment.status`, `Fulfillment.status`) is kept as the denormalized **current
 state**; the transition tables are the authoritative history and satisfy the

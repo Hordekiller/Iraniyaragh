@@ -8246,6 +8246,7 @@
                                   },
                                   "from": {
                                     "type": "string",
+                                    "nullable": true,
                                     "enum": [
                                       "DRAFT",
                                       "PENDING_PAYMENT",
@@ -9366,6 +9367,7 @@
                                   },
                                   "from": {
                                     "type": "string",
+                                    "nullable": true,
                                     "enum": [
                                       "DRAFT",
                                       "PENDING_PAYMENT",

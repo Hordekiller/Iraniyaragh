@@ -46,8 +46,26 @@ INSERT INTO "Payment" (
 INSERT INTO "Fulfillment" ("id", "orderId", "status", "updatedAt")
 VALUES ('st_fulfillment', 'st_order', 'PENDING', CURRENT_TIMESTAMP);
 
+INSERT INTO "FulfillmentTransition" ("id", "fulfillmentId", "from", "to")
+VALUES ('st_ft_initial', 'st_fulfillment', NULL, 'PENDING');
+
 DO $$
 BEGIN
+  -- A second initial row and a NULL -> non-PENDING row are invalid.
+  BEGIN
+    INSERT INTO "FulfillmentTransition" ("id", "fulfillmentId", "from", "to")
+    VALUES ('st_bad_duplicate_initial', 'st_fulfillment', NULL, 'PENDING');
+    RAISE EXCEPTION 'Expected one initial fulfillment event';
+  EXCEPTION WHEN unique_violation THEN
+    NULL;
+  END;
+  BEGIN
+    INSERT INTO "FulfillmentTransition" ("id", "fulfillmentId", "from", "to")
+    VALUES ('st_bad_initial_target', 'st_fulfillment', NULL, 'PROCESSING');
+    RAISE EXCEPTION 'Expected initial fulfillment target CHECK to reject the row';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
   -- Valid committed transitions must apply.
   INSERT INTO "OrderTransition" ("id", "orderId", "from", "to", "actorId", "requestId")
   VALUES ('st_ot_01', 'st_order', 'PENDING_PAYMENT', 'PAID', 'st_actor', 'req-1');
