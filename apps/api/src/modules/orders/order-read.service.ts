@@ -26,6 +26,7 @@ import type {
   OrderListMeta,
   OrderSummary,
   OrderTimelineEntry,
+  ShipmentSnapshot,
 } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import {
@@ -95,6 +96,9 @@ const customerDetailSelect = {
   },
   fulfillment: {
     select: { status: true, createdAt: true, updatedAt: true },
+  },
+  shipment: {
+    select: { id: true, carrier: true, trackingCode: true, dispatchedAt: true },
   },
 } satisfies Prisma.OrderSelect;
 
@@ -436,6 +440,15 @@ function customerOrderDetail(
           status: row.fulfillment.status,
           createdAt: row.fulfillment.createdAt.toISOString(),
           updatedAt: row.fulfillment.updatedAt.toISOString(),
+        }
+      : null,
+    shipment: row.shipment && row.fulfillment
+      ? {
+          id: row.shipment.id,
+          carrier: row.shipment.carrier,
+          trackingCode: row.shipment.trackingCode,
+          dispatchedAt: row.shipment.dispatchedAt.toISOString(),
+          status: row.fulfillment.status as ShipmentSnapshot['status'],
         }
       : null,
     timeline: timeline.customer,

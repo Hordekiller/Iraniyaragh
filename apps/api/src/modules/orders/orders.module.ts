@@ -20,6 +20,8 @@ import { FulfillmentCommandController } from './fulfillment-command.controller';
 import { FulfillmentCommandService } from './fulfillment-command.service';
 import { FulfillmentPickController } from './fulfillment-pick.controller';
 import { FulfillmentPickService } from './fulfillment-pick.service';
+import { ShipmentDispatchController } from './shipment-dispatch.controller';
+import { ShipmentDispatchService } from './shipment-dispatch.service';
 
 @Module({
   imports: [AuditModule, AuthModule, InventoryModule],
@@ -28,6 +30,7 @@ import { FulfillmentPickService } from './fulfillment-pick.service';
     OrderCommandController,
     FulfillmentCommandController,
     FulfillmentPickController,
+    ShipmentDispatchController,
     CartController,
     CartMergeController,
     GuestCartController,
@@ -42,6 +45,7 @@ import { FulfillmentPickService } from './fulfillment-pick.service';
     OrderCommandService,
     FulfillmentCommandService,
     FulfillmentPickService,
+    ShipmentDispatchService,
     ConfiguredShippingQuoteAdapter,
     {
       provide: SHIPPING_QUOTE_PORT,

@@ -127,6 +127,7 @@ export class CommerceFixtureClient implements CommerceApi {
       items,
       payments: [],
       fulfillment: null,
+      shipment: null,
       timeline: [
         {
           domain: 'ORDER',

@@ -7807,6 +7807,7 @@
                             "items",
                             "payments",
                             "fulfillment",
+                            "shipment",
                             "timeline",
                             "truncation",
                             "customer",
@@ -8198,6 +8199,41 @@
                                   "format": "date-time"
                                 }
                               }
+                            },
+                            "shipment": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "id",
+                                "carrier",
+                                "trackingCode",
+                                "status",
+                                "dispatchedAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "carrier": {
+                                  "type": "string"
+                                },
+                                "trackingCode": {
+                                  "type": "string"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "SHIPPED",
+                                    "DELIVERED",
+                                    "RETURNED"
+                                  ]
+                                },
+                                "dispatchedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "nullable": true
                             },
                             "customer": {
                               "type": "object",
@@ -8954,6 +8990,7 @@
                             "items",
                             "payments",
                             "fulfillment",
+                            "shipment",
                             "timeline",
                             "truncation"
                           ],
@@ -9343,6 +9380,41 @@
                                   "format": "date-time"
                                 }
                               }
+                            },
+                            "shipment": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "id",
+                                "carrier",
+                                "trackingCode",
+                                "status",
+                                "dispatchedAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "carrier": {
+                                  "type": "string"
+                                },
+                                "trackingCode": {
+                                  "type": "string"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "SHIPPED",
+                                    "DELIVERED",
+                                    "RETURNED"
+                                  ]
+                                },
+                                "dispatchedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "nullable": true
                             },
                             "timeline": {
                               "type": "array",
@@ -11060,6 +11132,276 @@
         "summary": "Record exact-quantity physical pick proof for one order item",
         "tags": [
           "fulfillment"
+        ]
+      }
+    },
+    "/orders/admin/{id}/shipment/dispatch": {
+      "post": {
+        "operationId": "ShipmentDispatchController_dispatch",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "carrier",
+                  "trackingCode"
+                ],
+                "properties": {
+                  "carrier": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9 _.-]*$"
+                  },
+                  "trackingCode": {
+                    "type": "string",
+                    "minLength": 4,
+                    "maxLength": 120,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "shipment"
+                      ],
+                      "properties": {
+                        "shipment": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "carrier",
+                            "trackingCode",
+                            "status",
+                            "dispatchedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "carrier": {
+                              "type": "string"
+                            },
+                            "trackingCode": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "SHIPPED",
+                                "DELIVERED",
+                                "RETURNED"
+                              ]
+                            },
+                            "dispatchedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Dispatch one complete, picked package with manual carrier tracking",
+        "tags": [
+          "shipments"
         ]
       }
     },

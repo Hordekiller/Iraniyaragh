@@ -23,6 +23,8 @@ import { FulfillmentCommandController } from "./fulfillment-command.controller";
 import { FulfillmentCommandService } from "./fulfillment-command.service";
 import { FulfillmentPickController } from './fulfillment-pick.controller';
 import { FulfillmentPickService } from './fulfillment-pick.service';
+import { ShipmentDispatchController } from './shipment-dispatch.controller';
+import { ShipmentDispatchService } from './shipment-dispatch.service';
 
 const base = {
   sessionId: "fulfillment-session",
@@ -49,6 +51,12 @@ const principals: Record<string, AuthPrincipalContext> = {
     authenticationLevel: "STAFF_MFA",
     permissions: new Set(["orders.read"]),
   },
+  shipping: {
+    ...base,
+    userId: 'shipper-1',
+    authenticationLevel: 'STAFF_MFA',
+    permissions: new Set(['shipments.manage']),
+  },
 };
 const principalService = {
   resolveBearerToken: vi.fn(async (authorization?: string) => {
@@ -73,13 +81,15 @@ const picks = {
   list: vi.fn(async () => ({ data: { fulfillment: { id: 'fulfillment-1', status: 'PROCESSING' }, items: [] } })),
   record: vi.fn(async (_orderId: string, itemId: string, quantity: number) => ({ data: { pick: { orderItemId: itemId, quantity } } })),
 };
+const shipments = { dispatch: vi.fn(async () => ({ data: { shipment: { id: 'shipment-1', status: 'SHIPPED' } } })) };
 
 @Module({
   imports: [ApiFoundationModule],
-  controllers: [FulfillmentCommandController, FulfillmentPickController],
+  controllers: [FulfillmentCommandController, FulfillmentPickController, ShipmentDispatchController],
   providers: [
     { provide: FulfillmentCommandService, useValue: commands },
     { provide: FulfillmentPickService, useValue: picks },
+    { provide: ShipmentDispatchService, useValue: shipments },
     { provide: AuthPrincipalService, useValue: principalService },
     {
       provide: APP_GUARD,
@@ -140,6 +150,19 @@ describe("Fulfillment command HTTP authorization", () => {
     expect((await request(pickPath, 'staff', 'pick-key', 'POST', { quantity: 2, actorId: 'forged' })).status).toBe(400);
     expect((await request(pickPath, 'staff', 'pick-key', 'POST', { quantity: 2 })).status).toBe(200);
     expect(picks.record).toHaveBeenCalledWith('order-1', 'item-1', 2, expect.objectContaining({ actorId: 'staff-1', idempotencyKey: 'pick-key' }));
+  });
+
+  it('requires shipment permission, MFA, idempotency and a valid carrier/tracking payload', async () => {
+    const path = '/api/v1/orders/admin/order-1/shipment/dispatch';
+    const body = { carrier: 'post', trackingCode: 'PKG-1234' };
+    expect((await request(path, undefined, 'key-1', 'POST', body)).status).toBe(401);
+    expect((await request(path, 'customer', 'key-1', 'POST', body)).status).toBe(403);
+    expect((await request(path, 'staff', 'key-1', 'POST', body)).status).toBe(403);
+    expect((await request(path, 'shipping', '', 'POST', body)).status).toBe(400);
+    expect((await request(path, 'shipping', 'key-1', 'POST', { ...body, trackingCode: 'bad / code' })).status).toBe(400);
+    expect((await request(path, 'shipping', 'key-1', 'POST', { ...body, actorId: 'forged' })).status).toBe(400);
+    expect((await request(path, 'shipping', 'key-1', 'POST', body)).status).toBe(200);
+    expect(shipments.dispatch).toHaveBeenCalledWith('order-1', body, expect.objectContaining({ actorId: 'shipper-1', idempotencyKey: 'key-1' }));
   });
 
   function request(

@@ -105,6 +105,16 @@ export type OrderFulfillmentSnapshot = {
   updatedAt: string;
 };
 
+export type ShipmentSnapshot = {
+  id: string;
+  carrier: string;
+  trackingCode: string;
+  status: Extract<FulfillmentStatus, 'SHIPPED' | 'DELIVERED' | 'RETURNED'>;
+  dispatchedAt: string;
+};
+
+export type ShipmentDispatchResponse = ApiSuccess<{ shipment: ShipmentSnapshot }>;
+
 export type OrderTimelineEntry = {
   domain: 'ORDER' | 'PAYMENT' | 'FULFILLMENT';
   from: OrderStatus | PaymentStatus | FulfillmentStatus | null;
@@ -138,6 +148,7 @@ export type OrderDetail = OrderSummary & {
   items: OrderLineSnapshot[];
   payments: OrderPaymentSnapshot[];
   fulfillment: OrderFulfillmentSnapshot | null;
+  shipment: ShipmentSnapshot | null;
   timeline: OrderTimelineEntry[];
   truncation: {
     items: boolean;

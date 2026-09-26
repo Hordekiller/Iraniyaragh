@@ -15,6 +15,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from '@mui/material';
 import { ArrowRight, Lock, PackageSearch } from 'lucide-react';
@@ -72,10 +73,13 @@ const DOMAIN_LABELS = {
   FULFILLMENT: 'ارسال',
 } as const;
 
+const SHIPMENTS_MANAGE = 'shipments.manage';
+
 export function OrderDetailView({ orderId }: { orderId: string }) {
   const { user } = useAuth();
   const canRead = canReadOrders(user);
   const canManage = hasOrderPermission(user, ORDERS_MANAGE);
+  const canDispatch = hasOrderPermission(user, SHIPMENTS_MANAGE);
 
   const [order, setOrder] = useState<AdminOrderDetail | null>(null);
   const [picks, setPicks] = useState<FulfillmentPickListResponse['data'] | null>(null);
@@ -83,6 +87,8 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
+  const [carrier, setCarrier] = useState('');
+  const [trackingCode, setTrackingCode] = useState('');
   const actionKeys = useRef<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +154,26 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
       delete actionKeys.current[actionId];
     } catch (caught) {
       setActionError(caught instanceof Error ? caught.message : 'ثبت عملیات ناموفق بود؛ همان عملیات را دوباره امتحان کنید.');
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function dispatch() {
+    if (!canDispatch || actionBusy || !carrier.trim() || !trackingCode.trim()) return;
+    const actionId = `${orderId}:dispatch`;
+    const key = actionKeys.current[actionId] ?? crypto.randomUUID();
+    actionKeys.current[actionId] = key;
+    setActionBusy(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await ordersApi.dispatchShipment(orderId, carrier.trim(), trackingCode.trim(), key);
+      setOrder(await ordersApi.getOrder(orderId));
+      setActionSuccess('ارسال و کد رهگیری ثبت شد.');
+      delete actionKeys.current[actionId];
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : 'ثبت ارسال ناموفق بود؛ همان عملیات را دوباره امتحان کنید.');
     } finally {
       setActionBusy(false);
     }
@@ -267,6 +293,24 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
               ) : null}
             </CardContent>
           </Card>
+        ) : null}
+        {order.fulfillment?.status === 'READY_TO_SHIP' || order.shipment ? (
+          <Card><CardContent>
+            <SectionTitle>مرسوله و رهگیری</SectionTitle>
+            {order.shipment ? (
+              <Stack spacing={1}>
+                <Typography variant="body2">حامل: {order.shipment.carrier}</Typography>
+                <Typography variant="body2">کد رهگیری: <span dir="ltr">{order.shipment.trackingCode}</span></Typography>
+                <Typography variant="body2">ثبت ارسال: {formatDateTime(order.shipment.dispatchedAt)}</Typography>
+              </Stack>
+            ) : canDispatch ? (
+              <Stack spacing={2} sx={{ maxWidth: 420 }}>
+                <TextField label="حامل" value={carrier} onChange={(event) => { delete actionKeys.current[`${orderId}:dispatch`]; setCarrier(event.target.value); }} inputProps={{ maxLength: 80 }} />
+                <TextField label="کد رهگیری" value={trackingCode} onChange={(event) => { delete actionKeys.current[`${orderId}:dispatch`]; setTrackingCode(event.target.value); }} inputProps={{ maxLength: 120, dir: 'ltr' }} />
+                <Button variant="contained" disabled={actionBusy || carrier.trim().length < 2 || trackingCode.trim().length < 4} onClick={() => void dispatch()}>ثبت ارسال</Button>
+              </Stack>
+            ) : <Alert severity="info">برای ثبت ارسال به مجوز مدیریت مرسوله نیاز دارید.</Alert>}
+          </CardContent></Card>
         ) : null}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3 }}>
           <Card>
