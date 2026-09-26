@@ -32,9 +32,8 @@ worktrees and uncommitted files.
    item-level pick proof and requires complete proof before ready-to-ship;
    shipment/tracking and external notification delivery remain. Exit with a
    real, fixture-free purchase-to-tracking test.
-   Active slice #310 implements manual one-package dispatch and customer
-   tracking; it is not complete or merged until CI/review pass. Delivery
-   confirmation and external notifications remain separate.
+   #310 implements manual one-package dispatch and customer tracking.
+   Delivery confirmation and external notifications remain separate.
 4. **Admin Inventory — #261:** connect Warehouse, Location, Balance, Movement,
    Adjustment, Reservation and Transfer screens to the existing permissioned
    backend. Verify one real operator flow and ledger/audit consistency.

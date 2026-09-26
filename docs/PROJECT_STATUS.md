@@ -15,10 +15,10 @@ settled orders with consumed reservations. #308 adds exact-quantity, actor-track
 item-level pick proof, a complete-pick guard on `READY_TO_SHIP`, and the staff
 pick workflow. Shipment/tracking, notification delivery and production acceptance
 remain open.
-Issue #310 has a local `feat/shipment-tracking` implementation in progress:
-manual one-package dispatch with carrier/tracking evidence, exact order-line
-allocation, owner-scoped customer tracking and Admin entry. This is not merged
-or staging-accepted; delivery confirmation and external notifications remain open.
+The #310 slice adds manual one-package dispatch with carrier/tracking evidence,
+exact order-line allocation, owner-scoped customer tracking and Admin entry.
+This is not staging-accepted; delivery confirmation and external notifications
+remain open. See `SHIPMENT_DISPATCH.md` for its exact boundary.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304's ADR-0006/schema discrepancy is addressed by a forward
