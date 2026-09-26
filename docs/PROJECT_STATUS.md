@@ -6,17 +6,19 @@ This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
 scope. A feature is not called complete merely because code exists on a branch.
 
-Latest checkpoint: #294–#303 are merged on `main`, including Zarinpal settlement,
+Latest checkpoint: #294–#303 and #305 are merged on `main`, including Zarinpal settlement,
 Web payment/result, staff evidence and reconciliation, recoverable outbox/effect
 projection, provider/authority race fixes, and manual refund recording. Pending
-outbox effects are not delivered notifications. Fulfillment operator commands are
-the active unmerged slice; shipment/tracking and production acceptance remain open.
+outbox effects are not delivered notifications. #305 adds staff-only,
+idempotent `PENDING → PROCESSING → READY_TO_SHIP` Fulfillment commands for paid,
+settled orders with consumed reservations. Item-level pick proof, shipment/tracking,
+notification delivery and production acceptance remain open.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304 tracks an existing ADR-0006/schema discrepancy: the ADR describes an
 initial Fulfillment transition with `from = NULL`, but settlement creates the
-`PENDING` aggregate without a transition and the column is non-nullable. This
-slice does not claim to resolve initial-history parity.
+`PENDING` aggregate without a transition and the column is non-nullable. #305
+does not claim to resolve initial-history parity.
 
 ## Executive summary
 
