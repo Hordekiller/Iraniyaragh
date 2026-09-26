@@ -1266,7 +1266,7 @@ model Fulfillment {
 model FulfillmentTransition {
   id            String            @id @default(cuid())
   fulfillmentId String
-  from          FulfillmentStatus
+  from          FulfillmentStatus?
   to            FulfillmentStatus
   reason        String?           @db.VarChar(255)
   actorId       String?

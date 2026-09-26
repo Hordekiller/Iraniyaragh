@@ -218,6 +218,7 @@ const transitionProperties: Record<string, SchemaObject> = {
   domain: { type: "string", enum: ["ORDER", "PAYMENT", "FULFILLMENT"] },
   from: {
     type: "string",
+    nullable: true,
     enum: [
       ...new Set([
         ...ORDER_STATUS_VALUES,

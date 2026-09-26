@@ -43,6 +43,7 @@ function setup(overrides: {
     orderTransition: { create: vi.fn().mockResolvedValue({ id: 'order-transition-1' }) },
     order: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     fulfillment: { upsert: vi.fn().mockResolvedValue({ id: 'fulfillment-1', orderId: 'order-1' }) },
+    fulfillmentTransition: { createMany: vi.fn().mockResolvedValue({ count: 1 }) },
     outboxEvent: {
       create: vi.fn().mockResolvedValue({ id: 'outbox-1' }),
       findUnique: vi.fn().mockResolvedValue(null),
@@ -147,6 +148,16 @@ describe('PaymentVerificationService', () => {
       create: { orderId: 'order-1' },
       update: {},
     });
+    expect(ctx.tx.fulfillmentTransition.createMany).toHaveBeenCalledWith({
+      data: [{
+        fulfillmentId: 'fulfillment-1',
+        from: null,
+        to: 'PENDING',
+        reason: 'PAYMENT_VERIFIED',
+        requestId: 'req-1',
+      }],
+      skipDuplicates: true,
+    });
     expect(ctx.tx.outboxEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -186,6 +197,7 @@ describe('PaymentVerificationService', () => {
     });
     expect(ctx.provider.verify).not.toHaveBeenCalled();
     expect(ctx.tx.paymentTransition.create).not.toHaveBeenCalled();
+    expect(ctx.tx.fulfillmentTransition.createMany).not.toHaveBeenCalled();
     expect(ctx.tx.outboxEvent.create).not.toHaveBeenCalled();
     expect(result).toEqual({
       data: {

@@ -107,7 +107,7 @@ export type OrderFulfillmentSnapshot = {
 
 export type OrderTimelineEntry = {
   domain: 'ORDER' | 'PAYMENT' | 'FULFILLMENT';
-  from: OrderStatus | PaymentStatus | FulfillmentStatus;
+  from: OrderStatus | PaymentStatus | FulfillmentStatus | null;
   to: OrderStatus | PaymentStatus | FulfillmentStatus;
   createdAt: string;
 };

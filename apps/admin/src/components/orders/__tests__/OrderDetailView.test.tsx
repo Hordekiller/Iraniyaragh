@@ -114,6 +114,24 @@ describe('OrderDetailView', () => {
     expect(screen.getByRole('table', { name: 'رویدادهای ممیزی سفارش' })).toBeInTheDocument();
   });
 
+  it('labels an initial fulfillment event without a prior status', async () => {
+    mocks.getOrder.mockResolvedValue({
+      ...detail,
+      timeline: [{
+        domain: 'FULFILLMENT',
+        from: null,
+        to: 'PENDING',
+        reason: 'PAYMENT_VERIFIED',
+        actor: null,
+        requestId: 'settlement-1',
+        createdAt: '2026-09-18T10:10:00Z',
+      }],
+    });
+    render(<OrderDetailView orderId="order-1042" />);
+
+    expect(await screen.findByText('ایجاد اولیه')).toBeInTheDocument();
+  });
+
   it('passes an abort signal to the API', async () => {
     render(<OrderDetailView orderId="order-1042" />);
 

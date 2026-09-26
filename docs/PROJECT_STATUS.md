@@ -15,10 +15,11 @@ settled orders with consumed reservations. Item-level pick proof, shipment/track
 notification delivery and production acceptance remain open.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
-Issue #304 tracks an existing ADR-0006/schema discrepancy: the ADR describes an
-initial Fulfillment transition with `from = NULL`, but settlement creates the
-`PENDING` aggregate without a transition and the column is non-nullable. #305
-does not claim to resolve initial-history parity.
+Issue #304's ADR-0006/schema discrepancy is addressed by a forward
+migration that permits exactly one `NULL → PENDING` initial Fulfillment transition,
+backfills legacy aggregates with an explicit inferred-history marker, and
+payment settlement writes the new row atomically. #305 remains separately
+merged and does not itself resolve initial-history parity.
 
 ## Executive summary
 
