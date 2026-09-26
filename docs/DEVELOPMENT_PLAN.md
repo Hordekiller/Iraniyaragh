@@ -10,6 +10,8 @@ Fulfillment operator-transition slice (#305) is merged; #308 supplies item-level
 pick proof and a guarded staff workflow. Shipment, tracking and actual notification delivery remain on the single-developer
 critical path. Historical Sprint 7/8 notes below are
 not current PR status.
+#310 is the manual full-order dispatch and owner-scoped tracking slice.
+Delivery confirmation and notification delivery are separate subsequent work.
 
 This document schedules the MVP sequence. `COMMERCE_EXPANSION_PLAN.md` is the
 authoritative complete-scope plan for V1, operational maturity and governed growth;

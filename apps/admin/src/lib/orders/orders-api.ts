@@ -70,4 +70,11 @@ export async function recordPick(id: string, itemId: string, quantity: number, i
   );
 }
 
-export const ordersApi: AdminOrdersApi = { listOrders, getOrder, getPicks, startFulfillment, markReady, recordPick };
+export async function dispatchShipment(id: string, carrier: string, trackingCode: string, idempotencyKey: string) {
+  await apiFetch(`/orders/admin/${encodeURIComponent(id)}/shipment/dispatch`, {
+    method: 'POST', body: { carrier, trackingCode }, token: getAccessToken(),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+
+export const ordersApi: AdminOrdersApi = { listOrders, getOrder, getPicks, startFulfillment, markReady, recordPick, dispatchShipment };

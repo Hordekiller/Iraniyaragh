@@ -206,6 +206,13 @@ export function OrderDetailPage() {
                 : 'هنوز آغاز نشده'}
             </strong>
           </p>
+          {order.shipment && (
+            <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+              <p>حامل: <strong>{order.shipment.carrier}</strong></p>
+              <p className="mt-1">کد رهگیری: <strong dir="ltr">{order.shipment.trackingCode}</strong></p>
+              <p className="mt-1 text-xs">ثبت ارسال: {formatTimestamp(order.shipment.dispatchedAt)}</p>
+            </div>
+          )}
         </section>
       </div>
 

@@ -102,6 +102,7 @@ export const ORDER: OrderDetail = {
   ],
   payments: [],
   fulfillment: null,
+  shipment: null,
   timeline: [
     {
       domain: 'ORDER',

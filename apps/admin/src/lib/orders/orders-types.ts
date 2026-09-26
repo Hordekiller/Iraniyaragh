@@ -42,4 +42,5 @@ export interface AdminOrdersApi {
   startFulfillment(id: string, idempotencyKey: string): Promise<void>;
   markReady(id: string, idempotencyKey: string): Promise<void>;
   recordPick(id: string, itemId: string, quantity: number, idempotencyKey: string): Promise<void>;
+  dispatchShipment(id: string, carrier: string, trackingCode: string, idempotencyKey: string): Promise<void>;
 }

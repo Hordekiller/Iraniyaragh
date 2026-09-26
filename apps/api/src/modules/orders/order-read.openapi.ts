@@ -1,4 +1,5 @@
 import type { SchemaObject } from "@nestjs/swagger/dist/interfaces/open-api-spec.interface";
+import { shipmentSnapshot } from './shipment-dispatch.openapi';
 import { failureEnvelope } from "./order-openapi-schemas";
 import {
   FULFILLMENT_STATUS_VALUES,
@@ -281,6 +282,7 @@ const commonDetailProperties: Record<string, SchemaObject> = {
   items: { type: "array", maxItems: 100, items: line },
   payments: { type: "array", maxItems: 100, items: payment },
   fulfillment,
+  shipment: { ...shipmentSnapshot, nullable: true },
 };
 
 const commonDetailRequired = [
@@ -292,6 +294,7 @@ const commonDetailRequired = [
   "items",
   "payments",
   "fulfillment",
+  "shipment",
   "timeline",
   "truncation",
 ];

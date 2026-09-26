@@ -225,6 +225,7 @@ model User {
   refunds                   Refund[]                   @relation("RefundActor")
   fulfillmentTransitions    FulfillmentTransition[]    @relation("FulfillmentActor")
   fulfillmentPicks          FulfillmentPick[]          @relation("FulfillmentPickActor")
+  dispatchedShipments       Shipment[]                 @relation("ShipmentDispatcher")
   roleAssignments           UserRole[]                 @relation("UserRoleSubject")
   roleAssignmentsGranted    UserRole[]                 @relation("UserRoleAssigner")
   roleAssignmentsRevoked    UserRole[]                 @relation("UserRoleRevoker")
@@ -1009,6 +1010,7 @@ model Order {
   payments                   Payment[]
   reservations               StockReservation[]
   fulfillment                Fulfillment?
+  shipment                   Shipment?
   transitions                OrderTransition[]
   shippingQuote              ShippingQuote?
   checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
@@ -1036,6 +1038,7 @@ model OrderItem {
   order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variant         ProductVariant   @relation(fields: [variantId], references: [id])
   fulfillmentPick FulfillmentPick?
+  shipmentLine    ShipmentLine?
 
   @@unique([orderId, ordinal])
   @@index([orderId])
@@ -1262,6 +1265,7 @@ model Fulfillment {
   order       Order                   @relation(fields: [orderId], references: [id])
   transitions FulfillmentTransition[]
   picks       FulfillmentPick[]
+  shipment    Shipment?
 
   @@index([status, updatedAt])
 }
@@ -1302,6 +1306,40 @@ model FulfillmentTransition {
   @@index([fulfillmentId, createdAt])
   @@index([actorId, createdAt])
   @@index([to, createdAt])
+}
+
+/// MVP policy: exactly one full-order package. Carrier evidence is immutable after dispatch.
+model Shipment {
+  id              String   @id @default(cuid())
+  orderId         String   @unique
+  fulfillmentId   String   @unique
+  carrier         String   @db.VarChar(80)
+  trackingCode    String   @db.VarChar(120)
+  addressSnapshot Json
+  actorId         String?
+  requestId       String   @db.VarChar(100)
+  dispatchedAt    DateTime @default(now())
+
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  fulfillment Fulfillment   @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
+  actor       User?         @relation("ShipmentDispatcher", fields: [actorId], references: [id], onDelete: SetNull)
+  lines       ShipmentLine[]
+
+  @@unique([carrier, trackingCode])
+  @@unique([orderId, requestId])
+  @@index([actorId, dispatchedAt])
+}
+
+model ShipmentLine {
+  id          String @id @default(cuid())
+  shipmentId  String
+  orderItemId String @unique
+  quantity    Int
+
+  shipment  Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+
+  @@index([shipmentId])
 }
 
 model AuditLog {

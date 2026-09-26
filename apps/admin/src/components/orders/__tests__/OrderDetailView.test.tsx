@@ -10,11 +10,13 @@ const mocks = vi.hoisted(() => ({
   startFulfillment: vi.fn(),
   markReady: vi.fn(),
   recordPick: vi.fn(),
+  dispatchShipment: vi.fn(),
 }));
 
 vi.mock('@/lib/orders/orders-api', () => ({
   ordersApi: { listOrders: vi.fn(), getOrder: mocks.getOrder, getPicks: mocks.getPicks,
-    startFulfillment: mocks.startFulfillment, markReady: mocks.markReady, recordPick: mocks.recordPick },
+    startFulfillment: mocks.startFulfillment, markReady: mocks.markReady, recordPick: mocks.recordPick,
+    dispatchShipment: mocks.dispatchShipment },
 }));
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
@@ -107,6 +109,7 @@ describe('OrderDetailView', () => {
     mocks.recordPick.mockResolvedValue(undefined);
     mocks.markReady.mockResolvedValue(undefined);
     mocks.startFulfillment.mockResolvedValue(undefined);
+    mocks.dispatchShipment.mockResolvedValue(undefined);
   });
 
   afterEach(() => vi.clearAllMocks());
@@ -169,6 +172,21 @@ describe('OrderDetailView', () => {
     fireEvent.click(ready);
     expect(await screen.findByText('سفارش آمادهٔ ارسال شد.')).toBeInTheDocument();
     expect(mocks.markReady).toHaveBeenCalledWith('order-1042', expect.any(String));
+  });
+
+  it('dispatches a ready order only with shipment permission and shows tracking', async () => {
+    mocks.user = { permissions: [ORDERS_READ, 'shipments.manage'] };
+    mocks.getOrder.mockResolvedValueOnce({ ...detail, fulfillment: { ...detail.fulfillment, status: 'READY_TO_SHIP' }, shipment: null })
+      .mockResolvedValueOnce({ ...detail, fulfillment: { ...detail.fulfillment, status: 'SHIPPED' }, shipment: {
+        id: 'shipment-1', carrier: 'post', trackingCode: 'PKG-1234', status: 'SHIPPED', dispatchedAt: '2026-09-18T11:00:00Z',
+      } });
+    render(<OrderDetailView orderId="order-1042" />);
+    fireEvent.change(await screen.findByRole('textbox', { name: 'حامل' }), { target: { value: 'post' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'کد رهگیری' }), { target: { value: 'PKG-1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت ارسال' }));
+    expect(await screen.findByText('ارسال و کد رهگیری ثبت شد.')).toBeInTheDocument();
+    expect(mocks.dispatchShipment).toHaveBeenCalledWith('order-1042', 'post', 'PKG-1234', expect.any(String));
+    expect(screen.getByText('PKG-1234')).toBeInTheDocument();
   });
 
   it('passes an abort signal to the API', async () => {
