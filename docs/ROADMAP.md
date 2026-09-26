@@ -44,10 +44,11 @@ store. Native mobile and advanced growth features are intentionally later.
   with durable pending effects. Manual refund recording (ADR-0019) merged in
   #303: a fresh-MFA, permissioned, exactly-once staff
   command that records an already-executed gateway refund as append-only
-  evidence, with database-enforced money invariants. Still open: gateway-side
-  refund verification, compensating corrections, external notification delivery,
-  fulfillment and a production acceptance result. None of this is SMS delivery
-  or a release claim.
+  evidence, with database-enforced money invariants. Gateway-side refund
+  verification is unavailable through Zarinpal v4. Compensating corrections,
+  external notification delivery and production acceptance remain. #305 merged
+  the first guarded Fulfillment operator transitions, not item-level pick proof,
+  shipment or tracking. None of this is SMS delivery or a release claim.
 - `0.6`–`1.0` are not release-ready. No live sale or launch claim is justified by
   green unit/CI alone.
 
@@ -66,7 +67,7 @@ before the previous PR merges. Never rewrite a shared migration; add a forward o
 | --- | --- | --- |
 | 1 | #300 Outbox worker/effect projection — merged | Final-SHA CI and migration drift green; failed jobs visible and replay tested; pending effects explicitly not counted as delivered notifications. |
 | 2 | #303 Payment refund recording — merged | Human-executed refund evidence, staff permission + fresh MFA, audit, exactly-once idempotency and DB-enforced totals. Zarinpal v4 has no refund API; gateway-side automated verification is unavailable, and compensating corrections require separate policy. |
-| 3 | Paid Order → Fulfillment — active | One paid Order creates exactly one fulfillment; operator transitions enforce state, actor, consumed inventory and audit. Shipment/tracking and item-level pick evidence remain separate slices. |
+| 3 | Paid Order → Fulfillment — #305 merged; remaining work active | One paid Order creates exactly one fulfillment; #305 adds guarded operator `start`/`ready` transitions with actor, consumed-inventory check, idempotency and audit. Item-level pick proof is not yet implemented; Shipment/tracking remain separate slices. |
 | 4 | Shipment → Tracking → essential notifications | Real shipment/tracking persistence and customer/staff views; pending outbox effects dispatched through a provider with explicit accepted/unknown/failed states and safe replay. Complete one fixture-free staging purchase through tracking. |
 | 5 | Admin Inventory #261 | Warehouse, Location, Balance, Movement, Adjustment, Reservation and Transfer connected to protected APIs; role/action states, conflicts and ledger invariants tested. |
 | 6 | SMS.ir acceptance #114 | Real account/key/sender/template in production-like staging; OTP delivery, timeout/error/unknown-result, rate limits, outage and rollback evidence. Do not commit credentials. |

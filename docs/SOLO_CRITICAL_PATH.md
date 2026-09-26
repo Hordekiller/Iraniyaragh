@@ -26,9 +26,11 @@ worktrees and uncommitted files.
    Zarinpal v4 has no refund API: #303 records a refund already executed by a
    human in the merchant panel; it does not transfer money. External notification
    delivery and production gateway acceptance remain open.
-3. **Fulfillment, shipping, notifications:** move `PAID` Orders through guarded
-   picking/packing, shipment and tracking states; deliver deduplicated, observable
-   notifications. Exit with a real, fixture-free purchase-to-tracking test.
+3. **Fulfillment, shipping, notifications:** #305 merged the guarded operator
+   `start`/`ready` transition slice for paid orders with consumed inventory.
+   Item-level pick proof, shipment/tracking and external notification delivery
+   remain; exit with a real, fixture-free purchase-to-tracking test. #304 tracks
+   the initial Fulfillment transition/ADR discrepancy.
 4. **Admin Inventory — #261:** connect Warehouse, Location, Balance, Movement,
    Adjustment, Reservation and Transfer screens to the existing permissioned
    backend. Verify one real operator flow and ledger/audit consistency.
