@@ -1,6 +1,6 @@
 # ADR-0019: Manual Refund Recording and Reconciliation
 
-- Status: Accepted (Epic-7 slice, PR pending)
+- Status: Accepted (merged in PR #303)
 - Date: 2026-09-25
 - Scope: V1 refund capability (`G6-03`)
 - Owners: Platform/API (contract + boundary) and Admin (staff UX)

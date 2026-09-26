@@ -1,10 +1,22 @@
 # Project Status
 
-Last reviewed: 2026-09-25
+Last reviewed: 2026-09-26
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
 scope. A feature is not called complete merely because code exists on a branch.
+
+Latest checkpoint: #294–#303 are merged on `main`, including Zarinpal settlement,
+Web payment/result, staff evidence and reconciliation, recoverable outbox/effect
+projection, provider/authority race fixes, and manual refund recording. Pending
+outbox effects are not delivered notifications. Fulfillment operator commands are
+the active unmerged slice; shipment/tracking and production acceptance remain open.
+Older historical checkpoints below retain their original review context and must
+not be read as overriding this update.
+Issue #304 tracks an existing ADR-0006/schema discrepancy: the ADR describes an
+initial Fulfillment transition with `from = NULL`, but settlement creates the
+`PENDING` aggregate without a transition and the column is non-nullable. This
+slice does not claim to resolve initial-history parity.
 
 ## Executive summary
 
@@ -47,7 +59,7 @@ Current delivery confidence:
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
-| Order commands/payment         | Refund recording in review | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence and manual reconciliation merged through #298; manual refund recording (ADR-0019) is in review, and gateway-side refund verification plus external notification delivery stay open |
+| Order commands/payment         | Refund evidence merged; production acceptance open | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence, reconciliation, outbox projection and manual refund evidence merged through #303. Zarinpal has no refund API; external notification delivery remains open. |
 | Commerce outbox                | Relay and effect projection implemented | #299 adds recoverable relay primitives; #300 activates a topic-aware worker and pending customer/operations effects, but no external notification or shipment delivery. Every settled payment topic closes its open reconciliation effect, and a published-but-unconsumed event can be recovered by the audited operator replay. |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
@@ -63,7 +75,7 @@ G6–G10 have not reached integrated completion.
 - Payment baseline through #299 includes the foundation, Web initiation/result,
   staff evidence, guarded manual reconciliation and recoverable outbox relay
   primitives. #300 adds topic-aware effect projection and worker activation.
-  Manual refund recording is implemented under ADR-0019 and under review;
+  Manual refund recording is merged under ADR-0019/#303;
   customer notification delivery, compensating refund corrections and shipment
   operations remain open.
 - The baseline also contains merged #109, #103, #112,
@@ -709,7 +721,7 @@ malware scanner also remain production-acceptance work.
 - Outbox relay and effect projection merged afterwards in #299/#300. Refunds,
   notification delivery and production acceptance remain separate work.
 
-### Manual refund recording (in review — ADR-0019)
+### Manual refund recording (merged — PR #303, ADR-0019)
 
 - A fresh-MFA, `payments.refund` staff command records a refund a human already
   executed in the Zarinpal merchant panel. It writes an append-only `Refund`
@@ -772,7 +784,7 @@ security/query review, OpenAPI drift confirmation and merge.
 | Cart          | Authenticated runtime (#239/#241–#244/#251) plus Guest token/TTL, abuse controls, cleanup, explicit OTP-login merge (#270/#269) and Web handoff (#273)                 | Production acceptance and long-running cleanup operations                                                                                       |
 | Checkout      | Merged preview/create API and live Web binding with configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence    | Shipping operations, compensation/cleanup, verified Payment and production acceptance                                                          |
 | Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation, #247/#238 customer/staff read API, live read-only Admin client (#257) and idempotent `POST` cancel + expiry-worker compensation with reservation release | Verified Payment, shipment operations and lifecycle-operation evidence in production |
-| Payments      | Zarinpal adapter, server-side settlement (#294), Web initiation/result (#295/#296), staff evidence (#297) and guarded reconciliation (#298) merged | Refunds, outbox dispatch and production acceptance remain |
+| Payments      | Zarinpal settlement, Web initiation/result, staff evidence/reconciliation, outbox effect projection and manual refund recording merged (#294–#303) | External notification delivery, gateway production acceptance and compensating refund-correction policy remain |
 | Web           | Accessible routed storefront with live Catalog/media/availability, authenticated Cart/Checkout/Order lifecycle (#268) and Guest Cart handoff (#273)                    | Verified Payment API/result lifecycle and production acceptance                                                                                |
 | Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229), Settings and live read-only Orders (#257)                     | Inventory UX, order commands and Admin-driven publish acceptance                                                                               |
 | Operations    | CI and local Compose                                                                                                                                                | Deploy/staging, observability, recovery and rollback proof                                                                                     |
@@ -809,8 +821,8 @@ security/query review, OpenAPI drift confirmation and merge.
   and green on the open `feat/epic5-order-lifecycle` branch, pending the Epic-5
   command PR. Payment-linked lifecycle operations remain open.
 - Payment gateway, verified callback, refunds and reconciliation.
-- Shipment/tracking, outbox dispatcher/workers and notifications. #246/#237
-  persists the first transactional `ORDER_CREATED` event but does not publish it.
+- Shipment/tracking and external notifications. #299/#300 dispatch and project
+  commerce events into durable pending effects; they do not deliver a message.
 - Purchasing, stocktake, returns and operational reporting.
 - Production deploy/rollback, monitoring/alerts, backup/restore, load budgets, UAT
   and launch data import.

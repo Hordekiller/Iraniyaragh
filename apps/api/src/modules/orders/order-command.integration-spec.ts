@@ -10,6 +10,7 @@ import {
   combinationSignature,
 } from '../catalog/variant-identifiers';
 import { OrderCommandService } from './order-command.service';
+import { FulfillmentCommandService } from './fulfillment-command.service';
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -41,6 +42,7 @@ describe.sequential('OrderCommandService database integration', () => {
   const audit = new AuditLogService(prisma);
   const inventory = new InventoryService(prisma, audit);
   const commands = new OrderCommandService(prisma, audit, inventory);
+  const fulfillmentCommands = new FulfillmentCommandService(prisma, audit);
   let connected = false;
 
   beforeAll(async () => {
@@ -342,6 +344,52 @@ describe.sequential('OrderCommandService database integration', () => {
     await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: { in: ['ORDER_CANCELLED', 'ORDER_EXPIRED'] } } })).resolves.toBe(1);
   });
 
+  it('moves a paid and consumed order through operator processing exactly once under concurrent retries', async () => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { id: order.id }, data: { status: 'PAID' } });
+      await inventory.consumeReservationsForOrder(tx, order.id, { requestId: `${requestIdPrefix}-settle` });
+      await tx.payment.create({ data: {
+        orderId: order.id, provider: 'zarinpal', amount: 150n, status: 'PAID',
+        idempotencyKey: `fulfillment-payment-${runId}`, idempotencyFingerprint: sha256('fulfillment-payment'),
+      } });
+      await tx.fulfillment.create({ data: { orderId: order.id } });
+    });
+    const context = { actorId: staffUser, requestId: `${requestIdPrefix}-start`, idempotencyKey: `start-${runId}` };
+    const [first, replay] = await Promise.all([
+      fulfillmentCommands.execute(order.id, 'start', context),
+      fulfillmentCommands.execute(order.id, 'start', { ...context, requestId: `${requestIdPrefix}-start-retry` }),
+    ]);
+    expect(replay).toEqual(first);
+    expect(first.data.fulfillment.status).toBe('PROCESSING');
+    await expect(prisma.fulfillmentTransition.count({ where: { fulfillmentId: first.data.fulfillment.id } })).resolves.toBe(1);
+    await expect(prisma.auditLog.count({ where: { entityId: first.data.fulfillment.id, action: 'fulfillment.start' } })).resolves.toBe(1);
+    await expect(fulfillmentCommands.execute(order.id, 'start', { ...context, actorId: staffUserTwo })).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_CONFLICT' } });
+    await expect(fulfillmentCommands.execute(order.id, 'start', { ...context, idempotencyKey: `again-${runId}` })).rejects.toMatchObject({ response: { code: 'FULFILLMENT_STATE_CONFLICT' } });
+
+    const ready = await fulfillmentCommands.execute(order.id, 'ready', { actorId: staffUser, requestId: `${requestIdPrefix}-ready`, idempotencyKey: `ready-${runId}` });
+    expect(ready.data.fulfillment.status).toBe('READY_TO_SHIP');
+    await expect(prisma.fulfillmentTransition.count({ where: { fulfillmentId: ready.data.fulfillment.id } })).resolves.toBe(2);
+  });
+
+  it('refuses fulfillment before reservation consumption', async () => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await prisma.order.update({ where: { id: order.id }, data: { status: 'PAID' } });
+    await prisma.payment.create({ data: {
+      orderId: order.id, provider: 'zarinpal', amount: 150n, status: 'PAID',
+      idempotencyKey: `unconsumed-payment-${runId}`, idempotencyFingerprint: sha256('unconsumed-payment'),
+    } });
+    await prisma.fulfillment.create({ data: { orderId: order.id } });
+    await expect(fulfillmentCommands.execute(order.id, 'start', {
+      actorId: staffUser, requestId: `${requestIdPrefix}-unconsumed`, idempotencyKey: `unconsumed-${runId}`,
+    })).rejects.toMatchObject({ response: { code: 'FULFILLMENT_STATE_CONFLICT' } });
+    await expect(prisma.fulfillmentTransition.count({ where: { fulfillment: { orderId: order.id } } })).resolves.toBe(0);
+  });
+
   async function makeOverdue(orderId: string) {
     await prisma.order.update({
       where: { id: orderId },
@@ -432,10 +480,19 @@ describe.sequential('OrderCommandService database integration', () => {
   }
 
   async function resetState() {
+    await prisma.fulfillmentTransition.deleteMany({
+      where: { fulfillment: { order: { customerId: { in: [customerId, otherCustomerId] } } } },
+    });
+    await prisma.fulfillment.deleteMany({
+      where: { order: { customerId: { in: [customerId, otherCustomerId] } } },
+    });
     await prisma.orderTransition.deleteMany({
       where: { order: { customerId: { in: [customerId, otherCustomerId] } } },
     });
     await prisma.orderCommandIdempotencyRecord.deleteMany({
+      where: { order: { customerId: { in: [customerId, otherCustomerId] } } },
+    });
+    await prisma.payment.deleteMany({
       where: { order: { customerId: { in: [customerId, otherCustomerId] } } },
     });
     await prisma.stockReservation.deleteMany({
@@ -448,6 +505,9 @@ describe.sequential('OrderCommandService database integration', () => {
       })
     ).map((order) => order.id);
     if (orderIds.length > 0) {
+      await prisma.inventoryMovement.deleteMany({
+        where: { referenceType: 'order', referenceId: { in: orderIds } },
+      });
       await prisma.outboxEvent.deleteMany({
         where: { aggregateId: { in: orderIds } },
       });

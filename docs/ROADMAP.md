@@ -1,6 +1,6 @@
 # Delivery Roadmap
 
-Last reviewed: 2026-09-25
+Last reviewed: 2026-09-26
 
 This is the executive view of delivery. The executable sprint backlog, owners,
 acceptance gates and dependencies live in `DEVELOPMENT_PLAN.md`.
@@ -41,8 +41,8 @@ store. Native mobile and advanced growth features are intentionally later.
 - `0.5` Payment foundation is merged through #294–#298: Zarinpal verification,
   Web initiation/result, staff evidence and guarded manual reconciliation. #299
   merged the recoverable outbox relay foundation and #300 the topic-aware worker
-  with durable pending effects. Manual refund recording (ADR-0019) is
-  implemented and under review: a fresh-MFA, permissioned, exactly-once staff
+  with durable pending effects. Manual refund recording (ADR-0019) merged in
+  #303: a fresh-MFA, permissioned, exactly-once staff
   command that records an already-executed gateway refund as append-only
   evidence, with database-enforced money invariants. Still open: gateway-side
   refund verification, compensating corrections, external notification delivery,
@@ -64,9 +64,9 @@ before the previous PR merges. Never rewrite a shared migration; add a forward o
 
 | Step | Next deliverable | Exit evidence before moving on |
 | --- | --- | --- |
-| 1 | Finish #300 Outbox worker/effect projection | Final-SHA CI and migration drift green; failed jobs visible and replay tested; pending effects explicitly not counted as delivered notifications. Delivered: topic-aware projection, `consumedAt` only after the effect, reconciliation effects closed by every settled payment topic, sanitized failure reasons, and an audited break-glass replay that also recovers stranded events. |
-| 2 | Payment refund — recording merged path, verification still open | Recording a human-executed refund is implemented (ADR-0019): refund state machine, staff permission + fresh MFA, audit, exactly-once idempotency, duplicate/concurrent/failure-path tests and DB-enforced totals. No browser or operator can forge a paid/refunded state. Still open: automatic gateway-side refund verification, compensating corrections and external notification delivery. |
-| 3 | Paid Order → Fulfillment | One paid Order creates exactly one fulfillment; pick/pack commands enforce transition, actor, inventory truth and audit. |
+| 1 | #300 Outbox worker/effect projection — merged | Final-SHA CI and migration drift green; failed jobs visible and replay tested; pending effects explicitly not counted as delivered notifications. |
+| 2 | #303 Payment refund recording — merged | Human-executed refund evidence, staff permission + fresh MFA, audit, exactly-once idempotency and DB-enforced totals. Zarinpal v4 has no refund API; gateway-side automated verification is unavailable, and compensating corrections require separate policy. |
+| 3 | Paid Order → Fulfillment — active | One paid Order creates exactly one fulfillment; operator transitions enforce state, actor, consumed inventory and audit. Shipment/tracking and item-level pick evidence remain separate slices. |
 | 4 | Shipment → Tracking → essential notifications | Real shipment/tracking persistence and customer/staff views; pending outbox effects dispatched through a provider with explicit accepted/unknown/failed states and safe replay. Complete one fixture-free staging purchase through tracking. |
 | 5 | Admin Inventory #261 | Warehouse, Location, Balance, Movement, Adjustment, Reservation and Transfer connected to protected APIs; role/action states, conflicts and ledger invariants tested. |
 | 6 | SMS.ir acceptance #114 | Real account/key/sender/template in production-like staging; OTP delivery, timeout/error/unknown-result, rate limits, outage and rollback evidence. Do not commit credentials. |
