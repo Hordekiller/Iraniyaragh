@@ -16182,7 +16182,12 @@
                             "updatedAt",
                             "transitions",
                             "transitionsTruncated",
-                            "reconciliationEligible"
+                            "reconciliationEligible",
+                            "refundedTotal",
+                            "remainingRefundable",
+                            "refundEligible",
+                            "refunds",
+                            "refundsTruncated"
                           ],
                           "properties": {
                             "id": {
@@ -16319,6 +16324,114 @@
                               "type": "boolean"
                             },
                             "reconciliationEligible": {
+                              "type": "boolean"
+                            },
+                            "refundedTotal": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "pattern": "^[0-9]+$"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "remainingRefundable": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "pattern": "^[0-9]+$"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "refundEligible": {
+                              "type": "boolean"
+                            },
+                            "refunds": {
+                              "type": "array",
+                              "maxItems": 100,
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "refundId",
+                                  "amount",
+                                  "status",
+                                  "gatewayReferenceId",
+                                  "reason",
+                                  "note",
+                                  "createdAt"
+                                ],
+                                "properties": {
+                                  "refundId": {
+                                    "type": "string"
+                                  },
+                                  "amount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^[0-9]+$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "RECORDED"
+                                    ]
+                                  },
+                                  "gatewayReferenceId": {
+                                    "type": "string"
+                                  },
+                                  "reason": {
+                                    "type": "string"
+                                  },
+                                  "note": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                }
+                              }
+                            },
+                            "refundsTruncated": {
                               "type": "boolean"
                             }
                           }
@@ -16680,6 +16793,402 @@
           }
         ],
         "summary": "Manually re-query an unconfirmed pending payment at the gateway",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/payments/admin/{id}/refund": {
+      "post": {
+        "operationId": "AdminPaymentRefundController_record",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque retry key, maximum 128 characters.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "amountMinorUnits",
+                  "gatewayReferenceId",
+                  "reason"
+                ],
+                "properties": {
+                  "amountMinorUnits": {
+                    "type": "string",
+                    "description": "Positive integer Rial, no leading zeros. Capped server-side by the remaining refundable amount."
+                  },
+                  "gatewayReferenceId": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "description": "The reference the gateway panel produced for this transfer. Required evidence and unique across refunds."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Bounded operational reason recorded with the transition."
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Optional operational context. Never projected to customers."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "refund"
+                      ],
+                      "properties": {
+                        "refund": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "refundId",
+                            "paymentId",
+                            "orderId",
+                            "amount",
+                            "status",
+                            "gatewayReferenceId",
+                            "reason",
+                            "note",
+                            "paymentStatus",
+                            "refundedTotal",
+                            "remainingRefundable",
+                            "createdAt"
+                          ],
+                          "properties": {
+                            "refundId": {
+                              "type": "string"
+                            },
+                            "paymentId": {
+                              "type": "string"
+                            },
+                            "orderId": {
+                              "type": "string"
+                            },
+                            "amount": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "description": "Amount returned by this refund.",
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "description": "Integer Rial, transported as a string."
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "RECORDED"
+                              ]
+                            },
+                            "gatewayReferenceId": {
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "paymentStatus": {
+                              "type": "string",
+                              "enum": [
+                                "REFUNDED",
+                                "PARTIALLY_REFUNDED"
+                              ]
+                            },
+                            "refundedTotal": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "description": "Total refunded for this payment after this record.",
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "description": "Integer Rial, transported as a string."
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "remainingRefundable": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "description": "Money that may still be returned.",
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "description": "Integer Rial, transported as a string."
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record a refund that staff already performed in the gateway panel (the gateway has no refund API)",
         "tags": [
           "payments"
         ]

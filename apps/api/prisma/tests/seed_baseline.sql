@@ -90,6 +90,20 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Payment reconciliation permission migration audit is missing';
   END IF;
+
+  -- The refund permission must be registered by a migration, not only by the
+  -- development seed, so the command exists in a staged or production database.
+  IF NOT EXISTS (
+    SELECT 1
+      FROM "AuditLog"
+     WHERE "id" = 'migration_audit_payments_refund'
+       AND "action" = 'permission.registered'
+       AND "entityId" = (
+         SELECT "id" FROM "Permission" WHERE "key" = 'payments.refund'
+       )
+  ) THEN
+    RAISE EXCEPTION 'Payment refund permission migration audit is missing';
+  END IF;
 END $$;
 
 ROLLBACK;

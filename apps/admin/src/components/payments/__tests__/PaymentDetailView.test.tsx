@@ -8,7 +8,12 @@ const mocks = vi.hoisted(() => ({
   reconcile: vi.fn(),
 }));
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => ({ user: mocks.user }) }));
-vi.mock('@/lib/payments/payments-api', () => ({ getPayment: mocks.get, reconcilePayment: mocks.reconcile }));
+vi.mock('@/lib/payments/payments-api', () => ({
+  getPayment: mocks.get,
+  reconcilePayment: mocks.reconcile,
+  refundPayment: vi.fn(),
+  newRefundIdempotencyKey: vi.fn(() => 'refund-key-1'),
+}));
 
 const pending = {
   id: 'payment-1', order: { id: 'order-1', number: 'IR-1001', status: 'PENDING_PAYMENT' },
@@ -16,6 +21,9 @@ const pending = {
   status: 'PENDING', referenceId: null, gatewayEnvironment: 'sandbox',
   createdAt: '2026-09-20T10:00:00.000Z', updatedAt: '2026-09-20T10:01:00.000Z',
   transitions: [], transitionsTruncated: false, reconciliationEligible: true,
+  refundedTotal: { amount: '0', currency: 'IRR' },
+  remainingRefundable: { amount: '123000', currency: 'IRR' },
+  refundEligible: true, refunds: [], refundsTruncated: false,
 };
 
 describe('PaymentDetailView reconciliation action', () => {

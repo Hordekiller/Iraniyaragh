@@ -1,6 +1,16 @@
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { PAYMENT_STATUS_VALUES } from './admin-payment-read.dto';
 
+const money: SchemaObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['amount', 'currency'],
+  properties: {
+    amount: { type: 'string', pattern: '^[0-9]+$' },
+    currency: { type: 'string', enum: ['IRR'] },
+  },
+};
+
 const payment: SchemaObject = {
   type: 'object',
   additionalProperties: false,
@@ -18,15 +28,7 @@ const payment: SchemaObject = {
       },
     },
     provider: { type: 'string' },
-    amount: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['amount', 'currency'],
-      properties: {
-        amount: { type: 'string', pattern: '^[0-9]+$' },
-        currency: { type: 'string', enum: ['IRR'] },
-      },
-    },
+    amount: money,
     status: { type: 'string', enum: PAYMENT_STATUS_VALUES },
     referenceId: { type: 'string', nullable: true },
     gatewayEnvironment: { type: 'string' },
@@ -35,9 +37,34 @@ const payment: SchemaObject = {
   },
 };
 
+const refund: SchemaObject = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['refundId', 'amount', 'status', 'gatewayReferenceId', 'reason', 'note', 'createdAt'],
+  properties: {
+    refundId: { type: 'string' },
+    amount: money,
+    status: { type: 'string', enum: ['RECORDED'] },
+    gatewayReferenceId: { type: 'string' },
+    reason: { type: 'string' },
+    note: { type: 'string', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+
 const detail: SchemaObject = {
   ...payment,
-  required: [...(payment.required ?? []), 'transitions', 'transitionsTruncated', 'reconciliationEligible'],
+  required: [
+    ...(payment.required ?? []),
+    'transitions',
+    'transitionsTruncated',
+    'reconciliationEligible',
+    'refundedTotal',
+    'remainingRefundable',
+    'refundEligible',
+    'refunds',
+    'refundsTruncated',
+  ],
   properties: {
     ...payment.properties,
     transitions: {
@@ -58,6 +85,11 @@ const detail: SchemaObject = {
     },
     transitionsTruncated: { type: 'boolean' },
     reconciliationEligible: { type: 'boolean' },
+    refundedTotal: money,
+    remainingRefundable: money,
+    refundEligible: { type: 'boolean' },
+    refunds: { type: 'array', maxItems: 100, items: refund },
+    refundsTruncated: { type: 'boolean' },
   },
 };
 
