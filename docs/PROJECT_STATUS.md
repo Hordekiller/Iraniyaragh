@@ -11,8 +11,10 @@ Web payment/result, staff evidence and reconciliation, recoverable outbox/effect
 projection, provider/authority race fixes, and manual refund recording. Pending
 outbox effects are not delivered notifications. #305 adds staff-only,
 idempotent `PENDING → PROCESSING → READY_TO_SHIP` Fulfillment commands for paid,
-settled orders with consumed reservations. Item-level pick proof, shipment/tracking,
-notification delivery and production acceptance remain open.
+settled orders with consumed reservations. #308 adds exact-quantity, actor-tracked
+item-level pick proof, a complete-pick guard on `READY_TO_SHIP`, and the staff
+pick workflow. Shipment/tracking, notification delivery and production acceptance
+remain open.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304's ADR-0006/schema discrepancy is addressed by a forward

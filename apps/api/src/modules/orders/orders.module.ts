@@ -18,6 +18,8 @@ import { GuestCartHttpService } from './guest-cart-http.service';
 import { GuestCartService } from './guest-cart.service';
 import { FulfillmentCommandController } from './fulfillment-command.controller';
 import { FulfillmentCommandService } from './fulfillment-command.service';
+import { FulfillmentPickController } from './fulfillment-pick.controller';
+import { FulfillmentPickService } from './fulfillment-pick.service';
 
 @Module({
   imports: [AuditModule, AuthModule, InventoryModule],
@@ -25,6 +27,7 @@ import { FulfillmentCommandService } from './fulfillment-command.service';
     OrderReadController,
     OrderCommandController,
     FulfillmentCommandController,
+    FulfillmentPickController,
     CartController,
     CartMergeController,
     GuestCartController,
@@ -38,6 +41,7 @@ import { FulfillmentCommandService } from './fulfillment-command.service';
     OrderReadService,
     OrderCommandService,
     FulfillmentCommandService,
+    FulfillmentPickService,
     ConfiguredShippingQuoteAdapter,
     {
       provide: SHIPPING_QUOTE_PORT,

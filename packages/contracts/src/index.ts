@@ -8,6 +8,7 @@ export * from './media';
 export * from './inventory';
 export * from './notifications-sms';
 export * from './orders';
+export * from './fulfillment';
 export * from './payments';
 export * from './reports';
 

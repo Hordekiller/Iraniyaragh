@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAccessToken } from '@/lib/auth/token-store';
-import { getOrder, listOrders } from '../orders-api';
+import { getOrder, getPicks, listOrders, markReady, recordPick, startFulfillment } from '../orders-api';
 
 function jsonResponse(body: unknown): Response {
   return {
@@ -78,5 +78,33 @@ describe('orders admin api client', () => {
 
     const [url] = fetchMock.mock.calls[0] as unknown as FetchCall;
     expect(url).toBe(`${baseUrl}/orders/admin?page=1&perPage=25&sortBy=createdAt&sortDir=desc`);
+  });
+
+  it('reads pick proof and sends the exact item quantity with a stable retry key', async () => {
+    setAccessToken('staff-access-token');
+    const fetchMock = vi.fn(async () => jsonResponse({ data: { fulfillment: { id: 'f1', status: 'PROCESSING' }, items: [] } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await getPicks('order/1');
+    await recordPick('order/1', 'item/2', 3, 'retry-key');
+    const [readUrl] = fetchMock.mock.calls[0] as unknown as FetchCall;
+    const [writeUrl, writeInit] = fetchMock.mock.calls[1] as unknown as FetchCall;
+    expect(readUrl).toBe(`${baseUrl}/orders/admin/order%2F1/fulfillment/picks`);
+    expect(writeUrl).toBe(`${baseUrl}/orders/admin/order%2F1/fulfillment/items/item%2F2/pick`);
+    expect(writeInit).toMatchObject({ method: 'POST', body: '{"quantity":3}' });
+    expect(writeInit.headers).toEqual(expect.objectContaining({ Authorization: 'Bearer staff-access-token', 'Idempotency-Key': 'retry-key' }));
+  });
+
+  it('sends both guarded fulfillment transitions with the supplied retry key', async () => {
+    setAccessToken('staff-access-token');
+    const fetchMock = vi.fn(async () => jsonResponse({ data: { fulfillment: { id: 'f1' } } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await startFulfillment('order-1', 'start-key');
+    await markReady('order-1', 'ready-key');
+    const [startUrl, startInit] = fetchMock.mock.calls[0] as unknown as FetchCall;
+    const [readyUrl, readyInit] = fetchMock.mock.calls[1] as unknown as FetchCall;
+    expect(startUrl).toBe(`${baseUrl}/orders/admin/order-1/fulfillment/start`);
+    expect(readyUrl).toBe(`${baseUrl}/orders/admin/order-1/fulfillment/ready`);
+    expect(startInit.headers).toEqual(expect.objectContaining({ 'Idempotency-Key': 'start-key' }));
+    expect(readyInit.headers).toEqual(expect.objectContaining({ 'Idempotency-Key': 'ready-key' }));
   });
 });

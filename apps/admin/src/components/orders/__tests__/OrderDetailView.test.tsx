@@ -1,15 +1,20 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ORDERS_READ } from '@/lib/orders/orders-permissions';
+import { ORDERS_MANAGE, ORDERS_READ } from '@/lib/orders/orders-permissions';
 import { OrderDetailView } from '../OrderDetailView';
 
 const mocks = vi.hoisted(() => ({
   user: null as { permissions: string[] } | null,
   getOrder: vi.fn(),
+  getPicks: vi.fn(),
+  startFulfillment: vi.fn(),
+  markReady: vi.fn(),
+  recordPick: vi.fn(),
 }));
 
 vi.mock('@/lib/orders/orders-api', () => ({
-  ordersApi: { listOrders: vi.fn(), getOrder: mocks.getOrder },
+  ordersApi: { listOrders: vi.fn(), getOrder: mocks.getOrder, getPicks: mocks.getPicks,
+    startFulfillment: mocks.startFulfillment, markReady: mocks.markReady, recordPick: mocks.recordPick },
 }));
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
@@ -95,6 +100,13 @@ describe('OrderDetailView', () => {
   beforeEach(() => {
     mocks.user = { permissions: [ORDERS_READ] };
     mocks.getOrder.mockResolvedValue(detail);
+    mocks.getPicks.mockResolvedValue({
+      fulfillment: { id: 'fulfillment-1', status: 'PROCESSING' },
+      items: [{ orderItemId: 'item-1', sku: 'SKU-001', productTitle: 'یراق‌آلات کابینت', variantTitle: 'استیل', quantity: 2, pick: null }],
+    });
+    mocks.recordPick.mockResolvedValue(undefined);
+    mocks.markReady.mockResolvedValue(undefined);
+    mocks.startFulfillment.mockResolvedValue(undefined);
   });
 
   afterEach(() => vi.clearAllMocks());
@@ -130,6 +142,33 @@ describe('OrderDetailView', () => {
     render(<OrderDetailView orderId="order-1042" />);
 
     expect(await screen.findByText('ایجاد اولیه')).toBeInTheDocument();
+  });
+
+  it('lets permitted staff record a pick and keeps ready disabled until proof is complete', async () => {
+    mocks.user = { permissions: [ORDERS_READ, ORDERS_MANAGE] };
+    render(<OrderDetailView orderId="order-1042" />);
+
+    const ready = await screen.findByRole('button', { name: 'آمادهٔ ارسال' });
+    expect(ready).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت برداشت' }));
+    expect(await screen.findByText('برداشت قلم ثبت شد.')).toBeInTheDocument();
+    expect(mocks.recordPick).toHaveBeenCalledWith('order-1042', 'item-1', 2, expect.any(String));
+  });
+
+  it('offers ready-to-ship only after every line has pick proof', async () => {
+    mocks.user = { permissions: [ORDERS_READ, ORDERS_MANAGE] };
+    mocks.getPicks.mockResolvedValue({
+      fulfillment: { id: 'fulfillment-1', status: 'PROCESSING' },
+      items: [{ orderItemId: 'item-1', sku: 'SKU-001', productTitle: 'یراق‌آلات کابینت', variantTitle: 'استیل', quantity: 2,
+        pick: { id: 'pick-1', orderItemId: 'item-1', quantity: 2, actorId: 'staff-1', requestId: 'req-1', createdAt: '2026-09-18T10:12:00Z' } }],
+    });
+    render(<OrderDetailView orderId="order-1042" />);
+
+    const ready = await screen.findByRole('button', { name: 'آمادهٔ ارسال' });
+    expect(ready).toBeEnabled();
+    fireEvent.click(ready);
+    expect(await screen.findByText('سفارش آمادهٔ ارسال شد.')).toBeInTheDocument();
+    expect(mocks.markReady).toHaveBeenCalledWith('order-1042', expect.any(String));
   });
 
   it('passes an abort signal to the API', async () => {

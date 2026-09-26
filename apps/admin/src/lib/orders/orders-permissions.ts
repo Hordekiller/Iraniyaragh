@@ -1,6 +1,7 @@
 import type { AuthUser } from '@/lib/auth/AuthProvider';
 
 export const ORDERS_READ = 'orders.read';
+export const ORDERS_MANAGE = 'orders.manage';
 
 export function hasOrderPermission(user: AuthUser | null, permission: string): boolean {
   return Boolean(user?.permissions.includes(permission));

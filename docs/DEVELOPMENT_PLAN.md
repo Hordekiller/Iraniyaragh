@@ -6,8 +6,8 @@ Current delivery order and capacity are defined by `SOLO_CRITICAL_PATH.md`.
 The two-developer sprint assignments and durations below are historical planning
 assumptions, not active execution instructions.
 Payment work through manual refund recording (#294–#303) is merged. The first
-Fulfillment operator-transition slice (#305) is merged; item-level pick proof,
-shipment, tracking and actual notification delivery remain on the single-developer
+Fulfillment operator-transition slice (#305) is merged; #308 supplies item-level
+pick proof and a guarded staff workflow. Shipment, tracking and actual notification delivery remain on the single-developer
 critical path. Historical Sprint 7/8 notes below are
 not current PR status.
 

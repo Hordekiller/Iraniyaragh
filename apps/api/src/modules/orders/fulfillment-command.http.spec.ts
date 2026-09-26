@@ -21,6 +21,8 @@ import {
 } from "../auth/auth-principal.service";
 import { FulfillmentCommandController } from "./fulfillment-command.controller";
 import { FulfillmentCommandService } from "./fulfillment-command.service";
+import { FulfillmentPickController } from './fulfillment-pick.controller';
+import { FulfillmentPickService } from './fulfillment-pick.service';
 
 const base = {
   sessionId: "fulfillment-session",
@@ -67,12 +69,17 @@ const commands = {
     },
   })),
 };
+const picks = {
+  list: vi.fn(async () => ({ data: { fulfillment: { id: 'fulfillment-1', status: 'PROCESSING' }, items: [] } })),
+  record: vi.fn(async (_orderId: string, itemId: string, quantity: number) => ({ data: { pick: { orderItemId: itemId, quantity } } })),
+};
 
 @Module({
   imports: [ApiFoundationModule],
-  controllers: [FulfillmentCommandController],
+  controllers: [FulfillmentCommandController, FulfillmentPickController],
   providers: [
     { provide: FulfillmentCommandService, useValue: commands },
+    { provide: FulfillmentPickService, useValue: picks },
     { provide: AuthPrincipalService, useValue: principalService },
     {
       provide: APP_GUARD,
@@ -121,17 +128,35 @@ describe("Fulfillment command HTTP authorization", () => {
     );
   });
 
+  it('guards pick reads and exact-quantity writes at the HTTP boundary', async () => {
+    const listPath = '/api/v1/orders/admin/order-1/fulfillment/picks';
+    const pickPath = '/api/v1/orders/admin/order-1/fulfillment/items/item-1/pick';
+    expect((await request(listPath, undefined, undefined, 'GET')).status).toBe(401);
+    expect((await request(listPath, 'customer', undefined, 'GET')).status).toBe(403);
+    expect((await request(listPath, 'denied', undefined, 'GET')).status).toBe(200);
+    expect((await request(pickPath, 'denied', 'pick-key', 'POST', { quantity: 2 })).status).toBe(403);
+    expect((await request(pickPath, 'staff', '', 'POST', { quantity: 2 })).status).toBe(400);
+    expect((await request(pickPath, 'staff', 'pick-key', 'POST', { quantity: 0 })).status).toBe(400);
+    expect((await request(pickPath, 'staff', 'pick-key', 'POST', { quantity: 2, actorId: 'forged' })).status).toBe(400);
+    expect((await request(pickPath, 'staff', 'pick-key', 'POST', { quantity: 2 })).status).toBe(200);
+    expect(picks.record).toHaveBeenCalledWith('order-1', 'item-1', 2, expect.objectContaining({ actorId: 'staff-1', idempotencyKey: 'pick-key' }));
+  });
+
   function request(
     path: string,
     token?: string,
     key: string | undefined = "key-1",
+    method = 'POST',
+    body?: unknown,
   ) {
     return fetch(baseUrl + path, {
-      method: "POST",
+      method,
       headers: {
         ...(token ? { authorization: `Bearer ${token}` } : {}),
         ...(key ? { "idempotency-key": key } : {}),
+        ...(body ? { 'content-type': 'application/json' } : {}),
       },
+      ...(body ? { body: JSON.stringify(body) } : {}),
     });
   }
 });

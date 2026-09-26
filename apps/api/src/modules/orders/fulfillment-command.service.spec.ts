@@ -24,6 +24,8 @@ function setup(
     stockReservation: {
       count: vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(1),
     },
+    orderItem: { count: vi.fn().mockResolvedValue(1) },
+    fulfillmentPick: { count: vi.fn().mockResolvedValue(1) },
     fulfillmentTransition: {
       create: vi.fn().mockResolvedValue({ id: "transition-1" }),
     },
@@ -151,6 +153,12 @@ describe("FulfillmentCommandService", () => {
       data: { fulfillment: { status: "READY_TO_SHIP" } },
     });
     expect(valid.tx.stockReservation.count).not.toHaveBeenCalled();
+    expect(valid.tx.fulfillmentPick.count).toHaveBeenCalledWith({ where: { fulfillmentId: "fulfillment-1" } });
+    const unpicked = setup("PAID", "PROCESSING");
+    unpicked.tx.fulfillmentPick.count.mockResolvedValue(0);
+    await expect(unpicked.service.execute("order-1", "ready", unpicked.context))
+      .rejects.toMatchObject({ response: { code: "FULFILLMENT_STATE_CONFLICT" } });
+    expect(unpicked.tx.fulfillmentTransition.create).not.toHaveBeenCalled();
     const skipped = setup();
     await expect(
       skipped.service.execute("order-1", "ready", skipped.context),

@@ -28,9 +28,10 @@ worktrees and uncommitted files.
    delivery and production gateway acceptance remain open.
 3. **Fulfillment, shipping, notifications:** #305 merged the guarded operator
    `start`/`ready` transition slice for paid orders with consumed inventory.
-   Item-level pick proof, shipment/tracking and external notification delivery
-   remain; exit with a real, fixture-free purchase-to-tracking test. #304 tracks
-   the initial Fulfillment transition/ADR discrepancy.
+   #304 closed the initial Fulfillment history discrepancy. #308 supplies
+   item-level pick proof and requires complete proof before ready-to-ship;
+   shipment/tracking and external notification delivery remain. Exit with a
+   real, fixture-free purchase-to-tracking test.
 4. **Admin Inventory — #261:** connect Warehouse, Location, Balance, Movement,
    Adjustment, Reservation and Transfer screens to the existing permissioned
    backend. Verify one real operator flow and ledger/audit consistency.
