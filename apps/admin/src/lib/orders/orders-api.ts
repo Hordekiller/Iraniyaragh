@@ -1,4 +1,4 @@
-import type { AdminOrderDetailResponse, AdminOrderListResponse } from '@iranyaragh/contracts';
+import type { AdminOrderDetailResponse, AdminOrderListResponse, FulfillmentPickListResponse, FulfillmentPickResponse } from '@iranyaragh/contracts';
 import { apiFetch } from '@/lib/api/client';
 import { getAccessToken } from '@/lib/auth/token-store';
 import type { AdminOrderQuery, AdminOrdersApi } from './orders-types';
@@ -41,4 +41,33 @@ export async function getOrder(id: string, signal?: AbortSignal) {
   return response.data.order;
 }
 
-export const ordersApi: AdminOrdersApi = { listOrders, getOrder };
+export async function getPicks(id: string, signal?: AbortSignal) {
+  const response = await apiFetch<FulfillmentPickListResponse['data']>(
+    `/orders/admin/${encodeURIComponent(id)}/fulfillment/picks`,
+    { token: getAccessToken(), signal },
+  );
+  return response.data;
+}
+
+async function fulfillmentCommand(id: string, command: 'start' | 'ready', idempotencyKey: string) {
+  await apiFetch(`/orders/admin/${encodeURIComponent(id)}/fulfillment/${command}`, {
+    method: 'POST', token: getAccessToken(), headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+
+export async function startFulfillment(id: string, idempotencyKey: string) {
+  return fulfillmentCommand(id, 'start', idempotencyKey);
+}
+
+export async function markReady(id: string, idempotencyKey: string) {
+  return fulfillmentCommand(id, 'ready', idempotencyKey);
+}
+
+export async function recordPick(id: string, itemId: string, quantity: number, idempotencyKey: string) {
+  await apiFetch<FulfillmentPickResponse['data']>(
+    `/orders/admin/${encodeURIComponent(id)}/fulfillment/items/${encodeURIComponent(itemId)}/pick`,
+    { method: 'POST', body: { quantity }, token: getAccessToken(), headers: { 'Idempotency-Key': idempotencyKey } },
+  );
+}
+
+export const ordersApi: AdminOrdersApi = { listOrders, getOrder, getPicks, startFulfillment, markReady, recordPick };

@@ -5,6 +5,7 @@ import type {
   OrderListMeta,
   OrderStatus,
   PaymentStatus,
+  FulfillmentPickListResponse,
 } from '@iranyaragh/contracts';
 
 export type {
@@ -37,4 +38,8 @@ export type AdminOrderListResult = {
 export interface AdminOrdersApi {
   listOrders(query: AdminOrderQuery, signal?: AbortSignal): Promise<AdminOrderListResult>;
   getOrder(id: string, signal?: AbortSignal): Promise<AdminOrderDetail>;
+  getPicks(id: string, signal?: AbortSignal): Promise<FulfillmentPickListResponse['data']>;
+  startFulfillment(id: string, idempotencyKey: string): Promise<void>;
+  markReady(id: string, idempotencyKey: string): Promise<void>;
+  recordPick(id: string, itemId: string, quantity: number, idempotencyKey: string): Promise<void>;
 }

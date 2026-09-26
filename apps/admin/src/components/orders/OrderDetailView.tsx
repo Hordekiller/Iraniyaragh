@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Divider,
@@ -19,6 +20,7 @@ import {
 import { ArrowRight, Lock, PackageSearch } from 'lucide-react';
 import Link from 'next/link';
 import type { AdminOrderDetail } from '@/lib/orders/orders-types';
+import type { FulfillmentPickListResponse } from '@iranyaragh/contracts';
 import { ApiAbortError } from '@/lib/api/client';
 import { ordersApi } from '@/lib/orders/orders-api';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -35,7 +37,7 @@ import {
   paymentStatusLabel,
   paymentStatusTone,
 } from '@/lib/orders/orders-labels';
-import { canReadOrders } from '@/lib/orders/orders-permissions';
+import { canReadOrders, hasOrderPermission, ORDERS_MANAGE } from '@/lib/orders/orders-permissions';
 
 const faDateTime = new Intl.DateTimeFormat('fa-IR', {
   dateStyle: 'medium',
@@ -73,8 +75,15 @@ const DOMAIN_LABELS = {
 export function OrderDetailView({ orderId }: { orderId: string }) {
   const { user } = useAuth();
   const canRead = canReadOrders(user);
+  const canManage = hasOrderPermission(user, ORDERS_MANAGE);
 
   const [order, setOrder] = useState<AdminOrderDetail | null>(null);
+  const [picks, setPicks] = useState<FulfillmentPickListResponse['data'] | null>(null);
+  const [pickError, setPickError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const actionKeys = useRef<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,10 +95,25 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
+    setPicks(null);
+    setPickError(null);
+    setActionError(null);
+    setActionSuccess(null);
+    actionKeys.current = {};
 
     ordersApi
       .getOrder(orderId, controller.signal)
-      .then(setOrder)
+      .then(async (detail) => {
+        if (controller.signal.aborted) return;
+        setOrder(detail);
+        if (detail.fulfillment) {
+          try {
+            setPicks(await ordersApi.getPicks(orderId, controller.signal));
+          } catch (caught) {
+            if (!(caught instanceof ApiAbortError)) setPickError(caught instanceof Error ? caught.message : 'خطا در دریافت برداشت اقلام.');
+          }
+        }
+      })
       .catch((caught: unknown) => {
         if (caught instanceof ApiAbortError) return;
         setError(caught instanceof Error ? caught.message : 'خطای غیرمنتظره در بارگیری سفارش.');
@@ -100,6 +124,34 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
 
     return () => controller.abort();
   }, [orderId, canRead]);
+
+  async function runAction(action: 'start' | 'ready' | 'pick', itemId?: string, quantity?: number) {
+    if (!canManage || actionBusy) return;
+    const actionId = `${orderId}:${action}:${itemId ?? ''}`;
+    const key = actionKeys.current[actionId] ?? crypto.randomUUID();
+    actionKeys.current[actionId] = key;
+    setActionBusy(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      if (action === 'start') await ordersApi.startFulfillment(orderId, key);
+      if (action === 'ready') await ordersApi.markReady(orderId, key);
+      if (action === 'pick') {
+        if (!itemId || !quantity) throw new Error('قلم یا تعداد برداشت مشخص نیست.');
+        await ordersApi.recordPick(orderId, itemId, quantity, key);
+      }
+      const [updated, updatedPicks] = await Promise.all([ordersApi.getOrder(orderId), ordersApi.getPicks(orderId)]);
+      setOrder(updated);
+      setPicks(updatedPicks);
+      setPickError(null);
+      setActionSuccess(action === 'pick' ? 'برداشت قلم ثبت شد.' : action === 'start' ? 'پردازش سفارش آغاز شد.' : 'سفارش آمادهٔ ارسال شد.');
+      delete actionKeys.current[actionId];
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : 'ثبت عملیات ناموفق بود؛ همان عملیات را دوباره امتحان کنید.');
+    } finally {
+      setActionBusy(false);
+    }
+  }
 
   if (!canRead) {
     return (
@@ -159,9 +211,9 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
         }
       />
 
-      <Alert severity="info" sx={{ mb: 2 }}>
-        این نما فقط اطلاعات قرارداد خواندنی را نمایش می‌دهد و هیچ تغییر وضعیتی از این صفحه ارسال نمی‌شود.
-      </Alert>
+      {!canManage ? <Alert severity="info" sx={{ mb: 2 }}>این نما فقط خواندنی است؛ برای ثبت عملیات به مجوز مدیریت سفارش نیاز دارید.</Alert> : null}
+      {actionError ? <Alert severity="error" sx={{ mb: 2 }}>{actionError} کلید تکرار برای تلاش دوباره حفظ شده است.</Alert> : null}
+      {actionSuccess ? <Alert severity="success" sx={{ mb: 2 }}>{actionSuccess}</Alert> : null}
 
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
         <StatusChip label={orderStatusLabel(order.status)} tone={orderStatusTone(order.status)} />
@@ -176,6 +228,46 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
       </Stack>
 
       <Stack spacing={3}>
+        {order.fulfillment ? (
+          <Card>
+            <CardContent>
+              <SectionTitle>برداشت و آماده‌سازی سفارش</SectionTitle>
+              {pickError ? <Alert severity="error" sx={{ mb: 2 }}>{pickError}</Alert> : null}
+              {canManage && order.fulfillment.status === 'PENDING' ? (
+                <Button disabled={actionBusy} variant="contained" onClick={() => void runAction('start')} sx={{ mb: 2 }}>شروع پردازش</Button>
+              ) : null}
+              {picks ? (
+                <TableContainer>
+                  <Table size="small" aria-label="اثبات برداشت اقلام">
+                    <TableHead><TableRow><TableCell>کالا</TableCell><TableCell>SKU</TableCell><TableCell>تعداد</TableCell><TableCell>برداشت</TableCell><TableCell>ثبت‌کننده</TableCell><TableCell>عملیات</TableCell></TableRow></TableHead>
+                    <TableBody>
+                      {picks.items.map((item) => (
+                        <TableRow key={item.orderItemId}>
+                          <TableCell>{item.productTitle}{item.variantTitle ? ` — ${item.variantTitle}` : ''}</TableCell>
+                          <TableCell><span dir="ltr">{item.sku}</span></TableCell>
+                          <TableCell>{formatCount(item.quantity)}</TableCell>
+                          <TableCell>{item.pick ? `ثبت‌شده · ${formatDateTime(item.pick.createdAt)}` : 'ثبت نشده'}</TableCell>
+                          <TableCell>{item.pick?.actorId ? <span dir="ltr">{item.pick.actorId}</span> : '—'}</TableCell>
+                          <TableCell>
+                            {canManage && order.fulfillment?.status === 'PROCESSING' && !item.pick ? (
+                              <Button disabled={actionBusy} size="small" onClick={() => void runAction('pick', item.orderItemId, item.quantity)}>ثبت برداشت</Button>
+                            ) : '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : <Typography variant="body2" color="text.secondary">در حال دریافت وضعیت برداشت اقلام…</Typography>}
+              {canManage && order.fulfillment.status === 'PROCESSING' ? (
+                <Button
+                  disabled={actionBusy || !picks || picks.items.length === 0 || picks.items.some((item) => !item.pick)}
+                  variant="contained" sx={{ mt: 2 }} onClick={() => void runAction('ready')}
+                >آمادهٔ ارسال</Button>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3 }}>
           <Card>
             <CardContent>

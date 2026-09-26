@@ -126,6 +126,18 @@ export class FulfillmentCommandService {
                 });
               }
             }
+            if (command === "ready") {
+              const [items, picked] = await Promise.all([
+                tx.orderItem.count({ where: { orderId } }),
+                tx.fulfillmentPick.count({ where: { fulfillmentId: order.fulfillment.id } }),
+              ]);
+              if (items === 0 || picked !== items) {
+                throw new ConflictException({
+                  code: "FULFILLMENT_STATE_CONFLICT",
+                  message: "Every order item needs recorded pick proof before ready-to-ship.",
+                });
+              }
+            }
             const state = await recordTransition(
               tx,
               "fulfillment",
