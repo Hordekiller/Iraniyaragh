@@ -1,4 +1,5 @@
 import {
+  applyDecorators,
   Controller,
   Headers,
   HttpCode,
@@ -25,6 +26,20 @@ import type { AuthPrincipalContext } from "../auth/auth-principal.service";
 import { FulfillmentCommandService } from "./fulfillment-command.service";
 import { openApiFulfillmentCommand } from "./fulfillment-command.openapi";
 
+const FulfillmentCommandApi = (summary: string) =>
+  applyDecorators(
+    HttpCode(200),
+    RequireAuthentication("STAFF_MFA"),
+    RequirePermission("orders.manage"),
+    ApiOperation({ summary }),
+    ApiHeader({ name: "Idempotency-Key", required: true }),
+    ApiParam({ name: "id", type: String }),
+    ApiResponse({ status: 200, schema: openApiFulfillmentCommand.result }),
+    ...[400, 401, 403, 404, 409].map((status) =>
+      ApiResponse({ status, schema: openApiFulfillmentCommand.error }),
+    ),
+  );
+
 @ApiTags("fulfillment")
 @ApiBearerAuth("access-token")
 @Controller({ path: "orders/admin/:id/fulfillment", version: "1" })
@@ -35,53 +50,36 @@ export class FulfillmentCommandController {
   ) {}
 
   @Post("start")
-  @HttpCode(200)
-  @RequireAuthentication("STAFF_MFA")
-  @RequirePermission("orders.manage")
-  @ApiOperation({
-    summary: "Start processing a paid order after stock consumption",
-  })
-  @ApiHeader({ name: "Idempotency-Key", required: true })
-  @ApiParam({ name: "id", type: String })
-  @ApiResponse({ status: 200, schema: openApiFulfillmentCommand.result })
-  @ApiResponse({ status: 400, schema: openApiFulfillmentCommand.error })
-  @ApiResponse({ status: 401, schema: openApiFulfillmentCommand.error })
-  @ApiResponse({ status: 403, schema: openApiFulfillmentCommand.error })
-  @ApiResponse({ status: 404, schema: openApiFulfillmentCommand.error })
-  @ApiResponse({ status: 409, schema: openApiFulfillmentCommand.error })
+  @FulfillmentCommandApi(
+    "Start processing a paid order after stock consumption",
+  )
   start(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Param("id") id: string,
     @Headers("idempotency-key") key: string | undefined,
   ) {
-    return this.commands.execute(id, "start", {
-      actorId: principal.userId,
-      requestId: getRequestId(),
-      idempotencyKey: normalizeIdempotencyKey(key),
-    });
+    return this.run("start", principal, id, key);
   }
 
   @Post("ready")
-  @HttpCode(200)
-  @RequireAuthentication("STAFF_MFA")
-  @RequirePermission("orders.manage")
-  @ApiOperation({
-    summary: "Mark processing order ready to ship after operator packing",
-  })
-  @ApiHeader({ name: "Idempotency-Key", required: true })
-  @ApiParam({ name: "id", type: String })
-  @ApiResponse({ status: 200, schema: openApiFulfillmentCommand.result })
-  @ApiResponse({ status: 400, schema: openApiFulfillmentCommand.error })
-  @ApiResponse({ status: 401, schema: openApiFulfillmentCommand.error })
-  @ApiResponse({ status: 403, schema: openApiFulfillmentCommand.error })
-  @ApiResponse({ status: 404, schema: openApiFulfillmentCommand.error })
-  @ApiResponse({ status: 409, schema: openApiFulfillmentCommand.error })
+  @FulfillmentCommandApi(
+    "Mark processing order ready to ship after operator packing",
+  )
   ready(
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Param("id") id: string,
     @Headers("idempotency-key") key: string | undefined,
   ) {
-    return this.commands.execute(id, "ready", {
+    return this.run("ready", principal, id, key);
+  }
+
+  private run(
+    command: "start" | "ready",
+    principal: AuthPrincipalContext,
+    id: string,
+    key: string | undefined,
+  ) {
+    return this.commands.execute(id, command, {
       actorId: principal.userId,
       requestId: getRequestId(),
       idempotencyKey: normalizeIdempotencyKey(key),
