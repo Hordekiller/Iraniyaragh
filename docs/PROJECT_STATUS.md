@@ -47,7 +47,7 @@ Current delivery confidence:
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
-| Order commands/payment         | Reconciliation merged | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence and manual reconciliation merged through #298; refund/outbox delivery still open |
+| Order commands/payment         | Refund recording in review | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence and manual reconciliation merged through #298; manual refund recording (ADR-0019) is in review, and gateway-side refund verification plus external notification delivery stay open |
 | Commerce outbox                | Relay and effect projection implemented | #299 adds recoverable relay primitives; #300 activates a topic-aware worker and pending customer/operations effects, but no external notification or shipment delivery. Every settled payment topic closes its open reconciliation effect, and a published-but-unconsumed event can be recovered by the audited operator replay. |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
@@ -62,8 +62,10 @@ G6–G10 have not reached integrated completion.
 - Default branch: `main`.
 - Payment baseline through #299 includes the foundation, Web initiation/result,
   staff evidence, guarded manual reconciliation and recoverable outbox relay
-  primitives. #300 adds topic-aware effect projection and worker activation;
-  customer notification delivery, refund and shipment operations remain open.
+  primitives. #300 adds topic-aware effect projection and worker activation.
+  Manual refund recording is implemented under ADR-0019 and under review;
+  customer notification delivery, compensating refund corrections and shipment
+  operations remain open.
 - The baseline also contains merged #109, #103, #112,
   accepted ADR-0011 via #116, the integrated SMS/Auth/admin-settings foundation
   through #148, #151, #153, #154, the docs reconciliation #155, the #50
@@ -706,6 +708,29 @@ malware scanner also remain production-acceptance work.
   appears only when the server reports eligibility.
 - Outbox relay and effect projection merged afterwards in #299/#300. Refunds,
   notification delivery and production acceptance remain separate work.
+
+### Manual refund recording (in review — ADR-0019)
+
+- A fresh-MFA, `payments.refund` staff command records a refund a human already
+  executed in the Zarinpal merchant panel. It writes an append-only `Refund`
+  evidence row (amount, gateway reference, reason, optional note) and moves
+  `PAID → PARTIALLY_REFUNDED → REFUNDED` through the guarded transition helper.
+  It never calls the gateway and never grants gateway authority.
+- The command is exactly-once per `Idempotency-Key`: a replay returns the
+  recorded refund, a changed payload under the same key is `409`, and a missing
+  reference, a non-positive amount or a total above the remaining amount is
+  refused. Refunds on non-settled payments are `409`.
+- Money invariants are enforced in the database: `0 <= refundedAmount <= amount`,
+  and a deferred constraint trigger refuses a running total that the recorded
+  refunds do not explain, so the projected `refundedTotal` cannot silently drift
+  from the evidence rows.
+- Each accepted command writes a `payment.refund.recorded` audit row and one
+  deduplicated `PAYMENT_REFUNDED` outbox event. The payment detail projects
+  `refundedTotal`, `remainingRefundable`, `refundEligible` and the recorded
+  refunds, and the Admin action appears only when the server reports eligibility.
+- Remaining: a compensating-record workflow for corrections, gateway-side
+  verification automation, external notification delivery and production
+  acceptance.
 
 ### PR #109 — Auth privileged lifecycle
 

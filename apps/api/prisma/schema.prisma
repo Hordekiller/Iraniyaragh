@@ -137,6 +137,10 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED
 }
 
+enum RefundStatus {
+  RECORDED
+}
+
 enum FulfillmentStatus {
   PENDING
   PROCESSING
@@ -218,6 +222,7 @@ model User {
   auditLogs                 AuditLog[]                 @relation("AuditActor")
   orderTransitions          OrderTransition[]          @relation("OrderActor")
   paymentTransitions        PaymentTransition[]        @relation("PaymentActor")
+  refunds                   Refund[]                   @relation("RefundActor")
   fulfillmentTransitions    FulfillmentTransition[]    @relation("FulfillmentActor")
   roleAssignments           UserRole[]                 @relation("UserRoleSubject")
   roleAssignmentsGranted    UserRole[]                 @relation("UserRoleAssigner")
@@ -1165,17 +1170,46 @@ model Payment {
   status                 PaymentStatus       @default(PENDING)
   authority              String?
   referenceId            String?
+  refundedAmount         BigInt              @default(0)
   idempotencyKey         String              @unique
   idempotencyFingerprint String              @db.Char(64)
   correlationId          String?             @db.VarChar(128)
   gatewayEnvironment     String              @db.VarChar(20) @default("sandbox")
   order                  Order               @relation(fields: [orderId], references: [id])
   transitions            PaymentTransition[]
+  refunds                Refund[]
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
   @@index([orderId, status])
   @@index([status])
+}
+
+/// Append-only record of a refund that staff performed in the gateway panel.
+/// Zarinpal v4 has no refund API, so this row is evidence, never a transfer:
+/// `gatewayReferenceId` is the panel's own reference and is unique, and the
+/// hashed idempotency key plus fingerprint make the command exactly-once.
+/// The sum of `amount` is capped by the `Payment_refundedAmount_within_amount`
+/// check constraint, so the money invariant holds even for writes that bypass
+/// the service.
+model Refund {
+  id                     String       @id @default(cuid())
+  paymentId              String
+  amount                 BigInt
+  status                 RefundStatus @default(RECORDED)
+  gatewayReferenceId     String       @unique @db.VarChar(128)
+  reason                 String       @db.VarChar(255)
+  note                   String?      @db.VarChar(500)
+  idempotencyKey         String       @unique @db.Char(64)
+  idempotencyFingerprint String       @db.Char(64)
+  actorId                String?
+  actor                  User?        @relation("RefundActor", fields: [actorId], references: [id], onDelete: SetNull)
+  requestId              String       @db.VarChar(100)
+  payment                Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdAt              DateTime     @default(now())
+
+  @@index([paymentId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model OrderTransition {

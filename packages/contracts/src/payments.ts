@@ -78,10 +78,52 @@ export type AdminPaymentTransition = {
   createdAt: string;
 };
 
+/**
+ * Staff-recorded refund of money staff already returned in the gateway panel.
+ * Zarinpal v4 has no refund API, so this is evidence, never a transfer request.
+ * The request carries no order or customer identity on purpose: the payment row
+ * is the only source, and the amount is validated against the server-side
+ * remaining refundable total.
+ */
+export type AdminRefundRequest = {
+  amountMinorUnits: string;
+  gatewayReferenceId: string;
+  reason: string;
+  note?: string;
+};
+
+export type RefundStatus = 'RECORDED';
+
+export type AdminRefundRecord = {
+  refundId: string;
+  amount: Money;
+  status: RefundStatus;
+  gatewayReferenceId: string;
+  reason: string;
+  note: string | null;
+  createdAt: string;
+};
+
+export type AdminRefund = AdminRefundRecord & {
+  paymentId: string;
+  orderId: string;
+  note: string | null;
+  paymentStatus: 'REFUNDED' | 'PARTIALLY_REFUNDED';
+  refundedTotal: Money;
+  remainingRefundable: Money;
+};
+
+export type AdminRefundResponse = ApiSuccess<{ refund: AdminRefund }>;
+
 export type AdminPaymentDetail = AdminPaymentSummary & {
   transitions: AdminPaymentTransition[];
   transitionsTruncated: boolean;
   reconciliationEligible: boolean;
+  refundedTotal: Money;
+  remainingRefundable: Money;
+  refundEligible: boolean;
+  refunds: AdminRefundRecord[];
+  refundsTruncated: boolean;
 };
 
 export type AdminPaymentListResponse = ApiSuccess<{

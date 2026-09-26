@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { formatRial, orderStatusLabel, paymentStatusLabel, paymentStatusTone } from '@/lib/orders/orders-labels';
 import { getPayment, reconcilePayment } from '@/lib/payments/payments-api';
+import { RefundDialog } from './RefundDialog';
 
 const faDateTime = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' });
 const outcomeLabels = {
@@ -26,11 +27,17 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
   const { user } = useAuth();
   const canRead = Boolean(user?.permissions.includes('payments.read'));
   const canReconcile = Boolean(user?.permissions.includes('payments.reconcile'));
+  const canRefund = Boolean(user?.permissions.includes('payments.refund'));
   const [payment, setPayment] = useState<AdminPaymentDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [rechecking, setRechecking] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [refundOpen, setRefundOpen] = useState(false);
+
+  async function refresh() {
+    setPayment(await getPayment(paymentId));
+  }
 
   async function recheck() {
     if (!payment || !canReconcile || !payment.reconciliationEligible || rechecking) return;
@@ -72,18 +79,23 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
   if (!payment) return <EmptyState title="پرداخت یافت نشد" description="رکورد پرداخت در دسترس نیست." />;
 
   return <>
-    <PageHeader title={`پرداخت سفارش ${payment.order.number}`} eyebrow="پرداخت‌ها" description="شواهد ثبت‌شده در سرور و بررسی دوبارهٔ موارد نامشخص." breadcrumbs={[{ label: 'پرداخت‌ها', href: '/payments' }, { label: payment.order.number }]} />
-    <Alert severity="info" sx={{ mb: 2 }}>وضعیت پرداخت و سفارش مستقل‌اند. فقط برای پاسخ نامشخص، کاربر مجاز می‌تواند درگاه را دوباره بررسی کند؛ استرداد در این صفحه انجام نمی‌شود.</Alert>
+    <PageHeader title={`پرداخت سفارش ${payment.order.number}`} eyebrow="پرداخت‌ها" description="شواهد ثبت‌شده در سرور، بررسی دوبارهٔ موارد نامشخص و ثبت استرداد انجام‌شده در پنل درگاه." breadcrumbs={[{ label: 'پرداخت‌ها', href: '/payments' }, { label: payment.order.number }]} />
+    <Alert severity="info" sx={{ mb: 2 }}>وضعیت پرداخت و سفارش مستقل‌اند. بررسی دوباره فقط برای پاسخ نامشخص درگاه است. استرداد پس از برگرداندن پول در پنل درگاه و با شمارهٔ مرجع آن تراکنش ثبت می‌شود.</Alert>
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
     {result && <Alert severity="success" sx={{ mb: 2 }}>{result}</Alert>}
     {canReconcile && payment.reconciliationEligible && <Button variant="contained" disabled={rechecking} onClick={recheck} sx={{ mb: 2 }}>
       {rechecking ? 'در حال بررسی درگاه…' : 'بررسی دوبارهٔ وضعیت نامشخص در درگاه'}
+    </Button>}
+    {canRefund && payment.refundEligible && <Button variant="contained" color="error" onClick={() => setRefundOpen(true)} sx={{ mb: 2 }}>
+      ثبت استرداد
     </Button>}
     <Card sx={{ mb: 3 }}><CardContent>
       <Stack spacing={1}>
         <Typography>شناسه پرداخت: <span dir="ltr">{payment.id}</span></Typography>
         <Typography>سفارش: <Link href={`/orders/${payment.order.id}`}>{payment.order.number}</Link> — {orderStatusLabel(payment.order.status)}</Typography>
         <Typography>مبلغ: {formatRial(payment.amount)}</Typography>
+        <Typography>استردادشده: {formatRial(payment.refundedTotal)}</Typography>
+        <Typography>قابل استرداد باقی‌مانده: {formatRial(payment.remainingRefundable)}</Typography>
         <Typography>درگاه: {payment.provider} ({payment.gatewayEnvironment})</Typography>
         <Typography>شماره مرجع: <span dir="ltr">{payment.referenceId ?? '—'}</span></Typography>
         <Stack direction="row" spacing={1} alignItems="center"><Typography>وضعیت:</Typography><StatusChip label={paymentStatusLabel(payment.status)} tone={paymentStatusTone(payment.status)} /></Stack>
@@ -105,5 +117,29 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
       </TableRow>)}
       {payment.transitions.length === 0 && <TableRow><TableCell colSpan={5}>تغییر وضعیتی ثبت نشده است.</TableCell></TableRow>}
     </TableBody></Table>
+    <Typography variant="h6" component="h2" sx={{ mt: 3, mb: 1 }}>استردادهای ثبت‌شده</Typography>
+    {payment.refundsTruncated && <Alert severity="warning" sx={{ mb: 1 }}>فقط ۱۰۰ استرداد اخیر نمایش داده شده است.</Alert>}
+    <Table aria-label="استردادهای ثبت‌شدهٔ پرداخت"><TableHead><TableRow>
+      <TableCell>مبلغ</TableCell><TableCell>مرجع درگاه</TableCell><TableCell>دلیل</TableCell><TableCell>یادداشت</TableCell><TableCell>زمان ثبت</TableCell>
+    </TableRow></TableHead><TableBody>
+      {payment.refunds.map((refund) => <TableRow key={refund.refundId}>
+        <TableCell>{formatRial(refund.amount)}</TableCell>
+        <TableCell dir="ltr">{refund.gatewayReferenceId}</TableCell>
+        <TableCell>{refund.reason}</TableCell>
+        <TableCell>{refund.note ?? '—'}</TableCell>
+        <TableCell>{faDateTime.format(new Date(refund.createdAt))}</TableCell>
+      </TableRow>)}
+      {payment.refunds.length === 0 && <TableRow><TableCell colSpan={5}>استردادی ثبت نشده است.</TableCell></TableRow>}
+    </TableBody></Table>
+    {canRefund && payment.refundEligible && <RefundDialog
+      open={refundOpen}
+      onClose={() => setRefundOpen(false)}
+      paymentId={payment.id}
+      remaining={payment.remainingRefundable}
+      onRecorded={async () => {
+        await refresh();
+        setResult('استرداد ثبت شد و وضعیت پرداخت از سرور بازخوانی شد.');
+      }}
+    />}
   </>;
 }

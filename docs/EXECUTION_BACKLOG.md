@@ -260,7 +260,7 @@ and reservation; valid/invalid state transitions and compensation are proven.
 | ----- | ---------------------------------------------- | ----- | ------------------------------------ |
 | G6-01 | Payment adapter and sandbox configuration      | A     | provider contract/fake tests         |
 | G6-02 | Initiation/return/verified callback flow       | A     | forged/duplicate/wrong-amount cases  |
-| G6-03 | Full/partial refund and reconciliation command | A     | exact-once evidence and audit        |
+| G6-03 | Full/partial refund and reconciliation command | A     | exact-once evidence and audit — recording merged-path candidate under ADR-0019; gateway-side verification and compensating corrections still open |
 | G6-04 | Payment result/retry customer UX               | B     | refresh/back/offline E2E             |
 | G6-05 | Accounting payment/reconciliation admin UI     | B     | permissions/evidence/error recovery  |
 | G6-06 | Shipment/package/carrier/tracking lifecycle    | A     | transition/idempotency tests         |

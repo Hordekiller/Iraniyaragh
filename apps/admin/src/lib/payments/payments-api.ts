@@ -2,6 +2,8 @@ import type {
   AdminPaymentDetailResponse,
   AdminPaymentListResponse,
   AdminPaymentReconciliationResponse,
+  AdminRefundRequest,
+  AdminRefundResponse,
   PaymentStatus,
 } from '@iranyaragh/contracts';
 import { apiFetch } from '@/lib/api/client';
@@ -38,4 +40,30 @@ export async function reconcilePayment(id: string) {
     { method: 'POST', token: getAccessToken() },
   );
   return response.data.reconciliation;
+}
+
+/**
+ * The staff member has already returned the money in the gateway panel; this
+ * records that evidence. The key is generated once per form so a retry after a
+ * lost response can never record the same transfer twice.
+ */
+export async function refundPayment(
+  id: string,
+  request: AdminRefundRequest,
+  idempotencyKey: string,
+) {
+  const response = await apiFetch<AdminRefundResponse['data']>(
+    `/payments/admin/${encodeURIComponent(id)}/refund`,
+    {
+      method: 'POST',
+      token: getAccessToken(),
+      headers: { 'Idempotency-Key': idempotencyKey },
+      body: request,
+    },
+  );
+  return response.data.refund;
+}
+
+export function newRefundIdempotencyKey(): string {
+  return `refund-${globalThis.crypto.randomUUID()}`;
 }
