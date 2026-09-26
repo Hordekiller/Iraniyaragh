@@ -10093,17 +10093,17 @@
         "operationId": "FulfillmentCommandController_start",
         "parameters": [
           {
-            "name": "id",
+            "name": "Idempotency-Key",
+            "in": "header",
             "required": true,
-            "in": "path",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Idempotency-Key",
-            "in": "header",
+            "name": "id",
             "required": true,
+            "in": "path",
             "schema": {
               "type": "string"
             }
@@ -10328,17 +10328,17 @@
         "operationId": "FulfillmentCommandController_ready",
         "parameters": [
           {
-            "name": "id",
+            "name": "Idempotency-Key",
+            "in": "header",
             "required": true,
-            "in": "path",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Idempotency-Key",
-            "in": "header",
+            "name": "id",
             "required": true,
+            "in": "path",
             "schema": {
               "type": "string"
             }
