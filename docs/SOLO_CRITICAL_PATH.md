@@ -19,17 +19,13 @@ worktrees and uncommitted files.
 1. **Payment foundation — PR #294:** merged 2026-09-24 with green quality,
    database, E2E, security and Sonar checks. The `idempotencyFingerprint`
    migration drift is resolved on `main`.
-2. **Payment completion:** Web initiation and safe redirect is **merged in PR
-   #295** (`2a578de`, 2026-09-25); its final SHA passed quality, database, E2E,
-   CodeQL, dependency review, production audit, Actions analysis and Sonar.
-   **Payment Result merged in PR #296** (`68aa581`, 2026-09-25), with the final
-   SHA passing quality, database, E2E, security and Sonar checks. **Admin
-   payment evidence merged in PR #297** (`807a6bc`, 2026-09-25), with all
-   final-SHA checks green. The active slice is **manual reconciliation** on
-   `feat/epic6-payment-reconciliation`: a privileged re-query of a recorded
-   unconfirmed payment through the existing server verifier, with staff audit
-   and replay-safe terminal results. Merge this PR after full review and CI;
-   then do durable outbox dispatch and refund as separate PRs.
+2. **Payment completion:** Web initiation/result (#295/#296), Admin evidence
+   (#297), reconciliation (#298), recoverable outbox relay/effect projection
+   (#299/#300), Zarinpal response and authority-race fixes (#301/#302), and
+   audited manual refund recording (#303, ADR-0019) are merged with green CI.
+   Zarinpal v4 has no refund API: #303 records a refund already executed by a
+   human in the merchant panel; it does not transfer money. External notification
+   delivery and production gateway acceptance remain open.
 3. **Fulfillment, shipping, notifications:** move `PAID` Orders through guarded
    picking/packing, shipment and tracking states; deliver deduplicated, observable
    notifications. Exit with a real, fixture-free purchase-to-tracking test.

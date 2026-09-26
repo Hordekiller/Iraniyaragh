@@ -16,12 +16,15 @@ import { SHIPPING_QUOTE_PORT } from './shipping-quote.port';
 import { GuestCartController } from './guest-cart.controller';
 import { GuestCartHttpService } from './guest-cart-http.service';
 import { GuestCartService } from './guest-cart.service';
+import { FulfillmentCommandController } from './fulfillment-command.controller';
+import { FulfillmentCommandService } from './fulfillment-command.service';
 
 @Module({
   imports: [AuditModule, AuthModule, InventoryModule],
   controllers: [
     OrderReadController,
     OrderCommandController,
+    FulfillmentCommandController,
     CartController,
     CartMergeController,
     GuestCartController,
@@ -34,6 +37,7 @@ import { GuestCartService } from './guest-cart.service';
     CheckoutService,
     OrderReadService,
     OrderCommandService,
+    FulfillmentCommandService,
     ConfiguredShippingQuoteAdapter,
     {
       provide: SHIPPING_QUOTE_PORT,
