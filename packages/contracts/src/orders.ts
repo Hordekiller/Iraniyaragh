@@ -115,6 +115,14 @@ export type ShipmentSnapshot = {
 
 export type ShipmentDispatchResponse = ApiSuccess<{ shipment: ShipmentSnapshot }>;
 
+export type ShipmentDeliveryResponse = ApiSuccess<{ delivery: {
+  shipmentId: string;
+  orderId: string;
+  status: 'DELIVERED';
+  proofReference: string;
+  confirmedAt: string;
+} }>;
+
 export type OrderTimelineEntry = {
   domain: 'ORDER' | 'PAYMENT' | 'FULFILLMENT';
   from: OrderStatus | PaymentStatus | FulfillmentStatus | null;

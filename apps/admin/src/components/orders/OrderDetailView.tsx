@@ -89,6 +89,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
   const [actionBusy, setActionBusy] = useState(false);
   const [carrier, setCarrier] = useState('');
   const [trackingCode, setTrackingCode] = useState('');
+  const [proofReference, setProofReference] = useState('');
   const actionKeys = useRef<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,6 +180,26 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
     }
   }
 
+  async function confirmDelivery() {
+    if (!canDispatch || actionBusy || proofReference.length < 4) return;
+    const actionId = `${orderId}:deliver`;
+    const key = actionKeys.current[actionId] ?? crypto.randomUUID();
+    actionKeys.current[actionId] = key;
+    setActionBusy(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await ordersApi.confirmDelivery(orderId, proofReference, key);
+      setOrder(await ordersApi.getOrder(orderId));
+      setActionSuccess('تحویل مرسوله با مرجع اثبات ثبت شد.');
+      delete actionKeys.current[actionId];
+    } catch (caught) {
+      setActionError(caught instanceof Error ? caught.message : 'تأیید تحویل ناموفق بود؛ همان عملیات را دوباره امتحان کنید.');
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
   if (!canRead) {
     return (
       <>
@@ -211,6 +232,8 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
       </>
     );
   }
+
+  const deliveryEvent = order.timeline.find((entry) => entry.domain === 'FULFILLMENT' && entry.to === 'DELIVERED');
 
   return (
     <>
@@ -302,6 +325,19 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                 <Typography variant="body2">حامل: {order.shipment.carrier}</Typography>
                 <Typography variant="body2">کد رهگیری: <span dir="ltr">{order.shipment.trackingCode}</span></Typography>
                 <Typography variant="body2">ثبت ارسال: {formatDateTime(order.shipment.dispatchedAt)}</Typography>
+                {order.shipment.status === 'DELIVERED' ? (
+                  <Typography variant="body2">تحویل تأیید شد{deliveryEvent ? ` · ${formatDateTime(deliveryEvent.createdAt)}` : ''}</Typography>
+                ) : null}
+                {order.shipment.status === 'SHIPPED' && canDispatch ? (
+                  <Stack spacing={2} sx={{ maxWidth: 420, mt: 2 }}>
+                    <Alert severity="warning">این تأیید، گواهی اپراتور بر اساس مرجع تحویل است؛ اتصال مستقیم به حامل هنوز فعال نیست.</Alert>
+                    <TextField label="مرجع اثبات تحویل" value={proofReference}
+                      onChange={(event) => { delete actionKeys.current[`${orderId}:deliver`]; setProofReference(event.target.value); }}
+                      inputProps={{ maxLength: 100, dir: 'ltr' }} />
+                    <Button variant="contained" disabled={actionBusy || !/^[A-Za-z0-9][A-Za-z0-9._-]{3,}$/.test(proofReference)}
+                      onClick={() => void confirmDelivery()}>تأیید تحویل با مرجع اثبات</Button>
+                  </Stack>
+                ) : null}
               </Stack>
             ) : canDispatch ? (
               <Stack spacing={2} sx={{ maxWidth: 420 }}>

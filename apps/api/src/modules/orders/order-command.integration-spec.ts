@@ -13,6 +13,7 @@ import { OrderCommandService } from './order-command.service';
 import { FulfillmentCommandService } from './fulfillment-command.service';
 import { FulfillmentPickService } from './fulfillment-pick.service';
 import { ShipmentDispatchService } from './shipment-dispatch.service';
+import { ShipmentDeliveryService } from './shipment-delivery.service';
 import { OrderReadService } from './order-read.service';
 
 function sha256(value: string): string {
@@ -48,6 +49,7 @@ describe.sequential('OrderCommandService database integration', () => {
   const fulfillmentCommands = new FulfillmentCommandService(prisma, audit);
   const fulfillmentPicks = new FulfillmentPickService(prisma, audit);
   const shipments = new ShipmentDispatchService(prisma, audit);
+  const delivery = new ShipmentDeliveryService(prisma, audit);
   const orderReads = new OrderReadService(prisma);
   let connected = false;
 
@@ -468,6 +470,10 @@ describe.sequential('OrderCommandService database integration', () => {
       quantity: foreignItem.quantity, actorId: staffUser, requestId: `${requestIdPrefix}-foreign-db-pick`,
     } })).rejects.toThrow();
 
+    await expect(delivery.confirm(order.id, { proofReference: `PROOF-${runId}` }, {
+      actorId: staffUser, requestId: `${requestIdPrefix}-early-delivery`, idempotencyKey: `early-delivery-${runId}`,
+    })).rejects.toMatchObject({ response: { code: 'SHIPMENT_STATE_CONFLICT' } });
+
     const dispatchContext = { actorId: staffUser, requestId: `${requestIdPrefix}-dispatch`, idempotencyKey: `dispatch-${runId}` };
     const body = { carrier: 'post', trackingCode: `PKG-${runId}` };
     const [dispatched, replay] = await Promise.all([
@@ -494,6 +500,24 @@ describe.sequential('OrderCommandService database integration', () => {
       shipmentId: stored.id, orderItemId: foreignItem.id, quantity: foreignItem.quantity,
     } })).rejects.toThrow();
     await expect(prisma.auditLog.count({ where: { entityId: stored.id, action: 'shipment.dispatch' } })).resolves.toBe(1);
+
+    const deliveryContext = { actorId: staffUser, requestId: `${requestIdPrefix}-delivery`, idempotencyKey: `delivery-${runId}` };
+    const proofReference = `PROOF-${runId}`;
+    const [confirmed, deliveryReplay] = await Promise.all([
+      delivery.confirm(order.id, { proofReference }, deliveryContext),
+      delivery.confirm(order.id, { proofReference }, { ...deliveryContext, requestId: `${requestIdPrefix}-delivery-replay` }),
+    ]);
+    expect(deliveryReplay).toEqual(confirmed);
+    expect(confirmed.data.delivery).toMatchObject({ shipmentId: stored.id, status: 'DELIVERED', proofReference });
+    expect(new Date(confirmed.data.delivery.confirmedAt).getTime()).toBeGreaterThan(0);
+    await expect(orderReads.getCustomerOrder(customerUser, order.id))
+      .resolves.toMatchObject({ data: { order: { shipment: { status: 'DELIVERED' }, fulfillmentStatus: 'DELIVERED' } } });
+    await expect(delivery.confirm(order.id, { proofReference: 'OTHER-REF' }, deliveryContext))
+      .rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_CONFLICT' } });
+    await expect(delivery.confirm(order.id, { proofReference }, { ...deliveryContext, idempotencyKey: `delivery-again-${runId}` }))
+      .rejects.toMatchObject({ response: { code: 'SHIPMENT_STATE_CONFLICT' } });
+    await expect(prisma.fulfillmentTransition.count({ where: { fulfillmentId: started.data.fulfillment.id, to: 'DELIVERED' } })).resolves.toBe(1);
+    await expect(prisma.auditLog.count({ where: { entityId: stored.id, action: 'shipment.delivery.confirm' } })).resolves.toBe(1);
   });
 
   async function makeOverdue(orderId: string) {

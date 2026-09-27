@@ -1,17 +1,19 @@
 # Detailed Development Plan
 
-Last reviewed: 2026-09-26
+Last reviewed: 2026-09-27
 
 Current delivery order and capacity are defined by `SOLO_CRITICAL_PATH.md`.
 The two-developer sprint assignments and durations below are historical planning
 assumptions, not active execution instructions.
 Payment work through manual refund recording (#294–#303) is merged. The first
 Fulfillment operator-transition slice (#305) is merged; #308 supplies item-level
-pick proof and a guarded staff workflow. Shipment, tracking and actual notification delivery remain on the single-developer
-critical path. Historical Sprint 7/8 notes below are
+pick proof and a guarded staff workflow. #310/#312 cover manual dispatch,
+tracking and staff-attested delivery; carrier verification and actual
+notification delivery remain on the single-developer critical path. Historical Sprint 7/8 notes below are
 not current PR status.
 #310 is the manual full-order dispatch and owner-scoped tracking slice.
-Delivery confirmation and notification delivery are separate subsequent work.
+#312 adds separate staff-attested delivery confirmation. Provider-verified
+carrier events and notification delivery are still future slices.
 
 This document schedules the MVP sequence. `COMMERCE_EXPANSION_PLAN.md` is the
 authoritative complete-scope plan for V1, operational maturity and governed growth;

@@ -25,6 +25,8 @@ import { FulfillmentPickController } from './fulfillment-pick.controller';
 import { FulfillmentPickService } from './fulfillment-pick.service';
 import { ShipmentDispatchController } from './shipment-dispatch.controller';
 import { ShipmentDispatchService } from './shipment-dispatch.service';
+import { ShipmentDeliveryController } from './shipment-delivery.controller';
+import { ShipmentDeliveryService } from './shipment-delivery.service';
 
 const base = {
   sessionId: "fulfillment-session",
@@ -82,14 +84,16 @@ const picks = {
   record: vi.fn(async (_orderId: string, itemId: string, quantity: number) => ({ data: { pick: { orderItemId: itemId, quantity } } })),
 };
 const shipments = { dispatch: vi.fn(async () => ({ data: { shipment: { id: 'shipment-1', status: 'SHIPPED' } } })) };
+const delivery = { confirm: vi.fn(async () => ({ data: { delivery: { shipmentId: 'shipment-1', status: 'DELIVERED' } } })) };
 
 @Module({
   imports: [ApiFoundationModule],
-  controllers: [FulfillmentCommandController, FulfillmentPickController, ShipmentDispatchController],
+  controllers: [FulfillmentCommandController, FulfillmentPickController, ShipmentDispatchController, ShipmentDeliveryController],
   providers: [
     { provide: FulfillmentCommandService, useValue: commands },
     { provide: FulfillmentPickService, useValue: picks },
     { provide: ShipmentDispatchService, useValue: shipments },
+    { provide: ShipmentDeliveryService, useValue: delivery },
     { provide: AuthPrincipalService, useValue: principalService },
     {
       provide: APP_GUARD,
@@ -163,6 +167,19 @@ describe("Fulfillment command HTTP authorization", () => {
     expect((await request(path, 'shipping', 'key-1', 'POST', { ...body, actorId: 'forged' })).status).toBe(400);
     expect((await request(path, 'shipping', 'key-1', 'POST', body)).status).toBe(200);
     expect(shipments.dispatch).toHaveBeenCalledWith('order-1', body, expect.objectContaining({ actorId: 'shipper-1', idempotencyKey: 'key-1' }));
+  });
+
+  it('guards manual delivery confirmation and refuses forged or invalid proof', async () => {
+    const path = '/api/v1/orders/admin/order-1/shipment/deliver';
+    const body = { proofReference: 'POD-1234' };
+    expect((await request(path, undefined, 'key-1', 'POST', body)).status).toBe(401);
+    expect((await request(path, 'customer', 'key-1', 'POST', body)).status).toBe(403);
+    expect((await request(path, 'staff', 'key-1', 'POST', body)).status).toBe(403);
+    expect((await request(path, 'shipping', '', 'POST', body)).status).toBe(400);
+    expect((await request(path, 'shipping', 'key-1', 'POST', { proofReference: 'bad / ref' })).status).toBe(400);
+    expect((await request(path, 'shipping', 'key-1', 'POST', { ...body, actorId: 'forged' })).status).toBe(400);
+    expect((await request(path, 'shipping', 'key-1', 'POST', body)).status).toBe(200);
+    expect(delivery.confirm).toHaveBeenCalledWith('order-1', body, expect.objectContaining({ actorId: 'shipper-1', idempotencyKey: 'key-1' }));
   });
 
   function request(
