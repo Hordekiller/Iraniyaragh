@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { ShipmentDeliveryResponse } from '@iranyaragh/contracts';
@@ -8,6 +7,7 @@ import { withSerializableRetry } from '../../common/serializable-retry';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import type { ShipmentDeliveryDto } from './shipment-delivery.dto';
+import { shipmentConflict, shipmentHash, storeShipmentCommandReplay } from './shipment-command-utils';
 
 type Context = { actorId: string; requestId: string; idempotencyKey: string };
 
@@ -20,8 +20,8 @@ export class ShipmentDeliveryService {
 
   async confirm(orderId: string, body: ShipmentDeliveryDto, context: Context): Promise<ShipmentDeliveryResponse> {
     const proofReference = body.proofReference;
-    const keyHash = sha256(context.idempotencyKey);
-    const fingerprint = sha256(JSON.stringify({ actorId: context.actorId, proofReference }));
+    const keyHash = shipmentHash(context.idempotencyKey);
+    const fingerprint = shipmentHash(JSON.stringify({ actorId: context.actorId, proofReference }));
     return withSerializableRetry({
       isContention: () => false,
       conflictMessage: 'Delivery changed concurrently; retry with the same idempotency key.',
@@ -40,10 +40,10 @@ export class ShipmentDeliveryService {
         if (prior) {
           if (prior.fingerprint !== fingerprint) throw new ConflictException({ code: 'IDEMPOTENCY_CONFLICT', message: 'Idempotency key payload conflict.' });
           if (prior.responseJson) return prior.responseJson as unknown as ShipmentDeliveryResponse;
-          throw conflict('Delivery confirmation is still running.');
+          throw shipmentConflict('Delivery confirmation is still running.');
         }
         if (!order.shipment || order.fulfillment?.status !== 'SHIPPED') {
-          throw conflict('Only a dispatched shipment can be confirmed delivered.');
+          throw shipmentConflict('Only a dispatched shipment can be confirmed delivered.');
         }
         const transition = await recordTransition(tx, 'fulfillment', order.fulfillment.id, 'SHIPPED', 'DELIVERED', {
           actorId: context.actorId, requestId: context.requestId,
@@ -59,18 +59,9 @@ export class ShipmentDeliveryService {
           before: { status: 'SHIPPED' }, after: { status: 'DELIVERED', proofReference },
           metadata: { orderId, transitionId: transition.id }, actorId: context.actorId, requestId: context.requestId,
         }, tx);
-        await tx.orderCommandIdempotencyRecord.create({ data: {
-          orderId, scope, keyHash, fingerprint,
-          responseJson: result as unknown as Prisma.InputJsonValue,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        } });
+        await storeShipmentCommandReplay(tx, { orderId, scope, keyHash, fingerprint, response: result });
         return result;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
     });
   }
 }
-
-function conflict(message: string): ConflictException {
-  return new ConflictException({ code: 'SHIPMENT_STATE_CONFLICT', message });
-}
-function sha256(value: string): string { return createHash('sha256').update(value).digest('hex'); }
