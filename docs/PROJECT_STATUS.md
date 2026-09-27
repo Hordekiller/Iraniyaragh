@@ -22,6 +22,10 @@ external proof reference, audit and replay-safe idempotency; this is not direct
 carrier verification. Neither slice is staging-accepted, and external
 notifications remain open. See `SHIPMENT_DISPATCH.md` and
 `SHIPMENT_DELIVERY.md` for their exact boundaries.
+The #314 slice adds durable paid/dispatch/delivery SMS attempts through the
+existing outbox and SMS.ir adapter. It records provider acceptance or safe
+failure; real SMS.ir templates/handset acceptance, delivery-status proof and
+fixture-free staging purchase remain open. See `CUSTOMER_SMS_DELIVERY.md`.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304's ADR-0006/schema discrepancy is addressed by a forward
@@ -72,7 +76,7 @@ Current delivery confidence:
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
 | Order commands/payment         | Refund evidence merged; production acceptance open | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence, reconciliation, outbox projection and manual refund evidence merged through #303. Zarinpal has no refund API; external notification delivery remains open. |
-| Commerce outbox                | Relay and effect projection implemented | #299 adds recoverable relay primitives; #300 activates a topic-aware worker and pending customer/operations effects, but no external notification or shipment delivery. Every settled payment topic closes its open reconciliation effect, and a published-but-unconsumed event can be recovered by the audited operator replay. |
+| Commerce outbox                | Relay, effects and essential SMS attempt worker | #299/#300 add relay/projection; #314 attempts paid/dispatch/delivery SMS through SMS.ir with durable at-most-once claims. Provider acceptance is not handset delivery; production acceptance is open. |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,

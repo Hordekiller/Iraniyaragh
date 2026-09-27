@@ -82,6 +82,13 @@ export class ShipmentDispatchService {
           metadata: { orderId, transitionId: transition.id, lineCount: order.items.length },
           actorId: context.actorId, requestId: context.requestId,
         }, tx);
+        await tx.outboxEvent.create({
+          data: {
+            topic: 'SHIPMENT_DISPATCHED', aggregateType: 'order', aggregateId: orderId,
+            payload: { shipmentId: shipment.id },
+            deduplicationKey: `shipment:${shipment.id}:dispatched`,
+          },
+        });
         await storeShipmentCommandReplay(tx, { orderId, scope, keyHash, fingerprint, response: result });
         return result;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),

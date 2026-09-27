@@ -8,6 +8,7 @@ import { ProductMediaCleanupService } from './modules/media/media-cleanup.servic
 import { GuestCartService } from './modules/orders/guest-cart.service';
 import { OutboxConsumerService } from './modules/outbox/outbox-consumer.service';
 import { OutboxRelayService } from './modules/outbox/outbox-relay.service';
+import { CustomerSmsDeliveryService } from './modules/notifications/customer-sms-delivery.service';
 import { OUTBOX_QUEUE_NAME, OUTBOX_QUEUE_PREFIX } from './modules/outbox/outbox-queue.port';
 
 async function bootstrap(): Promise<void> {
@@ -18,6 +19,7 @@ async function bootstrap(): Promise<void> {
   const guestCarts = app.get(GuestCartService);
   const outboxConsumer = app.get(OutboxConsumerService);
   const outboxRelay = app.get(OutboxRelayService);
+  const customerSms = app.get(CustomerSmsDeliveryService);
   const connection = { url: config.get('REDIS_URL', { infer: true }) };
   const worker = new Worker<{ mediaId: string }>(
     'product-media-processing',
@@ -118,12 +120,29 @@ async function bootstrap(): Promise<void> {
   const outboxTimer = setInterval(runOutbox, 5_000);
   runOutbox();
 
+  let smsPass: Promise<void> | null = null;
+  const runSms = () => {
+    if (smsPass) return;
+    smsPass = customerSms.dispatchBatch()
+      .then(result => {
+        if (result.claimed > 0) {
+          process.stdout.write(`Customer SMS claimed=${result.claimed} accepted=${result.accepted} pending=${result.pending} failed=${result.failed}\n`);
+        }
+      })
+      .catch(() => { process.stderr.write('Customer SMS delivery pass failed; inspect effect evidence.\n'); })
+      .finally(() => { smsPass = null; });
+  };
+  const smsTimer = setInterval(runSms, 5_000);
+  runSms();
+
   let closing = false;
   const close = async () => {
     if (closing) return;
     closing = true;
     clearInterval(outboxTimer);
+    clearInterval(smsTimer);
     await outboxPass;
+    await smsPass;
     await outboxWorker.close();
     await worker.close();
     await maintenanceWorker.close();

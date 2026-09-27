@@ -36,6 +36,8 @@ describe('OutboxConsumerService', () => {
     ['PAYMENT_VERIFICATION_UNCONFIRMED', 'payment', OutboxEffectKind.PAYMENT_RECONCILIATION, 'aggregate-1'],
     ['PAYMENT_VERIFIED_AFTER_CANCELLED', 'payment', OutboxEffectKind.PAYMENT_REFUND_REVIEW, 'aggregate-1'],
     ['PAYMENT_REFUNDED', 'payment', OutboxEffectKind.PAYMENT_REFUND_REVIEW, 'aggregate-1'],
+    ['SHIPMENT_DISPATCHED', 'order', OutboxEffectKind.CUSTOMER_SHIPMENT_DISPATCHED, 'aggregate-1'],
+    ['SHIPMENT_DELIVERED', 'order', OutboxEffectKind.CUSTOMER_SHIPMENT_DELIVERED, 'aggregate-1'],
   ])('projects %s into exactly one pending effect', async (topic, aggregateType, kind, subjectId) => {
     const { tx, consumer } = setup(topic, aggregateType);
     await consumer.consume('event-1');

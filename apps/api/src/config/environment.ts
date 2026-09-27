@@ -25,6 +25,9 @@ export type EnvironmentVariables = {
   AUTH_TOTP_ENCRYPTION_KEY?: string;
   SMS_IR_API_KEY?: string;
   SMS_IR_OTP_TEMPLATE_ID?: number;
+  SMS_IR_ORDER_PAID_TEMPLATE_ID?: number;
+  SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID?: number;
+  SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID?: number;
   SMS_IR_TIMEOUT_MS?: number;
   PAYMENT_PROVIDER_MODE?: string;
   ZARINPAL_MERCHANT_ID?: string;
@@ -346,6 +349,13 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     config.SMS_IR_OTP_TEMPLATE_ID === ''
       ? undefined
       : parseBoundedInteger(config.SMS_IR_OTP_TEMPLATE_ID, 'SMS_IR_OTP_TEMPLATE_ID', 1, 9_999_999_999);
+  const notificationTemplate = (key: string) =>
+    config[key] === undefined || config[key] === null || config[key] === ''
+      ? undefined
+      : parseBoundedInteger(config[key], key, 1, 9_999_999_999);
+  const paidTemplateId = notificationTemplate('SMS_IR_ORDER_PAID_TEMPLATE_ID');
+  const dispatchedTemplateId = notificationTemplate('SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID');
+  const deliveredTemplateId = notificationTemplate('SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID');
   const smsTimeoutMs =
     config.SMS_IR_TIMEOUT_MS === undefined || config.SMS_IR_TIMEOUT_MS === null || config.SMS_IR_TIMEOUT_MS === ''
       ? undefined
@@ -385,6 +395,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     if (smsTemplateId === undefined) {
       throw new Error('SMS_IR_OTP_TEMPLATE_ID is required in staging and production.');
     }
+    if (!paidTemplateId || !dispatchedTemplateId || !deliveredTemplateId) {
+      throw new Error('SMS_IR_ORDER_PAID_TEMPLATE_ID, SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID and SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID are required in staging and production.');
+    }
     if (config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === undefined || config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === '') {
       throw new Error('PRODUCT_MEDIA_IMAGE_MAX_BYTES is required in staging and production.');
     }
@@ -419,6 +432,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     AUTH_TOTP_ENCRYPTION_KEY: totpEncryptionKey,
     SMS_IR_API_KEY: smsApiKey,
     SMS_IR_OTP_TEMPLATE_ID: smsTemplateId,
+    SMS_IR_ORDER_PAID_TEMPLATE_ID: paidTemplateId,
+    SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID: dispatchedTemplateId,
+    SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID: deliveredTemplateId,
     SMS_IR_TIMEOUT_MS: smsTimeoutMs,
     PAYMENT_PROVIDER_MODE: paymentMode,
     ZARINPAL_MERCHANT_ID:

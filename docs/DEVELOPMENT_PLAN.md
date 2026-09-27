@@ -12,8 +12,9 @@ tracking and staff-attested delivery; carrier verification and actual
 notification delivery remain on the single-developer critical path. Historical Sprint 7/8 notes below are
 not current PR status.
 #310 is the manual full-order dispatch and owner-scoped tracking slice.
-#312 adds separate staff-attested delivery confirmation. Provider-verified
-carrier events and notification delivery are still future slices.
+#312 adds separate staff-attested delivery confirmation. #314 adds durable
+essential customer SMS attempts; real SMS.ir handset acceptance and
+provider-verified carrier events remain future acceptance slices.
 
 This document schedules the MVP sequence. `COMMERCE_EXPANSION_PLAN.md` is the
 authoritative complete-scope plan for V1, operational maturity and governed growth;

@@ -11,6 +11,8 @@ const TOPIC_KIND: Readonly<Record<string, OutboxEffectKind>> = {
   PAYMENT_VERIFIED_AFTER_CANCELLED: OutboxEffectKind.PAYMENT_REFUND_REVIEW,
   PAYMENT_VERIFICATION_FAILED: OutboxEffectKind.PAYMENT_RECONCILIATION,
   PAYMENT_REFUNDED: OutboxEffectKind.PAYMENT_REFUND_REVIEW,
+  SHIPMENT_DISPATCHED: OutboxEffectKind.CUSTOMER_SHIPMENT_DISPATCHED,
+  SHIPMENT_DELIVERED: OutboxEffectKind.CUSTOMER_SHIPMENT_DELIVERED,
 };
 
 /**
@@ -42,7 +44,7 @@ export class OutboxConsumerService {
       if (event.consumedAt) return;
 
       const kind = TOPIC_KIND[event.topic];
-      const expectedAggregate = event.topic.startsWith('ORDER_') ? 'order' : 'payment';
+      const expectedAggregate = event.topic.startsWith('ORDER_') || event.topic.startsWith('SHIPMENT_') ? 'order' : 'payment';
       if (!kind || event.aggregateType !== expectedAggregate) {
         throw new UnsupportedOutboxTopicError('Unsupported outbox event topic or aggregate.');
       }

@@ -500,6 +500,7 @@ describe.sequential('OrderCommandService database integration', () => {
       shipmentId: stored.id, orderItemId: foreignItem.id, quantity: foreignItem.quantity,
     } })).rejects.toThrow();
     await expect(prisma.auditLog.count({ where: { entityId: stored.id, action: 'shipment.dispatch' } })).resolves.toBe(1);
+    await expect(prisma.outboxEvent.count({ where: { topic: 'SHIPMENT_DISPATCHED', aggregateId: order.id } })).resolves.toBe(1);
 
     const deliveryContext = { actorId: staffUser, requestId: `${requestIdPrefix}-delivery`, idempotencyKey: `delivery-${runId}` };
     const proofReference = `PROOF-${runId}`;
@@ -518,6 +519,7 @@ describe.sequential('OrderCommandService database integration', () => {
       .rejects.toMatchObject({ response: { code: 'SHIPMENT_STATE_CONFLICT' } });
     await expect(prisma.fulfillmentTransition.count({ where: { fulfillmentId: started.data.fulfillment.id, to: 'DELIVERED' } })).resolves.toBe(1);
     await expect(prisma.auditLog.count({ where: { entityId: stored.id, action: 'shipment.delivery.confirm' } })).resolves.toBe(1);
+    await expect(prisma.outboxEvent.count({ where: { topic: 'SHIPMENT_DELIVERED', aggregateId: order.id } })).resolves.toBe(1);
   });
 
   async function makeOverdue(orderId: string) {
