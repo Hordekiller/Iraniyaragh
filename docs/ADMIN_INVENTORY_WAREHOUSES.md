@@ -19,8 +19,9 @@ must inspect open reservations and stock manually; this slice does not provide
 that cross-entity guard or a reconciliation dashboard.
 
 Evidence: Admin adapter/permission/dialog/view tests and package typecheck/lint/
-build/coverage pass locally. A browser journey that signs in and creates a real
-warehouse and location through the running API is added but still awaits CI.
+build/coverage pass; PR #318's nine exact-head CI checks passed, including the
+browser journey that signs in and creates a real warehouse and location through
+the running API on desktop and mobile.
 This is **M1 only**. Balance, Movement,
 Adjustment, Reservation and Transfer UI remain separate #261 slices; stocktake
 belongs to #7. No schema, shared contract or OpenAPI change is made here.

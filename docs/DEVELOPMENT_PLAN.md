@@ -3,9 +3,10 @@
 Last reviewed: 2026-09-27
 
 Current delivery order and capacity are defined by `SOLO_CRITICAL_PATH.md`.
-As of PR #315/#314, essential paid/dispatch/delivery SMS attempt delivery is
-merged; real provider acceptance and a fixture-free purchase remain open. #261
-is the next product implementation issue.
+As of PR #318/#317, essential paid/dispatch/delivery SMS attempts and Admin
+Warehouse/Location operations are merged; real provider acceptance and a
+fixture-free purchase remain open. #261 is active, with #319 the next ledger UI
+slice.
 The two-developer sprint assignments and durations below are historical planning
 assumptions, not active execution instructions.
 Payment work through manual refund recording (#294–#303) is merged. The first
