@@ -34,6 +34,7 @@ import {
   variantStatusTone,
 } from '@/lib/catalog/catalog-labels';
 import { canReadCatalog, canWriteCatalog } from '@/lib/catalog/catalog-permissions';
+import { canReadInventory } from '@/lib/inventory/inventory-permissions';
 import { getProduct, listAttributes } from '@/lib/catalog/catalog-api';
 import { AttributeConfigEditor } from './AttributeConfigEditor';
 import { ProductDescriptionEditor, ProductDescriptionPreview } from './ProductDescriptionEditor';
@@ -50,6 +51,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const { user } = useAuth();
   const canRead = canReadCatalog(user);
   const canWrite = canWriteCatalog(user);
+  const canViewInventory = canReadInventory(user);
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -309,7 +311,10 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 page={0}
                 pageSize={Math.max(product.variants.length, 1)}
                 onPageChange={() => undefined}
-                actions={canWrite ? (row) => <VariantRowActions variant={row} onChanged={reload} /> : undefined}
+                actions={canViewInventory || canWrite ? (row) => <Stack direction="row" spacing={1} alignItems="center">
+                  {canViewInventory ? <Button size="small" component={Link} href={`/inventory?variantId=${encodeURIComponent(row.id)}`}>موجودی</Button> : null}
+                  {canWrite ? <VariantRowActions variant={row} onChanged={reload} /> : null}
+                </Stack> : undefined}
                 actionsLabel="عملیات"
               />
               <Divider sx={{ my: 2 }} />

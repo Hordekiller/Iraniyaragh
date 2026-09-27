@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Alert, Box, Button, Chip, IconButton, Stack, Typography } from '@mui/material';
 import { Edit, Lock, MapPin, Plus, RefreshCw, Warehouse as WarehouseIcon } from 'lucide-react';
 import type { Warehouse, WarehouseLocation } from '@iranyaragh/contracts';
@@ -104,6 +105,7 @@ export function WarehousesView() {
         onPageChange={(page, size) => { setWarehousePage(page); setWarehousePageSize(size); }}
         actions={(row) => <Stack direction="row" spacing={0.5}>
           <Button size="small" startIcon={<MapPin size={16} />} onClick={() => { setSelected(row); setLocationPage(0); setLocations([]); }}>مکان‌ها</Button>
+          <Button size="small" component={Link} href={`/inventory?warehouseId=${encodeURIComponent(row.id)}`}>موجودی</Button>
           {canAdjust ? <IconButton size="small" aria-label={`ویرایش انبار ${row.name}`} onClick={() => setWarehouseDialog({ open: true, edit: row })}><Edit size={17} /></IconButton> : null}
         </Stack>}
         actionsLabel="عملیات"
@@ -133,8 +135,11 @@ export function WarehousesView() {
           emptyTitle="مکانی ثبت نشده است" emptyDescription="در این انبار هنوز مکانی ثبت نشده است."
           rowCount={locationCount} page={locationPage} pageSize={locationPageSize}
           onPageChange={(page, size) => { setLocationPage(page); setLocationPageSize(size); }}
-          actions={canAdjust ? (row) => <IconButton size="small" aria-label={`ویرایش مکان ${row.code}`} onClick={() => setLocationDialog({ open: true, edit: row })}><Edit size={17} /></IconButton> : undefined}
-          actionsLabel="ویرایش"
+          actions={(row) => <Stack direction="row" spacing={0.5}>
+            <Button size="small" component={Link} href={`/inventory?warehouseId=${encodeURIComponent(row.warehouseId)}&locationId=${encodeURIComponent(row.id)}`}>موجودی</Button>
+            {canAdjust ? <IconButton size="small" aria-label={`ویرایش مکان ${row.code}`} onClick={() => setLocationDialog({ open: true, edit: row })}><Edit size={17} /></IconButton> : null}
+          </Stack>}
+          actionsLabel="عملیات"
         />
       </Box> : <EmptyState icon={<WarehouseIcon size={28} />} title="یک انبار انتخاب کنید" description="برای مشاهده و مدیریت مکان‌ها، دکمهٔ «مکان‌ها» را در ردیف انبار بزنید." />}
       <WarehouseDialog open={warehouseDialog.open} warehouse={warehouseDialog.edit} onClose={() => setWarehouseDialog({ open: false, edit: null })} onSaved={() => setWarehouseReload((value) => value + 1)} />

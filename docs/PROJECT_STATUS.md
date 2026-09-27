@@ -31,10 +31,11 @@ PR #315 merged #314 at `91b7f49` with all nine final-head checks green.
 The next product issue is #261 Admin Inventory; #279 is closed as delivered
 by #284/#290 and obsolete UI coordination #166 is closed as superseded by
 #252/#258. The current issue dispositions live in `SOLO_CRITICAL_PATH.md`.
-The in-progress #317 child slice proposes a live Admin Warehouse/Location route
-and operator forms. It is not merged at this checkpoint and does not cover
-balance, movement, adjustment, reservation or transfer UI. See
-`ADMIN_INVENTORY_WAREHOUSES.md` for exact limits.
+PR #318 merged #317 at `4e56267` after all nine exact-head checks passed,
+including a real desktop/mobile warehouse/location browser journey. The next
+child slice #319 adds balance, movement and audited receipt/adjustment Admin UI;
+it is not merged at this checkpoint. Reservation and Transfer UI remain open.
+See `ADMIN_INVENTORY_WAREHOUSES.md` and `ADMIN_INVENTORY_LEDGER.md` for limits.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304's ADR-0006/schema discrepancy is addressed by a forward
@@ -77,7 +78,7 @@ Current delivery confidence:
 | Catalog Admin                  | Merged slice                                | #229 delivers product detail, attributes, variants and import management                                                                                                                                                  |
 | Product media                  | Merged M1–M5; production acceptance pending | #162/#223/#224 plus #240 deliver the image pipeline, Admin authoring, public projection, storefront gallery and publish-to-discovery E2E; video processing, production S3/CORS and malware-scanner acceptance remain open |
 | Public discovery               | Merged slice                                | #228 connects storefront catalog reads to live API data                                                                                                                                                                   |
-| Inventory core                 | Merged API; Admin operator slice in progress | #222 delivers protected warehouse/balance/movement/adjustment/transfer API; #317 proposes Warehouse/Location Admin UI. Other inventory operator routes remain open. |
+| Inventory core                 | Merged API and Warehouse/Location Admin UI; ledger UI in progress | #222 delivers protected inventory API; #317/#318 binds Warehouse/Location Admin. #319 works on Balance/Movement/Adjustment; Reservation/Transfer UI remains open. |
 | Public availability            | Merged slice                                | #231 exposes fail-closed variant availability without warehouse internals                                                                                                                                                 |
 | Reservation expiry             | Merged optimization                         | #232 processes bounded expiry batches transactionally with race-safe rechecks                                                                                                                                             |
 | Cart runtime                   | Authenticated + Guest API runtime merged    | #239/#241–#244/#251 deliver authenticated ownership and correctness; #270/#269 adds opaque Guest ownership, rolling TTL, abuse controls, bounded cleanup and explicit OTP-login merge                                     |
