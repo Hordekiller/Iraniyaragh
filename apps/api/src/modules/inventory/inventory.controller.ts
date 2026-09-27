@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { InventoryMovementType, ReservationStatus, TransferStatus } from '@prisma/client';
 import type {
@@ -149,6 +149,9 @@ export class InventoryController {
   @ApiBody({ schema: openApiInventory.reservationCreate })
   @ApiCreatedResponse({ schema: openApiInventory.reservation })
   async reserve(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string | undefined, @Body() input: InventoryReservationDto) {
+    if (input.orderId !== undefined) {
+      throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'Order-linked reservations must be created by checkout.' });
+    }
     return this.inventory.reserve({ ...input, expiresAt: new Date(input.expiresAt), idempotencyKey, actorId: principal.userId, requestId: getRequestId() });
   }
 

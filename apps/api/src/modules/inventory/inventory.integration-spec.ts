@@ -341,6 +341,8 @@ describe.sequential('InventoryService database integration', () => {
       requestId: consumeRequestId,
     });
     expect(consumed.status).toBe('CONSUMED');
+    expect(consumed).not.toHaveProperty('idempotencyKey');
+    expect(consumed.expiresAt).toEqual(expect.any(String));
 
     const replayed = await inventory.consumeReservation(reservation.id, {
       actorId,
@@ -381,6 +383,7 @@ describe.sequential('InventoryService database integration', () => {
       requestId: `${requestIdPrefix}-consume-release`,
     });
     expect(released.status).toBe('RELEASED');
+    expect(released).not.toHaveProperty('idempotencyKey');
 
     const releaseMovement = await prisma.inventoryMovement.findFirst({
       where: { referenceType: 'stock-reservation', referenceId: release.id },
@@ -816,6 +819,8 @@ describe.sequential('InventoryService database integration', () => {
     const replay = await inventory.reserve(payload);
 
     expect(replay.id).toBe(first.id);
+    expect(first).not.toHaveProperty('idempotencyKey');
+    expect(replay).not.toHaveProperty('idempotencyKey');
     await expect(
       prisma.stockReservation.count({ where: { idempotencyKey: key } }),
     ).resolves.toBe(1);

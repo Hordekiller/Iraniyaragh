@@ -149,6 +149,15 @@ describe('InventoryController', () => {
     expect(service.cancelTransfer).toHaveBeenCalledWith('tr-1', { expectedVersion: 0, actorId: 'staff-1', requestId: 'req-2' });
   });
 
+  it('rejects an operator-supplied orderId before creating a reservation', async () => {
+    service.reserve.mockClear();
+    await expect(controller.reserve(principal, 'idem-order', {
+      warehouseId: 'w', locationId: 'l', variantId: 'v', orderId: 'order-1',
+      quantity: 1, expiresAt: '2030-01-01T00:00:00.000Z',
+    } as never)).rejects.toMatchObject({ response: { code: 'INVALID_REQUEST' } });
+    expect(service.reserve).not.toHaveBeenCalled();
+  });
+
   it('binds actor and request context to warehouse and location CRUD', async () => {
     await runWithRequestContext(
       { requestId: 'req-3', correlationId: 'req-3', startedAt: new Date().toISOString() },

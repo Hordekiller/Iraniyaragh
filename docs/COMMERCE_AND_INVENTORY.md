@@ -62,6 +62,10 @@ Reservations require:
 Expired/cancelled reservations release available stock. Fulfillment consumes the reservation with the corresponding physical movement.
 
 Reservation writes are idempotent via an optional `idempotency-key` header (`StockReservation.idempotencyKey`); replaying the same key with the same payload returns the original reservation, while a conflicting payload is rejected. Expiry runs in a serializable transaction and makes each reservation expire exactly once, restoring `available` stock.
+The staff/manual reservation HTTP endpoint must reject caller-supplied `orderId`.
+Manual release/consume must reject order-linked or already-expired reservations;
+checkout, cancellation and fulfillment use their internal order-scoped lifecycle.
+The Admin manual commands never stand in for payment or fulfillment transitions.
 
 ## Cart runtime
 

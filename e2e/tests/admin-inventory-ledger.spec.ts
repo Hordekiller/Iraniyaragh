@@ -9,8 +9,8 @@ async function navigate(page: Page, name: string, pattern: RegExp) {
   await expect(page).toHaveURL(pattern);
 }
 
-test('operator records a real receipt and an audited adjustment through the inventory ledger', async ({ page }) => {
-  test.setTimeout(90_000);
+test('operator records receipt, adjustment, and guarded manual reservation lifecycle through real inventory APIs', async ({ page }) => {
+  test.setTimeout(120_000);
   await signInDiAsAdmin(page);
   const suffix = Date.now().toString(36);
 
@@ -74,4 +74,39 @@ test('operator records a real receipt and an audited adjustment through the inve
   await expect(adjustmentDialog).toBeHidden();
   await expect(balanceRow).toContainText('۳');
   await expect(page.getByRole('table', { name: 'گردش دفترکل موجودی' }).getByRole('row', { name: /تعدیل کاهشی/ })).toContainText('اصلاح شمارش آزمون');
+
+  await tap(balanceRow.getByRole('link', { name: 'رزروها' }));
+  await expect(page).toHaveURL(/\/reservations\?warehouseId=/);
+  const reservationsTable = page.getByRole('table', { name: 'رزروهای موجودی' });
+  await tap(page.getByRole('button', { name: 'رزرو دستی' }));
+  const createReservation = page.getByRole('dialog', { name: 'رزرو دستی موجودی' });
+  await expect(createReservation.getByRole('textbox', { name: 'نسخهٔ مانده' })).toHaveValue('2');
+  await createReservation.getByRole('textbox', { name: 'تعداد' }).fill('1');
+  await createReservation.locator('input[type="datetime-local"]').fill('2099-01-01T12:00');
+  await tap(createReservation.getByRole('button', { name: 'ثبت رزرو' }));
+  await expect(createReservation).toBeHidden();
+  const activeReservation = reservationsTable.getByRole('row').filter({ hasText: 'فعال' }).filter({ hasText: 'دستی' });
+  await expect(activeReservation).toHaveCount(1);
+  await tap(activeReservation.getByRole('button', { name: 'آزادسازی' }));
+  const releaseDialog = page.getByRole('dialog', { name: 'آزادسازی رزرو دستی' });
+  await expect(releaseDialog.getByText(/نسخهٔ مانده:/)).toBeVisible();
+  await tap(releaseDialog.getByRole('button', { name: 'تأیید آزادسازی' }));
+  await expect(releaseDialog).toBeHidden();
+  await expect(reservationsTable.getByRole('row').filter({ hasText: 'آزادشده' })).toHaveCount(1);
+
+  await tap(page.getByRole('button', { name: 'رزرو دستی' }));
+  const secondCreate = page.getByRole('dialog', { name: 'رزرو دستی موجودی' });
+  await secondCreate.getByRole('textbox', { name: 'نسخهٔ مانده' }).fill('4');
+  await secondCreate.getByRole('textbox', { name: 'تعداد' }).fill('1');
+  await secondCreate.locator('input[type="datetime-local"]').fill('2099-01-01T12:00');
+  await tap(secondCreate.getByRole('button', { name: 'ثبت رزرو' }));
+  await expect(secondCreate).toBeHidden();
+  const activeAgain = reservationsTable.getByRole('row').filter({ hasText: 'فعال' }).filter({ hasText: 'دستی' });
+  await expect(activeAgain).toHaveCount(1);
+  await tap(activeAgain.getByRole('button', { name: 'مصرف' }));
+  const consumeDialog = page.getByRole('dialog', { name: 'مصرف رزرو دستی' });
+  await expect(consumeDialog.getByText(/نسخهٔ مانده:/)).toBeVisible();
+  await tap(consumeDialog.getByRole('button', { name: 'تأیید مصرف' }));
+  await expect(consumeDialog).toBeHidden();
+  await expect(reservationsTable.getByRole('row').filter({ hasText: 'مصرف‌شده' })).toHaveCount(1);
 });

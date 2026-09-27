@@ -512,6 +512,48 @@ describe('InventoryService guards and queries', () => {
     expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('forbids manual release or consume of order-linked reservations', async () => {
+    ctx.prisma.stockReservation.findUnique.mockResolvedValue({
+      id: 'r-order', warehouseId: 'wh', locationId: 'loc', variantId: 'variant',
+      orderId: 'order-1', quantity: 2, status: 'ACTIVE',
+    });
+    ctx.prisma.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1 });
+
+    for (const action of ['releaseReservation', 'consumeReservation'] as const) {
+      await expect(ctx.service[action]('r-order', { actorId: 'actor', requestId: 'request' }))
+        .rejects.toMatchObject({ response: { code: 'RESERVATION_STATE_CONFLICT' } });
+    }
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects manual consumption after expiry even before the expiry worker runs', async () => {
+    ctx.prisma.stockReservation.findUnique.mockResolvedValue({
+      id: 'r-expired', warehouseId: 'wh', locationId: 'loc', variantId: 'variant',
+      orderId: null, quantity: 2, status: 'ACTIVE', expiresAt: new Date('2020-01-01T00:00:00.000Z'),
+    });
+    ctx.prisma.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1 });
+    await expect(ctx.service.consumeReservation('r-expired', { actorId: 'actor', requestId: 'request' }))
+      .rejects.toMatchObject({ response: { code: 'RESERVATION_EXPIRED' } });
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('preserves a released replay after its expiration time without exposing replay keys', async () => {
+    const released = {
+      id: 'r-released', warehouseId: 'wh', locationId: 'loc', variantId: 'variant',
+      orderId: null, quantity: 2, status: 'RELEASED',
+      expiresAt: new Date('2020-01-01T00:00:00.000Z'),
+      createdAt: new Date('2019-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2020-01-01T00:00:00.000Z'), idempotencyKey: 'internal-key',
+    };
+    ctx.prisma.stockReservation.findUnique.mockResolvedValue(released);
+    ctx.prisma.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 2 });
+    ctx.tx.stockReservation.findUnique.mockResolvedValue(released);
+    const replay = await ctx.service.releaseReservation('r-released', { actorId: 'actor', requestId: 'request' });
+    expect(replay.status).toBe('RELEASED');
+    expect(replay).not.toHaveProperty('idempotencyKey');
+    expect(ctx.tx.inventoryBalance.update).not.toHaveBeenCalled();
+  });
+
   it('emits RESERVATION_NOT_FOUND for an unknown reservation', async () => {
     ctx.prisma.stockReservation.findUnique.mockResolvedValue(null);
 
