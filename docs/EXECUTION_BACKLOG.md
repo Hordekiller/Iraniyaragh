@@ -1,6 +1,8 @@
 # Zero-to-Production Execution Backlog
 
-Status: active work-breakdown baseline; reconciled 2026-09-18
+Status: capability/exit-evidence backlog; gate assessment reconciled 2026-09-27.
+`SOLO_CRITICAL_PATH.md` controls the active one-developer order. Developer A/B
+columns below are historical ownership assumptions, not current parallel lanes.
 
 Developer A: [@Hordekiller](https://github.com/Hordekiller)
 
@@ -23,15 +25,17 @@ the agreed scope in `PRODUCT_SPEC.md`.
 
 ### Current gate assessment
 
-| Gate (EXEC_G#) | Assessment                      | Why it is not closed                                                                                                                                                                                   |
-| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| G0             | Substantially complete          | provider/business decisions and team agreement remain                                                                                                                                                  |
-| G1             | Substantially complete          | production images/deployment remain part of G9; clean-clone timing needs current evidence                                                                                                              |
-| G2             | Substantially complete          | Auth/RBAC runtime merged (#109/#111/#150/#158) plus admin logout CSRF #190, real staff-auth client #191 and live nav flags #192; refresh/CSRF parity #186/#188 closed via #190/#195                    |
-| G3             | Integrated foundation           | Catalog variants/pricing/import, Admin authoring, live storefront discovery and Product Media M1–M5 are merged through #240; Admin-driven publish and production media acceptance remain               |
-| G4             | Protected HTTP foundation       | inventory HTTP (#222), public availability (#231), batched expiry (#232) and deterministic Checkout allocation (#246/#237) are merged; operator UI, compensation and worker rollout remain             |
-| G5             | Cart + Checkout + Order reads   | Hardened authenticated Cart through #251, Checkout/Order creation through #246/#237 and customer/staff Order reads through #247/#238 are merged; guest Cart, clients, commands and compensation remain |
-| G6–G10         | Not started as integrated gates | no exit outcome has been demonstrated                                                                                                                                                                  |
+| Gate (EXEC_G#) | Assessment | Remaining exit evidence |
+| --- | --- | --- |
+| G0–G2 | Foundation/Auth runtime merged | private #114 SMS provider acceptance and production configuration |
+| G3 | Catalog/media integrated foundation | production media/scanner and full authoring acceptance |
+| G4 | Inventory core and protected HTTP merged | #261 operator integration, ledger reconciliation and rollout |
+| G5 | Cart/Checkout/Order and core Web/Admin binding merged | fixture-free purchase/staging and route completeness |
+| G6 | Payment, manual Fulfillment/shipping and SMS attempts merged through #314 | live gateway/SMS acceptance, carrier-proof limits and end-to-end staging evidence |
+| G7 | Not exited | #7 purchasing, receiving, stocktake, returns and reports |
+| G8 | Not exited | #252/#258 route audit, content/discovery and data rehearsal |
+| G9 | Not exited | #136 deploy, monitoring, backup/restore, rollback and load/security drills |
+| G10 | Not exited | stable RC, UAT, supervised launch and reconciliation |
 
 This table is qualitative. A numeric delivery percentage is intentionally withheld
 until each row has accepted exit evidence.

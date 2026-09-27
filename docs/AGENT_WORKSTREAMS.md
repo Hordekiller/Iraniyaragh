@@ -1,6 +1,8 @@
 # Independent Agent Workstreams
 
-Status: active coordination contract; reviewed 2026-09-18.
+Status: historical three-lane coordination design (last active review
+2026-09-18). Not an active work assignment. `SOLO_CRITICAL_PATH.md` supersedes
+its parallel execution and shared-hotspot schedule as of 2026-09-27.
 
 This file keeps three implementation lanes independently productive without allowing
 UI branches to redefine business truth or silently collide in shared hotspots.

@@ -1,10 +1,10 @@
 # Execution Status and Handoff
 
-Last reviewed: 2026-09-25
+Last reviewed: 2026-09-27
 
-The active one-developer queue is `SOLO_CRITICAL_PATH.md`. The parallel lanes,
-assignments and queue snapshots below are retained as historical evidence; they
-do not authorize starting work ahead of the payment/fulfillment critical path.
+The active one-developer queue is `SOLO_CRITICAL_PATH.md`. The dated parallel-lane
+assignments below are historical evidence only. This top checkpoint supersedes
+older queue rows, including any statement that Payment has not started.
 
 This is the short-horizon board. `PROJECT_STATUS.md` owns factual capability,
 `V1_MASTER_PLAN.md` owns the integrated delivery sequence, and GitHub issues/PRs own
@@ -13,17 +13,32 @@ day-to-day assignments.
 ## Operating rules
 
 - One integrated outcome at a time per release gate.
-- Contract/policy first, then API and fixture-backed UI in parallel, then integration.
+- Contract/policy first, then one scoped implementation and its integration.
 - `main` is delivered truth; open PRs and local files are reported separately.
 - Shared contracts, schema/migrations, root configuration and navigation require
   explicit ownership before editing.
 - Critical work requires failure, authorization, idempotency/concurrency, audit and
   contract evidence as applicable.
-- Limit each contributor to one primary implementation plus one review/unblock task.
-- Use the complete three-lane wave map and `D/C/P/A/W/I/O` merge train in
-  `AGENT_WORKSTREAMS.md`; Platform, Admin and User UI never share a dirty worktree.
+- One developer, at most one product PR; finish tests/review/CI/merge before the
+  next shared hotspot or domain slice. Historical `AGENT_WORKSTREAMS.md` is
+  not an instruction to parallelize.
 
 ## Current position
+
+Checkpoint `main@91b7f49` (PR #315, 2026-09-27): Payment through manual refund,
+Fulfillment pick/ready, shipment/tracking/delivery attestation and essential
+customer SMS attempts are merged. No product PR is open. #261 is next.
+
+| Gate | Current assessment | Exit blocker |
+| --- | --- | --- |
+| 0.1/0.2 | Auth and catalog/media foundation merged | #114 real SMS; production media/config acceptance |
+| 0.3 | Ledger and inventory HTTP merged | #261 operator UI and end-to-end stock reconciliation |
+| 0.4 | Cart, Checkout, Order/API and Web/Admin core merged | Fixture-free staging purchase and route-by-route UI audit |
+| 0.5 | Payment/Fulfillment/shipping and SMS attempt worker merged | Live gateway/SMS acceptance, full staging journey, delivery proof limits |
+| 0.6–1.0 | Not exited | #7, #252/#258, discovery, #136 hardening and UAT |
+
+The next two tables are the **2026-09-25 historical snapshot**; do not use them
+to choose the next issue.
 
 | Gate                  | State                                 | Current evidence                                                                                                                                                  | Exit blocker                                                                            |
 | --------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -179,6 +194,12 @@ Exit: no UI or storage work relies on an invented contract.
 Exit: one thin vertical journey is demonstrable; broad CRUD breadth is secondary.
 
 ## Current 10 working-day direction
+
+2026-09-27 active direction: finish #261 as sequential Admin Inventory slices,
+then #114 real SMS/provider acceptance, followed by #7 Warehouse+ and
+#252/#258 UI closure; keep staging payment/media and recovery blockers visible.
+Do not start SEO or deferred multi-provider/AI/dependency work while the
+first real purchase path is unproven. Historical numbered guidance follows.
 
 1. Treat #251 as the merged customer Cart correctness baseline, #270/#269 as the
    merged Guest Cart API/security baseline and #268 as the authenticated Web

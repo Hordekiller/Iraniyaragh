@@ -1,6 +1,7 @@
 # Page, Content and Release Matrix
 
-Status: authoritative page inventory and release boundary; reviewed 2026-09-18.
+Status: authoritative page inventory and release boundary; truth checkpoint
+reconciled 2026-09-27. `SOLO_CRITICAL_PATH.md` controls execution order.
 
 Implementation truth remains in `PROJECT_STATUS.md`. An entry in this matrix means
 required scope, not delivered code. Only reviewed evidence merged to `main` changes a
@@ -8,14 +9,14 @@ capability to delivered.
 
 ## 1. Current truth checkpoint
 
-| Area         | State on `main`                                                                                                                                                     | Open work, not delivered                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Customer web | Accessible responsive Vite app with real-HTTP Auth, live Catalog/media/availability discovery and the merged M4 gallery; Cart/Checkout/Orders remain fixture-backed | #126 rendered pages; live Cart binding; #140 dynamic page/content outcome                    |
-| Admin        | Next.js RTL shell, Auth/session management, SMS settings, Catalog workflow and Product Media authoring; no live Inventory/Order operations                          | Admin-driven publish acceptance and remaining operational commerce modules                   |
-| API          | Auth/RBAC, Catalog/Media, Inventory HTTP/availability, authenticated Cart, #246 Checkout/Order creation and #247 customer/staff Order reads are merged              | #114 provider acceptance; Cart guest/merge; Order commands/compensation; Payment/Fulfillment |
-| Discovery    | ADR-0012 and the complete SEO/GEO plan are merged                                                                                                                   | #129 sitemap/robots/IndexNow and #126 rendered templates                                     |
-| Commerce     | Server Cart, Checkout/Order creation and Order read APIs exist; Web/Admin remain fixture-backed and no Payment/Fulfillment journey exists                           | Live Cart/Checkout/Order clients; commands/compensation; Payment/Fulfillment/notifications   |
-| Operations   | CI and local dependencies exist                                                                                                                                     | #136 logging/telemetry plus deploy, restore, alerts and production drills                    |
+| Area | State on `main@91b7f49` | Open work, not delivered |
+| --- | --- | --- |
+| Customer web | Live Catalog, Cart/Checkout, payment result, customer Order and shipment tracking routes exist | #258 route-by-route fixture/action/mobile audit; #126 SSR and #140 dynamic pages |
+| Admin | Auth, Catalog/Media, Orders, payment/reconciliation/refund, Fulfillment and shipment operations exist | #261 Inventory operator UI; #252 route-by-route completion |
+| API | Auth, Catalog/Media, Inventory, Cart/Checkout/Order, Zarinpal Payment and manual Fulfillment/shipping plus #314 SMS attempt worker are merged | #114 real SMS/provider acceptance, carrier verification and fixture-free staging journey |
+| Discovery | Plan/ADR and catalog facts exist | #125/#126/#129/#127/#123/#130 content, rendering, sitemap, feed and audit |
+| Commerce | Server-authoritative purchase path and operational commands exist | Live gateway/SMS acceptance, inventory operator reconciliation and full E2E UAT |
+| Operations | CI, worker and local infrastructure exist | #136 deploy, metrics, alerts, backup/restore, rollback and runbooks |
 
 PR screenshots, fixtures, schemas and green branch tests are evidence of progress,
 not proof of an integrated customer journey.
