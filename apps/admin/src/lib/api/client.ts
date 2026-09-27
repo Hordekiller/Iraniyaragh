@@ -69,6 +69,8 @@ type RequestOptions = {
   headers?: Record<string, string>;
   /** Abort controller signal for stale-response protection (list views). */
   signal?: AbortSignal;
+  /** Some existing API routes return the contract body directly, without { data }. */
+  responseShape?: 'raw';
 };
 
 function resolveUrl(path: string): string {
@@ -105,7 +107,9 @@ export function readCsrfToken(document: Document): string | null {
   return null;
 }
 
-export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
+export function apiFetch<T>(path: string, options: RequestOptions & { responseShape: 'raw' }): Promise<T>;
+export function apiFetch<T>(path: string, options?: RequestOptions): Promise<ApiSuccess<T>>;
+export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T | ApiSuccess<T>> {
   const isFormData = options.body instanceof FormData;
   const headers: Record<string, string> = { ...options.headers };
   if (!isFormData) headers['Content-Type'] = 'application/json';
@@ -151,5 +155,6 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     throw new ApiClientError(failure, response.headers);
   }
 
+  if (options.responseShape === 'raw') return payload as T;
   return payload as ApiSuccess<T>;
 }

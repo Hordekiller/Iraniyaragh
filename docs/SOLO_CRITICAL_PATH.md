@@ -44,7 +44,9 @@ worktrees and uncommitted files.
    Direct carrier verification is not implemented and must not be claimed.
 4. **Admin Inventory — #261:** connect Warehouse, Location, Balance, Movement,
    Adjustment, Reservation and Transfer screens to the existing permissioned
-   backend. Verify one real operator flow and ledger/audit consistency.
+   backend. #317 is the first Warehouse/Location route and form slice; follow
+   with separate Balance/Movement/Adjustment, Reservation and Transfer PRs.
+   Verify one real operator flow and ledger/audit consistency before closing #261.
 5. **SMS.ir production acceptance — #114:** configure a real account, key,
    sender and four approved templates outside the repo; prove OTP and paid/
    dispatch/delivery SMS, timeout, rejection and unknown-result handling on a
