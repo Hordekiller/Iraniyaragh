@@ -1,4 +1,4 @@
-export type SmsPurpose = "customer_login";
+export type SmsPurpose = "customer_login" | "order_paid" | "shipment_dispatched" | "shipment_delivered";
 
 export const SMS_PROVIDER = Symbol("SMS_PROVIDER");
 export const CUSTOMER_OTP_SMS_CONFIG = Symbol("CUSTOMER_OTP_SMS_CONFIG");

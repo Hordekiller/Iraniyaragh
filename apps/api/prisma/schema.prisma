@@ -1143,6 +1143,8 @@ enum OutboxEffectKind {
   CUSTOMER_ORDER_CANCELLED
   CUSTOMER_ORDER_EXPIRED
   CUSTOMER_ORDER_PAID
+  CUSTOMER_SHIPMENT_DISPATCHED
+  CUSTOMER_SHIPMENT_DELIVERED
   PAYMENT_RECONCILIATION
   PAYMENT_REFUND_REVIEW
 }
@@ -1159,11 +1161,17 @@ model OutboxEffect {
   kind      OutboxEffectKind
   subjectId String             @db.VarChar(128)
   status    OutboxEffectStatus @default(PENDING)
+  attemptCount Int            @default(0)
+  lastAttemptAt DateTime?
+  nextAttemptAt DateTime       @default(now())
+  lastResultCode String?       @db.VarChar(64)
+  providerMessageId String?    @db.VarChar(128)
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
   event     OutboxEvent        @relation(fields: [eventId], references: [id], onDelete: Restrict)
 
   @@index([status, kind, createdAt])
+  @@index([status, kind, nextAttemptAt])
   @@index([subjectId, createdAt])
 }
 

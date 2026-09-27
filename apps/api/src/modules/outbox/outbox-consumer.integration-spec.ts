@@ -4,6 +4,10 @@ import { OutboxEffectKind } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 import { OutboxConsumerService } from './outbox-consumer.service';
+import { CustomerSmsDeliveryService } from '../notifications/customer-sms-delivery.service';
+import { FakeSmsProvider } from '../notifications/fake-sms.provider';
+import { ConfigService } from '@nestjs/config';
+import type { EnvironmentVariables } from '../../config/environment';
 
 describe.sequential('OutboxConsumerService database integration', () => {
   const suffix = randomUUID().replaceAll('-', '').slice(0, 12);
@@ -13,6 +17,7 @@ describe.sequential('OutboxConsumerService database integration', () => {
   const unconfirmedEventId = `outbox-unconfirmed-${suffix}`;
   const failedEventId = `outbox-failed-${suffix}`;
   const paymentId = `outbox-payment-${suffix}`;
+  const dispatchedEventId = `outbox-shipped-${suffix}`;
   const mobile = `+989${(BigInt(`0x${suffix}`) % 1_000_000_000n).toString().padStart(9, '0')}`;
   const prisma = new PrismaService();
   const first = new OutboxConsumerService(prisma);
@@ -84,11 +89,15 @@ describe.sequential('OutboxConsumerService database integration', () => {
         deduplicationKey: `outbox-failed:${paymentId}`,
       },
     });
+    await prisma.outboxEvent.create({ data: {
+      id: dispatchedEventId, topic: 'SHIPMENT_DISPATCHED', aggregateType: 'order',
+      aggregateId: orderId, payload: {}, deduplicationKey: `outbox-shipped:${orderId}`,
+    } });
   });
 
   afterAll(async () => {
-    await prisma.outboxEffect.deleteMany({ where: { eventId: { in: [eventId, unconfirmedEventId, failedEventId] } } });
-    await prisma.outboxEvent.deleteMany({ where: { id: { in: [eventId, unconfirmedEventId, failedEventId] } } });
+    await prisma.outboxEffect.deleteMany({ where: { eventId: { in: [eventId, unconfirmedEventId, failedEventId, dispatchedEventId] } } });
+    await prisma.outboxEvent.deleteMany({ where: { id: { in: [eventId, unconfirmedEventId, failedEventId, dispatchedEventId] } } });
     await prisma.payment.deleteMany({ where: { id: paymentId } });
     await prisma.order.deleteMany({ where: { id: orderId } });
     await prisma.customer.deleteMany({ where: { id: customerId } });
@@ -124,5 +133,21 @@ describe.sequential('OutboxConsumerService database integration', () => {
       { eventId: failedEventId, status: 'COMPLETED' },
       { eventId: unconfirmedEventId, status: 'COMPLETED' },
     ]);
+  });
+
+  it('projects shipment SMS and allows one accepted send under concurrent worker passes', async () => {
+    await Promise.all([first.consume(dispatchedEventId), second.consume(dispatchedEventId)]);
+    await expect(prisma.outboxEffect.findUniqueOrThrow({ where: { eventId: dispatchedEventId } }))
+      .resolves.toMatchObject({ kind: OutboxEffectKind.CUSTOMER_SHIPMENT_DISPATCHED, status: 'PENDING', subjectId: orderId });
+    const provider = new FakeSmsProvider();
+    const config = { get: () => 123 } as unknown as ConfigService<EnvironmentVariables, true>;
+    const workers = [
+      new CustomerSmsDeliveryService(prisma, provider, config),
+      new CustomerSmsDeliveryService(prisma, provider, config),
+    ];
+    await Promise.all(workers.map((worker) => worker.dispatchBatch()));
+    expect(provider.requests).toHaveLength(1);
+    await expect(prisma.outboxEffect.findUniqueOrThrow({ where: { eventId: dispatchedEventId } }))
+      .resolves.toMatchObject({ status: 'COMPLETED', attemptCount: 1, providerMessageId: 'fake-message-1' });
   });
 });

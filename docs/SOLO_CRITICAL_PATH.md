@@ -30,11 +30,11 @@ worktrees and uncommitted files.
    `start`/`ready` transition slice for paid orders with consumed inventory.
    #304 closed the initial Fulfillment history discrepancy. #308 supplies
    item-level pick proof and requires complete proof before ready-to-ship;
-   manual dispatch/tracking are in #310; external notification delivery remains. Exit with a
+   manual dispatch/tracking are in #310; #314 adds essential SMS attempt delivery. Exit with a
    real, fixture-free purchase-to-tracking test.
    #310 implements manual one-package dispatch and customer tracking.
    #312 adds separately audited, staff-attested delivery confirmation; direct
-   carrier verification and external notifications remain open.
+   carrier verification and real-provider SMS acceptance remain open.
 4. **Admin Inventory — #261:** connect Warehouse, Location, Balance, Movement,
    Adjustment, Reservation and Transfer screens to the existing permissioned
    backend. Verify one real operator flow and ledger/audit consistency.

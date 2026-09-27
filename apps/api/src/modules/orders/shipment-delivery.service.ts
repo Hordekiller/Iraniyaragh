@@ -59,6 +59,13 @@ export class ShipmentDeliveryService {
           before: { status: 'SHIPPED' }, after: { status: 'DELIVERED', proofReference },
           metadata: { orderId, transitionId: transition.id }, actorId: context.actorId, requestId: context.requestId,
         }, tx);
+        await tx.outboxEvent.create({
+          data: {
+            topic: 'SHIPMENT_DELIVERED', aggregateType: 'order', aggregateId: orderId,
+            payload: { shipmentId: order.shipment.id, transitionId: transition.id },
+            deduplicationKey: `shipment:${order.shipment.id}:delivered`,
+          },
+        });
         await storeShipmentCommandReplay(tx, { orderId, scope, keyHash, fingerprint, response: result });
         return result;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),

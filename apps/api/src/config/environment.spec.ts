@@ -29,6 +29,9 @@ const validProductionEnvironment = {
   OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
   SMS_IR_API_KEY: 'production-sms-ir-api-key',
   SMS_IR_OTP_TEMPLATE_ID: '123456',
+  SMS_IR_ORDER_PAID_TEMPLATE_ID: '123457',
+  SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID: '123458',
+  SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID: '123459',
   SMS_IR_TIMEOUT_MS: '5000',
   ZARINPAL_MERCHANT_ID: '11111111-2222-3333-4444-555555555555',
   ZARINPAL_CALLBACK_URL: 'https://pay.example.com/api/v1/payments/zarinpal/callback',
@@ -210,6 +213,9 @@ describe('validateEnvironment', () => {
         OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',
         SMS_IR_API_KEY: validProductionEnvironment.SMS_IR_API_KEY,
         SMS_IR_OTP_TEMPLATE_ID: validProductionEnvironment.SMS_IR_OTP_TEMPLATE_ID,
+        SMS_IR_ORDER_PAID_TEMPLATE_ID: validProductionEnvironment.SMS_IR_ORDER_PAID_TEMPLATE_ID,
+        SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID: validProductionEnvironment.SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID,
+        SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID: validProductionEnvironment.SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID,
         ZARINPAL_MERCHANT_ID: validProductionEnvironment.ZARINPAL_MERCHANT_ID,
         ZARINPAL_CALLBACK_URL: validProductionEnvironment.ZARINPAL_CALLBACK_URL,
         PRODUCT_MEDIA_IMAGE_MAX_BYTES: validProductionEnvironment.PRODUCT_MEDIA_IMAGE_MAX_BYTES,
@@ -262,6 +268,15 @@ describe('validateEnvironment', () => {
         [key]: undefined,
       }),
     ).toThrow(key);
+  });
+
+  it.each([
+    'SMS_IR_ORDER_PAID_TEMPLATE_ID',
+    'SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID',
+    'SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID',
+  ])('requires a configured %s in production', (key) => {
+    expect(() => validateEnvironment({ ...validProductionEnvironment, [key]: undefined })).toThrow(key);
+    expect(() => validateEnvironment({ ...validProductionEnvironment, [key]: '0' })).toThrow(key);
   });
 
   it.each([
