@@ -12,7 +12,7 @@ capability to delivered.
 | Area | State on `main@91b7f49` | Open work, not delivered |
 | --- | --- | --- |
 | Customer web | Live Catalog, Cart/Checkout, payment result, customer Order and shipment tracking routes exist | #258 route-by-route fixture/action/mobile audit; #126 SSR and #140 dynamic pages |
-| Admin | Auth, Catalog/Media, Orders, payment/reconciliation/refund, Fulfillment and shipment operations exist | #261 Inventory operator UI; #252 route-by-route completion |
+| Admin | Auth, Catalog/Media, Orders, payment/reconciliation/refund, Fulfillment and shipment operations exist | #317 Warehouse/Location forms are in progress; #261 balance/movement/adjustment/reservation/transfer UI and #252 route-by-route completion remain open |
 | API | Auth, Catalog/Media, Inventory, Cart/Checkout/Order, Zarinpal Payment and manual Fulfillment/shipping plus #314 SMS attempt worker are merged | #114 real SMS/provider acceptance, carrier verification and fixture-free staging journey |
 | Discovery | Plan/ADR and catalog facts exist | #125/#126/#129/#127/#123/#130 content, rendering, sitemap, feed and audit |
 | Commerce | Server-authoritative purchase path and operational commands exist | Live gateway/SMS acceptance, inventory operator reconciliation and full E2E UAT |

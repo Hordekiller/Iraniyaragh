@@ -86,7 +86,7 @@ export const navigation: NavigationGroup[] = [
     label: 'کالا و انبار',
     items: [
       { label: 'کالا و SKU', href: '/catalog', icon: PackageSearch, permission: 'catalog.read' },
-      { label: 'انبارها', href: '/warehouses', icon: Building2, permission: 'inventory.read', status: 'planned' },
+      { label: 'انبارها', href: '/warehouses', icon: Building2, permission: 'inventory.read' },
       { label: 'موجودی و گردش', href: '/inventory', icon: Boxes, permission: 'inventory.read', status: 'planned' },
       { label: 'انتقال‌ها', href: '/transfers', icon: ReceiptText, permission: 'inventory.transfer', status: 'planned' },
       { label: 'انبارگردانی', href: '/stocktakes', icon: ClipboardCheck, permission: 'inventory.adjust', status: 'planned' },
