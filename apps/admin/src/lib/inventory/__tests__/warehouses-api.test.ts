@@ -3,7 +3,7 @@ import { getAccessToken, setAccessToken } from '@/lib/auth/token-store';
 import { createLocation, createWarehouse, listLocations, listWarehouses, updateLocation, updateWarehouse } from '../warehouses-api';
 
 const baseUrl = 'http://localhost:4000/api/v1/inventory';
-const response = (data: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify({ data }) }) as Response;
+const response = (data: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify(data) }) as Response;
 
 describe('warehouse Admin HTTP adapter', () => {
   afterEach(() => { vi.unstubAllGlobals(); setAccessToken(null); });
@@ -13,8 +13,8 @@ describe('warehouse Admin HTTP adapter', () => {
     const fetcher = vi.fn(async () => response({ items: [], count: 0 }));
     vi.stubGlobal('fetch', fetcher);
     const signal = new AbortController().signal;
-    await listWarehouses({ offset: 25, limit: 25, isInactive: true }, signal);
-    await listLocations('warehouse/1', { offset: 0, limit: 50 }, signal);
+    expect(await listWarehouses({ offset: 25, limit: 25, isInactive: true }, signal)).toEqual({ items: [], count: 0 });
+    expect(await listLocations('warehouse/1', { offset: 0, limit: 50 }, signal)).toEqual({ items: [], count: 0 });
     const calls = fetcher.mock.calls as unknown as [string, RequestInit][];
     expect(calls[0][0]).toBe(`${baseUrl}/warehouses?offset=25&limit=25&isInactive=true`);
     expect(calls[1][0]).toBe(`${baseUrl}/warehouses/warehouse%2F1/locations?offset=0&limit=50`);
@@ -28,10 +28,10 @@ describe('warehouse Admin HTTP adapter', () => {
     setAccessToken('staff-token');
     const fetcher = vi.fn(async () => response({ id: 'record-1' }));
     vi.stubGlobal('fetch', fetcher);
-    await createWarehouse({ code: 'WH-1', name: 'انبار مرکزی' });
-    await updateWarehouse('warehouse/1', { name: 'انبار ۲', isActive: false });
-    await createLocation('warehouse/1', { code: 'A-1', name: 'ردیف الف' });
-    await updateLocation('location/1', { name: 'ردیف ب', isActive: true });
+    expect(await createWarehouse({ code: 'WH-1', name: 'انبار مرکزی' })).toEqual({ id: 'record-1' });
+    expect(await updateWarehouse('warehouse/1', { name: 'انبار ۲', isActive: false })).toEqual({ id: 'record-1' });
+    expect(await createLocation('warehouse/1', { code: 'A-1', name: 'ردیف الف' })).toEqual({ id: 'record-1' });
+    expect(await updateLocation('location/1', { name: 'ردیف ب', isActive: true })).toEqual({ id: 'record-1' });
     const calls = fetcher.mock.calls as unknown as [string, RequestInit][];
     expect(calls.map(([url]) => url)).toEqual([
       `${baseUrl}/warehouses`, `${baseUrl}/warehouses/warehouse%2F1`,

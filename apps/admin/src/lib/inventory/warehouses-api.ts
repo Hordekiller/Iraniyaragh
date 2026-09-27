@@ -16,46 +16,40 @@ function queryString(query: WarehouseQuery): string {
 }
 
 export async function listWarehouses(query: WarehouseQuery, signal?: AbortSignal): Promise<WarehouseListResponse> {
-  const response = await apiFetch<WarehouseListResponse>(`/inventory/warehouses?${queryString(query)}`, {
-    token: getAccessToken(), signal,
+  return apiFetch<WarehouseListResponse>(`/inventory/warehouses?${queryString(query)}`, {
+    token: getAccessToken(), signal, responseShape: 'raw',
   });
-  return response.data;
 }
 
 export async function createWarehouse(input: WarehouseCreateRequest): Promise<Warehouse> {
-  const response = await apiFetch<Warehouse>('/inventory/warehouses', {
-    method: 'POST', token: getAccessToken(), body: input,
+  return apiFetch<Warehouse>('/inventory/warehouses', {
+    method: 'POST', token: getAccessToken(), body: input, responseShape: 'raw',
   });
-  return response.data;
 }
 
 export async function updateWarehouse(id: string, input: WarehouseUpdateRequest): Promise<Warehouse> {
-  const response = await apiFetch<Warehouse>(`/inventory/warehouses/${encodeURIComponent(id)}`, {
-    method: 'PATCH', token: getAccessToken(), body: input,
+  return apiFetch<Warehouse>(`/inventory/warehouses/${encodeURIComponent(id)}`, {
+    method: 'PATCH', token: getAccessToken(), body: input, responseShape: 'raw',
   });
-  return response.data;
 }
 
 export async function listLocations(
   warehouseId: string, query: WarehouseQuery, signal?: AbortSignal,
 ): Promise<WarehouseLocationListResponse> {
-  const response = await apiFetch<WarehouseLocationListResponse>(
+  return apiFetch<WarehouseLocationListResponse>(
     `/inventory/warehouses/${encodeURIComponent(warehouseId)}/locations?${queryString(query)}`,
-    { token: getAccessToken(), signal },
+    { token: getAccessToken(), signal, responseShape: 'raw' },
   );
-  return response.data;
 }
 
 export async function createLocation(warehouseId: string, input: WarehouseLocationCreateRequest): Promise<WarehouseLocation> {
-  const response = await apiFetch<WarehouseLocation>(`/inventory/warehouses/${encodeURIComponent(warehouseId)}/locations`, {
-    method: 'POST', token: getAccessToken(), body: input,
+  return apiFetch<WarehouseLocation>(`/inventory/warehouses/${encodeURIComponent(warehouseId)}/locations`, {
+    method: 'POST', token: getAccessToken(), body: input, responseShape: 'raw',
   });
-  return response.data;
 }
 
 export async function updateLocation(id: string, input: WarehouseLocationUpdateRequest): Promise<WarehouseLocation> {
-  const response = await apiFetch<WarehouseLocation>(`/inventory/locations/${encodeURIComponent(id)}`, {
-    method: 'PATCH', token: getAccessToken(), body: input,
+  return apiFetch<WarehouseLocation>(`/inventory/locations/${encodeURIComponent(id)}`, {
+    method: 'PATCH', token: getAccessToken(), body: input, responseShape: 'raw',
   });
-  return response.data;
 }

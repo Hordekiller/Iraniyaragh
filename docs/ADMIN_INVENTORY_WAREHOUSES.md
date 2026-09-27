@@ -1,8 +1,10 @@
 # Admin Inventory M1: warehouses and locations (#317)
 
 The `/warehouses` Admin route uses the existing `/api/v1/inventory` staff-MFA
-endpoints and shared contracts. `inventory.read` can list all warehouses and
-their locations with bounded server pagination, including inactive rows.
+endpoints and shared contracts. Inventory success responses are raw contract
+bodies (not the `{ data }` envelope used by other Admin APIs). `inventory.read`
+can list all warehouses and their locations with bounded server pagination,
+including inactive rows.
 `inventory.adjust` additionally permits create, edit and activation changes;
 the backend remains the permission/audit authority. The Admin never edits
 balances directly. Codes are immutable in the edit dialog and are unique per
