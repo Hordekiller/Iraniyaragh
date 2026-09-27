@@ -9,7 +9,8 @@ scope. A feature is not called complete merely because code exists on a branch.
 Latest checkpoint: #294–#303 and #305 are merged on `main`, including Zarinpal settlement,
 Web payment/result, staff evidence and reconciliation, recoverable outbox/effect
 projection, provider/authority race fixes, and manual refund recording. Pending
-outbox effects are not delivered notifications. #305 adds staff-only,
+outbox effects are not delivered notifications until #314's delivery worker
+records provider acceptance; that still is not handset delivery. #305 adds staff-only,
 idempotent `PENDING → PROCESSING → READY_TO_SHIP` Fulfillment commands for paid,
 settled orders with consumed reservations. #308 adds exact-quantity, actor-tracked
 item-level pick proof, a complete-pick guard on `READY_TO_SHIP`, and the staff
@@ -26,6 +27,10 @@ The #314 slice adds durable paid/dispatch/delivery SMS attempts through the
 existing outbox and SMS.ir adapter. It records provider acceptance or safe
 failure; real SMS.ir templates/handset acceptance, delivery-status proof and
 fixture-free staging purchase remain open. See `CUSTOMER_SMS_DELIVERY.md`.
+PR #315 merged #314 at `91b7f49` with all nine final-head checks green.
+The next product issue is #261 Admin Inventory; #279 is closed as delivered
+by #284/#290 and obsolete UI coordination #166 is closed as superseded by
+#252/#258. The current issue dispositions live in `SOLO_CRITICAL_PATH.md`.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304's ADR-0006/schema discrepancy is addressed by a forward
@@ -75,7 +80,7 @@ Current delivery confidence:
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
-| Order commands/payment         | Refund evidence merged; production acceptance open | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence, reconciliation, outbox projection and manual refund evidence merged through #303. Zarinpal has no refund API; external notification delivery remains open. |
+| Order commands/payment         | Refund evidence merged; production acceptance open | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence, reconciliation, outbox projection and manual refund evidence merged through #303. Zarinpal has no refund API; #314 adds SMS attempts, not live handset acceptance. |
 | Commerce outbox                | Relay, effects and essential SMS attempt worker | #299/#300 add relay/projection; #314 attempts paid/dispatch/delivery SMS through SMS.ir with durable at-most-once claims. Provider acceptance is not handset delivery; production acceptance is open. |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
@@ -346,7 +351,7 @@ malware scanner also remain production-acceptance work.
   `pnpm lint`, `pnpm typecheck`, `pnpm build` and the unaffected Web (325) and
   Admin (506) test suites. Only the Admin rich-text UI remains, in a later slice.
 
-### Admin rich-text editor (in review — #279 editor slice)
+### Admin rich-text editor (merged via #290 — #279 editor slice)
 
 - `apps/admin` now ships a reusable, non-product-specific `RichTextEditor`
   component built directly against the exact-pinned, self-hosted `jodit@4.15.1`
@@ -382,7 +387,7 @@ malware scanner also remain production-acceptance work.
   `pnpm typecheck` and `pnpm build`. Not verifiable in this slice: real-browser
   interaction evidence (Playwright is not configured for Admin).
 
-### Admin product media picker wired to the real endpoint (in review — #279 media-picker slice)
+### Admin product media picker wired to the real endpoint (merged via #290 — #279 media-picker slice)
 
 - The Jodit **Image** toolbar button is now overridden end-to-end: clicking it
   captures the editor selection (`s.save()`), opens only the IranYaragh product
@@ -420,7 +425,7 @@ malware scanner also remain production-acceptance work.
   `useProductMediaPicker` on the product detail page (description persistence is
   the next slice and needs the admin `updateProductDescription` function).
 
-### Admin product description authoring (in review — #279 description slice)
+### Admin product description authoring (merged via #290 — #279 description slice)
 
 - The Product Detail/Edit page now hosts the real rich-text description editor.
   For accounts with `catalog.write`, `ProductDescriptionEditor` mounts the Jodit
@@ -461,11 +466,11 @@ malware scanner also remain production-acceptance work.
   the `beforeunload` unsaved-change guard. Not verifiable here: real-browser
   interaction evidence.
 
-### Assembled rich-text description stack — real-browser E2E journey (in review — #279 fused stack)
+### Assembled rich-text description stack — real-browser E2E journey (merged via #290)
 
-- The six #279 PRs are fused on the review head `feat/279-e2e-verify` (main
-  `eef2a8a` + contract-hardening, storefront-render, editor, media-picker and
-  description slices) and now carry a Playwright journey
+- The #279 contract and full-stack slices were merged via #284/#290. The
+  pre-merge review head `feat/279-e2e-verify` assembled contract-hardening,
+  storefront-render, editor, media-picker and description work and carried a Playwright journey
   (`e2e/tests/admin-279-journey.spec.ts`, serial, real API + real MinIO + real
   worker) that drives the whole feature through a real browser: create a draft,
   upload an image through the Admin and wait for READY, compose rich HTML in
@@ -1136,21 +1141,18 @@ recorded above and still does not prove production media acceptance.
 ## Current commerce critical path
 
 ```text
-Authenticated Cart correctness (#251)
-  → guest Cart token/TTL and explicit login merge (merged #270/#269)
-  → guest Cart/OTP handoff and live Web commerce (merged #273/#268)
-  → live read-only Admin Order binding (merged by #257)
-  → unpaid-Order expiry/cancellation compensation + outbox dispatch
-  → server-verified Payment and reconciliation/refund boundary
-  → Fulfillment/shipping and reservation consumption
-  → transactional notifications
-  → production deploy/observability/backup/restore/security evidence
-  → UAT and supervised launch
+Merged: Cart/Checkout/Order → Payment/Refund → Fulfillment/Shipping
+  → essential SMS attempt worker (#314)
+Next: Admin Inventory (#261)
+  → SMS.ir and payment production acceptance (#114 plus gateway evidence)
+  → Warehouse+ (#7) → route-by-route Web/Admin completion (#252/#258)
+  → Content/SEO (#122 and children) → hardening (#136)
+  → fixture-free staging UAT → supervised V1 launch
 ```
 
-#246/#237 creates the authoritative reserved Order and outbox row. #247/#238 adds
-owned and permissioned reads only; Payment/Fulfillment must not be promoted ahead
-of lifecycle commands and compensation guarantees.
+The historical foundation/commerce sections above document how this baseline
+was built; they are not a fresh unstarted queue. See `SOLO_CRITICAL_PATH.md`
+for current issue disposition and the separate limited-sales go/no-go gate.
 
 ## Status update protocol
 

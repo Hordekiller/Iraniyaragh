@@ -1,10 +1,13 @@
 # V1.0 Master Plan — ایران‌یاراغ
 
-Last updated: 2026-09-25
+Last updated: 2026-09-27
 
 `SOLO_CRITICAL_PATH.md` is the active V1 delivery sequence. The owners, duration
 estimates and three-lane method below describe the earlier two-contributor plan;
 capability and release acceptance requirements still apply.
+The current merged baseline and next issue are in `SOLO_CRITICAL_PATH.md`;
+the bullets below are retained as a dated historical snapshot where they
+contradict the 2026-09-27 checkpoint.
 
 This is the V1 release checklist. The complete expansion scope and mandatory
 implementation method—including post-V1 operations and growth—live in
@@ -27,6 +30,14 @@ Native mobile, loyalty, reviews, complex promotions, marketplace, full accountin
 and dedicated search infrastructure are excluded from V1.
 
 ## 2. Current baseline
+
+As of `main@91b7f49`, the verified-payment/Web/Admin foundation through #303,
+Fulfillment pick/ready through #308, manual shipment/tracking and staff-attested
+delivery through #312, and durable paid/dispatch/delivery SMS attempts through
+#314 are merged. No real SMS.ir handset acceptance, live Zarinpal acceptance,
+fixture-free staging purchase or production recovery drill has been proven.
+Admin Inventory #261 is next. The following older bullets describe the
+2026-09-25 baseline and are not the active queue.
 
 - `0.1` foundation is closed; privileged Auth, session and RBAC runtime are merged
   via #109/#111/#150/#158 and #49 is closed; auth-parity follow-ups #186/#188 were
@@ -69,10 +80,10 @@ Each release gate follows the same order:
 Issue size: `S` ≤ 1 focused day, `M` = 2–3 days, `L` = 4–5 days. Split larger
 items. Maintain at most one primary implementation per contributor.
 
-Three-lane execution (Platform, Admin and User UI), exclusive hotspot ownership,
-per-wave `D/C/P/A/W/I/O` issue splitting and the merge train are normative in
-`AGENT_WORKSTREAMS.md`. This plan defines what must ship; that document defines how
-the three agents may deliver it concurrently without changing business ownership.
+The historical three-lane `AGENT_WORKSTREAMS.md` map is not active. One developer
+opens at most one product PR, verifies and merges it before touching the next
+schema/contract/OpenAPI/navigation hotspot. The release exit checklist below
+still defines what must ship.
 
 ## 4. Gate map and dependency chain
 
@@ -112,9 +123,9 @@ team/provider decisions
 - [x] Accept #78: weekly capacity, review SLA, decision owner and release authority
       (accepted via merged #172, 2026-09-12).
 - [x] Accept ADR-0011 for the SMS.ir provider boundary via merged PR #116.
-- [ ] Backend #114 (SMS.ir OTP provider dispatch) remains open; the admin settings
-      panel shipped via #151 (superseding #115) and the read-only environment
-      projection via #154.
+- [ ] #114 remains open for real-account, approved-sender/template and handset
+      acceptance. The OTP adapter/admin settings and #314 transactional attempt
+      worker are merged; code presence alone is not provider acceptance.
 - [x] Close #49 against merged privileged-Auth evidence; reconcile #50/#91 so every remaining criterion has evidence or a named
       follow-up; close obsolete coordination text.
 

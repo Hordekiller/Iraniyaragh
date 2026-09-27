@@ -3,7 +3,9 @@
 Status: authoritative expansion plan; implementation status remains in
 `PROJECT_STATUS.md`.
 
-Last reviewed: 2026-09-18
+Last scope review: 2026-09-18. Execution precedence reconciled 2026-09-27:
+`SOLO_CRITICAL_PATH.md` is the active single-developer sequence. The scope and
+acceptance matrix here still apply; the two-owner/parallel sections are historical.
 
 Owners: Developer A — Platform/API/Data/Operations; Developer B —
 Product/Web/Admin/E2E. Every critical change requires independent review by the
