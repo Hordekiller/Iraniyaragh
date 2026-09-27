@@ -83,6 +83,8 @@ export function OrderDetailPage() {
       />
     )
 
+  const deliveryEvent = order.timeline.find((entry) => entry.domain === 'FULFILLMENT' && entry.to === 'DELIVERED')
+
   return (
     <div className="mx-auto max-w-[960px] px-4 py-8 lg:px-6 lg:py-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -211,6 +213,9 @@ export function OrderDetailPage() {
               <p>حامل: <strong>{order.shipment.carrier}</strong></p>
               <p className="mt-1">کد رهگیری: <strong dir="ltr">{order.shipment.trackingCode}</strong></p>
               <p className="mt-1 text-xs">ثبت ارسال: {formatTimestamp(order.shipment.dispatchedAt)}</p>
+              {order.shipment.status === 'DELIVERED' && (
+                <p className="mt-1 text-xs">تحویل تأیید شد{deliveryEvent ? ` · ${formatTimestamp(deliveryEvent.createdAt)}` : ''}</p>
+              )}
             </div>
           )}
         </section>

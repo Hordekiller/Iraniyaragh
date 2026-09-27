@@ -23,7 +23,8 @@ uses the existing `orders.read`-guarded order detail. In this MVP policy the
 shipment covers the whole order; partial packages and carrier-provided events
 are not represented.
 
-Next separate slices: verified/idempotent delivery confirmation and essential
-notification delivery. Neither is implied by SHIPPED or by a persisted outbox
-effect. Staging acceptance still requires a real, fixture-free purchase, a
-real carrier tracking code, and observed customer tracking.
+#312 separately adds staff-attested delivery confirmation with a proof
+reference. Direct carrier verification and essential notification delivery
+remain open. Neither is implied by SHIPPED or by a persisted outbox effect.
+Staging acceptance still requires a real, fixture-free purchase, a real
+carrier tracking code, and observed customer tracking.

@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-26
+Last reviewed: 2026-09-27
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -13,12 +13,15 @@ outbox effects are not delivered notifications. #305 adds staff-only,
 idempotent `PENDING → PROCESSING → READY_TO_SHIP` Fulfillment commands for paid,
 settled orders with consumed reservations. #308 adds exact-quantity, actor-tracked
 item-level pick proof, a complete-pick guard on `READY_TO_SHIP`, and the staff
-pick workflow. Shipment/tracking, notification delivery and production acceptance
-remain open.
+pick workflow. Shipping is manual-first; notification delivery and production
+acceptance remain open.
 The #310 slice adds manual one-package dispatch with carrier/tracking evidence,
 exact order-line allocation, owner-scoped customer tracking and Admin entry.
-This is not staging-accepted; delivery confirmation and external notifications
-remain open. See `SHIPMENT_DISPATCH.md` for its exact boundary.
+The #312 slice records a staff-attested `SHIPPED → DELIVERED` event with an
+external proof reference, audit and replay-safe idempotency; this is not direct
+carrier verification. Neither slice is staging-accepted, and external
+notifications remain open. See `SHIPMENT_DISPATCH.md` and
+`SHIPMENT_DELIVERY.md` for their exact boundaries.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304's ADR-0006/schema discrepancy is addressed by a forward

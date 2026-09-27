@@ -11,12 +11,13 @@ const mocks = vi.hoisted(() => ({
   markReady: vi.fn(),
   recordPick: vi.fn(),
   dispatchShipment: vi.fn(),
+  confirmDelivery: vi.fn(),
 }));
 
 vi.mock('@/lib/orders/orders-api', () => ({
   ordersApi: { listOrders: vi.fn(), getOrder: mocks.getOrder, getPicks: mocks.getPicks,
     startFulfillment: mocks.startFulfillment, markReady: mocks.markReady, recordPick: mocks.recordPick,
-    dispatchShipment: mocks.dispatchShipment },
+    dispatchShipment: mocks.dispatchShipment, confirmDelivery: mocks.confirmDelivery },
 }));
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
@@ -110,6 +111,7 @@ describe('OrderDetailView', () => {
     mocks.markReady.mockResolvedValue(undefined);
     mocks.startFulfillment.mockResolvedValue(undefined);
     mocks.dispatchShipment.mockResolvedValue(undefined);
+    mocks.confirmDelivery.mockResolvedValue(undefined);
   });
 
   afterEach(() => vi.clearAllMocks());
@@ -187,6 +189,28 @@ describe('OrderDetailView', () => {
     expect(await screen.findByText('ارسال و کد رهگیری ثبت شد.')).toBeInTheDocument();
     expect(mocks.dispatchShipment).toHaveBeenCalledWith('order-1042', 'post', 'PKG-1234', expect.any(String));
     expect(screen.getByText('PKG-1234')).toBeInTheDocument();
+  });
+
+  it('attests delivery only for shipped orders with a proof reference', async () => {
+    mocks.user = { permissions: [ORDERS_READ, 'shipments.manage'] };
+    const shipped = { ...detail, fulfillment: { ...detail.fulfillment, status: 'SHIPPED' }, shipment: {
+      id: 'shipment-1', carrier: 'post', trackingCode: 'PKG-1234', status: 'SHIPPED', dispatchedAt: '2026-09-18T11:00:00Z',
+    } };
+    mocks.getOrder.mockResolvedValueOnce(shipped).mockResolvedValueOnce({ ...shipped,
+      fulfillment: { ...detail.fulfillment, status: 'DELIVERED' },
+      shipment: { ...shipped.shipment, status: 'DELIVERED' },
+      timeline: [...detail.timeline, { domain: 'FULFILLMENT', from: 'SHIPPED', to: 'DELIVERED', createdAt: '2026-09-18T12:00:00Z',
+        reason: 'STAFF_DELIVERY_PROOF:POD-1234', actor: null, requestId: 'request-delivery-1' }],
+    });
+    render(<OrderDetailView orderId="order-1042" />);
+    const button = await screen.findByRole('button', { name: 'تأیید تحویل با مرجع اثبات' });
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'مرجع اثبات تحویل' }), { target: { value: 'POD-1234' } });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(await screen.findByText('تحویل مرسوله با مرجع اثبات ثبت شد.')).toBeInTheDocument();
+    expect(mocks.confirmDelivery).toHaveBeenCalledWith('order-1042', 'POD-1234', expect.any(String));
+    expect(screen.getByText(/تحویل تأیید شد/)).toBeInTheDocument();
   });
 
   it('passes an abort signal to the API', async () => {
