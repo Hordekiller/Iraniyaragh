@@ -1,6 +1,6 @@
 # Delivery Roadmap
 
-Last reviewed: 2026-09-26
+Last reviewed: 2026-09-28
 
 This is the executive view of delivery. The executable sprint backlog, owners,
 acceptance gates and dependencies live in `DEVELOPMENT_PLAN.md`.
@@ -34,7 +34,9 @@ store. Native mobile and advanced growth features are intentionally later.
 - `0.2` has an integrated live Catalog/Media foundation, but production object
   storage/scanner acceptance and remaining authoring gaps are open.
 - `0.3` has protected Inventory APIs, public availability and reservation expiry.
-  The Admin Inventory operator journey (#261) is not yet complete.
+  Admin Warehouse/Location, Balance/Movement/Adjustment, Reservation and Transfer
+  journeys are merged through #327; #261 is closed. Production-like operator
+  reconciliation is still a separate launch gate.
 - `0.4` has authenticated/guest Cart, Checkout/Order creation, customer/staff Order
   reads and controlled cancellation/expiry compensation. A fixture-free purchase
   from browser through shipment has not passed staging.
@@ -48,8 +50,10 @@ store. Native mobile and advanced growth features are intentionally later.
   verification is unavailable through Zarinpal v4. Compensating corrections,
   external notification delivery and production acceptance remain. #305 merged
   the first guarded Fulfillment operator transitions. #308 adds item-level
-  pick proof and blocks ready-to-ship until every line is picked; shipment and
-  tracking remain open. None of this is SMS delivery or a release claim.
+  pick proof and blocks ready-to-ship until every line is picked. #310/#312
+  have since merged manual dispatch/tracking and staff-attested
+  delivery; #314 merged durable essential SMS attempts. None of this proves
+  handset delivery or a release claim.
 - `0.6`–`1.0` are not release-ready. No live sale or launch claim is justified by
   green unit/CI alone.
 
@@ -81,7 +85,9 @@ before the previous PR merges. Never rewrite a shared migration; add a forward o
 Paused until after V1.0: #141 multi-provider, #128 AI/RAG and major dependency
 upgrades under #77. SEO must not displace Payment/Fulfillment on the critical path.
 External production-like acceptance requires owner-supplied accounts, credentials
-and deployment access; local code/CI cannot substitute for that evidence.
+and deployment access; local code/CI cannot substitute for that evidence. #114
+remains blocked on those private inputs and is mandatory before sales. In the
+meantime the next repository-owned slice is Warehouse+ #7, one PR at a time.
 
 ## Phase 0 — Repository and foundation
 

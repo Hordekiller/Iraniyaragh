@@ -5,11 +5,11 @@ Effective: 2026-09-28. This document supersedes parallel-lane schedules in
 `AGENT_WORKSTREAMS.md`. Those documents retain domain and release acceptance
 requirements. `PROJECT_STATUS.md` remains the factual capability record.
 
-Current main checkpoint: `2d86c6e` / PR #322 merged. Payment through manual
+Current main checkpoint: `2883d25` / PR #327 merged. Payment through manual
 refund, Fulfillment pick/ready, manual dispatch/tracking, staff-attested delivery,
-durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation operations are
-implemented. These are **not** real provider/handset acceptance or a fixture-free
-staging purchase. #261 remains active; #326 is its Transfer slice.
+durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation/Transfer
+operations are implemented. These are **not** real provider/handset acceptance or a
+fixture-free staging purchase. #261 and its #326 Transfer slice are closed.
 
 ## Delivery rule
 
@@ -42,17 +42,20 @@ worktrees and uncommitted files.
    test, provider acceptance and no unexplained inventory/payment discrepancy.
    #310 implements manual one-package dispatch and customer tracking.
    Direct carrier verification is not implemented and must not be claimed.
-4. **Admin Inventory — #261:** connect Warehouse, Location, Balance, Movement,
-   Adjustment, Reservation and Transfer screens to the existing permissioned
-   backend. #317 Warehouse/Location merged via #318, #319 Balance/Movement/
-   Adjustment via #320, and #321 guarded manual Reservations via #322. #326 is
-   the active Transfer slice.
-   Verify one real operator flow and ledger/audit consistency before closing #261.
+4. **Admin Inventory — #261: complete.** #317 Warehouse/Location merged via
+   #318, #319 Balance/Movement/Adjustment via #320, #321 guarded manual
+   Reservations via #322, and #326 guarded Transfers via #327. The final PR's
+   desktop/mobile E2E exercised a real two-warehouse transfer and verified
+   destination balance and inbound ledger. #261 closed 2026-09-28. This does
+   not constitute production-like operator acceptance.
 5. **SMS.ir production acceptance — #114:** configure a real account, key,
    sender and four approved templates outside the repo; prove OTP and paid/
    dispatch/delivery SMS, timeout, rejection and unknown-result handling on a
    controlled handset in a production-like environment. Do not put credentials,
    OTPs or personal data in evidence.
+   #114 remains a mandatory pre-sale gate. Its private acceptance is blocked on
+   operator-supplied account/key/sender/templates and controlled handset; work
+   on the next repository-owned slice may proceed while that gate remains open.
 6. **Warehouse+ — #7:** Supplier/PO, Receiving, Stocktake, Return/Refund, then
    Reports, one reviewable PR at a time, with ledger and financial reconciliation.
 7. **Web/Admin completion — #252/#258:** inspect every route for fixtures, fake
@@ -82,9 +85,9 @@ scope or an explicit product decision to move a non-selling item to V1.x.
 
 | Issues | Disposition and closure evidence |
 | --- | --- |
-| #261 | **In progress.** Warehouse/Location, ledger and manual Reservations merged through #322; #326 Transfer is active. Require live operator flow, ledger/audit and permission evidence before close. |
+| #261 | **Closed 2026-09-28.** Four independently merged slices through #327, including permission/state guards and real desktop/mobile transfer ledger E2E. Production-like acceptance remains a separate launch gate. |
 | #114 | External V1 acceptance blocker; real OTP plus three transactional SMS templates/handset evidence. |
-| #2, #4, #5, #6 | Keep milestone epics open: respectively private Auth acceptance, Admin Inventory, fixture-free selling, and real payment/shipping/notification acceptance are not closed. |
+| #2, #4, #5, #6 | Keep milestone epics open: respectively private Auth acceptance, production-like Inventory reconciliation, fixture-free selling, and real payment/shipping/notification acceptance are not closed. |
 | #7, #8 | Keep open for Warehouse+ and V1 launch/UAT exit evidence. |
 | #252, #258, #140 | Route-by-route Admin/Web and dynamic-page completion after the selling core; no fixture or fake KPI in production. #140 is an umbrella, not a parallel implementation lane. |
 | #125, #126, #129, #127, #123, #130, #122 | Content/SSR → sitemap/canonical → structured data/feed → discovery audit/crawler governance. #122 is the umbrella. Do not advance ahead of the purchase path. |

@@ -3,10 +3,11 @@
 Last reviewed: 2026-09-28
 
 Current delivery order and capacity are defined by `SOLO_CRITICAL_PATH.md`.
-As of PR #322/#321, essential paid/dispatch/delivery SMS attempts and Admin
-Warehouse/Location/Balance/Movement/Adjustment/Reservation operations are merged;
-real provider acceptance and a fixture-free purchase remain open. #261 is active,
-with #326 the Transfer UI slice next.
+As of PR #327/#326, essential paid/dispatch/delivery SMS attempts and Admin
+Warehouse/Location/Balance/Movement/Adjustment/Reservation/Transfer operations
+are merged; #261 is closed. Real SMS.ir/provider acceptance (#114) and a
+fixture-free staging purchase remain open. The next repository-owned scope is
+Warehouse+ #7 while private provider acceptance remains a pre-sale gate.
 The two-developer sprint assignments and durations below are historical planning
 assumptions, not active execution instructions.
 Payment work through manual refund recording (#294–#303) is merged. The first
