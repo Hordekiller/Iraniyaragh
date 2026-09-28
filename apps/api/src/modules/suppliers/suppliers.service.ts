@@ -14,7 +14,8 @@ function stableJson(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   const object = value as Record<string, unknown>;
-  return `{${Object.keys(object).sort().map(key => `${JSON.stringify(key)}:${stableJson(object[key])}`).join(',')}}`;
+  const byCodeUnit = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
+  return `{${Object.keys(object).sort(byCodeUnit).map(key => `${JSON.stringify(key)}:${stableJson(object[key])}`).join(',')}}`;
 }
 const notFound = () => new NotFoundException({ code: 'NOT_FOUND', message: 'Supplier not found.' });
 const stale = () => new ConflictException({ code: 'VERSION_CONFLICT', message: 'Supplier changed; reload before editing.' });
