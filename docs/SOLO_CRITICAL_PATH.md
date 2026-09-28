@@ -6,7 +6,9 @@ Effective: 2026-09-28. This document supersedes parallel-lane schedules in
 requirements. `PROJECT_STATUS.md` remains the factual capability record.
 
 Current main checkpoint includes PR #333 merged (Newsletter false-success
-removal) and PR #331 merged (inventory reconciliation CI evidence). Payment through manual
+removal) and PR #331 merged (inventory reconciliation CI evidence). Supplier
+backend PR #335 is open on `5ec9faa` with all required CI checks green; it is
+not part of `main` until merge. Payment through manual
 refund, Fulfillment pick/ready, manual dispatch/tracking, staff-attested delivery,
 durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation/Transfer
 operations are implemented. These are **not** real provider/handset acceptance or a
@@ -57,8 +59,8 @@ worktrees and uncommitted files.
    #114 remains a mandatory pre-sale gate. Its private acceptance is blocked on
    operator-supplied account/key/sender/templates and controlled handset; work
    on the next repository-owned slice may proceed while that gate remains open.
-6. **Warehouse+ — #7:** Supplier API #334 is the first sequential sub-slice of
-   #329; Admin Supplier UI follows only after its merge. Then PO, Receiving,
+6. **Warehouse+ — #7:** merge #335 first, then deliver the Admin Supplier UI as
+   the next single PR under #329. Only after that: PO, Receiving,
    Stocktake, Return/Refund, and
    Reports, one reviewable PR at a time, with ledger and financial reconciliation.
 7. **Web/Admin completion — #252/#258:** inspect every route for fixtures, fake
@@ -92,6 +94,8 @@ scope or an explicit product decision to move a non-selling item to V1.x.
 | #114 | External V1 acceptance blocker; real OTP plus three transactional SMS templates/handset evidence. |
 | #2, #4, #5, #6 | Keep milestone epics open: respectively private Auth acceptance, production-like Inventory reconciliation, fixture-free selling, and real payment/shipping/notification acceptance are not closed. |
 | #7, #8 | Keep open for Warehouse+ and V1 launch/UAT exit evidence. |
+| #329/#335 | Supplier backend is implemented on open PR #335 with green CI; merge it, then build/review the Admin Supplier UI before PO work. Neither #329 nor #7 is closed. |
+| #332/#333 | Closed/merged safety correction: Newsletter fake success and local contact fixture removed; real consented subscription remains future scope under #258. |
 | #252, #258, #140 | Route-by-route Admin/Web and dynamic-page completion after the selling core; no fixture or fake KPI in production. #140 is an umbrella, not a parallel implementation lane. |
 | #125, #126, #129, #127, #123, #130, #122 | Content/SSR → sitemap/canonical → structured data/feed → discovery audit/crawler governance. #122 is the umbrella. Do not advance ahead of the purchase path. |
 | #136 | Production hardening/telemetry plus deploy, restore, rollback and runbooks before a sales go/no-go. |
