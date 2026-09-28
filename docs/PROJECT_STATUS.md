@@ -48,6 +48,11 @@ claim, and clears the legacy locally stored contact list; the page now says
 Newsletter is unavailable until a consented backend subscription/delivery flow
 exists. This is a safety correction, not a delivered
 Newsletter capability, and #258 remains open.
+PR #335 (head `5ec9faa`) is the open Supplier API/contract slice (child of
+#329/#7); all required CI checks are green, but it is not merged and therefore
+not counted as main capability. It adds a permissioned, audited backend
+lifecycle with retry-safe writes, but no Admin Supplier UI, Purchase Order or
+Receiving flow. See `SUPPLIER_LIFECYCLE.md` for its exact boundary.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304's ADR-0006/schema discrepancy is addressed by a forward

@@ -11,6 +11,7 @@ export * from './orders';
 export * from './fulfillment';
 export * from './payments';
 export * from './reports';
+export * from './suppliers';
 
 export type InventorySnapshot = {
   warehouseId: string;

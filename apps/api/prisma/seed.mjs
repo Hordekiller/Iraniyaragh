@@ -21,6 +21,8 @@ const PERMISSIONS = [
   ["inventory.adjust", "Adjust inventory", "inventory"],
   ["inventory.transfer", "Transfer inventory", "inventory"],
   ["inventory.approve", "Approve inventory transfers", "inventory"],
+  ["suppliers.read", "Read suppliers", "suppliers"],
+  ["suppliers.manage", "Manage suppliers", "suppliers"],
   ["orders.read", "Read orders", "orders"],
   ["orders.manage", "Manage orders", "orders"],
   ["shipments.read", "Read shipments", "shipments"],
