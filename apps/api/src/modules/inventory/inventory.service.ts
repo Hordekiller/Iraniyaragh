@@ -12,6 +12,7 @@ import {
   type InventoryChangeType,
   type InventoryMovement as InventoryMovementContract,
   type InventoryMovementListResponse,
+  type Reservation as ReservationContract,
   type StockTransfer,
 } from "@iranyaragh/contracts";
 import { PrismaService } from "../../database/prisma.service";
@@ -376,7 +377,7 @@ export class InventoryService {
       );
     }
 
-    return this.withSerializableRetry(() =>
+    const reservation = await this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
           await this.acquireBalanceLock(tx, command);
@@ -455,13 +456,14 @@ export class InventoryService {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       ),
     );
+    return this.toReservationDto(reservation);
   }
 
   async releaseReservation(
     reservationId: string,
     context: ReservationLifecycleContext,
   ) {
-    return this.transitionReservation(
+    const reservation = await this.transitionReservation(
       reservationId,
       context,
       async (tx, reservation, balance) => {
@@ -501,13 +503,14 @@ export class InventoryService {
         return released;
       },
     );
+    return this.toReservationDto(reservation);
   }
 
   async consumeReservation(
     reservationId: string,
     context: ReservationLifecycleContext,
   ) {
-    return this.transitionReservation(
+    const reservation = await this.transitionReservation(
       reservationId,
       context,
       async (tx, reservation, balance) => {
@@ -563,6 +566,7 @@ export class InventoryService {
         return consumed;
       },
     );
+    return this.toReservationDto(reservation);
   }
 
   private async transitionReservation<R extends { id: string; status: string }>(
@@ -576,6 +580,15 @@ export class InventoryService {
   ): Promise<R | StockReservationRow> {
     this.assertTracked(context);
     const reservation = await this.requireActiveReservation(reservationId);
+    if (reservation.orderId) {
+      throw new ConflictException({
+        code: "RESERVATION_STATE_CONFLICT",
+        message: "Order-linked reservation lifecycle is managed by order and fulfillment workflows.",
+      });
+    }
+    if (reservation.status === "ACTIVE" && reservation.expiresAt && reservation.expiresAt <= new Date()) {
+      throw new ConflictException({ code: "RESERVATION_EXPIRED", message: "Reservation has expired." });
+    }
 
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
@@ -588,6 +601,15 @@ export class InventoryService {
           const replayState = this.reservationReplay(recheck, reservation);
           if (replayState !== null) {
             return replayState;
+          }
+          if (recheck?.orderId) {
+            throw new ConflictException({
+              code: "RESERVATION_STATE_CONFLICT",
+              message: "Order-linked reservation lifecycle is managed by order and fulfillment workflows.",
+            });
+          }
+          if (recheck?.expiresAt && recheck.expiresAt <= new Date()) {
+            throw new ConflictException({ code: "RESERVATION_EXPIRED", message: "Reservation has expired." });
           }
 
           const balance = await tx.inventoryBalance.findUnique({
@@ -2107,11 +2129,11 @@ export class InventoryService {
     variantId: string;
     orderId: string | null;
     quantity: number;
-    status: string;
+    status: ReservationContract['status'];
     expiresAt: Date;
     createdAt: Date;
     updatedAt: Date;
-  }) {
+  }): ReservationContract {
     return {
       id: reservation.id,
       warehouseId: reservation.warehouseId,
@@ -2120,9 +2142,9 @@ export class InventoryService {
       orderId: reservation.orderId,
       quantity: reservation.quantity,
       status: reservation.status,
-      expiresAt: reservation.expiresAt,
-      createdAt: reservation.createdAt,
-      updatedAt: reservation.updatedAt,
+      expiresAt: reservation.expiresAt.toISOString(),
+      createdAt: reservation.createdAt.toISOString(),
+      updatedAt: reservation.updatedAt.toISOString(),
     };
   }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { Lock, Plus, RefreshCw } from 'lucide-react';
 import type {
@@ -130,7 +131,10 @@ export function InventoryView({ initialFilters = EMPTY_FILTERS }: { initialFilte
     ]} rows={balances} rowKey={(row) => `${row.warehouseId}:${row.locationId}:${row.variantId}`} loading={balanceLoading}
       rowCount={balanceCount} page={balancePage} pageSize={balancePageSize} onPageChange={(page, size) => { setBalancePage(page); setBalancePageSize(size); }}
       emptyTitle="مانده‌ای یافت نشد" emptyDescription="فیلترها را بررسی کنید یا رسید اولیه ثبت کنید."
-      actions={canAdjust ? (row) => <Button size="small" onClick={() => setChange({ open: true, initial: row })}>رسید/تعدیل</Button> : undefined}
+      actions={(row) => <Stack direction="row" spacing={0.5}>
+        {canAdjust ? <Button size="small" onClick={() => setChange({ open: true, initial: row })}>رسید/تعدیل</Button> : null}
+        <Button size="small" component={Link} href={`/reservations?warehouseId=${encodeURIComponent(row.warehouseId)}&locationId=${encodeURIComponent(row.locationId)}&variantId=${encodeURIComponent(row.variantId)}&version=${row.version}`}>رزروها</Button>
+      </Stack>}
       actionsLabel="عملیات" />
 
     <Typography variant="h5" fontWeight={700} sx={{ mt: 4, mb: 1.5 }}>گردش دفترکل</Typography>
