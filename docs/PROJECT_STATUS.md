@@ -28,7 +28,8 @@ existing outbox and SMS.ir adapter. It records provider acceptance or safe
 failure; real SMS.ir templates/handset acceptance, delivery-status proof and
 fixture-free staging purchase remain open. See `CUSTOMER_SMS_DELIVERY.md`.
 PR #315 merged #314 at `91b7f49` with all nine final-head checks green.
-The next product issue is #261 Admin Inventory; #279 is closed as delivered
+The next repository-owned product scope is Warehouse+ #7; #114 SMS.ir private
+acceptance remains blocked and mandatory before any sale. #279 is closed as delivered
 by #284/#290 and obsolete UI coordination #166 is closed as superseded by
 #252/#258. The current issue dispositions live in `SOLO_CRITICAL_PATH.md`.
 PR #318 merged #317 at `4e56267` after all nine exact-head checks passed,
@@ -36,7 +37,9 @@ including a real desktop/mobile warehouse/location browser journey. PR #320
 merged #319 at `39003ee` after all nine exact-head checks passed, including
 receipt/adjustment browser evidence. PR #322 merged #321 at `2d86c6e` with all
 nine exact-head checks green, including manual reservation lifecycle E2E. The
-active #326 slice adds Transfer UI and is not merged at this checkpoint. See
+final #326 Transfer UI slice merged in PR #327 at `2883d25`, with all nine
+exact-head checks including a real two-warehouse desktop/mobile transfer E2E.
+#261 is closed as an Admin integration issue. See
 `ADMIN_INVENTORY_WAREHOUSES.md`, `ADMIN_INVENTORY_LEDGER.md`,
 `ADMIN_INVENTORY_RESERVATIONS.md` and `ADMIN_INVENTORY_TRANSFERS.md` for limits.
 Older historical checkpoints below retain their original review context and must
@@ -81,7 +84,7 @@ Current delivery confidence:
 | Catalog Admin                  | Merged slice                                | #229 delivers product detail, attributes, variants and import management                                                                                                                                                  |
 | Product media                  | Merged M1–M5; production acceptance pending | #162/#223/#224 plus #240 deliver the image pipeline, Admin authoring, public projection, storefront gallery and publish-to-discovery E2E; video processing, production S3/CORS and malware-scanner acceptance remain open |
 | Public discovery               | Merged slice                                | #228 connects storefront catalog reads to live API data                                                                                                                                                                   |
-| Inventory core                 | Merged API and Warehouse/Location/Ledger/Reservation Admin UI; Transfer UI in progress | #222 delivers protected inventory API; #317/#318 binds Warehouse/Location, #319/#320 binds Balance/Movement/Adjustment, and #321/#322 binds guarded manual Reservations. #326 works on Transfer UI. |
+| Inventory core                 | Merged API and Warehouse/Location/Ledger/Reservation/Transfer Admin UI | #222 delivers protected inventory API; #317/#318 binds Warehouse/Location, #319/#320 binds Balance/Movement/Adjustment, #321/#322 binds guarded manual Reservations, and #326/#327 binds guarded Transfers. #261 closed; production-like acceptance remains. |
 | Public availability            | Merged slice                                | #231 exposes fail-closed variant availability without warehouse internals                                                                                                                                                 |
 | Reservation expiry             | Merged optimization                         | #232 processes bounded expiry batches transactionally with race-safe rechecks                                                                                                                                             |
 | Cart runtime                   | Authenticated + Guest API runtime merged    | #239/#241–#244/#251 deliver authenticated ownership and correctness; #270/#269 adds opaque Guest ownership, rolling TTL, abuse controls, bounded cleanup and explicit OTP-login merge                                     |
@@ -94,8 +97,9 @@ Current delivery confidence:
 
 Using the gate model in `EXECUTION_BACKLOG.md`, G0/G1 are substantially complete,
 G2 is at acceptance reconciliation, G3 has an integrated Catalog/Media foundation,
-G4 has protected Inventory HTTP and merged Checkout allocation without operator
-UX, G5 has merged Cart, Checkout/Order creation and the Order-read API, and
+G4 has protected Inventory HTTP, merged Checkout allocation and Admin operator
+UX, but still needs production-like reconciliation. G5 has merged Cart,
+Checkout/Order creation and the Order-read API, and
 G6–G10 have not reached integrated completion.
 
 ## Repository snapshot
@@ -1151,9 +1155,10 @@ recorded above and still does not prove production media acceptance.
 ```text
 Merged: Cart/Checkout/Order → Payment/Refund → Fulfillment/Shipping
   → essential SMS attempt worker (#314)
-Next: Admin Inventory (#261)
-  → SMS.ir and payment production acceptance (#114 plus gateway evidence)
-  → Warehouse+ (#7) → route-by-route Web/Admin completion (#252/#258)
+Merged: Admin Inventory (#261 through #327)
+Blocked external gate: SMS.ir and payment production acceptance (#114 plus gateway evidence)
+Next repository-owned slice: Warehouse+ (#7)
+  → route-by-route Web/Admin completion (#252/#258)
   → Content/SEO (#122 and children) → hardening (#136)
   → fixture-free staging UAT → supervised V1 launch
 ```
