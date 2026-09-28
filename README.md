@@ -3,10 +3,16 @@
 Startup-ready commerce and warehouse platform for Iranian hardware/fittings retail.
 
 > Status: pre-release commerce integration. Auth, live Catalog/Media discovery,
-> protected Inventory HTTP and an authenticated server Cart API are merged. Web
-> Cart/Checkout/Orders remain fixture-backed; Checkout, Order application, Payment,
-> Fulfillment and production operations are not implemented. See
-> [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) before starting work.
+> protected Inventory HTTP, an authenticated server Cart API, Checkout, Order
+> application, Zarinpal Payment with audited manual refund, Fulfillment pick /
+> dispatch / tracking, the Admin inventory operations and the merged Supplier
+> backend lifecycle are implemented. What is still missing is external
+> acceptance and operations, not core commerce code: real SMS.ir and Zarinpal
+> acceptance, Purchase Order / Receiving / Stocktake / Return, customer credit
+> accounts (#336), SEO/content routes, production deploy, observability,
+> backup/restore/rollback and full UAT. See
+> [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) before starting work and
+> [`docs/SOLO_CRITICAL_PATH.md`](docs/SOLO_CRITICAL_PATH.md) for execution order.
 
 ## Workspace
 

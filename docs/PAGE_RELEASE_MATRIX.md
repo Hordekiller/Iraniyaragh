@@ -12,8 +12,8 @@ capability to delivered.
 | Area | State after this change lands | Open work, not delivered |
 | --- | --- | --- |
 | Customer web | Live Catalog, Cart/Checkout, payment result, customer Order and shipment tracking routes exist; #332 removes fake Newsletter signup and displays an unavailable state | #258 route-by-route fixture/action/mobile audit, including a real consented Newsletter backend if the feature is approved; #126 SSR and #140 dynamic pages |
-| Admin | Auth, Catalog/Media, Orders, payment/reconciliation/refund, Fulfillment/shipment, Warehouse/Location, Balance/Movement/Adjustment, guarded Reservations and Transfers exist | #252 route-by-route completion and production-like operator acceptance remain open |
-| API | Auth, Catalog/Media, Inventory, Cart/Checkout/Order, Zarinpal Payment and manual Fulfillment/shipping plus #314 SMS attempt worker are merged | #114 real SMS/provider acceptance, carrier verification and fixture-free staging journey |
+| Admin | Auth, Catalog/Media, Orders, payment/reconciliation/refund, Fulfillment/shipment, Warehouse/Location, Balance/Movement/Adjustment, guarded Reservations and Transfers exist; the Supplier lifecycle UI is on the current branch pending merge | #252 route-by-route completion and production-like operator acceptance remain open |
+| API | Auth, Catalog/Media, Inventory, Cart/Checkout/Order, Zarinpal Payment and manual Fulfillment/shipping, the merged Supplier lifecycle and #314 SMS attempt worker are merged | #114 real SMS/provider acceptance, carrier verification, Purchase Order/Receiving/Stocktake/Return, #336 customer credit and fixture-free staging journey |
 | Discovery | Plan/ADR and catalog facts exist | #125/#126/#129/#127/#123/#130 content, rendering, sitemap, feed and audit |
 | Commerce | Server-authoritative purchase path and operational commands exist | Live gateway/SMS acceptance, inventory operator reconciliation and full E2E UAT |
 | Operations | CI, worker and local infrastructure exist | #136 deploy, metrics, alerts, backup/restore, rollback and runbooks |

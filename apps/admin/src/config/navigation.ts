@@ -5,6 +5,7 @@ import {
   CreditCard,
   FileClock,
   Gauge,
+  Handshake,
   MonitorSmartphone,
   PackageSearch,
   ChartNoAxesCombined,
@@ -92,6 +93,12 @@ export const navigation: NavigationGroup[] = [
       { label: 'رزروها', href: '/reservations', icon: BookmarkCheck, permission: 'inventory.read' },
       { label: 'انتقال‌ها', href: '/transfers', icon: ReceiptText, permission: 'inventory.transfer' },
       { label: 'انبارگردانی', href: '/stocktakes', icon: ClipboardCheck, permission: 'inventory.adjust', status: 'planned' },
+    ],
+  },
+  {
+    label: 'تأمین و خرید',
+    items: [
+      { label: 'تأمین‌کنندگان', href: '/suppliers', icon: Handshake, permission: 'suppliers.read' },
     ],
   },
   {
