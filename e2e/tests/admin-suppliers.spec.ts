@@ -45,7 +45,12 @@ test('staff registers a real supplier, audits it and deactivates it without hard
   await tap(row.getByRole('button', { name: `ویرایش تأمین‌کننده ${supplierName}` }));
   const editDialog = page.getByRole('dialog', { name: 'ویرایش تأمین‌کننده' });
   await expect(editDialog.getByRole('textbox', { name: 'کد تأمین‌کننده' })).toBeDisabled();
-  await tap(editDialog.getByRole('checkbox', { name: 'تأمین‌کننده فعال است' }));
+  // MUI renders its Switch as an opacity:0 checkbox input, so target the control
+  // directly instead of depending on the computed accessible name.
+  await editDialog.locator('input[type="checkbox"]').setChecked(false);
+  // Prove the React state actually flipped: this warning only renders while
+  // `active` is false, so a DOM-only toggle that bypasses state cannot pass.
+  await expect(editDialog.getByText('غیرفعال‌سازی تأمین‌کننده', { exact: false })).toBeVisible();
   await tap(editDialog.getByRole('button', { name: 'ذخیره' }));
   await expect(editDialog).toBeHidden();
 
