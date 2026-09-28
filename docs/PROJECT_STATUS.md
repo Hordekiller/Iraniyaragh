@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-27
+Last reviewed: 2026-09-28
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -34,10 +34,11 @@ by #284/#290 and obsolete UI coordination #166 is closed as superseded by
 PR #318 merged #317 at `4e56267` after all nine exact-head checks passed,
 including a real desktop/mobile warehouse/location browser journey. PR #320
 merged #319 at `39003ee` after all nine exact-head checks passed, including
-receipt/adjustment browser evidence. The active #321 slice adds guarded manual
-reservation operations and is not merged at this checkpoint. Transfer UI remains
-open. See `ADMIN_INVENTORY_WAREHOUSES.md`, `ADMIN_INVENTORY_LEDGER.md` and
-`ADMIN_INVENTORY_RESERVATIONS.md` for exact limits.
+receipt/adjustment browser evidence. PR #322 merged #321 at `2d86c6e` with all
+nine exact-head checks green, including manual reservation lifecycle E2E. The
+active #326 slice adds Transfer UI and is not merged at this checkpoint. See
+`ADMIN_INVENTORY_WAREHOUSES.md`, `ADMIN_INVENTORY_LEDGER.md`,
+`ADMIN_INVENTORY_RESERVATIONS.md` and `ADMIN_INVENTORY_TRANSFERS.md` for limits.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304's ADR-0006/schema discrepancy is addressed by a forward
@@ -80,7 +81,7 @@ Current delivery confidence:
 | Catalog Admin                  | Merged slice                                | #229 delivers product detail, attributes, variants and import management                                                                                                                                                  |
 | Product media                  | Merged M1–M5; production acceptance pending | #162/#223/#224 plus #240 deliver the image pipeline, Admin authoring, public projection, storefront gallery and publish-to-discovery E2E; video processing, production S3/CORS and malware-scanner acceptance remain open |
 | Public discovery               | Merged slice                                | #228 connects storefront catalog reads to live API data                                                                                                                                                                   |
-| Inventory core                 | Merged API and Warehouse/Location/Ledger Admin UI; reservation UI in progress | #222 delivers protected inventory API; #317/#318 binds Warehouse/Location and #319/#320 binds Balance/Movement/Adjustment. #321 works on guarded manual Reservations; Transfer UI remains open. |
+| Inventory core                 | Merged API and Warehouse/Location/Ledger/Reservation Admin UI; Transfer UI in progress | #222 delivers protected inventory API; #317/#318 binds Warehouse/Location, #319/#320 binds Balance/Movement/Adjustment, and #321/#322 binds guarded manual Reservations. #326 works on Transfer UI. |
 | Public availability            | Merged slice                                | #231 exposes fail-closed variant availability without warehouse internals                                                                                                                                                 |
 | Reservation expiry             | Merged optimization                         | #232 processes bounded expiry batches transactionally with race-safe rechecks                                                                                                                                             |
 | Cart runtime                   | Authenticated + Guest API runtime merged    | #239/#241–#244/#251 deliver authenticated ownership and correctness; #270/#269 adds opaque Guest ownership, rolling TTL, abuse controls, bounded cleanup and explicit OTP-login merge                                     |

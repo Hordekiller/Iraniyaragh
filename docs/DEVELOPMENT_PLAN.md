@@ -1,12 +1,12 @@
 # Detailed Development Plan
 
-Last reviewed: 2026-09-27
+Last reviewed: 2026-09-28
 
 Current delivery order and capacity are defined by `SOLO_CRITICAL_PATH.md`.
-As of PR #320/#319, essential paid/dispatch/delivery SMS attempts and Admin
-Warehouse/Location/Balance/Movement/Adjustment operations are merged; real
-provider acceptance and a fixture-free purchase remain open. #261 is active,
-with #321 the guarded manual Reservation slice next.
+As of PR #322/#321, essential paid/dispatch/delivery SMS attempts and Admin
+Warehouse/Location/Balance/Movement/Adjustment/Reservation operations are merged;
+real provider acceptance and a fixture-free purchase remain open. #261 is active,
+with #326 the Transfer UI slice next.
 The two-developer sprint assignments and durations below are historical planning
 assumptions, not active execution instructions.
 Payment work through manual refund recording (#294–#303) is merged. The first
