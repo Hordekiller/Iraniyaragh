@@ -26,5 +26,9 @@ Verification target: adapter, permission, validation, stale-version and
 unknown-result tests; Admin lint/typecheck/coverage/build; desktop/mobile E2E
 creates real SKU/two warehouses/locations, receives source stock, moves one unit
 through request/approve/dispatch/receive and verifies destination balance and
-ledger. Stocktake remains planned; this slice changes no schema/migration/
+ledger. Follow-up #330 reconciles both ending balances (one unit each, no open
+reservation) against the exact receipt (+5), downward adjustment (-2), consumed
+reservation (-1), transfer out (-1) and transfer in (+1) movement chain, with
+one row per expected physical effect. This is a real local/CI API-browser flow,
+not production-like staging acceptance. Stocktake remains planned; this slice changes no schema/migration/
 shared contract/OpenAPI.

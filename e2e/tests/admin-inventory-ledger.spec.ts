@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
 
+const formatQuantity = new Intl.NumberFormat('fa-IR');
+
 async function navigate(page: Page, name: string, pattern: RegExp) {
   const link = adminSidebar(page).getByRole('link', { name });
   if (!(await link.isVisible().catch(() => false))) await tap(page.getByRole('button', { name: 'باز کردن منو' }));
@@ -164,10 +166,38 @@ test('operator records receipt, reservations and a two-warehouse transfer throug
     await expect(page.getByText(`وضعیت: ${step.status}`)).toBeVisible();
   }
 
+  await tap(page.getByRole('link', { name: 'مانده و گردش مبدأ' }));
+  await expect(page).toHaveURL(/\/inventory\?warehouseId=/);
+  const sourceBalance = page.getByRole('table', { name: 'ماندهٔ موجودی' }).getByRole('row', { name: new RegExp(variantId ?? '') });
+  await expect(sourceBalance.getByRole('cell').nth(3)).toHaveText('۱');
+  await expect(sourceBalance.getByRole('cell').nth(4)).toHaveText('۰');
+  await expect(sourceBalance.getByRole('cell').nth(5)).toHaveText('۱');
+  const sourceLedger = page.getByRole('table', { name: 'گردش دفترکل موجودی' });
+  for (const movement of [
+    { type: 'رسید', quantity: '۵', beforeAfter: '۰ ← ۵' },
+    { type: 'تعدیل کاهشی', quantity: formatQuantity.format(-2), beforeAfter: '۵ ← ۳' },
+    { type: 'فروش', quantity: formatQuantity.format(-1), beforeAfter: '۳ ← ۲' },
+    { type: 'انتقال خروجی', quantity: formatQuantity.format(-1), beforeAfter: '۲ ← ۱' },
+  ]) {
+    const rows = sourceLedger.getByRole('row', { name: new RegExp(movement.type) });
+    await expect(rows).toHaveCount(1);
+    await expect(rows.getByRole('cell').nth(5)).toHaveText(movement.quantity);
+    await expect(rows.getByRole('cell').nth(6)).toHaveText(movement.beforeAfter);
+  }
+  await expect(sourceLedger.getByRole('row')).toHaveCount(5);
+
+  await page.goBack();
+  await expect(page.getByText('وضعیت: تحویل‌شده')).toBeVisible();
   await tap(page.getByRole('link', { name: 'مانده و گردش مقصد' }));
   await expect(page).toHaveURL(/\/inventory\?warehouseId=/);
   const targetBalance = page.getByRole('table', { name: 'ماندهٔ موجودی' }).getByRole('row', { name: new RegExp(variantId ?? '') });
   await expect(targetBalance.getByRole('cell').nth(3)).toHaveText('۱');
+  await expect(targetBalance.getByRole('cell').nth(4)).toHaveText('۰');
   await expect(targetBalance.getByRole('cell').nth(5)).toHaveText('۱');
-  await expect(page.getByRole('table', { name: 'گردش دفترکل موجودی' }).getByRole('row', { name: /انتقال ورودی/ })).toBeVisible();
+  const targetLedger = page.getByRole('table', { name: 'گردش دفترکل موجودی' });
+  const inboundRows = targetLedger.getByRole('row', { name: /انتقال ورودی/ });
+  await expect(inboundRows).toHaveCount(1);
+  await expect(inboundRows.getByRole('cell').nth(5)).toHaveText('۱');
+  await expect(inboundRows.getByRole('cell').nth(6)).toHaveText('۰ ← ۱');
+  await expect(targetLedger.getByRole('row')).toHaveCount(2);
 });
