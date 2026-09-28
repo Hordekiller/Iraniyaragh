@@ -25,12 +25,7 @@ export const ADDRESS_FULL = 'تهران، خیابان امام خمینی، ن�
 export const WORKING_HOURS = 'شنبه تا پنجشنبه ۸ تا ۲۰'
 export const SUPPORT_HOURS = 'پشتیبانی تا ۱۰ شب • حتی جمعه‌ها'
 
-// ── Newsletter & brand presence ──────────────────────────────────────────────
-
-/** Discount code value (Toman) promised to newsletter subscribers. */
-export const NEWSLETTER_DISCOUNT_TOMAN = 150_000
-/** Total distinct tool brands carried by the shop (shown in the marquee). */
-export const TOTAL_BRAND_COUNT = 39
+// ── Catalog display ──────────────────────────────────────────────────────────
 /** Product catalogue size advertised in the header search placeholder. */
 export const CATALOG_PRODUCT_COUNT = 2500
 

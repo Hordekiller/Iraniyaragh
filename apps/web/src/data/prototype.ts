@@ -127,5 +127,3 @@ export const heroTrustPoints = [
   { icon: Truck, label: 'ارسال رایگان' },
   { icon: Award, label: '۴.۸ از ۵ • ۱۸۰۰ نظر' },
 ]
-
-export const brandsRow = ['BOSCH', 'Ronix', 'Tosan', 'DEWALT', 'Makita', 'NEC', 'HANS'] as const

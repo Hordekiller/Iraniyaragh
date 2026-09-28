@@ -9,9 +9,9 @@ capability to delivered.
 
 ## 1. Current truth checkpoint
 
-| Area | State on `main@2883d25` | Open work, not delivered |
+| Area | State after this change lands | Open work, not delivered |
 | --- | --- | --- |
-| Customer web | Live Catalog, Cart/Checkout, payment result, customer Order and shipment tracking routes exist | #258 route-by-route fixture/action/mobile audit; #126 SSR and #140 dynamic pages |
+| Customer web | Live Catalog, Cart/Checkout, payment result, customer Order and shipment tracking routes exist; #332 removes fake Newsletter signup and displays an unavailable state | #258 route-by-route fixture/action/mobile audit, including a real consented Newsletter backend if the feature is approved; #126 SSR and #140 dynamic pages |
 | Admin | Auth, Catalog/Media, Orders, payment/reconciliation/refund, Fulfillment/shipment, Warehouse/Location, Balance/Movement/Adjustment, guarded Reservations and Transfers exist | #252 route-by-route completion and production-like operator acceptance remain open |
 | API | Auth, Catalog/Media, Inventory, Cart/Checkout/Order, Zarinpal Payment and manual Fulfillment/shipping plus #314 SMS attempt worker are merged | #114 real SMS/provider acceptance, carrier verification and fixture-free staging journey |
 | Discovery | Plan/ADR and catalog facts exist | #125/#126/#129/#127/#123/#130 content, rendering, sitemap, feed and audit |
