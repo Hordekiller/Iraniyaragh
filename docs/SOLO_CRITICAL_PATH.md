@@ -5,7 +5,8 @@ Effective: 2026-09-28. This document supersedes parallel-lane schedules in
 `AGENT_WORKSTREAMS.md`. Those documents retain domain and release acceptance
 requirements. `PROJECT_STATUS.md` remains the factual capability record.
 
-Current main checkpoint: `2883d25` / PR #327 merged. Payment through manual
+Current main checkpoint includes PR #333 merged (Newsletter false-success
+removal) and PR #331 merged (inventory reconciliation CI evidence). Payment through manual
 refund, Fulfillment pick/ready, manual dispatch/tracking, staff-attested delivery,
 durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation/Transfer
 operations are implemented. These are **not** real provider/handset acceptance or a
@@ -56,7 +57,9 @@ worktrees and uncommitted files.
    #114 remains a mandatory pre-sale gate. Its private acceptance is blocked on
    operator-supplied account/key/sender/templates and controlled handset; work
    on the next repository-owned slice may proceed while that gate remains open.
-6. **Warehouse+ — #7:** Supplier/PO, Receiving, Stocktake, Return/Refund, then
+6. **Warehouse+ — #7:** Supplier API #334 is the first sequential sub-slice of
+   #329; Admin Supplier UI follows only after its merge. Then PO, Receiving,
+   Stocktake, Return/Refund, and
    Reports, one reviewable PR at a time, with ledger and financial reconciliation.
 7. **Web/Admin completion — #252/#258:** inspect every route for fixtures, fake
    KPIs, unavailable actions and incomplete UI; close each epic only against

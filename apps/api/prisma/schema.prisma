@@ -234,6 +234,7 @@ model User {
   mfaChallenges             MfaChallenge[]
   totpCredential            TotpCredential?
   catalogIdempotencyRecords CatalogIdempotencyRecord[]
+  supplierCommandRecords SupplierCommandRecord[]
   variantPriceRecords       VariantPriceRecord[]
   catalogImportRecords      CatalogImportRecord[]
   createdProductMedia       ProductMedia[]             @relation("ProductMediaCreator")
@@ -846,9 +847,23 @@ model Supplier {
   nationalId     String?
   economicCode   String?
   isActive       Boolean         @default(true)
+  version        Int             @default(0)
   purchaseOrders PurchaseOrder[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+}
+
+model SupplierCommandRecord {
+  id          String   @id @default(cuid())
+  actorId     String
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  scope       String   @db.VarChar(80)
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json?
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, scope, keyHash])
 }
 
 model PurchaseOrder {
