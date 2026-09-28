@@ -8,7 +8,7 @@ import { Bestsellers } from '../components/catalog/Bestsellers'
 import { SpecialCollection } from '../components/catalog/SpecialCollection'
 import { BlogSection } from '../components/content/BlogSection'
 import { ServicesSection } from '../components/content/ServicesSection'
-import { NewsletterBrands } from '../components/content/NewsletterBrands'
+import { NewsletterStatus } from '../components/content/NewsletterStatus'
 import { ROUTES } from '../lib/routes'
 import { SECTION_IDS } from '../lib/site-config'
 
@@ -49,7 +49,7 @@ export function HomePage() {
 
       <BlogSection />
       <ServicesSection />
-      <NewsletterBrands />
+      <NewsletterStatus />
     </div>
   )
 }

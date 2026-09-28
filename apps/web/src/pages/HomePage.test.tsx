@@ -24,13 +24,14 @@ function renderHome() {
 }
 
 describe('HomePage', () => {
-  it('renders the hero, category grid, popular tools and the newsletter section', () => {
+  it('renders the hero, category grid, popular tools and truthful newsletter status', () => {
     renderHome()
 
     expect(screen.getByRole('region', { name: 'اسلایدر پیشنهاد ویژه' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'دسته‌بندی تخصصی ابزار' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'ابزار محبوب هفته' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'عضو باشگاه استادکاران شوید' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'خبرنامه هنوز فعال نیست' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'شماره موبایل یا ایمیل' })).not.toBeInTheDocument()
   })
 
   it('navigates to the product page when a popular tool is selected', () => {
