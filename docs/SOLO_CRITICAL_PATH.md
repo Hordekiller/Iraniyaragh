@@ -7,9 +7,9 @@ requirements. `PROJECT_STATUS.md` remains the factual capability record.
 
 Current main checkpoint includes PR #333 merged (Newsletter false-success
 removal) and PR #331 merged (inventory reconciliation CI evidence). Supplier
-backend PR #335 is merged (squash `7c1cd1e`); the Admin Supplier UI is the
-current single product slice under #329 and is not on `main` until its own PR
-merges. Payment through manual
+backend PR #335 and Admin UI PR #337 are merged; #329 is closed. The #339
+Purchase Order API is the next single product slice, followed by Admin PO and
+then Receiving. Payment through manual
 refund, Fulfillment pick/ready, manual dispatch/tracking, staff-attested delivery,
 durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation/Transfer
 operations are implemented. These are **not** real provider/handset acceptance or a
@@ -60,14 +60,13 @@ worktrees and uncommitted files.
    #114 remains a mandatory pre-sale gate. Its private acceptance is blocked on
    operator-supplied account/key/sender/templates and controlled handset; work
    on the next repository-owned slice may proceed while that gate remains open.
-6. **Warehouse+ — #7:** #335 is merged; deliver the Admin Supplier UI as the
-   next single PR under #329, closing #329 only after its desktop/mobile E2E.
-   Only after that: PO, Receiving,
-   Stocktake, Return/Refund, and
-   Reports, one reviewable PR at a time, with ledger and financial reconciliation.
+6. **Warehouse+ — #7:** Supplier API #335 and Admin UI #337 are merged;
+   #329 is closed. Deliver PO API #339, then Admin PO, Receiving,
+   Stocktake and Return/Refund, one reviewable PR at a time, with ledger and
+   financial reconciliation.
 7. **Customer credit / accounts receivable — tracked in #336 (V1.0.0 scope):**
    approved 2026-09-28 as a required V1.0.0 capability and placed after
-   Warehouse+ and before Reports, because financial reporting without a
+   purchasing/returns and before Reports, because financial reporting without a
    receivables view is incomplete for a store that sells on account. Scope is
    deliberately narrow and staff-driven: credit is **not** offered in public
    storefront checkout. Staff record a credit sale for known walk-in/trade
@@ -78,17 +77,24 @@ worktrees and uncommitted files.
    `UNPAID`/`PARTIALLY_PAID`/`OVERDUE`, which changes the current
    payment-gated fulfillment transition and therefore needs its own reviewed ADR
    before implementation. Do not start this slice while #329 or a Warehouse+
-   slice is unmerged.
-8. **Web/Admin completion — #252/#258:** inspect every route for fixtures, fake
+   slice is unmerged. Prerequisites confirmed 2026-09-28: Admin Customer
+   create/search/update for known walk-in customers, staff-created Order,
+   audited one-time opening balances with legacy-ledger references, immutable
+   invoice/receipt/allocation entries and exact SKU/inventory reconciliation.
+   Public Checkout remains Zarinpal-only. Hard-block on overdue debt is the
+   conservative proposed policy for ADR #338, not an implemented rule.
+8. **Operational and financial Reports — #7:** reconcile low stock, PO aging,
+   inventory movements and customer receivables after their source ledgers exist.
+9. **Web/Admin completion — #252/#258:** inspect every route for fixtures, fake
    KPIs, unavailable actions and incomplete UI; close each epic only against
    actual integrated behavior.
-9. **Content and SEO — #125/#126/#129/#127/#123/#130:** content lifecycle,
+10. **Content and SEO — #125/#126/#129/#127/#123/#130:** content lifecycle,
    server rendering, canonical, sitemap, structured data, Merchant feed and
    performance/crawl monitoring, after the selling path works.
-10. **Production hardening — #136/Gate 0.9:** deployment, secrets, metrics,
+11. **Production hardening — #136/Gate 0.9:** deployment, secrets, metrics,
     tracing, alerts, backup/restore, rollback, load test and runbooks with staging
     evidence.
-11. **UAT and V1.0:** freeze a release candidate and prove
+12. **UAT and V1.0:** freeze a release candidate and prove
      Product → Guest Cart → OTP → Checkout → Zarinpal → Order → Inventory →
      Fulfillment → Tracking on staging before launch approval.
 
@@ -110,7 +116,7 @@ scope or an explicit product decision to move a non-selling item to V1.x.
 | #114 | External V1 acceptance blocker; real OTP plus three transactional SMS templates/handset evidence. |
 | #2, #4, #5, #6 | Keep milestone epics open: respectively private Auth acceptance, production-like Inventory reconciliation, fixture-free selling, and real payment/shipping/notification acceptance are not closed. |
 | #7, #8 | Keep open for Warehouse+ and V1 launch/UAT exit evidence. |
-| #329/#335 | Supplier backend merged via #335 (squash `7c1cd1e`). #329 stays open until the Admin Supplier UI PR merges with green desktop/mobile E2E. Neither #329 nor #7 is closed. |
+| #329/#335/#337 | Supplier backend and Admin UI merged with green final-head CI and desktop/mobile E2E; #329 is closed. #7 remains open for PO, Receiving, Stocktake, Return/Refund, credit and Reports. |
 | #336 | Approved 2026-09-28 as required V1.0.0 scope: staff-recorded customer credit with an immutable receivables ledger. Sequence after Warehouse+, before Reports; needs its own ADR for the payment-gated fulfillment transition. |
 | #332/#333 | Closed/merged safety correction: Newsletter fake success and local contact fixture removed; real consented subscription remains future scope under #258. |
 | #252, #258, #140 | Route-by-route Admin/Web and dynamic-page completion after the selling core; no fixture or fake KPI in production. #140 is an umbrella, not a parallel implementation lane. |

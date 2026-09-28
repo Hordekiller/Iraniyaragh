@@ -235,6 +235,7 @@ model User {
   totpCredential            TotpCredential?
   catalogIdempotencyRecords CatalogIdempotencyRecord[]
   supplierCommandRecords SupplierCommandRecord[]
+  purchaseOrderCommandRecords PurchaseOrderCommandRecord[]
   variantPriceRecords       VariantPriceRecord[]
   catalogImportRecords      CatalogImportRecord[]
   createdProductMedia       ProductMedia[]             @relation("ProductMediaCreator")
@@ -872,6 +873,7 @@ model PurchaseOrder {
   supplierId  String
   warehouseId String
   status      PurchaseOrderStatus @default(DRAFT)
+  version     Int                 @default(0)
   expectedAt  DateTime?
   notes       String?
   supplier    Supplier            @relation(fields: [supplierId], references: [id])
@@ -882,6 +884,19 @@ model PurchaseOrder {
 
   @@index([supplierId, createdAt])
   @@index([warehouseId, status])
+}
+
+model PurchaseOrderCommandRecord {
+  id          String   @id @default(cuid())
+  actorId     String
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  scope       String   @db.VarChar(100)
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json?
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, scope, keyHash])
 }
 
 model PurchaseOrderItem {

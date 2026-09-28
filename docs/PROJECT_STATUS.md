@@ -48,14 +48,14 @@ claim, and clears the legacy locally stored contact list; the page now says
 Newsletter is unavailable until a consented backend subscription/delivery flow
 exists. This is a safety correction, not a delivered
 Newsletter capability, and #258 remains open.
-PR #335 merged the Supplier API/contract slice (child of #329/#7) as squash
-`7c1cd1e`, adding a permissioned, audited backend lifecycle with retry-safe
-writes, but it contains no Admin Supplier UI, Purchase Order or Receiving flow;
-see `SUPPLIER_LIFECYCLE.md` for its exact boundary. The Admin Supplier UI
-(`/suppliers`, permission `suppliers.read`, mutations behind `suppliers.manage`,
-version-checked writes, audit history and explicit no-hard-delete semantics) is
-implemented on the current branch and is **not** counted as main capability until
-its own PR merges with green desktop/mobile E2E. #329 therefore stays open.
+PR #335 merged the Supplier API/contract slice as squash `7c1cd1e`. PR #337
+merged its Admin UI as squash `4052d26`, with all nine final-head checks green,
+including desktop/mobile no-fixture supplier create/deactivate/history E2E.
+#329 is closed; #7 remains open. The #339 Purchase Order API slice adds
+permissioned draft/edit/approve/cancel and audit but no Admin PO UI or Receiving;
+see `PURCHASE_ORDER_V1.md`. Customer credit is approved V1 scope in #336 but
+has no DB/API/Admin implementation yet; known-customer Admin creation, staff
+credit order, opening balance and a fulfillment ADR are prerequisites.
 Older historical checkpoints below retain their original review context and must
 not be read as overriding this update.
 Issue #304's ADR-0006/schema discrepancy is addressed by a forward
