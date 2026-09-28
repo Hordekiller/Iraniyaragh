@@ -21,6 +21,9 @@ const page = (item: SchemaObject): SchemaObject => ({ type: 'object', required: 
 export const purchasingOpenApi = {
   order,
   list: page(order),
+  options: page({ type: 'object', required: ['id', 'code', 'label'], properties: {
+    id: { type: 'string' }, code: { type: 'string' }, label: { type: 'string' },
+  } }),
   history: page({ type: 'object', required: ['id', 'action', 'actorId', 'createdAt'], properties: {
     id: { type: 'string' }, action: { type: 'string' }, actorId: { type: 'string', nullable: true },
     createdAt: { type: 'string', format: 'date-time' },

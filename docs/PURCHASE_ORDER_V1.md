@@ -1,15 +1,19 @@
 # Purchase Order API — first G7-02 slice (#339)
 
-This backend slice provides draft, review, approval and cancellation of purchase
-orders. It does **not** receive goods, increase stock, add an Admin PO route or
-close #7. Receiving and its exact inventory-ledger reconciliation are separate
-reviewed slices after the operator PO flow.
+The #339 backend slice provides draft, review, approval and cancellation of
+purchase orders. The subsequent #341 slice adds an Admin operator flow and a
+permission-scoped selector endpoint. Neither slice receives goods or increases
+stock; Receiving and its inventory-ledger reconciliation remain separate.
 
 ## Contract and lifecycle
 
 - `GET /api/v1/purchase-orders`, `GET /api/v1/purchase-orders/:id` and
   `GET /api/v1/purchase-orders/:id/history` require staff MFA and
   `purchasing.read`.
+- `GET /api/v1/purchase-orders/options?kind=supplier|warehouse|variant` also
+  requires `purchasing.read`. Search, offset and limit are validated and
+  bounded; only currently active references are returned. An operator does not
+  need broad catalog or inventory read access just to select PO references.
 - `POST /api/v1/purchase-orders` creates a server-numbered `DRAFT` from an
   active supplier, warehouse and 1–100 active SKUs. Supplier/warehouse identity
   is immutable after creation. The SKU snapshot is rechecked on approval.
@@ -37,11 +41,19 @@ reviewed slices after the operator PO flow.
 Only an existing system-admin role gets new purchasing permission grants from
 the forward migration. Other staff roles need deliberate grant/review.
 
+The Admin `/purchase-orders` route lists and filters real records, shows line
+and audit details, and supports draft creation/editing, separate approval and
+unreceived cancellation according to the three purchasing permissions. It
+submits integer IRR strings and stable command keys; after an ambiguous network
+failure it asks for refresh/inspection before another write. It does not show
+an option to receive stock or claim that an approved PO changed inventory.
+
 ## Exit evidence and limit
 
 API tests cover authorization declarations, DTOs, same-key replay, changed-key
 conflict, duplicate/overflow lines, inactive supplier/SKU, version races,
 approval, received-order cancellation denial, immutable approved lines, audit
 history and zero stock movement on PO creation. A fresh `_test` PostgreSQL
-database must pass migration and schema-drift checks. Admin PO route and actual
-partial-receipt inventory reconciliation remain open.
+database must pass migration and schema-drift checks. The #341 Admin change
+also needs option visibility, read-only/mutation separation and desktop/mobile
+browser evidence. Actual partial-receipt inventory reconciliation remains open.

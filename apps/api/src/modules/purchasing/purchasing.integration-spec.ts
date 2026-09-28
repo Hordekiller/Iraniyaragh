@@ -59,6 +59,18 @@ describe.sequential('PurchasingService database integration', () => {
     await expect(service.create({ ...input(), notes: 'Changed' }, context('create'))).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_CONFLICT' } });
   });
 
+  it('offers only active purchasing references through bounded search', async () => {
+    expect((await service.options({ kind: 'supplier', search: `PO-SUP-${runId}`, offset: 0, limit: 25 })).items)
+      .toEqual([{ id: supplierId, code: `PO-SUP-${runId.toUpperCase()}`, label: 'Purchase Supplier' }]);
+    expect((await service.options({ kind: 'warehouse', search: 'Purchase Warehouse', offset: 0, limit: 25 })).items)
+      .toEqual([{ id: warehouseId, code: `PO-WH-${runId.toUpperCase()}`, label: 'Purchase Warehouse' }]);
+    expect((await service.options({ kind: 'variant', search: `PO-SKU-${runId}`, offset: 0, limit: 25 })).items)
+      .toEqual([{ id: variantId, code: `PO-SKU-${runId.toUpperCase()}`, label: 'Purchase Product' }]);
+    await prisma.productVariant.update({ where: { id: variantId }, data: { isActive: false } });
+    expect((await service.options({ kind: 'variant', search: `PO-SKU-${runId}`, offset: 0, limit: 25 })).count).toBe(0);
+    await prisma.productVariant.update({ where: { id: variantId }, data: { isActive: true } });
+  });
+
   it('guards duplicate lines, invalid amounts and inactive references without partial writes', async () => {
     await expect(service.create({ ...input(), items: [input().items[0], input().items[0]] }, context('duplicate'))).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.create({ ...input(), items: [{ variantId, orderedQty: 1, unitCost: '9223372036854775808' }] }, context('overflow'))).rejects.toBeInstanceOf(BadRequestException);
