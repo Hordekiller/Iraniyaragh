@@ -90,7 +90,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'انبارها', href: '/warehouses', icon: Building2, permission: 'inventory.read' },
       { label: 'موجودی و گردش', href: '/inventory', icon: Boxes, permission: 'inventory.read' },
       { label: 'رزروها', href: '/reservations', icon: BookmarkCheck, permission: 'inventory.read' },
-      { label: 'انتقال‌ها', href: '/transfers', icon: ReceiptText, permission: 'inventory.transfer', status: 'planned' },
+      { label: 'انتقال‌ها', href: '/transfers', icon: ReceiptText, permission: 'inventory.transfer' },
       { label: 'انبارگردانی', href: '/stocktakes', icon: ClipboardCheck, permission: 'inventory.adjust', status: 'planned' },
     ],
   },

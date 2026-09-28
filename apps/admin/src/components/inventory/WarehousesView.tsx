@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { ApiAbortError } from '@/lib/api/client';
-import { canAdjustInventory, canReadInventory } from '@/lib/inventory/inventory-permissions';
+import { canAdjustInventory, canReadInventory, canTransferInventory } from '@/lib/inventory/inventory-permissions';
 import { listLocations, listWarehouses } from '@/lib/inventory/warehouses-api';
 import { WarehouseDialog } from './WarehouseDialog';
 import { LocationDialog } from './LocationDialog';
@@ -21,6 +21,7 @@ export function WarehousesView() {
   const { user } = useAuth();
   const canRead = canReadInventory(user);
   const canAdjust = canAdjustInventory(user);
+  const canTransfer = canTransferInventory(user);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [warehouseCount, setWarehouseCount] = useState(0);
   const [warehousePage, setWarehousePage] = useState(0);
@@ -106,6 +107,7 @@ export function WarehousesView() {
         actions={(row) => <Stack direction="row" spacing={0.5}>
           <Button size="small" startIcon={<MapPin size={16} />} onClick={() => { setSelected(row); setLocationPage(0); setLocations([]); }}>مکان‌ها</Button>
           <Button size="small" component={Link} href={`/inventory?warehouseId=${encodeURIComponent(row.id)}`}>موجودی</Button>
+          {canTransfer ? <Button size="small" component={Link} href={`/transfers/new?sourceWarehouseId=${encodeURIComponent(row.id)}`}>انتقال از انبار</Button> : null}
           {canAdjust ? <IconButton size="small" aria-label={`ویرایش انبار ${row.name}`} onClick={() => setWarehouseDialog({ open: true, edit: row })}><Edit size={17} /></IconButton> : null}
         </Stack>}
         actionsLabel="عملیات"

@@ -1,16 +1,15 @@
 # Single-Developer V1 Critical Path
 
-Effective: 2026-09-27. This document supersedes parallel-lane schedules in
+Effective: 2026-09-28. This document supersedes parallel-lane schedules in
 `DEVELOPMENT_PLAN.md`, `EXECUTION_STATUS.md`, `V1_MASTER_PLAN.md` and
 `AGENT_WORKSTREAMS.md`. Those documents retain domain and release acceptance
 requirements. `PROJECT_STATUS.md` remains the factual capability record.
 
-Current main checkpoint: `39003ee` / PR #320 merged. Payment through manual
+Current main checkpoint: `2d86c6e` / PR #322 merged. Payment through manual
 refund, Fulfillment pick/ready, manual dispatch/tracking, staff-attested delivery,
-durable essential SMS attempts and Admin Warehouse/Location/Ledger operations are
+durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation operations are
 implemented. These are **not** real provider/handset acceptance or a fixture-free
-staging purchase. #261 remains active; #321 is its guarded manual Reservation
-slice. Transfer follows separately.
+staging purchase. #261 remains active; #326 is its Transfer slice.
 
 ## Delivery rule
 
@@ -45,9 +44,9 @@ worktrees and uncommitted files.
    Direct carrier verification is not implemented and must not be claimed.
 4. **Admin Inventory — #261:** connect Warehouse, Location, Balance, Movement,
    Adjustment, Reservation and Transfer screens to the existing permissioned
-   backend. #317 Warehouse/Location merged via #318 and #319 Balance/Movement/
-   Adjustment merged via #320. #321 is the active Reservation slice; Transfer
-   follows in a separate PR.
+   backend. #317 Warehouse/Location merged via #318, #319 Balance/Movement/
+   Adjustment via #320, and #321 guarded manual Reservations via #322. #326 is
+   the active Transfer slice.
    Verify one real operator flow and ledger/audit consistency before closing #261.
 5. **SMS.ir production acceptance — #114:** configure a real account, key,
    sender and four approved templates outside the repo; prove OTP and paid/
@@ -79,11 +78,11 @@ This is a *go/no-go gate*, not an automatic launch authorization. The formal V1.
 tag additionally requires the agreed #7, #252/#258, content/discovery and #136
 scope or an explicit product decision to move a non-selling item to V1.x.
 
-## Open-issue disposition (2026-09-27)
+## Open-issue disposition (2026-09-28)
 
 | Issues | Disposition and closure evidence |
 | --- | --- |
-| #261 | **In progress.** #317/#318 and #319/#320 merged; #321 covers guarded manual Reservations next, then Transfer separately. Require live operator flow, ledger/audit and permission evidence. |
+| #261 | **In progress.** Warehouse/Location, ledger and manual Reservations merged through #322; #326 Transfer is active. Require live operator flow, ledger/audit and permission evidence before close. |
 | #114 | External V1 acceptance blocker; real OTP plus three transactional SMS templates/handset evidence. |
 | #2, #4, #5, #6 | Keep milestone epics open: respectively private Auth acceptance, Admin Inventory, fixture-free selling, and real payment/shipping/notification acceptance are not closed. |
 | #7, #8 | Keep open for Warehouse+ and V1 launch/UAT exit evidence. |

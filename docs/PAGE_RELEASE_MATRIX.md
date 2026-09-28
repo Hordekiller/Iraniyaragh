@@ -9,10 +9,10 @@ capability to delivered.
 
 ## 1. Current truth checkpoint
 
-| Area | State on `main@4e56267` | Open work, not delivered |
+| Area | State on `main@2d86c6e` | Open work, not delivered |
 | --- | --- | --- |
 | Customer web | Live Catalog, Cart/Checkout, payment result, customer Order and shipment tracking routes exist | #258 route-by-route fixture/action/mobile audit; #126 SSR and #140 dynamic pages |
-| Admin | Auth, Catalog/Media, Orders, payment/reconciliation/refund, Fulfillment/shipment, Warehouse/Location and #319 Balance/Movement/Adjustment operations exist | #321 guarded manual Reservation UI is in progress; #261 Transfer and #252 route-by-route completion remain open |
+| Admin | Auth, Catalog/Media, Orders, payment/reconciliation/refund, Fulfillment/shipment, Warehouse/Location, Balance/Movement/Adjustment and #321 guarded manual Reservation operations exist | #326 Transfer UI is in progress; #252 route-by-route completion remains open |
 | API | Auth, Catalog/Media, Inventory, Cart/Checkout/Order, Zarinpal Payment and manual Fulfillment/shipping plus #314 SMS attempt worker are merged | #114 real SMS/provider acceptance, carrier verification and fixture-free staging journey |
 | Discovery | Plan/ADR and catalog facts exist | #125/#126/#129/#127/#123/#130 content, rendering, sitemap, feed and audit |
 | Commerce | Server-authoritative purchase path and operational commands exist | Live gateway/SMS acceptance, inventory operator reconciliation and full E2E UAT |

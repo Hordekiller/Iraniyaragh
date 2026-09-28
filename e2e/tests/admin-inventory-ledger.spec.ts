@@ -9,8 +9,8 @@ async function navigate(page: Page, name: string, pattern: RegExp) {
   await expect(page).toHaveURL(pattern);
 }
 
-test('operator records receipt, adjustment, and guarded manual reservation lifecycle through real inventory APIs', async ({ page }) => {
-  test.setTimeout(120_000);
+test('operator records receipt, reservations and a two-warehouse transfer through real inventory APIs', async ({ page }) => {
+  test.setTimeout(180_000);
   await signInDiAsAdmin(page);
   const suffix = Date.now().toString(36);
 
@@ -51,6 +51,10 @@ test('operator records receipt, adjustment, and guarded manual reservation lifec
   await expect(locationRow).toBeVisible();
   await tap(locationRow.getByRole('link', { name: 'موجودی' }));
   await expect(page).toHaveURL(/\/inventory\?warehouseId=/);
+  const sourceWarehouseId = new URL(page.url()).searchParams.get('warehouseId');
+  const sourceLocationId = new URL(page.url()).searchParams.get('locationId');
+  expect(sourceWarehouseId).toBeTruthy();
+  expect(sourceLocationId).toBeTruthy();
 
   await tap(page.getByRole('button', { name: 'رسید یا تعدیل' }));
   const stockDialog = page.getByRole('dialog', { name: 'ثبت رسید یا تعدیل موجودی' });
@@ -109,4 +113,61 @@ test('operator records receipt, adjustment, and guarded manual reservation lifec
   await tap(consumeDialog.getByRole('button', { name: 'تأیید مصرف' }));
   await expect(consumeDialog).toBeHidden();
   await expect(reservationsTable.getByRole('row').filter({ hasText: 'مصرف‌شده' })).toHaveCount(1);
+
+  await navigate(page, 'انبارها', /\/warehouses$/);
+  await tap(page.getByRole('button', { name: 'انبار جدید' }));
+  const targetWarehouseDialog = page.getByRole('dialog', { name: 'انبار جدید' });
+  await targetWarehouseDialog.getByRole('textbox', { name: 'کد یکتا' }).fill(`INV-DST-${suffix}`);
+  await targetWarehouseDialog.getByRole('textbox', { name: 'نام انبار' }).fill('انبار مقصد آزمون');
+  await tap(targetWarehouseDialog.getByRole('button', { name: 'ذخیره' }));
+  await expect(targetWarehouseDialog).toBeHidden();
+  const targetWarehouseRow = page.getByRole('row', { name: new RegExp(`INV-DST-${suffix}`) });
+  await expect(targetWarehouseRow).toBeVisible();
+  await tap(targetWarehouseRow.getByRole('button', { name: 'مکان‌ها' }));
+  await tap(page.getByRole('button', { name: 'مکان جدید' }));
+  const targetLocationDialog = page.getByRole('dialog', { name: 'مکان جدید' });
+  await targetLocationDialog.getByRole('textbox', { name: 'کد مکان در انبار' }).fill(`INV-DST-LOC-${suffix}`);
+  await tap(targetLocationDialog.getByRole('button', { name: 'ذخیره' }));
+  await expect(targetLocationDialog).toBeHidden();
+  const targetLocationRow = page.getByRole('row', { name: new RegExp(`INV-DST-LOC-${suffix}`) });
+  const targetInventoryHref = await targetLocationRow.getByRole('link', { name: 'موجودی' }).getAttribute('href');
+  const targetWarehouseId = new URL(targetInventoryHref ?? '', 'http://localhost').searchParams.get('warehouseId');
+  const targetLocationId = new URL(targetInventoryHref ?? '', 'http://localhost').searchParams.get('locationId');
+  expect(targetWarehouseId).toBeTruthy();
+  expect(targetLocationId).toBeTruthy();
+
+  await navigate(page, 'انتقال‌ها', /\/transfers$/);
+  await tap(page.getByRole('link', { name: 'انتقال جدید' }));
+  await expect(page).toHaveURL(/\/transfers\/new$/);
+  await page.getByRole('textbox', { name: 'کد انتقال (اختیاری)' }).fill(`TRF-E2E-${suffix}`);
+  await page.getByRole('textbox', { name: 'شناسه انبار مبدأ' }).fill(sourceWarehouseId ?? '');
+  await page.getByRole('textbox', { name: 'شناسه انبار مقصد' }).fill(targetWarehouseId ?? '');
+  await page.getByRole('textbox', { name: 'شناسه SKU ردیف 1' }).fill(variantId ?? '');
+  await page.getByRole('textbox', { name: 'تعداد ردیف 1' }).fill('1');
+  await page.getByRole('textbox', { name: 'شناسه مکان مبدأ ردیف 1' }).fill(sourceLocationId ?? '');
+  await page.getByRole('textbox', { name: 'شناسه مکان مقصد ردیف 1' }).fill(targetLocationId ?? '');
+  await tap(page.getByRole('button', { name: 'ساخت پیش‌نویس' }));
+  await expect(page).toHaveURL(/\/transfers\/[^/]+$/);
+  await expect(page.getByRole('heading', { name: `انتقال TRF-E2E-${suffix}` })).toBeVisible();
+
+  for (const step of [
+    { button: 'درخواست تأیید', dialog: 'درخواست تأیید انتقال', confirm: 'تأیید درخواست تأیید', status: 'در انتظار تأیید' },
+    { button: 'تأیید', dialog: 'تأیید انتقال', confirm: 'تأیید تأیید', status: 'تأییدشده' },
+    { button: 'ارسال', dialog: 'ارسال فیزیکی انتقال', confirm: 'تأیید ارسال فیزیکی', status: 'در راه' },
+    { button: 'دریافت', dialog: 'دریافت فیزیکی انتقال', confirm: 'تأیید دریافت فیزیکی', status: 'تحویل‌شده' },
+  ]) {
+    await tap(page.getByRole('button', { name: step.button, exact: true }));
+    const actionDialog = page.getByRole('dialog', { name: step.dialog });
+    await expect(actionDialog.getByText(/نسخهٔ تأییدشده:/)).toBeVisible();
+    await tap(actionDialog.getByRole('button', { name: step.confirm }));
+    await expect(actionDialog).toBeHidden();
+    await expect(page.getByText(`وضعیت: ${step.status}`)).toBeVisible();
+  }
+
+  await tap(page.getByRole('link', { name: 'مانده و گردش مقصد' }));
+  await expect(page).toHaveURL(/\/inventory\?warehouseId=/);
+  const targetBalance = page.getByRole('table', { name: 'ماندهٔ موجودی' }).getByRole('row', { name: new RegExp(variantId ?? '') });
+  await expect(targetBalance.getByRole('cell').nth(3)).toHaveText('۱');
+  await expect(targetBalance.getByRole('cell').nth(5)).toHaveText('۱');
+  await expect(page.getByRole('table', { name: 'گردش دفترکل موجودی' }).getByRole('row', { name: /انتقال ورودی/ })).toBeVisible();
 });
