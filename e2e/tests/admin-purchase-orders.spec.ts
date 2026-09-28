@@ -39,7 +39,8 @@ test('staff creates references, a purchase-order draft and approves it without a
   await page.locator('#variant-0-sku').fill(sku);
   await page.locator('#variant-0-cost').fill('120000');
   await page.locator('#variant-0-sale').fill('180000');
-  await tap(page.locator('#product-status'));
+  await page.locator('#product-status').focus();
+  await page.keyboard.press('Enter');
   await tap(page.getByRole('option', { name: 'منتشرشده' }));
   await tap(page.getByRole('button', { name: 'ثبت کالا' }));
   await expect(page).toHaveURL(/\/catalog$/);
