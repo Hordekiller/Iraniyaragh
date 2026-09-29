@@ -17,6 +17,7 @@ import type {
   FulfillmentStatus,
   OrderListMeta,
 } from '@iranyaragh/contracts';
+import { maskIdentifier, maskText } from '../../common/masking';
 import { PrismaService } from '../../database/prisma.service';
 import { AdminShipmentListQueryDto } from './shipment-read.dto';
 import { staffDeliveryProofReference } from './shipment-command-utils';
@@ -54,16 +55,6 @@ const listSelect = {
 } satisfies Prisma.ShipmentSelect;
 
 type ListRow = Prisma.ShipmentGetPayload<{ select: typeof listSelect }>;
-
-function maskText(value: string): string {
-  const characters = [...value.trim()];
-  return characters.length ? `${characters[0]}***` : '***';
-}
-
-function maskIdentifier(value: string, prefix: number, suffix: number): string {
-  if (value.length <= prefix + suffix) return '*'.repeat(value.length);
-  return `${value.slice(0, prefix)}${'*'.repeat(value.length - prefix - suffix)}${value.slice(-suffix)}`;
-}
 
 function isRecord(value: Prisma.JsonValue): value is Prisma.JsonObject {
   return value !== null && typeof value === 'object' && !Array.isArray(value);

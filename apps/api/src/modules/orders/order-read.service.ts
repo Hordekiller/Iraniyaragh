@@ -28,6 +28,7 @@ import type {
   OrderTimelineEntry,
   ShipmentSnapshot,
 } from '@iranyaragh/contracts';
+import { maskIdentifier, maskText } from '../../common/masking';
 import { PrismaService } from '../../database/prisma.service';
 import {
   AdminOrderListQueryDto,
@@ -553,16 +554,6 @@ function adminAddress(value: CheckoutAddress | null): AdminOrderAddress | null {
     recipientMasked: maskText(value.recipient),
     mobileMasked: maskIdentifier(value.mobile, 5, 3),
   };
-}
-
-function maskText(value: string): string {
-  const characters = [...value.trim()];
-  return characters.length ? `${characters[0]}***` : '***';
-}
-
-function maskIdentifier(value: string, prefix: number, suffix: number): string {
-  if (value.length <= prefix + suffix) return '*'.repeat(value.length);
-  return `${value.slice(0, prefix)}${'*'.repeat(value.length - prefix - suffix)}${value.slice(-suffix)}`;
 }
 
 function tagTransitions<T extends TransitionRow>(
