@@ -142,6 +142,10 @@ jobs:
       AUTH_HASH_KEY_VERSION: "1"
       AUTH_HASH_SECRET: development-only-hash-root-secret-replace-me
       AUTH_DEV_CODE: dev-e2e-access-code
+      AUTH_TOTP_ENCRYPTION_KEY: fa647259a698500b34f7a2cc58c1806c4d00ffadd9bc8589bcd3cd4e6d83229e
+      E2E_STAFF_EMAIL: operator@iranyaragh.local
+      E2E_STAFF_PASSWORD: E2E-Only-Staff-Password-307153
+      E2E_STAFF_TOTP_SECRET: IXLKPK5WJ475PXWNG4QN3YPV4VDOD7WW
       CORS_ORIGINS: http://127.0.0.1:3001
       OBJECT_STORAGE_ENDPOINT: http://127.0.0.1:9000
       OBJECT_STORAGE_ACCESS_KEY: minio

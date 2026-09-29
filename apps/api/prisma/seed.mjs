@@ -1,5 +1,19 @@
+import { createCipheriv, randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import * as argon2 from "argon2";
 import { assertSeedEnvironment } from "./seed-policy.mjs";
+
+const OPERATOR_PASSWORD_ARGON_OPTIONS = {
+  type: argon2.argon2id,
+  memoryCost: 19_456,
+  timeCost: 2,
+  parallelism: 1,
+};
+
+const TOTP_ENVELOPE_VERSION = "v1";
+const TOTP_KEY_BYTES = 32;
+const TOTP_SECRET_PATTERN = /^[A-Z2-7]+$/iu;
+const TOTP_ISSUER = "Iraniyaragh";
 
 const SYSTEM_ADMIN_ROLE = {
   id: "seed_role_system_admin",
@@ -470,6 +484,181 @@ async function seedDemoCatalog() {
   return transactionPrisma;
 }
 
+function deriveTotpEncryptionKey() {
+  const value = process.env.AUTH_TOTP_ENCRYPTION_KEY;
+  if (!value) {
+    throw new Error("AUTH_TOTP_ENCRYPTION_KEY is required to seed the operator staff TOTP credential.");
+  }
+  const key = /^[0-9a-f]{64}$/iu.test(value) ? Buffer.from(value, "hex") : Buffer.from(value, "base64url");
+  if (key.length !== TOTP_KEY_BYTES) {
+    throw new Error("AUTH_TOTP_ENCRYPTION_KEY must decode to a 32-byte key (64 hex chars or 43 base64url chars).");
+  }
+  return key;
+}
+
+function encryptTotpSecret(secret) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", deriveTotpEncryptionKey(), iv);
+  const ciphertext = Buffer.concat([cipher.update(secret, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return {
+    encryptedSecret: [
+      TOTP_ENVELOPE_VERSION,
+      iv.toString("base64url"),
+      tag.toString("base64url"),
+      ciphertext.toString("base64url"),
+    ].join(":"),
+    encryptionKeyVersion: TOTP_ENVELOPE_VERSION,
+  };
+}
+
+/**
+ * Test/development-only operator-staff bootstrap.
+ *
+ * Creates (or refreshes) one ACTIVE staff user that can complete the REAL
+ * `/login` password + TOTP flow, so e2e coverage does not depend on the
+ * development-only `/auth/dev/signin` harness. It is a pure environment
+ * bootstrap: no default credential is stored here, `E2E_STAFF_EMAIL` must be
+ * present for it to run at all, and the surrounding seed already refuses to
+ * touch a production database (`assertSeedEnvironment`). Production first
+ * administrators are created through the TTY-only bootstrap command required
+ * by AUTH_CONTRACT §10, never through this path.
+ *
+ * - `E2E_STAFF_EMAIL` — enables the block; the staff identifier.
+ * - `E2E_STAFF_PASSWORD` — hashed with the same argon2id parameters the API
+ *   uses in `password-hash.service.ts`.
+ * - `E2E_STAFF_TOTP_SECRET` — base32 secret, stored through the same
+ *   AES-256-GCM envelope format as `totp-crypto.service.ts` and pre-confirmed so
+ *   the TOTP step can be satisfied from the seed environment.
+ * - `AUTH_TOTP_ENCRYPTION_KEY` — must match the key the running API uses, or the
+ *   stored secret cannot be decrypted and MFA fails closed.
+ */
+async function seedOperatorStaff() {
+  const email = process.env.E2E_STAFF_EMAIL ?? "";
+  const password = process.env.E2E_STAFF_PASSWORD ?? "";
+  const totpSecret = process.env.E2E_STAFF_TOTP_SECRET ?? "";
+  if (!email || !password || !TOTP_SECRET_PATTERN.test(totpSecret)) {
+    throw new Error(
+      "E2E_STAFF_EMAIL and E2E_STAFF_PASSWORD must be set and E2E_STAFF_TOTP_SECRET must be a base32-encoded secret.",
+    );
+  }
+
+  if (email.length > 254 || !email.includes("@")) {
+    throw new Error("E2E_STAFF_EMAIL must be a valid email address.");
+  }
+  if (Array.from(password).length < 15 || Array.from(password).length > 128) {
+    throw new Error("E2E_STAFF_PASSWORD must be 15-128 characters long.");
+  }
+
+  const passwordHash = await argon2.hash(password, OPERATOR_PASSWORD_ARGON_OPTIONS);
+  const encrypted = encryptTotpSecret(totpSecret);
+  const seededNow = new Date();
+
+  return prisma.$transaction(async (transaction) => {
+    const role = await transaction.role.findUnique({
+      where: { key: SYSTEM_ADMIN_ROLE.key },
+      select: { id: true },
+    });
+    if (!role) {
+      throw new Error("System admin role is missing before operator-staff seeding.");
+    }
+
+    const user = await transaction.user.upsert({
+      where: { email },
+      update: {
+        firstName: "Operator",
+        lastName: "Staff",
+        status: "ACTIVE",
+        isEmailVerified: true,
+        emailVerifiedAt: seededNow,
+        passwordHash,
+        updatedAt: seededNow,
+      },
+      create: {
+        id: "seed_operator_staff",
+        email,
+        firstName: "Operator",
+        lastName: "Staff",
+        status: "ACTIVE",
+        isEmailVerified: true,
+        emailVerifiedAt: seededNow,
+        passwordHash,
+        createdAt: seededNow,
+        updatedAt: seededNow,
+      },
+    });
+
+    await transaction.totpCredential.upsert({
+      where: { userId: user.id },
+      update: {
+        encryptedSecret: encrypted.encryptedSecret,
+        encryptionKeyVersion: encrypted.encryptionKeyVersion,
+        confirmedAt: seededNow,
+        disabledAt: null,
+        lastAcceptedStep: null,
+        updatedAt: seededNow,
+      },
+      create: {
+        userId: user.id,
+        encryptedSecret: encrypted.encryptedSecret,
+        encryptionKeyVersion: encrypted.encryptionKeyVersion,
+        confirmedAt: seededNow,
+        createdAt: seededNow,
+        updatedAt: seededNow,
+      },
+    });
+
+    await transaction.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId: user.id,
+          roleId: role.id,
+        },
+      },
+      update: {
+        revokedAt: null,
+        revokedById: null,
+        revokeReason: null,
+      },
+      create: {
+        id: "seed_operator_staff_role",
+        userId: user.id,
+        roleId: role.id,
+        assignedById: null,
+      },
+    });
+
+    await transaction.auditLog.upsert({
+      where: { id: "seed_audit_operator_staff" },
+      update: {
+        action: "seed.operator.staff",
+        entityId: user.id,
+        entityType: "User",
+        metadata: {
+          subject: "seed-operator-staff",
+          roleKey: SYSTEM_ADMIN_ROLE.key,
+          totpConfirmation: "ENROLLED",
+          source: "deterministic-test-bootstrap",
+        },
+      },
+      create: {
+        id: "seed_audit_operator_staff",
+        action: "seed.operator.staff",
+        entityId: user.id,
+        entityType: "User",
+        metadata: {
+          subject: "seed-operator-staff",
+          roleKey: SYSTEM_ADMIN_ROLE.key,
+          totpConfirmation: "ENROLLED",
+          source: "deterministic-test-bootstrap",
+        },
+      },
+    });
+
+    return { userId: user.id, roleId: role.id, provisioningUri: `otpauth://totp/${TOTP_ISSUER}:${encodeURIComponent(email)}?secret=${totpSecret}&issuer=${TOTP_ISSUER}` };
+  });
+}
+
 try {
   const result = await seedRbacBaseline();
   console.log(
@@ -487,6 +676,18 @@ try {
   console.log(
     `Seeded demo catalog: product ${demoCatalog.productId}, variant ${demoCatalog.variantId}, warehouse ${demoCatalog.warehouseId}, location ${demoCatalog.locationId}.`,
   );
+  const configuredOperatorStaff =
+    typeof process.env.E2E_STAFF_EMAIL === "string" &&
+    process.env.E2E_STAFF_EMAIL.trim().length > 0;
+  if (configuredOperatorStaff) {
+    const operator = await seedOperatorStaff();
+    console.log(
+      `Seeded operator staff user (${operator.userId}) with ${SYSTEM_ADMIN_ROLE.key} role and confirmed TOTP.`,
+    );
+    console.log(`Operator TOTP provisioning URI: ${operator.provisioningUri}`);
+  } else {
+    console.log("E2E_STAFF_EMAIL not set; skipping the operator staff bootstrap.");
+  }
 } catch {
   console.error(
     "Database seed failed. Review the seed safety policy and database state.",
