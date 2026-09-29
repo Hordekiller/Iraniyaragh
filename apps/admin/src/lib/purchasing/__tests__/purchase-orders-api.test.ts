@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAccessToken } from '@/lib/auth/token-store';
-import { createPurchaseOrder, listPurchaseOrderOptions, listPurchaseOrders, newPurchaseOrderCommandKey, transitionPurchaseOrder, updatePurchaseOrder } from '../purchase-orders-api';
+import { createPurchaseOrder, listPurchaseOrderOptions, listPurchaseOrderReceipts, listPurchaseReceiptLocations, listPurchaseOrders, newPurchaseOrderCommandKey, newPurchaseReceiptCommandKey, receivePurchaseOrder, transitionPurchaseOrder, updatePurchaseOrder } from '../purchase-orders-api';
 
 const response = (body: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify(body) }) as Response;
 const callsOf = (fetcher: ReturnType<typeof vi.fn>) => fetcher.mock.calls as unknown as [string, RequestInit][];
@@ -31,5 +31,18 @@ describe('purchase order Admin HTTP adapter', () => {
     expect(calls[0][1].headers).toEqual(expect.objectContaining({ 'Idempotency-Key': key }));
     expect(calls[1][0]).toBe('http://localhost:4000/api/v1/purchase-orders/po%2F1');
     expect(JSON.parse(calls[2][1].body as string)).toEqual({ expectedVersion: 4 });
+  });
+  it('uses PO-scoped receiving endpoints and a separate replay key', async () => {
+    const fetcher = vi.fn(async () => response({ items: [], count: 0 }));
+    vi.stubGlobal('fetch', fetcher);
+    await listPurchaseOrderReceipts('po/1');
+    await listPurchaseReceiptLocations('po/1', 'A1');
+    const key = newPurchaseReceiptCommandKey();
+    await receivePurchaseOrder('po/1', { expectedVersion: 3, externalReference: 'DEL-1', lines: [{ variantId: 'v1', locationId: 'l1', quantity: 2 }] }, key);
+    const calls = callsOf(fetcher);
+    expect(calls[0][0]).toContain('/purchase-orders/po%2F1/receipts?offset=0&limit=20');
+    expect(calls[1][0]).toContain('/purchase-orders/po%2F1/receipt-locations?search=A1&offset=0&limit=50');
+    expect(calls[2][1].headers).toEqual(expect.objectContaining({ 'Idempotency-Key': key }));
+    expect(JSON.parse(calls[2][1].body as string)).toEqual({ expectedVersion: 3, externalReference: 'DEL-1', lines: [{ variantId: 'v1', locationId: 'l1', quantity: 2 }] });
   });
 });

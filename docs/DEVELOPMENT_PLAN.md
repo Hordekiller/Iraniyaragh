@@ -1,8 +1,13 @@
 # Detailed Development Plan
 
-Last reviewed: 2026-09-28
+Last reviewed: 2026-09-29
 
 Current delivery order and capacity are defined by `SOLO_CRITICAL_PATH.md`.
+Receiving API #343 merged in PR #344 at `3a60f8c`; Admin receipt workflow
+#345 is the only active product slice and is not merged. The two-developer
+capacity estimates below are historical, not an authorization to implement
+Stocktake, Returns or credit in parallel with #345. See `PROJECT_STATUS.md`
+for current code/acceptance state and `PURCHASE_RECEIVING_V1.md` for boundaries.
 As of PR #327/#326, essential paid/dispatch/delivery SMS attempts and Admin
 Warehouse/Location/Balance/Movement/Adjustment/Reservation/Transfer operations
 are merged; #261 is closed. Real SMS.ir/provider acceptance (#114) and a

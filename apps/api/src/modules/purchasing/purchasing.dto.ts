@@ -62,3 +62,9 @@ export class PurchaseReceiptCreateDto implements PurchaseReceiptCreateRequest {
   @IsString() @MinLength(1) @MaxLength(120) externalReference!: string;
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => PurchaseReceiptLineDto) lines!: PurchaseReceiptLineDto[];
 }
+
+export class PurchaseReceiptLocationQueryDto {
+  @IsOptional() @IsString() @MaxLength(80) search?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) limit = 25;
+}

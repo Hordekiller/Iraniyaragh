@@ -4,14 +4,15 @@ import { PurchaseOrdersView } from '../PurchaseOrdersView';
 
 const mocks = vi.hoisted(() => ({
   user: { permissions: [] as string[] }, list: vi.fn(), history: vi.fn(), options: vi.fn(),
-  create: vi.fn(), update: vi.fn(), transition: vi.fn(), get: vi.fn(),
+  create: vi.fn(), update: vi.fn(), transition: vi.fn(), get: vi.fn(), receipts: vi.fn(), receiptLocations: vi.fn(), receive: vi.fn(),
 }));
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => ({ user: mocks.user }) }));
 vi.mock('@/lib/purchasing/purchase-orders-api', async () => {
   const actual = await vi.importActual<typeof import('@/lib/purchasing/purchase-orders-api')>('@/lib/purchasing/purchase-orders-api');
   return { ...actual, listPurchaseOrders: mocks.list, listPurchaseOrderHistory: mocks.history,
     listPurchaseOrderOptions: mocks.options, createPurchaseOrder: mocks.create,
-    updatePurchaseOrder: mocks.update, transitionPurchaseOrder: mocks.transition, getPurchaseOrder: mocks.get };
+    updatePurchaseOrder: mocks.update, transitionPurchaseOrder: mocks.transition, getPurchaseOrder: mocks.get,
+    listPurchaseOrderReceipts: mocks.receipts, listPurchaseReceiptLocations: mocks.receiptLocations, receivePurchaseOrder: mocks.receive };
 });
 
 const order = {
@@ -25,6 +26,8 @@ describe('PurchaseOrdersView', () => {
     mocks.list.mockResolvedValue({ items: [order], count: 1 });
     mocks.history.mockResolvedValue({ items: [{ id: 'audit-1', action: 'purchase-order.created', actorId: 'staff-1', createdAt: '2026-09-28T00:00:00.000Z' }], count: 1 });
     mocks.options.mockResolvedValue({ items: [], count: 0 });
+    mocks.receipts.mockResolvedValue({ items: [], count: 0 });
+    mocks.receiptLocations.mockResolvedValue({ items: [{ id: 'loc-1', code: 'A1', label: 'قفسهٔ A1' }], count: 1 });
   });
   it('fails closed without read permission', async () => {
     mocks.user.permissions = [];
@@ -49,6 +52,35 @@ describe('PurchaseOrdersView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'جزئیات' }));
     expect(screen.queryByRole('button', { name: 'تأیید سفارش' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'لغو سفارش' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'ثبت دریافت کالا' })).toBeNull();
+  });
+  it('shows persisted receipts and gates receiving by dedicated permission', async () => {
+    mocks.user.permissions = ['purchasing.read', 'purchasing.receive'];
+    mocks.list.mockResolvedValue({ items: [{ ...order, status: 'APPROVED', version: 1 }], count: 1 });
+    mocks.receipts.mockResolvedValue({ items: [{ id: 'receipt-1', number: 'RC-1', purchaseOrderId: 'po-1', warehouseId: 'wh-1',
+      externalReference: 'DEL-1', actorId: 'staff-1', receivedAt: '2026-09-29T00:00:00.000Z',
+      lines: [{ id: 'receipt-line-1', purchaseOrderItemId: 'line-1', variantId: 'variant-1', locationId: 'loc-1', quantity: 1, movementId: 'movement-1' }] }], count: 1 });
+    render(<PurchaseOrdersView />);
+    await screen.findByText('PO-123');
+    fireEvent.click(screen.getByRole('button', { name: 'جزئیات' }));
+    expect(await screen.findByText(/DEL-1/)).toBeInTheDocument();
+    expect(screen.getByText(/movement-1/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ثبت دریافت کالا' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ویرایش پیش‌نویس' })).toBeNull();
+  });
+  it('rejects an over-receipt in the operator form before issuing a mutation', async () => {
+    mocks.user.permissions = ['purchasing.read', 'purchasing.receive'];
+    mocks.list.mockResolvedValue({ items: [{ ...order, status: 'APPROVED', version: 1 }], count: 1 });
+    render(<PurchaseOrdersView />);
+    await screen.findByText('PO-123');
+    fireEvent.click(screen.getByRole('button', { name: 'جزئیات' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت دریافت کالا' }));
+    const dialog = screen.getByRole('dialog', { name: 'ثبت دریافت کالا برای PO-123' });
+    fireEvent.change(screen.getByRole('textbox', { name: 'شمارهٔ حوالهٔ تأمین‌کننده' }), { target: { value: 'DEL-99' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'تعداد واقعی' }), { target: { value: '3' } });
+    fireEvent.submit(dialog.querySelector('form')!);
+    expect(dialog).toHaveTextContent('تعداد هر ردیف باید صحیح و از باقیماندهٔ سفارش بیشتر نباشد');
+    expect(mocks.receive).not.toHaveBeenCalled();
   });
   it('filters draft orders at the server and offers a real create form', async () => {
     render(<PurchaseOrdersView />);

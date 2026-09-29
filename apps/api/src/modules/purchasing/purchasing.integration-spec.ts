@@ -78,15 +78,23 @@ describe.sequential('PurchasingService database integration', () => {
     await prisma.productVariant.update({ where: { id: variantId }, data: { isActive: false } });
     expect((await service.options({ kind: 'variant', search: `PO-SKU-${runId}`, offset: 0, limit: 25 })).count).toBe(0);
     await prisma.productVariant.update({ where: { id: variantId }, data: { isActive: true } });
+    const order = await service.create(input(), context('location-options-create'));
+    orderIds.push(order.id);
+    expect(await service.receiptLocations(order.id, { search: 'RECEIVING', offset: 0, limit: 25 }))
+      .toEqual({ items: [{ id: locationId, code: 'RECEIVING', label: 'Receiving' }], count: 1 });
+    await prisma.warehouseLocation.update({ where: { id: secondLocationId }, data: { isActive: false } });
+    expect((await service.receiptLocations(order.id, { offset: 0, limit: 25 })).items.map(item => item.id)).toEqual([locationId]);
+    await prisma.warehouseLocation.update({ where: { id: secondLocationId }, data: { isActive: true } });
   });
 
   it('guards duplicate lines, invalid amounts and inactive references without partial writes', async () => {
+    const beforeOrders = await prisma.purchaseOrder.count({ where: { supplierId } });
     await expect(service.create({ ...input(), items: [input().items[0], input().items[0]] }, context('duplicate'))).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.create({ ...input(), items: [{ variantId, orderedQty: 1, unitCost: '9223372036854775808' }] }, context('overflow'))).rejects.toBeInstanceOf(BadRequestException);
     await prisma.supplier.update({ where: { id: supplierId }, data: { isActive: false } });
     await expect(service.create(input(), context('inactive'))).rejects.toMatchObject({ response: { code: 'SUPPLIER_INACTIVE' } });
     await prisma.supplier.update({ where: { id: supplierId }, data: { isActive: true } });
-    expect(await prisma.purchaseOrder.count({ where: { supplierId } })).toBe(1);
+    expect(await prisma.purchaseOrder.count({ where: { supplierId } })).toBe(beforeOrders);
   });
 
   it('edits only a version-matched draft, approves immutable lines, then cancels an unreceived order', async () => {

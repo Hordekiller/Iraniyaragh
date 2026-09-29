@@ -1,10 +1,11 @@
-import type { PurchaseOrder, PurchaseOrderActionRequest, PurchaseOrderAuditResponse, PurchaseOrderCreateRequest, PurchaseOrderListResponse, PurchaseOrderOptionKind, PurchaseOrderOptionsResponse, PurchaseOrderStatus, PurchaseOrderUpdateRequest } from '@iranyaragh/contracts';
+import type { PurchaseOrder, PurchaseOrderActionRequest, PurchaseOrderAuditResponse, PurchaseOrderCreateRequest, PurchaseOrderListResponse, PurchaseOrderOptionKind, PurchaseOrderOptionsResponse, PurchaseOrderStatus, PurchaseOrderUpdateRequest, PurchaseReceipt, PurchaseReceiptCreateRequest, PurchaseReceiptListResponse, PurchaseReceiptLocationOptionsResponse } from '@iranyaragh/contracts';
 import { apiFetch } from '@/lib/api/client';
 import { getAccessToken } from '@/lib/auth/token-store';
 
 const token = () => getAccessToken();
 const path = (id: string) => `/purchase-orders/${encodeURIComponent(id)}`;
 export const newPurchaseOrderCommandKey = () => `po-${globalThis.crypto.randomUUID()}`;
+export const newPurchaseReceiptCommandKey = () => `po-receipt-${globalThis.crypto.randomUUID()}`;
 
 export function listPurchaseOrders(query: { offset: number; limit: number; status?: PurchaseOrderStatus }, signal?: AbortSignal): Promise<PurchaseOrderListResponse> {
   const params = new URLSearchParams({ offset: String(query.offset), limit: String(query.limit) });
@@ -29,4 +30,15 @@ export function updatePurchaseOrder(id: string, input: PurchaseOrderUpdateReques
 }
 export function transitionPurchaseOrder(id: string, action: 'approve' | 'cancel', input: PurchaseOrderActionRequest, key: string): Promise<PurchaseOrder> {
   return apiFetch<PurchaseOrder>(`${path(id)}/${action}`, { method: 'POST', token: token(), body: input, headers: { 'Idempotency-Key': key }, responseShape: 'raw' });
+}
+export function listPurchaseOrderReceipts(id: string, offset = 0, limit = 20, signal?: AbortSignal): Promise<PurchaseReceiptListResponse> {
+  return apiFetch<PurchaseReceiptListResponse>(`${path(id)}/receipts?offset=${offset}&limit=${limit}`, { token: token(), signal, responseShape: 'raw' });
+}
+export function listPurchaseReceiptLocations(id: string, search: string, signal?: AbortSignal): Promise<PurchaseReceiptLocationOptionsResponse> {
+  const params = new URLSearchParams({ search, offset: '0', limit: '50' });
+  return apiFetch<PurchaseReceiptLocationOptionsResponse>(`${path(id)}/receipt-locations?${params}`, { token: token(), signal, responseShape: 'raw' });
+}
+export function receivePurchaseOrder(id: string, input: PurchaseReceiptCreateRequest, key: string): Promise<PurchaseReceipt> {
+  return apiFetch<PurchaseReceipt>(`${path(id)}/receipts`, { method: 'POST', token: token(), body: input,
+    headers: { 'Idempotency-Key': key }, responseShape: 'raw' });
 }

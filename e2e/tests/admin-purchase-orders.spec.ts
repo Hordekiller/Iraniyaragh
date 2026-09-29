@@ -8,12 +8,13 @@ async function navigate(page: Page, name: string, path: RegExp) {
   await expect(page).toHaveURL(path);
 }
 
-test('staff creates references, a purchase-order draft and approves it without a stock receipt', async ({ page }) => {
+test('staff creates a purchase order and receives partial/final stock with persisted ledger evidence', async ({ page }) => {
   test.setTimeout(120_000);
   await signInDiAsAdmin(page);
   const suffix = Date.now().toString(36).toUpperCase();
   const supplierCode = `PO-SUP-${suffix}`;
   const warehouseCode = `PO-WH-${suffix}`;
+  const locationCode = `PO-LOC-${suffix}`;
   const sku = `PO-SKU-${suffix}`;
 
   await navigate(page, 'تأمین‌کنندگان', /\/suppliers$/);
@@ -31,6 +32,13 @@ test('staff creates references, a purchase-order draft and approves it without a
   await warehouse.getByRole('textbox', { name: 'نام انبار' }).fill(`انبار خرید ${suffix}`);
   await tap(warehouse.getByRole('button', { name: 'ذخیره' }));
   await expect(page.getByRole('row', { name: new RegExp(warehouseCode) })).toBeVisible();
+  await tap(page.getByRole('row', { name: new RegExp(warehouseCode) }).getByRole('button', { name: 'مکان‌ها' }));
+  await tap(page.getByRole('button', { name: 'مکان جدید' }));
+  const location = page.getByRole('dialog', { name: 'مکان جدید' });
+  await location.getByRole('textbox', { name: 'کد مکان در انبار' }).fill(locationCode);
+  await location.getByRole('textbox', { name: 'نام' }).fill('قفسه دریافت خرید');
+  await tap(location.getByRole('button', { name: 'ذخیره' }));
+  await expect(page.getByRole('row', { name: new RegExp(locationCode) })).toBeVisible();
 
   await navigate(page, 'کالا و SKU', /\/catalog$/);
   await tap(page.locator('a[href="/catalog/products/new"]'));
@@ -69,4 +77,18 @@ test('staff creates references, a purchase-order draft and approves it without a
   await tap(detail.getByRole('button', { name: 'تأیید سفارش' }));
   await expect(detail.getByText('تأییدشده')).toBeVisible();
   await expect(detail.getByRole('row', { name: new RegExp(sku) })).toContainText('۰');
+  for (const [quantity, expectedStatus, expectedReceived] of [['1', 'دریافت ناقص', '۱'], ['2', 'دریافت‌شده', '۳']] as const) {
+    await tap(detail.getByRole('button', { name: 'ثبت دریافت کالا' }));
+    const receipt = page.getByRole('dialog', { name: /ثبت دریافت کالا برای PO-/ });
+    await receipt.getByRole('textbox', { name: 'شمارهٔ حوالهٔ تأمین‌کننده' }).fill(`DEL-${quantity}-${suffix}`);
+    await receipt.getByRole('combobox', { name: /مکان انبار ردیف 1/ }).fill(locationCode);
+    await tap(page.getByRole('option', { name: new RegExp(locationCode) }));
+    await receipt.getByRole('spinbutton', { name: 'تعداد واقعی' }).fill(quantity);
+    await tap(receipt.getByRole('button', { name: 'ثبت رسید و افزایش موجودی' }));
+    await expect(receipt).toBeHidden();
+    await expect(detail.getByText(expectedStatus).first()).toBeVisible();
+    await expect(detail.getByRole('row', { name: new RegExp(sku) })).toContainText(expectedReceived);
+    await expect(detail.getByText(`DEL-${quantity}-${suffix}`)).toBeVisible();
+  }
+  await expect(detail.getByRole('button', { name: 'ثبت دریافت کالا' })).toHaveCount(0);
 });

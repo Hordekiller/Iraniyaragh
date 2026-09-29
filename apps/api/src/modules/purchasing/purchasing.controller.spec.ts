@@ -3,13 +3,13 @@ import { validate } from 'class-validator';
 import { describe, expect, it, vi } from 'vitest';
 import { REQUIRE_AUTH_LEVEL, REQUIRE_FRESH_AUTH, REQUIRE_PERMISSION } from '../auth/auth.guard';
 import { PurchasingController } from './purchasing.controller';
-import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderItemDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto, PurchaseReceiptCreateDto } from './purchasing.dto';
+import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderItemDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto, PurchaseReceiptCreateDto, PurchaseReceiptLocationQueryDto } from './purchasing.dto';
 
 describe('Purchase Order HTTP boundary', () => {
   it('requires staff MFA and separates read, manage and fresh-MFA approval', () => {
     const prototype = PurchasingController.prototype;
     expect(Reflect.getMetadata(REQUIRE_AUTH_LEVEL, PurchasingController)).toBe('STAFF_MFA');
-    for (const method of ['list', 'options', 'get', 'history', 'receipts'] as const) {
+    for (const method of ['list', 'options', 'get', 'history', 'receipts', 'receiptLocations'] as const) {
       expect(Reflect.getMetadata(REQUIRE_PERMISSION, prototype[method])).toBe('purchasing.read');
     }
     for (const method of ['create', 'update', 'cancel'] as const) {
@@ -38,6 +38,8 @@ describe('Purchase Order HTTP boundary', () => {
       lines: [{ variantId: 'variant-1', locationId: 'loc-1', quantity: 1 }] }))).toEqual([]);
     expect(await validate(plainToInstance(PurchaseReceiptCreateDto, { expectedVersion: -1, externalReference: '',
       lines: [{ variantId: 'variant-1', locationId: 'loc-1', quantity: 0 }] }))).not.toEqual([]);
+    expect(await validate(plainToInstance(PurchaseReceiptLocationQueryDto, { search: 'A', limit: '50' }))).toEqual([]);
+    expect(await validate(plainToInstance(PurchaseReceiptLocationQueryDto, { limit: '51' }))).not.toEqual([]);
   });
 
   it('passes actor and retry key to the service', async () => {

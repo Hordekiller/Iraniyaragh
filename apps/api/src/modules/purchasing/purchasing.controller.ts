@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { PurchaseOrderStatus } from '@prisma/client';
-import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderListResponse, PurchaseOrderOptionsResponse, PurchaseReceipt, PurchaseReceiptListResponse } from '@iranyaragh/contracts';
+import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderListResponse, PurchaseOrderOptionsResponse, PurchaseReceipt, PurchaseReceiptListResponse, PurchaseReceiptLocationOptionsResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
-import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto, PurchaseReceiptCreateDto } from './purchasing.dto';
+import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto, PurchaseReceiptCreateDto, PurchaseReceiptLocationQueryDto } from './purchasing.dto';
 import { purchasingOpenApi } from './purchasing.openapi';
 import { PurchasingService } from './purchasing.service';
 
@@ -59,6 +59,18 @@ export class PurchasingController {
   @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 100 })
   @ApiOkResponse({ schema: purchasingOpenApi.receipts })
   receipts(@Param('id') id: string, @Query() query: PurchaseOrderHistoryQueryDto): Promise<PurchaseReceiptListResponse> { return this.purchasing.receipts(id, query); }
+
+  @Get(':id/receipt-locations')
+  @RequirePermission('purchasing.read')
+  @ApiOperation({ summary: 'Select active receipt locations in this purchase order warehouse' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiQuery({ name: 'search', required: false, type: String, maxLength: 80 })
+  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 50 })
+  @ApiOkResponse({ schema: purchasingOpenApi.receiptLocations })
+  receiptLocations(@Param('id') id: string, @Query() query: PurchaseReceiptLocationQueryDto): Promise<PurchaseReceiptLocationOptionsResponse> {
+    return this.purchasing.receiptLocations(id, query);
+  }
 
   @Post()
   @RequirePermission('purchasing.manage')
