@@ -47,4 +47,18 @@ describe('filterNavigationByPermissions', () => {
     expect(filterNavigationByPermissions(navigation, ['reports.read']).flatMap((group) => group.items))
       .toContainEqual(expect.objectContaining({ href: '/dashboard' }));
   });
+
+  it('exposes the shipments reader as a live entry gated on shipments.read', () => {
+    const shipments = navigation
+      .flatMap((group) => group.items)
+      .find((item) => item.href === '/shipments');
+
+    expect(shipments).toBeDefined();
+    expect(shipments?.permission).toBe('shipments.read');
+    expect(shipments?.status).toBeUndefined();
+    expect(filterNavigationByPermissions(navigation, ['orders.read']).flatMap((group) => group.items))
+      .not.toContainEqual(expect.objectContaining({ href: '/shipments' }));
+    expect(filterNavigationByPermissions(navigation, ['shipments.read']).flatMap((group) => group.items))
+      .toContainEqual(expect.objectContaining({ href: '/shipments' }));
+  });
 });

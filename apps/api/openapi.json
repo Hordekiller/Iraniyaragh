@@ -11834,6 +11834,764 @@
         ]
       }
     },
+    "/shipments/admin": {
+      "get": {
+        "operationId": "ShipmentReadController_list",
+        "parameters": [
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "dispatchedAt",
+                "orderNumber",
+                "carrier"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "dispatchedTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dispatchedFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "trackingCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 120,
+              "type": "string"
+            }
+          },
+          {
+            "name": "carrier",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "SHIPPED",
+                "DELIVERED",
+                "RETURNED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "items",
+                        "meta"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "orderId",
+                              "orderNumber",
+                              "status",
+                              "carrier",
+                              "trackingCode",
+                              "itemCount",
+                              "totalQuantity",
+                              "city",
+                              "customer",
+                              "dispatchedAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "orderId": {
+                                "type": "string"
+                              },
+                              "orderNumber": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "PROCESSING",
+                                  "READY_TO_SHIP",
+                                  "SHIPPED",
+                                  "DELIVERED",
+                                  "RETURNED",
+                                  "CANCELLED"
+                                ]
+                              },
+                              "carrier": {
+                                "type": "string"
+                              },
+                              "trackingCode": {
+                                "type": "string"
+                              },
+                              "itemCount": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "totalQuantity": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "city": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "customer": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "id",
+                                  "displayNameMasked",
+                                  "mobileMasked"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "displayNameMasked": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "mobileMasked": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "dispatchedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "page",
+                            "perPage",
+                            "total",
+                            "pages"
+                          ],
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 10000
+                            },
+                            "perPage": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 100
+                            },
+                            "total": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "pages": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Invalid query or path input.",
+                  "additionalProperties": true,
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "A valid live access token is required.",
+                  "additionalProperties": true,
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The authentication level or shipments.read permission is missing.",
+                  "additionalProperties": true,
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List dispatched shipments with filters and pagination",
+        "tags": [
+          "shipments"
+        ]
+      }
+    },
+    "/shipments/admin/{id}": {
+      "get": {
+        "operationId": "ShipmentReadController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "shipment"
+                      ],
+                      "properties": {
+                        "shipment": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "orderId",
+                            "orderNumber",
+                            "status",
+                            "carrier",
+                            "trackingCode",
+                            "itemCount",
+                            "totalQuantity",
+                            "city",
+                            "customer",
+                            "dispatchedAt",
+                            "address",
+                            "dispatchedBy",
+                            "lines",
+                            "timeline"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "orderId": {
+                              "type": "string"
+                            },
+                            "orderNumber": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "PROCESSING",
+                                "READY_TO_SHIP",
+                                "SHIPPED",
+                                "DELIVERED",
+                                "RETURNED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "carrier": {
+                              "type": "string"
+                            },
+                            "trackingCode": {
+                              "type": "string"
+                            },
+                            "itemCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "totalQuantity": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "city": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "customer": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "id",
+                                "displayNameMasked",
+                                "mobileMasked"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "displayNameMasked": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "mobileMasked": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "dispatchedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "address": {
+                              "type": "object",
+                              "nullable": true,
+                              "additionalProperties": false,
+                              "required": [
+                                "provinceCode",
+                                "city",
+                                "addressMasked",
+                                "postalCodeMasked",
+                                "recipientMasked",
+                                "mobileMasked"
+                              ],
+                              "properties": {
+                                "provinceCode": {
+                                  "type": "string"
+                                },
+                                "city": {
+                                  "type": "string"
+                                },
+                                "addressMasked": {
+                                  "type": "string"
+                                },
+                                "postalCodeMasked": {
+                                  "type": "string"
+                                },
+                                "recipientMasked": {
+                                  "type": "string"
+                                },
+                                "mobileMasked": {
+                                  "type": "string"
+                                }
+                              },
+                              "description": "Immutable dispatch address snapshot with direct customer PII masked by default. Null only when a legacy row does not carry the accepted snapshot shape."
+                            },
+                            "dispatchedBy": {
+                              "type": "object",
+                              "nullable": true,
+                              "additionalProperties": false,
+                              "required": [
+                                "id",
+                                "displayNameMasked"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "displayNameMasked": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              }
+                            },
+                            "lines": {
+                              "type": "array",
+                              "maxItems": 100,
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "orderItemId",
+                                  "sku",
+                                  "productTitle",
+                                  "variantTitle",
+                                  "quantity"
+                                ],
+                                "properties": {
+                                  "orderItemId": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "productTitle": {
+                                    "type": "string"
+                                  },
+                                  "variantTitle": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  }
+                                }
+                              }
+                            },
+                            "timeline": {
+                              "type": "array",
+                              "maxItems": 50,
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "id",
+                                  "from",
+                                  "to",
+                                  "kind",
+                                  "proofReference",
+                                  "actor",
+                                  "requestId",
+                                  "createdAt"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "from": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      "PENDING",
+                                      "PROCESSING",
+                                      "READY_TO_SHIP",
+                                      "SHIPPED",
+                                      "DELIVERED",
+                                      "RETURNED",
+                                      "CANCELLED",
+                                      null
+                                    ]
+                                  },
+                                  "to": {
+                                    "type": "string",
+                                    "enum": [
+                                      "PENDING",
+                                      "PROCESSING",
+                                      "READY_TO_SHIP",
+                                      "SHIPPED",
+                                      "DELIVERED",
+                                      "RETURNED",
+                                      "CANCELLED"
+                                    ]
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "DISPATCH",
+                                      "DELIVERY_PROOF",
+                                      "STATE_CHANGE"
+                                    ]
+                                  },
+                                  "proofReference": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "actor": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "id",
+                                      "displayNameMasked"
+                                    ],
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "displayNameMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    }
+                                  },
+                                  "requestId": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                },
+                                "description": "One persisted fulfillment transition, oldest first. The free-text transition reason is never exposed; only the structured staff delivery proof reference is projected."
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "A valid live access token is required.",
+                  "additionalProperties": true,
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The authentication level or shipments.read permission is missing.",
+                  "additionalProperties": true,
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The requested shipment does not exist.",
+                  "additionalProperties": true,
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read one shipment with masked address, dispatcher and lines",
+        "tags": [
+          "shipments"
+        ]
+      }
+    },
     "/cart": {
       "get": {
         "operationId": "CartController_get",

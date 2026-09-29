@@ -7,7 +7,7 @@ import { withSerializableRetry } from '../../common/serializable-retry';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import type { ShipmentDeliveryDto } from './shipment-delivery.dto';
-import { shipmentConflict, shipmentHash, storeShipmentCommandReplay } from './shipment-command-utils';
+import { shipmentConflict, shipmentHash, storeShipmentCommandReplay, STAFF_DELIVERY_PROOF_PREFIX } from './shipment-command-utils';
 
 type Context = { actorId: string; requestId: string; idempotencyKey: string };
 
@@ -47,7 +47,7 @@ export class ShipmentDeliveryService {
         }
         const transition = await recordTransition(tx, 'fulfillment', order.fulfillment.id, 'SHIPPED', 'DELIVERED', {
           actorId: context.actorId, requestId: context.requestId,
-          reason: `STAFF_DELIVERY_PROOF:${proofReference}`,
+          reason: `${STAFF_DELIVERY_PROOF_PREFIX}${proofReference}`,
         });
         const event = await tx.fulfillmentTransition.findUniqueOrThrow({ where: { id: transition.id }, select: { createdAt: true } });
         const result: ShipmentDeliveryResponse = { data: { delivery: {
