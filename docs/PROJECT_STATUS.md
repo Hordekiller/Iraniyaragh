@@ -64,12 +64,17 @@ suppliers, purchase orders and receiving — is now merged on both API and Admin
 surfaces, so the Purchasing files, API controller/service/DTO/OpenAPI, purchasing
 contracts and `PURCHASE_RECEIVING_V1.md` are no longer reserved.
 Since that merge, Admin Audit viewer #354 (PR #361, `fcd2dfd`) and Shipments
-read API + Admin `/shipments` #356 (PR #362, `29f43b1`) have also merged.
-The current authoritative queue is issue #363 (V1 FINAL EXECUTION): Customers
-#349 → staff-created Order #350 → Stocktake #347 → Returns #348 → #338 Credit
-ADR → #336 Accounts Receivable → Reports #358 → Roles #359 → SEO/content
-backend → production deployment/acceptance. `docs/SOLO_CRITICAL_PATH.md` has
-been updated to the two-lane model.
+read API + Admin `/shipments` #356 (PR #362, `29f43b1`) have also merged, as has
+the staff Customers slice #349 (PR #365, `d8cd573`): a writable staff customer
+record with addresses, staff notes and order history, deactivated by status and
+never hard-deleted, plus Admin `/customers`. The Redis cold-start race that made
+the first authentication request of every boot answer 503 also merged
+(PR #365, `69a0a25`).
+The current authoritative queue is issue #363 (V1 FINAL EXECUTION): staff-created
+Order #350 → Stocktake #347 → Returns #348 → #338 Credit ADR → #336 Accounts
+Receivable → Reports #358 → Roles #359 → SEO/content backend →
+production deployment/acceptance. `docs/SOLO_CRITICAL_PATH.md` has been updated
+to the two-lane model.
 Production deployment alone is not approval to take real sales. Customer credit
 is approved V1 scope in #336 but
 has no DB/API/Admin implementation yet; known-customer Admin creation, staff
@@ -122,6 +127,7 @@ Current delivery confidence:
 | Cart runtime                   | Authenticated + Guest API runtime merged    | #239/#241–#244/#251 deliver authenticated ownership and correctness; #270/#269 adds opaque Guest ownership, rolling TTL, abuse controls, bounded cleanup and explicit OTP-login merge                                     |
 | Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
 | Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
+| Staff customer records         | Merged slice                                | #349 delivers a writable staff customer record with addresses, staff notes, order history, `expectedVersion` concurrency and status deactivation (never a hard delete), plus Admin `/customers`; the authenticated customer's own self-service profile is still absent |
 | Admin operations dashboard     | Live factual slice                          | #265 supplies the bounded, PII-free summary API; #264 Admin UI consumes it with permission gating, explicit range/snapshot semantics and accessible table fallbacks                                                       |
 | Order commands/payment         | Refund evidence merged; production acceptance open | Cancellation/expiry compensation, Zarinpal settlement, Web result, staff evidence, reconciliation, outbox projection and manual refund evidence merged through #303. Zarinpal has no refund API; #314 adds SMS attempts, not live handset acceptance. |
 | Commerce outbox                | Relay, effects and essential SMS attempt worker | #299/#300 add relay/projection; #314 attempts paid/dispatch/delivery SMS through SMS.ir with durable at-most-once claims. Provider acceptance is not handset delivery; production acceptance is open. |
