@@ -56,16 +56,20 @@ slice at `1aac0fe` with permissioned draft/edit/approve/cancel and audit.
 PR #342 merged the #341 Admin Purchase Order operator flow and least-privilege
 options endpoint at `30a5be5`; #341 is closed. Receiving API #343 merged via
 PR #344 at `3a60f8c` with all final-head CI checks green; #343 is closed. It is
-not production warehouse acceptance. Admin receipt UI #345 is the current
-unmerged product slice, owned by `feat/admin-purchase-receiving-v1` in the
-dedicated receiving worktree. Its scoped active-location selector, operator
-receipt form and persisted evidence view must pass review, tests and CI before
-merge. No other agent should edit the Purchasing Admin files, purchasing API
-controller/service/DTO/OpenAPI, purchasing contracts or `PURCHASE_RECEIVING_V1.md`
-until #345 is merged or ownership is explicitly handed off. The single-developer
-sequence is #345 merge → Stocktake → Returns → #338 Credit ADR → #336
-Accounts Receivable → Reports → #252/#258 closure → SEO/Content → #136 production
-deployment → SMS.ir/Zarinpal real acceptance → full staging UAT → `v1.0.0`.
+not production warehouse acceptance. Admin receipt UI #345 then merged via PR
+#346 at `e4398bd` (scoped active-location selector, operator receipt form and
+persisted evidence view). The earlier statement in this file that #345 was "the
+current unmerged product slice" was stale and is corrected here. Purchasing —
+suppliers, purchase orders and receiving — is now merged on both API and Admin
+surfaces, so the Purchasing files, API controller/service/DTO/OpenAPI, purchasing
+contracts and `PURCHASE_RECEIVING_V1.md` are no longer reserved.
+Since that merge, Admin Audit viewer #354 (PR #361, `fcd2dfd`) and Shipments
+read API + Admin `/shipments` #356 (PR #362, `29f43b1`) have also merged.
+The current authoritative queue is issue #363 (V1 FINAL EXECUTION): Customers
+#349 → staff-created Order #350 → Stocktake #347 → Returns #348 → #338 Credit
+ADR → #336 Accounts Receivable → Reports #358 → Roles #359 → SEO/content
+backend → production deployment/acceptance. `docs/SOLO_CRITICAL_PATH.md` has
+been updated to the two-lane model.
 Production deployment alone is not approval to take real sales. Customer credit
 is approved V1 scope in #336 but
 has no DB/API/Admin implementation yet; known-customer Admin creation, staff
