@@ -13,7 +13,7 @@ import {
   MenuItem,
   Typography,
 } from '@mui/material';
-import { LogOut, Settings2, ShieldCheck } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthProvider';
 
 export function ProfileMenu() {
@@ -59,25 +59,6 @@ export function ProfileMenu() {
             {user?.userId ?? '—'} · {user?.authenticationLevel ?? '—'}
           </Typography>
         </Box>
-        <Divider />
-        <MenuItem disabled title="تنظیمات حساب هنوز پیاده‌سازی نشده است">
-          <ListItemIcon>
-            <Settings2 size={18} />
-          </ListItemIcon>
-          <ListItemText>تنظیمات حساب</ListItemText>
-          <Typography variant="caption" color="text.secondary">
-            به‌زودی
-          </Typography>
-        </MenuItem>
-        <MenuItem disabled title="نقش‌ها و دسترسی‌ها هنوز پیاده‌سازی نشده است">
-          <ListItemIcon>
-            <ShieldCheck size={18} />
-          </ListItemIcon>
-          <ListItemText>نقش‌ها و دسترسی‌ها</ListItemText>
-          <Typography variant="caption" color="text.secondary">
-            به‌زودی
-          </Typography>
-        </MenuItem>
         <Divider />
         <MenuItem onClick={handleSignOut}>
           <ListItemIcon sx={{ color: 'error.main' }}>
