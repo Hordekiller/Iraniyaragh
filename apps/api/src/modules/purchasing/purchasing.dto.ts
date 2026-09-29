@@ -1,7 +1,7 @@
 import { Transform, Type, type TransformFnParams } from 'class-transformer';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
 import { PurchaseOrderStatus } from '@prisma/client';
-import type { PurchaseOrderActionRequest, PurchaseOrderCreateRequest, PurchaseOrderItemInput, PurchaseOrderUpdateRequest } from '@iranyaragh/contracts';
+import type { PurchaseOrderActionRequest, PurchaseOrderCreateRequest, PurchaseOrderItemInput, PurchaseOrderUpdateRequest, PurchaseReceiptCreateRequest, PurchaseReceiptLineInput } from '@iranyaragh/contracts';
 
 const trimOrNull = ({ value }: TransformFnParams) => typeof value === 'string' ? (value.trim() || null) : value;
 
@@ -49,4 +49,16 @@ export class PurchaseOrderUpdateDto implements PurchaseOrderUpdateRequest {
 
 export class PurchaseOrderActionDto implements PurchaseOrderActionRequest {
   @IsInt() @Min(0) expectedVersion!: number;
+}
+
+export class PurchaseReceiptLineDto implements PurchaseReceiptLineInput {
+  @IsString() @MinLength(1) @MaxLength(128) variantId!: string;
+  @IsString() @MinLength(1) @MaxLength(128) locationId!: string;
+  @IsInt() @Min(1) @Max(1_000_000) quantity!: number;
+}
+
+export class PurchaseReceiptCreateDto implements PurchaseReceiptCreateRequest {
+  @IsInt() @Min(0) expectedVersion!: number;
+  @IsString() @MinLength(1) @MaxLength(120) externalReference!: string;
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => PurchaseReceiptLineDto) lines!: PurchaseReceiptLineDto[];
 }

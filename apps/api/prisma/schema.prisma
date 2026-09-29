@@ -236,6 +236,7 @@ model User {
   catalogIdempotencyRecords CatalogIdempotencyRecord[]
   supplierCommandRecords SupplierCommandRecord[]
   purchaseOrderCommandRecords PurchaseOrderCommandRecord[]
+  purchaseReceipts PurchaseReceipt[]
   variantPriceRecords       VariantPriceRecord[]
   catalogImportRecords      CatalogImportRecord[]
   createdProductMedia       ProductMedia[]             @relation("ProductMediaCreator")
@@ -698,6 +699,7 @@ model Warehouse {
   targetTransfers StockTransfer[]     @relation("TransferTarget")
   locations       WarehouseLocation[]
   purchaseOrders  PurchaseOrder[]
+  purchaseReceipts PurchaseReceipt[]
   stocktakes      Stocktake[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
@@ -739,6 +741,7 @@ model InventoryMovement {
   warehouse      Warehouse             @relation(fields: [warehouseId], references: [id])
   location       WarehouseLocation     @relation(fields: [locationId], references: [id])
   variant        ProductVariant        @relation(fields: [variantId], references: [id])
+  purchaseReceiptLine PurchaseReceiptLine?
   createdAt      DateTime              @default(now())
 
   @@index([warehouseId, variantId, createdAt])
@@ -830,6 +833,7 @@ model WarehouseLocation {
   balances            InventoryBalance[]
   movements           InventoryMovement[]
   reservations        StockReservation[]
+  purchaseReceiptLines PurchaseReceiptLine[]
   sourceTransferItems StockTransferItem[] @relation("TransferItemSource")
   targetTransferItems StockTransferItem[] @relation("TransferItemTarget")
   createdAt           DateTime            @default(now())
@@ -879,6 +883,7 @@ model PurchaseOrder {
   supplier    Supplier            @relation(fields: [supplierId], references: [id])
   warehouse   Warehouse           @relation(fields: [warehouseId], references: [id])
   items       PurchaseOrderItem[]
+  receipts    PurchaseReceipt[]
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
@@ -908,8 +913,42 @@ model PurchaseOrderItem {
   unitCost        BigInt
   purchaseOrder   PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   variant         ProductVariant @relation(fields: [variantId], references: [id])
+  receiptLines    PurchaseReceiptLine[]
 
   @@unique([purchaseOrderId, variantId])
+}
+
+model PurchaseReceipt {
+  id                String                @id @default(cuid())
+  number            String                @unique
+  purchaseOrderId   String
+  warehouseId       String
+  externalReference String                @db.VarChar(120)
+  actorId           String
+  receivedAt        DateTime              @default(now())
+  purchaseOrder     PurchaseOrder         @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  warehouse         Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  actor             User                  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  lines             PurchaseReceiptLine[]
+
+  @@unique([purchaseOrderId, externalReference])
+  @@index([purchaseOrderId, receivedAt])
+}
+
+model PurchaseReceiptLine {
+  id                  String              @id @default(cuid())
+  receiptId           String
+  purchaseOrderItemId String
+  locationId          String
+  quantity            Int
+  movementId          String              @unique
+  receipt             PurchaseReceipt     @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  purchaseOrderItem   PurchaseOrderItem   @relation(fields: [purchaseOrderItemId], references: [id], onDelete: Restrict)
+  location            WarehouseLocation   @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  movement            InventoryMovement   @relation(fields: [movementId], references: [id], onDelete: Restrict)
+
+  @@unique([receiptId, purchaseOrderItemId, locationId], map: "PurchaseReceiptLine_receipt_item_location_key")
+  @@index([purchaseOrderItemId])
 }
 
 model Stocktake {

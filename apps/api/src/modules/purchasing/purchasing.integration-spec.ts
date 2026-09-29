@@ -12,6 +12,8 @@ describe.sequential('PurchasingService database integration', () => {
   const requestId = `po-it-${runId}`;
   const supplierId = `po-supplier-${runId}`;
   const warehouseId = `po-wh-${runId}`;
+  const locationId = `po-loc-${runId}`;
+  const secondLocationId = `po-loc-2-${runId}`;
   const productId = `po-product-${runId}`;
   const variantId = `po-variant-${runId}`;
   const prisma = new PrismaService();
@@ -30,6 +32,8 @@ describe.sequential('PurchasingService database integration', () => {
     actorId = actor.id;
     await prisma.supplier.create({ data: { id: supplierId, code: `PO-SUP-${runId.toUpperCase()}`, name: 'Purchase Supplier' } });
     await prisma.warehouse.create({ data: { id: warehouseId, code: `PO-WH-${runId.toUpperCase()}`, name: 'Purchase Warehouse' } });
+    await prisma.warehouseLocation.create({ data: { id: locationId, warehouseId, code: 'RECEIVING', name: 'Receiving' } });
+    await prisma.warehouseLocation.create({ data: { id: secondLocationId, warehouseId, code: 'OVERFLOW', name: 'Overflow' } });
     await prisma.product.create({ data: { id: productId, slug: `po-product-${runId}`, name: 'Purchase Product', status: 'ACTIVE' } });
     await prisma.productVariant.create({ data: { id: variantId, productId, sku: `PO-SKU-${runId.toUpperCase()}`,
       skuKey: canonicalizeSku(`PO-SKU-${runId.toUpperCase()}`), combinationSignature: EMPTY_AXIS_SIGNATURE,
@@ -39,10 +43,15 @@ describe.sequential('PurchasingService database integration', () => {
   afterAll(async () => {
     await prisma.auditLog.deleteMany({ where: { requestId } });
     await prisma.purchaseOrderCommandRecord.deleteMany({ where: { actorId } });
+    await prisma.purchaseReceiptLine.deleteMany({ where: { receipt: { purchaseOrderId: { in: orderIds } } } });
+    await prisma.purchaseReceipt.deleteMany({ where: { purchaseOrderId: { in: orderIds } } });
+    await prisma.inventoryMovement.deleteMany({ where: { referenceType: 'PurchaseReceiptLine', warehouseId } });
+    await prisma.inventoryBalance.deleteMany({ where: { warehouseId } });
     await prisma.purchaseOrder.deleteMany({ where: { id: { in: orderIds } } });
     await prisma.productVariant.deleteMany({ where: { id: variantId } });
     await prisma.product.deleteMany({ where: { id: productId } });
     await prisma.supplier.deleteMany({ where: { id: supplierId } });
+    await prisma.warehouseLocation.deleteMany({ where: { id: { in: [locationId, secondLocationId] } } });
     await prisma.warehouse.deleteMany({ where: { id: warehouseId } });
     if (actorId) await prisma.user.delete({ where: { id: actorId } });
     await prisma.$disconnect();
@@ -116,5 +125,108 @@ describe.sequential('PurchasingService database integration', () => {
     expect(attempts.filter(result => result.status === 'rejected')).toHaveLength(1);
     expect((await service.get(draft.id)).version).toBe(1);
     expect(await prisma.auditLog.count({ where: { requestId, entityId: draft.id, action: 'purchase-order.updated' } })).toBe(1);
+  });
+
+  it('receives partial and final quantities with one ledger movement per line and idempotent replay', async () => {
+    const draft = await service.create(input(), context('receive-create'));
+    orderIds.push(draft.id);
+    const approved = await service.approve(draft.id, { expectedVersion: 0 }, context('receive-approve'));
+    const firstInput = { expectedVersion: approved.version, externalReference: `DEL-1-${runId}`,
+      lines: [{ variantId, locationId, quantity: 2 }] };
+    const [first, replay] = await Promise.all([
+      service.receive(draft.id, firstInput, context('receive-first')),
+      service.receive(draft.id, firstInput, context('receive-first')),
+    ]);
+    expect(replay).toEqual(first);
+    expect(first.lines).toHaveLength(1);
+    expect((await service.get(draft.id))).toMatchObject({ status: 'PARTIALLY_RECEIVED', version: 2,
+      items: [{ orderedQty: 3, receivedQty: 2 }] });
+    expect((await service.receipts(draft.id, { offset: 0, limit: 50 })).items).toHaveLength(1);
+    expect(await prisma.inventoryMovement.count({ where: { referenceType: 'PurchaseReceiptLine', referenceId: first.lines[0].id } })).toBe(1);
+    expect(await prisma.inventoryBalance.findUnique({ where: { warehouseId_locationId_variantId: { warehouseId, locationId, variantId } } }))
+      .toMatchObject({ onHand: 2, available: 2, reserved: 0 });
+    await expect(service.receive(draft.id, { ...firstInput, externalReference: 'changed' }, context('receive-first')))
+      .rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_CONFLICT' } });
+    await expect(service.receive(draft.id, { ...firstInput, expectedVersion: 2, externalReference: `DEL-OVER-${runId}`,
+      lines: [{ variantId, locationId, quantity: 2 }] }, context('receive-over')))
+      .rejects.toMatchObject({ response: { code: 'RECEIPT_QUANTITY_CONFLICT' } });
+    const final = await service.receive(draft.id, { expectedVersion: 2, externalReference: `DEL-2-${runId}`,
+      lines: [{ variantId, locationId, quantity: 1 }] }, context('receive-final'));
+    expect((await service.get(draft.id))).toMatchObject({ status: 'RECEIVED', version: 3,
+      items: [{ orderedQty: 3, receivedQty: 3 }] });
+    const movements = await prisma.inventoryMovement.findMany({ where: { referenceType: 'PurchaseReceiptLine',
+      referenceId: { in: [first.lines[0].id, final.lines[0].id] } }, orderBy: { createdAt: 'asc' } });
+    expect(movements.map(movement => movement.type)).toEqual(['RECEIPT', 'RECEIPT']);
+    expect(movements.reduce((sum, movement) => sum + movement.quantity, 0)).toBe(3);
+    expect(await prisma.inventoryBalance.findUnique({ where: { warehouseId_locationId_variantId: { warehouseId, locationId, variantId } } }))
+      .toMatchObject({ onHand: 3, available: 3, reserved: 0 });
+    await expect(service.receive(draft.id, { expectedVersion: 3, externalReference: `DEL-3-${runId}`,
+      lines: [{ variantId, locationId, quantity: 1 }] }, context('receive-after-complete')))
+      .rejects.toMatchObject({ response: { code: 'PURCHASE_ORDER_STATE_CONFLICT' } });
+  });
+
+  it('allows only one concurrent receipt against the same remaining quantity', async () => {
+    const draft = await service.create(input(), context('race-receipt-create'));
+    orderIds.push(draft.id);
+    await service.approve(draft.id, { expectedVersion: 0 }, context('race-receipt-approve'));
+    const attempts = await Promise.allSettled([
+      service.receive(draft.id, { expectedVersion: 1, externalReference: `RACE-A-${runId}`,
+        lines: [{ variantId, locationId, quantity: 3 }] }, context('race-receipt-a')),
+      service.receive(draft.id, { expectedVersion: 1, externalReference: `RACE-B-${runId}`,
+        lines: [{ variantId, locationId, quantity: 3 }] }, context('race-receipt-b')),
+    ]);
+    expect(attempts.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    expect(attempts.filter(result => result.status === 'rejected')).toHaveLength(1);
+    expect((await service.receipts(draft.id, { offset: 0, limit: 50 })).count).toBe(1);
+    expect((await service.get(draft.id))).toMatchObject({ status: 'RECEIVED', items: [{ receivedQty: 3 }] });
+  });
+
+  it('rejects invalid location, unknown SKU and duplicate delivery references without stock drift', async () => {
+    const draft = await service.create(input(), context('failure-create'));
+    orderIds.push(draft.id);
+    await service.approve(draft.id, { expectedVersion: 0 }, context('failure-approve'));
+    const before = await prisma.inventoryMovement.count({ where: { warehouseId, referenceType: 'PurchaseReceiptLine' } });
+    await expect(service.receive(draft.id, { expectedVersion: 1, externalReference: `BAD-LOCATION-${runId}`,
+      lines: [{ variantId, locationId: 'unknown-location', quantity: 1 }] }, context('bad-location')))
+      .rejects.toMatchObject({ response: { code: 'LOCATION_INACTIVE' } });
+    await expect(service.receive(draft.id, { expectedVersion: 1, externalReference: `BAD-SKU-${runId}`,
+      lines: [{ variantId: 'unknown-variant', locationId, quantity: 1 }] }, context('bad-sku')))
+      .rejects.toMatchObject({ response: { code: 'RECEIPT_QUANTITY_CONFLICT' } });
+    expect(await prisma.inventoryMovement.count({ where: { warehouseId, referenceType: 'PurchaseReceiptLine' } })).toBe(before);
+    expect((await service.get(draft.id))).toMatchObject({ status: 'APPROVED', version: 1, items: [{ receivedQty: 0 }] });
+    const reference = `UNIQUE-DELIVERY-${runId}`;
+    await service.receive(draft.id, { expectedVersion: 1, externalReference: reference,
+      lines: [{ variantId, locationId, quantity: 1 }] }, context('unique-reference'));
+    await expect(service.receive(draft.id, { expectedVersion: 2, externalReference: reference,
+      lines: [{ variantId, locationId, quantity: 1 }] }, context('duplicate-reference')))
+      .rejects.toMatchObject({ response: { code: 'DELIVERY_REFERENCE_CONFLICT' } });
+    expect((await service.get(draft.id))).toMatchObject({ status: 'PARTIALLY_RECEIVED', version: 2, items: [{ receivedQty: 1 }] });
+    expect((await service.receipts(draft.id, { offset: 0, limit: 50 })).count).toBe(1);
+  });
+
+  it('reconciles a split-location receipt against PO quantity, movement rows and balances', async () => {
+    const draft = await service.create(input(), context('split-create'));
+    orderIds.push(draft.id);
+    await service.approve(draft.id, { expectedVersion: 0 }, context('split-approve'));
+    const before = await prisma.inventoryBalance.findMany({ where: { warehouseId, variantId,
+      locationId: { in: [locationId, secondLocationId] } } });
+    const beforeOnHand = before.reduce((sum, balance) => sum + balance.onHand, 0);
+    const beforeAvailable = before.reduce((sum, balance) => sum + balance.available, 0);
+    const receipt = await service.receive(draft.id, { expectedVersion: 1, externalReference: `SPLIT-${runId}`,
+      lines: [{ variantId, locationId: secondLocationId, quantity: 2 }, { variantId, locationId, quantity: 1 }] }, context('split-receive'));
+    expect(receipt.lines).toHaveLength(2);
+    const movements = await prisma.inventoryMovement.findMany({ where: { id: { in: receipt.lines.map(line => line.movementId) } } });
+    expect(movements).toHaveLength(2);
+    for (const line of receipt.lines) {
+      const movement = movements.find(row => row.id === line.movementId);
+      expect(movement).toMatchObject({ type: 'RECEIPT', referenceType: 'PurchaseReceiptLine', referenceId: line.id,
+        warehouseId, locationId: line.locationId, variantId, quantity: line.quantity });
+    }
+    expect(receipt.lines.reduce((sum, line) => sum + line.quantity, 0)).toBe(3);
+    expect((await service.get(draft.id))).toMatchObject({ status: 'RECEIVED', items: [{ receivedQty: 3 }] });
+    const balances = await prisma.inventoryBalance.findMany({ where: { warehouseId, variantId,
+      locationId: { in: [locationId, secondLocationId] } } });
+    expect(balances.reduce((sum, balance) => sum + balance.onHand, 0)).toBe(beforeOnHand + 3);
+    expect(balances.reduce((sum, balance) => sum + balance.available, 0)).toBe(beforeAvailable + 3);
   });
 });

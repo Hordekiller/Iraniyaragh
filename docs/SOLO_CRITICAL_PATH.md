@@ -1,6 +1,6 @@
 # Single-Developer V1 Critical Path
 
-Effective: 2026-09-28. This document supersedes parallel-lane schedules in
+Effective: 2026-09-29. This document supersedes parallel-lane schedules in
 `DEVELOPMENT_PLAN.md`, `EXECUTION_STATUS.md`, `V1_MASTER_PLAN.md` and
 `AGENT_WORKSTREAMS.md`. Those documents retain domain and release acceptance
 requirements. `PROJECT_STATUS.md` remains the factual capability record.
@@ -8,8 +8,9 @@ requirements. `PROJECT_STATUS.md` remains the factual capability record.
 Current main checkpoint includes PR #333 merged (Newsletter false-success
 removal) and PR #331 merged (inventory reconciliation CI evidence). Supplier
 backend PR #335 and Admin UI PR #337 are merged; #329 is closed. The #339
-Purchase Order API merged via PR #340. The #341 Admin PO slice is the current
-single product task, followed by Receiving. Payment through manual
+Purchase Order API merged via PR #340; Admin PO #341 merged via PR #342. The
+current single product task is Receiving API #343, followed by a separate Admin
+receipt slice. Payment through manual
 refund, Fulfillment pick/ready, manual dispatch/tracking, staff-attested delivery,
 durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation/Transfer
 operations are implemented. These are **not** real provider/handset acceptance or a
@@ -61,8 +62,8 @@ worktrees and uncommitted files.
    operator-supplied account/key/sender/templates and controlled handset; work
    on the next repository-owned slice may proceed while that gate remains open.
 6. **Warehouse+ — #7:** Supplier API #335 and Admin UI #337 are merged;
-   #329 is closed and PO API #339/#340 merged. Deliver Admin PO #341, then Receiving,
-   Stocktake and Return/Refund, one reviewable PR at a time, with ledger and
+   #329 is closed; PO API #339/#340 and Admin PO #341/#342 merged. Deliver Receiving
+   API #343, then Admin receipt entry, Stocktake and Return/Refund, one reviewable PR at a time, with ledger and
    financial reconciliation.
 7. **Customer credit / accounts receivable — tracked in #336 (V1.0.0 scope):**
    approved 2026-09-28 as a required V1.0.0 capability and placed after

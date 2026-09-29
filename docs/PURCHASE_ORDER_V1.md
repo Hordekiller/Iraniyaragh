@@ -2,8 +2,9 @@
 
 The #339 backend slice provides draft, review, approval and cancellation of
 purchase orders. The subsequent #341 slice adds an Admin operator flow and a
-permission-scoped selector endpoint. Neither slice receives goods or increases
-stock; Receiving and its inventory-ledger reconciliation remain separate.
+permission-scoped selector endpoint. Both slices are merged. Neither receives
+goods or increases stock; Receiving is tracked separately in #343 and
+`PURCHASE_RECEIVING_V1.md`.
 
 ## Contract and lifecycle
 
@@ -56,4 +57,5 @@ approval, received-order cancellation denial, immutable approved lines, audit
 history and zero stock movement on PO creation. A fresh `_test` PostgreSQL
 database must pass migration and schema-drift checks. The #341 Admin change
 also needs option visibility, read-only/mutation separation and desktop/mobile
-browser evidence. Actual partial-receipt inventory reconciliation remains open.
+browser evidence. Partial-receipt inventory reconciliation belongs to #343;
+Admin receipt entry remains a subsequent UI slice.
