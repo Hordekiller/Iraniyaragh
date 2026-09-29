@@ -88,20 +88,33 @@ record with addresses, staff notes and order history, deactivated by status and
 never hard-deleted, plus Admin `/customers`. The Redis cold-start race that made
 the first authentication request of every boot answer 503 also merged
 (PR #365, `69a0a25`).
-In progress on `feat/350-staff-order` (not merged, not counted as delivered):
-staff-created Order #350 with real password + TOTP staff sign-in
-(ADR-0020) replacing the removed development access code. The concurrent
-password-challenge path is fixed against real contention (a 500 from the
-`MfaChallenge` timestamp check constraint), the API integration suite covers
-simultaneous sign-ins, and the E2E suite signs in as the provisioned staff
-identity. Two findings are recorded rather than papered over: the API accepts each
-TOTP step once per credential, so the browser suite is serialised with one worker
-and reserves an unused code window per sign-in (a full run is about 27 minutes,
-and the CI e2e job timeout is 50 minutes); and the admin build
-still honours `NEXT_PUBLIC_FIXTURE_AUTH=true` for a fixture staff client, which no
-shipped or CI build sets but which should be deleted before the V1 security
-review.
-The previous feature queue was issue #363 (V1 FINAL EXECUTION): staff-created
+Staff-created Order #350 merged (PR #372, `2a92eab`): a staff operator places an
+order for a walk-in customer through SKU selection, server-side pricing,
+inventory reservation, order creation, audit and outbox, with `Idempotency-Key`
+and `expectedVersion` required and no client-supplied price or discount. It
+carries the real staff password + TOTP sign-in (ADR-0020) that replaced the
+development access code, so there is now exactly one admin sign-in path: the dev
+code, `/auth/dev/signin`, `/login/dev` and the `iranyaragh_dev_*` cookies are
+gone from API, Web and Admin, and `e2e/tests/helpers.ts` has a single
+`signInDiAsAdmin` helper driving `/login` like an operator does. The identity is
+the only provisioned part (`pnpm --filter @iranyaragh/api auth:e2e-staff`); the
+session, rate limiter, challenge and TOTP verification are genuine, and production
+first administrators still come from the TTY-only bootstrap of AUTH_CONTRACT §10.
+Two findings are recorded rather than papered over: the API accepts each TOTP step
+once per credential, so the browser suite is serialised with one worker and
+reserves an unused code window per sign-in (a full run is about 27 minutes and the
+CI e2e job timeout is 50 minutes); and the shipped
+`staff-password:identifier` policy (5 attempts per identifier per 15 minutes,
+counted for successful logins too) bounds how many real logins one suite can
+perform. The admin build still honours `NEXT_PUBLIC_FIXTURE_AUTH=true` for a
+fixture staff client, which no shipped or CI build sets but which should be
+deleted before the V1 security review.
+#351 now has a browser proof that purchase receipts reconcile against the
+inventory ledger exactly once per received line, driven through the Admin UI
+wherever the UI exists and through the real HTTP API where the surface is
+API-only, so no request is mocked and no fixture banner is involved. It reuses the
+single `signInDiAsAdmin` helper rather than adding a second sign-in harness.
+The current authoritative queue is issue #363 (V1 FINAL EXECUTION): staff-created
 Order #350 → Stocktake #347 → Returns #348 → #338 Credit ADR → #336 Accounts
 Receivable → Reports #358 → Roles #359 → SEO/content backend →
 production deployment/acceptance. The current user-directed integration priority
