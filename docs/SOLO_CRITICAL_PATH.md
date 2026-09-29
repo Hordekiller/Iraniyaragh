@@ -87,6 +87,14 @@ is isolated — see #363.
    Receiving Admin UI #345, Stocktake and Returns, one reviewable PR at a time,
    with ledger and financial reconciliation. Do not begin the next product
    slice until the previous PR is merged.
+   The staff Customers slice #349 (PR #365, `d8cd573`) merged 2026-09-29 and is
+   the first writable customer surface: staff create/search/update with
+   addresses, staff notes and order history, deactivated by status rather than
+   hard-deleted, with Admin `/customers`. This is the "Admin Customer
+   create/search/update" prerequisite that item 7 previously recorded as
+   confirmed; it is now actually implemented. It is not the authenticated
+   customer's own self-service profile, which still does not exist. The
+   authoritative next Lane A slice is staff-created Order #350.
 6. **Customer credit ADR — #338:** after Returns, accept the commercial versus
    financial order-state model, staff-only credit-sale authorization, overdue
    policy, opening-balance controls, cancellation/return effects and inventory
