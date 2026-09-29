@@ -13,6 +13,7 @@ export * from './payments';
 export * from './reports';
 export * from './suppliers';
 export * from './purchasing';
+export * from './stocktake';
 
 export type InventorySnapshot = {
   warehouseId: string;

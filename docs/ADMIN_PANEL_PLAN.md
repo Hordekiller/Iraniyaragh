@@ -152,6 +152,9 @@ validated non-secret configuration and safe metadata about secret health/rotatio
 - reservation search, age, consume/release/expire evidence;
 - transfer request/approve/dispatch/receive/cancel timeline;
 - stocktake create/scope/count/review/approve and variance reconciliation;
+  counting must stay blind for principals without the approval permission, so the
+  sheet must not render expected quantity or variance to a counter (delivered in
+  slice #347, see `docs/STOCKTAKE_V1.md`);
 - low-stock thresholds, reorder report and barcode/scanner-friendly input boundary;
 - damaged, unavailable and quarantine quantities must use the accepted inventory
   ledger/state model; a child domain decision must pin that model before UI work and
@@ -515,7 +518,9 @@ Flaky critical tests are release blockers; retrying CI until green is not accept
 ### Phase C — inventory operations (`0.3`)
 
 Warehouse/location, balance/ledger, receipt/adjustment, reservations, transfers,
-stocktake, low-stock and reconciliation in dependency order.
+stocktake, low-stock and reconciliation in dependency order. Stocktake (#347) is
+in progress: create/scope/count/review/approve with pinned scope and blind
+counting.
 
 ### Phase D — orders, payment and shipping (`0.4`–`0.5`)
 

@@ -56,14 +56,20 @@ slice at `1aac0fe` with permissioned draft/edit/approve/cancel and audit.
 PR #342 merged the #341 Admin Purchase Order operator flow and least-privilege
 options endpoint at `30a5be5`; #341 is closed. Receiving API #343 merged via
 PR #344 at `3a60f8c` with all final-head CI checks green; #343 is closed. It is
-not production warehouse acceptance. Admin receipt UI #345 is the current
-unmerged product slice, owned by `feat/admin-purchase-receiving-v1` in the
-dedicated receiving worktree. Its scoped active-location selector, operator
-receipt form and persisted evidence view must pass review, tests and CI before
-merge. No other agent should edit the Purchasing Admin files, purchasing API
-controller/service/DTO/OpenAPI, purchasing contracts or `PURCHASE_RECEIVING_V1.md`
-until #345 is merged or ownership is explicitly handed off. The single-developer
-sequence is #345 merge → Stocktake → Returns → #338 Credit ADR → #336
+not production warehouse acceptance. Admin receipt UI #345 merged via PR #346 at
+`e4398bd` with all nine final-head checks green; #345 is closed. Stocktake #347 is
+the current unmerged product slice, owned by `feat/stocktake-v1` in the
+dedicated receiving worktree. It turns the previously inert `Stocktake` tables
+into a ledger-backed count session: pinned creation scope, `DRAFT → COUNTING →
+REVIEW → COMPLETED` lifecycle, counts that stay blind for principals without
+`stocktake.approve`, and approval that sets `onHand` to the counted quantity
+while rejecting any count below reserved stock and posting exactly one
+`STOCKTAKE` movement per changed line. The contract is documented in
+`docs/STOCKTAKE_V1.md`. No other agent should edit the Stocktake schema,
+migration, seed permissions, stocktake contracts, the stocktake API module or
+Admin stocktake files until #347 is merged or ownership is explicitly handed
+off. The single-developer
+sequence is #345 merge → Stocktake (#347) → Returns → #338 Credit ADR → #336
 Accounts Receivable → Reports → #252/#258 closure → SEO/Content → #136 production
 deployment → SMS.ir/Zarinpal real acceptance → full staging UAT → `v1.0.0`.
 Production deployment alone is not approval to take real sales. Customer credit
