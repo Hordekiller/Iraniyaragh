@@ -254,13 +254,11 @@ describe('CustomersView', () => {
     expect(await screen.findByText('نشانی‌ها و وضعیت مشتری')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /ذخیرهٔ نشانی‌ها/ }));
 
-    await waitFor(() => {
-      expect(mocks.replaceAddresses).toHaveBeenCalledWith(
-        'customer-12',
-        expect.objectContaining({ expectedVersion: 3 }),
-        'customer-addresses-test-key',
-      );
-    });
+    expect(mocks.replaceAddresses).toHaveBeenCalledWith(
+      'customer-12',
+      expect.objectContaining({ expectedVersion: 3 }),
+      'customer-addresses-test-key',
+    );
   });
 
   it('appends a note with its visibility and the current version', async () => {
@@ -275,13 +273,11 @@ describe('CustomersView', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'ثبت یادداشت' }));
 
-    await waitFor(() => {
-      expect(mocks.addNote).toHaveBeenCalledWith(
-        'customer-12',
-        { expectedVersion: 3, visibility: 'INTERNAL', body: 'تماس گرفته شد' },
-        'customer-note-test-key',
-      );
-    });
+    expect(mocks.addNote).toHaveBeenCalledWith(
+      'customer-12',
+      { expectedVersion: 3, visibility: 'INTERNAL', body: 'تماس گرفته شد' },
+      'customer-note-test-key',
+    );
   });
 
   it('warns before recording a customer-visible note', async () => {
