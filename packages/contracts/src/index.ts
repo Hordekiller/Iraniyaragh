@@ -12,6 +12,7 @@ export * from './fulfillment';
 export * from './payments';
 export * from './reports';
 export * from './audit';
+export * from './shipments';
 export * from './suppliers';
 export * from './purchasing';
 

@@ -24,6 +24,8 @@ import { ShipmentDispatchController } from './shipment-dispatch.controller';
 import { ShipmentDispatchService } from './shipment-dispatch.service';
 import { ShipmentDeliveryController } from './shipment-delivery.controller';
 import { ShipmentDeliveryService } from './shipment-delivery.service';
+import { ShipmentReadController } from './shipment-read.controller';
+import { ShipmentReadService } from './shipment-read.service';
 
 @Module({
   imports: [AuditModule, AuthModule, InventoryModule],
@@ -34,6 +36,7 @@ import { ShipmentDeliveryService } from './shipment-delivery.service';
     FulfillmentPickController,
     ShipmentDispatchController,
     ShipmentDeliveryController,
+    ShipmentReadController,
     CartController,
     CartMergeController,
     GuestCartController,
@@ -50,6 +53,7 @@ import { ShipmentDeliveryService } from './shipment-delivery.service';
     FulfillmentPickService,
     ShipmentDispatchService,
     ShipmentDeliveryService,
+    ShipmentReadService,
     ConfiguredShippingQuoteAdapter,
     {
       provide: SHIPPING_QUOTE_PORT,

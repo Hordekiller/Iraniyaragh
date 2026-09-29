@@ -69,7 +69,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'سفارش‌ها', href: '/orders', icon: ShoppingBag, permission: 'orders.read' },
       { label: 'پرداخت‌ها', href: '/payments', icon: CreditCard, permission: 'payments.read' },
       { label: 'مشتریان', href: '/customers', icon: Users, permission: 'customers.read', status: 'planned' },
-      { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'shipments.read', status: 'planned' },
+      { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'shipments.read' },
     ],
   },
   {

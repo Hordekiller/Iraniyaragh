@@ -6,6 +6,19 @@ export function shipmentConflict(message: string): ConflictException {
   return new ConflictException({ code: 'SHIPMENT_STATE_CONFLICT', message });
 }
 
+/**
+ * The staff delivery command stores its proof reference in the fulfillment
+ * transition `reason` column. The read projection classifies the transition
+ * from this same marker, so writing and reading can never drift apart.
+ */
+export const STAFF_DELIVERY_PROOF_PREFIX = 'STAFF_DELIVERY_PROOF:';
+
+export function staffDeliveryProofReference(reason: string | null): string | null {
+  if (!reason?.startsWith(STAFF_DELIVERY_PROOF_PREFIX)) return null;
+  const reference = reason.slice(STAFF_DELIVERY_PROOF_PREFIX.length).trim();
+  return reference.length ? reference : null;
+}
+
 export function shipmentHash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
