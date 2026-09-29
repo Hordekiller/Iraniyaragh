@@ -48,6 +48,9 @@ export const purchasingOpenApi = {
   action: { type: 'object', required: ['expectedVersion'], properties: { expectedVersion: { type: 'integer', minimum: 0 } } } satisfies SchemaObject,
   receipt,
   receipts: page(receipt),
+  receiptLocations: page({ type: 'object', required: ['id', 'code', 'label'], properties: {
+    id: { type: 'string' }, code: { type: 'string' }, label: { type: 'string' },
+  } }),
   receive: { type: 'object', required: ['expectedVersion', 'externalReference', 'lines'], properties: {
     expectedVersion: { type: 'integer', minimum: 0 }, externalReference: { type: 'string', minLength: 1, maxLength: 120 },
     lines: { type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', required: ['variantId', 'locationId', 'quantity'], properties: {

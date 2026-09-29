@@ -54,11 +54,16 @@ including desktop/mobile no-fixture supplier create/deactivate/history E2E.
 #329 is closed; #7 remains open. PR #340 merged the #339 Purchase Order API
 slice at `1aac0fe` with permissioned draft/edit/approve/cancel and audit.
 PR #342 merged the #341 Admin Purchase Order operator flow and least-privilege
-options endpoint at `30a5be5`; #341 is closed. Receiving API #343 is in PR #344,
-not yet a released or production-accepted capability at this checkpoint.
-Its receipt/ledger contract is in `PURCHASE_RECEIVING_V1.md`; the Admin receipt
-screen remains a following slice. The single-developer sequence is PR #344 final
-CI/merge → Admin Receiving → Stocktake → Returns → #338 Credit ADR → #336
+options endpoint at `30a5be5`; #341 is closed. Receiving API #343 merged via
+PR #344 at `3a60f8c` with all final-head CI checks green; #343 is closed. It is
+not production warehouse acceptance. Admin receipt UI #345 is the current
+unmerged product slice, owned by `feat/admin-purchase-receiving-v1` in the
+dedicated receiving worktree. Its scoped active-location selector, operator
+receipt form and persisted evidence view must pass review, tests and CI before
+merge. No other agent should edit the Purchasing Admin files, purchasing API
+controller/service/DTO/OpenAPI, purchasing contracts or `PURCHASE_RECEIVING_V1.md`
+until #345 is merged or ownership is explicitly handed off. The single-developer
+sequence is #345 merge → Stocktake → Returns → #338 Credit ADR → #336
 Accounts Receivable → Reports → #252/#258 closure → SEO/Content → #136 production
 deployment → SMS.ir/Zarinpal real acceptance → full staging UAT → `v1.0.0`.
 Production deployment alone is not approval to take real sales. Customer credit

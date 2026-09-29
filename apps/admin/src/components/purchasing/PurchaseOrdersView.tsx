@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import { History, Lock, Plus, RefreshCw } from 'lucide-react';
-import type { PurchaseOrder, PurchaseOrderAuditEntry, PurchaseOrderStatus } from '@iranyaragh/contracts';
+import { History, Lock, PackageCheck, Plus, RefreshCw } from 'lucide-react';
+import type { PurchaseOrder, PurchaseOrderAuditEntry, PurchaseOrderStatus, PurchaseReceipt } from '@iranyaragh/contracts';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { ApiAbortError, ApiNetworkError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { getPurchaseOrder, listPurchaseOrderHistory, listPurchaseOrders, newPurchaseOrderCommandKey, transitionPurchaseOrder } from '@/lib/purchasing/purchase-orders-api';
-import { canApprovePurchaseOrders, canManagePurchaseOrders, canReadPurchaseOrders } from '@/lib/purchasing/purchase-orders-permissions';
+import { getPurchaseOrder, listPurchaseOrderHistory, listPurchaseOrderReceipts, listPurchaseOrders, newPurchaseOrderCommandKey, transitionPurchaseOrder } from '@/lib/purchasing/purchase-orders-api';
+import { canApprovePurchaseOrders, canManagePurchaseOrders, canReadPurchaseOrders, canReceivePurchaseOrders } from '@/lib/purchasing/purchase-orders-permissions';
 import { PurchaseOrderFormDialog, purchaseOrderError } from './PurchaseOrderFormDialog';
+import { PurchaseReceiptDialog } from './PurchaseReceiptDialog';
 
 const statuses: { value: PurchaseOrderStatus | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'همه' }, { value: 'DRAFT', label: 'پیش‌نویس' },
@@ -27,6 +28,7 @@ export function PurchaseOrdersView() {
   const canRead = canReadPurchaseOrders(user);
   const canManage = canManagePurchaseOrders(user);
   const canApprove = canApprovePurchaseOrders(user);
+  const canReceive = canReceivePurchaseOrders(user);
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(0);
@@ -38,6 +40,12 @@ export function PurchaseOrdersView() {
   const [selected, setSelected] = useState<PurchaseOrder | null>(null);
   const [history, setHistory] = useState<PurchaseOrderAuditEntry[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [receipts, setReceipts] = useState<PurchaseReceipt[]>([]);
+  const [receiptCount, setReceiptCount] = useState(0);
+  const [receiptsError, setReceiptsError] = useState<string | null>(null);
+  const [receiptsLoading, setReceiptsLoading] = useState(false);
+  const [receiptReload, setReceiptReload] = useState(0);
+  const [receiptFormOpen, setReceiptFormOpen] = useState(false);
   const [form, setForm] = useState<{ open: boolean; order: PurchaseOrder | null }>({ open: false, order: null });
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -64,6 +72,27 @@ export function PurchaseOrdersView() {
     return () => controller.abort();
   }, [selected]);
 
+  useEffect(() => {
+    if (!selected) return;
+    const controller = new AbortController();
+    setReceiptsLoading(true); setReceiptsError(null);
+    listPurchaseOrderReceipts(selected.id, 0, 20, controller.signal)
+      .then(result => { setReceipts(result.items); setReceiptCount(result.count); })
+      .catch((failure: unknown) => { if (!(failure instanceof ApiAbortError)) setReceiptsError('دریافت رسیدهای ثبت‌شده ناموفق بود.'); })
+      .finally(() => { if (!controller.signal.aborted) setReceiptsLoading(false); });
+    return () => controller.abort();
+  }, [selected?.id, receiptReload]);
+
+  async function loadMoreReceipts() {
+    if (!selected || receiptsLoading) return;
+    setReceiptsLoading(true); setReceiptsError(null);
+    try {
+      const result = await listPurchaseOrderReceipts(selected.id, receipts.length, 20);
+      setReceipts(current => [...current, ...result.items]); setReceiptCount(result.count);
+    } catch { setReceiptsError('دریافت ادامهٔ رسیدها ناموفق بود.'); }
+    finally { setReceiptsLoading(false); }
+  }
+
   function saved(order: PurchaseOrder) {
     setForm({ open: false, order: null }); setHistory([]); setSelected(order); setReload(value => value + 1);
     setActionError(null); setUncertain(false);
@@ -71,8 +100,22 @@ export function PurchaseOrdersView() {
 
   async function refreshSelected() {
     if (!selected) return;
-    try { setSelected(await getPurchaseOrder(selected.id)); setUncertain(false); setActionError(null); setReload(value => value + 1); }
+    try { setSelected(await getPurchaseOrder(selected.id)); setReceiptReload(value => value + 1); setUncertain(false); setActionError(null); setReload(value => value + 1); }
     catch (failure) { setActionError(purchaseOrderError(failure)); }
+  }
+
+  async function receiptSaved(receipt: PurchaseReceipt) {
+    setReceiptFormOpen(false);
+    setReceipts(current => [receipt, ...current.filter(item => item.id !== receipt.id)]);
+    setReceiptCount(current => current + (receipts.some(item => item.id === receipt.id) ? 0 : 1));
+    try {
+      setSelected(await getPurchaseOrder(receipt.purchaseOrderId));
+      setReload(value => value + 1);
+      setActionError(null);
+    } catch {
+      setActionError(`رسید ${receipt.number} ثبت شد، اما نوسازی سفارش ناموفق بود. برای ادامه وضعیت را دوباره بررسی کنید.`);
+      setUncertain(true);
+    }
   }
 
   async function transition(action: 'approve' | 'cancel') {
@@ -90,8 +133,8 @@ export function PurchaseOrdersView() {
 
   if (!canRead) return <><PageHeader title="سفارش‌های خرید" /><EmptyState icon={<Lock size={28} />} title="دسترسی ندارید" description="برای مشاهدهٔ سفارش‌های خرید، مجوز purchasing.read لازم است." /></>;
   return <>
-    <PageHeader title="سفارش‌های خرید" eyebrow="تأمین و خرید" description="پیش‌نویس، بازبینی و تأیید سفارش خرید؛ دریافت کالا در مرحلهٔ بعدی ثبت می‌شود." breadcrumbs={[{ label: 'تأمین و خرید' }, { label: 'سفارش‌های خرید' }]} actions={canManage ? <Button variant="contained" startIcon={<Plus size={18} />} onClick={() => setForm({ open: true, order: null })}>سفارش جدید</Button> : undefined} />
-    {!canManage ? <Alert severity="info" sx={{ mb: 2 }}>دسترسی شما فقط خواندنی است. ایجاد یا لغو سفارش به purchasing.manage نیاز دارد.</Alert> : null}
+    <PageHeader title="سفارش‌های خرید" eyebrow="تأمین و خرید" description="پیش‌نویس، تأیید و ثبت دریافت واقعی کالا با رسید و گردش موجودی." breadcrumbs={[{ label: 'تأمین و خرید' }, { label: 'سفارش‌های خرید' }]} actions={canManage ? <Button variant="contained" startIcon={<Plus size={18} />} onClick={() => setForm({ open: true, order: null })}>سفارش جدید</Button> : undefined} />
+    {!canManage && !canReceive ? <Alert severity="info" sx={{ mb: 2 }}>دسترسی شما فقط خواندنی است. تغییر سفارش یا ثبت رسید نیاز به مجوز جداگانه دارد.</Alert> : null}
     {error ? <Alert severity="error" sx={{ mb: 2 }} action={<Button size="small" onClick={() => setReload(value => value + 1)}>تلاش دوباره</Button>}>{error}</Alert> : null}
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} sx={{ mb: 2 }}>
       <Box sx={{ maxWidth: '100%', overflowX: 'auto' }}><ToggleButtonGroup size="small" exclusive value={status} onChange={(_, next: PurchaseOrderStatus | 'ALL' | null) => { if (next) { setStatus(next); setPage(0); } }}>
@@ -112,7 +155,8 @@ export function PurchaseOrdersView() {
       actions={row => <Button size="small" onClick={() => { setHistory([]); setSelected(row); setActionError(null); setUncertain(false); }}>جزئیات</Button>}
     />
     <PurchaseOrderFormDialog open={form.open} order={form.order} onClose={() => setForm({ open: false, order: null })} onSaved={saved} />
-    <Dialog open={Boolean(selected)} onClose={actionBusy ? undefined : () => setSelected(null)} fullWidth maxWidth="md" aria-labelledby="po-detail-title">
+    <PurchaseReceiptDialog open={receiptFormOpen} order={selected} onClose={() => { setReceiptFormOpen(false); setUncertain(true); void refreshSelected(); }} onSaved={receipt => void receiptSaved(receipt)} />
+    <Dialog open={Boolean(selected) && !receiptFormOpen} onClose={actionBusy ? undefined : () => setSelected(null)} fullWidth maxWidth="md" aria-labelledby="po-detail-title">
       <DialogTitle id="po-detail-title">سفارش خرید {selected?.number}</DialogTitle>
       <DialogContent><Stack spacing={2} sx={{ mt: 1 }}>
         {actionError ? <Alert severity="error">{actionError}</Alert> : null}
@@ -135,6 +179,19 @@ export function PurchaseOrdersView() {
           ]} />
           <Typography fontWeight={700}>جمع کل: {formatNumber(selected.totalCost)} ریال</Typography>
           <Divider />
+          <Typography variant="subtitle1" fontWeight={700}><PackageCheck size={16} aria-hidden="true" /> رسیدهای دریافت کالا</Typography>
+          {receiptsError ? <Alert severity="error" action={<Button size="small" onClick={() => setReceiptReload(value => value + 1)}>تلاش دوباره</Button>}>{receiptsError}</Alert> : null}
+          {receiptsLoading && receipts.length === 0 ? <Typography>در حال دریافت رسیدها…</Typography> : null}
+          {!receiptsLoading && receipts.length === 0 && !receiptsError ? <Typography color="text.secondary">هنوز رسیدی ثبت نشده است.</Typography> : null}
+          {receipts.map(receipt => <Box key={receipt.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+            <Typography fontWeight={700}>{receipt.number} — حواله: <span dir="ltr">{receipt.externalReference}</span></Typography>
+            <Typography variant="body2">{new Date(receipt.receivedAt).toLocaleString('fa-IR')} · ثبت‌کننده: <span dir="ltr">{receipt.actorId}</span></Typography>
+            {receipt.lines.map(line => <Typography key={line.id} variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+              SKU: <span dir="ltr">{selected.items.find(item => item.variantId === line.variantId)?.sku ?? line.variantId}</span> · تعداد: {formatNumber(line.quantity)} · مکان: <span dir="ltr">{line.locationId}</span> · گردش: <span dir="ltr">{line.movementId}</span>
+            </Typography>)}
+          </Box>)}
+          {receipts.length < receiptCount ? <Button disabled={receiptsLoading} onClick={() => void loadMoreReceipts()}>نمایش رسیدهای بیشتر</Button> : null}
+          <Divider />
           <Typography variant="subtitle1" fontWeight={700}><History size={16} aria-hidden="true" /> سابقهٔ عملیات</Typography>
           {historyError ? <Alert severity="error">{historyError}</Alert> : null}
           {history.map(entry => <Typography key={entry.id} variant="body2">{new Date(entry.createdAt).toLocaleString('fa-IR')} — {entry.action} — {entry.actorId || 'سیستم'}</Typography>)}
@@ -143,6 +200,8 @@ export function PurchaseOrdersView() {
       <DialogActions sx={{ flexWrap: 'wrap' }}>
         <Button onClick={() => setSelected(null)} disabled={actionBusy}>بستن</Button>
         <Button onClick={() => void refreshSelected()} disabled={actionBusy} startIcon={<RefreshCw size={16} />}>نوسازی جزئیات</Button>
+        {canReceive && selected && (selected.status === 'APPROVED' || selected.status === 'PARTIALLY_RECEIVED') && selected.items.some(item => item.receivedQty < item.orderedQty) ?
+          <Button variant="contained" onClick={() => setReceiptFormOpen(true)} disabled={actionBusy || uncertain}>ثبت دریافت کالا</Button> : null}
         {canManage && selected?.status === 'DRAFT' ? <Button onClick={() => { setForm({ open: true, order: selected }); setSelected(null); }} disabled={actionBusy || uncertain}>ویرایش پیش‌نویس</Button> : null}
         {canApprove && selected?.status === 'DRAFT' ? <Button variant="contained" onClick={() => void transition('approve')} disabled={actionBusy || uncertain}>تأیید سفارش</Button> : null}
         {canManage && (selected?.status === 'DRAFT' || selected?.status === 'APPROVED') ? <Button color="error" onClick={() => void transition('cancel')} disabled={actionBusy || uncertain}>لغو سفارش</Button> : null}

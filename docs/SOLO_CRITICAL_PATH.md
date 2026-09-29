@@ -9,8 +9,9 @@ Current main checkpoint includes PR #333 merged (Newsletter false-success
 removal) and PR #331 merged (inventory reconciliation CI evidence). Supplier
 backend PR #335 and Admin UI PR #337 are merged; #329 is closed. The #339
 Purchase Order API merged via PR #340; Admin PO #341 merged via PR #342. The
-current single product task is Receiving API #343 in PR #344, followed by a separate Admin
-receipt slice. Payment through manual
+current single product task is Admin Receiving #345 on
+`feat/admin-purchase-receiving-v1` after Receiving API #343 merged in PR #344
+at `3a60f8c`. This branch is not yet merged. Payment through manual
 refund, Fulfillment pick/ready, manual dispatch/tracking, staff-attested delivery,
 durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation/Transfer
 operations are implemented. These are **not** real provider/handset acceptance or a
@@ -24,6 +25,25 @@ merge, and only then begin the next slice. Do not edit `schema.prisma`, an
 existing migration, shared contracts or OpenAPI while a preceding product PR is
 awaiting merge. Use a forward migration for schema changes. Preserve unrelated
 worktrees and uncommitted files.
+
+## Agent handoff and ownership (2026-09-29)
+
+- Active product owner/branch: Receiving Admin #345 on
+  `feat/admin-purchase-receiving-v1`, based on merged #344. This is local work,
+  not merged or production-accepted until its PR and exact-head CI pass.
+- Reserved shared surfaces for #345: Purchasing Admin view/form/API adapter,
+  Purchasing API controller/service/DTO/OpenAPI, purchasing contracts and
+  purchase-receiving/status docs. Coordinate before touching these files or
+  changing their contracts. Do not modify the merged #344 migration.
+- Other agents may inspect and report defects or work on explicitly isolated,
+  non-product documentation/research, but should not open a second product PR
+  or start Stocktake/Returns/credit schema while #345 is active. Independent
+  production credentials/acceptance require an operator and are not proven by
+  repository tests.
+- After #345 merges: refresh `main`, assign Stocktake ownership explicitly,
+  then repeat one issue → tests/review/CI → merge. `PROJECT_STATUS.md` is the
+  factual capability record; issue labels or branch presence are not evidence
+  of completion.
 
 ## Ordered queue
 
@@ -55,8 +75,8 @@ worktrees and uncommitted files.
    not constitute production-like operator acceptance.
 5. **Warehouse+ — #7:** Supplier API #335 and Admin UI #337 are merged;
    #329 is closed; PO API #339/#340 and Admin PO #341/#342 merged. Finish
-   Receiving API #343/#344 and its final-head CI, merge it, then deliver
-   Receiving Admin UI, Stocktake and Returns, one reviewable PR at a time,
+   Receiving API #343/#344 is merged with green final-head CI. Deliver
+   Receiving Admin UI #345, Stocktake and Returns, one reviewable PR at a time,
    with ledger and financial reconciliation. Do not begin the next product
    slice until the previous PR is merged.
 6. **Customer credit ADR — #338:** after Returns, accept the commercial versus

@@ -55,3 +55,5 @@ export type PurchaseReceipt = {
   externalReference: string; actorId: string; receivedAt: string; lines: PurchaseReceiptLine[];
 };
 export type PurchaseReceiptListResponse = { items: PurchaseReceipt[]; count: number };
+export type PurchaseReceiptLocationOption = { id: string; code: string; label: string };
+export type PurchaseReceiptLocationOptionsResponse = { items: PurchaseReceiptLocationOption[]; count: number };

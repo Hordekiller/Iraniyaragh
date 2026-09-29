@@ -1,8 +1,8 @@
 # Purchase Receiving V1 — backend slice #343
 
-Status: backend implementation in PR #344. This document describes its contract,
-not a claim of live stock or production acceptance; the merge state is tracked
-by the PR and `PROJECT_STATUS.md`.
+Status: backend merged in PR #344 at `3a60f8c` with green final-head CI.
+Admin operator integration is in unmerged #345. This document describes its
+contract, not a claim of live warehouse or production acceptance.
 
 `POST /api/v1/purchase-orders/:id/receipts` is staff-MFA-only with the dedicated
 `purchasing.receive` permission. The payload requires `expectedVersion`, an
@@ -25,5 +25,9 @@ order is `PARTIALLY_RECEIVED`. A failed line rolls back the whole receipt.
 
 This is physical goods receipt, not a supplier invoice, supplier payment,
 customer sale, generic inventory adjustment or return. The Admin receipt
-operator screen follows in a separate PR. No real warehouse acceptance or
+operator screen is the separate #345 slice. It uses a PO-scoped active-location
+selector under `purchasing.read`, submits with `purchasing.receive`, and displays
+persisted receipt number, external reference, actor/time and movement IDs. The
+operator must refresh after an uncertain network result; it must not blindly
+retry the receipt. No real warehouse acceptance or
 fixture-free sale follows from database tests alone.

@@ -1,12 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type PurchaseOrderStatus } from '@prisma/client';
-import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderItemInput, PurchaseOrderListResponse, PurchaseOrderOptionsResponse, PurchaseReceipt, PurchaseReceiptListResponse } from '@iranyaragh/contracts';
+import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderItemInput, PurchaseOrderListResponse, PurchaseOrderOptionsResponse, PurchaseReceipt, PurchaseReceiptListResponse, PurchaseReceiptLocationOptionsResponse } from '@iranyaragh/contracts';
 import { createHash, randomUUID } from 'node:crypto';
 import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { retryDelayMs, sleep } from '../../common/retry';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import type { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto, PurchaseReceiptCreateDto } from './purchasing.dto';
+import type { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto, PurchaseReceiptCreateDto, PurchaseReceiptLocationQueryDto } from './purchasing.dto';
 
 const MAX_I64 = 9_223_372_036_854_775_807n;
 const keyPattern = /^[A-Za-z0-9_-]{8,96}$/u;
@@ -148,6 +148,20 @@ export class PurchasingService {
       this.prisma.purchaseReceipt.count({ where: { purchaseOrderId: id } }),
     ]);
     return { items: rows.map(publicReceipt), count };
+  }
+
+  async receiptLocations(id: string, query: PurchaseReceiptLocationQueryDto): Promise<PurchaseReceiptLocationOptionsResponse> {
+    const order = await this.prisma.purchaseOrder.findUnique({ where: { id }, select: { warehouseId: true, warehouse: { select: { isActive: true } } } });
+    if (!order) throw missing();
+    if (!order.warehouse.isActive) return { items: [], count: 0 };
+    const search = query.search?.trim();
+    const where: Prisma.WarehouseLocationWhereInput = { warehouseId: order.warehouseId, isActive: true,
+      ...(search ? { OR: [{ code: { contains: search, mode: 'insensitive' } }, { name: { contains: search, mode: 'insensitive' } }] } : {}) };
+    const [rows, count] = await this.prisma.$transaction([
+      this.prisma.warehouseLocation.findMany({ where, select: { id: true, code: true, name: true }, orderBy: { code: 'asc' }, skip: query.offset, take: query.limit }),
+      this.prisma.warehouseLocation.count({ where }),
+    ]);
+    return { items: rows.map(row => ({ id: row.id, code: row.code, label: row.name || row.code })), count };
   }
 
   async receive(id: string, input: PurchaseReceiptCreateDto, context: Context): Promise<PurchaseReceipt> {
