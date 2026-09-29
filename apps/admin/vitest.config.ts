@@ -20,6 +20,13 @@ export default defineConfig({
     passWithNoTests: false,
     clearMocks: true,
     restoreMocks: true,
+    // The admin views render a full data table plus their dialogs in jsdom, and
+    // a view-level test has to await the list load, the detail dialog and the
+    // panel dialog in sequence. That costs about a second on a workstation and
+    // several times more on a loaded CI runner, which pushed view tests past
+    // Vitest's 5s default. The tests are slow, not hung, so the budget is
+    // raised instead of padding individual tests with timeouts.
+    testTimeout: 20_000,
     coverage: {
       enabled: process.env.CI === 'true',
       provider: 'v8',

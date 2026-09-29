@@ -137,6 +137,22 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED
 }
 
+/// Lifecycle of a staff-managed customer record. Deactivation is a status
+/// change, never a hard delete: historical orders, payments and ledgers must
+/// stay referable to the customer they belonged to.
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// Whether a customer note is staff-only or explicitly customer-visible. The
+/// split is stored so an internal note can never be published by accident and a
+/// customer-visible note is auditable as such.
+enum CustomerNoteVisibility {
+  INTERNAL
+  CUSTOMER_VISIBLE
+}
+
 enum RefundStatus {
   RECORDED
 }
@@ -198,49 +214,51 @@ enum StocktakeStatus {
 }
 
 model User {
-  id                        String                     @id @default(cuid())
-  mobile                    String?                    @unique @db.VarChar(13)
-  email                     String?                    @unique @db.VarChar(320)
-  passwordHash              String?                    @db.Text
-  firstName                 String?                    @db.VarChar(100)
-  lastName                  String?                    @db.VarChar(100)
-  status                    UserStatus                 @default(PENDING)
-  isMobileVerified          Boolean                    @default(false)
-  mobileVerifiedAt          DateTime?
-  isEmailVerified           Boolean                    @default(false)
-  emailVerifiedAt           DateTime?
-  passwordChangedAt         DateTime?
-  failedLoginCount          Int                        @default(0)
-  lockedUntil               DateTime?
-  lastLoginAt               DateTime?
-  deletedAt                 DateTime?
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime                   @updatedAt
-  sessions                  Session[]
-  otpCodes                  OtpCode[]
-  loginAttempts             LoginAttempt[]
-  auditLogs                 AuditLog[]                 @relation("AuditActor")
-  orderTransitions          OrderTransition[]          @relation("OrderActor")
-  paymentTransitions        PaymentTransition[]        @relation("PaymentActor")
-  refunds                   Refund[]                   @relation("RefundActor")
-  fulfillmentTransitions    FulfillmentTransition[]    @relation("FulfillmentActor")
-  fulfillmentPicks          FulfillmentPick[]          @relation("FulfillmentPickActor")
-  dispatchedShipments       Shipment[]                 @relation("ShipmentDispatcher")
-  roleAssignments           UserRole[]                 @relation("UserRoleSubject")
-  roleAssignmentsGranted    UserRole[]                 @relation("UserRoleAssigner")
-  roleAssignmentsRevoked    UserRole[]                 @relation("UserRoleRevoker")
-  permissionGrants          RolePermission[]           @relation("RolePermissionGrantor")
-  permissionRevocations     RolePermission[]           @relation("RolePermissionRevoker")
-  mfaChallenges             MfaChallenge[]
-  totpCredential            TotpCredential?
-  catalogIdempotencyRecords CatalogIdempotencyRecord[]
-  supplierCommandRecords SupplierCommandRecord[]
+  id                          String                       @id @default(cuid())
+  mobile                      String?                      @unique @db.VarChar(13)
+  email                       String?                      @unique @db.VarChar(320)
+  passwordHash                String?                      @db.Text
+  firstName                   String?                      @db.VarChar(100)
+  lastName                    String?                      @db.VarChar(100)
+  status                      UserStatus                   @default(PENDING)
+  isMobileVerified            Boolean                      @default(false)
+  mobileVerifiedAt            DateTime?
+  isEmailVerified             Boolean                      @default(false)
+  emailVerifiedAt             DateTime?
+  passwordChangedAt           DateTime?
+  failedLoginCount            Int                          @default(0)
+  lockedUntil                 DateTime?
+  lastLoginAt                 DateTime?
+  deletedAt                   DateTime?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  sessions                    Session[]
+  otpCodes                    OtpCode[]
+  loginAttempts               LoginAttempt[]
+  auditLogs                   AuditLog[]                   @relation("AuditActor")
+  orderTransitions            OrderTransition[]            @relation("OrderActor")
+  paymentTransitions          PaymentTransition[]          @relation("PaymentActor")
+  refunds                     Refund[]                     @relation("RefundActor")
+  fulfillmentTransitions      FulfillmentTransition[]      @relation("FulfillmentActor")
+  fulfillmentPicks            FulfillmentPick[]            @relation("FulfillmentPickActor")
+  dispatchedShipments         Shipment[]                   @relation("ShipmentDispatcher")
+  customerNotesAuthored       CustomerNote[]               @relation("CustomerNoteAuthor")
+  customerCommandRecords      CustomerCommandRecord[]      @relation("CustomerCommandActor")
+  roleAssignments             UserRole[]                   @relation("UserRoleSubject")
+  roleAssignmentsGranted      UserRole[]                   @relation("UserRoleAssigner")
+  roleAssignmentsRevoked      UserRole[]                   @relation("UserRoleRevoker")
+  permissionGrants            RolePermission[]             @relation("RolePermissionGrantor")
+  permissionRevocations       RolePermission[]             @relation("RolePermissionRevoker")
+  mfaChallenges               MfaChallenge[]
+  totpCredential              TotpCredential?
+  catalogIdempotencyRecords   CatalogIdempotencyRecord[]
+  supplierCommandRecords      SupplierCommandRecord[]
   purchaseOrderCommandRecords PurchaseOrderCommandRecord[]
-  purchaseReceipts PurchaseReceipt[]
-  variantPriceRecords       VariantPriceRecord[]
-  catalogImportRecords      CatalogImportRecord[]
-  createdProductMedia       ProductMedia[]             @relation("ProductMediaCreator")
-  customer                  Customer?
+  purchaseReceipts            PurchaseReceipt[]
+  variantPriceRecords         VariantPriceRecord[]
+  catalogImportRecords        CatalogImportRecord[]
+  createdProductMedia         ProductMedia[]               @relation("ProductMediaCreator")
+  customer                    Customer?
 
   @@index([status, createdAt])
   @@index([lockedUntil])
@@ -686,23 +704,23 @@ model CatalogIdempotencyRecord {
 }
 
 model Warehouse {
-  id              String              @id @default(cuid())
-  code            String              @unique
-  name            String
-  city            String?
-  address         String?
-  isActive        Boolean             @default(true)
-  balances        InventoryBalance[]
-  movements       InventoryMovement[]
-  reservations    StockReservation[]
-  sourceTransfers StockTransfer[]     @relation("TransferSource")
-  targetTransfers StockTransfer[]     @relation("TransferTarget")
-  locations       WarehouseLocation[]
-  purchaseOrders  PurchaseOrder[]
+  id               String              @id @default(cuid())
+  code             String              @unique
+  name             String
+  city             String?
+  address          String?
+  isActive         Boolean             @default(true)
+  balances         InventoryBalance[]
+  movements        InventoryMovement[]
+  reservations     StockReservation[]
+  sourceTransfers  StockTransfer[]     @relation("TransferSource")
+  targetTransfers  StockTransfer[]     @relation("TransferTarget")
+  locations        WarehouseLocation[]
+  purchaseOrders   PurchaseOrder[]
   purchaseReceipts PurchaseReceipt[]
-  stocktakes      Stocktake[]
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  stocktakes       Stocktake[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 }
 
 model InventoryBalance {
@@ -726,23 +744,23 @@ model InventoryBalance {
 }
 
 model InventoryMovement {
-  id             String                @id @default(cuid())
-  warehouseId    String
-  locationId     String
-  variantId      String
-  type           InventoryMovementType
-  quantity       Int
-  beforeOnHand   Int
-  afterOnHand    Int
-  referenceType  String?
-  referenceId    String?
-  reason         String?
-  idempotencyKey String?               @unique
-  warehouse      Warehouse             @relation(fields: [warehouseId], references: [id])
-  location       WarehouseLocation     @relation(fields: [locationId], references: [id])
-  variant        ProductVariant        @relation(fields: [variantId], references: [id])
+  id                  String                @id @default(cuid())
+  warehouseId         String
+  locationId          String
+  variantId           String
+  type                InventoryMovementType
+  quantity            Int
+  beforeOnHand        Int
+  afterOnHand         Int
+  referenceType       String?
+  referenceId         String?
+  reason              String?
+  idempotencyKey      String?               @unique
+  warehouse           Warehouse             @relation(fields: [warehouseId], references: [id])
+  location            WarehouseLocation     @relation(fields: [locationId], references: [id])
+  variant             ProductVariant        @relation(fields: [variantId], references: [id])
   purchaseReceiptLine PurchaseReceiptLine?
-  createdAt      DateTime              @default(now())
+  createdAt           DateTime              @default(now())
 
   @@index([warehouseId, variantId, createdAt])
   @@index([referenceType, referenceId])
@@ -819,25 +837,25 @@ model StockTransferItem {
 }
 
 model WarehouseLocation {
-  id                  String              @id @default(cuid())
-  warehouseId         String
-  code                String
-  name                String?
-  zone                String?
-  aisle               String?
-  rack                String?
-  shelf               String?
-  bin                 String?
-  isActive            Boolean             @default(true)
-  warehouse           Warehouse           @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  balances            InventoryBalance[]
-  movements           InventoryMovement[]
-  reservations        StockReservation[]
+  id                   String                @id @default(cuid())
+  warehouseId          String
+  code                 String
+  name                 String?
+  zone                 String?
+  aisle                String?
+  rack                 String?
+  shelf                String?
+  bin                  String?
+  isActive             Boolean               @default(true)
+  warehouse            Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  balances             InventoryBalance[]
+  movements            InventoryMovement[]
+  reservations         StockReservation[]
   purchaseReceiptLines PurchaseReceiptLine[]
-  sourceTransferItems StockTransferItem[] @relation("TransferItemSource")
-  targetTransferItems StockTransferItem[] @relation("TransferItemTarget")
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  sourceTransferItems  StockTransferItem[]   @relation("TransferItemSource")
+  targetTransferItems  StockTransferItem[]   @relation("TransferItemTarget")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   @@unique([warehouseId, code])
 }
@@ -905,14 +923,14 @@ model PurchaseOrderCommandRecord {
 }
 
 model PurchaseOrderItem {
-  id              String         @id @default(cuid())
+  id              String                @id @default(cuid())
   purchaseOrderId String
   variantId       String
   orderedQty      Int
-  receivedQty     Int            @default(0)
+  receivedQty     Int                   @default(0)
   unitCost        BigInt
-  purchaseOrder   PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  purchaseOrder   PurchaseOrder         @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variant         ProductVariant        @relation(fields: [variantId], references: [id])
   receiptLines    PurchaseReceiptLine[]
 
   @@unique([purchaseOrderId, variantId])
@@ -936,16 +954,16 @@ model PurchaseReceipt {
 }
 
 model PurchaseReceiptLine {
-  id                  String              @id @default(cuid())
+  id                  String            @id @default(cuid())
   receiptId           String
   purchaseOrderItemId String
   locationId          String
   quantity            Int
-  movementId          String              @unique
-  receipt             PurchaseReceipt     @relation(fields: [receiptId], references: [id], onDelete: Restrict)
-  purchaseOrderItem   PurchaseOrderItem   @relation(fields: [purchaseOrderItemId], references: [id], onDelete: Restrict)
-  location            WarehouseLocation   @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  movement            InventoryMovement   @relation(fields: [movementId], references: [id], onDelete: Restrict)
+  movementId          String            @unique
+  receipt             PurchaseReceipt   @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  purchaseOrderItem   PurchaseOrderItem @relation(fields: [purchaseOrderItemId], references: [id], onDelete: Restrict)
+  location            WarehouseLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  movement            InventoryMovement @relation(fields: [movementId], references: [id], onDelete: Restrict)
 
   @@unique([receiptId, purchaseOrderItemId, locationId], map: "PurchaseReceiptLine_receipt_item_location_key")
   @@index([purchaseOrderItemId])
@@ -984,7 +1002,12 @@ model Customer {
   mobile                     String                      @unique
   firstName                  String?
   lastName                   String?
+  status                     CustomerStatus              @default(ACTIVE)
+  deactivatedAt              DateTime?
+  version                    Int                         @default(0)
   orders                     Order[]
+  addresses                  CustomerAddress[]
+  notes                      CustomerNote[]
   createdAt                  DateTime                    @default(now())
   updatedAt                  DateTime                    @updatedAt
   user                       User?                       @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -992,6 +1015,56 @@ model Customer {
   cartMutations              CartMutation[]
   shippingQuotes             ShippingQuote[]
   checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
+}
+
+/// A reusable staff-entered delivery address. Orders keep their own immutable
+/// `addressSnapshot`, so editing or replacing an address never rewrites history.
+model CustomerAddress {
+  id           String   @id @default(cuid())
+  customerId   String
+  label        String   @db.VarChar(60)
+  receiverName String   @db.VarChar(120)
+  mobile       String   @db.VarChar(20)
+  provinceCode String   @db.VarChar(16)
+  city         String   @db.VarChar(80)
+  addressLine  String   @db.VarChar(400)
+  postalCode   String?  @db.VarChar(20)
+  isDefault    Boolean  @default(false)
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([customerId])
+}
+
+/// Append-only. Notes are never edited or deleted in place so the note history
+/// stays usable as evidence; correcting a note means adding a new one.
+model CustomerNote {
+  id          String                 @id @default(cuid())
+  customerId  String
+  visibility  CustomerNoteVisibility
+  body        String                 @db.VarChar(2000)
+  createdById String
+  customer    Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdBy   User                   @relation("CustomerNoteAuthor", fields: [createdById], references: [id])
+  createdAt   DateTime               @default(now())
+
+  @@index([customerId, createdAt])
+}
+
+/// Replay record for staff customer commands, so a retried create/update with the
+/// same Idempotency-Key returns the first result instead of duplicating work.
+model CustomerCommandRecord {
+  id          String   @id @default(cuid())
+  actorId     String
+  actor       User     @relation("CustomerCommandActor", fields: [actorId], references: [id], onDelete: Cascade)
+  scope       String   @db.VarChar(80)
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json?
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, scope, keyHash])
 }
 
 model Cart {
@@ -1060,20 +1133,20 @@ model GuestCartMutation {
 }
 
 model Order {
-  id                         String                      @id @default(cuid())
-  number                     String                      @unique
+  id                         String                          @id @default(cuid())
+  number                     String                          @unique
   customerId                 String
-  customer                   Customer                    @relation(fields: [customerId], references: [id])
-  status                     OrderStatus                 @default(DRAFT)
+  customer                   Customer                        @relation(fields: [customerId], references: [id])
+  status                     OrderStatus                     @default(DRAFT)
   subtotal                   BigInt
-  discount                   BigInt                      @default(0)
-  shipping                   BigInt                      @default(0)
+  discount                   BigInt                          @default(0)
+  shipping                   BigInt                          @default(0)
   grandTotal                 BigInt
   addressSnapshot            Json
-  shippingMethod             String                      @db.VarChar(64)
-  shippingMethodTitle        String                      @db.VarChar(120)
-  shippingPolicyRevision     String                      @db.VarChar(100)
-  pricePolicyRevision        String                      @db.VarChar(100)
+  shippingMethod             String                          @db.VarChar(64)
+  shippingMethodTitle        String                          @db.VarChar(120)
+  shippingPolicyRevision     String                          @db.VarChar(100)
+  pricePolicyRevision        String                          @db.VarChar(100)
   reservationExpiresAt       DateTime
   items                      OrderItem[]
   payments                   Payment[]
@@ -1084,8 +1157,8 @@ model Order {
   shippingQuote              ShippingQuote?
   checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
   commandIdempotencyRecords  OrderCommandIdempotencyRecord[]
-  createdAt                  DateTime                    @default(now())
-  updatedAt                  DateTime                    @updatedAt
+  createdAt                  DateTime                        @default(now())
+  updatedAt                  DateTime                        @updatedAt
 
   @@index([customerId, createdAt])
   @@index([status, createdAt])
@@ -1186,22 +1259,22 @@ model OrderCommandIdempotencyRecord {
 }
 
 model OutboxEvent {
-  id               String    @id @default(cuid())
-  topic            String    @db.VarChar(100)
-  aggregateType    String    @db.VarChar(100)
-  aggregateId      String    @db.VarChar(128)
-  payload          Json
-  deduplicationKey String    @unique @db.VarChar(200)
-  availableAt      DateTime  @default(now())
-  publishedAt      DateTime?
-  attempts         Int       @default(0)
-  deadLetteredAt   DateTime?
-  lastErrorCode    String?   @db.VarChar(100)
-  consumedAt       DateTime?
+  id                       String        @id @default(cuid())
+  topic                    String        @db.VarChar(100)
+  aggregateType            String        @db.VarChar(100)
+  aggregateId              String        @db.VarChar(128)
+  payload                  Json
+  deduplicationKey         String        @unique @db.VarChar(200)
+  availableAt              DateTime      @default(now())
+  publishedAt              DateTime?
+  attempts                 Int           @default(0)
+  deadLetteredAt           DateTime?
+  lastErrorCode            String?       @db.VarChar(100)
+  consumedAt               DateTime?
   processingDeadLetteredAt DateTime?
-  lastProcessingErrorCode String? @db.VarChar(100)
-  effect           OutboxEffect?
-  createdAt        DateTime  @default(now())
+  lastProcessingErrorCode  String?       @db.VarChar(100)
+  effect                   OutboxEffect?
+  createdAt                DateTime      @default(now())
 
   @@index([publishedAt, deadLetteredAt, availableAt])
   @@index([aggregateType, aggregateId])
@@ -1225,19 +1298,19 @@ enum OutboxEffectStatus {
 }
 
 model OutboxEffect {
-  id        String             @id @default(cuid())
-  eventId   String             @unique
-  kind      OutboxEffectKind
-  subjectId String             @db.VarChar(128)
-  status    OutboxEffectStatus @default(PENDING)
-  attemptCount Int            @default(0)
-  lastAttemptAt DateTime?
-  nextAttemptAt DateTime       @default(now())
-  lastResultCode String?       @db.VarChar(64)
-  providerMessageId String?    @db.VarChar(128)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  event     OutboxEvent        @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  id                String             @id @default(cuid())
+  eventId           String             @unique
+  kind              OutboxEffectKind
+  subjectId         String             @db.VarChar(128)
+  status            OutboxEffectStatus @default(PENDING)
+  attemptCount      Int                @default(0)
+  lastAttemptAt     DateTime?
+  nextAttemptAt     DateTime           @default(now())
+  lastResultCode    String?            @db.VarChar(64)
+  providerMessageId String?            @db.VarChar(128)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  event             OutboxEvent        @relation(fields: [eventId], references: [id], onDelete: Restrict)
 
   @@index([status, kind, createdAt])
   @@index([status, kind, nextAttemptAt])
@@ -1256,7 +1329,7 @@ model Payment {
   idempotencyKey         String              @unique
   idempotencyFingerprint String              @db.Char(64)
   correlationId          String?             @db.VarChar(128)
-  gatewayEnvironment     String              @db.VarChar(20) @default("sandbox")
+  gatewayEnvironment     String              @default("sandbox") @db.VarChar(20)
   order                  Order               @relation(fields: [orderId], references: [id])
   transitions            PaymentTransition[]
   refunds                Refund[]
@@ -1367,15 +1440,15 @@ model FulfillmentPick {
 }
 
 model FulfillmentTransition {
-  id            String            @id @default(cuid())
+  id            String             @id @default(cuid())
   fulfillmentId String
   from          FulfillmentStatus?
   to            FulfillmentStatus
-  reason        String?           @db.VarChar(255)
+  reason        String?            @db.VarChar(255)
   actorId       String?
-  actor         User?             @relation("FulfillmentActor", fields: [actorId], references: [id], onDelete: SetNull)
-  requestId     String?           @db.VarChar(100)
-  createdAt     DateTime          @default(now())
+  actor         User?              @relation("FulfillmentActor", fields: [actorId], references: [id], onDelete: SetNull)
+  requestId     String?            @db.VarChar(100)
+  createdAt     DateTime           @default(now())
 
   fulfillment Fulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
 
@@ -1397,9 +1470,9 @@ model Shipment {
   requestId       String   @db.VarChar(100)
   dispatchedAt    DateTime @default(now())
 
-  order       Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  fulfillment Fulfillment   @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
-  actor       User?         @relation("ShipmentDispatcher", fields: [actorId], references: [id], onDelete: SetNull)
+  order       Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  fulfillment Fulfillment    @relation(fields: [fulfillmentId], references: [id], onDelete: Restrict)
+  actor       User?          @relation("ShipmentDispatcher", fields: [actorId], references: [id], onDelete: SetNull)
   lines       ShipmentLine[]
 
   @@unique([carrier, trackingCode])

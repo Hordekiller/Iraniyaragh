@@ -60,7 +60,12 @@ describe('GlobalSearch', () => {
     expect(screen.getByRole('button', { name: /تنظیمات/ })).toBeEnabled();
 
     expect(screen.getByRole('button', { name: /پرداخت‌ها/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /مشتریان/ })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: /مشتریان/ })).toBeEnabled();
+    // Reports still has no shipped page, so it must stay unselectable.
+    expect(screen.getByRole('button', { name: /گزارش‌های عملیاتی/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 
   it('filters results and jumps to the selected page', () => {
