@@ -196,4 +196,25 @@ describe('RateLimitService live Redis integration', () => {
       }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
+
+  it('serves the first command of a cold, never-connected client without a 503', async context => {
+    if (!available) return context.skip();
+    // Regression for the boot race: with `lazyConnect` the first auth command
+    // arrives before the handshake, so the client must queue it rather than
+    // reject it as "Stream isn't writeable". No `connect()` is called here on
+    // purpose, mirroring a freshly booted process handling its first request.
+    const cold = provideRedisClient(REDIS_URL) as unknown as RedisClient;
+    const coldService = new RateLimitService(cold, hashes);
+
+    const decision = await coldService.enforce({
+      dimension: 'otp-request:ip-hour',
+      value: `198.51.100.${Math.floor(Math.random() * 200)}`,
+      context: 'ip',
+    });
+    expect(decision.allowed).toBe(true);
+
+    const probe = cold as unknown as RedisProbe;
+    if (probe.status === 'ready') await probe.quit();
+    else probe.disconnect();
+  });
 });

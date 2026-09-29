@@ -45,7 +45,7 @@ describe.sequential('First-administrator bootstrap database integration', () => 
 
     await prisma.userRole.updateMany({
       where: { roleId: systemAdminRoleId, revokedAt: null },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: new Date(), revokeReason: 'bootstrap integration test reset' },
     });
   });
 
