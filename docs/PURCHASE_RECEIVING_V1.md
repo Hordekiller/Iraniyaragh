@@ -1,7 +1,8 @@
 # Purchase Receiving V1 — backend slice #343
 
-Status: implementation branch, not merged or production-accepted. This document
-describes the contract being verified, not a claim of live stock acceptance.
+Status: backend implementation in PR #344. This document describes its contract,
+not a claim of live stock or production acceptance; the merge state is tracked
+by the PR and `PROJECT_STATUS.md`.
 
 `POST /api/v1/purchase-orders/:id/receipts` is staff-MFA-only with the dedicated
 `purchasing.receive` permission. The payload requires `expectedVersion`, an
