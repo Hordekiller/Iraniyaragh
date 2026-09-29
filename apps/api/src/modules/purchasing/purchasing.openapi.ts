@@ -18,6 +18,15 @@ const order: SchemaObject = { type: 'object', required: ['id', 'number', 'suppli
 const page = (item: SchemaObject): SchemaObject => ({ type: 'object', required: ['items', 'count'], properties: {
   items: { type: 'array', items: item }, count: { type: 'integer' },
 } });
+const receiptLine: SchemaObject = { type: 'object', required: ['id', 'purchaseOrderItemId', 'variantId', 'locationId', 'quantity', 'movementId'], properties: {
+  id: { type: 'string' }, purchaseOrderItemId: { type: 'string' }, variantId: { type: 'string' }, locationId: { type: 'string' },
+  quantity: { type: 'integer' }, movementId: { type: 'string' },
+} };
+const receipt: SchemaObject = { type: 'object', required: ['id', 'number', 'purchaseOrderId', 'warehouseId', 'externalReference', 'actorId', 'receivedAt', 'lines'], properties: {
+  id: { type: 'string' }, number: { type: 'string' }, purchaseOrderId: { type: 'string' }, warehouseId: { type: 'string' },
+  externalReference: { type: 'string' }, actorId: { type: 'string' }, receivedAt: { type: 'string', format: 'date-time' },
+  lines: { type: 'array', items: receiptLine },
+} };
 export const purchasingOpenApi = {
   order,
   list: page(order),
@@ -37,4 +46,12 @@ export const purchasingOpenApi = {
     notes: { type: 'string', nullable: true }, items: { type: 'array', minItems: 1, maxItems: 100, items: lineInput },
   } } satisfies SchemaObject,
   action: { type: 'object', required: ['expectedVersion'], properties: { expectedVersion: { type: 'integer', minimum: 0 } } } satisfies SchemaObject,
+  receipt,
+  receipts: page(receipt),
+  receive: { type: 'object', required: ['expectedVersion', 'externalReference', 'lines'], properties: {
+    expectedVersion: { type: 'integer', minimum: 0 }, externalReference: { type: 'string', minLength: 1, maxLength: 120 },
+    lines: { type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', required: ['variantId', 'locationId', 'quantity'], properties: {
+      variantId: { type: 'string' }, locationId: { type: 'string' }, quantity: { type: 'integer', minimum: 1, maximum: 1_000_000 },
+    } } },
+  } } satisfies SchemaObject,
 };

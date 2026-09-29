@@ -26,6 +26,7 @@ const PERMISSIONS = [
   ["purchasing.read", "Read purchase orders", "purchasing"],
   ["purchasing.manage", "Create and edit purchase orders", "purchasing"],
   ["purchasing.approve", "Approve purchase orders", "purchasing"],
+  ["purchasing.receive", "Receive purchase orders", "purchasing"],
   ["orders.read", "Read orders", "orders"],
   ["orders.manage", "Manage orders", "orders"],
   ["shipments.read", "Read shipments", "shipments"],

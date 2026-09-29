@@ -3,13 +3,13 @@ import { validate } from 'class-validator';
 import { describe, expect, it, vi } from 'vitest';
 import { REQUIRE_AUTH_LEVEL, REQUIRE_FRESH_AUTH, REQUIRE_PERMISSION } from '../auth/auth.guard';
 import { PurchasingController } from './purchasing.controller';
-import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderItemDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto } from './purchasing.dto';
+import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderItemDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto, PurchaseReceiptCreateDto } from './purchasing.dto';
 
 describe('Purchase Order HTTP boundary', () => {
   it('requires staff MFA and separates read, manage and fresh-MFA approval', () => {
     const prototype = PurchasingController.prototype;
     expect(Reflect.getMetadata(REQUIRE_AUTH_LEVEL, PurchasingController)).toBe('STAFF_MFA');
-    for (const method of ['list', 'options', 'get', 'history'] as const) {
+    for (const method of ['list', 'options', 'get', 'history', 'receipts'] as const) {
       expect(Reflect.getMetadata(REQUIRE_PERMISSION, prototype[method])).toBe('purchasing.read');
     }
     for (const method of ['create', 'update', 'cancel'] as const) {
@@ -17,6 +17,7 @@ describe('Purchase Order HTTP boundary', () => {
     }
     expect(Reflect.getMetadata(REQUIRE_PERMISSION, prototype.approve)).toBe('purchasing.approve');
     expect(Reflect.getMetadata(REQUIRE_FRESH_AUTH, prototype.approve)).toBe(true);
+    expect(Reflect.getMetadata(REQUIRE_PERMISSION, prototype.receive)).toBe('purchasing.receive');
   });
 
   it('rejects malformed lines, money and stale-version shapes', async () => {
@@ -33,6 +34,10 @@ describe('Purchase Order HTTP boundary', () => {
     expect(await validate(plainToInstance(PurchaseOrderOptionsQueryDto, { kind: 'variant', limit: '50', search: 'SKU' }))).toEqual([]);
     expect(await validate(plainToInstance(PurchaseOrderOptionsQueryDto, { kind: 'unknown' }))).not.toEqual([]);
     expect(await validate(plainToInstance(PurchaseOrderOptionsQueryDto, { kind: 'supplier', limit: '1000' }))).not.toEqual([]);
+    expect(await validate(plainToInstance(PurchaseReceiptCreateDto, { expectedVersion: 2, externalReference: 'DEL-1',
+      lines: [{ variantId: 'variant-1', locationId: 'loc-1', quantity: 1 }] }))).toEqual([]);
+    expect(await validate(plainToInstance(PurchaseReceiptCreateDto, { expectedVersion: -1, externalReference: '',
+      lines: [{ variantId: 'variant-1', locationId: 'loc-1', quantity: 0 }] }))).not.toEqual([]);
   });
 
   it('passes actor and retry key to the service', async () => {

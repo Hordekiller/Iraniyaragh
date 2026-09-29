@@ -1,12 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type PurchaseOrderStatus } from '@prisma/client';
-import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderItemInput, PurchaseOrderListResponse, PurchaseOrderOptionsResponse } from '@iranyaragh/contracts';
+import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderItemInput, PurchaseOrderListResponse, PurchaseOrderOptionsResponse, PurchaseReceipt, PurchaseReceiptListResponse } from '@iranyaragh/contracts';
 import { createHash, randomUUID } from 'node:crypto';
 import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { retryDelayMs, sleep } from '../../common/retry';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import type { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto } from './purchasing.dto';
+import type { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto, PurchaseReceiptCreateDto } from './purchasing.dto';
 
 const MAX_I64 = 9_223_372_036_854_775_807n;
 const keyPattern = /^[A-Za-z0-9_-]{8,96}$/u;
@@ -28,6 +28,15 @@ const orderInclude = { items: { include: { variant: { select: { sku: true } } },
 type OrderRow = Prisma.PurchaseOrderGetPayload<{ include: typeof orderInclude }>;
 type Context = { actorId: string; requestId: string | null; idempotencyKey: string };
 type Line = { variantId: string; orderedQty: number; unitCost: bigint };
+const receiptInclude = { lines: { include: { purchaseOrderItem: { select: { variantId: true } } }, orderBy: [{ locationId: 'asc' }, { purchaseOrderItemId: 'asc' }] } } satisfies Prisma.PurchaseReceiptInclude;
+type ReceiptRow = Prisma.PurchaseReceiptGetPayload<{ include: typeof receiptInclude }>;
+
+function publicReceipt(row: ReceiptRow): PurchaseReceipt {
+  return { id: row.id, number: row.number, purchaseOrderId: row.purchaseOrderId, warehouseId: row.warehouseId,
+    externalReference: row.externalReference, actorId: row.actorId, receivedAt: row.receivedAt.toISOString(),
+    lines: row.lines.map(line => ({ id: line.id, purchaseOrderItemId: line.purchaseOrderItemId,
+      variantId: line.purchaseOrderItem.variantId, locationId: line.locationId, quantity: line.quantity, movementId: line.movementId })) };
+}
 
 function normalizeLines(items: PurchaseOrderItemInput[]): Line[] {
   if (!Array.isArray(items) || items.length < 1 || items.length > 100) {
@@ -131,6 +140,104 @@ export class PurchasingService {
     return { items: rows.map(row => ({ ...row, createdAt: row.createdAt.toISOString() })), count };
   }
 
+  async receipts(id: string, query: PurchaseOrderHistoryQueryDto): Promise<PurchaseReceiptListResponse> {
+    if (!await this.prisma.purchaseOrder.findUnique({ where: { id }, select: { id: true } })) throw missing();
+    const [rows, count] = await this.prisma.$transaction([
+      this.prisma.purchaseReceipt.findMany({ where: { purchaseOrderId: id }, include: receiptInclude,
+        orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }], skip: query.offset, take: query.limit }),
+      this.prisma.purchaseReceipt.count({ where: { purchaseOrderId: id } }),
+    ]);
+    return { items: rows.map(publicReceipt), count };
+  }
+
+  async receive(id: string, input: PurchaseReceiptCreateDto, context: Context): Promise<PurchaseReceipt> {
+    assertCommandTarget(id, input.expectedVersion);
+    const externalReference = input.externalReference?.trim();
+    if (!externalReference || externalReference.length > 120 || !Array.isArray(input.lines) || input.lines.length < 1 || input.lines.length > 100) {
+      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Receipt needs an external delivery reference and 1–100 lines.' });
+    }
+    const seen = new Set<string>();
+    const quantities = new Map<string, number>();
+    const lines = input.lines.map(line => {
+      if (typeof line.variantId !== 'string' || !line.variantId || typeof line.locationId !== 'string' || !line.locationId ||
+        !Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 1_000_000) {
+        throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Invalid receipt line.' });
+      }
+      const key = `${line.locationId}\u0000${line.variantId}`;
+      if (seen.has(key)) throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Duplicate receipt location and SKU.' });
+      seen.add(key);
+      const quantity = (quantities.get(line.variantId) ?? 0) + line.quantity;
+      if (quantity > 1_000_000) throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Receipt quantity exceeds supported limit.' });
+      quantities.set(line.variantId, quantity);
+      return { variantId: line.variantId, locationId: line.locationId, quantity: line.quantity };
+    }).sort((a, b) => a.locationId < b.locationId ? -1 : a.locationId > b.locationId ? 1 : a.variantId < b.variantId ? -1 : a.variantId > b.variantId ? 1 : 0);
+    return this.command(`receive:${id}`, { expectedVersion: input.expectedVersion, externalReference, lines }, context, async tx => {
+      const [poHi, poLo] = advisoryLockIdKey('purchase-order-receive', id);
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${poHi}::int, ${poLo}::int)`;
+      const order = await tx.purchaseOrder.findUnique({ where: { id }, include: { items: true, warehouse: { select: { isActive: true } } } });
+      if (!order) throw missing();
+      if (order.status !== 'APPROVED' && order.status !== 'PARTIALLY_RECEIVED') throw stateConflict();
+      if (order.version !== input.expectedVersion) throw versionConflict();
+      if (!order.warehouse.isActive) throw new ConflictException({ code: 'WAREHOUSE_INACTIVE', message: 'Warehouse is unavailable for receipt.' });
+      if (await tx.purchaseReceipt.findUnique({ where: { purchaseOrderId_externalReference: { purchaseOrderId: id, externalReference } }, select: { id: true } })) {
+        throw new ConflictException({ code: 'DELIVERY_REFERENCE_CONFLICT', message: 'This delivery reference was already received for the purchase order.' });
+      }
+      const items = new Map(order.items.map(item => [item.variantId, item]));
+      for (const [variantId, quantity] of quantities) {
+        const item = items.get(variantId);
+        if (!item || quantity > item.orderedQty - item.receivedQty) {
+          throw new ConflictException({ code: 'RECEIPT_QUANTITY_CONFLICT', message: 'Receipt exceeds remaining purchase order quantity.' });
+        }
+      }
+      const locationIds = [...new Set(lines.map(line => line.locationId))];
+      const activeLocations = await tx.warehouseLocation.findMany({ where: { id: { in: locationIds }, warehouseId: order.warehouseId, isActive: true }, select: { id: true } });
+      if (activeLocations.length !== locationIds.length) throw new ConflictException({ code: 'LOCATION_INACTIVE', message: 'Receipt location is not active in the purchase order warehouse.' });
+      const receipt = await tx.purchaseReceipt.create({ data: { number: `RC-${randomUUID().replaceAll('-', '').toUpperCase()}`,
+        purchaseOrderId: id, warehouseId: order.warehouseId, externalReference, actorId: context.actorId } });
+      for (const line of lines) {
+        const [hi, lo] = advisoryLockIdKey('balance', order.warehouseId, line.locationId, line.variantId);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hi}::int, ${lo}::int)`;
+        const key = { warehouseId_locationId_variantId: { warehouseId: order.warehouseId, locationId: line.locationId, variantId: line.variantId } };
+        const current = await tx.inventoryBalance.findUnique({ where: key });
+        const beforeOnHand = current?.onHand ?? 0;
+        const reserved = current?.reserved ?? 0;
+        const afterOnHand = beforeOnHand + line.quantity;
+        const available = afterOnHand - reserved;
+        if (afterOnHand > 2_147_483_647 || available > 2_147_483_647) {
+          throw new ConflictException({ code: 'INVENTORY_OVERFLOW', message: 'Receipt exceeds supported inventory quantity.' });
+        }
+        await tx.inventoryBalance.upsert({ where: key, create: { warehouseId: order.warehouseId, locationId: line.locationId,
+          variantId: line.variantId, onHand: afterOnHand, reserved, available, version: 1 },
+        update: { onHand: afterOnHand, available, version: { increment: 1 } } });
+        const lineId = randomUUID();
+        const movement = await tx.inventoryMovement.create({ data: { warehouseId: order.warehouseId, locationId: line.locationId,
+          variantId: line.variantId, type: 'RECEIPT', quantity: line.quantity, beforeOnHand, afterOnHand,
+          referenceType: 'PurchaseReceiptLine', referenceId: lineId } });
+        await tx.purchaseReceiptLine.create({ data: { id: lineId, receiptId: receipt.id,
+          purchaseOrderItemId: items.get(line.variantId)!.id, locationId: line.locationId, quantity: line.quantity, movementId: movement.id } });
+        await this.audit.record({ action: 'inventory.balance.changed', entityType: 'inventory-movement', entityId: movement.id,
+          actorId: context.actorId, requestId: context.requestId,
+          metadata: { type: 'RECEIPT', receiptId: receipt.id, warehouseId: order.warehouseId, locationId: line.locationId,
+            variantId: line.variantId, quantity: line.quantity, beforeOnHand, afterOnHand } }, tx);
+      }
+      for (const [variantId, quantity] of quantities) {
+        const item = items.get(variantId)!;
+        const updated = await tx.purchaseOrderItem.updateMany({ where: { id: item.id, receivedQty: { lte: item.orderedQty - quantity } },
+          data: { receivedQty: { increment: quantity } } });
+        if (updated.count !== 1) throw new ConflictException({ code: 'RECEIPT_QUANTITY_CONFLICT', message: 'Purchase order quantity changed during receipt.' });
+      }
+      const complete = order.items.every(item => item.receivedQty + (quantities.get(item.variantId) ?? 0) === item.orderedQty);
+      const updatedOrder = await tx.purchaseOrder.updateMany({ where: { id, version: input.expectedVersion, status: order.status },
+        data: { status: complete ? 'RECEIVED' : 'PARTIALLY_RECEIVED', version: { increment: 1 } } });
+      if (updatedOrder.count !== 1) throw versionConflict();
+      await this.audit.record({ action: 'purchase-order.received', entityType: 'PurchaseOrder', entityId: id,
+        actorId: context.actorId, requestId: context.requestId,
+        metadata: { receiptId: receipt.id, lineCount: lines.length, from: order.status,
+          to: complete ? 'RECEIVED' : 'PARTIALLY_RECEIVED', fromVersion: order.version, toVersion: order.version + 1 } }, tx);
+      return publicReceipt(await tx.purchaseReceipt.findUniqueOrThrow({ where: { id: receipt.id }, include: receiptInclude }));
+    });
+  }
+
   async create(input: PurchaseOrderCreateDto, context: Context): Promise<PurchaseOrder> {
     const items = normalizeLines(input.items);
     const payload = { supplierId: input.supplierId, warehouseId: input.warehouseId,
@@ -231,8 +338,8 @@ export class PurchasingService {
     }
   }
 
-  private async command(scope: string, payload: unknown, context: Context,
-    execute: (tx: Prisma.TransactionClient) => Promise<PurchaseOrder>): Promise<PurchaseOrder> {
+  private async command<T extends PurchaseOrder | PurchaseReceipt>(scope: string, payload: unknown, context: Context,
+    execute: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     if (!keyPattern.test(context.idempotencyKey ?? '')) {
       throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Idempotency-Key must contain 8–96 ASCII letters, digits, underscores or hyphens.' });
     }
@@ -248,7 +355,7 @@ export class PurchasingService {
           if (prior) {
             if (prior.payloadHash !== payloadHash) throw new ConflictException({ code: 'IDEMPOTENCY_CONFLICT', message: 'Key reused with another purchase order command.' });
             if (prior.response === null) throw new ConflictException({ code: 'CONFLICT', message: 'Command is still committing.' });
-            return prior.response as PurchaseOrder;
+            return prior.response as T;
           }
           const record = await tx.purchaseOrderCommandRecord.create({ data: { ...key, payloadHash } });
           const result = await execute(tx);

@@ -5,9 +5,9 @@ packages:
 
 overrides:
   '@prisma/config>deepmerge-ts': 8.0.2
-  # Nest currently resolves multer 2.2.0, which is affected by multiple
-  # multipart denial-of-service advisories fixed in 2.3.0.
-  multer: 2.3.0
+  # Keep Nest's multipart parser on the patched release; 2.3.0 is affected by
+  # GHSA-3pph-fpjx-jg34 (orphaned disk writes on aborted uploads).
+  multer: 2.4.0
   # ExcelJS accepts uuid.v4 from the patched uuid major; older uuid releases
   # are rejected by dependency-review for missing buffer bounds checks.
   uuid: 11.1.1

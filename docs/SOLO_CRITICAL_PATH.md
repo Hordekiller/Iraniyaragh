@@ -1,6 +1,6 @@
 # Single-Developer V1 Critical Path
 
-Effective: 2026-09-28. This document supersedes parallel-lane schedules in
+Effective: 2026-09-29. This document supersedes parallel-lane schedules in
 `DEVELOPMENT_PLAN.md`, `EXECUTION_STATUS.md`, `V1_MASTER_PLAN.md` and
 `AGENT_WORKSTREAMS.md`. Those documents retain domain and release acceptance
 requirements. `PROJECT_STATUS.md` remains the factual capability record.
@@ -8,8 +8,9 @@ requirements. `PROJECT_STATUS.md` remains the factual capability record.
 Current main checkpoint includes PR #333 merged (Newsletter false-success
 removal) and PR #331 merged (inventory reconciliation CI evidence). Supplier
 backend PR #335 and Admin UI PR #337 are merged; #329 is closed. The #339
-Purchase Order API merged via PR #340. The #341 Admin PO slice is the current
-single product task, followed by Receiving. Payment through manual
+Purchase Order API merged via PR #340; Admin PO #341 merged via PR #342. The
+current single product task is Receiving API #343 in PR #344, followed by a separate Admin
+receipt slice. Payment through manual
 refund, Fulfillment pick/ready, manual dispatch/tracking, staff-attested delivery,
 durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation/Transfer
 operations are implemented. These are **not** real provider/handset acceptance or a
@@ -52,19 +53,17 @@ worktrees and uncommitted files.
    desktop/mobile E2E exercised a real two-warehouse transfer and verified
    destination balance and inbound ledger. #261 closed 2026-09-28. This does
    not constitute production-like operator acceptance.
-5. **SMS.ir production acceptance — #114:** configure a real account, key,
-   sender and four approved templates outside the repo; prove OTP and paid/
-   dispatch/delivery SMS, timeout, rejection and unknown-result handling on a
-   controlled handset in a production-like environment. Do not put credentials,
-   OTPs or personal data in evidence.
-   #114 remains a mandatory pre-sale gate. Its private acceptance is blocked on
-   operator-supplied account/key/sender/templates and controlled handset; work
-   on the next repository-owned slice may proceed while that gate remains open.
-6. **Warehouse+ — #7:** Supplier API #335 and Admin UI #337 are merged;
-   #329 is closed and PO API #339/#340 merged. Deliver Admin PO #341, then Receiving,
-   Stocktake and Return/Refund, one reviewable PR at a time, with ledger and
-   financial reconciliation.
-7. **Customer credit / accounts receivable — tracked in #336 (V1.0.0 scope):**
+5. **Warehouse+ — #7:** Supplier API #335 and Admin UI #337 are merged;
+   #329 is closed; PO API #339/#340 and Admin PO #341/#342 merged. Finish
+   Receiving API #343/#344 and its final-head CI, merge it, then deliver
+   Receiving Admin UI, Stocktake and Returns, one reviewable PR at a time,
+   with ledger and financial reconciliation. Do not begin the next product
+   slice until the previous PR is merged.
+6. **Customer credit ADR — #338:** after Returns, accept the commercial versus
+   financial order-state model, staff-only credit-sale authorization, overdue
+   policy, opening-balance controls, cancellation/return effects and inventory
+   reconciliation before touching credit schema or checkout/fulfillment logic.
+7. **Customer credit / accounts receivable — #336 (V1.0.0 scope):**
    approved 2026-09-28 as a required V1.0.0 capability and placed after
    purchasing/returns and before Reports, because financial reporting without a
    receivables view is incomplete for a store that sells on account. Scope is
@@ -75,9 +74,9 @@ worktrees and uncommitted files.
    credit note / adjustment), never a freely editable field on the customer.
    A credit order is commercially fulfillable while financially
    `UNPAID`/`PARTIALLY_PAID`/`OVERDUE`, which changes the current
-   payment-gated fulfillment transition and therefore needs its own reviewed ADR
-   before implementation. Do not start this slice while #329 or a Warehouse+
-   slice is unmerged. Prerequisites confirmed 2026-09-28: Admin Customer
+   payment-gated fulfillment transition and therefore requires accepted #338
+   before implementation. Do not start while a Warehouse+ slice is unmerged.
+   Prerequisites confirmed 2026-09-28: Admin Customer
    create/search/update for known walk-in customers, staff-created Order,
    audited one-time opening balances with legacy-ledger references, immutable
    invoice/receipt/allocation entries and exact SKU/inventory reconciliation.
@@ -91,12 +90,21 @@ worktrees and uncommitted files.
 10. **Content and SEO — #125/#126/#129/#127/#123/#130:** content lifecycle,
    server rendering, canonical, sitemap, structured data, Merchant feed and
    performance/crawl monitoring, after the selling path works.
-11. **Production hardening — #136/Gate 0.9:** deployment, secrets, metrics,
-    tracing, alerts, backup/restore, rollback, load test and runbooks with staging
-    evidence.
-12. **UAT and V1.0:** freeze a release candidate and prove
+11. **Production deployment and hardening — #136/Gate 0.9:** deploy to a
+    production-like environment with secrets, metrics, tracing, alerts,
+    backup/restore, rollback, load/security tests and runbooks. Deploying is
+    not permission to accept customer money.
+12. **SMS.ir and Zarinpal acceptance — #114 and payment gate:** with real
+    operator-owned credentials outside the repo, prove OTP and paid/dispatch/
+    delivery SMS plus timeout/rejection/unknown-result handling on a controlled
+    handset; execute one controlled real Zarinpal transaction and reconcile
+    callback, order, payment and inventory. Do not expose credentials, OTPs,
+    personal data or merchant details in evidence. These remain pre-sale gates.
+13. **Full staging UAT and v1.0.0:** freeze a release candidate and prove a
+     fixture-free
      Product → Guest Cart → OTP → Checkout → Zarinpal → Order → Inventory →
-     Fulfillment → Tracking on staging before launch approval.
+     Fulfillment → Tracking on staging, including operational credit and returns
+     acceptance, before launch approval and the `v1.0.0` tag.
 
 ## Saleable pilot versus formal V1
 

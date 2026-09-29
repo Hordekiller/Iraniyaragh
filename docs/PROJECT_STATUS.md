@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-28
+Last reviewed: 2026-09-29
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -53,9 +53,16 @@ merged its Admin UI as squash `4052d26`, with all nine final-head checks green,
 including desktop/mobile no-fixture supplier create/deactivate/history E2E.
 #329 is closed; #7 remains open. PR #340 merged the #339 Purchase Order API
 slice at `1aac0fe` with permissioned draft/edit/approve/cancel and audit.
-The #341 Admin Purchase Order operator flow and least-privilege options endpoint
-are now in progress, not yet merged or accepted. Receiving is still absent; see
-`PURCHASE_ORDER_V1.md`. Customer credit is approved V1 scope in #336 but
+PR #342 merged the #341 Admin Purchase Order operator flow and least-privilege
+options endpoint at `30a5be5`; #341 is closed. Receiving API #343 is in PR #344,
+not yet a released or production-accepted capability at this checkpoint.
+Its receipt/ledger contract is in `PURCHASE_RECEIVING_V1.md`; the Admin receipt
+screen remains a following slice. The single-developer sequence is PR #344 final
+CI/merge → Admin Receiving → Stocktake → Returns → #338 Credit ADR → #336
+Accounts Receivable → Reports → #252/#258 closure → SEO/Content → #136 production
+deployment → SMS.ir/Zarinpal real acceptance → full staging UAT → `v1.0.0`.
+Production deployment alone is not approval to take real sales. Customer credit
+is approved V1 scope in #336 but
 has no DB/API/Admin implementation yet; known-customer Admin creation, staff
 credit order, opening balance and a fulfillment ADR are prerequisites.
 Older historical checkpoints below retain their original review context and must

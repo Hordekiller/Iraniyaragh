@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { PurchaseOrderStatus } from '@prisma/client';
-import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderListResponse, PurchaseOrderOptionsResponse } from '@iranyaragh/contracts';
+import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderListResponse, PurchaseOrderOptionsResponse, PurchaseReceipt, PurchaseReceiptListResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
-import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto } from './purchasing.dto';
+import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto, PurchaseReceiptCreateDto } from './purchasing.dto';
 import { purchasingOpenApi } from './purchasing.openapi';
 import { PurchasingService } from './purchasing.service';
 
@@ -50,6 +50,15 @@ export class PurchasingController {
   @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 100 })
   @ApiOkResponse({ schema: purchasingOpenApi.history })
   history(@Param('id') id: string, @Query() query: PurchaseOrderHistoryQueryDto): Promise<PurchaseOrderAuditResponse> { return this.purchasing.history(id, query); }
+
+  @Get(':id/receipts')
+  @RequirePermission('purchasing.read')
+  @ApiOperation({ summary: 'List immutable goods receipts for a purchase order' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 100 })
+  @ApiOkResponse({ schema: purchasingOpenApi.receipts })
+  receipts(@Param('id') id: string, @Query() query: PurchaseOrderHistoryQueryDto): Promise<PurchaseReceiptListResponse> { return this.purchasing.receipts(id, query); }
 
   @Post()
   @RequirePermission('purchasing.manage')
@@ -97,5 +106,17 @@ export class PurchasingController {
   cancel(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') key: string,
     @Param('id') id: string, @Body() input: PurchaseOrderActionDto): Promise<PurchaseOrder> {
     return this.purchasing.cancel(id, input, { actorId: principal.userId, requestId: getRequestId() ?? null, idempotencyKey: key });
+  }
+
+  @Post(':id/receipts')
+  @RequirePermission('purchasing.receive')
+  @ApiOperation({ summary: 'Receive approved purchase order goods into inventory ledger' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiBody({ schema: purchasingOpenApi.receive })
+  @ApiCreatedResponse({ schema: purchasingOpenApi.receipt })
+  receive(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') key: string,
+    @Param('id') id: string, @Body() input: PurchaseReceiptCreateDto): Promise<PurchaseReceipt> {
+    return this.purchasing.receive(id, input, { actorId: principal.userId, requestId: getRequestId() ?? null, idempotencyKey: key });
   }
 }
