@@ -106,7 +106,7 @@ export const navigation: NavigationGroup[] = [
     label: 'سیستم',
     items: [
       { label: 'نقش‌ها و دسترسی', href: '/access', icon: ShieldCheck, permission: 'roles.manage', status: 'planned' },
-      { label: 'گزارش ممیزی', href: '/audit', icon: FileClock, permission: 'audit.read', status: 'planned' },
+      { label: 'گزارش ممیزی', href: '/audit', icon: FileClock, permission: 'audit.read' },
       { label: 'سرویس پیامک', href: '/settings/sms', icon: Send, permission: 'settings.manage' },
       { label: 'نشست‌ها و دستگاه‌ها', href: '/settings/sessions', icon: MonitorSmartphone },
       { label: 'تنظیمات', href: '/settings', icon: Settings2, permission: 'settings.manage' },
