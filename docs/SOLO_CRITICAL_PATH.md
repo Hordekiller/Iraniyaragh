@@ -1,49 +1,57 @@
-# Single-Developer V1 Critical Path
+# V1 Critical Path
+
+> **Superseded 2026-09-29 for scheduling.** V1 now runs as **two parallel
+> lanes**. The authoritative tracker is **issue #363** (V1 FINAL EXECUTION).
+> `AGENT_WORKSTREAMS.md` holds the ownership split. This document keeps the
+> domain invariants, release gates and acceptance requirements. Read
+> `PROJECT_STATUS.md` for what is actually merged, and #363 for what is next.
 
 Effective: 2026-09-29. This document supersedes parallel-lane schedules in
 `DEVELOPMENT_PLAN.md`, `EXECUTION_STATUS.md`, `V1_MASTER_PLAN.md` and
 `AGENT_WORKSTREAMS.md`. Those documents retain domain and release acceptance
 requirements. `PROJECT_STATUS.md` remains the factual capability record.
 
-Current main checkpoint includes PR #333 merged (Newsletter false-success
-removal) and PR #331 merged (inventory reconciliation CI evidence). Supplier
-backend PR #335 and Admin UI PR #337 are merged; #329 is closed. The #339
-Purchase Order API merged via PR #340; Admin PO #341 merged via PR #342. The
-current single product task is Admin Receiving #345 on
-`feat/admin-purchase-receiving-v1` after Receiving API #343 merged in PR #344
-at `3a60f8c`. This branch is not yet merged. Payment through manual
-refund, Fulfillment pick/ready, manual dispatch/tracking, staff-attested delivery,
-durable essential SMS attempts and Admin Warehouse/Location/Ledger/Reservation/Transfer
-operations are implemented. These are **not** real provider/handset acceptance or a
+Current main checkpoint is `29f43b1`. Merged since the previous revision of
+this file: Admin Receiving #345 (PR #346, `e4398bd`) — the "Admin Receiving is
+unmerged" claim in the previous revision was stale and is now removed. Admin
+Audit viewer #354 (PR #361, `fcd2dfd`) and Shipments read API + Admin
+`/shipments` #356 (PR #362, `29f43b1`) are merged. Supplier backend PR #335 and
+Admin UI PR #337, Purchase Order API #340 / Admin #342, and Receiving API #344
+were already merged. Payment through manual refund, Fulfillment pick/ready,
+manual dispatch/tracking, staff-attested delivery, durable essential SMS attempts
+and Admin Warehouse/Location/Ledger/Reservation/Transfer operations are
+implemented. These are **not** real provider/handset acceptance or a
 fixture-free staging purchase. #261 and its #326 Transfer slice are closed.
 
 ## Delivery rule
 
-Only one product PR may be open. For each slice: implement on current `main`, run
-the narrow checks and then full affected-package checks, review the diff and CI,
-merge, and only then begin the next slice. Do not edit `schema.prisma`, an
-existing migration, shared contracts or OpenAPI while a preceding product PR is
-awaiting merge. Use a forward migration for schema changes. Preserve unrelated
-worktrees and uncommitted files.
+At most one product PR open per owner at a time. For each slice: implement on
+current `main`, run the narrow checks and then full affected-package checks,
+review the diff and CI, merge, and only then begin the next slice in the same
+lane. Do not edit `schema.prisma`, an existing migration, shared contracts or
+OpenAPI while a preceding product PR in the same lane is awaiting merge. Use a
+forward migration for schema changes. Preserve unrelated worktrees and
+uncommitted files. Parallel work across lanes is allowed only where ownership
+is isolated — see #363.
 
-## Agent handoff and ownership (2026-09-29)
+## Agent handoff and ownership (2026-09-29, two lanes)
 
-- Active product owner/branch: Receiving Admin #345 on
-  `feat/admin-purchase-receiving-v1`, based on merged #344. This is local work,
-  not merged or production-accepted until its PR and exact-head CI pass.
-- Reserved shared surfaces for #345: Purchasing Admin view/form/API adapter,
-  Purchasing API controller/service/DTO/OpenAPI, purchasing contracts and
-  purchase-receiving/status docs. Coordinate before touching these files or
-  changing their contracts. Do not modify the merged #344 migration.
-- Other agents may inspect and report defects or work on explicitly isolated,
-  non-product documentation/research, but should not open a second product PR
-  or start Stocktake/Returns/credit schema while #345 is active. Independent
-  production credentials/acceptance require an operator and are not proven by
-  repository tests.
-- After #345 merges: refresh `main`, assign Stocktake ownership explicitly,
-  then repeat one issue → tests/review/CI → merge. `PROJECT_STATUS.md` is the
-  factual capability record; issue labels or branch presence are not evidence
-  of completion.
+- **Hordeiller** owns `apps/api`, `apps/admin`, `schema.prisma` + forward
+  migrations, `packages/contracts`, OpenAPI, RBAC/Audit, infra/deployment,
+  production secrets and provider acceptance, and the authoritative
+  project/status docs. Hordekiller does not edit `apps/web` except as an agreed
+  emergency integration fix.
+- **Maddyrampant** owns `apps/web` and all customer-facing journeys. Web does
+  not touch `schema.prisma`, migrations, API domain logic, state machines,
+  OpenAPI or shared contracts unless Hordekiller hands off that exact surface.
+- When Web needs a missing contract, Hordekiller opens a backend dependency
+  issue, lands the contract/API first, and Web rebases on merged `main`.
+- The previous revision of this section reserved shared surfaces for Admin
+  Receiving #345 and asked other agents not to start Stocktake/Returns/credit
+  while it was active. #345 is merged, so that hold is lifted.
+- No product PR should duplicate an already-merged capability. Issue labels or
+  branch presence are not evidence of completion; `PROJECT_STATUS.md` and
+  `origin/main` are.
 
 ## Ordered queue
 

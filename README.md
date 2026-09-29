@@ -5,14 +5,15 @@ Startup-ready commerce and warehouse platform for Iranian hardware/fittings reta
 > Status: pre-release commerce integration. Auth, live Catalog/Media discovery,
 > protected Inventory HTTP, an authenticated server Cart API, Checkout, Order
 > application, Zarinpal Payment with audited manual refund, Fulfillment pick /
-> dispatch / tracking, the Admin inventory operations and the merged Supplier
-> backend lifecycle are implemented. What is still missing is external
+> dispatch / tracking, the Admin inventory operations, and the merged Supplier,
+> Purchase Order, Purchase Receiving, Audit-log and Shipments read surfaces are
+> implemented. What is still missing is external
 > acceptance and operations, not core commerce code: real SMS.ir and Zarinpal
-> acceptance, Purchase Order / Receiving / Stocktake / Return, customer credit
-> accounts (#336), SEO/content routes, production deploy, observability,
-> backup/restore/rollback and full UAT. See
-> [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) before starting work and
-> [`docs/SOLO_CRITICAL_PATH.md`](docs/SOLO_CRITICAL_PATH.md) for execution order.
+> acceptance, Customers Admin, stocktake count, Returns, customer credit
+> accounts (#336), reports/roles Admin surfaces, SEO/content routes, production
+> deploy, observability, backup/restore/rollback and full UAT. See
+> [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for what is actually merged
+> and issue #363 for the current execution order.
 
 ## Workspace
 
