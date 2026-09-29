@@ -23226,6 +23226,2714 @@
         ]
       }
     },
+    "/stocktakes": {
+      "get": {
+        "operationId": "StocktakeController_list",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "warehouseId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "DRAFT",
+                "COUNTING",
+                "REVIEW",
+                "COMPLETED",
+                "CANCELLED"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "count"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "number",
+                          "status",
+                          "scopeType",
+                          "version",
+                          "warehouseId",
+                          "warehouseCode",
+                          "warehouseName",
+                          "notes",
+                          "createdBy",
+                          "countedBy",
+                          "approvedBy",
+                          "startedAt",
+                          "submittedAt",
+                          "completedAt",
+                          "cancelledAt",
+                          "createdAt",
+                          "updatedAt",
+                          "summary"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "number": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "DRAFT",
+                              "COUNTING",
+                              "REVIEW",
+                              "COMPLETED",
+                              "CANCELLED"
+                            ]
+                          },
+                          "scopeType": {
+                            "type": "string",
+                            "enum": [
+                              "WAREHOUSE",
+                              "LOCATIONS",
+                              "VARIANTS"
+                            ]
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "warehouseId": {
+                            "type": "string"
+                          },
+                          "warehouseCode": {
+                            "type": "string"
+                          },
+                          "warehouseName": {
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "createdBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "countedBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "nullable": true
+                          },
+                          "approvedBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "nullable": true
+                          },
+                          "startedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "submittedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "completedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "cancelledAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "summary": {
+                            "type": "object",
+                            "required": [
+                              "totalLines",
+                              "countedLines",
+                              "pendingLines"
+                            ],
+                            "properties": {
+                              "totalLines": {
+                                "type": "integer"
+                              },
+                              "countedLines": {
+                                "type": "integer"
+                              },
+                              "pendingLines": {
+                                "type": "integer"
+                              },
+                              "netDifference": {
+                                "type": "integer",
+                                "description": "Omitted for counters without stocktake.approve."
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List stocktakes",
+        "tags": [
+          "Stocktake"
+        ]
+      },
+      "post": {
+        "operationId": "StocktakeController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "warehouseId"
+                ],
+                "properties": {
+                  "warehouseId": {
+                    "type": "string"
+                  },
+                  "scopeType": {
+                    "type": "string",
+                    "enum": [
+                      "WAREHOUSE",
+                      "LOCATIONS",
+                      "VARIANTS"
+                    ],
+                    "default": "WAREHOUSE"
+                  },
+                  "locationIds": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Required when scopeType is LOCATIONS."
+                  },
+                  "variantIds": {
+                    "type": "array",
+                    "maxItems": 2000,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Required when scopeType is VARIANTS."
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "scopeType",
+                    "version",
+                    "warehouseId",
+                    "warehouseCode",
+                    "warehouseName",
+                    "notes",
+                    "createdBy",
+                    "countedBy",
+                    "approvedBy",
+                    "startedAt",
+                    "submittedAt",
+                    "completedAt",
+                    "cancelledAt",
+                    "createdAt",
+                    "updatedAt",
+                    "summary",
+                    "lines"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "COUNTING",
+                        "REVIEW",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "enum": [
+                        "WAREHOUSE",
+                        "LOCATIONS",
+                        "VARIANTS"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "warehouseId": {
+                      "type": "string"
+                    },
+                    "warehouseCode": {
+                      "type": "string"
+                    },
+                    "warehouseName": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "countedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "approvedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "completedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "summary": {
+                      "type": "object",
+                      "required": [
+                        "totalLines",
+                        "countedLines",
+                        "pendingLines"
+                      ],
+                      "properties": {
+                        "totalLines": {
+                          "type": "integer"
+                        },
+                        "countedLines": {
+                          "type": "integer"
+                        },
+                        "pendingLines": {
+                          "type": "integer"
+                        },
+                        "netDifference": {
+                          "type": "integer",
+                          "description": "Omitted for counters without stocktake.approve."
+                        }
+                      }
+                    },
+                    "lines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "locationId",
+                          "locationCode",
+                          "locationName",
+                          "variantId",
+                          "sku",
+                          "productName",
+                          "variantTitle",
+                          "countedQty",
+                          "countedAt",
+                          "notes",
+                          "countedBy",
+                          "movementId"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "type": "string"
+                          },
+                          "locationCode": {
+                            "type": "string"
+                          },
+                          "locationName": {
+                            "type": "string"
+                          },
+                          "variantId": {
+                            "type": "string"
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "variantTitle": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "expectedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "nullable": true
+                          },
+                          "difference": {
+                            "type": "integer",
+                            "nullable": true,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "countedBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "nullable": true
+                          },
+                          "movementId": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a draft stocktake with a pinned count scope",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
+    "/stocktakes/locations": {
+      "get": {
+        "operationId": "StocktakeController_locations",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "warehouseId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "count"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "code",
+                          "label"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Select active warehouse locations to count",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
+    "/stocktakes/variants": {
+      "get": {
+        "operationId": "StocktakeController_variants",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 80,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "count"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "sku",
+                          "label"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Select active SKUs to count",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
+    "/stocktakes/{id}": {
+      "get": {
+        "operationId": "StocktakeController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "scopeType",
+                    "version",
+                    "warehouseId",
+                    "warehouseCode",
+                    "warehouseName",
+                    "notes",
+                    "createdBy",
+                    "countedBy",
+                    "approvedBy",
+                    "startedAt",
+                    "submittedAt",
+                    "completedAt",
+                    "cancelledAt",
+                    "createdAt",
+                    "updatedAt",
+                    "summary",
+                    "lines"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "COUNTING",
+                        "REVIEW",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "enum": [
+                        "WAREHOUSE",
+                        "LOCATIONS",
+                        "VARIANTS"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "warehouseId": {
+                      "type": "string"
+                    },
+                    "warehouseCode": {
+                      "type": "string"
+                    },
+                    "warehouseName": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "countedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "approvedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "completedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "summary": {
+                      "type": "object",
+                      "required": [
+                        "totalLines",
+                        "countedLines",
+                        "pendingLines"
+                      ],
+                      "properties": {
+                        "totalLines": {
+                          "type": "integer"
+                        },
+                        "countedLines": {
+                          "type": "integer"
+                        },
+                        "pendingLines": {
+                          "type": "integer"
+                        },
+                        "netDifference": {
+                          "type": "integer",
+                          "description": "Omitted for counters without stocktake.approve."
+                        }
+                      }
+                    },
+                    "lines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "locationId",
+                          "locationCode",
+                          "locationName",
+                          "variantId",
+                          "sku",
+                          "productName",
+                          "variantTitle",
+                          "countedQty",
+                          "countedAt",
+                          "notes",
+                          "countedBy",
+                          "movementId"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "type": "string"
+                          },
+                          "locationCode": {
+                            "type": "string"
+                          },
+                          "locationName": {
+                            "type": "string"
+                          },
+                          "variantId": {
+                            "type": "string"
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "variantTitle": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "expectedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "nullable": true
+                          },
+                          "difference": {
+                            "type": "integer",
+                            "nullable": true,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "countedBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "nullable": true
+                          },
+                          "movementId": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get a stocktake with its count sheet",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
+    "/stocktakes/{id}/history": {
+      "get": {
+        "operationId": "StocktakeController_history",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "count"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "action",
+                          "actorId",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string"
+                          },
+                          "actorId": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get stocktake lifecycle audit events",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
+    "/stocktakes/{id}/start": {
+      "post": {
+        "operationId": "StocktakeController_start",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "scopeType",
+                    "version",
+                    "warehouseId",
+                    "warehouseCode",
+                    "warehouseName",
+                    "notes",
+                    "createdBy",
+                    "countedBy",
+                    "approvedBy",
+                    "startedAt",
+                    "submittedAt",
+                    "completedAt",
+                    "cancelledAt",
+                    "createdAt",
+                    "updatedAt",
+                    "summary",
+                    "lines"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "COUNTING",
+                        "REVIEW",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "enum": [
+                        "WAREHOUSE",
+                        "LOCATIONS",
+                        "VARIANTS"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "warehouseId": {
+                      "type": "string"
+                    },
+                    "warehouseCode": {
+                      "type": "string"
+                    },
+                    "warehouseName": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "countedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "approvedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "completedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "summary": {
+                      "type": "object",
+                      "required": [
+                        "totalLines",
+                        "countedLines",
+                        "pendingLines"
+                      ],
+                      "properties": {
+                        "totalLines": {
+                          "type": "integer"
+                        },
+                        "countedLines": {
+                          "type": "integer"
+                        },
+                        "pendingLines": {
+                          "type": "integer"
+                        },
+                        "netDifference": {
+                          "type": "integer",
+                          "description": "Omitted for counters without stocktake.approve."
+                        }
+                      }
+                    },
+                    "lines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "locationId",
+                          "locationCode",
+                          "locationName",
+                          "variantId",
+                          "sku",
+                          "productName",
+                          "variantTitle",
+                          "countedQty",
+                          "countedAt",
+                          "notes",
+                          "countedBy",
+                          "movementId"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "type": "string"
+                          },
+                          "locationCode": {
+                            "type": "string"
+                          },
+                          "locationName": {
+                            "type": "string"
+                          },
+                          "variantId": {
+                            "type": "string"
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "variantTitle": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "expectedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "nullable": true
+                          },
+                          "difference": {
+                            "type": "integer",
+                            "nullable": true,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "countedBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "nullable": true
+                          },
+                          "movementId": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Open the count sheet from live balances",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
+    "/stocktakes/{id}/counts": {
+      "post": {
+        "operationId": "StocktakeController_count",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion",
+                  "lines"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "lines": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "locationId",
+                        "variantId",
+                        "countedQty"
+                      ],
+                      "properties": {
+                        "locationId": {
+                          "type": "string"
+                        },
+                        "variantId": {
+                          "type": "string"
+                        },
+                        "countedQty": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2000000000
+                        },
+                        "notes": {
+                          "type": "string",
+                          "maxLength": 500,
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "scopeType",
+                    "version",
+                    "warehouseId",
+                    "warehouseCode",
+                    "warehouseName",
+                    "notes",
+                    "createdBy",
+                    "countedBy",
+                    "approvedBy",
+                    "startedAt",
+                    "submittedAt",
+                    "completedAt",
+                    "cancelledAt",
+                    "createdAt",
+                    "updatedAt",
+                    "summary",
+                    "lines"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "COUNTING",
+                        "REVIEW",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "enum": [
+                        "WAREHOUSE",
+                        "LOCATIONS",
+                        "VARIANTS"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "warehouseId": {
+                      "type": "string"
+                    },
+                    "warehouseCode": {
+                      "type": "string"
+                    },
+                    "warehouseName": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "countedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "approvedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "completedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "summary": {
+                      "type": "object",
+                      "required": [
+                        "totalLines",
+                        "countedLines",
+                        "pendingLines"
+                      ],
+                      "properties": {
+                        "totalLines": {
+                          "type": "integer"
+                        },
+                        "countedLines": {
+                          "type": "integer"
+                        },
+                        "pendingLines": {
+                          "type": "integer"
+                        },
+                        "netDifference": {
+                          "type": "integer",
+                          "description": "Omitted for counters without stocktake.approve."
+                        }
+                      }
+                    },
+                    "lines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "locationId",
+                          "locationCode",
+                          "locationName",
+                          "variantId",
+                          "sku",
+                          "productName",
+                          "variantTitle",
+                          "countedQty",
+                          "countedAt",
+                          "notes",
+                          "countedBy",
+                          "movementId"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "type": "string"
+                          },
+                          "locationCode": {
+                            "type": "string"
+                          },
+                          "locationName": {
+                            "type": "string"
+                          },
+                          "variantId": {
+                            "type": "string"
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "variantTitle": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "expectedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "nullable": true
+                          },
+                          "difference": {
+                            "type": "integer",
+                            "nullable": true,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "countedBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "nullable": true
+                          },
+                          "movementId": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Record physical counts against the open count sheet",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
+    "/stocktakes/{id}/submit": {
+      "post": {
+        "operationId": "StocktakeController_submit",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "scopeType",
+                    "version",
+                    "warehouseId",
+                    "warehouseCode",
+                    "warehouseName",
+                    "notes",
+                    "createdBy",
+                    "countedBy",
+                    "approvedBy",
+                    "startedAt",
+                    "submittedAt",
+                    "completedAt",
+                    "cancelledAt",
+                    "createdAt",
+                    "updatedAt",
+                    "summary",
+                    "lines"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "COUNTING",
+                        "REVIEW",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "enum": [
+                        "WAREHOUSE",
+                        "LOCATIONS",
+                        "VARIANTS"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "warehouseId": {
+                      "type": "string"
+                    },
+                    "warehouseCode": {
+                      "type": "string"
+                    },
+                    "warehouseName": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "countedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "approvedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "completedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "summary": {
+                      "type": "object",
+                      "required": [
+                        "totalLines",
+                        "countedLines",
+                        "pendingLines"
+                      ],
+                      "properties": {
+                        "totalLines": {
+                          "type": "integer"
+                        },
+                        "countedLines": {
+                          "type": "integer"
+                        },
+                        "pendingLines": {
+                          "type": "integer"
+                        },
+                        "netDifference": {
+                          "type": "integer",
+                          "description": "Omitted for counters without stocktake.approve."
+                        }
+                      }
+                    },
+                    "lines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "locationId",
+                          "locationCode",
+                          "locationName",
+                          "variantId",
+                          "sku",
+                          "productName",
+                          "variantTitle",
+                          "countedQty",
+                          "countedAt",
+                          "notes",
+                          "countedBy",
+                          "movementId"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "type": "string"
+                          },
+                          "locationCode": {
+                            "type": "string"
+                          },
+                          "locationName": {
+                            "type": "string"
+                          },
+                          "variantId": {
+                            "type": "string"
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "variantTitle": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "expectedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "nullable": true
+                          },
+                          "difference": {
+                            "type": "integer",
+                            "nullable": true,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "countedBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "nullable": true
+                          },
+                          "movementId": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Submit the count sheet for review",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
+    "/stocktakes/{id}/approve": {
+      "post": {
+        "operationId": "StocktakeController_approve",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "scopeType",
+                    "version",
+                    "warehouseId",
+                    "warehouseCode",
+                    "warehouseName",
+                    "notes",
+                    "createdBy",
+                    "countedBy",
+                    "approvedBy",
+                    "startedAt",
+                    "submittedAt",
+                    "completedAt",
+                    "cancelledAt",
+                    "createdAt",
+                    "updatedAt",
+                    "summary",
+                    "lines"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "COUNTING",
+                        "REVIEW",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "enum": [
+                        "WAREHOUSE",
+                        "LOCATIONS",
+                        "VARIANTS"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "warehouseId": {
+                      "type": "string"
+                    },
+                    "warehouseCode": {
+                      "type": "string"
+                    },
+                    "warehouseName": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "countedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "approvedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "completedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "summary": {
+                      "type": "object",
+                      "required": [
+                        "totalLines",
+                        "countedLines",
+                        "pendingLines"
+                      ],
+                      "properties": {
+                        "totalLines": {
+                          "type": "integer"
+                        },
+                        "countedLines": {
+                          "type": "integer"
+                        },
+                        "pendingLines": {
+                          "type": "integer"
+                        },
+                        "netDifference": {
+                          "type": "integer",
+                          "description": "Omitted for counters without stocktake.approve."
+                        }
+                      }
+                    },
+                    "lines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "locationId",
+                          "locationCode",
+                          "locationName",
+                          "variantId",
+                          "sku",
+                          "productName",
+                          "variantTitle",
+                          "countedQty",
+                          "countedAt",
+                          "notes",
+                          "countedBy",
+                          "movementId"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "type": "string"
+                          },
+                          "locationCode": {
+                            "type": "string"
+                          },
+                          "locationName": {
+                            "type": "string"
+                          },
+                          "variantId": {
+                            "type": "string"
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "variantTitle": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "expectedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "nullable": true
+                          },
+                          "difference": {
+                            "type": "integer",
+                            "nullable": true,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "countedBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "nullable": true
+                          },
+                          "movementId": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Approve the count and post one movement per changed line",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
+    "/stocktakes/{id}/cancel": {
+      "post": {
+        "operationId": "StocktakeController_cancel",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "scopeType",
+                    "version",
+                    "warehouseId",
+                    "warehouseCode",
+                    "warehouseName",
+                    "notes",
+                    "createdBy",
+                    "countedBy",
+                    "approvedBy",
+                    "startedAt",
+                    "submittedAt",
+                    "completedAt",
+                    "cancelledAt",
+                    "createdAt",
+                    "updatedAt",
+                    "summary",
+                    "lines"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "number": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "COUNTING",
+                        "REVIEW",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "enum": [
+                        "WAREHOUSE",
+                        "LOCATIONS",
+                        "VARIANTS"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer"
+                    },
+                    "warehouseId": {
+                      "type": "string"
+                    },
+                    "warehouseCode": {
+                      "type": "string"
+                    },
+                    "warehouseName": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "countedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "approvedBy": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "completedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "summary": {
+                      "type": "object",
+                      "required": [
+                        "totalLines",
+                        "countedLines",
+                        "pendingLines"
+                      ],
+                      "properties": {
+                        "totalLines": {
+                          "type": "integer"
+                        },
+                        "countedLines": {
+                          "type": "integer"
+                        },
+                        "pendingLines": {
+                          "type": "integer"
+                        },
+                        "netDifference": {
+                          "type": "integer",
+                          "description": "Omitted for counters without stocktake.approve."
+                        }
+                      }
+                    },
+                    "lines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "locationId",
+                          "locationCode",
+                          "locationName",
+                          "variantId",
+                          "sku",
+                          "productName",
+                          "variantTitle",
+                          "countedQty",
+                          "countedAt",
+                          "notes",
+                          "countedBy",
+                          "movementId"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "locationId": {
+                            "type": "string"
+                          },
+                          "locationCode": {
+                            "type": "string"
+                          },
+                          "locationName": {
+                            "type": "string"
+                          },
+                          "variantId": {
+                            "type": "string"
+                          },
+                          "sku": {
+                            "type": "string"
+                          },
+                          "productName": {
+                            "type": "string"
+                          },
+                          "variantTitle": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "expectedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedQty": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "nullable": true
+                          },
+                          "difference": {
+                            "type": "integer",
+                            "nullable": true,
+                            "description": "Omitted for counters without stocktake.approve."
+                          },
+                          "countedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "countedBy": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "nullable": true
+                          },
+                          "movementId": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cancel a stocktake before approval",
+        "tags": [
+          "Stocktake"
+        ]
+      }
+    },
     "/reports/admin/dashboard": {
       "get": {
         "operationId": "DashboardController_getSummary",
