@@ -3,13 +3,13 @@ import { validate } from 'class-validator';
 import { describe, expect, it, vi } from 'vitest';
 import { REQUIRE_AUTH_LEVEL, REQUIRE_FRESH_AUTH, REQUIRE_PERMISSION } from '../auth/auth.guard';
 import { PurchasingController } from './purchasing.controller';
-import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderItemDto, PurchaseOrderListQueryDto, PurchaseOrderUpdateDto } from './purchasing.dto';
+import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderItemDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto } from './purchasing.dto';
 
 describe('Purchase Order HTTP boundary', () => {
   it('requires staff MFA and separates read, manage and fresh-MFA approval', () => {
     const prototype = PurchasingController.prototype;
     expect(Reflect.getMetadata(REQUIRE_AUTH_LEVEL, PurchasingController)).toBe('STAFF_MFA');
-    for (const method of ['list', 'get', 'history'] as const) {
+    for (const method of ['list', 'options', 'get', 'history'] as const) {
       expect(Reflect.getMetadata(REQUIRE_PERMISSION, prototype[method])).toBe('purchasing.read');
     }
     for (const method of ['create', 'update', 'cancel'] as const) {
@@ -30,6 +30,9 @@ describe('Purchase Order HTTP boundary', () => {
     const query = plainToInstance(PurchaseOrderListQueryDto, { offset: '2', limit: '20', status: 'APPROVED' });
     expect(await validate(query)).toEqual([]);
     expect(query).toMatchObject({ offset: 2, limit: 20, status: 'APPROVED' });
+    expect(await validate(plainToInstance(PurchaseOrderOptionsQueryDto, { kind: 'variant', limit: '50', search: 'SKU' }))).toEqual([]);
+    expect(await validate(plainToInstance(PurchaseOrderOptionsQueryDto, { kind: 'unknown' }))).not.toEqual([]);
+    expect(await validate(plainToInstance(PurchaseOrderOptionsQueryDto, { kind: 'supplier', limit: '1000' }))).not.toEqual([]);
   });
 
   it('passes actor and retry key to the service', async () => {

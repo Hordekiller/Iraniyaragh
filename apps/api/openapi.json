@@ -22028,6 +22028,101 @@
         ]
       }
     },
+    "/purchase-orders/options": {
+      "get": {
+        "operationId": "PurchasingController_options",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "supplier",
+                "warehouse",
+                "variant"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "count"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "code",
+                          "label"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Select active suppliers, warehouses or SKUs for purchase orders",
+        "tags": [
+          "Purchasing"
+        ]
+      }
+    },
     "/purchase-orders/{id}": {
       "get": {
         "operationId": "PurchasingController_get",

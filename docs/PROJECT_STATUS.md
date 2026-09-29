@@ -51,9 +51,11 @@ Newsletter capability, and #258 remains open.
 PR #335 merged the Supplier API/contract slice as squash `7c1cd1e`. PR #337
 merged its Admin UI as squash `4052d26`, with all nine final-head checks green,
 including desktop/mobile no-fixture supplier create/deactivate/history E2E.
-#329 is closed; #7 remains open. The #339 Purchase Order API slice adds
-permissioned draft/edit/approve/cancel and audit but no Admin PO UI or Receiving;
-see `PURCHASE_ORDER_V1.md`. Customer credit is approved V1 scope in #336 but
+#329 is closed; #7 remains open. PR #340 merged the #339 Purchase Order API
+slice at `1aac0fe` with permissioned draft/edit/approve/cancel and audit.
+The #341 Admin Purchase Order operator flow and least-privilege options endpoint
+are now in progress, not yet merged or accepted. Receiving is still absent; see
+`PURCHASE_ORDER_V1.md`. Customer credit is approved V1 scope in #336 but
 has no DB/API/Admin implementation yet; known-customer Admin creation, staff
 credit order, opening balance and a fulfillment ADR are prerequisites.
 Older historical checkpoints below retain their original review context and must

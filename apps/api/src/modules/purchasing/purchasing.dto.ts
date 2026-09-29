@@ -1,5 +1,5 @@
 import { Transform, Type, type TransformFnParams } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
 import { PurchaseOrderStatus } from '@prisma/client';
 import type { PurchaseOrderActionRequest, PurchaseOrderCreateRequest, PurchaseOrderItemInput, PurchaseOrderUpdateRequest } from '@iranyaragh/contracts';
 
@@ -16,6 +16,13 @@ export class PurchaseOrderListQueryDto {
 export class PurchaseOrderHistoryQueryDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 50;
+}
+
+export class PurchaseOrderOptionsQueryDto {
+  @IsIn(['supplier', 'warehouse', 'variant']) kind!: 'supplier' | 'warehouse' | 'variant';
+  @IsOptional() @IsString() @MaxLength(80) search?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) offset = 0;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) limit = 25;
 }
 
 export class PurchaseOrderItemDto implements PurchaseOrderItemInput {

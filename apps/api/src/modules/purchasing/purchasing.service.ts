@@ -1,12 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type PurchaseOrderStatus } from '@prisma/client';
-import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderItemInput, PurchaseOrderListResponse } from '@iranyaragh/contracts';
+import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderItemInput, PurchaseOrderListResponse, PurchaseOrderOptionsResponse } from '@iranyaragh/contracts';
 import { createHash, randomUUID } from 'node:crypto';
 import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { retryDelayMs, sleep } from '../../common/retry';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
-import type { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderUpdateDto } from './purchasing.dto';
+import type { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto } from './purchasing.dto';
 
 const MAX_I64 = 9_223_372_036_854_775_807n;
 const keyPattern = /^[A-Za-z0-9_-]{8,96}$/u;
@@ -71,6 +71,38 @@ function publicOrder(row: OrderRow): PurchaseOrder {
 @Injectable()
 export class PurchasingService {
   constructor(private readonly prisma: PrismaService, private readonly audit: AuditLogService) {}
+
+  async options(query: PurchaseOrderOptionsQueryDto): Promise<PurchaseOrderOptionsResponse> {
+    const search = query.search?.trim() || undefined;
+    if (query.kind === 'supplier') {
+      const where: Prisma.SupplierWhereInput = { isActive: true, ...(search ? { OR: [
+        { code: { contains: search, mode: 'insensitive' } }, { name: { contains: search, mode: 'insensitive' } },
+      ] } : {}) };
+      const [rows, count] = await this.prisma.$transaction([
+        this.prisma.supplier.findMany({ where, select: { id: true, code: true, name: true }, orderBy: { code: 'asc' }, skip: query.offset, take: query.limit }),
+        this.prisma.supplier.count({ where }),
+      ]);
+      return { items: rows.map(row => ({ id: row.id, code: row.code, label: row.name })), count };
+    }
+    if (query.kind === 'warehouse') {
+      const where: Prisma.WarehouseWhereInput = { isActive: true, ...(search ? { OR: [
+        { code: { contains: search, mode: 'insensitive' } }, { name: { contains: search, mode: 'insensitive' } },
+      ] } : {}) };
+      const [rows, count] = await this.prisma.$transaction([
+        this.prisma.warehouse.findMany({ where, select: { id: true, code: true, name: true }, orderBy: { code: 'asc' }, skip: query.offset, take: query.limit }),
+        this.prisma.warehouse.count({ where }),
+      ]);
+      return { items: rows.map(row => ({ id: row.id, code: row.code, label: row.name })), count };
+    }
+    const where: Prisma.ProductVariantWhereInput = { isActive: true, status: 'ACTIVE', product: { status: 'ACTIVE' },
+      ...(search ? { OR: [{ sku: { contains: search, mode: 'insensitive' } },
+        { product: { name: { contains: search, mode: 'insensitive' } } }] } : {}) };
+    const [rows, count] = await this.prisma.$transaction([
+      this.prisma.productVariant.findMany({ where, select: { id: true, sku: true, title: true, product: { select: { name: true } } }, orderBy: { sku: 'asc' }, skip: query.offset, take: query.limit }),
+      this.prisma.productVariant.count({ where }),
+    ]);
+    return { items: rows.map(row => ({ id: row.id, code: row.sku, label: `${row.product.name}${row.title ? ` — ${row.title}` : ''}` })), count };
+  }
 
   async list(query: PurchaseOrderListQueryDto): Promise<PurchaseOrderListResponse> {
     const where = { ...(query.status ? { status: query.status } : {}),

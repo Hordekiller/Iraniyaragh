@@ -99,6 +99,7 @@ export const navigation: NavigationGroup[] = [
     label: 'تأمین و خرید',
     items: [
       { label: 'تأمین‌کنندگان', href: '/suppliers', icon: Handshake, permission: 'suppliers.read' },
+      { label: 'سفارش‌های خرید', href: '/purchase-orders', icon: ReceiptText, permission: 'purchasing.read' },
     ],
   },
   {

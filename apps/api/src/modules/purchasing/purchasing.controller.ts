@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { PurchaseOrderStatus } from '@prisma/client';
-import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderListResponse } from '@iranyaragh/contracts';
+import type { PurchaseOrder, PurchaseOrderAuditResponse, PurchaseOrderListResponse, PurchaseOrderOptionsResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
-import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderUpdateDto } from './purchasing.dto';
+import { PurchaseOrderActionDto, PurchaseOrderCreateDto, PurchaseOrderHistoryQueryDto, PurchaseOrderListQueryDto, PurchaseOrderOptionsQueryDto, PurchaseOrderUpdateDto } from './purchasing.dto';
 import { purchasingOpenApi } from './purchasing.openapi';
 import { PurchasingService } from './purchasing.service';
 
@@ -24,6 +24,16 @@ export class PurchasingController {
   @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 100 })
   @ApiOkResponse({ schema: purchasingOpenApi.list })
   list(@Query() query: PurchaseOrderListQueryDto): Promise<PurchaseOrderListResponse> { return this.purchasing.list(query); }
+
+  @Get('options')
+  @RequirePermission('purchasing.read')
+  @ApiOperation({ summary: 'Select active suppliers, warehouses or SKUs for purchase orders' })
+  @ApiQuery({ name: 'kind', required: true, enum: ['supplier', 'warehouse', 'variant'] })
+  @ApiQuery({ name: 'search', required: false, type: String, maxLength: 80 })
+  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 50 })
+  @ApiOkResponse({ schema: purchasingOpenApi.options })
+  options(@Query() query: PurchaseOrderOptionsQueryDto): Promise<PurchaseOrderOptionsResponse> { return this.purchasing.options(query); }
 
   @Get(':id')
   @RequirePermission('purchasing.read')

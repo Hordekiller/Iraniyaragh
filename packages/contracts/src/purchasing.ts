@@ -26,6 +26,9 @@ export type PurchaseOrder = {
 };
 
 export type PurchaseOrderListResponse = { items: PurchaseOrder[]; count: number };
+export type PurchaseOrderOptionKind = 'supplier' | 'warehouse' | 'variant';
+export type PurchaseOrderOption = { id: string; code: string; label: string };
+export type PurchaseOrderOptionsResponse = { items: PurchaseOrderOption[]; count: number };
 export type PurchaseOrderItemInput = { variantId: string; orderedQty: number; unitCost: string };
 export type PurchaseOrderCreateRequest = {
   supplierId: string;
