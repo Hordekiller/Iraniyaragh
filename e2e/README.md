@@ -137,13 +137,23 @@ API. Two consequences, both deliberate:
   one, so parallel sign-ins would race the product's own security contract.
 - `tests/totp-step.ts` reserves the next unused step before each sign-in and waits
   for it, keeping the generated code at least three seconds away from the boundary.
-  The reservation lives in the OS temp directory because Playwright re-imports the
-  module registry per test file and per project.
+  The reservation lives in a private per-user cache directory (`XDG_CACHE_HOME`,
+  defaulting to `~/.cache`) because Playwright re-imports the module registry per
+  test file and per project, so the path has to be stable across processes. It is
+  not a shared OS temp file: a per-run temp name would be re-imported empty, and a
+  fixed `/tmp` path is a world-writable-directory hazard (it also tripped the
+  CodeQL `js/insecure-temporary-file` rule).
 
 The cost is real time: a full run is about 27 minutes locally, so the CI `e2e`
 job timeout is 50 minutes. Do not "fix" a slow run by raising the rate limits or
 by allowing a second active challenge - both weaken MFA for a test convenience.
-See
+
+The shipped rate limit is `staff-password:identifier` 5 per 900s and
+`staff-password:ip` 30 per 900s, and successful sign-ins count against it too. The
+test environment raises the identifier limit, so a suite that signs in as the same
+identity more than five times inside a 15-minute window fails with
+`429 RATE_LIMITED` against a staging-shaped database rather than in CI. That is
+the product's own policy; do not special-case it for a test.
 
 ## Why taps are dispatched
 
