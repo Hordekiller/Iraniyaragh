@@ -1,5 +1,7 @@
 import { expect } from '@playwright/test';
-import type { Locator, Page, Request } from '@playwright/test';
+import { generate } from 'otplib';
+import { waitForFreshTotpStep } from './totp-step';
+import type { Locator, Page, Request, Response } from '@playwright/test';
 
 export const isMobile = (page: Page): boolean => (page.viewportSize()?.width ?? 1440) < 768;
 
@@ -14,27 +16,95 @@ export const isMobile = (page: Page): boolean => (page.viewportSize()?.width ?? 
 export const adminSidebar = (page: Page): Locator => page.locator('aside[aria-label="منوی اصلی"]');
 
 /**
- * Signs the dev admin into the admin panel through the dedicated non-production
- * test harness. The primary `/login` route always remains the real staff MFA UI.
+ * Signs a staff administrator in through the real password + TOTP sign-in.
  *
- * The admin token is held in memory only (AUTH_CONTRACT §7: no
- * localStorage/sessionStorage/document.cookie), so it cannot be replayed via
- * Playwright's storageState. The only reliable way to reach the authenticated
- * shell is to perform the actual sign-in through the login page.
+ * The admin panel has exactly one sign-in path: `/login` posts the staff
+ * password to `/auth/staff/password` and then the six-digit code to
+ * `/auth/staff/totp/verify`. There is no development access code and no
+ * test-only back door, so the suite exercises the same contract an operator
+ * uses. Only the *identity* is provisioned for the test database (see
+ * `apps/api auth:e2e-staff`); the session, the rate limiter, the challenge and
+ * the TOTP verification are all genuine.
  *
- * Requires the API to be running with `AUTH_DEV_CODE` set and the dev admin
- * seeded (see the e2e job in .github/workflows/ci.yml).
+ * The TOTP code is produced with the same `otplib` release the API verifies
+ * with, so the suite can never drift from the server's algorithm, period or
+ * digit count.
  */
 export async function signInDiAsAdmin(page: Page) {
-  const devCode = process.env.AUTH_DEV_CODE;
-  if (!devCode) {
-    throw new Error('AUTH_DEV_CODE must be set to sign in to the admin panel in e2e.');
+  const identifier = process.env.E2E_STAFF_EMAIL;
+  const password = process.env.E2E_STAFF_PASSWORD;
+  const totpSecret = process.env.E2E_STAFF_TOTP_SECRET;
+  if (!identifier || !password || !totpSecret) {
+    throw new Error(
+      'E2E_STAFF_EMAIL, E2E_STAFF_PASSWORD and E2E_STAFF_TOTP_SECRET must be set to sign in to the admin panel in e2e. ' +
+        'Provision the identity with `pnpm --filter @iranyaragh/api auth:e2e-staff`.',
+    );
   }
 
-  await page.goto('/login/dev');
-  await page.getByLabel('کد دسترسی توسعه‌دهنده').fill(devCode);
-  await page.getByRole('button', { name: 'ورود' }).click();
-  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+  // Record the real reason a sign-in did not advance: the admin UI renders one
+  // friendly sentence for half a dozen server codes, so without this a failure
+  // only says "the code field never appeared".
+  const authFailures: string[] = [];
+  const pendingBodies: Promise<void>[] = [];
+  const recordAuthFailure = (response: Response): void => {
+    const url = response.url();
+    const status = response.status();
+    // The path is matched loosely on purpose: if NEXT_PUBLIC_API_BASE_URL was
+    // missing from the admin build, the request silently goes to the admin's own
+    // origin and 404s, which is the most confusing way this can break.
+    if (!url.includes('/auth/staff/') || status < 400) return;
+    // The body carries the machine code the UI hides behind one friendly
+    // sentence, so capture it: "401 vs 409" is the difference between a wrong
+    // code and a consumed TOTP step. Reading it is asynchronous, so the report
+    // below waits for it instead of racing it.
+    const path = url.split('/').slice(3).join('/');
+    pendingBodies.push(
+      response
+        .json()
+        .then((body: { code?: string }) => {
+          authFailures.push(`${status} ${body.code ?? 'no-code'}:${path}`);
+        })
+        .catch(() => {
+          authFailures.push(`${status} unreadable-body:${path}`);
+        }),
+    );
+  };
+  const reportAuthFailures = async (): Promise<string> => {
+    page.off('response', recordAuthFailure);
+    await Promise.allSettled(pendingBodies);
+    return authFailures.length > 0 ? authFailures.join(', ') : 'none failed';
+  };
+  page.on('response', recordAuthFailure);
+
+  await page.goto('/login');
+  await page.getByLabel('شناسه کارکن').fill(identifier);
+  await page.getByLabel('رمز عبور').fill(password);
+  await page.getByRole('button', { name: 'ادامه' }).click();
+
+  const codeInput = page.getByLabel('کد تایید شش‌رقمی');
+  try {
+    await expect(codeInput).toBeVisible({ timeout: 15_000 });
+  } catch (cause) {
+    throw new Error(
+      `Staff sign-in never reached the TOTP step. Staff auth responses: ${await reportAuthFailures()}.`,
+      { cause },
+    );
+  }
+  await waitForFreshTotpStep();
+  const submittedCode = await generate({ secret: totpSecret });
+  const submittedAtStep = Math.floor(Date.now() / 30_000);
+  await codeInput.fill(submittedCode);
+  await page.getByRole('button', { name: 'ورود', exact: true }).click();
+
+  let signInFailure: string | null = null;
+  try {
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+  } catch {
+    signInFailure = `Staff sign-in did not reach the dashboard. Submitted code for step ${submittedAtStep}. ` +
+      `Staff auth responses: ${await reportAuthFailures()}.`;
+  }
+  page.off('response', recordAuthFailure);
+  if (signInFailure !== null) throw new Error(signInFailure);
 }
 
 /**
@@ -62,16 +132,27 @@ export async function signInFixtureCustomer(page: Page) {
 }
 
 /**
- * Fires a (synthetic) click on the element. Used instead of `locator.click()`
- * for pointer interactions: Chromium reports a negative `scrollLeft` for RTL
- * pages, which Playwright's hit-target maths mis-handles on mobile emulation
- * (the click point lands outside the visual viewport and the document root
- * "intercepts the pointer events"). The React handlers are DOM-event driven, so
- * the dispatched click still exercises the real behavior.
+ * Clicks the element the way a person would, falling back to a synthetic click.
+ *
+ * A real `locator.click()` is preferred because some MUI widgets (menus,
+ * autocomplete popups, selects) only open on a full pointer interaction and
+ * ignore a bare dispatched `click`.
+ *
+ * The fallback exists for a known Chromium bug: on RTL pages under mobile
+ * emulation the document reports a negative `scrollLeft`, which breaks
+ * Playwright's hit-target maths — the resolved click point lands outside the
+ * visual viewport and the document root "intercepts the pointer events".
+ * Playwright fails such a click with an actionability/timeout error instead of
+ * misfiring, so falling back is safe.
  */
 export async function tap(locator: Locator) {
-  await locator.scrollIntoViewIfNeeded().catch(() => undefined);
-  await locator.dispatchEvent('click');
+  try {
+    await locator.click({ timeout: 5_000 });
+    return;
+  } catch {
+    await locator.scrollIntoViewIfNeeded().catch(() => undefined);
+    await locator.dispatchEvent('click');
+  }
 }
 
 /**

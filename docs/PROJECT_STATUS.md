@@ -88,6 +88,19 @@ record with addresses, staff notes and order history, deactivated by status and
 never hard-deleted, plus Admin `/customers`. The Redis cold-start race that made
 the first authentication request of every boot answer 503 also merged
 (PR #365, `69a0a25`).
+In progress on `feat/350-staff-order` (not merged, not counted as delivered):
+staff-created Order #350 with real password + TOTP staff sign-in
+(ADR-0020) replacing the removed development access code. The concurrent
+password-challenge path is fixed against real contention (a 500 from the
+`MfaChallenge` timestamp check constraint), the API integration suite covers
+simultaneous sign-ins, and the E2E suite signs in as the provisioned staff
+identity. Two findings are recorded rather than papered over: the API accepts each
+TOTP step once per credential, so the browser suite is serialised with one worker
+and reserves an unused code window per sign-in (a full run is about 27 minutes,
+and the CI e2e job timeout is 50 minutes); and the admin build
+still honours `NEXT_PUBLIC_FIXTURE_AUTH=true` for a fixture staff client, which no
+shipped or CI build sets but which should be deleted before the V1 security
+review.
 The previous feature queue was issue #363 (V1 FINAL EXECUTION): staff-created
 Order #350 → Stocktake #347 → Returns #348 → #338 Credit ADR → #336 Accounts
 Receivable → Reports #358 → Roles #359 → SEO/content backend →

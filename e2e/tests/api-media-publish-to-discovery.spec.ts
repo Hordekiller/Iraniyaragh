@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { APIRequestContext, APIResponse } from "@playwright/test";
+import { signInStaff } from "./staff-auth";
 
 /**
  * Real-HTTP evidence for the product-media vertical: draft -> upload intent ->
@@ -10,12 +11,11 @@ import type { APIRequestContext, APIResponse } from "@playwright/test";
  * public discovery, plus the denial/failure paths the publish guard must hold.
  *
  * Requires the API, the media worker and S3-compatible object storage (MinIO) to
- * be running with `AUTH_DEV_CODE` set and the dev admin seeded. The e2e job in
+ * be running with the automated test administrator seeded. The e2e job in
  * .github/workflows/ci.yml brings these up; locally see infrastructure/docker.
  */
 
 const API = "/api/v1";
-const DEV_CODE = process.env.AUTH_DEV_CODE;
 const SAMPLE_IMAGE = resolve(
   __dirname,
   "../../apps/web/public/images/hero1.jpg",
@@ -63,16 +63,8 @@ function newKey(): string {
 }
 
 async function signIn(request: APIRequestContext): Promise<string> {
-  if (!DEV_CODE)
-    throw new Error(
-      "AUTH_DEV_CODE must be set to sign in to the admin API in e2e.",
-    );
-  const response = await request.post(`${API}/auth/dev/signin`, {
-    data: { code: DEV_CODE, deviceName: `media-e2e-${randomUUID()}` },
-  });
-  expect(response.status()).toBe(201);
-  const body = (await response.json()) as { data: { accessToken: string } };
-  return body.data.accessToken;
+  const session = await signInStaff(request);
+  return session.accessToken;
 }
 
 async function createDraftProduct(

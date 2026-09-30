@@ -81,15 +81,57 @@ NODE_ENV=test OBJECT_STORAGE_SECRET_KEY=change-me-now \
   PUBLIC_MEDIA_ORIGIN=http://localhost:9000/products \
   node apps/api/dist/src/media-worker.js &
 
-AUTH_DEV_CODE=dev-admin-code-123 \
+E2E_STAFF_EMAIL=e2e-admin@iranyaragh.test \
+  E2E_STAFF_PASSWORD=e2e-staff-password-2026 \
+  E2E_STAFF_TOTP_SECRET=<base32 secret> \
   pnpm --filter @iranyaragh/e2e exec playwright test \
   tests/api-media-publish-to-discovery.spec.ts --project=api-http
 ```
 
 CI provides all of this in the `e2e` job (MinIO service via `docker run`, bucket
-provisioning, media worker) and sets `AUTH_DEV_CODE=dev-e2e-access-code`,
-`PUBLIC_MEDIA_ORIGIN` and the object-storage variables. See
+provisioning, media worker) and sets `PUBLIC_MEDIA_ORIGIN`, the object-storage
+variables and the `E2E_STAFF_*` credentials.
+
+## Staff sign-in
+
+There is no development access code. The suite signs in through the real staff
+password + TOTP contract (`/auth/staff/password` then `/auth/staff/totp/verify`),
+exactly as an operator does. Only the *identity* is provisioned for the test
+database, and it must be created explicitly after the seed:
+
+```bash
+# once per test database (NODE_ENV=test and a _test database are required)
+E2E_STAFF_EMAIL=e2e-admin@iranyaragh.test \
+  E2E_STAFF_PASSWORD=e2e-staff-password-2026 \
+  E2E_STAFF_TOTP_SECRET=$(node -e "console.log(require('otplib').generateSecret())") \
+  AUTH_TOTP_ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))") \
+  pnpm --filter @iranyaragh/api auth:e2e-staff
+```
+
+`E2E_STAFF_TOTP_SECRET` must be the same value in the provisioning step and the
+test run: the suite derives each current code from it with the same `otplib`
+release the API verifies with. See ADR-0020. See
 `docs/MEDIA_M5_EVIDENCE.md` for the verified matrix and open gaps.
+### One sign-in per TOTP step, and why the suite is serialised
+
+`TotpCredential.lastAcceptedStep` is advanced with a compare-and-swap, so the API
+accepts each 30-second TOTP step exactly once per credential. A second sign-in
+inside the same window is answered with `401 AUTH_CHALLENGE_INVALID` even when its
+challenge was just issued and its code is current - verified against a running
+API. Two consequences, both deliberate:
+
+- `playwright.config.ts` runs a single worker. Every browser spec signs in as the
+  same provisioned identity, and a password challenge also invalidates the previous
+  one, so parallel sign-ins would race the product's own security contract.
+- `tests/totp-step.ts` reserves the next unused step before each sign-in and waits
+  for it, keeping the generated code at least three seconds away from the boundary.
+  The reservation lives in the OS temp directory because Playwright re-imports the
+  module registry per test file and per project.
+
+The cost is real time: a full run is about 27 minutes locally, so the CI `e2e`
+job timeout is 50 minutes. Do not "fix" a slow run by raising the rate limits or
+by allowing a second active challenge - both weaken MFA for a test convenience.
+See
 
 ## Why taps are dispatched
 

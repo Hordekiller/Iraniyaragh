@@ -130,7 +130,11 @@ jobs:
   e2e:
     needs: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # The browser suite signs in as one real staff identity with a real TOTP
+    # credential, and the API accepts each 30-second TOTP step only once. A full
+    # run therefore spends real time waiting for unused code windows and takes
+    # about 27 minutes locally; keep headroom for install, build and MinIO.
+    timeout-minutes: 50
     env:
       NODE_ENV: test
       ALLOW_DATABASE_SEED: "true"
@@ -141,7 +145,6 @@ jobs:
       AUTH_JWT_ISSUER: iranyaragh-api
       AUTH_HASH_KEY_VERSION: "1"
       AUTH_HASH_SECRET: development-only-hash-root-secret-replace-me
-      AUTH_DEV_CODE: dev-e2e-access-code
       CORS_ORIGINS: http://127.0.0.1:3001
       OBJECT_STORAGE_ENDPOINT: http://127.0.0.1:9000
       OBJECT_STORAGE_ACCESS_KEY: minio
@@ -150,6 +153,12 @@ jobs:
       PUBLIC_MEDIA_ORIGIN: http://127.0.0.1:9000/products
       NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4000
       NEXT_PUBLIC_MEDIA_ORIGIN: http://127.0.0.1:9000/products
+      # Test-only staff identity for the real password + TOTP sign-in. The
+      # product has no development access code; only the identity is provisioned.
+      AUTH_TOTP_ENCRYPTION_KEY: E9eAkpLQ0cbdhzFKs1usfTNiIWoPK-G-p6aApAoOblE
+      E2E_STAFF_EMAIL: e2e-admin@iranyaragh.test
+      E2E_STAFF_PASSWORD: e2e-staff-password-for-ci-only
+      E2E_STAFF_TOTP_SECRET: JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP
     services:
       postgres:
         image: postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
@@ -187,8 +196,10 @@ jobs:
         run: |
           pnpm --filter @iranyaragh/api prisma:generate
           pnpm --filter @iranyaragh/api exec prisma migrate deploy
-      - name: Seed the dev admin for real sign-in
+      - name: Seed the RBAC baseline and demo catalog
         run: pnpm --filter @iranyaragh/api prisma:seed
+      - name: Provision the staff identity for the real MFA sign-in
+        run: pnpm --filter @iranyaragh/api auth:e2e-staff
       - name: Install Chromium and system dependencies
         run: pnpm --filter @iranyaragh/e2e exec playwright install --with-deps chromium
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
