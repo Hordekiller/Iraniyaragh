@@ -11,3 +11,7 @@ overrides:
   # ExcelJS accepts uuid.v4 from the patched uuid major; older uuid releases
   # are rejected by dependency-review for missing buffer bounds checks.
   uuid: 11.1.1
+  # Patch-only pins for production audit advisories published on 2026-09-29.
+  'brace-expansion@1': 1.1.21
+  'brace-expansion@2': 2.1.7
+  'js-yaml@5': 5.4.1
