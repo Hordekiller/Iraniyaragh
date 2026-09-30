@@ -32,21 +32,30 @@ export class CatalogHttpClient implements CatalogApi {
 
   constructor(options: HttpClientOptions = {}) {
     this.baseUrl = options.baseUrl ?? ''
-    this.fetcher = options.fetch ?? globalThis.fetch
+    // Browser Window.fetch requires its native receiver; calling an extracted
+    // function as this.fetcher() otherwise fails with "Illegal invocation".
+    this.fetcher = options.fetch ?? globalThis.fetch.bind(globalThis)
   }
 
   async listCategories(): Promise<CatalogCategory[]> {
     this.categoriesPromise ??= this.request<CategoryListResponse>(
       '/api/v1/catalog/categories',
-    ).then((response) =>
-      response.data.items.map((category) => ({
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        productCount: category.productCount,
-        image: PLACEHOLDER_IMAGE,
-      })),
     )
+      .then((response) =>
+        response.data.items.map((category) => ({
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          productCount: category.productCount,
+          image: PLACEHOLDER_IMAGE,
+        })),
+      )
+      .catch(error => {
+        // Keep successful category reads coalesced, but let an explicit UI
+        // retry issue a fresh request after an outage.
+        this.categoriesPromise = undefined
+        throw error
+      })
     return this.categoriesPromise
   }
 
@@ -171,6 +180,7 @@ export class CatalogHttpClient implements CatalogApi {
       description: detail?.description ?? null,
       price: product.startingPrice ??
         variantPrice ?? { amount: '0', currency: 'IRR' },
+      priceAvailable: product.startingPrice != null || variantPrice != null,
       oldPrice: null,
       rating: null,
       reviews: 0,

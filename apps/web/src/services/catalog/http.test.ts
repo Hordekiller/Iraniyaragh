@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CatalogError } from './errors'
 import { CatalogHttpClient } from './http'
 
@@ -9,6 +9,19 @@ function response(body: unknown, status = 200): Response {
 }
 
 describe('CatalogHttpClient', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('preserves the native browser fetch receiver', async () => {
+    const nativeLikeFetch = vi.fn(function (this: unknown) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation')
+      return Promise.resolve(response({ data: { items: [] } }))
+    })
+    vi.stubGlobal('fetch', nativeLikeFetch)
+
+    await expect(new CatalogHttpClient().listCategories()).resolves.toEqual([])
+    expect(nativeLikeFetch).toHaveBeenCalledTimes(1)
+  })
+
   it('maps live public list data and resolves category filters', async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -69,7 +82,7 @@ describe('CatalogHttpClient', () => {
   it('uses a safe placeholder for products without media or price', async () => {
     const fetcher = vi.fn(async () => response({ data: { items: [{ id: 'p-2', name: 'محصول', slug: 'item', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', primaryMedia: null, startingPrice: null }], meta: { page: 1, perPage: 100, total: 1, pages: 1 } } }))
     const product = (await new CatalogHttpClient({ fetch: fetcher }).listProducts()).items[0]
-    expect(product).toMatchObject({ image: '/images/tool1.jpg', price: { amount: '0', currency: 'IRR' }, stockStatus: 'UNKNOWN' })
+    expect(product).toMatchObject({ image: '/images/tool1.jpg', price: { amount: '0', currency: 'IRR' }, priceAvailable: false, stockStatus: 'UNKNOWN' })
   })
 
   it('normalizes transport, API and malformed responses', async () => {
@@ -77,5 +90,16 @@ describe('CatalogHttpClient', () => {
     await expect(new CatalogHttpClient({ fetch: vi.fn(async () => response({ code: 'NOT_FOUND', message: 'missing', requestId: 'req-1' }, 404)) }).listCategories()).rejects.toMatchObject({ code: 'NOT_FOUND', statusCode: 404, requestId: 'req-1' })
     const error = new CatalogHttpClient({ fetch: vi.fn(async () => response({ nope: true })) })
     await expect(error.listCategories()).rejects.toBeInstanceOf(CatalogError)
+  })
+
+  it('retries categories after a transient transport failure', async () => {
+    const fetcher = vi.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(response({ data: { items: [{ id: 'cat-1', name: 'ابزار', slug: 'tools', productCount: 1 }] } }))
+    const client = new CatalogHttpClient({ fetch: fetcher })
+
+    await expect(client.listCategories()).rejects.toMatchObject({ code: 'UPSTREAM_UNAVAILABLE' })
+    await expect(client.listCategories()).resolves.toMatchObject([{ slug: 'tools' }])
+    expect(fetcher).toHaveBeenCalledTimes(2)
   })
 })

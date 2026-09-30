@@ -11,10 +11,16 @@ import { toPersianDigits } from './format'
 
 export const SITE_NAME = 'ایران یراق'
 export const SITE_FOUNDING_YEAR = 1385
-export const SITE_TAGLINE = `ARAD TOOLS • از ${toPersianDigits(SITE_FOUNDING_YEAR)}`
+export const SITE_TAGLINE = 'فروشگاه تخصصی ابزار و یراق‌آلات'
 
-export const PHONE_MAIN = '۰۲۱-۸۸۸۸۸۸۸۸'
-export const PHONE_SECONDARY = '۰۲۱-۶۶۷۰۰۰۰۰'
+// Supplied on the coworker's storefront branch. Business ownership and
+// publication approval should be reconfirmed before a public launch.
+export const SITE_PHONE = '09202295969'
+export const SITE_POSTAL_CODE = '1497973517'
+export const SITE_ADDRESS_LINE = 'استان البرز، کرج، میدان استاندارد، بلوار کامیون‌داران، سایت کابینت‌سازان، بلوک صنعت ۳'
+
+export const PHONE_MAIN = toPersianDigits(SITE_PHONE)
+export const PHONE_SECONDARY = toPersianDigits(SITE_PHONE)
 export const EMAIL = 'info@aradtools.ir'
 export const INSTAGRAM_HANDLE = 'aradtools.ir'
 export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_HANDLE}`

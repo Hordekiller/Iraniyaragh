@@ -23,37 +23,23 @@ test.describe('web: storefront shell', () => {
       await expect(page.getByRole('link', { name: /خانه/ }).first()).toBeVisible();
     }
 
-    await expect(page.getByText('دسته‌بندی تخصصی ابزار')).toBeVisible();
-    await expect(page.getByText('ابزار محبوب هفته')).toBeVisible();
-    await expect(page.getByText('پرفروش‌ترین‌ها').first()).toBeVisible();
-    await expect(page.getByText('مجله آموزشی ایران یراق')).toBeVisible();
-    await expect(page.getByRole('heading', { name: /چرا .* استادکار، ایران یراق را انتخاب کرده‌اند؟/ })).toBeVisible();
-
-    if (!isMobile(page)) {
-      await expect(page.getByText('آدرس فروشگاه مرکزی')).toBeVisible();
-    }
+    await expect(page.getByRole('heading', { name: 'دسته‌بندی کالاها' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'کالاهای فروشگاه' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'خبرنامه هنوز فعال نیست' })).toBeVisible();
+    await expect(page.getByText(/سایت کابینت‌سازان، بلوک صنعت ۳/)).toBeVisible();
+    await expect(page.getByText(/ارسال رایگان برای خرید بالای/)).toHaveCount(0);
 
     await network.assertNone();
   });
 
-  test('hero slider navigates through dots and keeps the counter in sync', async ({ page }) => {
+  test('live catalog category cards navigate to their real routes', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
     await page.goto('/');
 
-    const dots = page.locator('section#home div[class*="bg-black/30"] button');
-    await expect(dots).toHaveCount(3);
-
-    await tap(dots.nth(1));
-    await expect(page.getByText('دقت آلمانی، قدرت ایرانی')).toBeVisible();
-
-    await tap(dots.nth(2));
-    await expect(page.getByText('بهار در کارگاه شما')).toBeVisible();
-
-    await tap(dots.nth(0));
-    await expect(page.getByText('قدرت را در دست بگیرید')).toBeVisible();
-
-    await expect(page.getByText(/۰[۱۳] \/ ۰۳/)).toBeVisible();
+    await tap(page.locator('section#categories').getByRole('link', { name: 'ابزار برقی' }));
+    await expect(page).toHaveURL(/\/category\/power-tools$/);
+    await expect(page.getByRole('heading', { name: 'ابزار برقی' })).toBeVisible();
 
     await network.assertNone();
   });
@@ -63,7 +49,7 @@ test.describe('web: storefront shell', () => {
 
     await signInFixtureCustomer(page);
 
-    await tap(page.locator('section#popular button[class*="snap-start"]').first());
+    await tap(page.getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ }).first());
 
     await expect(page).toHaveURL(/\/product\//);
     await expect(page.getByRole('button', { name: 'افزودن به سبد خرید' })).toBeVisible();
@@ -75,25 +61,13 @@ test.describe('web: storefront shell', () => {
     await network.assertNone();
   });
 
-  test('category filter narrows the popular products carousel', async ({ page }) => {
+  test('homepage categories and products come from the same catalog fixture API', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
     await page.goto('/');
 
-    const cards = page.locator('section#popular button[class*="snap-start"]');
-    await expect(cards).toHaveCount(6);
-
-    await tap(page.getByRole('button', { name: 'ابزار برقی', exact: true }));
-    await expect(cards).toHaveCount(3);
-
-    await tap(page.getByRole('button', { name: 'باغبانی', exact: true }));
-    await expect(cards).toHaveCount(1);
-
-    await tap(page.getByRole('button', { name: 'ابزار دستی', exact: true }));
-    await expect(cards).toHaveCount(1);
-
-    await tap(page.getByRole('button', { name: 'همه', exact: true }));
-    await expect(cards).toHaveCount(6);
+    await expect(page.locator('section#categories').getByRole('link')).toHaveCount(6);
+    await expect(page.getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ }).first()).toBeVisible();
 
     await network.assertNone();
   });
@@ -105,7 +79,7 @@ test.describe('web: storefront shell', () => {
 
     await page.goto('/');
 
-    const search = page.locator('header input[placeholder*="۲۵۰۰"]');
+    const search = page.locator('header input#site-search-desktop');
     await expect(search).toBeVisible();
 
     await search.fill('دریل رونیکس');
@@ -133,7 +107,7 @@ test.describe('web: storefront shell', () => {
     await page.goto('/');
 
     await expect(page.getByRole('button', { name: 'دسته‌بندی‌ها' })).toBeVisible();
-    const support = page.getByRole('link', { name: 'پشتیبانی' });
+    const support = page.getByRole('link', { name: 'تماس با فروشگاه' });
     await expect(support).toBeVisible();
     await expect(support).toHaveAttribute('href', /^tel:/);
 

@@ -34,6 +34,9 @@ describe('AppLayout', () => {
     expect(
       screen.getByRole('navigation', { name: 'ناوبری پایین' }),
     ).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'تماس با فروشگاه' }).every(link => link.getAttribute('href') === 'tel:09202295969')).toBe(true)
+    expect(screen.getByText(/سایت کابینت‌سازان، بلوک صنعت ۳/)).toBeInTheDocument()
+    expect(screen.queryByText(/ارسال رایگان برای خرید بالای/)).not.toBeInTheDocument()
   })
 
   it('opens the shared login dialog from an anonymous commerce route', async () => {

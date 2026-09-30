@@ -9,7 +9,7 @@ import {
 } from './helpers'
 
 async function addFirstProduct(page: Page) {
-  await tap(page.locator('section#popular button[class*="snap-start"]').first())
+  await tap(page.getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ }).first())
   await expect(
     page.getByRole('button', { name: 'افزودن به سبد خرید' }),
   ).toBeVisible()

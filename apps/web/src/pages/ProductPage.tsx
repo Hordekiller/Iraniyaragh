@@ -289,9 +289,9 @@ export function ProductPage() {
 
           <div className="mt-5 flex items-baseline gap-3">
             <span className="font-black text-[22px] text-slate-900">
-              {formatToman(
-                selectedVariant?.price.amount ?? product.price.amount,
-              )}
+              {selectedVariant || product.priceAvailable !== false
+                ? formatToman(selectedVariant?.price.amount ?? product.price.amount)
+                : 'قیمت در دسترس نیست'}
             </span>
             {product.oldPrice && (
               <>
