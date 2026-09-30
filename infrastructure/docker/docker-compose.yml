@@ -23,19 +23,36 @@ services:
     volumes:
       - redis_data:/data
 
-  minio:
-    image: quay.io/minio/minio:latest
-    command: server /data --console-address ':9001'
+  # S3-compatible object storage for local development. This was MinIO, whose
+  # upstream image now requires registry authentication for anonymous pulls, so
+  # it can no longer be started from a clean checkout. The API talks plain S3 and
+  # reads the same generic OBJECT_STORAGE_* variables either way.
+  object-store:
+    image: rustfs/rustfs:1.0.0
+    # Dev-only: the console is enabled here so the bucket can be inspected in a
+    # browser. The staging/VPS compose leaves it disabled and unpublished.
+    command: server /data --address :9000 --console-enable --console-address :9001
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: change-me-now
+      # These must stay in sync with the developer's local .env, which is what
+      # the API and the e2e suite use to reach this store. Sourcing them from
+      # the environment instead of hardcoding a second copy means a developer who
+      # rotated the local credentials does not silently end up talking to a store
+      # it cannot authenticate to. The fallback matches .env.example, so a fresh
+      # checkout works with no extra setup.
+      RUSTFS_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY:-minio}
+      RUSTFS_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY:-change-me}
     ports:
       - '9000:9000'
       - '9001:9001'
     volumes:
-      - minio_data:/data
+      - object_store_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', "curl -s -o /dev/null -w '%{http_code}' http://localhost:9000/ | grep -qE '^(200|400|403)$'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data:
   redis_data:
-  minio_data:
+  object_store_data:

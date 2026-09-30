@@ -50,10 +50,31 @@ const contentSecurityPolicy = [
   `connect-src ${getConnectSources()}`,
 ].join('; ');
 
+function getBasePath() {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+
+  if (basePath === '') return '';
+
+  // Next requires an absolute path with no trailing slash, because it appends
+  // the slash itself when building asset URLs.
+  if (!basePath.startsWith('/') || basePath.endsWith('/') || basePath === '/') {
+    throw new Error(
+      `NEXT_PUBLIC_BASE_PATH must start with "/" and must not end with one, received "${basePath}".`,
+    );
+  }
+
+  return basePath;
+}
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
   images: { remotePatterns: [] },
+  // Empty by default so local development and the existing tests are unaffected.
+  // The staging deployment sets it to /admin, because the reverse proxy mounts
+  // the Admin on a subpath of the storefront origin and Next needs the same
+  // value to emit asset URLs that the proxy actually routes.
+  basePath: getBasePath(),
   async headers() {
     return [
       {

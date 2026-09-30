@@ -51,7 +51,15 @@ export class S3ProductMediaStorage implements ProductMediaStorage {
 
   async headObject(objectKey: string): Promise<StoredObjectHead | null> {
     try {
-      const head = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: objectKey }));
+      const head = await this.client.send(new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: objectKey,
+        // S3-compatible stores only return object checksums on HeadObject when
+        // the caller opts in. Without this the field is simply absent, and the
+        // upload confirmation in media.service compares checksums only when it
+        // received one, so the integrity check would be silently skipped.
+        ChecksumMode: 'ENABLED',
+      }));
       return {
         objectKey,
         bytes: head.ContentLength ?? 0,

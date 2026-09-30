@@ -46,7 +46,7 @@ describe('S3ProductMediaStorage', () => {
   });
 
   it('maps trusted HEAD metadata and converts the checksum to lowercase hex', async () => {
-    vi.spyOn(S3Client.prototype, 'send').mockResolvedValueOnce({
+    const send = vi.spyOn(S3Client.prototype, 'send').mockResolvedValueOnce({
       ContentLength: 1234,
       ContentType: 'image/png',
       ChecksumSHA256: Buffer.from('ab'.repeat(32), 'hex').toString('base64'),
@@ -58,6 +58,11 @@ describe('S3ProductMediaStorage', () => {
       contentType: 'image/png',
       checksumSha256: 'ab'.repeat(32),
     });
+
+    // Object stores only return the checksum when the caller opts in, and the
+    // upload confirmation silently skips verification when it is absent.
+    const [command] = send.mock.calls[0]!;
+    expect((command as { input: { ChecksumMode?: string } }).input.ChecksumMode).toBe('ENABLED');
   });
 
   it('uploads immutable renditions with a storage-verifiable checksum', async () => {

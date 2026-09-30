@@ -7,6 +7,11 @@ dist
 .env.*
 !.env.example
 !.env.fixture-e2e
+# The staging env template is a documented interface and must be committed.
+# The real .env.staging next to it stays ignored by the .env.* rule above.
+!infrastructure/docker/.env.staging.example
+# Backups hold customer and staff data and are host-local, never in git.
+infrastructure/docker/backups/
 coverage
 *.log
 *.tsbuildinfo
