@@ -58,8 +58,8 @@ function createController(overrides: Partial<{
     devLoginEnabled: false,
     devCode: '',
     cookies: overrides.cookies ?? {
-      refreshName: 'iranyaragh_dev_refresh',
-      csrfName: 'iranyaragh_dev_csrf',
+      refreshName: 'iranyaragh_customer_refresh',
+      csrfName: 'iranyaragh_customer_csrf',
       secure: false,
       sameSite: 'strict',
       path: '/',
@@ -119,13 +119,13 @@ describe('CustomerAuthController (customer OTP)', () => {
     expect(result.data.principal.authenticationLevel).toBe('CUSTOMER_OTP');
 
     const cookieNames = response.calls.map(call => call.name);
-    expect(cookieNames).toEqual(['iranyaragh_dev_refresh', 'iranyaragh_dev_csrf']);
+    expect(cookieNames).toEqual(['iranyaragh_customer_refresh', 'iranyaragh_customer_csrf']);
     expect(response.calls[0]).toMatchObject({
-      name: 'iranyaragh_dev_refresh',
+      name: 'iranyaragh_customer_refresh',
       options: { httpOnly: true, secure: false, sameSite: 'strict', path: '/' },
     });
     expect(response.calls[1]).toMatchObject({
-      name: 'iranyaragh_dev_csrf',
+      name: 'iranyaragh_customer_csrf',
       options: { httpOnly: false },
     });
   });

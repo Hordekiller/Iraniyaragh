@@ -130,26 +130,9 @@ describe('validateEnvironment', () => {
     expect(result.CORS_ORIGINS).toBe('http://localhost:5173,http://localhost:3001');
   });
 
-  it('parses and returns an optional AUTH_DEV_CODE when provided', () => {
-    const result = validateEnvironment({
-      ...validDevelopmentEnvironment,
-      AUTH_DEV_CODE: 'dev-signin-code',
-    });
-    expect(result.AUTH_DEV_CODE).toBe('dev-signin-code');
-  });
-
-  it('leaves AUTH_DEV_CODE undefined when omitted', () => {
+  it('exposes no development sign-in configuration at all', () => {
     const result = validateEnvironment(validDevelopmentEnvironment);
-    expect(result.AUTH_DEV_CODE).toBeUndefined();
-  });
-
-  it('rejects surrounding whitespace in AUTH_DEV_CODE', () => {
-    expect(() =>
-      validateEnvironment({
-        ...validDevelopmentEnvironment,
-        AUTH_DEV_CODE: '  dev-signin-code  ',
-      }),
-    ).toThrow();
+    expect(result).not.toHaveProperty('AUTH_DEV_CODE');
   });
 
   it.each([

@@ -1,4 +1,5 @@
-import { LoginAttemptOutcome, LoginMethod, MfaChallengePurpose, UserStatus } from '@prisma/client';
+import { ConflictException } from '@nestjs/common';
+import { LoginAttemptOutcome, LoginMethod, MfaChallengePurpose, Prisma, UserStatus } from '@prisma/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthHashService } from './auth-hash.service';
 import type { AuthSessionService } from './auth-session.service';
@@ -26,6 +27,8 @@ type MockTransaction = {
   };
 };
 
+const DATABASE_NOW = new Date('2026-09-30T06:00:00.000Z');
+
 function createTransaction(overrides: Partial<MockTransaction> = {}): MockTransaction {
   return {
     user: overrides.user ?? {
@@ -42,12 +45,14 @@ function createTransaction(overrides: Partial<MockTransaction> = {}): MockTransa
     auditLog: overrides.auditLog ?? {
       create: vi.fn(async () => ({})),
     },
+    $queryRaw: vi.fn(async () => [{ now: DATABASE_NOW }]),
   };
 }
 
 function createService(overrides: {
   user?: ReturnType<typeof vi.fn>;
   transaction?: MockTransaction;
+  prismaTransaction?: ReturnType<typeof vi.fn>;
   hashes?: Pick<AuthHashService, 'hash' | 'candidateHashes'>;
   tokens?: Pick<AuthTokenService, 'generateMfaChallengeToken'>;
   passwords?: Pick<PasswordHashService, 'verify' | 'needsRehash' | 'hash' | 'hashForLoginRehash'>;
@@ -59,7 +64,9 @@ function createService(overrides: {
     user: {
       findUnique: overrides.user ?? vi.fn(async () => null),
     },
-    $transaction: vi.fn(async (callback: (tx: MockTransaction) => Promise<unknown>) => callback(transaction)),
+    $transaction:
+      overrides.prismaTransaction ??
+      vi.fn(async (callback: (tx: MockTransaction) => Promise<unknown>) => callback(transaction)),
   } as unknown as PrismaService;
   const hashes = overrides.hashes ?? {
     hash: vi.fn((value: string) => `hash:${value}`),
@@ -202,6 +209,70 @@ describe('StaffAuthService', () => {
       expect(result).toEqual({
         data: { challengeToken: 'challenge-token-1', next: 'TOTP', expiresInSeconds: 300 },
       });
+    });
+
+    it('retries a serializable write conflict so two simultaneous staff sign-ins both succeed', async () => {
+      const tx = createTransaction();
+      let attempts = 0;
+      const transaction = vi.fn(async (callback: (inner: MockTransaction) => Promise<unknown>) => {
+        attempts += 1;
+        if (attempts === 1) {
+          // First writer wins the SERIALIZABLE conflict; Prisma reports P2034.
+          throw new Prisma.PrismaClientKnownRequestError('write conflict', {
+            code: 'P2034',
+            clientVersion: Prisma.prismaVersion.client,
+          });
+        }
+        return callback(tx);
+      });
+      const { service } = createService({
+        user: vi.fn(async () => ACTIVE_USER),
+        prismaTransaction: transaction,
+        hashes: {
+          hash: vi.fn((value: string) => `hash:${value}`),
+          candidateHashes: vi.fn((value: string) => [`hash:${value}`]),
+        },
+        tokens: { generateMfaChallengeToken: vi.fn(() => 'challenge-token-1') },
+        passwords: {
+          verify: vi.fn(async () => true),
+          needsRehash: vi.fn(() => false),
+          hash: vi.fn(async (value: string) => `argon2:${value}`),
+        },
+      });
+
+      const result = await service.requestPasswordChallenge({
+        identifier: 'staff@example.com',
+        password: 'a-super-secure-password',
+        ipAddress: '192.0.2.10',
+      });
+
+      expect(attempts).toBe(2);
+      expect(result.data).toEqual({ challengeToken: 'challenge-token-1', next: 'TOTP', expiresInSeconds: 300 });
+    });
+
+    it('surfaces a conflict, not a 500, when the serializable challenge write keeps losing', async () => {
+      const { service } = createService({
+        user: vi.fn(async () => ACTIVE_USER),
+        prismaTransaction: vi.fn(async () => {
+          throw new Prisma.PrismaClientKnownRequestError('write conflict', {
+            code: 'P2034',
+            clientVersion: Prisma.prismaVersion.client,
+          });
+        }),
+        passwords: {
+          verify: vi.fn(async () => true),
+          needsRehash: vi.fn(() => false),
+          hash: vi.fn(async (value: string) => `argon2:${value}`),
+        },
+      });
+
+      await expect(
+        service.requestPasswordChallenge({
+          identifier: 'staff@example.com',
+          password: 'a-super-secure-password',
+          ipAddress: '192.0.2.10',
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('upgrades and persists a new argon2 password hash when the stored hash needs rehashing', async () => {

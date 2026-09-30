@@ -1,6 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { type AuthCookieSpec, DEV_SIGNIN_COOKIE_SPEC } from './auth.config';
+import type { AuthCookieSpec } from './auth.config';
 import { AuthTokenService } from './auth-token.service';
 
 export class AuthCsrfException extends ForbiddenException {
@@ -24,14 +24,6 @@ export function readCookie(request: Request, name: string): string | undefined {
     return value.length > 0 ? value : undefined;
   }
   return undefined;
-}
-
-export function cookieSpecForRequest(request: Request, configured: AuthCookieSpec): AuthCookieSpec {
-  if (configured.secure) return configured;
-  if (!readCookie(request, configured.refreshName) && readCookie(request, DEV_SIGNIN_COOKIE_SPEC.refreshName)) {
-    return Object.freeze({ ...configured, ...DEV_SIGNIN_COOKIE_SPEC });
-  }
-  return configured;
 }
 
 export function requireCookieProof(
@@ -70,10 +62,6 @@ export function clearAuthCookies(response: Response, cookieSpec: AuthCookieSpec)
   const base = { sameSite: cookieSpec.sameSite, path: cookieSpec.path, secure: cookieSpec.secure, maxAge: 0 };
   response.cookie(cookieSpec.refreshName, '', { ...base, httpOnly: true });
   response.cookie(cookieSpec.csrfName, '', { ...base, httpOnly: false });
-  if (!cookieSpec.secure && cookieSpec.refreshName !== DEV_SIGNIN_COOKIE_SPEC.refreshName) {
-    response.cookie(DEV_SIGNIN_COOKIE_SPEC.refreshName, '', { ...base, httpOnly: true });
-    response.cookie(DEV_SIGNIN_COOKIE_SPEC.csrfName, '', { ...base, httpOnly: false });
-  }
 }
 
 function readHeader(request: Request, name: string): string | undefined {

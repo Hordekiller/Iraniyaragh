@@ -173,12 +173,7 @@ describe('SessionManagementController (revoke own session)', () => {
     expect(sessions.revokeUserSession).toHaveBeenCalledWith('user-1', 'session-current');
     expect(result).toEqual({ data: {} });
     const names = response.calls.map(call => call.name);
-    expect(names).toEqual([
-      'iranyaragh_customer_refresh',
-      'iranyaragh_customer_csrf',
-      'iranyaragh_dev_refresh',
-      'iranyaragh_dev_csrf',
-    ]);
+    expect(names).toEqual(['iranyaragh_customer_refresh', 'iranyaragh_customer_csrf']);
     expect(response.calls[0]).toMatchObject({
       name: 'iranyaragh_customer_refresh',
       value: '',
@@ -186,15 +181,6 @@ describe('SessionManagementController (revoke own session)', () => {
     });
     expect(response.calls[1]).toMatchObject({
       name: 'iranyaragh_customer_csrf',
-      options: { httpOnly: false, maxAge: 0 },
-    });
-    expect(response.calls[2]).toMatchObject({
-      name: 'iranyaragh_dev_refresh',
-      value: '',
-      options: { httpOnly: true, secure: false, sameSite: 'strict', path: '/', maxAge: 0 },
-    });
-    expect(response.calls[3]).toMatchObject({
-      name: 'iranyaragh_dev_csrf',
       options: { httpOnly: false, maxAge: 0 },
     });
   });
@@ -287,12 +273,7 @@ describe('SessionManagementController (logout all)', () => {
     expect(sessions.revokeAllSessions).toHaveBeenCalledWith('user-1');
     expect(result).toEqual({ data: {} });
     const names = response.calls.map(call => call.name);
-    expect(names).toEqual([
-      'iranyaragh_customer_refresh',
-      'iranyaragh_customer_csrf',
-      'iranyaragh_dev_refresh',
-      'iranyaragh_dev_csrf',
-    ]);
+    expect(names).toEqual(['iranyaragh_customer_refresh', 'iranyaragh_customer_csrf']);
     for (const call of response.calls) {
       expect(call.options).toMatchObject({ maxAge: 0 });
     }

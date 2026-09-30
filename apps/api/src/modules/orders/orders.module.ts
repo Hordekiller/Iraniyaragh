@@ -26,10 +26,16 @@ import { ShipmentDeliveryController } from './shipment-delivery.controller';
 import { ShipmentDeliveryService } from './shipment-delivery.service';
 import { ShipmentReadController } from './shipment-read.controller';
 import { ShipmentReadService } from './shipment-read.service';
+import { StaffOrderController } from './staff-order.controller';
+import { StaffOrderService } from './staff-order.service';
 
 @Module({
   imports: [AuditModule, AuthModule, InventoryModule],
   controllers: [
+    // Static staff sub-routes (`orders/admin/options`) must be registered before
+    // the parametric `orders/admin/:id` route in OrderReadController, otherwise
+    // Nest matches `/orders/admin/options` as an id and returns 404.
+    StaffOrderController,
     OrderReadController,
     OrderCommandController,
     FulfillmentCommandController,
@@ -47,6 +53,7 @@ import { ShipmentReadService } from './shipment-read.service';
     GuestCartService,
     GuestCartHttpService,
     CheckoutService,
+    StaffOrderService,
     OrderReadService,
     OrderCommandService,
     FulfillmentCommandService,

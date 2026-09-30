@@ -10,9 +10,7 @@ function config(key?: string): AuthRuntimeConfig {
     accessTokenTtlSeconds: 600,
     clockToleranceSeconds: 30,
     currentHashKey: { version: 1, secret: 'secret'.repeat(8) },
-    devLoginEnabled: false,
-    devCode: '',
-    ...(key ? { totpEncryptionKey: key } : {}),
+        ...(key ? { totpEncryptionKey: key } : {}),
     cookies: {
       refreshName: 'refresh',
       csrfName: 'csrf',

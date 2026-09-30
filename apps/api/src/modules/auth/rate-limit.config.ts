@@ -48,3 +48,43 @@ export const RATE_LIMIT_DEFINITIONS = Object.freeze({
 } as const);
 
 export type RateLimitDefinition = Readonly<{ limit: number; windowSeconds: number }>;
+
+export type RateLimitDimension = keyof typeof RATE_LIMIT_DEFINITIONS;
+
+/**
+ * Test-environment budget for the staff sign-in buckets only.
+ *
+ * The automated suite signs the *same* staff identity in from the *same* IP once
+ * per test, and each desktop/mobile project repeats it, so a run legitimately
+ * performs far more successful sign-ins than the anti-credential-stuffing
+ * thresholds above allow. Raising the ceiling here keeps AUTH_CONTRACT §9 intact
+ * for every real environment while letting the suite exercise the real login
+ * instead of a bypass. No other dimension is relaxed: customer OTP, guest cart
+ * and refresh abuse limits stay exactly as configured.
+ */
+const TEST_ONLY_STAFF_SIGN_IN_LIMITS = Object.freeze({
+  'staff-password:identifier': Object.freeze({ limit: 200, windowSeconds: 900 }),
+  'staff-password:ip': Object.freeze({ limit: 200, windowSeconds: 900 }),
+  'staff-mfa:ip': Object.freeze({ limit: 200, windowSeconds: 300 }),
+} as const satisfies Partial<Record<RateLimitDimension, RateLimitDefinition>>);
+
+
+
+/** Production values, always. */
+export const STAFF_SIGN_IN_RATE_LIMITS = Object.freeze({
+  'staff-password:identifier': RATE_LIMIT_DEFINITIONS['staff-password:identifier'],
+  'staff-password:ip': RATE_LIMIT_DEFINITIONS['staff-password:ip'],
+  'staff-mfa:ip': RATE_LIMIT_DEFINITIONS['staff-mfa:ip'],
+} as const);
+
+export function rateLimitDefinitionFor(
+  dimension: RateLimitDimension,
+  environment: string,
+): RateLimitDefinition {
+  if (environment === 'test' && dimension in TEST_ONLY_STAFF_SIGN_IN_LIMITS) {
+    return TEST_ONLY_STAFF_SIGN_IN_LIMITS[
+      dimension as keyof typeof TEST_ONLY_STAFF_SIGN_IN_LIMITS
+    ];
+  }
+  return RATE_LIMIT_DEFINITIONS[dimension];
+}

@@ -141,20 +141,6 @@
         ]
       }
     },
-    "/auth/dev/signin": {
-      "post": {
-        "operationId": "StaffAuthController_devSignIn",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "StaffAuth"
-        ]
-      }
-    },
     "/auth/me": {
       "get": {
         "operationId": "StaffAuthController_me",
@@ -7425,7 +7411,449 @@
         ]
       }
     },
+    "/orders/admin/options": {
+      "get": {
+        "operationId": "StaffOrderController_options",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Matching active customers or sellable variants. Customer mobiles stay masked and no catalog pricing is disclosed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "count"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "label",
+                              "detail"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "detail": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Masked mobile for a customer; null for a variant."
+                              }
+                            }
+                          }
+                        },
+                        "count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query was malformed."
+          },
+          "403": {
+            "description": "Authenticated, but the caller lacks the order-management permission or the required authentication level."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Search the customers and SKUs a staff order can be built from",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
     "/orders/admin": {
+      "post": {
+        "operationId": "StaffOrderController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque retry key, maximum 128 characters. Reuse the same key when retrying after a timeout; the stored response is replayed verbatim.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "lines",
+                  "address"
+                ],
+                "properties": {
+                  "customerId": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "description": "Existing staff-managed customer to bill. Omitting it is answered with GUEST_ORDER_UNSUPPORTED, because this slice only creates orders that belong to a customer."
+                  },
+                  "lines": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "variantId",
+                        "quantity"
+                      ],
+                      "properties": {
+                        "variantId": {
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1000
+                        }
+                      }
+                    }
+                  },
+                  "address": {
+                    "type": "object",
+                    "required": [
+                      "provinceCode",
+                      "city",
+                      "address",
+                      "postalCode",
+                      "recipient",
+                      "mobile"
+                    ],
+                    "properties": {
+                      "provinceCode": {
+                        "type": "string",
+                        "maxLength": 32
+                      },
+                      "city": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "address": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "maxLength": 32
+                      },
+                      "recipient": {
+                        "type": "string",
+                        "maxLength": 120
+                      },
+                      "mobile": {
+                        "type": "string",
+                        "maxLength": 32
+                      }
+                    }
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Operator note stored on the order for staff traceability."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reserved pending-payment order priced on the server. When the Idempotency-Key already exists the stored response is replayed verbatim and no additional order or reservation is created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "order",
+                        "replayed",
+                        "reservations"
+                      ],
+                      "properties": {
+                        "replayed": {
+                          "type": "boolean",
+                          "description": "True when the Idempotency-Key matched a previously created order."
+                        },
+                        "order": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "number",
+                            "status",
+                            "customer",
+                            "payment",
+                            "fulfillmentStatus",
+                            "itemCount",
+                            "totals",
+                            "version",
+                            "reservationExpiresAt",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "number": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "DRAFT",
+                                "PENDING_PAYMENT",
+                                "PAID",
+                                "CANCELLED",
+                                "RETURNED"
+                              ]
+                            },
+                            "customer": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "displayNameMasked",
+                                "mobileMasked"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "displayNameMasked": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "mobileMasked": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "payment": {
+                              "type": "object",
+                              "required": [
+                                "status",
+                                "attemptCount"
+                              ],
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "attemptCount": {
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            "fulfillmentStatus": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "PENDING",
+                                "PROCESSING",
+                                "READY_TO_SHIP",
+                                "SHIPPED",
+                                "DELIVERED",
+                                "RETURNED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "itemCount": {
+                              "type": "integer"
+                            },
+                            "totals": {
+                              "type": "object",
+                              "required": [
+                                "subtotal",
+                                "discount",
+                                "shipping",
+                                "grandTotal"
+                              ],
+                              "properties": {
+                                "subtotal": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "discount": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "shipping": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "grandTotal": {
+                                  "type": "object",
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "version": {
+                              "type": "integer",
+                              "description": "Optimistic-concurrency token for later staff commands on this order."
+                            },
+                            "reservationExpiresAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        },
+                        "reservations": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "variantId",
+                              "quantity",
+                              "expiresAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "variantId": {
+                                "type": "string"
+                              },
+                              "quantity": {
+                                "type": "integer"
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "403": {
+            "description": "Authenticated, but the caller lacks the order-management permission or the required authentication level."
+          },
+          "404": {
+            "description": "Customer or variant does not exist."
+          },
+          "409": {
+            "description": "Idempotency, stock or state conflict."
+          },
+          "422": {
+            "description": "The catalog price is unusable, or the submission asked for a guest order."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Create a staff-entered order for an existing customer",
+        "tags": [
+          "orders"
+        ]
+      },
       "get": {
         "operationId": "OrderReadController_listAdmin",
         "parameters": [

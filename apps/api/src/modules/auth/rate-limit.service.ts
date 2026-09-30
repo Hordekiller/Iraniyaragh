@@ -4,8 +4,9 @@ import { AuthHashService, type AuthHashContext } from './auth-hash.service';
 import {
   RATE_LIMITER_UNAVAILABLE,
   RATE_LIMIT_KEY_VERSION,
-  RATE_LIMIT_DEFINITIONS,
+  rateLimitDefinitionFor,
   type RateLimitDefinition,
+  type RateLimitDimension,
 } from './rate-limit.config';
 
 const INCREMENT_WINDOW_SCRIPT = `
@@ -40,8 +41,6 @@ export type RateLimitDecision = Readonly<{
   retryAfterSeconds: number;
   windowSeconds: number;
 }>;
-
-export type RateLimitDimension = keyof typeof RATE_LIMIT_DEFINITIONS;
 
 @Injectable()
 export class RateLimitService {
@@ -150,7 +149,7 @@ export class RateLimitService {
   }
 
   private definitionFor(dimension: RateLimitDimension): RateLimitDefinition {
-    const definition = RATE_LIMIT_DEFINITIONS[dimension];
+    const definition = rateLimitDefinitionFor(dimension, process.env.NODE_ENV ?? 'development');
     if (!definition) throw new TypeError(`Unknown rate-limit dimension: ${dimension}`);
     return definition;
   }

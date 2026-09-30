@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "auth:bootstrap": "node scripts/bootstrap-admin.mjs",
+    "auth:e2e-staff": "node scripts/provision-e2e-staff.mjs",
     "media:bucket": "node scripts/provision-media-bucket.mjs",
     "dev": "nest start --watch",
     "worker:media": "node dist/src/media-worker.js",

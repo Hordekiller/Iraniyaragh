@@ -1,4 +1,5 @@
-import { type ArgumentsHost, Catch, HttpException, HttpStatus } from '@nestjs/common';
+import { type ArgumentsHost, Catch, HttpException, HttpStatus, type OnModuleInit } from '@nestjs/common';
+import { RedactedLogger } from './redacted-logger';
 import type { Prisma } from '@prisma/client';
 import type { Response } from 'express';
 import { getRequestId } from './request-context';
@@ -60,7 +61,13 @@ function isPrismaError(exception: unknown): exception is Prisma.PrismaClientKnow
 }
 
 @Catch()
-export class AllExceptionsFilter {
+export class AllExceptionsFilter implements OnModuleInit {
+  private logger = new RedactedLogger();
+
+  onModuleInit(): void {
+    this.logger = new RedactedLogger();
+  }
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const response: Response = host.switchToHttp().getResponse();
     const requestId = getRequestId();
@@ -99,6 +106,23 @@ export class AllExceptionsFilter {
       );
       return;
     }
+
+    // An unhandled exception is invisible without this: the client only sees a
+    // generic 500 envelope, so operators had no way to see that a request failed
+    // or why. The message is redacted and the request id is the only identifier
+    // that leaves the process.
+    this.logger.event('error', {
+      event: 'http.unhandled_exception',
+      outcome: 'failure',
+      errorCode: 'INTERNAL_ERROR',
+      data: {
+        requestId,
+        reason: safeErrorMessage(
+          exception instanceof Error ? exception.message : String(exception),
+        ),
+        name: exception instanceof Error ? exception.name : typeof exception,
+      },
+    });
 
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
       buildErrorEnvelope({
