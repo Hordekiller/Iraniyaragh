@@ -1,5 +1,10 @@
 # Independent Agent Workstreams
 
+> Historical contributor allocation. The user set a new 2026-09-30 priority:
+> integrate merged capabilities into an MVP before VPS deployment. See
+> `MVP_INTEGRATION.md`. This file does not assign current UI/API ownership or
+> constrain the user's next instruction; preserve security and data integrity.
+
 Status: historical three-lane coordination design (last active review
 2026-09-18). Not an active work assignment. `SOLO_CRITICAL_PATH.md` supersedes
 its parallel execution and shared-hotspot schedule as of 2026-09-27.

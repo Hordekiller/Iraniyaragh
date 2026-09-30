@@ -1,8 +1,11 @@
 # Iraniyaragh Documentation Index
 
-Read these documents before implementing business-critical features.
+Current entry points: `MVP_INTEGRATION.md` for the user-directed assembly of
+merged capabilities, `PROJECT_STATUS.md` for verified capability state,
+`SECURITY.md`/`FOUNDATION.md` for safety invariants. Older sprint, ownership and
+parallel-agent plans below are retained for context, not current instructions.
 
-1. `FOUNDATION.md` — mandatory engineering rules and Definition of Done.
+1. `FOUNDATION.md` — existing architecture and money/inventory/order safety invariants.
 2. `ARCHITECTURE.md` — system shape, domains and scale path.
 3. `COMMERCE_AND_INVENTORY.md` — product, pricing, warehouse, stock and order rules.
 4. `SECURITY.md` — authentication, RBAC, audit, secrets and payment safety.
@@ -15,8 +18,8 @@ Read these documents before implementing business-critical features.
 9. `TESTING.md` — test layers, isolated database safety and local/CI commands.
 10. `ROADMAP.md` — release-level implementation order.
 11. `PROJECT_STATUS.md` — honest inventory of what exists today and known gaps.
-12. `DEVELOPMENT_PLAN.md` — MVP scope, two-person sprint backlog and release gates.
-13. `COLLABORATION.md` — ownership, GitHub flow, hand-offs and conflict prevention.
+12. `DEVELOPMENT_PLAN.md` — historical sprint scope and release-gate context.
+13. `COLLABORATION.md` — historical ownership and GitHub-flow reference.
 14. `PRODUCT_SPEC.md` — end-to-end functional and non-functional product specification.
 15. `PRODUCT_MEDIA_SPEC.md` — accepted image/video media contract and its M1–M5 runtime
     slices.
@@ -46,4 +49,5 @@ Read these documents before implementing business-critical features.
 30. `MEDIA_M5_EVIDENCE.md` — verified product-media M4 storefront gallery and M5
     publish-to-discovery evidence, plus the open contract gaps.
 
-When code and documentation disagree, stop and resolve the discrepancy. Do not silently bypass a documented invariant.
+The current user instruction decides scope and order. Never silently bypass a
+security, money, inventory or payment invariant because a roadmap is stale.

@@ -1,19 +1,19 @@
 # Iraniyaragh
 
-Startup-ready commerce and warehouse platform for Iranian hardware/fittings retail.
+Pre-release commerce and warehouse platform for Iranian hardware/fittings retail.
 
 > Status: pre-release commerce integration. Auth, live Catalog/Media discovery,
 > protected Inventory HTTP, an authenticated server Cart API, Checkout, Order
 > application, Zarinpal Payment with audited manual refund, Fulfillment pick /
 > dispatch / tracking, the Admin inventory operations, and the merged Supplier,
 > Purchase Order, Purchase Receiving, Audit-log and Shipments read surfaces are
-> implemented. What is still missing is external
-> acceptance and operations, not core commerce code: real SMS.ir and Zarinpal
-> acceptance, Customers Admin, stocktake count, Returns, customer credit
-> accounts (#336), reports/roles Admin surfaces, SEO/content routes, production
-> deploy, observability, backup/restore/rollback and full UAT. See
-> [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for what is actually merged
-> and issue #363 for the current execution order.
+> implemented. Customers Admin is also merged. Staff-created Orders, Stocktake,
+> Returns, customer credit accounts (#336), reports/roles, SEO/content routes,
+> real SMS.ir and Zarinpal acceptance, production operations and full UAT are
+> still open. The current user priority is to integrate what already exists,
+> with VPS deployment later. See [`docs/MVP_INTEGRATION.md`](docs/MVP_INTEGRATION.md)
+> for the exact scope/gaps and [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)
+> for merged evidence; historical issue #363 is not the current instruction.
 
 ## Workspace
 
@@ -65,21 +65,14 @@ pnpm e2e
 - no business logic in controllers/UI
 - Docker-first deployability
 
-Start with `docs/README.md`. The engineering rules in `docs/FOUNDATION.md` are mandatory for future business-critical development.
+Start with [`docs/MVP_INTEGRATION.md`](docs/MVP_INTEGRATION.md) and
+[`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md). The standing agent rules
+are limited to security/data safety in [`AGENTS.md`](AGENTS.md); domain
+invariants in `docs/FOUNDATION.md` still protect existing business records.
 
 ## Working on the project
 
-This repository is designed for a two-developer team. Before opening a branch:
-
-1. Read [`CONTRIBUTING.md`](CONTRIBUTING.md).
-2. Pick or create a GitHub issue with acceptance criteria.
-3. Check the ownership and hand-off rules in [`docs/COLLABORATION.md`](docs/COLLABORATION.md).
-4. Follow the sprint sequence in [`docs/DEVELOPMENT_PLAN.md`](docs/DEVELOPMENT_PLAN.md).
-
-For the complete product behavior and work breakdown, also read
-[`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) and
-[`docs/EXECUTION_BACKLOG.md`](docs/EXECUTION_BACKLOG.md). Team identities and the
-current proposed ownership split are recorded in [`docs/TEAM.md`](docs/TEAM.md).
-
-All changes go through pull requests. Direct pushes to `main` are reserved for
-repository recovery only.
+The user sets current product and UI priorities. [`CONTRIBUTING.md`](CONTRIBUTING.md)
+has local setup notes; `docs/COLLABORATION.md`, `docs/DEVELOPMENT_PLAN.md`
+and earlier sprint/agent plans are historical references, not current work rules.
+GitHub's protected-branch checks still apply to repository changes.

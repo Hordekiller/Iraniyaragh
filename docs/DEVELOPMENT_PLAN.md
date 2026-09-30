@@ -1,13 +1,18 @@
 # Detailed Development Plan
 
+> Historical planning reference. As of 2026-09-30, the active user direction is
+> integration of existing Web/Admin/API capabilities and safe non-production
+> demo data before VPS deployment. `MVP_INTEGRATION.md` is the current execution
+> checklist. Sprint durations, team allocations and feature order below are not
+> standing rules.
+
 Last reviewed: 2026-09-29
 
-Current delivery order and capacity are defined by `SOLO_CRITICAL_PATH.md`.
-Receiving API #343 merged in PR #344 at `3a60f8c`; Admin receipt workflow
-#345 is the only active product slice and is not merged. The two-developer
-capacity estimates below are historical, not an authorization to implement
-Stocktake, Returns or credit in parallel with #345. See `PROJECT_STATUS.md`
-for current code/acceptance state and `PURCHASE_RECEIVING_V1.md` for boundaries.
+The previous delivery order and capacity were recorded in
+`SOLO_CRITICAL_PATH.md`. Receiving API #343 and Admin receipt workflow #345
+have both merged. The two-developer estimates and queue below are historical;
+see `PROJECT_STATUS.md` for current code/acceptance state and
+`MVP_INTEGRATION.md` for the present user-directed integration work.
 As of PR #327/#326, essential paid/dispatch/delivery SMS attempts and Admin
 Warehouse/Location/Balance/Movement/Adjustment/Reservation/Transfer operations
 are merged; #261 is closed. Real SMS.ir/provider acceptance (#114) and a

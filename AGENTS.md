@@ -1,76 +1,31 @@
-# Repository Instructions for Coding Agents
+# Security and Data-Safety Rules for Coding Agents
 
-These rules apply to all automated coding agents working in this repository.
+These are the repository's standing agent rules. Product scope, priority, UI
+direction and delivery workflow come from the user's current instructions, not
+from old sprint or agent-allocation plans.
 
-## Read first
+- Never commit or disclose credentials, OTPs, tokens, real customer data or
+  production database/object-storage exports. Use environment secrets and
+  redact diagnostic evidence.
+- Enforce authentication and current permissions on the server for every
+  protected action. UI hiding is not authorization. Preserve CSRF, rate limits,
+  session revocation and audit redaction.
+- Preserve money and inventory correctness: integer monetary units, immutable
+  stock/receivable movements, transactional state changes, verified payment
+  callbacks, idempotent retries, and explicit order/payment/fulfillment states.
+  Never fabricate a paid payment or successful provider response.
+- Do not turn a failed or uncertain request into a success message. Reconcile
+  external payment, SMS and stock outcomes before claiming completion.
+- Demo/fixture identities, products, prices and stock must be clearly labelled
+  and isolated from production sales. Never run development seed or fixture
+  authentication against the live sales database.
+- Keep production data recoverable: use forward database migrations; do not
+  rewrite an applied migration or delete financial/audit history. Verify a
+  backup by restoring it before relying on it.
+- A build or deployed page is not evidence that real SMS, Zarinpal, storage or
+  end-to-end sales have been accepted. Do not enable live customer payments
+  until the controlled acceptance and reconciliation gates pass.
 
-Before business-critical changes, read:
-
-- `docs/FOUNDATION.md`
-- `docs/PROJECT_STATUS.md`
-- `docs/DEVELOPMENT_PLAN.md`
-- the relevant domain/security/API document
-
-Treat documented invariants as requirements. If code and docs disagree, report and
-resolve the discrepancy; do not silently choose one.
-
-## Work boundaries
-
-- Work from one scoped issue/goal and preserve unrelated user changes.
-- Do not introduce microservices, a new framework, or broad dependency changes
-  without an accepted ADR.
-- Keep business logic out of controllers and UI components.
-- Never expose Prisma models as public API contracts.
-- Never bypass inventory ledger, order/payment state machines, permission checks,
-  audit requirements or idempotency rules for convenience.
-- Do not generate or commit secrets, real personal data or production dumps.
-
-## Single-developer delivery
-
-- Follow `docs/SOLO_CRITICAL_PATH.md`. Complete one product slice, its full
-  affected-package checks, review and merge before starting the next slice.
-- Keep at most one product PR open. Before editing shared hotspots
-  (`schema.prisma`, migrations, root configs, shared contracts, OpenAPI and
-  navigation), confirm the previous product PR is merged and check existing
-  worktree ownership. Preserve unrelated local work.
-- Do not edit already-shared migrations; add a forward migration.
-- Keep each PR small enough for reliable review.
-
-## Verification
-
-Run the narrowest relevant checks during development and the full affected package
-checks before completion. Critical inventory/order/payment/auth changes require
-failure-path, authorization, idempotency and concurrency coverage as applicable.
-
-CI (GitHub Actions) runs the same commands below with `CI=true`, which also enables
-Vitest coverage gates (imported-code baselines; thresholds live in each package's
-`vitest.config.ts`). Keep local runs fast: run without `CI=true` for plain unit
-tests, and use `CI=true` exactly like the pipeline when you need the coverage gate.
-
-```bash
-# All packages: lint + build + typecheck (mirrors the CI "check" job)
-pnpm lint
-pnpm build
-
-# Per-package unit + integration tests (mirrors the CI "test" job)
-pnpm --filter @iranyaragh/api test        # requires the test Postgres (see below)
-pnpm --filter @iranyaragh/web test
-pnpm --filter @iranyaragh/admin test
-
-# CI-equivalent: enforce coverage thresholds within a single package
-CI=true pnpm --filter @iranyaragh/web test
-
-# Agents: run the narrowest package test for the package you touched first,
-# then the full affected package checks before finishing.
-```
-
-Locally, the API integration tests need the test database and matching env:
-`NODE_ENV=test` and `DATABASE_URL` ending in `_test`. Bring up the containers with:
-
-```bash
-docker compose -f infrastructure/docker/docker-compose.yml \
-  -f infrastructure/docker/docker-compose.override.yml up -d postgres
-```
-
-Update docs and `docs/PROJECT_STATUS.md` when actual capabilities or known gaps
-change. State clearly what was verified and what could not be verified.
+`docs/SECURITY.md` and the domain invariants in `docs/FOUNDATION.md` describe
+the existing system behavior. Historical roadmaps are context, not standing
+instructions to agents.

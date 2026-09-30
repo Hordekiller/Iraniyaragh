@@ -1,12 +1,18 @@
-# V1 Critical Path
+# Historical V1 Critical Path
 
-> **Superseded 2026-09-29 for scheduling.** V1 now runs as **two parallel
-> lanes**. The authoritative tracker is **issue #363** (V1 FINAL EXECUTION).
+> Superseded for active scheduling on 2026-09-30 by the user's instruction to
+> integrate the capabilities already merged into a truthful MVP first, with VPS
+> deployment later. See `MVP_INTEGRATION.md`. Process/ownership rules below are
+> historical, not standing instructions. Security and data-safety rules remain
+> in `AGENTS.md`, `SECURITY.md` and `FOUNDATION.md`.
+
+> **Historical 2026-09-29 scheduling note.** V1 was then planned as **two parallel
+> lanes**. Its tracker was **issue #363** (V1 FINAL EXECUTION).
 > `AGENT_WORKSTREAMS.md` holds the ownership split. This document keeps the
 > domain invariants, release gates and acceptance requirements. Read
 > `PROJECT_STATUS.md` for what is actually merged, and #363 for what is next.
 
-Effective: 2026-09-29. This document supersedes parallel-lane schedules in
+Historical effective date: 2026-09-29. This document then superseded schedules in
 `DEVELOPMENT_PLAN.md`, `EXECUTION_STATUS.md`, `V1_MASTER_PLAN.md` and
 `AGENT_WORKSTREAMS.md`. Those documents retain domain and release acceptance
 requirements. `PROJECT_STATUS.md` remains the factual capability record.
