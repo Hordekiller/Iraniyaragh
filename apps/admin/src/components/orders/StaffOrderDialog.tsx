@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { Plus, Trash2, X } from 'lucide-react';
 import { ApiClientError, ApiNetworkError } from '@/lib/api/client';
+import { randomUuid } from '@/lib/crypto/random-uuid';
 import { createStaffOrder } from '@/lib/orders/orders-api';
 import type { StaffOrderOption } from '@iranyaragh/contracts';
 import { StaffOrderOptionPicker } from './StaffOrderOptionPicker';
@@ -58,15 +59,16 @@ const PROVINCES = [
 ];
 
 function newLine(): StaffOrderLineDraft {
-  return { key: Math.random().toString(36).slice(2), variant: null, quantity: '1' };
+  return { key: randomUuid(), variant: null, quantity: '1' };
 }
 
-/** A UUID keeps the retry key stable per attempt and unique per order. */
+/**
+ * A UUID keeps the retry key stable per attempt and unique per order. The API
+ * deduplicates on this value, so it has to come from a cryptographic source: a
+ * predictable key could let one order swallow another order's retry.
+ */
 function newIdempotencyKey(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-  return `staff-order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `staff-order-${randomUuid()}`;
 }
 
 export type StaffOrderDialogProps = {
