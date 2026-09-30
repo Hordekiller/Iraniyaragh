@@ -112,6 +112,18 @@ E2E_STAFF_EMAIL=e2e-admin@iranyaragh.test \
 test run: the suite derives each current code from it with the same `otplib`
 release the API verifies with. See ADR-0020. See
 `docs/MEDIA_M5_EVIDENCE.md` for the verified matrix and open gaps.
+### Never rebuild under the live E2E servers
+
+The Admin (and Web) servers serve their `.next`/`dist` output from disk while
+the suite runs. Rebuilding (`pnpm build`, even at the repo root) while a server
+is up replaces those files mid-run: chunk requests fail, the page never
+hydrates, and every sign-in fails identically with empty fields and no failed
+API call — which looks like an auth bug but is a broken server. This exact
+failure mode was observed and diagnosed from the Playwright network trace.
+Rebuild only with the suite's build environment (`NEXT_PUBLIC_API_BASE_URL`,
+`NEXT_PUBLIC_MEDIA_ORIGIN`, `--mode fixture-e2e` for Web), then restart the
+servers before running any spec.
+
 ### One sign-in per TOTP step, and why the suite is serialised
 
 `TotpCredential.lastAcceptedStep` is advanced with a compare-and-swap, so the API

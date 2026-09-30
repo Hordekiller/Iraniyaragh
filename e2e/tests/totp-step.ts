@@ -1,6 +1,6 @@
-import { readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 
 const TOTP_STEP_MS = 30_000;
 const FRESH_WINDOW_MS = 3_000;
@@ -8,15 +8,34 @@ const FRESH_WINDOW_MS = 3_000;
 /**
  * Playwright re-imports the module registry for every test file *and* every
  * project, so an in-memory counter cannot coordinate sign-ins across the
- * desktop and mobile runs. The reservation therefore lives in the OS temp
- * directory, where every test process in the run can see it and the repository
- * stays clean.
+ * desktop and mobile runs. The reservation therefore lives in one stable file
+ * shared by every test process and every back-to-back invocation.
+ *
+ * The file must never live at a predictable path inside the shared
+ * world-writable `/tmp`: another local user could pre-create a symlink there
+ * and have our write land in their target (CodeQL `js/insecure-temporary-file`
+ * flags exactly that pattern). Instead it lives under the current user's
+ * private cache directory (`XDG_CACHE_HOME`, default `~/.cache`), where no
+ * other local user can plant anything; the leaf is still verified to be a real
+ * directory, and every write goes through an atomic rename, so even a hostile
+ * `XDG_CACHE_HOME` cannot redirect the write into a symlink target. Stale
+ * content is self-healing: step numbers grow with time, so an old reservation
+ * is simply smaller than the current step and ignored. The repository itself
+ * stays clean because nothing is written next to the sources.
  */
-const RESERVATION_FILE = join(tmpdir(), 'iranyaragh-e2e-totp-step.json');
+function reservationPaths(): { target: string; staging: string } {
+  const cacheBase = process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache');
+  const dir = join(cacheBase, 'iranyaragh-e2e');
+  mkdirSync(dir, { recursive: true });
+  if (!lstatSync(dir).isDirectory()) {
+    throw new Error(`Refusing to use ${dir} as a TOTP reservation directory: not a real directory.`);
+  }
+  return { target: join(dir, 'totp-step.json'), staging: join(dir, `totp-step.${process.pid}.json`) };
+}
 
 function readReservedStep(): number | null {
   try {
-    const parsed = JSON.parse(readFileSync(RESERVATION_FILE, 'utf8')) as { step?: unknown };
+    const parsed = JSON.parse(readFileSync(reservationPaths().target, 'utf8')) as { step?: unknown };
     return typeof parsed.step === 'number' && Number.isSafeInteger(parsed.step) ? parsed.step : null;
   } catch {
     return null;
@@ -24,7 +43,9 @@ function readReservedStep(): number | null {
 }
 
 function writeReservedStep(step: number): void {
-  writeFileSync(RESERVATION_FILE, JSON.stringify({ step }));
+  const { target, staging } = reservationPaths();
+  writeFileSync(staging, JSON.stringify({ step }));
+  renameSync(staging, target);
 }
 
 /**
