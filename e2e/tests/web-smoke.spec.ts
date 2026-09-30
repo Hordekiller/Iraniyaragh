@@ -26,8 +26,14 @@ test.describe('web: storefront shell', () => {
     await expect(page.getByRole('heading', { name: 'دسته‌بندی کالاها' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'کالاهای فروشگاه' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'خبرنامه هنوز فعال نیست' })).toBeVisible();
-    await expect(page.getByText(/سایت کابینت‌سازان، بلوک صنعت ۳/)).toBeVisible();
+
+    // Unconfirmed contact and business claims must not reach the storefront.
+    // The e2e build sets no `VITE_SITE_*` values, so the shell renders the
+    // "not published yet" note instead of a placeholder address or number.
+    await expect(page.getByText('اطلاعات تماس فروشگاه هنوز منتشر نشده است.')).toBeVisible();
+    await expect(page.getByText(/کابینت‌سازان/)).toHaveCount(0);
     await expect(page.getByText(/ارسال رایگان برای خرید بالای/)).toHaveCount(0);
+    await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
 
     await network.assertNone();
   });
@@ -107,9 +113,9 @@ test.describe('web: storefront shell', () => {
     await page.goto('/');
 
     await expect(page.getByRole('button', { name: 'دسته‌بندی‌ها' })).toBeVisible();
-    const support = page.getByRole('link', { name: 'تماس با فروشگاه' });
-    await expect(support).toBeVisible();
-    await expect(support).toHaveAttribute('href', /^tel:/);
+    // No phone is configured for this build, so the bottom nav must not offer a
+    // contact affordance that would dial a number nobody has confirmed.
+    await expect(page.getByRole('link', { name: 'تماس با فروشگاه' })).toHaveCount(0);
 
     await tap(page.getByRole('button', { name: 'دسته‌بندی‌ها' }));
     await expect(page.locator('section#categories')).toBeInViewport();
