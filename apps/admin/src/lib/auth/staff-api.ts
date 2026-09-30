@@ -20,6 +20,8 @@ export type StaffAuthErrorCode =
   | 'RATE_LIMITED'
   | 'VALIDATION_ERROR'
   | 'UPSTREAM_UNAVAILABLE'
+  /** A concurrent write on the same account lost the race; retrying succeeds. */
+  | 'CONFLICT'
   | 'INTERNAL_ERROR';
 
 /**

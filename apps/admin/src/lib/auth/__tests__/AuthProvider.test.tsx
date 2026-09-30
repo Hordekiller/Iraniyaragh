@@ -11,21 +11,6 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
   } as unknown as Response;
 }
 
-function TestPanel() {
-  const { isAuthenticated, signIn, signOut, user } = useAuth();
-  return (
-    <div>
-      <span data-testid="authed">{isAuthenticated ? 'yes' : 'no'}</span>
-      <span data-testid="email">{user?.userId ?? 'none'}</span>
-      <button type="button" onClick={() => signIn('dev-code')}>
-        signin
-      </button>
-      <button type="button" onClick={() => signOut()}>
-        signout
-      </button>
-    </div>
-  );
-}
 
 const staffPrincipal = {
   userId: 'ops@iranyaragh.local',
@@ -55,7 +40,7 @@ function AdoptPanel() {
 
 describe('AuthProvider', () => {
   afterEach(() => {
-    for (const name of ['__Host-iranyaragh_csrf', 'iranyaragh_dev_csrf']) {
+    for (const name of ['__Host-iranyaragh_csrf', 'iranyaragh_customer_csrf']) {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
     }
     vi.unstubAllGlobals();
@@ -65,85 +50,12 @@ describe('AuthProvider', () => {
   it('starts unauthenticated', () => {
     render(
       <AuthProvider>
-        <TestPanel />
+        <AdoptPanel />
       </AuthProvider>,
     );
     expect(screen.getByTestId('authed')).toHaveTextContent('no');
   });
 
-  it('sets the user and authenticates after a successful sign-in', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        jsonResponse({
-          data: {
-            accessToken: 'at-1',
-            principal: {
-              userId: 'dev-admin',
-              sessionId: 's-1',
-              authenticationLevel: 'STAFF_MFA',
-              permissions: ['catalog.read'],
-            },
-          },
-        }),
-      ),
-    );
-
-    render(
-      <AuthProvider>
-        <TestPanel />
-      </AuthProvider>,
-    );
-
-    fireEvent.click(screen.getByText('signin'));
-    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('yes'));
-    expect(screen.getByTestId('email')).toHaveTextContent('dev-admin');
-  });
-
-  it('remains unauthenticated on a failed sign-in', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        async () =>
-          jsonResponse(
-            { code: 'AUTH_INVALID_CREDENTIALS', message: 'invalid', requestId: 'r', statusCode: 401 },
-            false,
-            401,
-          ),
-      ),
-    );
-
-    render(
-      <AuthProvider>
-        <TestPanel />
-      </AuthProvider>,
-    );
-
-    fireEvent.click(screen.getByText('signin'));
-    await screen.findByTestId('authed');
-    expect(screen.getByTestId('authed')).toHaveTextContent('no');
-  });
-
-  it('clears the user on sign-out', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ data: { accessToken: 'at-1', principal: { userId: 'u', sessionId: 's', authenticationLevel: 'STAFF_MFA', permissions: [] } } })),
-    );
-
-    render(
-      <AuthProvider>
-        <TestPanel />
-      </AuthProvider>,
-    );
-
-    fireEvent.click(screen.getByText('signin'));
-    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('yes'));
-
-    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
-    fireEvent.click(screen.getByText('signout'));
-    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
-    expect(screen.getByTestId('email')).toHaveTextContent('none');
-  });
 
   it('adopts a staff-verified session: sets the user and stores the token for apiFetch', () => {
     render(
@@ -176,7 +88,7 @@ describe('AuthProvider', () => {
   });
 
   it('sign-out sends /auth/logout with the double-submit CSRF proof so the server session is revoked', async () => {
-    document.cookie = 'iranyaragh_dev_csrf=csrf-tok; path=/';
+    document.cookie = 'iranyaragh_customer_csrf=csrf-tok; path=/';
     const fetchMock = vi.fn(async () => jsonResponse({ data: {} }));
     vi.stubGlobal('fetch', fetchMock);
     render(

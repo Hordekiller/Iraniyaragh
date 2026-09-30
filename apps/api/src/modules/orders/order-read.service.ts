@@ -37,7 +37,7 @@ import {
 
 const HISTORY_LIMIT = 100;
 
-const customerListSelect = {
+export const customerListSelect = {
   id: true,
   number: true,
   status: true,
@@ -57,8 +57,9 @@ const customerListSelect = {
   fulfillment: { select: { status: true } },
 } satisfies Prisma.OrderSelect;
 
-const adminListSelect = {
+export const adminListSelect = {
   ...customerListSelect,
+  version: true,
   customer: {
     select: { id: true, firstName: true, lastName: true, mobile: true },
   },
@@ -110,10 +111,10 @@ const adminDetailSelect = {
   },
 } satisfies Prisma.OrderSelect;
 
-type CustomerListRow = Prisma.OrderGetPayload<{
+export type CustomerListRow = Prisma.OrderGetPayload<{
   select: typeof customerListSelect;
 }>;
-type AdminListRow = Prisma.OrderGetPayload<{ select: typeof adminListSelect }>;
+export type AdminListRow = Prisma.OrderGetPayload<{ select: typeof adminListSelect }>;
 type CustomerDetailRow = Prisma.OrderGetPayload<{
   select: typeof customerDetailSelect;
 }>;
@@ -373,7 +374,7 @@ function listMeta(page: number, perPage: number, total: number): OrderListMeta {
   };
 }
 
-function orderSummary(row: CustomerListRow): OrderSummary {
+export function orderSummary(row: CustomerListRow): OrderSummary {
   return {
     id: row.id,
     number: row.number,
@@ -396,10 +397,11 @@ function orderSummary(row: CustomerListRow): OrderSummary {
   };
 }
 
-function adminOrderSummary(row: AdminListRow): AdminOrderSummary {
+export function adminOrderSummary(row: AdminListRow): AdminOrderSummary {
   return {
     ...orderSummary(row),
     customer: adminCustomer(row.customer),
+    version: row.version,
   };
 }
 

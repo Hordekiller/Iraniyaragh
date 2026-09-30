@@ -53,8 +53,6 @@ const PERMISSIONS = [
   name,
 }));
 
-const DEV_ADMIN_EMAIL = "dev-admin@iranyaragh.local";
-
 const prisma = new PrismaClient();
 
 async function seedRbacBaseline() {
@@ -144,90 +142,6 @@ async function seedRbacBaseline() {
       roleCount: 1,
       rolePermissionCount: permissions.length,
     };
-  });
-}
-
-async function seedDevAdmin() {
-  return prisma.$transaction(async (transaction) => {
-    const role = await transaction.role.findUnique({
-      where: { key: SYSTEM_ADMIN_ROLE.key },
-      select: { id: true },
-    });
-    if (!role) {
-      throw new Error("System admin role is missing before dev-admin seeding.");
-    }
-
-    const seededNow = new Date();
-    const user = await transaction.user.upsert({
-      where: { email: DEV_ADMIN_EMAIL },
-      update: {
-        status: "ACTIVE",
-        firstName: "Dev",
-        lastName: "Administrator",
-        isEmailVerified: true,
-        emailVerifiedAt: seededNow,
-        updatedAt: seededNow,
-      },
-      create: {
-        id: "seed_dev_admin",
-        email: DEV_ADMIN_EMAIL,
-        firstName: "Dev",
-        lastName: "Administrator",
-        status: "ACTIVE",
-        isEmailVerified: true,
-        emailVerifiedAt: seededNow,
-        createdAt: seededNow,
-        updatedAt: seededNow,
-        passwordHash: null,
-      },
-    });
-
-    await transaction.userRole.upsert({
-      where: {
-        userId_roleId: {
-          userId: user.id,
-          roleId: role.id,
-        },
-      },
-      update: {
-        revokedAt: null,
-        revokedById: null,
-        revokeReason: null,
-      },
-      create: {
-        id: "seed_dev_admin_role",
-        userId: user.id,
-        roleId: role.id,
-        assignedById: null,
-      },
-    });
-
-    await transaction.auditLog.upsert({
-      where: { id: "seed_audit_dev_admin" },
-      update: {
-        action: "seed.dev.admin",
-        entityId: user.id,
-        entityType: "User",
-        metadata: {
-          subject: "seed-dev-admin",
-          roleKey: SYSTEM_ADMIN_ROLE.key,
-          source: "deterministic-development-seed",
-        },
-      },
-      create: {
-        id: "seed_audit_dev_admin",
-        action: "seed.dev.admin",
-        entityId: user.id,
-        entityType: "User",
-        metadata: {
-          subject: "seed-dev-admin",
-          roleKey: SYSTEM_ADMIN_ROLE.key,
-          source: "deterministic-development-seed",
-        },
-      },
-    });
-
-    return { userId: user.id, roleId: role.id };
   });
 }
 
@@ -475,14 +389,9 @@ try {
   console.log(
     `Seeded RBAC baseline: ${result.permissionCount} permissions, ${result.roleCount} role, ${result.rolePermissionCount} grants.`,
   );
-  const configuredDevCode =
-    typeof process.env.AUTH_DEV_CODE === "string" && process.env.AUTH_DEV_CODE.trim().length > 0;
-  if (configuredDevCode) {
-    const devAdmin = await seedDevAdmin();
-    console.log(`Seeded dev admin user (${devAdmin.userId}) with ${SYSTEM_ADMIN_ROLE.key} role.`);
-  } else {
-    console.log("AUTH_DEV_CODE not set; skipping the development admin user.");
-  }
+  console.log(
+    "No privileged user is seeded. Provision the first administrator explicitly (apps/api auth:bootstrap for operators, provision-e2e-staff for automated tests).",
+  );
   const demoCatalog = await seedDemoCatalog();
   console.log(
     `Seeded demo catalog: product ${demoCatalog.productId}, variant ${demoCatalog.variantId}, warehouse ${demoCatalog.warehouseId}, location ${demoCatalog.locationId}.`,

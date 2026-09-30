@@ -21,7 +21,6 @@ export type EnvironmentVariables = {
   AUTH_HASH_SECRET: string;
   AUTH_JWT_ISSUER: string;
   JWT_ACCESS_SECRET: string;
-  AUTH_DEV_CODE?: string;
   AUTH_TOTP_ENCRYPTION_KEY?: string;
   SMS_IR_API_KEY?: string;
   SMS_IR_OTP_TEMPLATE_ID?: number;
@@ -428,7 +427,6 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     AUTH_HASH_SECRET: hashSecret,
     AUTH_JWT_ISSUER: parseAuthIssuer(config.AUTH_JWT_ISSUER),
     JWT_ACCESS_SECRET: accessSecret,
-    AUTH_DEV_CODE: optionalSecretString(config.AUTH_DEV_CODE, 'AUTH_DEV_CODE'),
     AUTH_TOTP_ENCRYPTION_KEY: totpEncryptionKey,
     SMS_IR_API_KEY: smsApiKey,
     SMS_IR_OTP_TEMPLATE_ID: smsTemplateId,

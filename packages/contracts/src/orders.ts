@@ -79,6 +79,12 @@ export type AdminOrderAddress = {
 
 export type AdminOrderSummary = OrderSummary & {
   customer: AdminOrderCustomer;
+  /**
+   * Optimistic-concurrency token for staff commands on this order. It is
+   * deliberately absent from the customer-facing OrderSummary: customers never
+   * send it, so it is not part of their contract.
+   */
+  version: number;
 };
 
 export type OrderLineSnapshot = {
@@ -206,3 +212,69 @@ export type OrderCommandResult = {
 export type OrderCancelResponse = ApiSuccess<{ order: OrderCommandResult }>;
 
 export type OrderExpiryRunResponse = ApiSuccess<{ expired: number }>;
+
+/**
+ * One requested staff-order line. The client sends only identity and quantity;
+ * every amount is priced server-side from the catalog sale price.
+ */
+export type StaffOrderLineInput = {
+  variantId: string;
+  quantity: number;
+};
+
+export type StaffOrderCreateInput = {
+  /**
+   * Required in practice, optional in the type so that a guest submission
+   * reaches the domain rule and is answered with `GUEST_ORDER_UNSUPPORTED`
+   * instead of failing shape validation.
+   */
+  customerId?: string;
+  lines: StaffOrderLineInput[];
+  address: CheckoutAddress;
+  /**
+   * Free-text note recorded on the order for staff traceability.
+   *
+   * There is deliberately no client-supplied price, discount or total field:
+   * every monetary value on a staff order is derived on the server from the
+   * catalog sale price, so an operator cannot invent a number that the order
+   * state machine never agreed to.
+   */
+  note?: string;
+};
+
+export type StaffOrderOptionKind = 'customer' | 'variant';
+
+export type StaffOrderOption = {
+  id: string;
+  label: string;
+  /**
+   * Secondary line for the operator. For a customer this is the masked mobile
+   * only: a caller who holds order permissions must not be handed the full
+   * number, which is gated behind the customer-record permission.
+   */
+  detail: string | null;
+};
+
+export type StaffOrderOptionsResponse = ApiSuccess<{
+  items: StaffOrderOption[];
+  count: number;
+}>;
+
+export type StaffOrderReservation = {
+  id: string;
+  variantId: string;
+  quantity: number;
+  expiresAt: string;
+};
+
+export type StaffOrderResult = {
+  order: AdminOrderSummary;
+  /** True when the Idempotency-Key matched a previously created order. */
+  replayed: boolean;
+};
+
+export type StaffOrderCreateResponse = ApiSuccess<{
+  order: AdminOrderSummary;
+  replayed: boolean;
+  reservations: StaffOrderReservation[];
+}>;

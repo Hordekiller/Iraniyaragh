@@ -11,8 +11,15 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 2 : 0,
-  workers: CI ? 1 : undefined,
-  timeout: 30_000,
+  // Always one worker, locally and in CI. Every browser suite signs in as the same
+  // real staff identity, and a password challenge invalidates the previous one,
+  // so two sign-ins in parallel would leave the slower test with a dead
+  // challenge. Serialising the suite is what lets the tests exercise the real
+  // single-active-challenge security contract instead of weakening it.
+  workers: 1,
+  // A real sign-in spends up to one TOTP step (30s) waiting for an unused code
+  // window, so the per-test budget cannot stay at the interaction-level default.
+  timeout: 120_000,
   expect: { timeout: 10_000 },
   outputDir: 'test-results',
   reporter: [

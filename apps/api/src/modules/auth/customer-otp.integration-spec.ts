@@ -22,8 +22,6 @@ const runtimeConfig: AuthRuntimeConfig = Object.freeze({
     version: 1,
     secret: 'integration-previous-hash-secret-32-bytes-minimum',
   }),
-  devLoginEnabled: false,
-  devCode: '',
   cookies: Object.freeze({
     refreshName: '__Host-iranyaragh_refresh',
     csrfName: '__Host-iranyaragh_csrf',

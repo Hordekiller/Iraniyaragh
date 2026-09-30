@@ -11,7 +11,7 @@ import { ApiClientError, ApiNetworkError, apiFetch } from '@/lib/api/client';
 import { StaffAuthFixtureClient } from './staff-fixture';
 import { isFixtureAuthEnabled } from './staff-fixture-guard';
 
-const CSRF_COOKIE_NAMES = new Set(['__Host-iranyaragh_csrf', 'iranyaragh_dev_csrf']);
+const CSRF_COOKIE_NAMES = new Set(['__Host-iranyaragh_csrf', 'iranyaragh_customer_csrf']);
 
 function readCsrfCookie(): string | null {
   if (typeof document === 'undefined') return null;

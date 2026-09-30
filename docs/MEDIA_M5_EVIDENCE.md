@@ -36,7 +36,8 @@ the last section and were intentionally reported rather than changed in code.
 against a real API, the media worker, Redis/BullMQ and a live MinIO bucket:
 
 ```bash
-NODE_ENV=test AUTH_DEV_CODE=dev-admin-code-123 \
+NODE_ENV=test E2E_STAFF_EMAIL=e2e-admin@iranyaragh.test \
+  E2E_STAFF_PASSWORD=e2e-staff-password-2026 E2E_STAFF_TOTP_SECRET=<base32 secret> \
   pnpm --filter @iranyaragh/e2e exec playwright test \
   tests/api-media-publish-to-discovery.spec.ts --project=api-http
 # 6 passed (6.1s)

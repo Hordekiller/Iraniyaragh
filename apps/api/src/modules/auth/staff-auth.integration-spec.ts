@@ -22,8 +22,6 @@ const runtimeConfig: AuthRuntimeConfig = {
   accessTokenTtlSeconds: 600,
   clockToleranceSeconds: 30,
   currentHashKey: { version: 1, secret: 'integration-hash-secret-32-bytes-minimum' },
-  devLoginEnabled: false,
-  devCode: '',
   cookies: { refreshName: 'refresh', csrfName: 'csrf', secure: false, sameSite: 'strict', path: '/' },
   totpEncryptionKey: Buffer.alloc(32, 9).toString('base64url'),
 };
@@ -98,6 +96,61 @@ describe.sequential('StaffAuthService database integration', () => {
     expect(challenge.challengeTokenHash).not.toContain(result.data.challengeToken);
     expect(challenge.consumedAt).toBeNull();
     expect(await prisma.mfaChallenge.count({ where: { userId, invalidatedAt: null, consumedAt: null } })).toBe(1);
+  });
+
+  it('never fails simultaneous sign-ins with a 500; losers get a retryable 409 and one challenge stays active', async () => {
+    // Two staff members (or one member on two devices) verifying the password in
+    // the same instant both invalidate the previous challenge and insert a new
+    // one. `MfaChallenge` is guarded by a check constraint requiring
+    // `invalidatedAt >= createdAt`, so the timestamps must come from the database
+    // clock and the write conflict must be retried: the regression is a 500, and
+    // it only appears under real contention.
+    //
+    // A 409 CONFLICT ("Concurrent staff sign-in; retry the request.") is the
+    // designed backpressure when all five serializable attempts collide — it is
+    // explicitly allowed here, and only it: anything else (a 500, a constraint
+    // error surfacing, a wrong code) fails the test. What the contract pins is
+    // that losers never corrupt challenge state: every fulfilled attempt gets a
+    // TOTP challenge, exactly one challenge stays usable, and no challenge is
+    // ever invalidated before it was created.
+    const attempts = await Promise.allSettled(
+      Array.from({ length: 8 }, (_, index) =>
+        service.requestPasswordChallenge({
+          identifier: email,
+          password: 'a secure staff password',
+          ipAddress: `192.0.2.${60 + index}`,
+        }),
+      ),
+    );
+
+    const fulfilled = attempts.filter((outcome) => outcome.status === 'fulfilled');
+    const rejected = attempts.filter((outcome) => outcome.status === 'rejected');
+    expect(fulfilled.length).toBeGreaterThan(0);
+    for (const outcome of rejected) {
+      const reason = outcome.reason as { status?: unknown; message?: unknown; response?: { code?: unknown } };
+      expect(reason?.status).toBe(409);
+      expect(reason?.response?.code).toBe('CONFLICT');
+      expect(reason?.message).toBe('Concurrent staff sign-in; retry the request.');
+    }
+    for (const outcome of fulfilled) {
+      expect(outcome.value.data.next).toBe('TOTP');
+    }
+    // Exactly one challenge stays usable: every earlier one was invalidated, so a
+    // stale six-digit code can never complete a replaced sign-in.
+    await expect(
+      prisma.mfaChallenge.count({ where: { userId, invalidatedAt: null, consumedAt: null } }),
+    ).resolves.toBe(1);
+    // The constraint that used to break: no challenge is ever invalidated before
+    // it was created.
+    const challenges = await prisma.mfaChallenge.findMany({
+      where: { userId },
+      select: { createdAt: true, invalidatedAt: true },
+    });
+    expect(challenges.length).toBeGreaterThan(1);
+    for (const challenge of challenges) {
+      if (challenge.invalidatedAt === null) continue;
+      expect(challenge.invalidatedAt.getTime()).toBeGreaterThanOrEqual(challenge.createdAt.getTime());
+    }
   });
 
   it('records a generic failure and never creates a challenge for a wrong password', async () => {

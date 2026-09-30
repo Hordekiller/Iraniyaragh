@@ -71,6 +71,8 @@ function farsiError(error: unknown): string {
         return 'دسترسی به پنل عملیات مجاز نیست.';
       case 'RATE_LIMITED':
         return 'تلاش‌های زیادی ثبت شده است. کمی بعد دوباره تلاش کنید.';
+      case 'CONFLICT':
+        return 'هم‌زمانی روی این حساب رخ داد. دوباره تلاش کنید.';
       case 'VALIDATION_ERROR':
         return 'کد تایید باید ۶ رقم باشد.';
       case 'AUTH_CSRF_INVALID':

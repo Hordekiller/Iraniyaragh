@@ -10,3 +10,7 @@ export function hasOrderPermission(user: AuthUser | null, permission: string): b
 export function canReadOrders(user: AuthUser | null): boolean {
   return hasOrderPermission(user, ORDERS_READ);
 }
+
+export function canManageOrders(user: AuthUser | null): boolean {
+  return hasOrderPermission(user, ORDERS_MANAGE);
+}

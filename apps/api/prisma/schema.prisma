@@ -244,6 +244,7 @@ model User {
   dispatchedShipments         Shipment[]                   @relation("ShipmentDispatcher")
   customerNotesAuthored       CustomerNote[]               @relation("CustomerNoteAuthor")
   customerCommandRecords      CustomerCommandRecord[]      @relation("CustomerCommandActor")
+  staffOrderCommandRecords    StaffOrderCommandRecord[]    @relation("StaffOrderCommandActor")
   roleAssignments             UserRole[]                   @relation("UserRoleSubject")
   roleAssignmentsGranted      UserRole[]                   @relation("UserRoleAssigner")
   roleAssignmentsRevoked      UserRole[]                   @relation("UserRoleRevoker")
@@ -1157,6 +1158,9 @@ model Order {
   shippingQuote              ShippingQuote?
   checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
   commandIdempotencyRecords  OrderCommandIdempotencyRecord[]
+  staffCommandRecords        StaffOrderCommandRecord[]
+  version                    Int                             @default(0)
+  staffNote                  String?                         @db.VarChar(500)
   createdAt                  DateTime                        @default(now())
   updatedAt                  DateTime                        @updatedAt
 
@@ -1224,6 +1228,22 @@ model ShippingQuote {
 
   @@index([customerId, expiresAt])
   @@index([cartId, cartVersion])
+}
+
+model StaffOrderCommandRecord {
+  id          String   @id @default(cuid())
+  actorId     String
+  scope       String   @db.VarChar(100)
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  orderId     String?
+  response    Json?
+  actor       User     @relation("StaffOrderCommandActor", fields: [actorId], references: [id], onDelete: Cascade)
+  order       Order?   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, scope, keyHash])
+  @@index([orderId])
 }
 
 model CheckoutIdempotencyRecord {

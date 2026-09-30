@@ -25,8 +25,9 @@ customer OTP surface is documented separately in
   not-found / unknown rendered as distinct recoverable states — see the
   surface for each in States).
 - **Scripted screenshots** (`e2e/scripts/capture-admin-sessions-screenshots.mjs`):
-  the committed PNGs were captured against the **live dev admin** (API up with
-  `AUTH_DEV_CODE` + seeded dev admin, exactly like the e2e target). The same
+  the committed PNGs were captured against the **live staff administrator** (API
+  up with the automated test identity provisioned by `apps/api auth:e2e-staff`,
+  signed in through the real password + TOTP flow, exactly like the e2e target). The same
   states are reproducible deterministically in fixture mode without the API:
 
   ```bash

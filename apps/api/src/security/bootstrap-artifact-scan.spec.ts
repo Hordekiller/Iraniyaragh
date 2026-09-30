@@ -58,15 +58,16 @@ describe('bootstrap artifact scan', () => {
     expect(source).toMatch(/recoveryCodes/);
   });
 
-  it('keeps the seed free of a stored admin credential and gates the dev admin on AUTH_DEV_CODE', () => {
+  it('keeps the seed free of any privileged user or stored admin credential', () => {
     const source = seedScript();
-    expect(source).toMatch(/passwordHash:\s*null/);
-    expect(source).toMatch(/AUTH_DEV_CODE/);
-    expect(source).toMatch(/process\.env\.AUTH_DEV_CODE/);
-    expect(source).not.toMatch(/AUTH_DEV_CODE[^\r\n]{0,40}\?\?\s*['"]/);
-    expect(source).not.toMatch(/password:\s*['"]/);
-    expect(source).not.toMatch(/secret:\s*['"]/);
+    // The RBAC baseline is the seed's whole job: no privileged identity is ever
+    // created implicitly, so a database can be seeded without a back door.
+    expect(source).not.toMatch(/user\.(create|upsert)/);
+    expect(source).not.toMatch(/passwordHash/);
+    expect(source).not.toMatch(/password\s*:/);
+    expect(source).not.toMatch(/secret\s*:/);
     expect(source).not.toMatch(/const\s+(devCode|password)\s*=\s*['"]/i);
+    expect(source).toMatch(/No privileged user is seeded/);
   });
 
   it('lists no committed default credential string in the first-admin artifacts', () => {

@@ -1,8 +1,9 @@
 # ADR-0010: Development-Enabled Staff Sign-In (Admin Panel)
 
-Status: Accepted — dev-gated staff sign-in shipped via #88 (2026-09-04); the live
-production staff HTTP client that supersedes the dev/fixture path is under review
-as #191
+Status: **Superseded by ADR-0020 (2026-09-30)** — the development staff sign-in,
+its `AUTH_DEV_CODE` gate and the admin `/login/dev` route have been removed. The
+real password + TOTP flow that ADR-0010 was waiting for has landed, so nothing
+in this document is implemented any more. Kept for the decision history.
 
 Date: 2026-09-03
 

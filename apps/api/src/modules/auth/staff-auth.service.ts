@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { LoginAttemptOutcome, LoginMethod, MfaChallengePurpose, Prisma, UserStatus } from '@prisma/client';
 import type { StaffMfaChallengeResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
+import { withSerializableRetry } from '../../common/serializable-retry';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthHashService } from './auth-hash.service';
 import { AuthSessionService, type IssuedAuthSession } from './auth-session.service';
@@ -78,65 +79,94 @@ export class StaffAuthService {
     const challengeToken = this.tokens.generateMfaChallengeToken();
     const challengeTokenHash = this.hashes.hash(challengeToken, 'mfa-challenge');
     const requestId = getRequestId();
-    const expiresAt = new Date(now.getTime() + MFA_CHALLENGE_TTL_MS);
     const upgradedPasswordHash = user.passwordHash && this.passwords.needsRehash(user.passwordHash)
       ? await this.passwords.hashForLoginRehash(command.password)
       : undefined;
 
-    await this.prisma.$transaction(
-      async tx => {
-        if (upgradedPasswordHash) {
-          await tx.user.update({ where: { id: user.id }, data: { passwordHash: upgradedPasswordHash } });
-        }
-        await tx.mfaChallenge.updateMany({
-          where: {
-            userId: user.id,
-            purpose: MfaChallengePurpose.STAFF_SIGN_IN,
-            consumedAt: null,
-            invalidatedAt: null,
-          },
-          data: { invalidatedAt: now },
-        });
-        await tx.mfaChallenge.create({
-          data: {
-            userId: user.id,
-            challengeTokenHash,
-            purpose: MfaChallengePurpose.STAFF_SIGN_IN,
-            expiresAt,
-            requestId,
-          },
-        });
-        await tx.loginAttempt.create({
-          data: {
-            userId: user.id,
-            identifierHash: this.hashes.hash(identifier, 'identifier'),
-            ipHash: this.hashes.hash(ipAddress, 'ip'),
-            method: LoginMethod.PASSWORD,
-            outcome: LoginAttemptOutcome.SUCCESS,
-            requestId,
-          },
-        });
-        await tx.auditLog.create({
-          data: {
-            actorId: user.id,
-            action: 'auth.staff.password_verified',
-            entityType: 'User',
-            entityId: user.id,
-            requestId,
-            metadata: { method: 'PASSWORD', next: 'TOTP' },
-          },
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+    // Two staff members (or one member on two devices) verifying a password at
+    // the same instant both invalidate the previous challenge and insert a new
+    // one. Under SERIALIZABLE that is a genuine write conflict, and surfacing
+    // P2034 to the operator as a 500 would be wrong: the loser simply retries and
+    // both sign-ins succeed.
+    return withSerializableRetry<StaffMfaChallengeResponse>({
+      conflictMessage: 'Concurrent staff sign-in; retry the request.',
+      isContention: () => false,
+      // Every concurrent sign-in for one staff member writes the same rows, so a
+      // zero-delay retry just collides with the winner again.
+      backoffMs: 25,
+      attempts: 5,
+      operation: async () => {
+        await this.prisma.$transaction(
+        async tx => {
+          // The challenge timestamps must come from the database clock, not the
+          // process clock. `MfaChallenge` is guarded by a check constraint that
+          // requires `invalidatedAt >= createdAt`, and two sign-ins racing for the
+          // same staff member mean this request's application-clock `now` can
+          // easily predate a row a concurrent transaction inserted. CURRENT_TIMESTAMP
+          // is the transaction start time, so it is never earlier than any row
+          // visible in this transaction's snapshot.
+          const [{ now: databaseNow }] = await tx.$queryRaw<{ now: Date }[]>`
+            SELECT CURRENT_TIMESTAMP AS "now"
+          `;
+          const expiresAt = new Date(databaseNow.getTime() + MFA_CHALLENGE_TTL_MS);
 
-    return {
-      data: {
-        challengeToken,
-        next: 'TOTP',
-        expiresInSeconds: 300,
+          if (upgradedPasswordHash) {
+            await tx.user.update({ where: { id: user.id }, data: { passwordHash: upgradedPasswordHash } });
+          }
+          await tx.mfaChallenge.updateMany({
+            where: {
+              userId: user.id,
+              purpose: MfaChallengePurpose.STAFF_SIGN_IN,
+              consumedAt: null,
+              invalidatedAt: null,
+            },
+            data: { invalidatedAt: databaseNow },
+          });
+          await tx.mfaChallenge.create({
+            data: {
+              userId: user.id,
+              challengeTokenHash,
+              purpose: MfaChallengePurpose.STAFF_SIGN_IN,
+              // `createdAt` keeps its CURRENT_TIMESTAMP default, which is the same
+              // transaction start time as `databaseNow`, so `expiresAt` is always
+              // strictly later than the row's creation regardless of clock skew.
+              expiresAt,
+              requestId,
+            },
+          });
+          await tx.loginAttempt.create({
+            data: {
+              userId: user.id,
+              identifierHash: this.hashes.hash(identifier, 'identifier'),
+              ipHash: this.hashes.hash(ipAddress, 'ip'),
+              method: LoginMethod.PASSWORD,
+              outcome: LoginAttemptOutcome.SUCCESS,
+              requestId,
+            },
+          });
+          await tx.auditLog.create({
+            data: {
+              actorId: user.id,
+              action: 'auth.staff.password_verified',
+              entityType: 'User',
+              entityId: user.id,
+              requestId,
+              metadata: { method: 'PASSWORD', next: 'TOTP' },
+            },
+          });
+        },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+
+        return {
+          data: {
+            challengeToken,
+            next: 'TOTP',
+            expiresInSeconds: 300,
+          },
+        };
       },
-    };
+    });
   }
 
   async updateCredentialAndRotateSession(command: {

@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Alert, Box, Chip, MenuItem, Select, Stack, Typography } from '@mui/material';
-import { Lock, ShoppingBag } from 'lucide-react';
+import { Alert, Box, Button, Chip, MenuItem, Select, Stack, Typography } from '@mui/material';
+import { Lock, Plus, ShoppingBag } from 'lucide-react';
 import type { AdminOrderSummary } from '@/lib/orders/orders-types';
 import { DataTable, type SortChange, type SortState } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -24,9 +24,10 @@ import {
   paymentStatusTone,
   PAYMENT_STATUS_LABELS,
 } from '@/lib/orders/orders-labels';
-import { canReadOrders } from '@/lib/orders/orders-permissions';
+import { canManageOrders, canReadOrders } from '@/lib/orders/orders-permissions';
 import type { AdminOrdersQuery } from './useOrders';
 import { useOrders } from './useOrders';
+import { StaffOrderDialog } from './StaffOrderDialog';
 
 export type OrdersUrlQuery = {
   page?: string;
@@ -98,10 +99,12 @@ export function OrdersView({ initialQuery: raw }: { initialQuery: OrdersUrlQuery
   const router = useRouter();
   const { user } = useAuth();
   const canRead = canReadOrders(user);
+  const canManage = canManageOrders(user);
+  const [staffOrderOpen, setStaffOrderOpen] = useState(false);
 
   const [query, setQuery] = useState<AdminOrdersQuery>(() => normalizeOrdersQuery(raw));
 
-  const { items, meta, loading, error } = useOrders(query, canRead);
+  const { items, meta, loading, error, refresh } = useOrders(query, canRead);
 
   const apply = (patch: Partial<AdminOrdersQuery>) => {
     const next = { ...query, ...patch, page: patch.page ?? 1 };
@@ -140,6 +143,16 @@ export function OrdersView({ initialQuery: raw }: { initialQuery: OrdersUrlQuery
               icon={<ShoppingBag size={15} />}
               label={`${meta ? formatCount(meta.total) : '…'} سفارش`}
             />
+            {canManage ? (
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<Plus size={16} />}
+                onClick={() => setStaffOrderOpen(true)}
+              >
+                سفارش حضوری
+              </Button>
+            ) : null}
           </Stack>
         }
       />
@@ -286,6 +299,17 @@ export function OrdersView({ initialQuery: raw }: { initialQuery: OrdersUrlQuery
             </Select>
           </>
         }
+      />
+
+      <StaffOrderDialog
+        open={staffOrderOpen}
+        onClose={() => setStaffOrderOpen(false)}
+        onRefreshed={() => refresh()}
+        onCreated={() => {
+          // A created order must not stay off-screen behind a stale page.
+          setStaffOrderOpen(false);
+          refresh();
+        }}
       />
     </>
   );

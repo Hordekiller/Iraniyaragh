@@ -337,6 +337,9 @@ importers:
       globals:
         specifier: ^16.5.0
         version: 16.5.0
+      otplib:
+        specifier: 13.5.0
+        version: 13.5.0
       typescript:
         specifier: ~5.9.3
         version: 5.9.3

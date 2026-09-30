@@ -25,33 +25,20 @@ const baseEnv: EnvRecord = {
 };
 
 describe('createAuthRuntimeConfig', () => {
-  it('disables dev login when AUTH_DEV_CODE is absent', () => {
+  it('exposes no development sign-in surface at all', () => {
     const config = createAuthRuntimeConfig(fakeConfigService({ ...baseEnv }));
-    expect(config.devLoginEnabled).toBe(false);
-    expect(config.devCode).toBe('');
-  });
-
-  it('enables dev login in development when AUTH_DEV_CODE is set', () => {
-    const config = createAuthRuntimeConfig(fakeConfigService({ ...baseEnv, AUTH_DEV_CODE: 'dev-code' }));
-    expect(config.devLoginEnabled).toBe(true);
-    expect(config.devCode).toBe('dev-code');
-  });
-
-  it('enables dev login in test when AUTH_DEV_CODE is set', () => {
-    const config = createAuthRuntimeConfig(fakeConfigService({ ...baseEnv, NODE_ENV: 'test', AUTH_DEV_CODE: 'x' }));
-    expect(config.devLoginEnabled).toBe(true);
-  });
-
-  it('fails startup when AUTH_DEV_CODE is set outside development/test', () => {
-    for (const environment of ['staging', 'production']) {
-      expect(() =>
-        createAuthRuntimeConfig(fakeConfigService({ ...baseEnv, NODE_ENV: environment, AUTH_DEV_CODE: 'x' })),
-      ).toThrow(/only permitted in development and test/);
-    }
-  });
-
-  it('rejects an empty AUTH_DEV_CODE (treated as absent, not enabled)', () => {
-    const config = createAuthRuntimeConfig(fakeConfigService({ ...baseEnv, AUTH_DEV_CODE: '' }));
-    expect(config.devLoginEnabled).toBe(false);
+    expect(Object.keys(config).sort()).toEqual([
+      'accessSigningSecret',
+      'accessTokenTtlSeconds',
+      'audience',
+      'clockToleranceSeconds',
+      'cookies',
+      'corsOrigins',
+      'currentHashKey',
+      'issuer',
+      'previousHashKey',
+      'totpEncryptionKey',
+    ]);
   });
 });
+

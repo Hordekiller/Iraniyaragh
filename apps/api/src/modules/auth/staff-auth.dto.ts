@@ -1,23 +1,6 @@
 import { IsNotEmpty, IsOptional, IsString, Length, MaxLength, Matches } from 'class-validator';
 import { STAFF_PASSWORD_MAX_LENGTH, STAFF_PASSWORD_MIN_LENGTH } from './password-hash.service';
 
-const DEV_CODE_PATTERN = /^[A-Za-z0-9._~-]{6,256}$/u;
-
-export class StaffDevSignInDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(256)
-  @Matches(DEV_CODE_PATTERN, {
-    message: 'code must be a non-empty alphanumeric value no longer than 256 characters.',
-  })
-  code!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(150)
-  deviceName?: string;
-}
-
 export class StaffPasswordDto {
   @IsString()
   @IsNotEmpty()

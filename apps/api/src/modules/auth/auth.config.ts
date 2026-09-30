@@ -37,14 +37,6 @@ const DEVELOPMENT_COOKIES: AuthCookieSpec = Object.freeze({
   path: '/',
 });
 
-export const DEV_SIGNIN_COOKIE_SPEC: Readonly<{
-  refreshName: string;
-  csrfName: string;
-}> = Object.freeze({
-  refreshName: 'iranyaragh_dev_refresh',
-  csrfName: 'iranyaragh_dev_csrf',
-});
-
 export type AuthRuntimeConfig = Readonly<{
   accessSigningSecret: string;
   issuer: string;
@@ -53,8 +45,6 @@ export type AuthRuntimeConfig = Readonly<{
   clockToleranceSeconds: typeof AUTH_CLOCK_TOLERANCE_SECONDS;
   currentHashKey: AuthHashKey;
   previousHashKey?: AuthHashKey;
-  devLoginEnabled: boolean;
-  devCode: string;
   totpEncryptionKey?: string;
   cookies: AuthCookieSpec;
   corsOrigins?: readonly string[];
@@ -77,12 +67,7 @@ export function createAuthRuntimeConfig(config: ConfigService<EnvironmentVariabl
     throw new Error('Previous Auth hash key configuration is incomplete.');
   }
 
-  const devCode = config.get('AUTH_DEV_CODE', { infer: true }) as string | undefined;
   const environment = config.getOrThrow('NODE_ENV', { infer: true });
-  const hasDevCode = typeof devCode === 'string' && devCode.length > 0;
-  if (hasDevCode && environment !== 'development' && environment !== 'test') {
-    throw new Error('AUTH_DEV_CODE is only permitted in development and test environments.');
-  }
 
   return Object.freeze({
     accessSigningSecret: config.getOrThrow('JWT_ACCESS_SECRET', {
@@ -100,8 +85,6 @@ export function createAuthRuntimeConfig(config: ConfigService<EnvironmentVariabl
       previousVersion === undefined || previousSecret === undefined
         ? undefined
         : Object.freeze({ version: previousVersion, secret: previousSecret }),
-    devLoginEnabled: hasDevCode,
-    devCode: hasDevCode ? (devCode as string) : '',
     totpEncryptionKey: config.get('AUTH_TOTP_ENCRYPTION_KEY', { infer: true }),
     cookies: cookieSpecFor(environment),
     corsOrigins: Object.freeze(config.getOrThrow('CORS_ORIGINS', { infer: true }).split(',')),

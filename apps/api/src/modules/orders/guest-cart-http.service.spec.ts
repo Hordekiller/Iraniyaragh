@@ -12,9 +12,7 @@ function config(secure = false): AuthRuntimeConfig {
     accessTokenTtlSeconds: 600,
     clockToleranceSeconds: 30,
     currentHashKey: { version: 1, secret: 'b'.repeat(32) },
-    devLoginEnabled: false,
-    devCode: '',
-    cookies: {
+        cookies: {
       refreshName: secure
         ? '__Host-iranyaragh_refresh'
         : 'iranyaragh_customer_refresh',
