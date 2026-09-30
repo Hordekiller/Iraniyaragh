@@ -1,6 +1,9 @@
 # Iraniyaragh Engineering Foundation
 
-This document is the default engineering contract for all future Iraniyaragh development. A feature that violates these rules must be discussed and documented with an Architecture Decision Record (ADR) before implementation.
+This document records existing architecture and the safety invariants protecting
+orders, money, inventory and identity. The safety invariants are requirements;
+historical architecture choices and planning workflow are context, not standing
+instructions overriding the user's current product direction.
 
 ## 1. Product boundaries
 
@@ -27,7 +30,8 @@ The backend is the source of business truth. UI clients must not own business ru
 - Mobile: React Native + Expo after API contracts stabilize
 - Deployment: Docker-first
 
-Do not introduce microservices until profiling and operational evidence justify the split.
+The present implementation is a modular monolith. Its shape is a description of
+the current system, not an independent roadmap mandate.
 
 ## 3. Domain rules that must not be bypassed
 
@@ -149,9 +153,11 @@ A business-critical feature is not complete until applicable items are done:
 - Observability/logging considered
 - Security/privacy impact reviewed
 
-## 9. Change policy
+## 9. Recording changes to safety invariants
 
-If a future requirement contradicts this foundation, create an ADR under `docs/adr/` explaining:
+When a change affects a safety invariant, record its rationale and migration
+impact so payment, inventory and audit behavior remain reviewable. An ADR under
+`docs/adr/` is one available format:
 
 1. Context
 2. Decision

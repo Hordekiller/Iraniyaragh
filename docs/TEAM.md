@@ -1,5 +1,8 @@
 # Team, Ownership and Onboarding
 
+> Historical team/capacity record. It does not assign current ownership or
+> override the user's 2026-09-30 MVP integration direction.
+
 Last updated: 2026-09-13
 
 ## Current working item — RBAC and financial-policy governance (2026-09-13)

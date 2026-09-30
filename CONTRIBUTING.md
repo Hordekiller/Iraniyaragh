@@ -1,11 +1,9 @@
-# Contributing to Iraniyaragh
+# Working with Iraniyaragh
 
-## Before coding
-
-1. Read `docs/FOUNDATION.md`, `docs/PROJECT_STATUS.md` and the relevant domain doc.
-2. Work from a GitHub issue with acceptance criteria, owner, priority and area.
-3. Confirm no other branch owns the same schema/contract/hotspot.
-4. For architecture-invariant changes, agree on an ADR before implementation.
+The current product priority and UI direction are set by the user. Older sprint,
+issue-order and contributor-lane documents are historical context; they do not
+override a newer request. The factual implementation record is
+`docs/PROJECT_STATUS.md`.
 
 ## Local setup
 
@@ -20,53 +18,16 @@ pnpm --filter @iranyaragh/api prisma:migrate
 pnpm dev
 ```
 
-Never commit `.env`, credentials, customer information or production exports.
+The Compose file is for local development. Its example passwords, published
+database/cache ports and `minio:latest` are not a VPS production deployment.
+The development seed is intentionally blocked outside development/test and
+includes demo data; it must not be run on a live sales database.
 
-## Branch and commit conventions
+## Security and verification
 
-Branch format: `<type>/<issue>-<short-topic>` where type is `feat`, `fix`, `docs`,
-`chore`, `refactor` or `test`.
-
-Use Conventional Commit subjects:
-
-```text
-feat(inventory): add idempotent stock receipt
-fix(auth): revoke rotated refresh token
-docs(orders): record cancellation policy
-```
-
-Keep commits reviewable. Do not rewrite or edit a shared/applied migration; create a
-new forward migration.
-
-## Required checks
-
-Run the checks relevant to changed work before opening a PR:
-
-```bash
-pnpm lint
-pnpm typecheck
-pnpm build
-```
-
-Run unit/integration/E2E tests as those harnesses are introduced. A missing test
-script is current technical debt, not permission to merge critical logic untested.
-
-## Pull requests
-
-- Link the issue using `Closes #123` when merge should close it.
-- Explain behavior, design decisions, test evidence and migration/API impact.
-- Include screenshots/video for UI changes.
-- Mark risk areas and provide rollback/forward-fix instructions where relevant.
-- Self-review the diff before requesting the other developer's review.
-- Keep docs, OpenAPI/contracts and migrations in sync with behavior.
-
-Draft PRs are encouraged for early contract/design feedback. They are not merged.
-
-## Definition of Done
-
-A change is done only when acceptance criteria pass, CI is green, required review
-is complete, tests cover important behavior/failures, authorization/audit/
-idempotency are addressed where applicable, documentation is current, and the
-author verifies the merged result in the target environment.
-
-See `docs/DEVELOPMENT_PLAN.md` for the complete acceptance matrix and release gates.
+The standing agent rules are in `AGENTS.md`; detailed identity and financial
+safety requirements are in `docs/SECURITY.md` and `docs/FOUNDATION.md`.
+Available checks include `pnpm lint`, `pnpm typecheck`, `pnpm build`, package
+tests and the PostgreSQL-backed API integration suite. Record what actually
+passed; do not describe an untested provider, browser journey, backup or VPS
+deployment as accepted.

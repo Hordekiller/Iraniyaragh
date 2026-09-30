@@ -1,5 +1,9 @@
 # Two-Developer Collaboration Guide
 
+> Historical coordination reference, not an active assignment or delivery rule.
+> Current user direction and `MVP_INTEGRATION.md` control scope and sequence;
+> `AGENTS.md` retains only security/data-safety rules.
+
 ## Purpose
 
 Two people must be able to work in parallel without duplicating business logic or

@@ -1,6 +1,24 @@
 # Project Status
 
-Last reviewed: 2026-09-29
+Last reviewed: 2026-09-30
+
+Current user priority: assemble the capabilities already merged on `main` into
+one honest Web/Admin/API MVP, using development/test-only demo data; VPS
+deployment comes later. `MVP_INTEGRATION.md` is the current integration
+checklist. The older #363 feature queue below is historical planning context,
+not an instruction to start unmerged feature work now. As checked via GitHub
+on 2026-09-30, PRs #367 (real staff E2E provisioning) and #368 (ledger/receipt
+reconciliation E2E) are open, not part of `main`. Staff-created Orders #350,
+Stocktake #347, Returns #348 and Accounts Receivable #336 must not be described
+as merged MVP capabilities. There is no proven production/VPS deployment,
+provider acceptance or full fixture-free staging purchase at this checkpoint.
+The coworker's `lane-b/storefront-completion` branch is visible on GitHub at
+`9be3539` without a PR; it is 56 commits behind `main` and must be selectively
+reconciled rather than counted as merged Web capability. Its proposed business
+contact details and UI claims require verification before publication.
+PR #371 is a draft, not merged capability: it selectively adapts the
+API-backed homepage and truthful storefront shell, leaving current commerce
+state/HTTP logic intact. Its public shop contact details await owner approval.
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -70,11 +88,12 @@ record with addresses, staff notes and order history, deactivated by status and
 never hard-deleted, plus Admin `/customers`. The Redis cold-start race that made
 the first authentication request of every boot answer 503 also merged
 (PR #365, `69a0a25`).
-The current authoritative queue is issue #363 (V1 FINAL EXECUTION): staff-created
+The previous feature queue was issue #363 (V1 FINAL EXECUTION): staff-created
 Order #350 → Stocktake #347 → Returns #348 → #338 Credit ADR → #336 Accounts
 Receivable → Reports #358 → Roles #359 → SEO/content backend →
-production deployment/acceptance. `docs/SOLO_CRITICAL_PATH.md` has been updated
-to the two-lane model.
+production deployment/acceptance. The current user-directed integration priority
+is recorded in `MVP_INTEGRATION.md`; the historical two-lane model is not an
+active scheduling rule.
 Production deployment alone is not approval to take real sales. Customer credit
 is approved V1 scope in #336 but
 has no DB/API/Admin implementation yet; known-customer Admin creation, staff
