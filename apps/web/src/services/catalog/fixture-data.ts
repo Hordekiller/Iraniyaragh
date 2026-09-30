@@ -20,6 +20,12 @@ function tomanToMoney(toman: number): Money {
   return { amount: String(Math.trunc(toman * 10)), currency: 'IRR' }
 }
 
+// `@__PURE__` on both factories below is what lets a non-fixture production
+// build drop this module entirely. These helpers only allocate objects, but
+// Rollup cannot infer that across call boundaries, so every `p(...)` call is
+// retained as a potentially side-effecting statement unless the annotations
+// tell it otherwise. The dataset is fabricated sample data, so shipping it in
+// a real deployment bundle is both dead weight and a correctness risk.
 function p(
   partial: Omit<CatalogProduct, 'price' | 'oldPrice' | 'media' | 'variants'> & {
     priceToman: number
@@ -117,7 +123,7 @@ const measuring = {
 const garden = { id: 'cat-garden', name: 'باغبانی', slug: 'garden' }
 
 export const fixtureCatalogProducts: CatalogProduct[] = [
-  p({
+  /* @__PURE__ */ p({
     id: 'p-101',
     slug: 'ronix-2210-hammer-drill',
     name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰',
@@ -133,7 +139,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     description:
       'دریل چکشی ۱۳ میلی‌متری با موتور قدرتمند و سرعت متغیر برای سوراخ‌کاری روی فلز، چوب و بتن.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-102',
     slug: 'bosch-gws-750-grinder',
     name: 'مینی فرز ۱۱۵ میلی‌متر بوش GWS 750',
@@ -148,7 +154,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     description:
       'مینی فرز ۷۵۰ وات با بدنه باریک و ارگونومیک برای برش و سنگ‌زنی در کارگاه و پروژه.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-103',
     slug: 'hans-24pc-socket-set',
     name: 'ست آچار بکس ۲۴ پارچه هنس',
@@ -163,7 +169,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     badge: null,
     description: 'ست آچار بکس ۲۴ پارچه با کیفیت صنعتی و جعبه نگهداری مقاوم.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-104',
     slug: 'nek-1342-breaker-hammer',
     name: 'چکش تخریب ۷ کیلویی نک NEK 1342',
@@ -178,7 +184,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     description:
       'چکش تخریب ۷ کیلویی با قابلیت تخریب بتن و آجرکاری با ضربه بالا.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-105',
     slug: 'dewalt-20v-chainsaw',
     name: 'اره زنجیری شارژی ۲۰ ولت دیوالت',
@@ -194,7 +200,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     description:
       'اره زنجیری شارژی ۲۰ ولت برای برش شاخه‌ها و هرس درختان بدون نیاز به کابل.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-106',
     slug: 'tosan-50l-compressor',
     name: 'کمپرسور باد ۵۰ لیتری توسن',
@@ -209,7 +215,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     description:
       'کمپرسور باد ۵۰ لیتری با مخزن و موتور قدرتمند برای مصارف کارگاهی.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-201',
     slug: 'ronix-8101-screwdriver',
     name: 'پیچ‌گوشتی شارژی ۴ ولت رونیکس ۸۱۰۱',
@@ -225,7 +231,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     description:
       'پیچ‌گوشتی شارژی ۴ ولت سبک و جمع‌وجور برای مصارف خانگی و تعمیرات.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-202',
     slug: 'iran-potk-8in-plier',
     name: 'انبر دست ۸ اینچ ایران پتک',
@@ -239,7 +245,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     badge: null,
     description: 'انبر دست ۸ اینچ با فک مقاوم و دسته ارگونومیک.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-203',
     slug: 'bosch-glm-50-laser',
     name: 'متر لیزری ۵۰ متری بوش GLM 50',
@@ -253,7 +259,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     badge: 'دقیق',
     description: 'متر لیزری ۵۰ متری با دقت بالا و صفحه نمایش روشن.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-204',
     slug: 'safety-pro-cut-gloves',
     name: 'دستکش ایمنی ضد برش',
@@ -268,7 +274,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     badge: 'اقتصادی',
     description: 'دستکش ایمنی ضد برش با سطح ۵ محافظت در برابر برش.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-205',
     slug: 'fiskars-garden-shears',
     name: 'قیچی باغبانی حرفه‌ای FISKARS',
@@ -282,7 +288,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     badge: null,
     description: 'قیچی باغبانی حرفه‌ای با تیغه فولادی تیز و دسته نرم.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-301',
     slug: 'ronix-8100k-kit',
     name: 'ست دریل و پیچ‌گوشتی شارژی رونیکس ۸۱۰۰K',
@@ -297,7 +303,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     badge: 'سری مشکی',
     description: 'ست کامل دریل و پیچ‌گوشتی شارژی با دو باتری و کیف حمل.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-302',
     slug: 'ronix-rp0140-pressure-washer',
     name: 'کارواش فشار قوی ۱۴۰ بار رونیکس RP-0140',
@@ -311,7 +317,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     badge: 'قدرتمند',
     description: 'کارواش فشار قوی ۱۴۰ بار برای شست‌وشوی خودرو و سطوح.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-303',
     slug: 'ronix-5403-sliding-saw',
     name: 'اره فارسی‌بر کشویی رونیکس ۵۴۰۳',
@@ -326,7 +332,7 @@ export const fixtureCatalogProducts: CatalogProduct[] = [
     badge: null,
     description: 'اره فارسی‌بر کشویی با برش دقیق و زاویه‌دار برای نجاری.',
   }),
-  p({
+  /* @__PURE__ */ p({
     id: 'p-304',
     slug: 'ronix-2701-multitool',
     name: 'بتون‌کن سه‌کاره رونیکس ۲۷۰۱',
@@ -405,21 +411,21 @@ function video(
 }
 
 const drillGallery: PublicProductMedia[] = [
-  img(0, 'PRIMARY', '/images/hero1.jpg', 'دریل چکشی رونیکس ۲۲۱۰ از نمای جلو'),
-  img(1, 'GALLERY', '/images/tool2.jpg', 'دریل چکشی رونیکس ۲۲۱۰ از نمای کنار'),
-  video(
+  /* @__PURE__ */ img(0, 'PRIMARY', '/images/hero1.jpg', 'دریل چکشی رونیکس ۲۲۱۰ از نمای جلو'),
+  /* @__PURE__ */ img(1, 'GALLERY', '/images/tool2.jpg', 'دریل چکشی رونیکس ۲۲۱۰ از نمای کنار'),
+  /* @__PURE__ */ video(
     2,
     '/images/hero1.jpg',
     '/media/demo/drill-intro.mp4',
     'ویدیوی معرفی دریل چکشی',
     'نمایش عملکرد دریل چکشی و دستهبندی اجزای آن در ویدیوی کوتاه معرفی.',
   ),
-  img(3, 'GALLERY', '/images/tool3.jpg', 'دریل چکشی رونیکس ۲۲۱۰ و متعلقات'),
+  /* @__PURE__ */ img(3, 'GALLERY', '/images/tool3.jpg', 'دریل چکشی رونیکس ۲۲۱۰ و متعلقات'),
 ]
 
 const grinderGallery: PublicProductMedia[] = [
-  img(0, 'PRIMARY', '/images/tool2.jpg', 'مینی فرز بوش GWS 750 از نمای جلو'),
-  img(1, 'GALLERY', '/images/hero1.jpg', 'مینی فرز بوش GWS 750 هنگام کار'),
+  /* @__PURE__ */ img(0, 'PRIMARY', '/images/tool2.jpg', 'مینی فرز بوش GWS 750 از نمای جلو'),
+  /* @__PURE__ */ img(1, 'GALLERY', '/images/hero1.jpg', 'مینی فرز بوش GWS 750 هنگام کار'),
 ]
 
 const fixtureGalleries: Record<string, PublicProductMedia[]> = {
@@ -427,7 +433,13 @@ const fixtureGalleries: Record<string, PublicProductMedia[]> = {
   'p-102': grinderGallery,
 }
 
-export const fixtureAllProducts = fixtureCatalogProducts.map((product) => {
+// `@__PURE__` is required, not cosmetic: without it Rollup treats this
+// top-level call as a possible side effect and retains the entire fixture
+// dataset in production bundles even though both fixture clients are
+// tree-shaken away. The call is deterministic and side-effect free, so
+// annotating it lets the whole module drop out of non-fixture builds and keeps
+// the fabricated dataset provably absent from a shipped `dist/`.
+export const fixtureAllProducts = /* @__PURE__ */ fixtureCatalogProducts.map((product) => {
   const gallery = fixtureGalleries[product.id]
   return gallery ? { ...product, media: gallery } : product
 })

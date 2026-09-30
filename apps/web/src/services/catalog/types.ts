@@ -41,6 +41,8 @@ export type CatalogProduct = {
   description: string | null
   /** Lowest active-variant sale price, in IRR (Rial). */
   price: Money
+  /** False when the public API omitted a sellable price; zero must not impersonate it. */
+  priceAvailable?: boolean
   oldPrice: Money | null
   rating: number | null
   reviews: number

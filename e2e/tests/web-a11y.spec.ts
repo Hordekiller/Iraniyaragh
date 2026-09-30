@@ -62,9 +62,9 @@ test.describe('web: a11y baseline (#82)', () => {
     }
   });
 
-  test('storefront interactive cards are exposed as buttons', async ({ page }) => {
+  test('storefront product cards are exposed as navigable links', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('section#popular button[class*="snap-start"]').first()).toBeEnabled();
+    await expect(page.getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ }).first()).toHaveAttribute('href', /\/product\//);
   });
 });

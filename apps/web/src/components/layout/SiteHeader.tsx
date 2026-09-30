@@ -2,10 +2,10 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { Phone, Search, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '../../state/cart-context'
-import { toLatinDigits, toPersianDigits } from '../../lib/format'
+import { toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
 import { AccountMenu } from '../auth/AccountMenu'
-import { CATALOG_PRODUCT_COUNT, PHONE_MAIN, SECTION_IDS, SITE_NAME, SITE_TAGLINE } from '../../lib/site-config'
+import { HAS_SITE_PHONE, SITE_NAME, SITE_PHONE, SITE_TAGLINE } from '../../lib/site-config'
 
 type SiteHeaderProps = {
   searchQuery: string
@@ -50,12 +50,9 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
 
           {/* Nav - Desktop */}
           <nav className="hidden lg:flex items-center gap-7 mr-6 text-[14px] font-medium text-slate-700">
-            <a href={`#${SECTION_IDS.home}`} className="text-[#C2410C] font-bold flex items-center gap-1">خانه <span className="w-1.5 h-1.5 rounded-full bg-[#C2410C]" /></a>
-            <a href={`#${SECTION_IDS.categories}`} className="hover:text-[#FF4D00] transition">دسته‌بندی‌ها</a>
-            <a href={`#${SECTION_IDS.popular}`} className="hover:text-[#FF4D00] transition">محبوب‌ها</a>
-            <a href={`#${SECTION_IDS.bestseller}`} className="hover:text-[#FF4D00] transition">پرفروش‌ها</a>
-            <a href={`#${SECTION_IDS.blog}`} className="hover:text-[#FF4D00] transition flex items-center gap-1">مجله آموزشی <span className="px-1.5 py-0.5 rounded bg-emerald-700 text-white text-[10px] font-bold">جدید</span></a>
-            <a href={`#${SECTION_IDS.services}`} className="hover:text-[#FF4D00] transition">خدمات</a>
+            <Link to={ROUTES.home} className="text-[#C2410C] font-bold flex items-center gap-1">خانه <span className="w-1.5 h-1.5 rounded-full bg-[#C2410C]" /></Link>
+            <Link to={ROUTES.home} state={{ scrollToCategories: true }} className="hover:text-[#FF4D00] transition">دسته‌بندی‌ها</Link>
+            <Link to={ROUTES.orders} className="hover:text-[#FF4D00] transition">سفارش‌ها</Link>
           </nav>
 
           {/* Search - Desktop */}
@@ -67,7 +64,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
                 onChange={e => onSearchChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 aria-label="جستجو در محصولات"
-                placeholder={`جستجو در ${toPersianDigits(CATALOG_PRODUCT_COUNT)}+ ابزار ... مثلا : دریل رونیکس`}
+                placeholder="جستجو در کالاهای فروشگاه..."
                 className="w-full h-11 pr-11 pl-4 bg-slate-50 border border-slate-200 rounded-full text-[13.5px] placeholder:text-slate-400 focus:outline-none focus:border-[#FF4D00]/40 focus:bg-white focus:ring-4 focus:ring-[#FF4D00]/10 transition"
               />
               <Search size={18} aria-hidden="true" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -80,9 +77,11 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
           {/* Actions */}
           <div className="flex items-center gap-2 mr-auto lg:mr-0">
             <button onClick={onToggleSearch} aria-label="جستجو" className="lg:hidden w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center"><Search size={18} /></button>
-            <a href={`tel:${toLatinDigits(PHONE_MAIN).replace(/[^0-9]/g, '')}`} className="hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-[#0F172A] text-white text-[13px] font-bold hover:bg-black transition">
-              <Phone size={16} aria-hidden="true" /> مشاوره خرید
-            </a>
+            {HAS_SITE_PHONE && (
+              <a href={`tel:${SITE_PHONE}`} className="hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-[#0F172A] text-white text-[13px] font-bold hover:bg-black transition">
+                <Phone size={16} aria-hidden="true" /> تماس با فروشگاه
+              </a>
+            )}
             <Link
               to={ROUTES.cart}
               aria-label={`سبد خرید، ${toPersianDigits(itemCount)} کالا`}

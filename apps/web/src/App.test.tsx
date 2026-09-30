@@ -21,6 +21,7 @@ const routes: Array<[string, () => Promise<void> | void]> = [
       expect(
         screen.getByRole('heading', { name: /تخصصی ابزار/ }),
       ).toBeInTheDocument()
+      expect(screen.getByRole('note')).toHaveTextContent('پیش‌نمایش دمو')
     },
   ],
   [
