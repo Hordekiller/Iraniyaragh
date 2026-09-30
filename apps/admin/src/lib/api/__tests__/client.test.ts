@@ -34,10 +34,10 @@ describe('apiFetch', () => {
 
   it('serializes the request body for POST', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
-    await apiFetch<Record<string, never>>('/auth/dev/signin', { method: 'POST', body: { code: 'x' } });
+    await apiFetch<Record<string, never>>('/auth/staff/password', { method: 'POST', body: { identifier: 'x' } });
     const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
     expect(init.method).toBe('POST');
-    expect(init.body).toBe('{"code":"x"}');
+    expect(init.body).toBe('{"identifier":"x"}');
   });
 
   it('reads the double-submit CSRF cookie for cookie-authenticated calls', () => {
@@ -45,20 +45,8 @@ describe('apiFetch', () => {
     expect(readCsrfToken(document)).toBe('csrftoken-abc');
   });
 
-  it('reads the development staff CSRF cookie when present', () => {
-    const document = { cookie: 'iranyaragh_dev_csrf=dev-csrf-9' } as unknown as Document;
-    expect(readCsrfToken(document)).toBe('dev-csrf-9');
-  });
-
   it('reads the development customer/staff CSRF cookie issued by real sign-in', () => {
     const document = { cookie: 'other=1; iranyaragh_customer_csrf=customer-csrf-4' } as unknown as Document;
-    expect(readCsrfToken(document)).toBe('customer-csrf-4');
-  });
-
-  it('prefers the configured customer CSRF cookie when stale dev cookies coexist', () => {
-    const document = {
-      cookie: 'iranyaragh_customer_csrf=customer-csrf-4; iranyaragh_dev_csrf=stale-dev-csrf',
-    } as unknown as Document;
     expect(readCsrfToken(document)).toBe('customer-csrf-4');
   });
 
@@ -85,7 +73,7 @@ describe('apiFetch', () => {
 
   it('returns the success envelope', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: { accessToken: 'at' } })));
-    const result = await apiFetch<{ accessToken: string }>('/auth/dev/signin');
+    const result = await apiFetch<{ accessToken: string }>('/auth/staff/totp/verify');
     expect(result.data.accessToken).toBe('at');
   });
 
@@ -97,7 +85,7 @@ describe('apiFetch', () => {
           jsonResponse({ code: 'AUTH_INVALID_CREDENTIALS', message: 'bad', requestId: 'r1', statusCode: 401 }, false, 401),
       ),
     );
-    await expect(apiFetch<unknown>('/auth/dev/signin')).rejects.toMatchObject({
+    await expect(apiFetch<unknown>('/auth/staff/password')).rejects.toMatchObject({
       name: 'ApiClientError',
       code: 'AUTH_INVALID_CREDENTIALS',
       statusCode: 401,

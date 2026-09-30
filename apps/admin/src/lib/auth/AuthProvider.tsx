@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { apiFetch, ApiClientError, ApiNetworkError } from '@/lib/api/client';
+import { apiFetch } from '@/lib/api/client';
 import { getAccessToken, setAccessToken } from './token-store';
 
 export type AuthUser = {
@@ -11,58 +11,18 @@ export type AuthUser = {
   permissions: string[];
 };
 
-type SignInResult = { ok: true } | { ok: false; error: string };
-
 type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  signIn: (code: string, deviceName?: string) => Promise<SignInResult>;
   signOut: () => Promise<void>;
-  /** Adopt a session that was verified outside the dev sign-in path (#50 staff login). */
+  /** Adopt the session verified by the real staff password + TOTP login. */
   establishSession: (input: { accessToken: string; principal: AuthUser }) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-type SignInResponse = {
-  accessToken: string;
-  principal: {
-    userId: string;
-    sessionId: string;
-    authenticationLevel: string;
-    permissions: string[];
-  };
-};
-
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<AuthUser | null>(null);
-
-  const signIn = useCallback(async (code: string, deviceName?: string): Promise<SignInResult> => {
-    try {
-      const response = await apiFetch<SignInResponse>('/auth/dev/signin', {
-        method: 'POST',
-        body: { code, ...(deviceName ? { deviceName } : {}) },
-      });
-
-      const token = response.data.accessToken;
-      setAccessToken(token);
-      setUser({
-        userId: response.data.principal.userId,
-        sessionId: response.data.principal.sessionId,
-        authenticationLevel: response.data.principal.authenticationLevel,
-        permissions: response.data.principal.permissions,
-      });
-      return { ok: true };
-    } catch (error) {
-      if (error instanceof ApiClientError) {
-        return { ok: false, error: error.message };
-      }
-      if (error instanceof ApiNetworkError) {
-        return { ok: false, error: error.message };
-      }
-      return { ok: false, error: 'ورود ناموفق بود؛ دوباره تلاش کنید.' };
-    }
-  }, []);
 
   const establishSession = useCallback((input: { accessToken: string; principal: AuthUser }): void => {
     setAccessToken(input.accessToken);
@@ -92,11 +52,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     () => ({
       user,
       isAuthenticated: user !== null,
-      signIn,
       signOut,
       establishSession,
     }),
-    [user, signIn, signOut, establishSession],
+    [user, signOut, establishSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

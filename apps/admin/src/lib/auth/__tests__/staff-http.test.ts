@@ -35,7 +35,7 @@ const PRINCIPAL = {
 describe('StaffAuthHttpClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    document.cookie = 'iranyaragh_dev_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    document.cookie = 'iranyaragh_customer_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     document.cookie = '__Host-iranyaragh_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
   });
 
@@ -84,7 +84,7 @@ describe('StaffAuthHttpClient', () => {
 
   it('posts to /auth/logout so the server can revoke the session', async () => {
     store.set('at-1');
-    document.cookie = 'iranyaragh_dev_csrf=csrf-1; path=/';
+    document.cookie = 'iranyaragh_customer_csrf=csrf-1; path=/';
     apiFetchMock.mockResolvedValueOnce({ data: {} });
     await expect(client.logout()).resolves.toBeUndefined();
     expect(apiFetchMock).toHaveBeenCalledWith('/auth/logout', {
@@ -97,7 +97,7 @@ describe('StaffAuthHttpClient', () => {
 
   it('clears the local token when logout fails after the server request', async () => {
     store.set('at-1');
-    document.cookie = 'iranyaragh_dev_csrf=csrf-1; path=/';
+    document.cookie = 'iranyaragh_customer_csrf=csrf-1; path=/';
     apiFetchMock.mockRejectedValueOnce(new ApiClientError(errorEnvelope('AUTH_CSRF_INVALID', 403)));
     await expect(client.logout()).rejects.toMatchObject({ code: 'AUTH_CSRF_INVALID' });
     expect(store.get()).toBeNull();
@@ -155,7 +155,7 @@ describe('StaffAuthHttpClient', () => {
     });
 
     it('passes through AUTH_CSRF_INVALID from the logout path', async () => {
-      document.cookie = 'iranyaragh_dev_csrf=csrf-1; path=/';
+      document.cookie = 'iranyaragh_customer_csrf=csrf-1; path=/';
       mockEnvelope('AUTH_CSRF_INVALID', 403);
       await expect(client.logout()).rejects.toMatchObject({ code: 'AUTH_CSRF_INVALID', statusCode: 403 });
     });

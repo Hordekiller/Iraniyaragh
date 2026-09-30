@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedbackProvider } from '@/components/ui/FeedbackProvider';
-import { ORDERS_READ } from '@/lib/orders/orders-permissions';
+import { ORDERS_MANAGE, ORDERS_READ } from '@/lib/orders/orders-permissions';
 import { OrdersView, type OrdersUrlQuery } from '../OrdersView';
 
 const mocks = vi.hoisted(() => ({
@@ -132,5 +132,22 @@ describe('OrdersView', () => {
     renderView();
 
     expect(await screen.findByRole('link', { name: 'IR-2026-1042' })).toHaveAttribute('href', '/orders/order-1042');
+  });
+
+  it('hides the staff-order action from a read-only account', async () => {
+    mocks.user = { permissions: [ORDERS_READ] };
+    renderView();
+
+    await screen.findByRole('link', { name: 'IR-2026-1042' });
+    expect(screen.queryByRole('button', { name: 'سفارش حضوری' })).not.toBeInTheDocument();
+  });
+
+  it('shows the staff-order action to a caller holding orders.manage', async () => {
+    mocks.user = { permissions: [ORDERS_READ, ORDERS_MANAGE] };
+    renderView();
+
+    expect(
+      await screen.findByRole('button', { name: 'سفارش حضوری' }),
+    ).toBeInTheDocument();
   });
 });

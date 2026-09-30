@@ -1,4 +1,11 @@
-import type { AdminOrderDetailResponse, AdminOrderListResponse, FulfillmentPickListResponse, FulfillmentPickResponse } from '@iranyaragh/contracts';
+import type {
+  AdminOrderDetailResponse,
+  AdminOrderListResponse,
+  FulfillmentPickListResponse,
+  FulfillmentPickResponse,
+  StaffOrderCreateResponse,
+  StaffOrderOptionsResponse,
+} from '@iranyaragh/contracts';
 import { apiFetch } from '@/lib/api/client';
 import { getAccessToken } from '@/lib/auth/token-store';
 import type { AdminOrderQuery, AdminOrdersApi } from './orders-types';
@@ -82,6 +89,54 @@ export async function confirmDelivery(id: string, proofReference: string, idempo
     method: 'POST', body: { proofReference }, token: getAccessToken(),
     headers: { 'Idempotency-Key': idempotencyKey },
   });
+}
+
+/**
+ * Create a staff-entered order. The client sends only variant ids, quantities
+ * and the shipping address; every amount is priced by the API.
+ */
+export async function createStaffOrder(
+  input: {
+    customerId: string;
+    lines: { variantId: string; quantity: number }[];
+    address: {
+      provinceCode: string;
+      city: string;
+      address: string;
+      postalCode: string;
+      recipient: string;
+      mobile: string;
+    };
+    note?: string;
+  },
+  idempotencyKey: string,
+) {
+  const response = await apiFetch<StaffOrderCreateResponse['data']>('/orders/admin', {
+    method: 'POST',
+    body: input,
+    token: getAccessToken(),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+  return response.data;
+}
+
+/**
+ * Typeahead source for the staff order form. It is a separate endpoint on
+ * purpose: order-taking staff can search the customers and SKUs they need
+ * without also holding the customer-record or purchasing permission.
+ */
+export async function searchStaffOrderOptions(
+  query: { kind: 'customer' | 'variant'; search?: string; signal?: AbortSignal },
+) {
+  const params = new URLSearchParams({ kind: query.kind, limit: '20' });
+  if (query.search && query.search.trim() !== '') {
+    params.set('search', query.search.trim());
+  }
+  const response = await apiFetch<StaffOrderOptionsResponse['data']>(
+    `/orders/admin/options?${params.toString()}`,
+    { token: getAccessToken(), signal: query.signal },
+  );
+  return response.data;
 }
 
 export const ordersApi: AdminOrdersApi = { listOrders, getOrder, getPicks, startFulfillment, markReady, recordPick, dispatchShipment, confirmDelivery };
