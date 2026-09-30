@@ -96,8 +96,11 @@ or use `node .github/scripts/audit-prod.mjs` for the same classification used in
 a green Dependency Review only evaluates a PR delta and is not proof that the existing
 tree has no newly published advisory. The scheduled production-audit workflow is the
 continuous baseline check, but local evidence is still required before review. The
-admin runtime is pinned to Next.js `16.3.3`,
-which brings patched PostCSS/Sharp versions. Prisma 6.19.3 still pins vulnerable
+admin runtime is pinned to Next.js `16.3.8`. It was raised from `16.3.3` to clear
+critical advisory GHSA-vcvr-r3jv-pc5j (remote code execution in `next/og`
+`ImageResponse`, affecting `>=16.2.0 <16.3.6`); the pin is the patched line, so
+re-check it whenever a new advisory is published rather than assuming the tree is
+clean. `16.3.8` also brings patched PostCSS/Sharp versions. Prisma 6.19.3 still pins vulnerable
 `deepmerge-ts` 7.x through `@prisma/config`, so `pnpm-workspace.yaml` contains one
 narrow override to 8.0.2. Do not broaden or remove it until the production audit,
 Prisma generate/validate, clean migration+drift, SQL constraints and integration
