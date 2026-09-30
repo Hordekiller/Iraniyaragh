@@ -7,8 +7,9 @@ one honest Web/Admin/API MVP, using development/test-only demo data; VPS
 deployment comes later. `MVP_INTEGRATION.md` is the current integration
 checklist. The older #363 feature queue below is historical planning context,
 not an instruction to start unmerged feature work now. As checked via GitHub
-on 2026-09-30, PRs #367 (real staff E2E provisioning) and #368 (ledger/receipt
-reconciliation E2E) are open, not part of `main`. Staff-created Orders #350,
+on 2026-09-30, staff-created Orders #350 (PR #372, `2a92eab`), the ledger/receipt
+reconciliation E2E #351 (PR #368, `b4cd950`) and the API-backed homepage with
+the truthful storefront shell (PR #371, `d12d9fd`) are merged on `main`.
 Stocktake #347, Returns #348 and Accounts Receivable #336 must not be described
 as merged MVP capabilities. There is no proven production/VPS deployment,
 provider acceptance or full fixture-free staging purchase at this checkpoint.
@@ -16,9 +17,18 @@ The coworker's `lane-b/storefront-completion` branch is visible on GitHub at
 `9be3539` without a PR; it is 56 commits behind `main` and must be selectively
 reconciled rather than counted as merged Web capability. Its proposed business
 contact details and UI claims require verification before publication.
-PR #371 is a draft, not merged capability: it selectively adapts the
-API-backed homepage and truthful storefront shell, leaving current commerce
-state/HTTP logic intact. Its public shop contact details await owner approval.
+
+The storefront shell merged in #371 publishes no unconfirmed business data. The
+prototype showcase components and `apps/web/src/data/prototype.ts` (hand-authored
+products, prices, ratings, review counts, a Karaj address, a phone/postal code,
+working hours and shipping/warranty claims) were deleted rather than retained as
+in-app fixtures. Contact details now come from `VITE_SITE_PHONE`,
+`VITE_SITE_POSTAL_CODE`, `VITE_SITE_ADDRESS`, `VITE_SITE_EMAIL` and
+`VITE_INSTAGRAM_HANDLE`, all defaulting to `null`; with none configured the
+footer states that contact information is not published yet and no `tel:` link
+renders. The published phone, address, postal code, email and Instagram handle
+remain unconfirmed by the owner and must be set from verified values at deploy
+time, not by editing source.
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -109,11 +119,14 @@ counted for successful logins too) bounds how many real logins one suite can
 perform. The admin build still honours `NEXT_PUBLIC_FIXTURE_AUTH=true` for a
 fixture staff client, which no shipped or CI build sets but which should be
 deleted before the V1 security review.
-#351 now has a browser proof that purchase receipts reconcile against the
-inventory ledger exactly once per received line, driven through the Admin UI
-wherever the UI exists and through the real HTTP API where the surface is
+#351 merged (PR #368, `b4cd950`): a browser proof that purchase receipts reconcile
+against the inventory ledger exactly once per received line, driven through the
+Admin UI wherever the UI exists and through the real HTTP API where the surface is
 API-only, so no request is mocked and no fixture banner is involved. It reuses the
-single `signInDiAsAdmin` helper rather than adding a second sign-in harness.
+single `signInDiAsAdmin` helper rather than adding a second sign-in harness. One
+finding is recorded rather than hidden: signing in also consumes one rate-limit
+attempt for successful logins (5 per identifier per 15 minutes), so the suite
+reserves an unused code window and serialises staff sign-ins.
 The current authoritative queue is issue #363 (V1 FINAL EXECUTION): staff-created
 Order #350 → Stocktake #347 → Returns #348 → #338 Credit ADR → #336 Accounts
 Receivable → Reports #358 → Roles #359 → SEO/content backend →
