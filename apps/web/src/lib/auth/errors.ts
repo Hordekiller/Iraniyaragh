@@ -140,3 +140,16 @@ export async function authApiErrorFromResponse(
     retryAfterSeconds,
   });
 }
+
+/**
+ * Structural check for a normalized auth failure. Narrowing on `code` is what
+ * callers need; a thrown `Error` from the transport layer has none and must not
+ * be treated as an API envelope.
+ */
+export function isApiError(error: unknown): error is AuthApiError {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      typeof (error as { code?: unknown }).code === 'string',
+  );
+}

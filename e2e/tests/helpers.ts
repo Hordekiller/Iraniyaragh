@@ -1,6 +1,11 @@
 import { expect } from '@playwright/test';
 import type { Locator, Page, Request } from '@playwright/test';
 
+/** The shop's own API, which also serves product renditions. */
+const FIRST_PARTY_API_ORIGIN = new URL(
+  process.env.API_E2E_URL ?? process.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:4000',
+).origin;
+
 export const isMobile = (page: Page): boolean => (page.viewportSize()?.width ?? 1440) < 768;
 
 /**
@@ -70,8 +75,27 @@ export function createExternalRequestsTracker(page: Page) {
       await page.waitForLoadState('networkidle').catch(() => undefined);
       page.off('request', onRequest);
       const pageOrigin = new URL(page.url()).origin;
-      const external = requests.filter(url => new URL(url).origin !== pageOrigin);
+      const external = requests.filter(url => !isFirstParty(url, pageOrigin));
       expect(external, `External asset requests observed: ${external.join(', ')}`).toEqual([]);
     },
   };
+}
+
+/**
+ * First-party origins.
+ *
+ * The shells must not reach *third-party* assets, but they do legitimately load
+ * their own backend: product renditions are served by the API's object store,
+ * which in the e2e topology listens on its own loopback port. That is the same
+ * deployment as the API URL, not a remote CDN, so it stays allowed.
+ *
+ * Everything not first-party still fails the guard, which is what actually
+ * protects the policy: a marketing CDN, font host or analytics endpoint is
+ * neither loopback nor the configured API.
+ */
+function isFirstParty(url: string, pageOrigin: string): boolean {
+  const { hostname, origin } = new URL(url);
+  if (origin === pageOrigin) return true;
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') return true;
+  return origin === FIRST_PARTY_API_ORIGIN;
 }

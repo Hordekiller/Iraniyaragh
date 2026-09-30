@@ -1,84 +1,56 @@
 import type { ReactNode } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { ToastProvider } from '../feedback/Toast'
-import { Bestsellers } from './Bestsellers'
 import { PopularTools } from './PopularTools'
-import { SpecialCollection } from './SpecialCollection'
-import { ROUTES } from '../../lib/routes'
+import { CatalogProvider } from '../../state/CatalogProvider'
+import { CatalogFixtureClient } from '../../services/catalog/fixtures'
 
-function withRouter(node: ReactNode) {
+function withCatalog(node: ReactNode) {
   return (
     <MemoryRouter>
-      <ToastProvider>{node}</ToastProvider>
-    </MemoryRouter>
-  )
-}
-
-function LocationProbe() {
-  const { pathname, search } = useLocation()
-  return <span data-testid="location">{pathname}{search}</span>
-}
-
-function withRouterProbe(node: ReactNode) {
-  return (
-    <MemoryRouter initialEntries={[ROUTES.home]}>
-      <ToastProvider>{node}</ToastProvider>
-      <LocationProbe />
+      <CatalogProvider api={new CatalogFixtureClient({ delayMs: 0 })}>
+        {node}
+      </CatalogProvider>
     </MemoryRouter>
   )
 }
 
 describe('storefront product cards › a11y baseline (#82)', () => {
-  it('renders bestseller cards as native buttons with accessible names', () => {
-    render(withRouter(<Bestsellers onSelectProduct={vi.fn()} />))
+  it('renders newest product cards as native buttons with accessible names', async () => {
+    render(withCatalog(<PopularTools onSelectProduct={vi.fn()} />))
 
-    const cards = screen.getAllByRole('button', { name: /تومان/ })
+    const cards = await screen.findAllByRole('button', { name: /تومان/ })
     expect(cards.length).toBeGreaterThan(0)
     expect(cards[0]).toHaveAttribute('type', 'button')
 
-    const pointing = screen.getByText(/پرفروش‌ترین‌ها/)
+    const pointing = screen.getByText(/تازه‌های فروشگاه/)
     expect(pointing.tagName).toBe('H2')
   })
 
-  it('renders carousel scroll buttons with Persian accessible labels', () => {
-    render(withRouter(<Bestsellers onSelectProduct={vi.fn()} />))
+  it('renders carousel scroll buttons with Persian accessible labels', async () => {
+    render(withCatalog(<PopularTools onSelectProduct={vi.fn()} />))
 
-    expect(screen.getByRole('button', { name: 'پیمایش به راست' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'پیمایش به راست' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'پیمایش به چپ' })).toBeInTheDocument()
   })
 
-  it('renders popular-tool cards as native buttons that open the product', () => {
+  it('renders popular-tool cards as native buttons that open the product', async () => {
     const onSelect = vi.fn()
-    render(withRouter(<PopularTools onSelectProduct={onSelect} />))
+    render(withCatalog(<PopularTools onSelectProduct={onSelect} />))
 
-    const cards = screen.getAllByRole('button', { name: /تومان/ })
+    const cards = await screen.findAllByRole('button', { name: /تومان/ })
     expect(cards.length).toBeGreaterThan(0)
     expect(cards[0]).toHaveAttribute('type', 'button')
 
     fireEvent.click(cards[0])
     expect(onSelect).toHaveBeenCalledOnce()
-
-    expect(screen.getByRole('button', { name: 'پیمایش به راست' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'پیمایش به چپ' })).toBeInTheDocument()
   })
 
-  it('renders special-collection cards as native buttons and gives the banner a heading', () => {
-    const onSelect = vi.fn()
-    render(withRouter(<SpecialCollection onSelectProduct={onSelect} />))
+  it('keeps no product card implemented as a click-only generic element', async () => {
+    const { container } = render(withCatalog(<PopularTools onSelectProduct={vi.fn()} />))
 
-    const cards = screen.getAllByRole('button', { name: /م تومن/ })
-    expect(cards.length).toBeGreaterThan(0)
-    expect(cards[0]).toHaveAttribute('type', 'button')
-
-    expect(screen.getByRole('heading', { level: 2, name: 'سری مشکی رونیکس' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'پیمایش به راست' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'پیمایش به چپ' })).toBeInTheDocument()
-  })
-
-  it('keeps no product card implemented as a click-only generic element', () => {
-    const { container } = render(withRouter(<Bestsellers onSelectProduct={vi.fn()} />))
+    await screen.findAllByRole('button', { name: /تومان/ })
 
     const clickableDivs = container.querySelectorAll('div[onclick]')
     expect(clickableDivs.length).toBe(0)
@@ -86,24 +58,10 @@ describe('storefront product cards › a11y baseline (#82)', () => {
 })
 
 describe('storefront CTAs › real destinations instead of toasts', () => {
-  it('routes the bestsellers "view all" CTA to the bestsellers page', () => {
-    render(withRouterProbe(<Bestsellers onSelectProduct={vi.fn()} />))
+  it('reveals ordering details inline instead of showing a toast', async () => {
+    render(withCatalog(<PopularTools onSelectProduct={vi.fn()} />))
 
-    fireEvent.click(screen.getByRole('button', { name: /مشاهده همه پرفروش‌ها/ }))
-
-    expect(screen.getByTestId('location')).toHaveTextContent(ROUTES.bestsellers)
-  })
-
-  it('routes the special-collection CTA to a Ronix-brand search', () => {
-    render(withRouterProbe(<SpecialCollection onSelectProduct={vi.fn()} />))
-
-    fireEvent.click(screen.getByRole('button', { name: 'نمایش کلکسیون' }))
-
-    expect(screen.getByTestId('location')).toHaveTextContent(`${ROUTES.search}?q=Ronix`)
-  })
-
-  it('reveals shipping details inline instead of showing a toast', () => {
-    render(withRouter(<PopularTools onSelectProduct={vi.fn()} />))
+    await screen.findAllByRole('button', { name: /تومان/ })
 
     const detailsButton = screen.getByRole('button', { name: 'جزئیات' })
     expect(detailsButton).toHaveAttribute('aria-expanded', 'false')
@@ -111,9 +69,9 @@ describe('storefront CTAs › real destinations instead of toasts', () => {
     fireEvent.click(detailsButton)
 
     expect(detailsButton).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText(/ارسال رایگان برای سفارش‌های بالای/)).toBeInTheDocument()
+    expect(screen.getByText(/هزینهٔ ارسال پس از واردکردن اطلاعات دریافت‌کننده اعلام می‌شود/)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'بستن' }))
-    expect(screen.queryByText(/ارسال رایگان برای سفارش‌های بالای/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/هزینهٔ ارسال پس از واردکردن اطلاعات دریافت‌کننده اعلام می‌شود/)).not.toBeInTheDocument()
   })
 })

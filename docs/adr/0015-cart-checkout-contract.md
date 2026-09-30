@@ -34,9 +34,11 @@ immutable order snapshots and idempotent commands.
 
 - Every cart read returns a server-calculated quote with a monotonic cart version
   and price-policy revision. A quote is informational and is not payment proof.
-- Checkout accepts variant IDs, quantities, an inline delivery address or a
-  customer-owned address ID, and a requested shipping method. It never accepts
-  client subtotal, total, stock, discount or shipping amount.
+- Checkout operates on the persisted cart (server-owned read of the cart's
+  variant IDs/quantities) plus an inline delivery address snapshot and a requested
+  shipping method. It never accepts client subtotal, total, stock, discount or
+  shipping amount, and it never reads variant IDs or quantities from the client
+  payload.
 - Prices are integer IRR values using the existing `Money` contract. The server
   recalculates every line and total on checkout.
 - Reservation starts only inside checkout after repricing and allocation; adding
@@ -48,8 +50,8 @@ immutable order snapshots and idempotent commands.
 
 ### Address and shipping
 
-- V1 checkout accepts an immutable inline address snapshot. Saved addresses may
-  be added later, but an `addressId` must belong to the authenticated customer.
+- V1 checkout accepts an immutable inline address snapshot only. Saved addresses
+  are future scope (deferred; no `addressId` exists in the V1 checkout DTO).
 - Required fields are province code, city, address text, 10-digit normalized
   postal code, recipient name and Iranian mobile. Persian/Arabic-Indic digits
   are normalized server-side; all-zero postal codes are rejected.

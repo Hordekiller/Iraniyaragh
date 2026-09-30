@@ -26,8 +26,10 @@ capability.
 | Admin agent      | Bind read-only Order queue/detail/timeline to merged #247 before adding permission-aware commands            | `apps/admin/**`; one named owner alone edits `apps/admin/src/config/navigation.ts` | Keep command actions fixture-gated until the protected command API and compensation policy merge       |
 | User UI agent    | Bind Cart, Checkout and owned Order reads to merged #244/#246/#247 APIs after Cart hardening                 | `apps/web/**`; one named owner alone edits web routing/layout                      | Preserve live Catalog/media/availability; clients never own price, stock or Order state                |
 
-At the reviewed `b220e01` baseline, #249 is the docs-only status follow-up. Before
-new implementation starts, each lane
+At the current `06d7a12` baseline (#251 Cart correctness; #249 docs already
+merged), the storefront Cart/Checkout/Order surfaces are bound to the live APIs per
+`PROJECT_STATUS.md` (the rows below describe remaining hardening, not the original
+binding). Before new implementation starts, each lane
 must claim its issue/branch/worktree and shared hotspots; local or untracked files
 remain user-owned and are never delivery evidence. A local commit is handoff
 evidence, not merged capability.
@@ -40,7 +42,7 @@ contract gate is merged. The integration row is a separate PR based on then-curr
 
 | Wave                        | Contract/platform lane                                                                                | Admin lane                                                                        | User UI lane                                                                 | Integration and exit                                                                    |
 | --------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `0.1` Auth closure          | Reconcile #50/#91; retain #114 as private SMS.ir acceptance; no invented secret backend               | Verify live staff session, MFA, permission denial and SMS read-only states        | Verify live customer OTP states, refresh/revoke and cross-tab recovery       | Clean-main Auth E2E; close/split #50/#91; #78 remains a named governance blocker        |
+| `0.1` Auth closure          | Reconcile #50/#91; retain #114 as private SMS.ir acceptance; no invented secret backend               | Verify live staff session, MFA, permission denial and SMS read-only states        | Verify live customer OTP states, refresh/revoke and cross-tab recovery       | Clean-main Auth E2E; close/split #50/#91 (#78 closed as a governance item; release authority recorded in `TEAM.md`)        |
 | `0.2-A` Catalog contract    | #111 idempotency, public cache/projection and barcode decision; then variants/pricing/media contracts | Finish category/brand/product/SKU fixture screens without editing domain rules    | Finish discover/list/detail fixture pages with canonical URL state           | Contract parity tests; no live switch before #111 and public DTOs merge                 |
 | `0.2-B` Catalog services    | Effective-price history, SKU lifecycle, media metadata/upload confirmation and import dry-run         | Bind draft wizard, media ordering and publish/archive commands                    | Bind public search/list/detail, responsive images and metadata               | Draft → SKU/price/media → publish → anonymous discovery on current `main`               |
 | `0.3-A` Inventory contract  | Warehouse/location, reason, allocation, reservation TTL and transfer transition contracts             | Build ports/fixtures for locations, balance, movements, adjustments and transfers | Consume only public availability summary; never expose ledger/cost           | Schema/contract PR first; migration reviewed independently                              |
@@ -137,7 +139,7 @@ same hotspot, stop both integrations and land a small reconciliation PR first.
 
 | Likely collision                                         | Prevention                                                                                                                                            |
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Admin SMS work #133 vs platform SMS contract #118        | Keep #133 stacked/fixture-backed until #118 is corrected and merged; then rebase and run contract parity tests                                        |
+| Admin SMS work #133 vs platform SMS contract #118        | #133 was superseded by #151 (shipped against the accepted SMS contract); a residual collision would be filed fresh. Keep any new SMS UI stacked/fixture-backed until its contract is corrected and merged |
 | User UI Next.js migration #126 vs discovery runtime #129 | #126 owns rendered pages/routes; #129 owns sitemap projection, robots policy, cache/outbox and IndexNow; coordinate only the canonical route manifest |
 | Logging UI vs logging platform #136                      | Platform lands schema, permissioned query API and retention first; admin renders aggregates/search only; user UI exposes at most safe `requestId`     |
 | Navigation edits by multiple UI agents                   | Separate admin and web navigation; within each app appoint one branch owner and merge navigation in a final small commit                              |

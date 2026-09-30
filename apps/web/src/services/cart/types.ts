@@ -1,30 +1,37 @@
 import type { Money } from '@iranyaragh/contracts'
 
 /**
- * Storefront cart and order view types.
+ * Storefront cart view types.
  *
  * The authoritative domain types live in `@iranyaragh/contracts` (single source
- * of truth). This module declares the slim client-side cart model the storefront
- * renders. Line unit prices are contract `Money` (IRR) values captured from the
- * catalog at add time; totals are computed in Rial and formatted in Toman by
- * `lib/format.ts`.
- *
- * NOTE: In this pre-backend phase the cart is client-side state (in-memory +
- * localStorage). It is intentionally NOT an authority on pricing or inventory;
- * a real server order must re-derive prices from the ledger when the backend
- * lands (COMMERCE_AND_INVENTORY.md).
+ * of truth). This module declares the unified UI cart line rendered by the
+ * cart/checkout pages. Two sources feed it:
+ * - a guest local draft (in-memory + localStorage, pre-login convenience), and
+ * - the authenticated server cart (`services/commerce/cart.ts`), whose lines
+ *   carry `variantId`, title, SKU, prices and stock `available` and whose
+ *   totals come from the server quote.
+ * Line unit prices are contract `Money` (IRR) values; totals are computed in
+ * Rial and formatted in Toman by `lib/format.ts`.
  */
 
 export type CartLine = {
-  productId: string
-  slug: string
+  /** Server cart line key (public variant id). */
+  variantId: string
+  /** Catalog product id, when the line came from the current session. */
+  productId: string | null
+  /** Catalog slug for the product link; absent for server-sourced lines. */
+  slug: string | null
   name: string
   brand: string | null
-  image: string
+  /** Catalog image, when known; server-sourced lines may lack one. */
+  image: string | null
+  sku: string
   /** Unit price in IRR (Rial), captured from the catalog when added. */
   unitPrice: Money
   oldPrice: Money | null
   quantity: number
+  /** Server-reported available stock when authoritative; null for guest drafts. */
+  available: number | null
 }
 
 export type CartState = {
@@ -69,80 +76,4 @@ export function computeCartTotals(lines: CartLine[], shippingRials = 0): CartTot
     lineCount: lines.length,
     itemCount,
   }
-}
-
-/**
- * Checkout identity and shipping/billing inputs (client-side shape for the demo
- * flow). This is intentionally a separate, stable form model, not a Prisma or
- * API contract type.
- */
-export type CheckoutInput = {
-  fullName: string
-  mobile: string
-  province: string
-  city: string
-  postalCode: string
-  address: string
-  note: string
-}
-
-export type OrderStatus = 'PENDING_PAYMENT' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
-
-export type OrderItem = {
-  productId: string
-  slug: string
-  name: string
-  image: string
-  unitPrice: Money
-  quantity: number
-}
-
-export type StoreOrder = {
-  id: string
-  createdAt: string
-  /** Demo-only idempotency marker; the backend will own this field later. */
-  idempotencyKey?: string
-  status: OrderStatus
-  items: OrderItem[]
-  shippingRials: number
-  subtotalRials: number
-  totalRials: number
-  shipping: {
-    fullName: string
-    mobile: string
-    province: string
-    city: string
-    postalCode: string
-    address: string
-  }
-  note?: string
-}
-
-export type CreateOrderInput = {
-  /** Stable key used to make checkout retries create one logical order. */
-  idempotencyKey?: string
-  items: OrderItem[]
-  shippingRials: number
-  subtotalRials: number
-  totalRials: number
-  shipping: StoreOrder['shipping']
-  note?: string
-}
-
-/**
- * The order port used by the storefront's demo checkout/orders flow. A real
- * client hitting the order/payment state machines will replace the fixture when
- * the backend lands (COMMERCE_AND_INVENTORY.md); the UI only depends on this
- * interface.
- */
-export interface OrderApi {
-  createOrder(input: CreateOrderInput): Promise<StoreOrder>
-  listOrders(): Promise<StoreOrder[]>
-  getOrder(id: string): Promise<StoreOrder>
-  /**
-   * Demo-only transition: PENDING_PAYMENT -> PAID after a mock gateway success.
-   * The real order/payment state machine will supersede this fixture when the
-   * backend lands (COMMERCE_AND_INVENTORY.md).
-   */
-  markPaid(id: string): Promise<StoreOrder>
 }

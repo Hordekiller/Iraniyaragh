@@ -37,6 +37,11 @@ Blockers — those must be resolved or explicitly risk-accepted by a human.
 
 ## Current triage (snapshot, 340 issues)
 
+> Snapshot of 2026-09-14. Since this snapshot: `typescript:S6323` (regex empty
+> alternative) was closed by merged #202 and `typescript:S2245` (weak RNG) by merged
+> #201 (both 2026-09-14). Re-run the Sonar scan before treating numbers below as
+> current.
+
 ### 1) Fix Now — real production risk
 
 | Rule | N | Note |
@@ -77,7 +82,8 @@ S6571/S7744/S7760/S7773/S7755 (low value, 1 each).
 
 ### 4) Design reference — excluded from product grade
 
-~11 issues trace to `docs/design/user-ui-reference/**` (`greng` interactive elements,
+~11 issues trace to `docs/design/user-ui-reference/**` (interactive-element rule hit
+in the archived reference — raw token `greng` is not a Sonar rule name (unclear in report);
 `array index as key`, invalid links, regex style…). It is a design archive, not shipped app.
 Suggested config (server-side, no code change):
 

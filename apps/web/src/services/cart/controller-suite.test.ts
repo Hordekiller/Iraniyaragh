@@ -3,14 +3,17 @@ import { CartController, LocalCartStorage } from './controller'
 import type { CartLine } from './types'
 
 const VALID: CartLine = {
+  variantId: 'v1',
   productId: 'p1',
   slug: 'ronix-2210-hammer-drill',
   name: 'دریل رونیکس ۲۲۱۰',
   brand: 'Ronix',
   image: '/images/hero1.jpg',
+  sku: 'SKU-2210',
   unitPrice: { amount: '28500000', currency: 'IRR' },
   oldPrice: null,
   quantity: 2,
+  available: null,
 }
 
 function makeController() {
@@ -37,14 +40,14 @@ describe('CartController', () => {
   it('setQuantity removes a line at zero and clamps to the max', () => {
     const { controller } = makeController()
     controller.add({ ...VALID, quantity: 1 })
-    controller.setQuantity('p1', 0)
+    controller.setQuantity('v1', 0)
     expect(controller.getState().lines).toHaveLength(0)
 
     controller.add({ ...VALID, quantity: 1 })
-    controller.setQuantity('p1', 1000)
+    controller.setQuantity('v1', 1000)
     expect(controller.getState().lines[0].quantity).toBe(99)
 
-    controller.setQuantity('p1', Number.NaN)
+    controller.setQuantity('v1', Number.NaN)
     expect(controller.getState().lines).toHaveLength(0)
   })
 

@@ -1,7 +1,10 @@
 # ADR-0014: Runtime RBAC administration and configurable financial policy
 
-Status: Proposed for review (#66-family governance slice)
-Date: 2026-09-13
+Status: Accepted — adopted on `main` via merged review #185 (`2e137d2`,
+2026-09-14); the planned runtime slices (Sections A–C below) remain unimplemented
+and are tracked in `docs/RBAC_AND_FINANCIAL_GOVERNANCE.md` and
+`docs/PROJECT_STATUS.md`
+Date: 2026-09-13 (adopted 2026-09-14)
 Owner: `@Hordekiller` (platform contract lead); independent reviewer: `@Maddyrampant`
 Related: `docs/adr/0005-auth-persistence-boundary.md`, `docs/adr/0007-auth-runtime-security-and-http-contract.md`,
 `docs/adr/0003-money-and-time.md`, `docs/adr/0011-sms-provider-and-admin-settings.md`,
@@ -145,7 +148,9 @@ a capability and slice.
 
 - Customer/money/invoice reviewer: `@Maddyrampant` approves the admin UX, the
   settings contract and the compliance mapping.
-- No `schema.prisma` change merges before this ADR is accepted.
+- No `schema.prisma` change merges before this ADR is accepted. (Pre-acceptance
+  freeze; the ADR is now adopted via #185, so subsequent schema changes must follow
+  the normal forward-reviewed migration policy.)
 
 ## References
 

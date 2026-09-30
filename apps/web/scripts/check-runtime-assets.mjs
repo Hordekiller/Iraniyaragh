@@ -26,12 +26,23 @@ const LEGAL_TXT = /(?:^|\/)(OFL\.txt|LICEN[CS]E.*|NOTICE.*|COPYING.*)$/i;
  */
 const NAVIGATION_ONLY_DOMAINS = ['instagram.com'];
 
+/**
+ * Structured-data vocabulary terms (e.g. `availability`) are the same kind of
+ * identifier as the `@context` itself: a crawler resolves them, the page never
+ * fetches them. The set is explicit so an actual remote asset can never slip in
+ * behind the schema.org host.
+ */
+const SCHEMA_TERM_URLS = ['https://schema.org/InStock', 'https://schema.org/OutOfStock'];
+
 function remoteUrls(content) {
   const matches = [];
   const re = new RegExp(REMOTE_URL_SRC.source, 'g');
   let match = null;
   while ((match = re.exec(content)) !== null) {
-    if (!NAVIGATION_ONLY_DOMAINS.some(domain => match[0].includes(domain))) {
+    const allowed =
+      NAVIGATION_ONLY_DOMAINS.some(domain => match[0].includes(domain)) ||
+      SCHEMA_TERM_URLS.includes(match[0]);
+    if (!allowed) {
       matches.push(match[0]);
     }
   }
@@ -55,7 +66,6 @@ function contentToInspect(file, content) {
   const withoutNamespaces = content.replace(/xmlns(?::\w+)?="(?:https?:\/\/[^"]*)"/g, '');
   return withoutNamespaces.replace(/['"]@context['"]\s*:\s*['"]https?:\/\/schema\.org['"]/g, '');
 }
-
 function collectFiles(target) {
   const stat = statSync(target);
   if (!stat.isDirectory()) return [target];

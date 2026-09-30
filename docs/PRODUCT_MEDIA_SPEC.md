@@ -137,9 +137,13 @@ express them in SQL migration and cover them with integration tests.
 5. One transaction changes `PROCESSING` to `READY` and exposes the rendition set.
    Failure records a safe reason code; raw decoder/storage errors stay in redacted
    logs. Retry is bounded and idempotent.
-6. Unconfirmed uploads expire after 30 minutes. Quarantine objects, failed sources,
-   replaced renditions and archived assets are cleaned by idempotent jobs with a
-   safety delay and metrics. Database state is the source of truth for deletion.
+6. Unconfirmed uploads expire after the configured TTL — default 15 minutes
+   (`media-policy.service.ts`), bounded 60–1800 s (`PRODUCT_MEDIA_UPLOAD_TTL_SECONDS`).
+   This is an accepted deviation from an earlier 30-minute draft (tracked in
+   `docs/PROJECT_STATUS.md` and `docs/MEDIA_M5_EVIDENCE.md`). Quarantine objects,
+   failed sources, replaced renditions and archived assets are cleaned by idempotent
+   jobs with a safety delay and metrics. Database state is the source of truth for
+   deletion.
 
 Allowed source formats for MVP: JPEG, PNG and WebP images; MP4 video. SVG, GIF,
 HTML, PDF, archives, playlists and externally hosted URLs are rejected. Extension,
@@ -312,8 +316,11 @@ fixtures while M1 is implemented, but M2 cannot merge before the shared contract
 
 - [x] Maximum 12 published gallery assets per product, including at most 3 videos.
       Existing products are not unpublished if a future configured limit is lower.
-- [x] Video source maximum is 100 MiB, 120 seconds and 1080p. All three checks are
-      server-enforced from trusted probe metadata, not browser declarations.
+- [ ] Video source maximum is 100 MiB, 120 seconds and 1080p. Only the 100 MiB byte
+      bound is enforced today; the worker returns immediately for non-images
+      (`image-processor.service.ts:55`) and confirmed videos stay `UPLOADED`, so the
+      duration and resolution checks are **not yet** server-enforced (open gap
+      recorded in `docs/PROJECT_STATUS.md`).
 - [x] Catalog/content staff own Persian captions and transcripts. Generated caption
       drafts are never published without an authorized human review.
 - [x] A successfully processed private source is retained for 7 days to permit a

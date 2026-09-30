@@ -13,7 +13,7 @@ function result(): CatalogListResult {
         slug: 'ronix-2210-hammer-drill',
         name: 'دریل چکشی رونیکس',
         brand: 'Ronix',
-        category: { id: 'cat-power', name: 'ابزار برقی', slug: 'power-tools' },
+        category: { id: 'cat-power', name: 'ابزار برقی', slug: 'power-tools', parentId: null },
         image: '/images/hero1.jpg',
         media: [],
         description: null,
@@ -23,6 +23,8 @@ function result(): CatalogListResult {
         reviews: 342,
         stockStatus: 'IN_STOCK',
         badge: null,
+        variants: [],
+        defaultVariantId: null,
       },
     ],
     meta: { page: 1, perPage: 24, total: 1, pages: 1 },
@@ -32,6 +34,7 @@ function result(): CatalogListResult {
 function stubCatalog(overrides: Partial<CatalogApi> = {}): CatalogApi {
   return {
     listCategories: vi.fn(async () => []),
+    listBrands: vi.fn(async () => []),
     listProducts: vi.fn(async () => result()),
     getProductBySlug: vi.fn(async () => { throw new Error('not found') }),
     ...overrides,
@@ -60,26 +63,27 @@ describe('SearchPage', () => {
     const api = stubCatalog()
     renderSearch(undefined, api)
 
-    expect(screen.getByRole('heading', { name: /نتایج جستجو/ })).toBeInTheDocument()
-    expect(screen.getByText('عبارتی برای جستجو وارد کنید.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'جست‌وجو' })).toBeInTheDocument()
+    expect(screen.getByText(/عبارت خود را در نوار جست‌وجو/)).toBeInTheDocument()
     expect(api.listProducts).not.toHaveBeenCalled()
   })
 
   it('shows the loading state and then the matching products', async () => {
     renderSearch('دریل', stubCatalog())
 
-    expect(await screen.findByText(/برای «دریل»/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /نتایج جست‌وجو برای «دریل»/ })).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: /دریل چکشی رونیکس/ })).toBeInTheDocument()
-    expect(screen.getByText('۱ کالا یافت شد')).toBeInTheDocument()
+    expect(screen.getByText('۱ کالا')).toBeInTheDocument()
   })
 
-  it('shows the product count from the returned items, not the pagination total', async () => {
+  it('shows the total from the API meta rather than the length of the received page', async () => {
     renderSearch('bosch', stubCatalog({ listProducts: vi.fn(async () => ({
       items: result().items,
-      meta: { page: 1, perPage: 24, total: 3, pages: 1 },
+      meta: { page: 1, perPage: 24, total: 57, pages: 3 },
     })) }))
 
-    expect(await screen.findByText('۱ کالا یافت شد')).toBeInTheDocument()
+    expect(await screen.findByText('۵۷ کالا')).toBeInTheDocument()
+    expect(screen.getByText(/نمایش ۱ تا ۲۴ از ۵۷ کالا/)).toBeInTheDocument()
   })
 
   it('shows an empty-result hint when nothing matches', async () => {
@@ -88,7 +92,7 @@ describe('SearchPage', () => {
       stubCatalog({ listProducts: vi.fn(async () => ({ items: [], meta: { page: 1, perPage: 24, total: 0, pages: 0 } })) }),
     )
 
-    expect(await screen.findByText(/هیچ محصولی برای «banana» پیدا نشد\./)).toBeInTheDocument()
+    expect(await screen.findByText('هیچ کالایی برای «banana» پیدا نشد.')).toBeInTheDocument()
   })
 
   it('shows a Persian error alert when the search fails', async () => {
@@ -96,7 +100,7 @@ describe('SearchPage', () => {
       listProducts: vi.fn(async () => { throw new Error('down') }),
     }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('دریافت نتایج جستجو با خطا مواجه شد. لطفاً دوباره تلاش کنید.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('بارگذاری محصولات با خطا مواجه شد.')
   })
 
   it('re-runs the search when the query parameter changes', async () => {
@@ -124,8 +128,9 @@ describe('SearchPage', () => {
 
     fireEvent.click(screen.getByText('next'))
 
-    expect(await screen.findByText(/برای «two»/)).toBeInTheDocument()
-    expect(listProducts.mock.calls.length).toBeGreaterThanOrEqual(2)
-    expect((listProducts.mock.calls as unknown as Array<[Record<string, string>]>)[1][0]).toEqual({ search: 'two' })
+    expect(await screen.findByRole('heading', { name: /نتایج جست‌وجو برای «two»/ })).toBeInTheDocument()
+    const terms = (listProducts.mock.calls as unknown as Array<[Record<string, unknown>]>).map(call => call[0].search)
+    expect(terms).toContain('one')
+    expect(terms).toContain('two')
   })
 })

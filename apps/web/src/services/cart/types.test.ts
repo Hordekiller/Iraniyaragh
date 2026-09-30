@@ -3,14 +3,17 @@ import { computeCartTotals, lineTotalRials } from './types'
 import type { CartLine } from './types'
 
 const LINE: CartLine = {
+  variantId: 'v1',
   productId: 'p1',
   slug: 'ronix-2210-hammer-drill',
   name: 'دریل رونیکس ۲۲۱۰',
   brand: 'Ronix',
   image: '/images/hero1.jpg',
+  sku: 'SKU-2210',
   unitPrice: { amount: '28500000', currency: 'IRR' },
   oldPrice: null,
   quantity: 2,
+  available: null,
 }
 
 describe('cart totals', () => {

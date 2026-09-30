@@ -107,6 +107,7 @@ export function MediaGallery({
         <img
           src={fallbackImage ?? PLACEHOLDER_IMAGE}
           alt={productName}
+          decoding="async"
           className="w-full aspect-square object-cover"
         />
       </div>
@@ -252,7 +253,15 @@ export function MediaGallery({
       )}
 
       {items.length > 1 && (
-        <div className="flex gap-2 mt-4 px-4 pb-4 overflow-x-auto">
+        // 2.1.1 Keyboard: the thumbnail strip scrolls sideways, so it has to be
+        // reachable and operable without a pointer, and a screen reader has to be
+        // able to announce what the scrollable region is for.
+        <div
+          role="group"
+          aria-label="تصاویر محصول"
+          tabIndex={0}
+          className="flex gap-2 mt-4 px-4 pb-4 overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 rounded-2xl"
+        >
           {items.map((item, index) => {
             const isActive = index === activeIndex;
             const imageItem = item.kind === "IMAGE" ? item : item.poster;

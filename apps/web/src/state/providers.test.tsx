@@ -7,20 +7,23 @@ import { CartProvider } from './CartProvider'
 import { useAuth } from './auth-context'
 import { useCart } from './cart-context'
 import { useCatalog } from './catalog-context'
-import { useOrders } from './order-context'
+import { useCommerce } from '../services/commerce/context'
 import { useToast } from '../components/feedback/toast-context'
 import type { CartLine } from '../services/cart/types'
 import type { CartStorage } from '../services/cart/controller'
 
 const LINE: CartLine = {
+  variantId: 'v1',
   productId: 'p1',
   slug: 'ronix-2210-hammer-drill',
   name: 'دریل رونیکس ۲۲۱۰',
   brand: 'Ronix',
   image: '/images/hero1.jpg',
+  sku: 'SKU-2210',
   unitPrice: { amount: '28500000', currency: 'IRR' },
   oldPrice: null,
   quantity: 1,
+  available: null,
 }
 
 class MemoryCartStorage implements CartStorage {
@@ -42,11 +45,11 @@ function Probe() {
       <span data-testid="cart-lines">{cart.state.lines.length}</span>
       <span data-testid="totals-itemcount">{cart.totals.itemCount}</span>
       <button onClick={() => cart.add(LINE)}>add</button>
-      <button onClick={() => cart.setQuantity('p1', 3)}>set3</button>
-      <button onClick={() => cart.remove('p1')}>remove</button>
+      <button onClick={() => cart.setQuantity('v1', 3)}>set3</button>
+      <button onClick={() => cart.remove('v1')}>remove</button>
       <button onClick={() => cart.clear()}>clear</button>
-      <span data-testid="in-cart">{String(cart.isInCart('p1'))}</span>
-      <span data-testid="qty">{cart.quantityOf('p1')}</span>
+      <span data-testid="in-cart">{String(cart.isInCart('v1'))}</span>
+      <span data-testid="qty">{cart.quantityOf('v1')}</span>
     </div>
   )
 }
@@ -90,12 +93,12 @@ describe('context guards', () => {
     expectThrow(() => render(<Bad />), 'useCatalog must be used within CatalogProvider')
   })
 
-  it('useOrders throws outside OrderProvider', () => {
+  it('useCommerce throws outside CommerceProvider', () => {
     function Bad() {
-      useOrders()
+      useCommerce()
       return null
     }
-    expectThrow(() => render(<Bad />), 'useOrders must be used within OrderProvider')
+    expectThrow(() => render(<Bad />), 'useCommerce must be used within CommerceProvider')
   })
 
   it('useToast throws outside ToastProvider', () => {

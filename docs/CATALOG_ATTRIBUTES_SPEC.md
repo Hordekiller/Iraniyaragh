@@ -181,7 +181,10 @@ key cells. Unknown columns are an error, not silently ignored, in v1.
    transaction; per-row outcomes; result report. Replaying the same key returns the
    stored result.
 5. `GET /api/v1/catalog/admin/export` → streamed workbook, same schema, filters via
-   `CatalogExportQuery`.
+   `CatalogExportQuery`. **Status: planned.** The workbook parser/export library
+   layer is merged (#183), but there is no `catalog/admin/export` route yet; it is
+   tracked as "live-data export wiring" in `docs/PROJECT_STATUS.md`.
+   `CatalogExportQuery` is therefore a contract type, not a live endpoint.
 
 Import is an upsert keyed by `slug`/`sku`/`code`; it never deletes rows, never writes
 inventory, and never changes an existing `sku`. Commit applies creates first, then

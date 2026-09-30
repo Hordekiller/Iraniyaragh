@@ -5,7 +5,7 @@ Status: active design baseline; implementation remains partial
 Owners: product/UX lead `@Maddyrampant`; runtime/security/integration lead
 `@Hordekiller`
 
-Last reconciled with repository: 2026-09-07
+Last reconciled with repository: 2026-09-19
 
 The admin modules in this program map to the dependency gates and complete
 capability register in `COMMERCE_EXPANSION_PLAN.md`. Admin UI sequencing must follow
@@ -54,16 +54,27 @@ Implemented today:
   dashboard guard and logout;
 - fixture-gated staff password/TOTP journey with rate-limit, expiry, replay,
   invalid-session and forbidden states; the route fails closed by default;
+- real staff authentication over the live HTTP client (`#191`,
+  `StaffAuthHttpClient` — password → TOTP verify → Bearer store → `me()` →
+  logout with double-submit CSRF); the fixture remains only behind
+  `NEXT_PUBLIC_FIXTURE_AUTH=true`;
 - shared table, form, wizard, confirmation, feedback, status, page-header/card and
   selectable-input primitives with Vitest component coverage;
-- showcase routes for the primitives, deliberately outside operational navigation.
+- showcase routes for the primitives, deliberately outside operational navigation;
+- read-only operational slices bound to the live API where published: Catalog
+  product/attributes/variants/import management (#229), Order queue/detail (#247)
+  and Settings (SMS #151/#154, session list/revoke #158).
 
 Not implemented today:
 
-- production staff Auth wiring for password/TOTP, refresh/recovery and permission-aware
-  navigation (the fixture journey is not production integration);
-- complete typed domain clients and live business-domain integration;
-- operational module routes, tables, forms, commands, notifications and audit timelines;
+- live MFA/session operational UX and production provider acceptance beyond the #191
+  real HTTP login; complete privileged-user/role administration (runtime RBAC, G2/G3
+  of ADR-0014) is absent;
+- complete typed domain clients and live business-domain integration for Inventory,
+  Payment and Fulfillment operations;
+- operational module routes, tables, forms, commands, notifications and audit timelines
+  for Inventory and Order commands (catalog/orders/settings are read-only or
+  authoring-only today);
 - dashboard metrics, work queues, global search or operator task inbox;
 - upload, export, advanced filtering and domain-specific sensitive-command primitives;
 - complete admin a11y and visual-regression suites (component tests exist);

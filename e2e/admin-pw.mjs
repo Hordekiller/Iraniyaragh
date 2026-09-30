@@ -1,0 +1,27 @@
+import { chromium } from '@playwright/test';
+const code = process.env.AUTH_DEV_CODE ?? 'dev-admin-code-123';
+const browser = await chromium.launch({ headless: true });
+const ctx = await browser.newContext();
+const page = await ctx.newPage();
+const logs = [];
+page.on('console', m => { if (m.type() === 'error') logs.push('[console] ' + m.text()); });
+page.on('pageerror', e => logs.push('[pageerror] ' + e.message));
+page.on('requestfailed', r => logs.push('[reqfail] ' + r.url() + ' :: ' + (r.failure()?.errorText ?? '')));
+page.on('response', r => { if (r.url().includes('/api/')) logs.push('[res] ' + r.status() + ' ' + r.url()); });
+
+await page.goto('http://localhost:3001/login', { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(1500);
+const inputs = await page.locator('input').count();
+console.log('inputs:', inputs);
+const first = page.locator('input').first();
+await first.fill(code);
+await page.getByRole('button', { name: 'ورود' }).click();
+await page.waitForTimeout(8000);
+console.log('AFTER LOGIN URL:', page.url());
+const bodyText = await page.locator('body').innerText().catch(() => '');
+if (bodyText.includes('امکان برقراری ارتباط')) console.log('FOUND network-error text on page');
+console.log('--- logs ---');
+console.log(logs.slice(0, 40).join('\n') || '(none)');
+console.log('--- body snippet (first 500) ---');
+console.log(JSON.stringify(bodyText.slice(0, 500)));
+await browser.close();

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { MemorySessionStore } from '../lib/auth/session-store'
@@ -24,17 +24,20 @@ class MemoryCartStorage implements CartStorage {
 }
 
 const LINE: CartLine = {
+  variantId: 'v1',
   productId: 'p1',
   slug: 'ronix-2210-hammer-drill',
   name: 'دریل رونیکس ۲۲۱۰',
   brand: 'Ronix',
   image: '/images/hero1.jpg',
+  sku: 'SKU-2210',
   unitPrice: { amount: '28500000', currency: 'IRR' },
   oldPrice: null,
   quantity: 2,
+  available: null,
 }
 
-function renderCart(storage: CartStorage) {
+function renderCart(storage: CartStorage, options: { store?: MemorySessionStore } = {}) {
   return render(
     <MemoryRouter initialEntries={['/cart']}>
       <Routes>
@@ -42,7 +45,10 @@ function renderCart(storage: CartStorage) {
           path="/cart"
           element={
             <ToastProvider>
-              <AuthProvider api={new AuthFixtureClient({ store: new MemorySessionStore() })}>
+              <AuthProvider
+                api={new AuthFixtureClient({ store: options.store ?? new MemorySessionStore() })}
+                store={options.store}
+              >
                 <CartProvider storage={storage}>
                   <CartPage />
                 </CartProvider>
@@ -55,12 +61,25 @@ function renderCart(storage: CartStorage) {
   )
 }
 
+async function signInSession(store: MemorySessionStore) {
+  const { CustomerOtpController } = await import('../lib/auth/ui')
+  const controller = new CustomerOtpController(new AuthFixtureClient({ store }), store, () => Date.now())
+  controller.open()
+  controller.setMobile('09123456789')
+  await controller.requestOtp()
+  controller.setCode('123456')
+  await controller.verifyOtp()
+}
+
 describe('CartPage', () => {
-  it('shows the empty-cart state with a back-to-store link', () => {
+  it('shows the empty-cart state with real shopping destinations', () => {
     renderCart(new MemoryCartStorage([]))
 
     expect(screen.getByRole('heading', { name: 'سبد خرید شما خالی است' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'بازگشت به فروشگاه' })).toHaveAttribute('href', '/')
+    // A dead "back home" button is not a recovery path on mobile.
+    expect(screen.getByRole('link', { name: 'مشاهدهٔ کالاها' })).toHaveAttribute('href', '/products')
+    expect(screen.getByRole('link', { name: 'مرور دسته‌بندی‌ها' })).toHaveAttribute('href', '/categories')
+    expect(screen.getByRole('link', { name: 'تازه‌های فروشگاه' })).toHaveAttribute('href', '/newest')
   })
 
   it('renders lines, quantities and order summary', () => {
@@ -101,22 +120,96 @@ describe('CartPage', () => {
     renderCart(storage)
 
     fireEvent.click(screen.getByRole('button', { name: 'حذف همه' }))
+    fireEvent.click(screen.getByRole('button', { name: 'بله، حذف کن' }))
 
     expect(storage.state.lines).toHaveLength(0)
     expect(screen.getByRole('status')).toHaveTextContent('سبد خرید خالی شد')
   })
 
-  it('shows free shipping above the threshold and metered shipping below it', () => {
-    const bigLine: CartLine = { ...LINE, quantity: 8, unitPrice: { amount: '28500000', currency: 'IRR' } }
-    renderCart(new MemoryCartStorage([bigLine]))
+  it('requires a confirmation before destroying every line', () => {
+    const storage = new MemoryCartStorage([LINE])
+    renderCart(storage)
 
-    expect(screen.getAllByText('رایگان').length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button', { name: 'حذف همه' }))
+    // One tap must never wipe a filled cart.
+    expect(storage.state.lines).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'انصراف' }))
+    expect(storage.state.lines).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'بله، حذف کن' })).not.toBeInTheDocument()
   })
 
-  it('shows the metered shipping cost for an under-threshold subtotal', () => {
+  it('announces the confirmation and hands focus back to the trigger', async () => {
+    renderCart(new MemoryCartStorage([LINE]))
+
+    const trigger = screen.getByRole('button', { name: 'حذف همه' })
+    fireEvent.click(trigger)
+
+    // Opening a confirmation must not leave focus on the now-hidden trigger.
+    const prompt = screen.getByRole('alertdialog')
+    expect(prompt).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'بله، حذف کن' })).toHaveFocus()
+
+    fireEvent.click(screen.getByRole('button', { name: 'انصراف' }))
+    await waitFor(() => expect(trigger).toHaveFocus())
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('cancels the clear confirmation on Escape without touching the cart', async () => {
+    const storage = new MemoryCartStorage([LINE])
+    renderCart(storage)
+
+    const trigger = screen.getByRole('button', { name: 'حذف همه' })
+    fireEvent.click(trigger)
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    await waitFor(() => expect(trigger).toHaveFocus())
+    expect(storage.state.lines).toHaveLength(1)
+  })
+
+  it('keeps the quantity stepper at an accessible touch size', () => {
+    renderCart(new MemoryCartStorage([LINE]))
+
+    const increase = screen.getByRole('button', { name: /افزایش تعداد/ })
+    expect(increase.className).toContain('w-11')
+    expect(increase.className).toContain('h-11')
+  })
+
+  it('announces the item count in a live region', () => {
+    renderCart(new MemoryCartStorage([LINE]))
+
+    const status = screen.getAllByRole('status').find(node => node.textContent?.includes('در سبد خرید'))
+    expect(status).toBeDefined()
+    expect(status).toHaveAttribute('aria-live', 'polite')
+  })
+
+  it('never states a shipping fee for a guest draft that has no server quote', () => {
     const small: CartLine = { ...LINE, quantity: 1, unitPrice: { amount: '1000000', currency: 'IRR' } }
     renderCart(new MemoryCartStorage([small]))
 
-    expect(screen.getByText('۴۵٬۰۰۰ تومان')).toBeInTheDocument()
+    expect(screen.getByText('در تسویه‌حساب محاسبه می‌شود')).toBeInTheDocument()
+    expect(screen.queryByText('رایگان')).not.toBeInTheDocument()
+  })
+
+  it('labels the draft total as a goods subtotal, not a final payable amount', () => {
+    const small: CartLine = { ...LINE, quantity: 1, unitPrice: { amount: '1000000', currency: 'IRR' } }
+    renderCart(new MemoryCartStorage([small]))
+
+    expect(screen.getByText('جمع کالاها')).toBeInTheDocument()
+    expect(screen.queryByText('مبلغ قابل پرداخت')).not.toBeInTheDocument()
+  })
+
+  it('never tells a signed-in customer their cart is empty while the server cart loads', async () => {
+    const store = new MemorySessionStore()
+    await signInSession(store)
+    // A cold signed-in cart starts from an empty in-memory draft, so the first
+    // render has no lines at all until the server cart arrives.
+    renderCart(new MemoryCartStorage([]), { store })
+
+    expect(screen.queryByRole('heading', { name: 'سبد خرید شما خالی است' })).not.toBeInTheDocument()
+    // ...and the draft source must not make a signed-in visitor look like a guest.
+    expect(screen.queryByText('برای تکمیل سفارش ابتدا وارد حساب خود شوید.')).not.toBeInTheDocument()
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('در حال بارگذاری سبد خرید'))
   })
 })

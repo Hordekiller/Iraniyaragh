@@ -11,9 +11,11 @@ The first release supports two first-party browser clients:
 - `CUSTOMER_WEB`: mobile OTP authentication;
 - `ADMIN_WEB`: staff password plus TOTP authentication.
 
-Native/mobile token delivery, social login, passkeys/WebAuthn, production SMS vendor
-selection and implicit `User`/`Customer` linkage are out of scope. They require a
-compatible contract extension, not an undocumented switch in transport.
+Native/mobile token delivery, social login, passkeys/WebAuthn and implicit
+`User`/`Customer` linkage are out of scope. They require a compatible contract
+extension, not an undocumented switch in transport. (The initial production SMS
+vendor is settled: SMS.ir behind the vendor-neutral provider boundary — ADR-0011;
+provider-specific delivery remains an adaptive transport under this contract.)
 
 `MUST`, `MUST NOT`, `SHOULD` and `MAY` are normative. Time is UTC and ISO-8601 in
 JSON. Durations in responses are integer seconds. IDs are opaque strings.
@@ -146,6 +148,7 @@ browser clients above.
 | `POST /staff/password/change`     | `STAFF_MFA` + fresh auth          | `200 {data:{}}`                  | Verify current password; revoke other sessions    |
 | `POST /staff/totp/enroll`         | Bearer + fresh password/bootstrap | `200` one-time provisioning data | No logs/cache; pending credential only            |
 | `POST /staff/totp/confirm`        | Pending enrollment                | `200` one-time recovery codes    | Confirm TOTP before activating credential         |
+| `POST /staff/recovery/verify`     | Public challenge                  | `200` MFA challenge              | Distinct endpoint/DTO from TOTP; one-time recovery code, dummy-hash non-enumeration |
 | `POST /staff/recovery/regenerate` | `STAFF_MFA` + fresh auth          | `200` one-time recovery codes    | Invalidates all previous recovery codes           |
 
 Fresh authentication means `now - auth_time <= 300 seconds`; otherwise return
@@ -391,8 +394,10 @@ the service never silently falls back to per-process limits.
 
 ### Password
 
-- 15–128 Unicode characters; a separate 1,024-byte request limit prevents hashing
-  denial of service.
+- 15–128 Unicode characters enforced at the DTO boundary
+  (`apps/api/src/modules/auth/staff-auth.dto.ts`), which also bounds the hashing
+  input size. A separate global request-body byte limit is not currently enforced
+  in `apps/api`; if a body-size cap is added later it must not change this rule.
 - No trim, case conversion, silent truncation, periodic expiry or character-class
   composition rule.
 - Paste and password managers are allowed.

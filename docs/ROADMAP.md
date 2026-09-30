@@ -30,8 +30,9 @@ store. Native mobile and advanced growth features are intentionally later.
 ## Current checkpoint
 
 - `0.1`: closed. Auth runtime, privileged lifecycle, sessions and RBAC are on
-  `main` (#109/#111/#150/#158); #49 is closed and #50/#91 acceptance reconciled.
+  `main` (#109/#150/#158; #49 is closed and #50/#91 acceptance reconciled).
   Auth-parity follow-ups #186/#188 were delivered via #190/#195 (2026-09-15/13).
+  (#111 is the Catalog-hardening epic, tracked under `0.2` below.)
 - `0.2`: integrated Catalog/Media foundation. Attributes, variants/SKU identity,
   price history and staged import are merged via #179–#184; Catalog parity and
   typed contracts are merged through #214; Product Media M1–M5 and the

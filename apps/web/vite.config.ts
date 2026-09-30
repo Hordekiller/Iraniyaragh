@@ -23,5 +23,18 @@ export default defineConfig(async ({ mode }) => {
     plugins,
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
     define: processEnvDefines,
-  };
+    // Dev only. The storefront calls the API with a same-origin relative path, so
+    // the dev server has to forward `/api` to the API process; without this the
+    // request hits Vite, comes back as the SPA HTML and every catalog call fails
+    // as an invalid response. Production is served behind the same origin by the
+    // reverse proxy, so this mapping must never reach a build.
+    server: {
+      proxy: {
+        '/api': {
+          target: `http://127.0.0.1:${env.VITE_DEV_API_TARGET_PORT ?? process.env.API_PORT ?? 4000}`,
+          changeOrigin: false,
+        },
+      },
+    },
+  }
 })

@@ -12,12 +12,30 @@ import type { Money, ProductListMeta, CategorySummary, PublicProductMedia } from
 
 export type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'UNKNOWN'
 
+/**
+ * A sellable variant of a product, surfaced from the public catalog detail.
+ * `id` is the `variantId` the cart/checkout API keys its lines by.
+ */
+export type StorefrontVariant = {
+  id: string
+  sku: string
+  /** Human label from variant attributes (e.g. «سایز ۵»); null for single-variant products. */
+  title: string | null
+  /** This variant's own sale price, in IRR. */
+  salePrice: Money
+  /** Package weight in grams, when the catalog records one; null when unknown. */
+  weightGrams: number | null
+  /** Coarse public availability for this variant (IN_STOCK/LOW_STOCK = true). */
+  available: boolean
+  lowStock: boolean
+}
+
 export type CatalogProduct = {
   id: string
   slug: string
   name: string
   brand: string | null
-  category: { id: string; name: string; slug: string } | null
+  category: { id: string; name: string; slug: string; parentId: string | null } | null
   image: string
   /** Ordered ready media gallery for the product detail page (contract union). */
   media: PublicProductMedia[]
@@ -29,13 +47,32 @@ export type CatalogProduct = {
   reviews: number
   stockStatus: StockStatus
   badge: string | null
+  /** Active sellable variants; empty for list items (only the detail resolves them). */
+  variants: StorefrontVariant[]
+  /** Preferred variant id for add-to-cart; null when no active variant is known. */
+  defaultVariantId: string | null
 }
+
+/**
+ * Listing options offered by the storefront. `name`/`name_desc` map onto the
+ * public contract's `sortBy=name` with an ascending/descending direction; the
+ * contract has no price or popularity ranking, so none is offered here.
+ */
+export type CatalogSort = 'newest' | 'name' | 'name_desc'
+
+/** Page size for storefront listings; the API caps a page at 100. */
+export const LISTING_PER_PAGE = 24
+export const LISTING_MAX_PER_PAGE = 100
 
 export type CatalogQuery = {
   search?: string
   categorySlug?: string
   brand?: string
-  sortBy?: 'popular' | 'price_asc' | 'price_desc' | 'newest'
+  sortBy?: CatalogSort
+  /** 1-based page index. */
+  page?: number
+  /** Page size; the API caps this at 100. */
+  perPage?: number
 }
 
 /** Categories exposed to the storefront browsing UI. */
@@ -43,8 +80,17 @@ export type CatalogCategory = {
   id: string
   name: string
   slug: string
+  /** Parent category id, so the storefront can build the real ancestor trail. */
+  parentId: string | null
   productCount: number
   image: string
+}
+
+/** Brands present in the live catalog (marquee / filter chips). */
+export type CatalogBrand = {
+  id: string
+  name: string
+  slug: string
 }
 
 export type CatalogListResult = {
@@ -60,6 +106,7 @@ export type CatalogListResult = {
  */
 export interface CatalogApi {
   listCategories(): Promise<CatalogCategory[]>
+  listBrands(): Promise<CatalogBrand[]>
   listProducts(query?: CatalogQuery): Promise<CatalogListResult>
   getProductBySlug(slug: string): Promise<CatalogProduct>
 }

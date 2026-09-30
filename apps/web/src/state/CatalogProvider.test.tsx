@@ -7,6 +7,7 @@ import { CatalogHttpClient } from '../services/catalog/http'
 
 const api: CatalogApi = {
   listCategories: vi.fn(async () => []),
+  listBrands: vi.fn(async () => []),
   listProducts: vi.fn(async () => ({ items: [], meta: { page: 1, perPage: 24, total: 0, pages: 0 } })),
   getProductBySlug: vi.fn(async () => { throw new Error('nope') }),
 }
@@ -33,23 +34,31 @@ describe('CatalogProvider', () => {
       return <span data-testid="catalog-live">{provided instanceof CatalogHttpClient ? 'live' : 'other'}</span>
     }
     render(<CatalogProvider><Probe /></CatalogProvider>)
+    // Resolved on the first render: production never waits on a lazy fixture chunk.
     expect(screen.getByTestId('catalog-live')).toHaveTextContent('live')
   })
 
-  it('serves the fixture client when VITE_FIXTURE_CATALOG=true', async () => {
+  it('lazily loads the fixture client when VITE_FIXTURE_CATALOG=true', async () => {
     vi.resetModules()
     vi.stubEnv('VITE_FIXTURE_CATALOG', 'true')
     const freshCatalog = await import('../state/CatalogProvider')
     const freshCtx = await import('../state/catalog-context')
+    const freshFixtures = await import('../services/catalog/fixtures')
     function Probe() {
       const catalog = freshCtx.useCatalogApi()
-      return <span data-testid="fixture-catalog">{typeof catalog.listCategories === 'function' ? 'ready' : 'no'}</span>
+      return (
+        <span data-testid="fixture-catalog">
+          {catalog instanceof freshFixtures.CatalogFixtureClient ? 'ready' : 'no'}
+        </span>
+      )
     }
     render(
       <freshCatalog.CatalogProvider>
         <Probe />
       </freshCatalog.CatalogProvider>,
     )
-    expect(screen.getByTestId('fixture-catalog')).toHaveTextContent('ready')
+    // The fixture module is reached through a dynamic import, so it resolves
+    // after the first paint instead of being bundled into the entry chunk.
+    expect(await screen.findByTestId('fixture-catalog')).toHaveTextContent('ready')
   })
 })

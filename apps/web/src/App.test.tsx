@@ -40,7 +40,7 @@ const routes: Array<[string, () => Promise<void> | void]> = [
   [
     '/checkout',
     async () => {
-      expect(await screen.findByRole('heading', { name: 'سبد خرید خالی است' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'برای تکمیل سفارش وارد شوید' })).toBeInTheDocument()
     },
   ],
   [
@@ -52,25 +52,43 @@ const routes: Array<[string, () => Promise<void> | void]> = [
   [
     '/orders/IR-9999-1',
     async () => {
-      expect(await screen.findByRole('heading', { name: 'سفارش یافت نشد' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'برای مشاهده جزئیات سفارش وارد شوید' })).toBeInTheDocument()
     },
   ],
   [
     '/payment/IR-9999-1',
     async () => {
-      expect(await screen.findByRole('heading', { name: 'سفارش یافت نشد' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'برای دیدن وضعیت پرداخت وارد شوید' })).toBeInTheDocument()
     },
   ],
   [
-    '/bestsellers',
+    '/categories',
     async () => {
-      expect(await screen.findByRole('heading', { name: 'پرفروش‌ترین‌ها' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: 'دسته‌بندی کالاها' })).toBeInTheDocument()
+    },
+  ],
+  [
+    '/products',
+    async () => {
+      expect(await screen.findByRole('heading', { name: 'همه کالاها' })).toBeInTheDocument()
+    },
+  ],
+  [
+    '/services',
+    async () => {
+      expect(await screen.findByRole('heading', { name: 'خدمات فروشگاه' })).toBeInTheDocument()
+    },
+  ],
+  [
+    '/newest',
+    async () => {
+      expect(await screen.findByRole('heading', { name: 'تازه‌ترین کالاها' })).toBeInTheDocument()
     },
   ],
   [
     '/search',
     async () => {
-      expect(await screen.findByText('عبارتی برای جستجو وارد کنید.')).toBeInTheDocument()
+      expect(await screen.findByText(/عبارت خود را در نوار جست‌وجو/)).toBeInTheDocument()
     },
   ],
   [

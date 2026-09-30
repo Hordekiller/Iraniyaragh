@@ -1,8 +1,10 @@
 # Catalog mutation idempotency contract
 
-Status: proposed implementation contract for #111  
+Status: accepted and merged — the durable runtime shipped via #168/#171, and the
+media/catalog-import paths reuse the same semantics (see #240/#200). This document
+remains the reference contract for the behavior.
 Owner: `@Hordekiller`; independent reviewer: `@Maddyrampant`  
-Last reviewed: 2026-09-11
+Last reviewed: 2026-09-11 (status updated 2026-09-19)
 
 ## Boundary
 
@@ -12,6 +14,12 @@ The following retry-prone commands require the `Idempotency-Key` HTTP header:
 - `POST /api/v1/catalog/admin/products/:id/status`
 - `POST /api/v1/catalog/admin/brands`
 - `POST /api/v1/catalog/admin/categories`
+
+This list is not exhaustive. The same header is also required by the variant
+generation, attribute/option, variant-status and staged-import routes
+(`catalog.controller.ts`) and by the media authoring commands (upload/confirm/
+metadata/reorder/archive/primary in `media.controller.ts`); those surfaces follow
+the same replay/conflict semantics below.
 
 PATCH commands use optimistic concurrency in their owning follow-up and are not
 silently treated as idempotent by this slice. Read operations ignore the header.

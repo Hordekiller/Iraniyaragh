@@ -10,11 +10,11 @@ capability to delivered.
 
 | Area         | State on `main`                                                                                                                                                     | Open work, not delivered                                                                     |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Customer web | Accessible responsive Vite app with real-HTTP Auth, live Catalog/media/availability discovery and the merged M4 gallery; Cart/Checkout/Orders remain fixture-backed | #126 rendered pages; live Cart binding; #140 dynamic page/content outcome                    |
+| Customer web | Accessible responsive Vite app with real-HTTP Auth, live Catalog/media/availability discovery, the merged M4 gallery and live Cart/Checkout/Order clients (variant-aware product page, server-priced cart, two-phase checkout, honest pending-payment handoff, order history/detail); fixtures restricted to dev/e2e builds | #126 rendered pages; live Cart binding; #140 dynamic page/content outcome |
 | Admin        | Next.js RTL shell, Auth/session management, SMS settings, Catalog workflow and Product Media authoring; no live Inventory/Order operations                          | Admin-driven publish acceptance and remaining operational commerce modules                   |
 | API          | Auth/RBAC, Catalog/Media, Inventory HTTP/availability, authenticated Cart, #246 Checkout/Order creation and #247 customer/staff Order reads are merged              | #114 provider acceptance; Cart guest/merge; Order commands/compensation; Payment/Fulfillment |
 | Discovery    | ADR-0012 and the complete SEO/GEO plan are merged                                                                                                                   | #129 sitemap/robots/IndexNow and #126 rendered templates                                     |
-| Commerce     | Server Cart, Checkout/Order creation and Order read APIs exist; Web/Admin remain fixture-backed and no Payment/Fulfillment journey exists                           | Live Cart/Checkout/Order clients; commands/compensation; Payment/Fulfillment/notifications   |
+| Commerce     | Server Cart, Checkout/Order creation and Order read APIs exist; storefront now talks to them over HTTP (Idempotency-Key, CUSTOMER_OTP), no simulated payment success and no Payment/Fulfillment provider live yet | Order commands/compensation; Payment/Fulfillment/notifications                               |
 | Operations   | CI and local dependencies exist                                                                                                                                     | #136 logging/telemetry plus deploy, restore, alerts and production drills                    |
 
 PR screenshots, fixtures, schemas and green branch tests are evidence of progress,
@@ -208,7 +208,9 @@ them.
 ## 7. Dependency order
 
 1. Keep current truth/status and three-lane ownership synchronized.
-2. Use the merged Auth/SMS contracts (#118/#139) before live UI integration (#133).
+2. Use the merged Auth/SMS contracts (#118/#139); the live admin SMS UI shipped via
+   #151 (superseding #133), and #139 made the real HTTP Auth default with fixture
+   flags.
 3. Land Next.js route foundation and public projections (#126), coordinated with
    sitemap/robots/IndexNow (#129).
 4. Deliver content schema/workflow and FAQ/policy admin before claiming pages dynamic.

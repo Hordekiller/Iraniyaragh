@@ -9,11 +9,13 @@ export type RequestOptions = {
   baseUrl?: string;
   accessToken?: string;
   json?: unknown;
-  method?: 'DELETE' | 'GET' | 'POST';
+  method?: 'DELETE' | 'GET' | 'POST' | 'PUT';
   timeoutMs?: number;
   /** Send credentialed (cookies) so refresh/CSRF cookies and CORS apply. */
   credentials?: RequestCredentials;
   headers?: Record<string, string>;
+  /** Test seam: override the fetch implementation without touching globals. */
+  fetch?: typeof fetch;
 };
 
 export const DEFAULT_TIMEOUT_MS = 15_000;
@@ -39,6 +41,10 @@ export async function jsonRequest<T>(
     timeoutMs = DEFAULT_TIMEOUT_MS,
     credentials = 'same-origin',
     headers,
+    // Bound for the same reason as the catalog client: a bare `fetcher(...)` call
+    // in strict-mode module code runs with an undefined receiver, which browsers
+    // reject with `TypeError: Illegal invocation` before a request is sent.
+    fetch: fetcher = globalThis.fetch.bind(globalThis),
   } = options;
 
   const controller = new AbortController();
@@ -46,7 +52,7 @@ export async function jsonRequest<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}${path}`, {
+    response = await fetcher(`${baseUrl}${path}`, {
       method,
       credentials,
       signal: controller.signal,

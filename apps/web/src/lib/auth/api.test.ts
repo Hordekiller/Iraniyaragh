@@ -169,4 +169,85 @@ describe('AuthHttpClient cookie-authenticated commands', () => {
       'Authenticated request requires an in-memory access token.',
     );
   });
+  it('revokes another session with DELETE plus CSRF proof and keeps the caller signed in', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
+    fetchMock.mockResolvedValue(okJson({}));
+    vi.stubGlobal('fetch', fetchMock);
+    const store = new MemorySessionStore();
+    store.setAuthenticated(accessData);
+    const client = new AuthHttpClient({ baseUrl: '/backend', store, getCsrfToken: () => 'csrf-proof' });
+
+    await client.revokeSession('other-session');
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/backend/api/v1/auth/sessions/other-session');
+    const init = fetchInit(fetchMock.mock.calls[0]!);
+    expect(init).toMatchObject({ method: 'DELETE', credentials: 'include' });
+    expect((init.headers as Record<string, string>)['X-CSRF-Token']).toBe('csrf-proof');
+    // Revoking someone else's device must not sign this browser out.
+    expect(store.getAccessToken()).toBe(accessData.accessToken);
+  });
+
+  it('drops the in-memory principal when this browser revokes its own session', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
+    fetchMock.mockResolvedValue(okJson({}));
+    vi.stubGlobal('fetch', fetchMock);
+    const store = new MemorySessionStore();
+    store.setAuthenticated(accessData);
+    const client = new AuthHttpClient({ store, getCsrfToken: () => 'csrf-proof' });
+
+    await client.revokeSession('session-1');
+
+    // The refresh cookie died with the session, so keeping the principal would
+    // render a signed-in account with no usable credential.
+    expect(store.getAccessToken()).toBeNull();
+    expect(store.isAuthenticated()).toBe(false);
+  });
+
+  it('percent-encodes a session id and refuses an empty one without a request', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
+    fetchMock.mockResolvedValue(okJson({}));
+    vi.stubGlobal('fetch', fetchMock);
+    const store = new MemorySessionStore();
+    store.setAuthenticated(accessData);
+    const client = new AuthHttpClient({ baseUrl: '/backend', store, getCsrfToken: () => 'csrf-proof' });
+
+    await client.revokeSession('a/../b');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/backend/api/v1/auth/sessions/a%2F..%2Fb');
+
+    fetchMock.mockClear();
+    await expect(client.revokeSession('   ')).rejects.toThrow('Revoking a session requires a sessionId.');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('revokes the whole session family with POST, CSRF proof and the bearer token', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
+    fetchMock.mockResolvedValue(okJson({}));
+    vi.stubGlobal('fetch', fetchMock);
+    const store = new MemorySessionStore();
+    store.setAuthenticated(accessData);
+    const client = new AuthHttpClient({ baseUrl: '/backend', store, getCsrfToken: () => 'csrf-proof' });
+
+    await client.logoutAll();
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/backend/api/v1/auth/logout-all');
+    const init = fetchInit(fetchMock.mock.calls[0]!);
+    expect(init).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect((init.headers as Record<string, string>)['X-CSRF-Token']).toBe('csrf-proof');
+    expect((init.headers as Record<string, string>)['Authorization']).toBe('Bearer access-token-kept-in-memory');
+    expect(store.isAuthenticated()).toBe(false);
+  });
+
+  it('fails closed for logout-all without CSRF proof and leaves the session intact', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
+    fetchMock.mockResolvedValue(okJson({}));
+    vi.stubGlobal('fetch', fetchMock);
+    const store = new MemorySessionStore();
+    store.setAuthenticated(accessData);
+    const client = new AuthHttpClient({ store, getCsrfToken: () => null });
+
+    await expect(client.logoutAll()).rejects.toMatchObject({ code: 'AUTH_CSRF_INVALID' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    // A rejected request must never look like a completed logout.
+    expect(store.isAuthenticated()).toBe(true);
+  });
 });

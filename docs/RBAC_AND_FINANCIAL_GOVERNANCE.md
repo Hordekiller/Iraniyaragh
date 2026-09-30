@@ -1,8 +1,9 @@
 # RBAC and Financial Policy Governance
 
-> Status: team documentation (proposed with ADR-0014)
+> Status: team documentation (ADR-0014 accepted via merged review #185, `2e137d2`,
+> 2026-09-14; this doc tracks the audited state and the G1–G8 slice plan)
 > Owner: `@Hordekiller` (proposed by), independent reviewer: `@Maddyrampant`
-> Date: 2026-09-13
+> Date: 2026-09-13 (status updated 2026-09-19)
 > Companion ADR: `docs/adr/0014-runtime-rbac-administration-and-configurable-financial-policy.md`
 
 This document records (1) the audited current state of role-based access control
@@ -62,7 +63,7 @@ raised, not silently resolved.
 
 ### 1.3 Writers today (seed-only) and drift
 
-- `apps/api/prisma/seed.mjs` deterministically creates 20 permissions + the
+- `apps/api/prisma/seed.mjs` deterministically creates 24 permissions + the
   `system-admin` role + a documented bootstrap `.env` user if absent.
   `apps/api/scripts/bootstrap-admin-core.mjs` returns `BOOTSTRAP_REFUSAL` when an
   **active** system-admin already exists — i.e. it refuses to bootstrap an
@@ -77,7 +78,7 @@ raised, not silently resolved.
   - `orders.write` is used by
     `apps/admin/src/lib/orders/orders-permissions.ts` (`ORDERS_WRITE`) and
     consumed in `components/orders/{OrdersView,OrderDetailView}`, but is **not**
-    among the 20 seeded permissions;
+    among the 24 seeded permissions;
   - seeded `orders.read`/`orders.manage` exist, UI uses `orders.write`;
   - `admin.dashboard.read` is a fixture role permission in the UI that has no
     registry definition.
@@ -260,7 +261,7 @@ concurrency (`expectedVersion`).
 
 | Slice | Deliverable | Depends on | Exit criteria |
 | --- | --- | --- | --- |
-| **G1 — Settings store** | DB `Setting` model + admin settings service/endpoint (typed values, audit, optimistic concurrency) | ADR-0014 accepted | GET/PUT settings with `version`; audit rows; UI page (fin + seller block) |
+| **G1 — Settings store** | DB `Setting` model + admin settings service/endpoint (typed values, audit, optimistic concurrency) | ADR-0014 accepted (**done** via #185; runtime slice unstarted) | GET/PUT settings with `version`; audit rows; UI page (fin + seller block) |
 | **G2 — Admin RBAC API** | Staff/Roles/Permissions services + endpoints (list, grant, revoke, expiry, status) w/ migration + seeds | G1 | full CRUD incl. SoD rejection, last-admin guard, idempotent re-grant, audit; 48-file+ suite stays green |
 | **G3 — RBAC admin UI** | `نقشها و دسترسی` pages wired to G2; permission registry single-source; fix `orders.write` drift | G2 | UI shows effective permissions & impact preview; e2e not broken |
 | **G4 — Taxation math** | BPS round-to-Rial, VAT on Rial price, exclusive/inclusive, zero-rated categories → all integer | G1 | property tests vs handbook Rial expectations; zero float in any column |
@@ -278,9 +279,9 @@ store falls under `ماده 14 مکرر` threshold — the owner verifies agains
 
 ## 6. Decision checklist for the team
 
-- [ ] **ADR-0014 accepted.** Schema work (Setting/SoD/ApprovalRequest) starts only
-      after acceptance; migrations are forward-only and reviewed (no edits to
-      shared migrations).
+- [x] **ADR-0014 accepted** (adopted via #185, `2e137d2`, 2026-09-14). Schema work
+      (Setting/SoD/ApprovalRequest) starts only after acceptance; migrations are
+      forward-only and reviewed (no edits to shared migrations).
 - [ ] Confirm `orders.write` drift fix direction (rename vs seed).
 - [ ] Confirm VAT display position (exclusive vs inclusive) for the storefront —
       decided visibly in the legal block demo, then encoded as the default.
@@ -303,6 +304,8 @@ store falls under `ماده 14 مکرر` threshold — the owner verifies agains
 
 ## 8. Reconciled contradictions
 
-None between code and this doc yet; the flagged **only** discrepancy class is the
+The permission-count wording was reconciled with the seed on 2026-09-19 (24 seeded
+permissions including `catalog.media.read/write`, `catalog.publish` and
+`inventory.approve`). The remaining open discrepancy class is the
 permission-registry drift in §1.3 (`orders.write` vs `orders.manage`,
 `admin.dashboard.read` fixture). Resolve via G3 single-source-of-truth.

@@ -1,20 +1,39 @@
-import { brandStats, customerTotal, services } from '../../data/prototype'
-import { SECTION_IDS, SUPPORT_HOURS } from '../../lib/site-config'
-import { formatPersianNumber } from '../../lib/format'
+import { Link } from 'react-router-dom'
+import { BadgeCheck, ChevronLeft, Headset, KeyRound, Truck } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { ROUTES } from '../../lib/routes'
+import { SECTION_IDS } from '../../lib/site-config'
+
+type Service = {
+  icon: LucideIcon
+  title: string
+  desc: string
+  color: string
+}
+
+const services: Service[] = [
+  { icon: Truck, title: 'پیگیری آنلاین سفارش', desc: 'وضعیت هر سفارش را از حساب کاربری دنبال کنید.', color: 'bg-[#FF4D00]' },
+  { icon: KeyRound, title: 'ورود با پیامک', desc: 'ورود با شماره موبایل و کد یکبارمصرف پیامکی.', color: 'bg-[#0F172A]' },
+  { icon: BadgeCheck, title: 'کاتالوگ زنده', desc: 'قیمت و موجودی کالاها به‌صورت زنده از فروشگاه.', color: 'bg-[#10b981]' },
+  { icon: Headset, title: 'قیمت‌گذاری سمت سرور', desc: 'جمع سفارش هنگام پرداخت از سمت فروشگاه تایید می‌شود.', color: 'bg-[#0ea5e9]' },
+]
 
 export function ServicesSection() {
-
   return (
     <section id={SECTION_IDS.services} className="max-w-[1280px] mx-auto px-4 lg:px-6 mt-8">
       <div className="bg-white rounded-[24px] lg:rounded-[28px] p-4 lg:p-8">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-black text-[20px] lg:text-[22px] text-slate-900">چرا {formatPersianNumber(customerTotal)} استادکار، ایران یراق را انتخاب کرده‌اند؟</h2>
-            <p className="text-slate-500 text-[13px] mt-1">خدماتی که کار شما را آسان‌تر می‌کند، نه سخت‌تر</p>
+            <h2 className="font-black text-[20px] lg:text-[22px] text-slate-900">خدمات ایران یراق</h2>
+            <p className="text-slate-500 text-[13px] mt-1">آنچه از یک فروشگاه آنلاین ابزار انتظار دارید</p>
           </div>
-          <div className="hidden lg:flex items-center gap-2 text-xs font-bold text-slate-500">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" /> {SUPPORT_HOURS}
-          </div>
+          <Link
+            to={ROUTES.services}
+            className="inline-flex items-center gap-1 h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:border-slate-900 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00]"
+          >
+            همه خدمات
+            <ChevronLeft size={15} aria-hidden="true" />
+          </Link>
         </div>
 
         <div className="grid md:grid-cols-4 gap-4 mt-6">
@@ -30,15 +49,6 @@ export function ServicesSection() {
               </div>
             )
           })}
-        </div>
-
-        <div className="mt-6 grid grid-cols-3 lg:grid-cols-4 gap-3 bg-[#0F172A] rounded-[20px] p-4 lg:p-5 text-white text-center">
-          {brandStats.map(s => (
-            <div key={s.l} className="py-1">
-              <div className="font-black text-[18px] lg:text-[22px] leading-none">{s.n}</div>
-              <div className="text-white/60 text-xs mt-1">{s.l}</div>
-            </div>
-          ))}
         </div>
       </div>
     </section>

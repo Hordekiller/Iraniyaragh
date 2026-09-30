@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, KeyRound, Loader2, Smartphone, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { normalizeIranianMobile } from '../../lib/auth/normalize'
 import { useAuth } from '../../state/auth-context'
-import { MOBILE_PLACEHOLDER } from '../../lib/site-config'
+import { MOBILE_PLACEHOLDER, SECTION_IDS } from '../../lib/site-config'
+import { ROUTES } from '../../lib/routes'
 
 type LoginDialogProps = {
   open: boolean
@@ -85,8 +87,14 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
 
   useEffect(() => {
     if (!open) return
+    const active = document.activeElement
+    // `body` is the default when the dialog was opened by something that does
+    // not move focus (a programmatic call, or a pointer on a non-focusable
+    // element). Restoring focus to it would drop the user at the very top of
+    // the document with no context, which is exactly the 2.4.3 failure this
+    // return path exists to prevent.
     const previouslyFocused =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null
+      active instanceof HTMLElement && active !== document.body ? active : null
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     controller.open()
@@ -121,7 +129,17 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = previousOverflow
       controller.close()
-      previouslyFocused?.focus()
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus()
+        return
+      }
+      // No usable trigger to go back to: hand focus to the main landmark so
+      // the customer lands on the page content instead of nowhere.
+      const main = document.getElementById(SECTION_IDS.mainContent)
+      if (main) {
+        if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1')
+        main.focus({ preventScroll: false })
+      }
     }
   }, [controller, onClose, open])
 
@@ -275,8 +293,10 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                       </label>
                       <input
                         id="login-mobile"
+                        type="tel"
                         dir="ltr"
                         inputMode="tel"
+                        autoComplete="tel-national"
                         aria-invalid={Boolean(state.error)}
                         aria-describedby={state.error ? 'login-dialog-error' : undefined}
                         value={state.mobile}
@@ -367,7 +387,23 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
               </div>
 
               <p className="mt-5 text-[11px] text-slate-400 text-center leading-5">
-                با ورود، قوانین و مقررات ایران یراق را می‌پذیرید.
+                با ورود،{' '}
+                <Link
+                  to={ROUTES.terms}
+                  onClick={onClose}
+                  className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00]"
+                >
+                  قوانین و شرایط فروش
+                </Link>{' '}
+                و{' '}
+                <Link
+                  to={ROUTES.privacy}
+                  onClick={onClose}
+                  className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00]"
+                >
+                  حریم خصوصی
+                </Link>{' '}
+                را می‌پذیرید.
               </p>
             </div>
           </motion.div>

@@ -7,9 +7,17 @@ export const ROUTES = {
   category: (slug: string) => `/category/${slug}`,
   product: (slug: string) => `/product/${slug}`,
   search: '/search',
-  bestsellers: '/bestsellers',
+  /** Full category directory: the destination for the header/footer category links. */
+  categories: '/categories',
+  /** The whole catalog: the destination for the "all products" links. */
+  products: '/products',
+  /** Sorted by publish date: the public catalog has no sales ranking to serve. */
+  newest: '/newest',
+  services: '/services',
   cart: '/cart',
   checkout: '/checkout',
+  terms: '/terms',
+  privacy: '/privacy',
   account: '/account',
   orders: '/orders',
   order: (id: string) => `/orders/${id}`,
@@ -22,9 +30,17 @@ export const ROUTE_PATHS = {
   category: '/category/:slug',
   product: '/product/:slug',
   search: '/search',
-  bestsellers: '/bestsellers',
+  /** Full category directory: the destination for the header/footer category links. */
+  categories: '/categories',
+  /** The whole catalog: the destination for the "all products" links. */
+  products: '/products',
+  /** Sorted by publish date: the public catalog has no sales ranking to serve. */
+  newest: '/newest',
+  services: '/services',
   cart: '/cart',
   checkout: '/checkout',
+  terms: '/terms',
+  privacy: '/privacy',
   account: '/account',
   orders: '/orders',
   order: '/orders/:id',

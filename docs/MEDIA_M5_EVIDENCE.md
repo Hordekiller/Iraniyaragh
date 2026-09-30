@@ -108,13 +108,15 @@ was changed for them.
    (`image-processor.service.ts:55`). A confirmed video therefore stays in
    `UPLOADED` forever with no failure code surfaced, so the spec §2/§3/§9
    video gallery, poster and captions behavior cannot be exercised end to end.
-2. **`catalog.publish` does not exist.** Spec §5 reserves a `catalog.publish`
-   permission for the publish-readiness command. The publish route is guarded by
-   `catalog.write` (`catalog.controller.ts:96`) and the key is not seeded
-   anywhere, so publish is not separated from general catalog writes.
-3. **Upload intent TTL is 15 minutes, not 30.** `media-policy.service.ts` defaults
-   `PRODUCT_MEDIA_UPLOAD_TTL_SECONDS` to `15 * 60`; spec §4 states unconfirmed
-   uploads expire after 30 minutes.
+2. **`catalog.publish` separation is not wired.** Spec §5 reserves a
+   `catalog.publish` permission for the publish-readiness command; the key **is**
+   seeded (`apps/api/prisma/seed.mjs`, since the M1 merge `da99bc3`), but the
+   publish route is still guarded by `catalog.write` (`catalog.controller.ts:96`),
+   so publish is not yet separated from general catalog writes.
+3. **Upload intent TTL defaults to 15 minutes, not the earlier 30-minute draft.**
+   `media-policy.service.ts` defaults `PRODUCT_MEDIA_UPLOAD_TTL_SECONDS` to `15 * 60`
+   (bounded 60–1800 s). `PRODUCT_MEDIA_SPEC.md` §4 has since been reconciled to this
+   default as an accepted deviation; the runtime value is the one to monitor.
 4. **Publish readiness is weaker than spec §9.** The guard only requires exactly
    one `READY` primary image and one active variant. It does **not** require
    reviewed alt text, contiguous positions, an existing poster for videos or

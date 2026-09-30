@@ -1,6 +1,6 @@
 import { CatalogError } from './errors'
 import { fixtureAllProducts, fixtureCatalogCategories } from './fixture-data'
-import type { CatalogApi, CatalogCategory, CatalogListResult, CatalogProduct, CatalogQuery } from './types'
+import type { CatalogApi, CatalogBrand, CatalogCategory, CatalogListResult, CatalogProduct, CatalogQuery } from './types'
 
 /**
  * Deterministic, contract-shaped fixture implementation of `CatalogApi`.
@@ -26,6 +26,12 @@ export class CatalogFixtureClient implements CatalogApi {
     await this.wait();
     // Category product counts are static fixture metadata; do not reveal them as live.
     return this.categories.map(c => ({ ...c }));
+  }
+
+  async listBrands(): Promise<CatalogBrand[]> {
+    await this.wait();
+    const names = [...new Set(this.products.map(product => product.brand).filter((name): name is string => Boolean(name)))];
+    return names.map(name => ({ id: name, name, slug: name.toLowerCase().replace(/\s+/g, '-') }));
   }
 
   async listProducts(query: CatalogQuery = {}): Promise<CatalogListResult> {
@@ -54,30 +60,31 @@ export class CatalogFixtureClient implements CatalogApi {
     }
 
     switch (query.sortBy) {
-      case 'price_asc':
-        items.sort((a, b) => Number(a.price.amount) - Number(b.price.amount));
+      case 'name':
+        items.sort((a, b) => a.name.localeCompare(b.name, 'fa'))
         break;
-      case 'price_desc':
-        items.sort((a, b) => Number(b.price.amount) - Number(a.price.amount));
+      case 'name_desc':
+        items.sort((a, b) => b.name.localeCompare(a.name, 'fa'))
         break;
       case 'newest':
-        // Fixture has no real timestamps; falls back to stable insertion order.
-        break;
-      case 'popular':
       default:
-        items.sort((a, b) => b.reviews - a.reviews);
+        // The fixture has no publish timestamps, so the newest listing keeps the
+        // stable authoring order rather than inventing a ranking.
         break;
     }
 
-    const perPage = 24;
-    const page = 1;
-    const total = items.length;
-    const pages = Math.max(1, Math.ceil(total / perPage));
+    const perPage = Math.min(Math.max(1, Math.trunc(query.perPage ?? 24)), 100)
+    const pages = Math.ceil(items.length / perPage)
+    const total = items.length
+    // A page beyond the end is clamped, so the UI can never render an empty grid
+    // next to a non-zero total.
+    const page = Math.min(Math.max(1, Math.trunc(query.page ?? 1)), Math.max(1, pages))
+    const start = (page - 1) * perPage
 
     return {
-      items,
+      items: items.slice(start, start + perPage),
       meta: { page, perPage, total, pages },
-    };
+    }
   }
 
   async getProductBySlug(slug: string): Promise<CatalogProduct> {

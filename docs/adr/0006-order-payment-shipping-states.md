@@ -61,8 +61,11 @@ Each lifecycle keeps an **append-only, immutable** transition table:
 
 Every transition row records:
 
-- `from` and `to` statuses (the `from` of the first row of an aggregate is `NULL`
-  only for the initial creation event);
+- `from` and `to` statuses. In the shipped implementation `from` is non-nullable
+  (`from OrderStatus`) and the first row of an aggregate records the initial
+  creation transition — e.g. Checkout writes `DRAFT -> PENDING_PAYMENT`
+  (`apps/api/src/modules/orders/checkout.service.ts:218`) — rather than leaving
+  `from` as `NULL` for the creation event;
 - `reason` (free-text or stable command code);
 - `actorId` referencing `User` with `onDelete: SetNull`, preserving the actor
   reference as `NULL` if the user is deleted (consistent with `AuditLog`);

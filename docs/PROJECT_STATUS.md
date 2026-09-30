@@ -1,6 +1,6 @@
 # Project Status
 
-Last reviewed: 2026-09-18
+Last reviewed: 2026-09-19
 
 This document is the factual entry point for the repository. It distinguishes
 merged capability, open pull-request work, local/uncommitted material and planned
@@ -15,11 +15,13 @@ merged. The first atomic Checkout-to-Order runtime is merged via #246 (closing
 merged via #247 (closing #238).
 The repository has a credible platform baseline and substantial authentication,
 security and test infrastructure. It is not yet a usable commerce product: the
-storefront Cart/Checkout/Orders still use fixture clients, the operational admin
-has only fixture-backed read-only Orders/Settings modules, and the new Checkout
-API has no live Web consumer, Order command API, payment, fulfillment or production
-operations yet. The #238 query API is delivered, but its Web/Admin consumers are
-not yet bound to the live API.
+storefront Cart/Checkout/Orders now bind the live API through HTTP commerce
+clients (with dev/e2e fixture mode kept behind `VITE_FIXTURE_*` flags), the
+operational admin has only fixture-backed read-only Orders/Settings modules, and
+payment handoff is honest `PENDING_PAYMENT` (no simulated success) pending a
+live gateway. Order command APIs, payment, fulfillment and production
+operations are not yet delivered. The #238 query API is delivered, but its Admin
+consumer is not yet bound to the live API.
 
 Current delivery confidence:
 
@@ -36,9 +38,9 @@ Current delivery confidence:
 | Inventory core                 | Merged foundation                           | #222 delivers protected warehouse, balances, movements, adjustments and transfers                                                                                                                                         |
 | Public availability            | Merged slice                                | #231 exposes fail-closed variant availability without warehouse internals                                                                                                                                                 |
 | Reservation expiry             | Merged optimization                         | #232 processes bounded expiry batches transactionally with race-safe rechecks                                                                                                                                             |
-| Cart runtime                   | Partial                                     | #239/#241–#244 deliver authenticated ownership, persistence and read/add/set/remove APIs with server pricing; guest/merge, scoped retention and storefront binding remain                                                 |
-| Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence                       |
-| Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections                                                      |
+| Cart runtime                   | Partial                                     | #239/#241–#244 deliver authenticated ownership, persistence and read/add/set/remove APIs with server pricing, and the storefront now binds them (guest draft merged on sign-in); ADR-0015 guest-token ownership, scoped retention and add/remove serializable hardening remain |
+| Checkout runtime               | Merged foundation                           | #246/#237 implements normalized addresses, configured shipping quotes, serializable repricing/allocation/reservation, immutable Order snapshots, scoped replay and transactional outbox persistence; storefront two-phase checkout is bound to preview/create |
+| Order read API                 | Merged read slice                           | #247/#238 delivers ownership-safe customer list/detail and an `orders.read` staff queue/detail with bounded filters and persistence-safe lifecycle/audit projections; storefront order history/detail reuses the customer reads         |
 | Order commands/payment         | Foundation only                             | Cancellation/expiry compensation, payment and fulfillment application workflows remain separate follow-up scope                                                                                                           |
 | Production operations          | Early                                       | CI/security controls exist; deploy, monitoring, backup/restore and rollback evidence do not                                                                                                                               |
 
@@ -238,7 +240,8 @@ G6–G10 have not reached integrated completion.
   stale-version conflict and idempotent confirm replay. CI now starts MinIO, the
   media worker and a repeatable bucket-provisioning script.
 - Evidence, verified commands and the still-open contract gaps (video pipeline,
-  `catalog.publish`, 15 vs 30-minute upload TTL, weaker publish readiness) are in
+  `catalog.publish`, weaker publish readiness; the 15-minute upload TTL default is
+  reconciled in the spec as an accepted deviation) are in
   `docs/MEDIA_M5_EVIDENCE.md`.
 - Also fixes a real runtime defect: `esModuleInterop` was missing from
   `apps/api/tsconfig.json`, so `sharp`/`exceljs` default imports were `undefined`
@@ -266,11 +269,14 @@ malware scanner also remain production-acceptance work.
   behavior. The absolute-set path runs in a serializable transaction; add/remove
   do not yet share that isolation/retry hardening.
 - Shared Cart/Checkout types and OpenAPI paths are committed. Unit/controller
-  coverage and PostgreSQL migration/drift checks are green; there is no Cart HTTP
-  integration suite or real storefront Cart adapter yet.
-- Accepted ADR-0015 gaps remain: guest token ownership and login merge, operation/
-  route-scoped idempotency, 24-hour mutation cleanup, side-effect-free empty Cart
-  reads, line-limit concurrency hardening and live Web integration.
+  coverage and PostgreSQL migration/drift checks are green; a storefront HTTP
+  Cart adapter is now bound through `CommerceProvider`, with fixture mode scoped
+  to dev/e2e builds. There is still no Cart HTTP integration suite in the API
+  package.
+- Accepted ADR-0015 gaps remain: guest token ownership (the storefront merges the
+  local guest draft on sign-in only), operation/route-scoped idempotency,
+  24-hour mutation cleanup, side-effect-free empty Cart reads and line-limit
+  concurrency hardening.
 
 ### Checkout to reserved Order runtime (merged via #246; closes #237)
 
@@ -360,11 +366,11 @@ security/query review, OpenAPI drift confirmation and merge.
 | Staff Auth    | Runtime, privileged lifecycle, double-submit CSRF logout fix (#190) and real HTTP login (#191) merged                                                  | Live MFA/session UX and production acceptance (admin UI with Hordekiller)                                                                      |
 | Catalog       | Advanced API, Product Media M1–M5 runtime, live storefront discovery, Admin authoring (#229) and API-level publish-to-discovery E2E (#240)             | Admin-UI-driven publish acceptance, durable parsed-import storage and production media acceptance                                              |
 | Inventory     | Ledger; inventory HTTP (#222), public availability (#231), batched expiry (#232) and merged Checkout allocation (#246/#237)                            | Admin operator UX, reconciliation UI, compensation and worker rollout                                                                          |
-| Cart          | Authenticated persistence and protected read/add/set/remove runtime (#239/#241–#244), server pricing and informational availability                    | Guest/merge, scoped retention, fully serializable concurrency, HTTP integration coverage and live storefront binding                           |
-| Checkout      | Merged preview/create API, configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence (#246/#237) | Shipping operations, compensation/cleanup, Web binding and production acceptance                                                               |
-| Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation and #247/#238 customer/staff read API                                                   | Commands, compensation, live clients and lifecycle-operation evidence                                                                          |
-| Payments      | Schema/state foundation                                                                                                                                | Provider/adapter, verification, idempotency, refund and reconciliation                                                                         |
-| Web           | Accessible routed storefront with live Catalog/media/availability HTTP adapter                                                                         | Cart/checkout/order/payment pages remain fixture-backed and are not connected to the merged Cart API                                           |
+| Cart          | Authenticated persistence and protected read/add/set/remove runtime (#239/#241–#244), server pricing, informational availability and a live storefront HTTP adapter (guest draft merged on sign-in) | Guest-token ownership, scoped retention, fully serializable add/remove concurrency and API-package HTTP integration coverage                                                                                           |
+| Checkout      | Merged preview/create API, configured quotes, server repricing, deterministic reservation, immutable Order snapshot and outbox persistence (#246/#237); storefront two-phase checkout bound to preview/create | Shipping operations, compensation/cleanup, honest payment handoff to a live gateway and production acceptance                                                                                                             |
+| Orders        | Merged state/transition foundation, `PENDING_PAYMENT` creation and #247/#238 customer/staff read API; storefront history/detail bound to the customer reads                                             | Commands, compensation, live admin clients and lifecycle-operation evidence                                                                                                                                          |
+| Payments      | Schema/state foundation; storefront shows real order payment status (`PENDING_PAYMENT`) and never simulates success                                        | Provider/adapter, verification, idempotency, refund and reconciliation                                                                                                                                         |
+| Web           | Accessible routed storefront with live Catalog/media/availability HTTP adapter and live Cart/Checkout/Order HTTP clients via `CommerceProvider`            | Admin friendlier account UX is not in scope; storefront checkout requires login after guest draft merge, and payment result remains honest pending until a gateway exists                                          |
 | Admin         | Shell, Auth/UI primitives, SMS settings, real staff-auth HTTP login (#191), Catalog authoring (#229) and read-only Orders/Settings modules             | Live inventory/order operations and publish E2E                                                                                                |
 | Operations    | CI and local Compose                                                                                                                                   | Deploy/staging, observability, recovery and rollback proof                                                                                     |
 
@@ -388,13 +394,14 @@ security/query review, OpenAPI drift confirmation and merge.
 - Inventory Admin/operator modules, reconciliation UI, cancellation/expiry
   compensation and production expiry-worker rollout. Core inventory HTTP,
   optimized expiry batching and Checkout allocation are merged.
-- Guest Cart/login merge, Cart scoped-retention/cleanup and live Web Cart/Checkout
-  binding. Authenticated address/quote/Checkout/Order creation is merged but has no
-  live Web consumer.
+- Guest Cart/login merge in the storefront: the local guest draft is merged into
+  the authenticated server Cart on sign-in; Cart scoped-retention/cleanup and an
+  API-side guest-token ownership model remain open.
 - Shipping-method administration/provisioning and the global 24-hour Checkout
   idempotency cleanup job.
-- Order command lifecycle and live customer/admin experiences. The #247/#238 read
-  API is merged, but its Web/Admin clients remain fixture-backed.
+- Order command lifecycle and live customer/admin experiences beyond the storefront
+  checkout→`PENDING_PAYMENT` flow. The #247/#238 read API is merged and the
+  storefront is bound, but its Admin clients remain fixture-backed.
 - Payment gateway, verified callback, refunds and reconciliation.
 - Shipment/tracking, outbox dispatcher/workers and notifications. #246/#237
   persists the first transactional `ORDER_CREATED` event but does not publish it.
@@ -667,6 +674,44 @@ Harden and bind the authenticated Cart runtime
 #246/#237 creates the authoritative reserved Order and outbox row. #247/#238 adds
 owned and permissioned reads only; Payment/Fulfillment must not be promoted ahead
 of lifecycle commands and compensation guarantees.
+
+## Status update — 2026-09-19 documentation reconciliation
+
+```text
+Date / main SHA / sprint or release gate:
+  2026-09-19 · origin/main = 06d7a12 (#251) · docs-only reconciliation pass
+  (local HEAD = ab876b1, #249)
+Merged outcomes:
+  None in this pass — documentation corrections only (see below).
+  Applied corrections: ADR-0014 status (accepted via #185); ADR-0015/0016
+  renumbering (SKU invariant moved to ADR-0016); #111 re-annotated as the
+  Catalog-hardening epic across ROADMAP/V1_MASTER_PLAN/EXECUTION_BACKLOG;
+  AGENT_WORKSTREAMS/TEAM/COLLABORATION #78 closed with release authority in
+  TEAM.md; ADR-0010 status (#191); ADR-0006 nullable-from wording; AUTH_CONTRACT
+  endpoint matrix + password-length bounds; COMMERCE_EXPANSION_PLAN/Catalog
+  Media/Admin-panel baseline pins; README/AGENTS.md/TESTING/OPERATIONS CI and
+  port hardening; MEDIA_M5_EVIDENCE catalog.publish seeded claim; SONAR_TRIAGE
+  S6323/S2245 closed by #202/#201; PAGE_RELEASE_MATRIX #133 superseded by #151.
+  Full ledger: docs/REVIEW_HANDOFF_2026-09-19.md.
+Open PR outcomes (not counted as delivered):
+  None in scope of this pass.
+Deferred work and reason:
+  No code changed; the local uncommitted storefront/`apps/web` refactor remains
+  user-owned and is not delivery evidence. Video duration/1080p server checks,
+  guest-Cart ownership/merge and Order command/compensation APIs remain open.
+New security/data/contract risks:
+  None introduced. Corrected earlier overclaims: no 1024-byte request-body cap
+  exists; video media checks are only partially enforced; Node baseline is 22.
+Verification commands and results:
+  Docs-only pass; per-file diffs reviewed. Full pnpm lint/typecheck/build not
+  re-run (no runtime code touched).
+Decision blockers and owner:
+  None for this pass. Follow-up: sonar scan re-run to refresh triage totals.
+Next integrated outcome:
+  Admin read-only Orders/Settings live binding (#247) then Cart guest/merge and
+  checkout command client work.
+Confidence: green (docs truthfulness improved; delivery state unchanged)
+```
 
 ## Status update protocol
 

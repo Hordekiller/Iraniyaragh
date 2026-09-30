@@ -1,39 +1,21 @@
-import { useEffect, useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import type { Product } from '../types/content'
+import { useNavigate } from 'react-router-dom'
+import type { CatalogProduct } from '../services/catalog/types'
 import { HeroSlider } from '../components/hero/HeroSlider'
 import { CategoryGrid } from '../components/catalog/CategoryGrid'
 import { PopularTools } from '../components/catalog/PopularTools'
-import { Bestsellers } from '../components/catalog/Bestsellers'
-import { SpecialCollection } from '../components/catalog/SpecialCollection'
-import { BlogSection } from '../components/content/BlogSection'
 import { ServicesSection } from '../components/content/ServicesSection'
 import { NewsletterBrands } from '../components/content/NewsletterBrands'
 import { ROUTES } from '../lib/routes'
-import { SECTION_IDS } from '../lib/site-config'
-
-type HomePageLocationState = {
-  scrollToCategories?: boolean
-}
+import { SITE_NAME, SITE_TAGLINE } from '../lib/site-config'
+import { useDocumentMeta } from '../lib/use-document-meta'
 
 export function HomePage() {
   const navigate = useNavigate()
-  const location = useLocation()
-  const handledKeyRef = useRef<string | null>(null)
 
-  useEffect(() => {
-    const state = location.state as HomePageLocationState | null
-    if (!state?.scrollToCategories) return
-    if (handledKeyRef.current === location.key) return
-    handledKeyRef.current = location.key
-    document.getElementById(SECTION_IDS.categories)?.scrollIntoView({ behavior: 'smooth' })
-    navigate(ROUTES.home, { replace: true, state: {} })
-  }, [location.state, location.key, navigate])
+  useDocumentMeta({ title: SITE_NAME, description: SITE_TAGLINE, canonicalPath: ROUTES.home })
 
-  function handleSelectProduct(product: Product) {
-    if (product.slug) {
-      navigate(ROUTES.product(product.slug))
-    }
+  function handleSelectProduct(product: CatalogProduct) {
+    navigate(ROUTES.product(product.slug))
   }
 
   return (
@@ -41,13 +23,6 @@ export function HomePage() {
       <HeroSlider />
       <CategoryGrid />
       <PopularTools onSelectProduct={handleSelectProduct} />
-
-      <section className="max-w-[1280px] mx-auto px-4 lg:px-6 mt-6 grid lg:grid-cols-12 gap-6">
-        <Bestsellers onSelectProduct={handleSelectProduct} />
-        <SpecialCollection onSelectProduct={handleSelectProduct} />
-      </section>
-
-      <BlogSection />
       <ServicesSection />
       <NewsletterBrands />
     </div>

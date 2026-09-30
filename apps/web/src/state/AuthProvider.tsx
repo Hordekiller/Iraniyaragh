@@ -67,6 +67,10 @@ export function AuthProvider({ children, api, store, bus, refreshCoordinator }: 
     return {
       state: controller.getState(),
       controller,
+      // Exposed so account-security UI (active sessions) can list and revoke
+      // sessions through the very same client the sign-in flow used.
+      api: client,
+      store: sessionStore,
       open: () => controller.open(),
       close: () => controller.close(),
     };

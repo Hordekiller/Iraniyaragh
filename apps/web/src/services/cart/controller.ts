@@ -7,12 +7,14 @@ function isValidCartLine(line: unknown): line is CartLine {
   if (!line || typeof line !== 'object') return false
   const value = line as CartLine
   return Boolean(
-    typeof value.productId === 'string' &&
-      value.productId.trim() &&
-      typeof value.slug === 'string' &&
+    typeof value.variantId === 'string' &&
+      value.variantId.trim() &&
       typeof value.name === 'string' &&
-      typeof value.image === 'string' &&
+      typeof value.sku === 'string' &&
+      (value.productId === null || typeof value.productId === 'string') &&
+      (value.slug === null || typeof value.slug === 'string') &&
       (value.brand === null || typeof value.brand === 'string') &&
+      (value.image === null || typeof value.image === 'string') &&
       value.unitPrice &&
       value.unitPrice.currency === 'IRR' &&
       /^\d+$/.test(value.unitPrice.amount) &&
@@ -27,12 +29,12 @@ function sanitizeLines(lines: unknown[]): CartLine[] {
   const valid = lines.filter(isValidCartLine)
   const deduped = new Map<string, CartLine>()
   for (const line of valid) {
-    const previous = deduped.get(line.productId)
+    const previous = deduped.get(line.variantId)
     if (!previous) {
-      deduped.set(line.productId, { ...line })
+      deduped.set(line.variantId, { ...line })
       continue
     }
-    deduped.set(line.productId, {
+    deduped.set(line.variantId, {
       ...previous,
       quantity: Math.min(MAX_CART_QUANTITY, previous.quantity + line.quantity),
     })
@@ -133,14 +135,14 @@ export class CartController {
     for (const listener of this.listeners) listener();
   }
 
-  /** Add a line (or bump quantity if the product is already present). */
+  /** Add a line (keyed by variantId; bumps quantity if already present). */
   add(line: CartLine): void {
     if (!isValidCartLine(line)) return
-    const existing = this.state.lines.find(l => l.productId === line.productId);
+    const existing = this.state.lines.find(l => l.variantId === line.variantId);
     if (existing) {
       this.commit({
         lines: this.state.lines.map(l =>
-          l.productId === line.productId
+          l.variantId === line.variantId
               ? { ...l, quantity: Math.min(MAX_CART_QUANTITY, l.quantity + line.quantity) }
             : l,
         ),
@@ -151,20 +153,20 @@ export class CartController {
   }
 
   /** Set the quantity of an existing line; removes the line at zero/negative. */
-  setQuantity(productId: string, quantity: number): void {
+  setQuantity(variantId: string, quantity: number): void {
     const nextQty = Number.isFinite(quantity)
       ? Math.min(MAX_CART_QUANTITY, Math.max(0, Math.trunc(quantity)))
       : 0
     this.commit({
       lines: this.state.lines
-        .map(l => (l.productId === productId ? { ...l, quantity: nextQty } : l))
+        .map(l => (l.variantId === variantId ? { ...l, quantity: nextQty } : l))
         .filter(l => l.quantity > 0),
     });
   }
 
-  remove(productId: string): void {
+  remove(variantId: string): void {
     this.commit({
-      lines: this.state.lines.filter(l => l.productId !== productId),
+      lines: this.state.lines.filter(l => l.variantId !== variantId),
     });
   }
 
@@ -172,12 +174,12 @@ export class CartController {
     this.commit({ lines: [] });
   }
 
-  isInCart(productId: string): boolean {
-    return this.state.lines.some(l => l.productId === productId);
+  isInCart(variantId: string): boolean {
+    return this.state.lines.some(l => l.variantId === variantId);
   }
 
-  quantityOf(productId: string): number {
-    return this.state.lines.find(l => l.productId === productId)?.quantity ?? 0;
+  quantityOf(variantId: string): number {
+    return this.state.lines.find(l => l.variantId === variantId)?.quantity ?? 0;
   }
 }
 

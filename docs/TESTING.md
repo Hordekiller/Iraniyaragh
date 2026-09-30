@@ -24,7 +24,11 @@ data, even if its name happens to end in `_test`.
 ## Local PostgreSQL setup
 
 Start the repository PostgreSQL service, then create dedicated test and shadow
-databases once:
+databases once. On machines with a git-ignored local
+`infrastructure/docker/docker-compose.override.yml` (remaps Postgres to host
+`55432`, Redis to `56379`), point `DATABASE_URL`/`PSQL_DATABASE_URL` at the port
+your environment actually publishes; the examples below assume the base
+`docker-compose.yml` (`5432`):
 
 ```bash
 docker compose -f infrastructure/docker/docker-compose.yml up -d postgres
@@ -64,6 +68,7 @@ psql "$PSQL_DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f apps/api/prisma/tests/state_transitions.sql
 psql "$PSQL_DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f apps/api/prisma/tests/money_migration.sql
+# Seed the deterministic RBAC baseline twice (idempotency/upsert proof; mirrors CI)
 pnpm --filter @iranyaragh/api prisma:seed
 pnpm --filter @iranyaragh/api prisma:seed
 psql "$PSQL_DATABASE_URL" -v ON_ERROR_STOP=1 \
@@ -102,8 +107,8 @@ and concurrency evidence.
 ## Production dependency audit
 
 `.github/workflows/production-audit.yml` runs `node .github/scripts/audit-prod.mjs`
-on every PR, protected-branch push and weekly schedule. Docs-only PRs
-(`.md`, `docs/**`) are skipped via `paths-ignore`. The script runs
+on every PR (the job has no `paths`/`paths-ignore` filter, so docs-only PRs still
+exercise the baseline), protected-branch push and weekly schedule. The script runs
 `pnpm audit --prod --audit-level=moderate --json`, classifies the result and exits
 with a status code the workflow wrapper interprets:
 

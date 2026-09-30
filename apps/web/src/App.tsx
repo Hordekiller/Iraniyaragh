@@ -4,7 +4,7 @@ import { ToastProvider } from './components/feedback/Toast'
 import { AuthProvider } from './state/AuthProvider'
 import { CatalogProvider } from './state/CatalogProvider'
 import { CartProvider } from './state/CartProvider'
-import { OrderProvider } from './state/OrderProvider'
+import { CommerceProvider } from './state/CommerceProvider'
 import { AppLayout } from './components/layout/AppLayout'
 import { HomePage } from './pages/HomePage'
 import { ROUTE_PATHS } from './lib/routes'
@@ -12,7 +12,10 @@ import { ROUTE_PATHS } from './lib/routes'
 const CategoryPage = lazy(() => import('./pages/CategoryPage').then(module => ({ default: module.CategoryPage })))
 const ProductPage = lazy(() => import('./pages/ProductPage').then(module => ({ default: module.ProductPage })))
 const SearchPage = lazy(() => import('./pages/SearchPage').then(module => ({ default: module.SearchPage })))
-const BestsellersPage = lazy(() => import('./pages/BestsellersPage').then(module => ({ default: module.BestsellersPage })))
+const NewestPage = lazy(() => import('./pages/NewestPage').then(module => ({ default: module.NewestPage })))
+const ProductsPage = lazy(() => import('./pages/ProductsPage').then(module => ({ default: module.ProductsPage })))
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage').then(module => ({ default: module.CategoriesPage })))
+const ServicesPage = lazy(() => import('./pages/ServicesPage').then(module => ({ default: module.ServicesPage })))
 const CartPage = lazy(() => import('./pages/CartPage').then(module => ({ default: module.CartPage })))
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then(module => ({ default: module.CheckoutPage })))
 const PaymentPage = lazy(() => import('./pages/PaymentPage').then(module => ({ default: module.PaymentPage })))
@@ -20,6 +23,8 @@ const AccountPage = lazy(() => import('./pages/AccountPage').then(module => ({ d
 const OrdersPage = lazy(() => import('./pages/OrdersPage').then(module => ({ default: module.OrdersPage })))
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage').then(module => ({ default: module.OrderDetailPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(module => ({ default: module.NotFoundPage })))
+const TermsPage = lazy(() => import('./pages/TermsPage').then(module => ({ default: module.TermsPage })))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then(module => ({ default: module.PrivacyPage })))
 
 function RouteLoading() {
   return (
@@ -35,18 +40,23 @@ export default function App() {
       <ToastProvider>
         <AuthProvider>
           <CatalogProvider>
-            <CartProvider>
-              <OrderProvider>
+            <CommerceProvider>
+              <CartProvider>
                 <Suspense fallback={<RouteLoading />}>
                   <Routes>
                     <Route element={<AppLayout />}>
                       <Route path={ROUTE_PATHS.home} element={<HomePage />} />
+                      <Route path={ROUTE_PATHS.categories} element={<CategoriesPage />} />
+                      <Route path={ROUTE_PATHS.products} element={<ProductsPage />} />
+                      <Route path={ROUTE_PATHS.services} element={<ServicesPage />} />
                       <Route path={ROUTE_PATHS.category} element={<CategoryPage />} />
                       <Route path={ROUTE_PATHS.product} element={<ProductPage />} />
                       <Route path={ROUTE_PATHS.search} element={<SearchPage />} />
-                      <Route path={ROUTE_PATHS.bestsellers} element={<BestsellersPage />} />
+                      <Route path={ROUTE_PATHS.newest} element={<NewestPage />} />
                       <Route path={ROUTE_PATHS.cart} element={<CartPage />} />
                       <Route path={ROUTE_PATHS.checkout} element={<CheckoutPage />} />
+                      <Route path={ROUTE_PATHS.terms} element={<TermsPage />} />
+                      <Route path={ROUTE_PATHS.privacy} element={<PrivacyPage />} />
                       <Route path={ROUTE_PATHS.payment} element={<PaymentPage />} />
                       <Route path={ROUTE_PATHS.account} element={<AccountPage />} />
                       <Route path={ROUTE_PATHS.orders} element={<OrdersPage />} />
@@ -55,8 +65,8 @@ export default function App() {
                     </Route>
                   </Routes>
                 </Suspense>
-              </OrderProvider>
-            </CartProvider>
+              </CartProvider>
+            </CommerceProvider>
           </CatalogProvider>
         </AuthProvider>
       </ToastProvider>

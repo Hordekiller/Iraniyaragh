@@ -25,6 +25,8 @@ export interface AuthApi {
   refresh(): Promise<AccessTokenData>;
   me(): Promise<AuthPrincipal>;
   listSessions(): Promise<SessionSummary[]>;
+  revokeSession(sessionId: string): Promise<void>;
+  logoutAll(): Promise<void>;
   logout(): Promise<void>;
 }
 
@@ -105,6 +107,51 @@ export class AuthHttpClient implements AuthApi {
       { baseUrl: this.baseUrl, accessToken: token },
     );
     return data.sessions;
+  }
+
+  /**
+   * Revoke one session.
+   *
+   * Revoking the caller's own session also clears the refresh cookie
+   * server-side, so the in-memory principal must be dropped too: keeping it
+   * would leave the UI showing a signed-in account whose only live credential
+   * has just been destroyed.
+   */
+  async revokeSession(sessionId: string): Promise<void> {
+    const token = this.requireToken();
+    const normalized = sessionId.trim();
+    if (!normalized) throw new Error('Revoking a session requires a sessionId.');
+    await jsonRequest<Record<string, never>>(
+      `${AUTH_BASE}/sessions/${encodeURIComponent(normalized)}`,
+      {
+        baseUrl: this.baseUrl,
+        accessToken: token,
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': this.requireCsrfToken() },
+        method: 'DELETE',
+      },
+    );
+    if (this.store.getPrincipal()?.sessionId === normalized) this.store.clear();
+  }
+
+  /**
+   * Revoke every session for this user, including this one.
+   *
+   * The API demands a fresh authentication (OTP verified within the last five
+   * minutes) and answers `AUTH_REAUTHENTICATION_REQUIRED` otherwise, so the
+   * caller must be able to re-verify. The local state is cleared on success
+   * because this browser's refresh cookie is destroyed with the family.
+   */
+  async logoutAll(): Promise<void> {
+    const csrfToken = this.requireCsrfToken();
+    await jsonRequest<Record<string, never>>(`${AUTH_BASE}/logout-all`, {
+      baseUrl: this.baseUrl,
+      accessToken: this.requireToken(),
+      credentials: 'include',
+      headers: { 'X-CSRF-Token': csrfToken },
+      method: 'POST',
+    });
+    this.store.clear();
   }
 
   async logout(): Promise<void> {

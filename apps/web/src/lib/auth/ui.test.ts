@@ -342,6 +342,8 @@ describe('CustomerOtpController OTP flow', () => {
       refresh: fixture.refresh.bind(fixture),
       me: fixture.me.bind(fixture),
       listSessions: fixture.listSessions.bind(fixture),
+      revokeSession: fixture.revokeSession.bind(fixture),
+      logoutAll: fixture.logoutAll.bind(fixture),
       logout: fixture.logout.bind(fixture),
     };
     const controller = new CustomerOtpController(api, store, () => 1_000);
@@ -429,6 +431,38 @@ describe('CustomerOtpController silent session restore (#50)', () => {
     const ok = await controller.restoreSession();
     expect(ok).toBe(false);
     expect(controller.getState().phase).toBe('idle');
+  });
+
+  it('starts with the first restore still pending so private screens can wait', () => {
+    const { controller } = makeFlow();
+    // `restored` must be false before the restore runs: private screens gate on
+    // it, and `phase` alone starts at 'idle' and would flash a sign-in wall.
+    expect(controller.getState().restored).toBe(false);
+  });
+
+  it('settles `restored` even when no session was found', async () => {
+    const { controller } = makeFlow();
+    await controller.restoreSession();
+    expect(controller.getState().restored).toBe(true);
+  });
+
+  it('settles `restored` after a successful silent restore', async () => {
+    const { controller } = makeFlow();
+    await authenticate(controller);
+    await controller.restoreSession();
+    expect(controller.getState().restored).toBe(true);
+    expect(controller.getState().phase).toBe('authenticated');
+  });
+
+  it('keeps `restored` settled after a deliberate logout so screens do not hang', async () => {
+    const { controller } = makeFlow();
+    await authenticate(controller);
+    await controller.restoreSession();
+    await controller.logout();
+    // The important part is that the settle flag survives the reset; the phase
+    // resets to the closed dialog state, which is not what this test is about.
+    expect(controller.getState().restored).toBe(true);
+    expect(controller.getState().principal).toBeNull();
   });
 
   it('restores a session silently when one exists and stays authenticated', async () => {

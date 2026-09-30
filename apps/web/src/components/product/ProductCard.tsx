@@ -14,8 +14,8 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
 const STOCK_CLASS: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   LOW_STOCK: 'bg-amber-50 text-amber-700 border-amber-200',
-  OUT_OF_STOCK: 'bg-slate-100 text-slate-500 border-slate-200',
-  UNKNOWN: 'bg-slate-100 text-slate-500 border-slate-200',
+  OUT_OF_STOCK: 'bg-slate-100 text-slate-700 border-slate-200',
+  UNKNOWN: 'bg-slate-100 text-slate-700 border-slate-200',
 }
 
 export function ProductCard({ product }: { product: CatalogProduct }) {
@@ -48,19 +48,19 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
           {product.name}
         </h3>
 
-        <div className="flex items-center gap-1 mt-1.5 text-xs" aria-hidden="true">
-          <Star size={12} className="fill-amber-400 text-amber-400" />
-          <span className="font-bold text-slate-900">
-            {product.rating != null ? toPersianDigits(product.rating) : '—'}
-          </span>
-          <span className="text-slate-500">({toPersianDigits(product.reviews)})</span>
-        </div>
+        {product.rating != null && product.reviews > 0 && (
+          <div className="flex items-center gap-1 mt-1.5 text-xs" aria-hidden="true">
+            <Star size={12} className="fill-amber-400 text-amber-400" />
+            <span className="font-bold text-slate-900">{toPersianDigits(product.rating)}</span>
+            <span className="text-slate-500">({toPersianDigits(product.reviews)})</span>
+          </div>
+        )}
 
         <div className="mt-3 flex items-baseline gap-1.5">
           <span className="font-black text-[15px] text-slate-900">{formatToman(product.price.amount)}</span>
         </div>
         {oldToman != null && (
-          <div className="text-xs text-slate-400 line-through">{formatToman(oldToman)}</div>
+          <div className="text-xs text-slate-500 line-through">{formatToman(oldToman)}</div>
         )}
 
         <div className={`mt-3 inline-flex self-start px-2.5 py-1 rounded-full text-[11px] font-bold border ${STOCK_CLASS[product.stockStatus]}`}>

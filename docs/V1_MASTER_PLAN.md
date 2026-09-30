@@ -25,8 +25,9 @@ and dedicated search infrastructure are excluded from V1.
 ## 2. Current baseline
 
 - `0.1` foundation is closed; privileged Auth, session and RBAC runtime are merged
-  via #109/#111/#150/#158 and #49 is closed; auth-parity follow-ups #186/#188 were
-  delivered via #190/#195.
+  via #109/#150/#158 and #49 is closed; auth-parity follow-ups #186/#188 were
+  delivered via #190/#195. (#111 is the Catalog-hardening epic, delivered under
+  `0.2`.)
 - `0.2` has a merged Catalog/Media foundation: attributes, variants/SKU identity,
   price history, staged import, Admin authoring, live storefront discovery and
   Product Media M1–M5 through #240. Admin-driven publish and production media

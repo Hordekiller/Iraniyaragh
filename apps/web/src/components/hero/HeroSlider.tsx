@@ -1,17 +1,55 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Pause, Play, Star } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { heroSlides, heroTrustPoints, quickStats } from '../../data/prototype'
-import { formatPersianNumber, toPersianDigits } from '../../lib/format'
-import { HERO_PROMO, SECTION_IDS } from '../../lib/site-config'
+import { toPersianDigits } from '../../lib/format'
+import { usePrefersReducedMotion } from '../../lib/reduced-motion'
+import { SECTION_IDS } from '../../lib/site-config'
 import { ROUTES } from '../../lib/routes'
+import { useCatalogApi } from '../../state/catalog-context'
+import type { CatalogCategory } from '../../services/catalog/types'
 
 const SLIDE_INTERVAL_MS = 5000
+const SLIDE_LIMIT = 3
 
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined' || !window.matchMedia) return false
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+/**
+ * Presentation-only treatments cycled across the slides. The slide content
+ * itself (name, product count, destination) always comes from the live catalog,
+ * so no category name, slug or count is hardcoded in the storefront.
+ */
+const TREATMENTS = [
+  { gradient: 'from-[#0F172A]/90 via-[#0F172A]/60 to-transparent' },
+  { gradient: 'from-[#7c2d12]/85 via-[#0F172A]/55 to-transparent' },
+  { gradient: 'from-[#064e3b]/85 via-[#0F172A]/50 to-transparent' },
+] as const
+
+type HeroSlide = {
+  id: string
+  badge: string
+  title: string
+  highlight: string
+  desc: string
+  cta: string
+  image: string
+  gradient: string
+  ctaSlug: string
+}
+
+function toSlides(categories: readonly CatalogCategory[]): HeroSlide[] {
+  return categories
+    .filter(category => category.productCount > 0)
+    .slice(0, SLIDE_LIMIT)
+    .map((category, index) => ({
+      id: category.id,
+      badge: 'دسته‌بندی فروشگاه',
+      title: category.name,
+      highlight: `${toPersianDigits(category.productCount)} کالا`,
+      desc: `قیمت و موجودی ${category.name} به‌صورت زنده از فروشگاه نمایش داده می‌شود.`,
+      cta: 'مشاهده دسته',
+      image: category.image,
+      gradient: TREATMENTS[index % TREATMENTS.length].gradient,
+      ctaSlug: category.slug,
+    }))
 }
 
 function slideCounter(current: number, total: number): string {
@@ -20,48 +58,99 @@ function slideCounter(current: number, total: number): string {
 }
 
 export function HeroSlider() {
+  const api = useCatalogApi()
+  const [categories, setCategories] = useState<CatalogCategory[] | null>(null)
   const [activeSlide, setActiveSlide] = useState(0)
   const [interactionPaused, setInteractionPaused] = useState(false)
   const [manuallyPaused, setManuallyPaused] = useState(false)
-  const [reducedMotion] = useState(prefersReducedMotion)
+  const reducedMotion = usePrefersReducedMotion()
+  const [loadError, setLoadError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const retry = () => {
+    setCategories(null)
+    setLoadError(false)
+    setAttempt(n => n + 1)
+  }
   const navigate = useNavigate()
 
-  const autoplayStopped = reducedMotion || manuallyPaused || interactionPaused
+  const heroSlides = useMemo(() => (categories ? toSlides(categories) : []), [categories])
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .listCategories()
+      .then(list => {
+        if (!cancelled) setCategories(list)
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [api, attempt])
+
+  // A shrinking catalog (e.g. a category removed) must not leave the index dangling.
+  const current = heroSlides.length === 0 ? 0 : Math.min(activeSlide, heroSlides.length - 1)
+
+  const autoplayStopped = reducedMotion || manuallyPaused || interactionPaused || heroSlides.length < 2
   const permanentlyPaused = reducedMotion || manuallyPaused
 
   useEffect(() => {
     if (autoplayStopped) return
     const id = setInterval(() => setActiveSlide(s => (s + 1) % heroSlides.length), SLIDE_INTERVAL_MS)
     return () => clearInterval(id)
-  }, [autoplayStopped])
+  }, [autoplayStopped, heroSlides.length])
 
   return (
-    <section id={SECTION_IDS.home} aria-label="اسلایدر پیشنهاد ویژه" className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
+    <section id={SECTION_IDS.home} aria-label="اسلایدر دسته‌بندی‌های فروشگاه" className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
       <div
         onMouseEnter={() => setInteractionPaused(true)}
         onMouseLeave={() => setInteractionPaused(false)}
         onFocusCapture={() => setInteractionPaused(true)}
         onBlurCapture={() => setInteractionPaused(false)}
-        className="relative overflow-hidden rounded-[24px] lg:rounded-[28px] bg-[#0F172A] h-[480px] lg:h-[520px]"
+        className="relative overflow-hidden rounded-[24px] lg:rounded-[28px] bg-[#0F172A] h-[440px] lg:h-[520px]"
       >
+        {heroSlides.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
+            {loadError ? (
+              <div role="alert" className="text-white/80">
+                <p className="text-sm font-bold">بارگذاری دسته‌بندی‌ها با خطا مواجه شد.</p>
+                <button
+                  type="button"
+                  onClick={retry}
+                  className="mt-4 inline-flex h-10 items-center gap-2 rounded-full border border-white/25 bg-white/10 px-5 text-[13px] font-bold text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <RotateCcw size={15} aria-hidden="true" />
+                  تلاش دوباره
+                </button>
+              </div>
+            ) : (
+              <p role="status" className="text-white/70 text-sm">
+                {categories === null ? 'در حال بارگذاری دسته‌بندی‌ها...' : 'هنوز دسته‌بندی فعالی در فروشگاه ثبت نشده است.'}
+              </p>
+            )}
+          </div>
+        ) : (
+        <>
         <AnimatePresence mode="wait">
           {reducedMotion ? (
-            <div key={activeSlide} className="absolute inset-0">
-              <img src={heroSlides[activeSlide].image} alt={heroSlides[activeSlide].title} className="absolute inset-0 w-full h-full object-cover" />
-              <div className={`absolute inset-0 bg-gradient-to-l ${heroSlides[activeSlide].gradient}`} />
+            <div key={current} className="absolute inset-0">
+              <img src={heroSlides[current].image} alt={heroSlides[current].title} className="absolute inset-0 w-full h-full object-cover" />
+              <div className={`absolute inset-0 bg-gradient-to-l ${heroSlides[current].gradient}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent lg:from-black/30" />
             </div>
           ) : (
             <motion.div
-              key={activeSlide}
+              key={current}
               initial={{ opacity: 0, scale: 1.02 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.7, ease: 'easeOut' }}
               className="absolute inset-0"
             >
-              <img src={heroSlides[activeSlide].image} alt={heroSlides[activeSlide].title} className="absolute inset-0 w-full h-full object-cover" />
-              <div className={`absolute inset-0 bg-gradient-to-l ${heroSlides[activeSlide].gradient}`} />
+              <img src={heroSlides[current].image} alt={heroSlides[current].title} className="absolute inset-0 w-full h-full object-cover" />
+              <div className={`absolute inset-0 bg-gradient-to-l ${heroSlides[current].gradient}`} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent lg:from-black/30" />
             </motion.div>
           )}
@@ -70,31 +159,30 @@ export function HeroSlider() {
         {/* Hero Content */}
         <div className="relative h-full flex flex-col justify-center px-6 lg:px-14 py-10 lg:py-0">
           <motion.div
-            key={'content-' + activeSlide}
+            key={'content-' + current}
             initial={reducedMotion ? false : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: reducedMotion ? 0 : 0.25, duration: reducedMotion ? 0 : 0.6 }}
             className="max-w-[620px]"
           >
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> {heroSlides[activeSlide].badge}
+              {reducedMotion ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              )} {heroSlides[current].badge}
             </span>
             <h1 className="mt-4 text-white font-black leading-[1.05] text-[30px] lg:text-[48px]">
-              {heroSlides[activeSlide].title}
-              <span className="block text-white/90 font-extrabold text-[24px] lg:text-[36px] mt-1">{heroSlides[activeSlide].highlight}</span>
+              {heroSlides[current].title}
+              <span className="block text-white/90 font-extrabold text-[24px] lg:text-[36px] mt-1">{heroSlides[current].highlight}</span>
             </h1>
             <p className="mt-4 text-white/85 text-[13.5px] lg:text-[15px] leading-7 max-w-[520px] font-medium">
-              {heroSlides[activeSlide].desc}
+              {heroSlides[current].desc}
             </p>
             <div className="flex flex-wrap gap-3 mt-7">
-              <button type="button" onClick={() => navigate(ROUTES.category(heroSlides[activeSlide].ctaSlug))} className="h-12 px-7 rounded-full bg-[#C2410C] text-white font-extrabold text-sm hover:bg-[#A83509] transition flex items-center gap-2 shadow-lg shadow-[#C2410C]/25">
-                {heroSlides[activeSlide].cta} <ArrowLeft size={18} className="bg-white/20 rounded-full p-0.5" />
+              <button type="button" onClick={() => navigate(ROUTES.category(heroSlides[current].ctaSlug))} className="h-12 px-7 rounded-full bg-[#C2410C] text-white font-extrabold text-sm hover:bg-[#A83509] transition flex items-center gap-2 shadow-lg shadow-[#C2410C]/25">
+                {heroSlides[current].cta} <ArrowLeft size={18} className="bg-white/20 rounded-full p-0.5" />
               </button>
-            </div>
-            <div className="hidden lg:flex items-center gap-6 mt-8 text-white/90 text-xs">
-              {heroTrustPoints.map(point => (
-                <span key={point.label} className="flex items-center gap-2"><point.icon size={16} className="text-emerald-400" /> {point.label}</span>
-              ))}
             </div>
           </motion.div>
         </div>
@@ -122,47 +210,22 @@ export function HeroSlider() {
                 key={i}
                 onClick={() => setActiveSlide(i)}
                 aria-label={`اسلاید ${i + 1}`}
-                aria-current={activeSlide === i ? 'true' : undefined}
-                className={`transition-all duration-300 ${activeSlide === i ? 'w-8 h-2.5 bg-[#FF4D00] rounded-full' : 'w-2.5 h-2.5 bg-white/50 rounded-full hover:bg-white'}`}
-              />
+                aria-current={current === i ? 'true' : undefined}
+                // The pill stays visually small, but the button keeps a 32px
+                // touch target (WCAG 2.5.8) without moving anything else.
+                className="flex h-8 w-8 shrink-0 items-center justify-center"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`transition-all duration-300 ${current === i ? 'w-8 h-2.5 bg-[#FF4D00] rounded-full' : 'w-2.5 h-2.5 bg-white/50 rounded-full'}`}
+                />
+              </button>
             ))}
-            <span className="mr-2 text-white/90 text-xs font-bold tabular-nums">{slideCounter(activeSlide, heroSlides.length)}</span>
+            <span className="mr-2 text-white/90 text-xs font-bold tabular-nums">{slideCounter(current, heroSlides.length)}</span>
           </div>
         </div>
-
-        {/* Left Promo Card - Desktop */}
-        <div className="hidden lg:block absolute top-6 left-6 w-[300px]">
-          <div className="rounded-[20px] bg-white p-4 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">{HERO_PROMO.label}</span>
-              <span className="px-2.5 py-1 rounded-full bg-red-600 text-white text-[11px] font-black flex items-center gap-1"><Flame size={12} /> {HERO_PROMO.badge}</span>
-            </div>
-            <div className="flex gap-3 mt-3">
-              <img src={HERO_PROMO.image} alt={HERO_PROMO.productName} className="w-20 h-20 rounded-2xl object-cover bg-slate-50" />
-              <div className="flex-1">
-                <div className="text-[13px] font-bold leading-5 text-slate-900 line-clamp-2">{HERO_PROMO.productName}</div>
-                <div className="flex items-center gap-1 mt-1"><Star size={12} className="fill-amber-400 text-amber-400" /><span className="text-xs font-bold">{toPersianDigits(HERO_PROMO.rating)}</span><span className="text-xs text-slate-500">({toPersianDigits(HERO_PROMO.reviews)})</span></div>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-[#C2410C] font-black text-[15px]">{formatPersianNumber(HERO_PROMO.price)}</span><span className="text-xs text-slate-500 line-through">{formatPersianNumber(HERO_PROMO.oldPrice)}</span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div style={{ width: `${HERO_PROMO.soldPercent}%` }} className="h-full bg-[#FF4D00] rounded-full" />
-            </div>
-            <div className="flex justify-between mt-1.5 text-[11px] font-medium text-slate-500"><span>فروخته شده {toPersianDigits(HERO_PROMO.soldPercent)}٪</span><span>باقی‌مانده {toPersianDigits(HERO_PROMO.remainingQty)} عدد</span></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tiny Stats under hero - mobile */}
-      <div className="grid grid-cols-3 gap-2 mt-3 lg:hidden">
-        {quickStats.map(s => (
-          <div key={s.k} className="bg-white rounded-2xl py-3 text-center border border-slate-100">
-            <div className="text-[11px] text-slate-500 font-medium">{s.k}</div>
-            <div className="text-[13px] font-black text-slate-900">{s.v}</div>
-          </div>
-        ))}
+        </>
+        )}
       </div>
     </section>
   )

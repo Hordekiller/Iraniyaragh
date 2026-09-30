@@ -62,9 +62,30 @@ test.describe('web: a11y baseline (#82)', () => {
     }
   });
 
+  test('primary navigation entries are real routes, not home scroll anchors', async ({ page }) => {
+    await page.goto('/');
+
+    // The header nav is desktop-only, so the mobile viewshed is checked through
+    // the footer, which carries the same destinations on every screen size.
+    const scope = isMobile(page)
+      ? page.getByRole('contentinfo')
+      : page.getByRole('navigation', { name: 'ناوبری اصلی' });
+    const entries: Array<[string, string]> = [
+      ['دسته‌بندی', '/categories'],
+      ['همه کالاها', '/products'],
+      ['تازه‌های فروشگاه', '/newest'],
+      ['خدمات', '/services'],
+    ];
+
+    for (const [name, href] of entries) {
+      // A real destination, not `/#section` state navigation or a bare fragment.
+      await expect(scope.getByRole('link', { name: new RegExp(name) }).first()).toHaveAttribute('href', href);
+    }
+  });
+
   test('storefront interactive cards are exposed as buttons', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('section#popular button[class*="snap-start"]').first()).toBeEnabled();
+    await expect(page.locator('section#newest button[class*="snap-start"]').first()).toBeEnabled();
   });
 });

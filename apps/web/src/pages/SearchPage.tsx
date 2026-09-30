@@ -1,83 +1,44 @@
-import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ProductGrid } from '../components/product/ProductGrid'
-import { useCatalogApi } from '../state/catalog-context'
-import { toPersianDigits } from '../lib/format'
-import type { CatalogProduct } from '../services/catalog/types'
+import { ProductListing } from '../components/catalog/ProductListing'
+import { useDocumentMeta } from '../lib/use-document-meta'
 
+/**
+ * Search results for a term, served by the same listing surface as the catalog
+ * and category pages: live `meta.total`, brand filter, sort and paging. A
+ * term-specific result page is a search surface, not an indexable landing page.
+ */
 export function SearchPage() {
-  const api = useCatalogApi()
   const [searchParams] = useSearchParams()
-  const query = searchParams.get('q') ?? ''
-  const term = query.trim()
-  const [items, setItems] = useState<CatalogProduct[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const term = (searchParams.get('q') ?? '').trim()
 
-  const [resolvedQuery, setResolvedQuery] = useState(query)
-  if (resolvedQuery !== query) {
-    setResolvedQuery(query)
-    setItems(null)
-    setError(null)
+  useDocumentMeta({
+    title: term ? `جست‌وجوی ${term}` : 'جست‌وجوی کالا',
+    description: term ? `نتایج جست‌وجوی «${term}» در کاتالوگ فروشگاه.` : 'در کاتالوگ فروشگاه جست‌وجو کنید.',
+  })
+
+  if (!term) {
+    return (
+      <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
+        <h1 className="font-black text-slate-900 text-lg lg:text-xl">جست‌وجو</h1>
+        <p className="mt-4 text-slate-500 text-sm">
+          برای جست‌وجو، عبارت خود را در نوار جست‌وجوی بالای صفحه وارد کنید.
+        </p>
+      </div>
+    )
   }
-
-  useEffect(() => {
-    let cancelled = false
-    if (!term) return
-    api
-      .listProducts({ search: term })
-      .then(result => {
-        if (cancelled) return
-        setItems(result.items)
-      })
-      .catch(() => {
-        if (cancelled) return
-        setError('دریافت نتایج جستجو با خطا مواجه شد. لطفاً دوباره تلاش کنید.')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [api, term])
 
   return (
     <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
-      <h1 className="font-black text-slate-900 text-lg lg:text-xl">
-        نتایج جستجو
-        {term ? (
-          <span className="text-slate-500 font-bold text-sm mr-2">برای «{term}»</span>
-        ) : null}
-      </h1>
-
-      {!term && (
-        <p className="mt-6 text-slate-500 text-sm">عبارتی برای جستجو وارد کنید.</p>
-      )}
-
-      {term && items === null && !error && (
-        <div className="mt-8 text-slate-500" aria-live="polite">
-          در حال جستجو...
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-8 rounded-2xl bg-red-50 border border-red-200 text-red-700 p-4 text-sm font-bold" role="alert">
-          {error}
-        </div>
-      )}
-
-      {term && items !== null && items.length === 0 && !error && (
-        <p className="mt-8 text-slate-500 text-sm">
-          هیچ محصولی برای «{term}» پیدا نشد.
-        </p>
-      )}
-
-      {items !== null && items.length > 0 && (
-        <div className="mt-6">
-          <ProductGrid products={items} />
-        </div>
-      )}
-
-      {items !== null && items.length > 0 && (
-        <p className="mt-6 text-xs text-slate-400">{toPersianDigits(items.length)} کالا یافت شد</p>
-      )}
+      <ProductListing
+        title={`نتایج جست‌وجو برای «${term}»`}
+        subtitle="مطابقت نام، برند و دسته‌بندی کالاها"
+        crumbs={[{ label: 'جست‌وجو' }]}
+        defaultSort="newest"
+        search={term}
+        emptyMessage={`هیچ کالایی برای «${term}» پیدا نشد.`}
+        sortId="search-sort"
+        brandId="search-brand"
+      />
     </div>
   )
 }

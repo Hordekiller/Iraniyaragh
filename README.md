@@ -3,10 +3,14 @@
 Startup-ready commerce and warehouse platform for Iranian hardware/fittings retail.
 
 > Status: pre-release commerce integration. Auth, live Catalog/Media discovery,
-> protected Inventory HTTP and an authenticated server Cart API are merged. Web
-> Cart/Checkout/Orders remain fixture-backed; Checkout, Order application, Payment,
-> Fulfillment and production operations are not implemented. See
-> [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) before starting work.
+> protected Inventory HTTP, an authenticated server Cart, two-phase Checkout-to-
+> reserved-Order and customer/staff Order reads are merged through #246/#247; the
+> storefront binds Cart/Checkout/Orders to the live API through HTTP commerce
+> clients (fixture mode only behind `VITE_FIXTURE_*` flags, with honest
+> `PENDING_PAYMENT` after checkout — no simulated success). Payment, fulfillment,
+> Order commands/compensation and production operations are not yet
+> implemented. See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) before
+> starting work.
 
 ## Workspace
 

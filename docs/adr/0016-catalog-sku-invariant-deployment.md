@@ -1,7 +1,9 @@
-# ADR-0015: Deploying the catalog SKU ASCII invariant
+# ADR-0016: Deploying the catalog SKU ASCII invariant
 
 - Status: Accepted
 - Date: 2026-09-14
+- Renumbered: 2026-09-19 (from the duplicate number 0015; the Server Cart and
+  Checkout Contract keeps ADR-0015 — see 0015-cart-checkout-contract.md)
 - Scope: `ProductVariant.sku` and `ProductVariant.skuKey`
 
 ## Context

@@ -210,6 +210,25 @@ export class AuthFixtureClient implements AuthApi {
     ];
   }
 
+  async revokeSession(sessionId: string): Promise<void> {
+    const principal = this.store.getPrincipal();
+    if (!principal) {
+      throw new AuthApiError({
+        code: 'AUTH_SESSION_INVALID',
+        message: 'Your session has ended. Please sign in again.',
+        statusCode: 401,
+      });
+    }
+    if (sessionId.trim() !== principal.sessionId) {
+      throw new AuthApiError({ code: 'NOT_FOUND', message: 'Not found.', statusCode: 404 });
+    }
+    this.store.clear();
+  }
+
+  async logoutAll(): Promise<void> {
+    this.store.clear();
+  }
+
   async logout(): Promise<void> {
     this.store.clear();
   }

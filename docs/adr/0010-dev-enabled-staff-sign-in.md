@@ -1,10 +1,10 @@
 # ADR-0010: Development-Enabled Staff Sign-In (Admin Panel)
 
 Status: Accepted — dev-gated staff sign-in shipped via #88 (2026-09-04); the live
-production staff HTTP client that supersedes the dev/fixture path is under review
-as #191
+production staff HTTP client that supersedes the dev/fixture path was merged as
+#191 (`3fafceb`, 2026-09-15)
 
-Date: 2026-09-03
+Date: 2026-09-03 (status updated 2026-09-19)
 
 ## Context
 

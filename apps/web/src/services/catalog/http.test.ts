@@ -63,6 +63,7 @@ describe('CatalogHttpClient', () => {
     const client = new CatalogHttpClient({ fetch: fetcher })
     expect((await client.listProducts({ brand: 'arya' })).meta.total).toBe(0)
     expect((await client.listProducts({ brand: 'missing' })).items).toEqual([])
+    expect((await client.listBrands()).map(brand => brand.name)).toEqual(['آریا'])
     expect(fetcher).toHaveBeenCalledTimes(2)
   })
 
@@ -78,4 +79,23 @@ describe('CatalogHttpClient', () => {
     const error = new CatalogHttpClient({ fetch: vi.fn(async () => response({ nope: true })) })
     await expect(error.listCategories()).rejects.toBeInstanceOf(CatalogError)
   })
+
+  it('calls the ambient fetch with the global as its receiver, not the client', async () => {
+    // Regression guard. Invoking `globalThis.fetch` as `this.fetcher(...)` passes the
+    // client as the receiver, and a real browser rejects that with
+    // `TypeError: Illegal invocation` before any request is sent. Node and jsdom
+    // accept any receiver, so the receiver itself has to be asserted.
+    const original = globalThis.fetch
+    const spy = vi.fn(async () => response({ data: { items: [] } }))
+    globalThis.fetch = spy as unknown as typeof globalThis.fetch
+    try {
+      await new CatalogHttpClient().listCategories()
+    } finally {
+      globalThis.fetch = original
+    }
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.instances[0]).toBe(globalThis)
+  })
 })
+

@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import { popularProducts } from '../data/prototype'
-import { ToastProvider } from '../components/feedback/Toast'
 import { HomePage } from './HomePage'
+import { CatalogProvider } from '../state/CatalogProvider'
+import { CatalogFixtureClient } from '../services/catalog/fixtures'
 
 function renderHome() {
   return render(
@@ -12,9 +12,9 @@ function renderHome() {
         <Route
           path="/"
           element={
-            <ToastProvider>
+            <CatalogProvider api={new CatalogFixtureClient({ delayMs: 0 })}>
               <HomePage />
-            </ToastProvider>
+            </CatalogProvider>
           }
         />
         <Route path="/product/:slug" element={<span data-testid="product-probe">product</span>} />
@@ -24,20 +24,21 @@ function renderHome() {
 }
 
 describe('HomePage', () => {
-  it('renders the hero, category grid, popular tools and the newsletter section', () => {
+  it('renders the hero, live category grid, newest products, services and the newsletter teaser', async () => {
     renderHome()
 
-    expect(screen.getByRole('region', { name: 'اسلایدر پیشنهاد ویژه' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'اسلایدر دسته‌بندی‌های فروشگاه' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'دسته‌بندی تخصصی ابزار' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'ابزار محبوب هفته' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'عضو باشگاه استادکاران شوید' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'تازه‌های فروشگاه' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'خدمات ایران یراق' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'عضو خبرنامه شوید' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'برندهای موجود' })).toBeInTheDocument()
   })
 
-  it('navigates to the product page when a popular tool is selected', () => {
+  it('navigates to the product page when a newest product is selected', async () => {
     renderHome()
 
-    const first = popularProducts[0]
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(first.title) }))
+    fireEvent.click(await screen.findByRole('button', { name: /دریل چکشی ۱۳/ }))
 
     expect(screen.getByTestId('product-probe')).toBeInTheDocument()
   })

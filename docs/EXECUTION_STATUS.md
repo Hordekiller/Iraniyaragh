@@ -33,7 +33,7 @@ day-to-day assignments.
 
 | Priority | Work                                   | State                                                    | Required reviewer focus                                                                                            | Exit action                                                                        |
 | -------: | -------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-|        1 | Cart hardening/Web binding             | Partial; #236 is closed after authenticated API delivery | ADR-0015 gaps: guest/merge, scoped retention, side-effect-free reads, concurrent limits and a real Web adapter     | Open bounded follow-up issue(s); do not treat #236 closure as integrated Cart exit |
+|        1 | Cart hardening/Web binding             | Partial; #236 is closed after authenticated API delivery. `#251` (merged to `origin/main`) closed the side-effect-free-reads item and scoped idempotency keys/limits | ADR-0015 gaps: guest/merge, scoped retention, concurrent (add/remove) limits and a real Web adapter     | Open bounded follow-up issue(s); do not treat #236/#251 closure as integrated Cart exit |
 |        2 | Issue #237 / PR #246                   | Complete/merged                                          | independently approved serializable Checkout, privacy-safe contracts, DB constraints, rollback and replay evidence | Closed by protected squash merge `b53de29`                                         |
 |        3 | Issue #238 / PR #247                   | Complete/merged                                          | independently approved ownership/IDOR, staff permission, bounded queries and persistence-safe DTOs                 | Closed by protected squash merge `b220e01`                                         |
 |        4 | Issue #114                             | Private production acceptance                            | adapter/runtime exists; no secret/PII exposure and mutations fail closed                                           | Provision account/line/template/key; controlled provider-backed evidence           |
@@ -215,6 +215,10 @@ server Cart API and #246/#237 authenticated Checkout preview plus atomic
 reserved-Order creation are merged. Web Cart/Checkout/Orders remain fixture-backed;
 #247/#238 Order read/Admin API operations are merged; their live Web/Admin consumers
 remain open.
+
+> Updated 2026-09-19: the storefront Cart/Checkout/Order surfaces now bind the live
+> APIs through HTTP commerce clients (fixture mode behind `VITE_FIXTURE_*` flags only);
+> the Admin consumers remain open. See `docs/PROJECT_STATUS.md`.
 
 ## Explicitly not ready
 

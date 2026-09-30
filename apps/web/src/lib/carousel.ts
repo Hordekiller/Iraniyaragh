@@ -1,7 +1,9 @@
+import { scrollBehavior } from './reduced-motion'
+
 export function scrollCarousel(ref: React.RefObject<HTMLDivElement | null>, dir: 'left' | 'right') {
   if (!ref.current) return
   const amount = 340
-  ref.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' })
+  ref.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: scrollBehavior() })
 }
 
 /** Format a Toman-styled value with Persian locale digits (prototype display only). */

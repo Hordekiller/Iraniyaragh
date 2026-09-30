@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/check-bundle-fixtures.mjs",
+    "build:fixture-e2e": "tsc -b && vite build --mode fixture-e2e && node scripts/check-bundle-fixtures.mjs --expect fixtures",
     "lint": "eslint . && pnpm check:runtime-assets",
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview",

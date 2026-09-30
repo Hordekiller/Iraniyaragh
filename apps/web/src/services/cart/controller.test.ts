@@ -3,14 +3,17 @@ import { MAX_CART_QUANTITY, LocalCartStorage } from './controller'
 import type { CartLine } from './types'
 
 const VALID: CartLine = {
+  variantId: 'v1',
   productId: 'p1',
   slug: 'ronix-2210-hammer-drill',
   name: 'دریل رونیکس ۲۲۱۰',
   brand: 'Ronix',
   image: '/images/hero1.jpg',
+  sku: 'SKU-2210',
   unitPrice: { amount: '28500000', currency: 'IRR' },
   oldPrice: null,
   quantity: 2,
+  available: null,
 }
 
 function invalid(line: Partial<CartLine>): CartLine {
@@ -48,7 +51,7 @@ describe('LocalCartStorage', () => {
       lines: [
         duplicate,
         VALID,
-        invalid({ productId: '' }),
+        invalid({ variantId: '' }),
         invalid({ quantity: 0 }),
         invalid({ unitPrice: { amount: 'abc', currency: 'IRR' } }),
         invalid({ quantity: MAX_CART_QUANTITY + 10 }),
@@ -56,7 +59,7 @@ describe('LocalCartStorage', () => {
     })
     const lines = storage.read().lines
     expect(lines).toHaveLength(1)
-    expect(lines[0].productId).toBe('p1')
+    expect(lines[0].variantId).toBe('v1')
     expect(lines[0].quantity).toBe(MAX_CART_QUANTITY)
   })
 })

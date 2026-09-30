@@ -68,8 +68,8 @@ The public repository also has independent security gates:
   published after the dependency originally entered the repository. It runs the
   surgical `audit-prod.mjs` script: real vulnerabilities fail immediately;
   transient network errors are retried up to 3 times; exhaustion warns without
-  blocking CI (exit 2 → warning, not failure). Docs-only PRs are skipped via
-  `paths-ignore`.
+  blocking CI (exit 2 → warning, not failure). The job has no
+  `paths`/`paths-ignore` filter, so docs-only PRs still exercise the baseline.
 - Dependabot alerts and security updates are enabled; `.github/dependabot.yml`
   proposes bounded weekly npm-workspace and GitHub Actions update groups.
 - Secret scanning and push protection detect existing supported credentials and
@@ -79,8 +79,8 @@ The public repository also has independent security gates:
 
 All workflow actions are pinned to reviewed full commit SHAs. The adjacent version
 comment is documentation only; updating a tag does not update the executed code.
-Action upgrades require a reviewed SHA change and must retain the Node 24-compatible
-runtime baseline.
+Action upgrades require a reviewed SHA change and must retain the Node 22-compatible
+runtime baseline (every CI workflow pins `node-version: 22`).
 
 Run `pnpm audit --prod --audit-level=moderate` locally during dependency triage too,
 or use `node .github/scripts/audit-prod.mjs` for the same classification used in CI;
@@ -199,7 +199,7 @@ operational meanings:
 | Probe                      | Success                | Failure behavior                                                           | Intended consumer                                   |
 | -------------------------- | ---------------------- | -------------------------------------------------------------------------- | --------------------------------------------------- |
 | `GET /api/v1/health/live`  | `200`, `status: ok`    | Fails only when the API process cannot serve HTTP                          | Container/process restart policy                    |
-| `GET /api/v1/health/ready` | `200`, `status: ready` | `503`, `DATABASE_UNAVAILABLE` when PostgreSQL fails or exceeds 1.5 seconds | Load balancer traffic gate and deployment readiness |
+| `GET /api/v1/health/ready` | `200`, `status: ready` | `503` with envelope code `HEALTH_NOT_READY` when PostgreSQL fails or exceeds 1.5 seconds (`DATABASE_UNAVAILABLE` is the cause under `details.error.code`) | Load balancer traffic gate and deployment readiness |
 
 `GET /api/v1/health` remains a liveness alias for compatibility, but new
 infrastructure must use the explicit `/live` path. The liveness probe never queries

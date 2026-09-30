@@ -2,12 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { ToastContext } from './toast-context'
+import { usePrefersReducedMotion } from '../../lib/reduced-motion'
 
 const TOAST_DURATION_MS = 5000
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<string | null>(null)
   const [paused, setPaused] = useState(false)
+  // 2.3.3 Animation from Interactions: the toast slides and scales on every
+  // action, which is exactly the involuntary motion the setting asks us to drop.
+  const reducedMotion = usePrefersReducedMotion()
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const show = useCallback((message: string) => {
@@ -38,9 +42,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <AnimatePresence>
         {toast && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: reducedMotion ? 0 : 0.2 }}
             onMouseEnter={() => setPaused(true)}
             onMouseLeave={() => setPaused(false)}
             onFocus={() => setPaused(true)}

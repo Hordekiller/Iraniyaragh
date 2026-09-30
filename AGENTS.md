@@ -45,14 +45,20 @@ Vitest coverage gates (imported-code baselines; thresholds live in each package'
 tests, and use `CI=true` exactly like the pipeline when you need the coverage gate.
 
 ```bash
-# All packages: lint + build + typecheck (mirrors the CI "check" job)
+# All packages: lint + typecheck + build (mirrors the CI "quality" job;
+# CI also runs `pnpm test` in the same job)
 pnpm lint
+pnpm typecheck
 pnpm build
 
-# Per-package unit + integration tests (mirrors the CI "test" job)
-pnpm --filter @iranyaragh/api test        # requires the test Postgres (see below)
+# Per-package unit tests (run inside the CI "quality" job)
+pnpm --filter @iranyaragh/api test
 pnpm --filter @iranyaragh/web test
 pnpm --filter @iranyaragh/admin test
+
+# API integration tests (mirror the CI "database" job; REQUIRES the test
+# Postgres — see below)
+pnpm --filter @iranyaragh/api test:integration
 
 # CI-equivalent: enforce coverage thresholds within a single package
 CI=true pnpm --filter @iranyaragh/web test
@@ -62,12 +68,17 @@ CI=true pnpm --filter @iranyaragh/web test
 ```
 
 Locally, the API integration tests need the test database and matching env:
-`NODE_ENV=test` and `DATABASE_URL` ending in `_test`. Bring up the containers with:
+`NODE_ENV=test` and a `DATABASE_URL` ending in `_test`. Bring up Postgres with:
 
 ```bash
-docker compose -f infrastructure/docker/docker-compose.yml \
-  -f infrastructure/docker/docker-compose.override.yml up -d postgres
+docker compose -f infrastructure/docker/docker-compose.yml up -d postgres
 ```
+
+Note: `infrastructure/docker/docker-compose.override.yml` is a git-ignored
+LOCAL-ONLY override on this machine that remaps Postgres to host `55432` and Redis
+to `56379`; on a fresh clone only the base `docker-compose.yml` exists. Point your
+`DATABASE_URL`/`REDIS_URL` at whichever host ports your local environment actually
+publishes (see `TESTING.md`).
 
 Update docs and `docs/PROJECT_STATUS.md` when actual capabilities or known gaps
 change. State clearly what was verified and what could not be verified.

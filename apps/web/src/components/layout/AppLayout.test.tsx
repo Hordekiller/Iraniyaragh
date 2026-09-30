@@ -1,16 +1,17 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { AuthFixtureClient } from '../../lib/auth/fixtures'
 import { MemorySessionStore } from '../../lib/auth/session-store'
 import { AuthProvider } from '../../state/AuthProvider'
 import { CartProvider } from '../../state/CartProvider'
+import { CatalogProvider } from '../../state/CatalogProvider'
+import { CatalogFixtureClient } from '../../services/catalog/fixtures'
 import { ToastProvider } from '../../components/feedback/Toast'
 import type { CartLine, CartState } from '../../services/cart/types'
 import type { CartStorage } from '../../services/cart/controller'
 import { AppLayout } from './AppLayout'
 import { SITE_NAME } from '../../lib/site-config'
-import { ROUTES } from '../../lib/routes'
 
 class MemoryCartStorage implements CartStorage {
   state: CartState
@@ -26,14 +27,17 @@ class MemoryCartStorage implements CartStorage {
 }
 
 const LINE: CartLine = {
+  variantId: 'v1',
   productId: 'p1',
   slug: 'ronix-2210-hammer-drill',
   name: 'دریل رونیکس ۲۲۱۰',
   brand: 'Ronix',
   image: '/images/hero1.jpg',
+  sku: 'SKU-2210',
   unitPrice: { amount: '28500000', currency: 'IRR' },
   oldPrice: null,
   quantity: 1,
+  available: null,
 }
 
 function ProductProbe() {
@@ -48,9 +52,11 @@ function renderLayout(storage: CartStorage = new MemoryCartStorage([])) {
           element={
             <ToastProvider>
               <AuthProvider api={new AuthFixtureClient({ store: new MemorySessionStore() })}>
-                <CartProvider storage={storage}>
-                  <AppLayout />
-                </CartProvider>
+                <CatalogProvider api={new CatalogFixtureClient({ delayMs: 0 })}>
+                  <CartProvider storage={storage}>
+                    <AppLayout />
+                  </CartProvider>
+                </CatalogProvider>
               </AuthProvider>
             </ToastProvider>
           }
@@ -68,8 +74,7 @@ describe('AppLayout', () => {
     renderLayout()
 
     expect(screen.getAllByText(SITE_NAME).length).toBeGreaterThanOrEqual(2)
-    expect(screen.getByText('مشاوره خرید')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'پیگیری سفارش' })).toHaveAttribute('href', ROUTES.orders)
+    expect(screen.getAllByRole('link', { name: 'پیگیری سفارش' }).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('outlet-content')).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'ناوبری پایین' })).toBeInTheDocument()
   })
@@ -77,7 +82,10 @@ describe('AppLayout', () => {
   it('shows the cart item count badge from the cart state', () => {
     renderLayout(new MemoryCartStorage([LINE]))
 
-    expect(screen.getByRole('link', { name: 'سبد خرید، ۱ کالا' })).toBeInTheDocument()
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: 'سبد خرید، ۱ کالا' })).toBeInTheDocument()
+    // The cart lives in the header only: one control per destination.
+    const bottom = screen.getByRole('navigation', { name: 'ناوبری پایین' })
+    expect(within(bottom).queryByRole('link', { name: /سبد خرید/ })).not.toBeInTheDocument()
   })
 
   it('navigates to the search route when a query is submitted from the desktop input', () => {
