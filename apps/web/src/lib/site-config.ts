@@ -1,65 +1,54 @@
-import { categories } from '../data/prototype'
-import { toPersianDigits } from './format'
-
 /**
- * Single source of truth for site-wide business constants, contact info,
- * policy values and section anchor IDs. Every component references these
- * constants instead of hardcoding values — one place to update, no stale data.
+ * Single source of truth for the storefront's own identity, its section anchor
+ * IDs, and the business contact details.
+ *
+ * Business contact details are deployment configuration, not source constants.
+ * Nothing here is a placeholder number or address: a storefront that has not been
+ * told its real phone number, postal code, address, email or Instagram handle
+ * must render no contact block at all rather than publish a plausible-looking but
+ * unverified one. Each value is read from a `VITE_SITE_*` variable and is `null`
+ * when the deployment does not set it, so the omission is explicit and testable.
  */
 
-// ── Contact & identity ───────────────────────────────────────────────────────
+import { toPersianDigits } from './format'
+
+// ── Identity ─────────────────────────────────────────────────────────────────
 
 export const SITE_NAME = 'ایران یراق'
-export const SITE_FOUNDING_YEAR = 1385
 export const SITE_TAGLINE = 'فروشگاه تخصصی ابزار و یراق‌آلات'
 
-// Supplied on the coworker's storefront branch. Business ownership and
-// publication approval should be reconfirmed before a public launch.
-export const SITE_PHONE = '09202295969'
-export const SITE_POSTAL_CODE = '1497973517'
-export const SITE_ADDRESS_LINE = 'استان البرز، کرج، میدان استاندارد، بلوار کامیون‌داران، سایت کابینت‌سازان، بلوک صنعت ۳'
+// ── Business contact (deployment configuration) ──────────────────────────────
 
-export const PHONE_MAIN = toPersianDigits(SITE_PHONE)
-export const PHONE_SECONDARY = toPersianDigits(SITE_PHONE)
-export const EMAIL = 'info@aradtools.ir'
-export const INSTAGRAM_HANDLE = 'aradtools.ir'
-export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_HANDLE}`
+function optionalSetting(value: string | undefined): string | null {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : null
+}
 
-export const ADDRESS_SHORT = 'تهران، خیابان امام خمینی، پاساژ ابزار'
-export const ADDRESS_FULL = 'تهران، خیابان امام خمینی، نرسیده به حسن‌آباد، مرکز فروش ایران یراق، طبقه همکف، پلاک ۴۲'
+/** Verified storefront phone number, or `null` when the deployment has none. */
+export const SITE_PHONE = optionalSetting(import.meta.env.VITE_SITE_PHONE)
+/** Verified storefront postal code, or `null`. */
+export const SITE_POSTAL_CODE = optionalSetting(import.meta.env.VITE_SITE_POSTAL_CODE)
+/** Verified storefront address, or `null`. */
+export const SITE_ADDRESS_LINE = optionalSetting(import.meta.env.VITE_SITE_ADDRESS)
+/** Verified storefront email, or `null`. */
+export const SITE_EMAIL = optionalSetting(import.meta.env.VITE_SITE_EMAIL)
+/** Verified Instagram handle (without `@`), or `null`. */
+export const INSTAGRAM_HANDLE = optionalSetting(import.meta.env.VITE_INSTAGRAM_HANDLE)
 
-export const WORKING_HOURS = 'شنبه تا پنجشنبه ۸ تا ۲۰'
-export const SUPPORT_HOURS = 'پشتیبانی تا ۱۰ شب • حتی جمعه‌ها'
+export const INSTAGRAM_URL = INSTAGRAM_HANDLE
+  ? `https://www.instagram.com/${INSTAGRAM_HANDLE.replace(/^@/u, '')}`
+  : null
 
-// ── Catalog display ──────────────────────────────────────────────────────────
-/** Product catalogue size advertised in the header search placeholder. */
-export const CATALOG_PRODUCT_COUNT = 2500
+/** The phone number in Persian digits, or `null` when there is no number. */
+export const SITE_PHONE_PERSIAN = SITE_PHONE ? toPersianDigits(SITE_PHONE) : null
 
-// ── Shipping policy ──────────────────────────────────────────────────────────
-
-/** Free-shipping threshold in Toman. */
-export const FREE_SHIPPING_THRESHOLD_TOMAN = 2_000_000
-/** Standard shipping cost in Toman. */
-export const SHIPPING_COST_TOMAN = 45_000
-/** Threshold in Rial (Toman × 10). */
-export const FREE_SHIPPING_THRESHOLD_RIALS = FREE_SHIPPING_THRESHOLD_TOMAN * 10
-/** Shipping cost in Rial (Toman × 10). */
-export const SHIPPING_COST_RIALS = SHIPPING_COST_TOMAN * 10
-
-/** Same-day delivery promo banner (popular-tools strip). */
-export const DELIVERY_PROMO = {
-  title: 'ارسال امروز اگر تا ۲ ساعت دیگر سفارش دهید',
-  subtitle: 'تهران و کرج • تحویل درب منزل',
-} as const
-
-// ── Special collection (Ronix PRO) ───────────────────────────────────────────
-
-/** Marketing copy for the home "special collection" banner. */
-export const SPECIAL_COLLECTION = {
-  title: 'سری مشکی رونیکس',
-  subtitle: 'RONIX PRO • ابزار دسته‌بندی خاص',
-  description: 'کلکسیون ابزار صنعتی مشکی مات با موتور براشلس و گارانتی ۲۴ ماهه — انتخاب حرفه‌ای‌ها',
-} as const
+/**
+ * Whether the deployment supplied at least one contact detail. The shell uses
+ * this to decide if a contact affordance belongs on the page at all: a "تماس با
+ * فروشگاه" button with no number behind it is a dead control, so it is not
+ * rendered instead of being rendered broken.
+ */
+export const HAS_SITE_PHONE = SITE_PHONE !== null
 
 // ── Login dialog ─────────────────────────────────────────────────────────────
 
@@ -71,34 +60,5 @@ export const MOBILE_PLACEHOLDER = '۰۹۱۲ ۳۴۵ ۶۷۸۹'
 export const SECTION_IDS = {
   home: 'home',
   categories: 'categories',
-  popular: 'popular',
-  bestseller: 'bestseller',
-  blog: 'blog',
-  services: 'services',
   mainContent: 'main-content',
-} as const
-
-// ── Category filter pills (derived from prototype categories) ────────────────
-
-export const ALL_FILTER_PILL = 'همه' as const
-
-/** Filter pills for the popular-tools section, derived from category data. */
-export const FILTER_PILLS: readonly string[] = [
-  ALL_FILTER_PILL,
-  ...categories.map(c => c.title),
-] as const
-
-// ── Promo card (home hero sidebar) ───────────────────────────────────────────
-
-export const HERO_PROMO = {
-  label: 'پیشنهاد امروز',
-  badge: 'حراج',
-  productName: 'دریل بتن‌کن رونیکس 2701 + هدیه',
-  image: '/images/tool2.jpg',
-  rating: 4.9,
-  reviews: 212,
-  price: 5_120_000,
-  oldPrice: 6_400_000,
-  soldPercent: 68,
-  remainingQty: 32,
 } as const

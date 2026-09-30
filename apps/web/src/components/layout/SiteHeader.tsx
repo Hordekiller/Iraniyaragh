@@ -5,7 +5,7 @@ import { useCart } from '../../state/cart-context'
 import { toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
 import { AccountMenu } from '../auth/AccountMenu'
-import { SITE_NAME, SITE_PHONE, SITE_TAGLINE } from '../../lib/site-config'
+import { HAS_SITE_PHONE, SITE_NAME, SITE_PHONE, SITE_TAGLINE } from '../../lib/site-config'
 
 type SiteHeaderProps = {
   searchQuery: string
@@ -77,9 +77,11 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
           {/* Actions */}
           <div className="flex items-center gap-2 mr-auto lg:mr-0">
             <button onClick={onToggleSearch} aria-label="جستجو" className="lg:hidden w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center"><Search size={18} /></button>
-            <a href={`tel:${SITE_PHONE}`} className="hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-[#0F172A] text-white text-[13px] font-bold hover:bg-black transition">
-              <Phone size={16} aria-hidden="true" /> تماس با فروشگاه
-            </a>
+            {HAS_SITE_PHONE && (
+              <a href={`tel:${SITE_PHONE}`} className="hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-[#0F172A] text-white text-[13px] font-bold hover:bg-black transition">
+                <Phone size={16} aria-hidden="true" /> تماس با فروشگاه
+              </a>
+            )}
             <Link
               to={ROUTES.cart}
               aria-label={`سبد خرید، ${toPersianDigits(itemCount)} کالا`}

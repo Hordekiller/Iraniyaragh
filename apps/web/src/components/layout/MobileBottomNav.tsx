@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Home, LayoutGrid, MessageCircle, Search, User } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
-import { SECTION_IDS, SITE_PHONE } from '../../lib/site-config'
+import { HAS_SITE_PHONE, SECTION_IDS, SITE_PHONE } from '../../lib/site-config'
 import { useAuth } from '../../state/auth-context'
 
 type MobileBottomNavProps = {
@@ -62,14 +62,16 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavPr
               <span className="text-[11px] font-bold leading-none text-slate-500">دسته‌ها</span>
             </button>
 
-            <a
-              href={`tel:${SITE_PHONE}`}
-              aria-label="تماس با فروشگاه"
-              className="flex flex-col items-center gap-1 min-w-[64px] py-1.5 transition text-slate-500"
-            >
-              <MessageCircle size={22} strokeWidth={1.9} />
-              <span className="text-[11px] font-medium leading-none text-slate-500">تماس</span>
-            </a>
+            {HAS_SITE_PHONE && (
+              <a
+                href={`tel:${SITE_PHONE}`}
+                aria-label="تماس با فروشگاه"
+                className="flex flex-col items-center gap-1 min-w-[64px] py-1.5 transition text-slate-500"
+              >
+                <MessageCircle size={22} strokeWidth={1.9} />
+                <span className="text-[11px] font-medium leading-none text-slate-500">تماس</span>
+              </a>
+            )}
 
             <button
               onClick={() => {

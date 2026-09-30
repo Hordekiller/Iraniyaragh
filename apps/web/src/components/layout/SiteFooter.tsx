@@ -1,6 +1,14 @@
 import { Link } from 'react-router-dom'
 import { MapPin, Phone, ShoppingBag, UserRound } from 'lucide-react'
-import { SITE_ADDRESS_LINE, SITE_NAME, SITE_PHONE, SITE_POSTAL_CODE, SITE_TAGLINE } from '../../lib/site-config'
+import {
+  HAS_SITE_PHONE,
+  SITE_ADDRESS_LINE,
+  SITE_NAME,
+  SITE_PHONE,
+  SITE_PHONE_PERSIAN,
+  SITE_POSTAL_CODE,
+  SITE_TAGLINE,
+} from '../../lib/site-config'
 import { gregorianToJalali, toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
 
@@ -8,6 +16,8 @@ function currentJalaliYear(): number {
   const now = new Date()
   return gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate()).year
 }
+
+const hasContactBlock = HAS_SITE_PHONE || SITE_ADDRESS_LINE !== null || SITE_POSTAL_CODE !== null
 
 export function SiteFooter() {
   return (
@@ -34,13 +44,23 @@ export function SiteFooter() {
 
           <div className="lg:col-span-4">
             <h2 className="font-black text-sm text-slate-900">ارتباط با فروشگاه</h2>
-            <address className="mt-4 not-italic text-[13px] leading-7 text-slate-600">
-              <div className="flex items-start gap-2"><MapPin size={16} aria-hidden="true" className="mt-1 shrink-0 text-[#C2410C]" /> {SITE_ADDRESS_LINE}</div>
-              <div>کد پستی: {toPersianDigits(SITE_POSTAL_CODE)}</div>
-              <a href={`tel:${SITE_PHONE}`} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline" dir="ltr">
-                <Phone size={15} aria-hidden="true" /> {toPersianDigits(SITE_PHONE)}
-              </a>
-            </address>
+            {hasContactBlock ? (
+              <address className="mt-4 not-italic text-[13px] leading-7 text-slate-600">
+                {SITE_ADDRESS_LINE !== null && (
+                  <div className="flex items-start gap-2"><MapPin size={16} aria-hidden="true" className="mt-1 shrink-0 text-[#C2410C]" /> {SITE_ADDRESS_LINE}</div>
+                )}
+                {SITE_POSTAL_CODE !== null && <div>کد پستی: {toPersianDigits(SITE_POSTAL_CODE)}</div>}
+                {SITE_PHONE !== null && (
+                  <a href={`tel:${SITE_PHONE}`} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline" dir="ltr">
+                    <Phone size={15} aria-hidden="true" /> {SITE_PHONE_PERSIAN}
+                  </a>
+                )}
+              </address>
+            ) : (
+              <p className="mt-4 text-[13px] leading-7 text-slate-500">
+                اطلاعات تماس فروشگاه هنوز منتشر نشده است.
+              </p>
+            )}
           </div>
         </div>
         <div className="border-t border-slate-100 py-5 text-xs text-slate-500">

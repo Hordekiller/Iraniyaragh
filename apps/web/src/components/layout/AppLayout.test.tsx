@@ -34,8 +34,13 @@ describe('AppLayout', () => {
     expect(
       screen.getByRole('navigation', { name: 'ناوبری پایین' }),
     ).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'تماس با فروشگاه' }).every(link => link.getAttribute('href') === 'tel:09202295969')).toBe(true)
-    expect(screen.getByText(/سایت کابینت‌سازان، بلوک صنعت ۳/)).toBeInTheDocument()
+    // With no `VITE_SITE_*` configuration the shell must publish no contact
+    // details at all: no `tel:` link, no postal code, no address, and no
+    // "ارسال رایگان" shipping claim. An unconfigured deployment renders the
+    // explicit "not published yet" note instead of a plausible-looking number.
+    expect(screen.queryAllByRole('link', { name: 'تماس با فروشگاه' })).toHaveLength(0)
+    expect(screen.queryByText(/کد پستی/)).not.toBeInTheDocument()
+    expect(screen.getByText('اطلاعات تماس فروشگاه هنوز منتشر نشده است.')).toBeInTheDocument()
     expect(screen.queryByText(/ارسال رایگان برای خرید بالای/)).not.toBeInTheDocument()
   })
 
