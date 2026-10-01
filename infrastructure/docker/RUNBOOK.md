@@ -73,16 +73,36 @@ These are not conventions to remember. Each one fails a build or a boot:
 | No fixture data in the shipped bundle | `web.Dockerfile` scans `dist/assets` for fixture markers after the build |
 | No fixture staff client in a deployed Admin | `admin.Dockerfile` fails the build on `NEXT_PUBLIC_FIXTURE_AUTH` |
 | No development access code | removed from the product in #372; no compose service re-enables it |
-| Real payment gateway | API refuses to boot unless `PAYMENT_PROVIDER_MODE=live` with a merchant id and https callback |
-| Real SMS delivery | API refuses to boot without `SMS_IR_API_KEY` and all four template ids |
+| Real payment gateway | API refuses to boot unless `PAYMENT_PROVIDER_MODE` is `live` with a merchant id and https callback, or `disabled`, which no-ops every call |
+| Real SMS delivery | API refuses to boot without `SMS_IR_API_KEY` and all four template ids, unless `SMS_PROVIDER_MODE=disabled` |
 | Real secrets | API refuses staging/production secrets shorter than 32 characters or containing a placeholder |
 | https public origins | API rejects `http` for `STOREFRONT_ORIGIN` and `PUBLIC_MEDIA_ORIGIN` |
 | Genuine health | `/api/v1/health/ready` checks Postgres and Redis; liveness alone is not used to accept traffic |
 
 The deliberate consequence: **staging cannot be made to look successful with
-fake providers.** There is no staging payment mode, and the API refuses to start
-without a live gateway. A staging deploy that boots is a staging deploy wired to
-real Zarinpal and real SMS.
+fake providers.** There is no staging payment mode that returns success.
+
+`PAYMENT_PROVIDER_MODE=disabled` and `SMS_PROVIDER_MODE=disabled` exist for
+deploying before a provider account does, and they are the opposite of a stub:
+the provider makes no network call, so it cannot mint a payment authority, a
+settlement reference, a provider message id, or an OTP delivery record. Every
+attempt gets an explicit refusal instead:
+
+| Call | Result |
+|---|---|
+| `POST /api/v1/orders/:orderId/pay` | `503 PAYMENT_PROVIDER_DISABLED`, attempt recorded `FAILED` with reason `gateway_disabled` |
+| Zarinpal callback verification | `503 PAYMENT_PROVIDER_DISABLED`, payment left `PENDING`, nothing persisted |
+| `POST /api/v1/auth/customer/otp/request` | `503 SMS_PROVIDER_DISABLED`, challenge invalidated so no undeliverable code stays live |
+
+Both modes are rejected in `production`, where the real credentials are still
+required. A payment left `PENDING` by a disabled gateway is deliberately not
+marked failed: an authority issued before the gateway was switched off may
+already have been settled, so it is left for reconciliation.
+
+A deploy with either provider disabled has **not** passed payment or SMS
+acceptance, and the runbook's remaining steps do not substitute for it. Before
+enabling real sales, set the mode to `live`/`smsir` with real credentials and
+complete steps 4 and 5 of the acceptance list.
 
 ## Acceptance before calling a deploy done
 
@@ -97,7 +117,9 @@ Run against the real host, not localhost assumptions:
    The bootstrap refuses to run without a TTY by design.
 4. A product draft is created, an image uploaded, and the image becomes `READY`.
 5. A real customer order is placed and reaches `PENDING_PAYMENT`. Do **not**
-   assert a successful payment without a real Zarinpal callback.
+   assert a successful payment without a real Zarinpal callback. With
+   `PAYMENT_PROVIDER_MODE=disabled` this step stops at the gateway refusal, which
+   is the expected outcome rather than a skipped check.
 6. `docker compose ... restart` and a host reboot are survivable: containers
    return on their own and volumes persist.
 7. A backup is restored into a scratch database and the row counts are compared.

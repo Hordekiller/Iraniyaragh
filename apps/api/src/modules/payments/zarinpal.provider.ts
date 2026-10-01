@@ -1,7 +1,7 @@
 import type {
   PaymentAuthorizeRequest,
   PaymentAuthorizeResult,
-  PaymentGatewayEnvironment,
+  PaymentGatewayCallMode,
   PaymentProvider,
   PaymentRejectionReason,
   PaymentVerifyRequest,
@@ -26,9 +26,12 @@ const CONTROL_CHARACTER = /\s/u;
 // deterministic gateway rejection.
 const TRANSIENT_HTTP_STATUS = new Set([408, 425, 429]);
 
+// Typed against the callable subset only: this client always talks to a real
+// gateway host, so it must be impossible to construct one for the `disabled`
+// mode, where there is no host to talk to.
 export type ZarinpalGatewayConfig = Readonly<{
   merchantId: string;
-  mode: PaymentGatewayEnvironment;
+  mode: PaymentGatewayCallMode;
   timeoutMs: number;
   callbackUrl: string;
 }>;
@@ -101,7 +104,7 @@ function assertValidConfig(config: ZarinpalGatewayConfig): void {
   }
 }
 
-function isValidCallableUrl(value: string, environment: PaymentGatewayEnvironment): boolean {
+function isValidCallableUrl(value: string, environment: PaymentGatewayCallMode): boolean {
   let url: URL;
   try {
     url = new URL(value);

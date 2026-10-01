@@ -112,6 +112,15 @@ export class PaymentInitiationService {
         message: 'Payment gateway rejected the initiation request.',
       });
     }
+    if (authorizeResult.status === 'disabled') {
+      // The attempt is recorded FAILED because no gateway call was made, so this
+      // specific attempt provably never reached a payment page. Retrying with a
+      // new key cannot help while the gateway stays disabled.
+      throw new ServiceUnavailableException({
+        code: 'PAYMENT_PROVIDER_DISABLED',
+        message: 'Payments are not enabled on this deployment.',
+      });
+    }
     throw new ServiceUnavailableException({
       code:
         authorizeResult.status === 'unknown_result'
@@ -305,7 +314,7 @@ export class PaymentInitiationService {
   }
 
   private transitionReason(
-    status: 'rejected' | 'unavailable' | 'unknown_result',
+    status: 'rejected' | 'unavailable' | 'unknown_result' | 'disabled',
   ): string {
     switch (status) {
       case 'rejected':
@@ -314,6 +323,8 @@ export class PaymentInitiationService {
         return 'gateway_unconfirmed';
       case 'unavailable':
         return 'gateway_unavailable';
+      case 'disabled':
+        return 'gateway_disabled';
     }
   }
 

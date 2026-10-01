@@ -98,7 +98,7 @@ export function PaymentPage({ returnMode = false }: { returnMode?: boolean }) {
           )
         )
           setUncertainOrderId(id)
-        if (['UPSTREAM_UNAVAILABLE', 'UNPROCESSABLE'].includes(cause.code))
+        if (['UPSTREAM_UNAVAILABLE', 'UNPROCESSABLE', 'PAYMENT_PROVIDER_DISABLED'].includes(cause.code))
           paymentKey.current = null
       } else {
         setUncertainOrderId(id)
@@ -240,6 +240,8 @@ export function PaymentPage({ returnMode = false }: { returnMode?: boolean }) {
 function paymentErrorMessage(error: unknown): string {
   if (error instanceof AuthApiError) {
     switch (error.code) {
+      case 'PAYMENT_PROVIDER_DISABLED':
+        return 'پرداخت روی این استقرار فعال نیست. وضعیت سفارش را بررسی کنید.'
       case 'UPSTREAM_UNAVAILABLE':
         return 'درگاه پرداخت موقتاً در دسترس نیست. کمی بعد وضعیت سفارش را بررسی کنید.'
       case 'UNPROCESSABLE':

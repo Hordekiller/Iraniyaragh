@@ -143,6 +143,16 @@ export class PaymentVerificationService {
         message: 'Payment gateway is unavailable while verifying the callback.',
       });
     }
+    if (verifyResult.status === 'disabled') {
+      // The gateway was never contacted, so this proves nothing about the
+      // transaction: an authority issued before the gateway was switched off may
+      // already have been settled. Persist nothing and keep the payment PENDING,
+      // so settling it later stays possible.
+      throw new ServiceUnavailableException({
+        code: 'PAYMENT_PROVIDER_DISABLED',
+        message: 'Payments are not enabled on this deployment.',
+      });
+    }
 
     // Ambiguous verify (timeout/abort): the gateway may already have settled the
     // money, so it must NOT become a definitive FAILED. The payment stays PENDING

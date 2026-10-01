@@ -9,6 +9,7 @@ import type { SessionSignal } from './session-store';
 import { CustomerOtpController } from './ui';
 import type { AuthApi } from './api';
 import type { CustomerOtpChallenge } from './types';
+import { AuthApiError } from './errors';
 
 function makeFlow(nowValue = 1_000) {
   const store = new MemorySessionStore();
@@ -268,6 +269,32 @@ describe('CustomerOtpController OTP flow', () => {
     controller.setMobile('09123456789');
     await controller.requestOtp();
     expect(controller.getState().error).toContain('سرویس پیامک');
+    expect(controller.getState().phase).toBe('mobile');
+  });
+
+  it('requestOtp with SMS disabled says so plainly instead of blaming the carrier', async () => {
+    // A disabled SMS transport is a configuration state, not a transient fault.
+    // Telling a customer to retry would be misleading, so the message must not
+    // reuse the generic "service unavailable, try again shortly" wording.
+    const store = new MemorySessionStore();
+    const base = new AuthFixtureClient({ store });
+    const api = {
+      ...base,
+      requestOtp: async () => {
+        throw new AuthApiError({
+          code: 'SMS_PROVIDER_DISABLED',
+          message: 'SMS delivery is not enabled on this deployment.',
+          statusCode: 503,
+        });
+      },
+    } as unknown as AuthApi;
+    const controller = new CustomerOtpController(api, store, () => 1_000);
+    controller.open();
+    controller.setMobile('09123456789');
+    await controller.requestOtp();
+    const error = controller.getState().error ?? '';
+    expect(error).toContain('فعال نیست');
+    expect(error).not.toContain('سرویس پیامک');
     expect(controller.getState().phase).toBe('mobile');
   });
 

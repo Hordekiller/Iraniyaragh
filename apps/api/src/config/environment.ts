@@ -359,6 +359,23 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     config.SMS_IR_TIMEOUT_MS === undefined || config.SMS_IR_TIMEOUT_MS === null || config.SMS_IR_TIMEOUT_MS === ''
       ? undefined
       : parseBoundedInteger(config.SMS_IR_TIMEOUT_MS, 'SMS_IR_TIMEOUT_MS', 500, 10_000);
+  // `disabled` is a fail-closed staging mode that lets a deployment exist before
+  // a gateway account does. The provider answering in that mode cannot produce
+  // an authority or a reference id, so no amount of traffic can make it look
+  // like a paid order. It is refused in production, where a store that cannot
+  // take money must not be deployable at all.
+  const rawSmsMode = config.SMS_PROVIDER_MODE;
+  const smsMode = (() => {
+    if (rawSmsMode === undefined || rawSmsMode === null || rawSmsMode === '') return 'smsir';
+    const mode = String(rawSmsMode).trim();
+    if (mode !== 'smsir' && mode !== 'disabled') {
+      throw new Error("SMS_PROVIDER_MODE must be either 'smsir' or 'disabled'.");
+    }
+    return mode;
+  })();
+  if (smsMode === 'disabled' && environment === 'production') {
+    throw new Error('SMS_PROVIDER_MODE=disabled is not allowed in production.');
+  }
   const rawPaymentMode = config.PAYMENT_PROVIDER_MODE;
   const paymentMode =
     rawPaymentMode === undefined || rawPaymentMode === null || rawPaymentMode === ''
@@ -367,13 +384,16 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
         : 'sandbox'
       : (() => {
           const mode = String(rawPaymentMode).trim();
-          if (mode !== 'sandbox' && mode !== 'live') {
-            throw new Error('PAYMENT_PROVIDER_MODE must be either sandbox or live.');
+          if (mode !== 'sandbox' && mode !== 'live' && mode !== 'disabled') {
+            throw new Error('PAYMENT_PROVIDER_MODE must be one of sandbox, live or disabled.');
           }
           return mode;
         })();
-  if (['staging', 'production'].includes(environment) && paymentMode !== 'live') {
-    throw new Error('PAYMENT_PROVIDER_MODE must be live in staging and production.');
+  if (paymentMode === 'disabled' && environment === 'production') {
+    throw new Error('PAYMENT_PROVIDER_MODE=disabled is not allowed in production.');
+  }
+  if (['staging', 'production'].includes(environment) && paymentMode === 'sandbox') {
+    throw new Error('PAYMENT_PROVIDER_MODE must be live or disabled in staging and production.');
   }
   if (paymentMode === 'live') {
     const merchant = optionalOpaqueSecret(config.ZARINPAL_MERCHANT_ID, 'ZARINPAL_MERCHANT_ID');
@@ -389,7 +409,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     throw new Error('AUTH_TOTP_ENCRYPTION_KEY must contain at least 32 bytes in staging and production.');
   }
 
-  if (['staging', 'production'].includes(environment)) {
+  if (['staging', 'production'].includes(environment) && smsMode === 'smsir') {
     if (smsApiKey === undefined) throw new Error('SMS_IR_API_KEY is required in staging and production.');
     if (smsTemplateId === undefined) {
       throw new Error('SMS_IR_OTP_TEMPLATE_ID is required in staging and production.');
@@ -397,6 +417,8 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     if (!paidTemplateId || !dispatchedTemplateId || !deliveredTemplateId) {
       throw new Error('SMS_IR_ORDER_PAID_TEMPLATE_ID, SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID and SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID are required in staging and production.');
     }
+  }
+  if (['staging', 'production'].includes(environment)) {
     if (config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === undefined || config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === '') {
       throw new Error('PRODUCT_MEDIA_IMAGE_MAX_BYTES is required in staging and production.');
     }

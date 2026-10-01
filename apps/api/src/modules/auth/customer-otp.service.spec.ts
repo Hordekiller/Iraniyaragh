@@ -202,6 +202,24 @@ describe('CustomerOtpService', () => {
       expect(tx.otpCode.updateMany).toHaveBeenCalledTimes(1);
     });
 
+    it('reports a disabled transport distinctly and invalidates the challenge', async () => {
+      // With SMS switched off nothing is ever sent, so the issued code must be
+      // invalidated rather than left verifiable, and the caller must be told this
+      // is a disabled deployment rather than a transient carrier fault.
+      const tx = createTx();
+      tx.user.findUnique = vi.fn(async () => ({ id: 'user-1' }));
+      const send = vi.fn(async () => ({ status: 'disabled' }) as const);
+      const { service } = createService({ tx, smsProvider: { send } });
+
+      await expect(
+        service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '192.0.2.1'),
+      ).rejects.toMatchObject({ response: { code: 'SMS_PROVIDER_DISABLED' } });
+      expect(send).toHaveBeenCalledOnce();
+      expect(tx.otpCode.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ invalidatedAt: expect.anything() }) }),
+      );
+    });
+
     it.each([
       { status: 'rejected', reason: 'template' } as const,
       { status: 'rate_limited' } as const,

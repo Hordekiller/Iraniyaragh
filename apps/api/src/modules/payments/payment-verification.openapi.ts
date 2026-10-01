@@ -61,6 +61,6 @@ export const openApiPaymentVerification = {
     validation: failureError(['INVALID_REQUEST'], 400),
     notFound: failureError(['NOT_FOUND'], 404),
     conflict: failureError(['PAYMENT_STATE_CONFLICT', 'ORDER_STATE_CONFLICT', 'CONFLICT'], 409),
-    serviceUnavailable: failureError(['UPSTREAM_UNAVAILABLE'], 503),
+    serviceUnavailable: failureError(['UPSTREAM_UNAVAILABLE', 'PAYMENT_PROVIDER_DISABLED'], 503),
   },
 };

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DisabledSmsProvider } from './disabled-sms.provider';
 import { FakeSmsProvider } from './fake-sms.provider';
 import { SmsIrProvider } from './sms-ir.provider';
 import { CUSTOMER_OTP_SMS_CONFIG, SMS_PROVIDER, type CustomerOtpSmsConfig, type SmsProvider } from './sms-provider';
@@ -23,10 +24,34 @@ function requiredApiKey(value: string | undefined): string {
   return value;
 }
 
+function smsMode(config: ConfigService, environment: string): 'smsir' | 'disabled' {
+  const raw = config.get<string>('SMS_PROVIDER_MODE');
+  if (raw === 'disabled') {
+    // Staging affordance for deploying before an SMS.ir account exists.
+    // Production must never resolve to it: a production deployment has to be
+    // able to deliver OTPs and order notifications, and silently skipping them
+    // would look like a working store to a customer.
+    if (environment === 'production') {
+      throw new Error('SMS_PROVIDER_MODE=disabled is not allowed in production.');
+    }
+    return 'disabled';
+  }
+  if (raw !== undefined && raw !== '' && raw !== 'smsir') {
+    throw new Error("SMS_PROVIDER_MODE must be either 'smsir' or 'disabled'.");
+  }
+  return 'smsir';
+}
+
 function createOtpSmsConfig(config: ConfigService): CustomerOtpSmsConfig {
   const environment = config.get<string>('NODE_ENV') ?? 'development';
   if (environment === 'development' || environment === 'test') {
     return Object.freeze({ templateId: 1, codeParameterName: 'Code' });
+  }
+  if (smsMode(config, environment) === 'disabled') {
+    // No template can be reached, so requiring an id would only force an
+    // operator to invent one. The provider still refuses to dispatch, and
+    // customer-otp turns that into an explicit unavailable response.
+    return Object.freeze({ templateId: 0, codeParameterName: 'Code' });
   }
   return Object.freeze({
     templateId: requiredBoundedInteger(
@@ -42,6 +67,7 @@ function createOtpSmsConfig(config: ConfigService): CustomerOtpSmsConfig {
 function createSmsProvider(config: ConfigService): SmsProvider {
   const environment = config.get<string>('NODE_ENV') ?? 'development';
   if (environment === 'development' || environment === 'test') return new FakeSmsProvider();
+  if (smsMode(config, environment) === 'disabled') return new DisabledSmsProvider();
   const apiKey = requiredApiKey(config.get<string>('SMS_IR_API_KEY'));
   const timeoutRaw = config.get<string>('SMS_IR_TIMEOUT_MS');
   const timeoutMs =

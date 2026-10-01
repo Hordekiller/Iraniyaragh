@@ -313,8 +313,27 @@ G6–G10 have not reached integrated completion.
   applied, storefront/Admin/API reachable through Nginx, and a published image
   fetched over the public media path with its real `Content-Type` before and
   after a backup/restore round trip.
-- Not yet done: the real staging deploy on Server.ir, TLS, real secrets, live
-  Zarinpal/SMS.ir acceptance, and a real staff sign-in. See the boundary below.
+- Not yet done: TLS, real secrets, live Zarinpal/SMS.ir acceptance, and a real
+  staff sign-in. See the boundary below.
+
+### Provider-disabled staging mode
+
+- `PAYMENT_PROVIDER_MODE=disabled` and `SMS_PROVIDER_MODE=disabled` let a staging
+  deployment exist before a Zarinpal or SMS.ir account does. They are refused in
+  `production`, where the real credentials are still mandatory.
+- They are not stubs. The bound provider makes no network call, so it cannot
+  produce a payment authority, a settlement reference, a provider message id, or
+  an OTP delivery record. Payment initiation and callback verification return
+  `503 PAYMENT_PROVIDER_DISABLED`; customer OTP requests return
+  `503 SMS_PROVIDER_DISABLED` and invalidate the challenge so no undeliverable
+  code stays verifiable.
+- A payment whose authority predates the switch to disabled is left `PENDING`
+  rather than marked `FAILED`, because it may already have settled and belongs in
+  reconciliation.
+- A staging deploy running in either disabled mode has **not** passed payment or
+  SMS acceptance. Customer SMS OTP, transactional SMS, Zarinpal payment
+  initiation, and real payment callback/reconciliation remain unverified until the
+  real providers are configured.
 
 ### Production-readiness boundary
 

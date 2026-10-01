@@ -325,6 +325,17 @@ describe('PaymentInitiationService', () => {
       'PAYMENT_RESULT_UNCONFIRMED',
       503,
     ],
+    // The gateway is switched off for this deployment. The attempt is still
+    // recorded FAILED because no gateway call was made, so this attempt provably
+    // never reached a payment page, and the caller is told the reason is
+    // configuration rather than an outage.
+    [
+      { status: 'disabled' } as const,
+      'gateway_disabled',
+      ServiceUnavailableException,
+      'PAYMENT_PROVIDER_DISABLED',
+      503,
+    ],
   ])(
     'records %s as a failed attempt with an explicit transition',
     async (authorizeResult, reason, exceptionClass, code, status) => {

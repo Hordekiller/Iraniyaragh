@@ -293,6 +293,31 @@ describe.sequential('PaymentVerificationService database integration', () => {
     await expect(prisma.stockReservation.count({ where: { orderId: order.id, status: 'ACTIVE' } })).resolves.toBe(1);
   });
 
+  it('leaves a payment PENDING and unsettled when the gateway is disabled', async () => {
+    // Disabled means the gateway was never contacted, which says nothing about
+    // whether the buyer paid. The payment must therefore stay PENDING with no
+    // transition and no reconciliation event, so it can still be settled later
+    // once a real gateway is configured.
+    const order = await createOrderWithReservation('disabled', 3);
+    await createPayment(order.id, 'S-disabled', 'disabled');
+    provider.verify.mockResolvedValue({ status: 'disabled' } as const);
+
+    await expect(
+      verification.verify({
+        authority: 'S-disabled',
+        status: 'OK',
+        requestId: `${requestIdPrefix}-disabled`,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'PAYMENT_PROVIDER_DISABLED' } });
+
+    const payment = await prisma.payment.findFirstOrThrow({ where: { orderId: order.id } });
+    expect(payment.status).toBe('PENDING');
+    expect(payment.referenceId).toBeNull();
+    await expect(prisma.paymentTransition.count({ where: { paymentId: payment.id } })).resolves.toBe(0);
+    await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id } })).resolves.toBe(0);
+    await expect(balanceOf()).resolves.toMatchObject({ onHand: 3, reserved: 3 });
+  });
+
   it('surfaces upstream unavailability and leaves the payment untouched', async () => {
     const order = await createOrderWithReservation('unavail', 2);
     await createPayment(order.id, 'S-unavail', 'unavail');

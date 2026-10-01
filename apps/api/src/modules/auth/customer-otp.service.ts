@@ -96,6 +96,18 @@ export class CustomerOtpService {
     const delivery = await this.dispatchOnce(mobile, issued.challengeId, issued.code);
     if (delivery.status !== 'accepted' && delivery.status !== 'unknown_result') {
       await this.invalidateAfterKnownDeliveryFailure(issued.challengeId, delivery);
+      if (delivery.status === 'disabled') {
+        // No message was attempted, so the challenge is invalidated rather than
+        // left live: a code that could never have been delivered must not remain
+        // verifiable. The distinct code tells the storefront this is a
+        // configuration state, not a transient carrier fault, so it can say so
+        // instead of telling a customer to keep retrying.
+        throw new ServiceUnavailableException({
+          code: 'SMS_PROVIDER_DISABLED',
+          message: 'SMS delivery is not enabled on this deployment.',
+          statusCode: 503,
+        });
+      }
       throw new ServiceUnavailableException({
         code: 'UPSTREAM_UNAVAILABLE',
         message: 'Authentication delivery is temporarily unavailable.',
