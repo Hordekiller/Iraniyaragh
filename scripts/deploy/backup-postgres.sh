@@ -59,9 +59,16 @@ if [[ ! -s "${DUMP}" ]]; then
 fi
 
 echo "Backing up product media objects to ${OBJECTS}"
-# The container writes into the bind mount, so the host owns the resulting
-# files and the umask above still applies to the directory created here.
 mkdir -p "${OBJECTS}"
+# The API image runs as `USER node` (uid 1000), and it is that user which writes
+# the objects into this bind mount. A directory created by root is root-owned and,
+# under the restrictive umask above, not writable by uid 1000 -- so the container
+# failed with EACCES on mkdir and the whole backup was refused. Chowned here
+# rather than running the container as root, so the backup uses exactly the same
+# user as the image does everywhere else, and the files it writes stay owned by
+# that user.
+chown 1000:1000 "${OBJECTS}"
+chmod 0700 "${OBJECTS}"
 # `--no-deps` is deliberate: the backup must not depend on the API image being
 # up, and a first deploy runs this before anything is started. The object store
 # is the one dependency it genuinely has, so it is started and awaited here
