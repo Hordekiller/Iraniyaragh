@@ -70,7 +70,7 @@ jobs:
       - name: Derive the lowercase image registry
         run: |
           set -Eeuo pipefail
-          owner="\${GITHUB_REPOSITORY_OWNER,,}"
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
           [[ -n "${owner}" ]] || { echo "GITHUB_REPOSITORY_OWNER is empty" >&2; exit 1; }
           echo "IMAGE_REGISTRY=ghcr.io/${owner}" >> "${GITHUB_ENV}"
           echo "Publishing to ghcr.io/${owner}"
