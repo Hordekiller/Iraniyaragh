@@ -117,7 +117,12 @@ services:
     env_file: [.env.staging]
     environment:
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
-      DATABASE_URL: ${DATABASE_URL}
+      # Assembled from the POSTGRES_* credentials rather than read from a
+      # separate DATABASE_URL, so the password cannot drift out of sync with
+      # the role Postgres was actually initialised with. A hand-edited URL was
+      # how the first deploy failed with P1000: the two values were authored
+      # separately and only one of them was set to the real secret.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
     depends_on:
       postgres:
         condition: service_healthy
@@ -154,7 +159,12 @@ services:
     environment:
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
       API_PORT: '4000'
-      DATABASE_URL: ${DATABASE_URL}
+      # Assembled from the POSTGRES_* credentials rather than read from a
+      # separate DATABASE_URL, so the password cannot drift out of sync with
+      # the role Postgres was actually initialised with. A hand-edited URL was
+      # how the first deploy failed with P1000: the two values were authored
+      # separately and only one of them was set to the real secret.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_URL: ${REDIS_URL}
       # Nginx is the only proxy in front of the API, so trust exactly one hop.
       # The value is a bare hop count: the API parses TRUST_PROXY as a number
@@ -182,7 +192,12 @@ services:
       # value is never bound. It is set here so the worker shares exactly the
       # same validated environment as the API instead of a second, weaker one.
       API_PORT: '4000'
-      DATABASE_URL: ${DATABASE_URL}
+      # Assembled from the POSTGRES_* credentials rather than read from a
+      # separate DATABASE_URL, so the password cannot drift out of sync with
+      # the role Postgres was actually initialised with. A hand-edited URL was
+      # how the first deploy failed with P1000: the two values were authored
+      # separately and only one of them was set to the real secret.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_URL: ${REDIS_URL}
       OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT}
       OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}

@@ -57,11 +57,41 @@ git fetch --quiet origin main
 git merge-base --is-ancestor "${NEW_TAG}" origin/main \
   || fail "${NEW_TAG} is not on origin/main. Deploy only a merged commit."
 
+# compose assembles DATABASE_URL from the POSTGRES_* credentials, so a password
+# containing a character that is structural in a connection string would produce
+# a URL that parses as something other than what was intended. Checked here,
+# before anything is pulled, with a message that says how to fix it -- rather than
+# as a Prisma P1000 much later.
+PG_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' "${ENV_FILE}" | cut -d= -f2- || true)"
+if [[ -z "${PG_PASSWORD}" ]]; then
+  fail "POSTGRES_PASSWORD is unset in ${ENV_FILE}."
+fi
+if [[ "${PG_PASSWORD}" =~ [://@?#] ]]; then
+  fail "POSTGRES_PASSWORD contains a character that is structural in DATABASE_URL (one of : / @ ? #). Generate a password from [A-Za-z0-9-._~] instead."
+fi
+PG_USER="$(grep -E '^POSTGRES_USER=' "${ENV_FILE}" | cut -d= -f2- || true)"
+PG_DB="$(grep -E '^POSTGRES_DB=' "${ENV_FILE}" | cut -d= -f2- || true)"
+[[ -n "${PG_USER}" ]] || fail "POSTGRES_USER is unset in ${ENV_FILE}."
+[[ -n "${PG_DB}" ]] || fail "POSTGRES_DB is unset in ${ENV_FILE}."
+
 PREVIOUS_TAG="$(grep -E '^IMAGE_TAG=' "${ENV_FILE}" | cut -d= -f2- || true)"
 PREVIOUS_TAG="${PREVIOUS_TAG:-none}"
 
-log "Backing up the database and media objects before migrating"
-"$(dirname "${BASH_SOURCE[0]}")/backup-postgres.sh" || fail "pre-migrate backup failed; refusing to migrate."
+# The pre-migrate backup is what makes a schema change reversible, so it is
+# mandatory once a database exists. A first deploy is the one case where there is
+# nothing to protect: no container is running and no schema has been created yet,
+# so a dump cannot be taken and cannot fail to be taken. Skipping it here is what
+# lets a fresh host come up at all.
+#
+# Probed with `compose ps`, the same command that later resolves the container, so
+# the check cannot disagree with what the script then operates on.
+PREVIOUS_WEB_ID="$(compose ps -q web 2>/dev/null || true)"
+if [[ -z "${PREVIOUS_WEB_ID}" ]]; then
+  log "No running stack: first deploy, so there is no database to back up yet"
+else
+  log "Backing up the database and media objects before migrating"
+  "$(dirname "${BASH_SOURCE[0]}")/backup-postgres.sh" || fail "pre-migrate backup failed; refusing to migrate."
+fi
 
 log "Pulling images for ${NEW_TAG}"
 # No `--quiet`: the pull is the only record of which digests were fetched, and a
