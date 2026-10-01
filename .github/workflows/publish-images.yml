@@ -30,7 +30,6 @@ env:
   # `IMAGE_TAG` to a 40-character SHA, so `latest` and branch names can never be
   # what a host runs, and a rollback names a commit rather than a moving target.
   IMAGE_TAG: ${{ github.sha }}
-  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
   # `NEXT_PUBLIC_*` is inlined into the Admin's client bundle at build time and
   # must be an absolute URL, so it cannot be discovered from inside the
@@ -54,6 +53,27 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # Docker requires a repository name to be lowercase and
+      # `github.repository_owner` preserves the owner's own capitalisation, so
+      # every tag came out as `ghcr.io/Hordekiller/iranyaragh/api:<sha>` and
+      # `docker buildx` rejected the build outright. This is the only thing that
+      # workflow ever did on its first real run.
+      #
+      # Written to GITHUB_ENV rather than to an `env:` key because a `steps.*`
+      # output is not in scope in a job- or workflow-level `env:`. GitHub rejects
+      # that whole file as invalid, and it does so at dispatch time rather than
+      # when the workflow runs, so a workflow_dispatch cannot verify it either.
+      #
+      # Lowercased in a step rather than written as a literal so a transfer or a
+      # rename cannot reintroduce it. GitHub has no expression function for this.
+      - name: Derive the lowercase image registry
+        run: |
+          set -Eeuo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          [[ -n "${owner}" ]] || { echo "GITHUB_REPOSITORY_OWNER is empty" >&2; exit 1; }
+          echo "IMAGE_REGISTRY=ghcr.io/${owner}" >> "${GITHUB_ENV}"
+          echo "Publishing to ghcr.io/${owner}"
 
       # No QEMU: every published image targets linux/amd64, which is both the
       # runner's architecture and the deployment host's. Emulation would only
