@@ -33,6 +33,16 @@
 #   ensure-certificate.sh --force      # renew even if not near expiry
 set -Eeuo pipefail
 
+# Derived from this script's own location rather than hardcoded, so the paths
+# follow the checkout wherever it lives. They have to agree with deploy.sh, which
+# reads the same env file and compose file: the deploy hook is a separate process
+# with no way to inherit them, and a hook pointed at a different env file would
+# reload the wrong Compose project.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INFRA_DIR="${INFRA_DIR:-$(cd "${SCRIPT_DIR}/../../infrastructure/docker" && pwd)}"
+ENV_FILE="${ENV_FILE:-${INFRA_DIR}/.env.staging}"
+COMPOSE_FILE="${COMPOSE_FILE:-${INFRA_DIR}/compose.staging.yml}"
+
 TLS_DIR="${TLS_DIR:-/srv/iranyaragh/tls}"
 ACME_WEBROOT_DIR="${ACME_WEBROOT_DIR:-/srv/iranyaragh/acme-webroot}"
 CERTBOT_BIN="${CERTBOT_BIN:-certbot}"
@@ -88,8 +98,8 @@ renewal_args=(
 # second case exits non-zero.
 read -r -d '' deploy_hook <<'HOOK' || true
 set -eu
-web_id="$(docker compose --env-file "${ENV_FILE:-/srv/iranyaragh/.env.staging}" \
-  -f "${COMPOSE_FILE:-/srv/iranyaragh/infrastructure/docker/compose.staging.yml}" \
+web_id="$(docker compose --env-file "${ENV_FILE}" \
+  -f "${COMPOSE_FILE}" \
   ps -q web 2>/dev/null || true)"
 if [ -z "${web_id}" ]; then
   # Nothing is serving yet, so there is nothing to reload. The next `compose up`

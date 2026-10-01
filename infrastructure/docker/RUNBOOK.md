@@ -164,8 +164,8 @@ Renewal is a systemd timer, not a deploy step: a certificate has to keep being
 renewed whether or not anyone deploys.
 
 ```bash
-install -m 0644 infrastructure/systemd/iranyaragh-certbot-renew.service /etc/systemd/system/
-install -m 0644 infrastructure/systemd/iranyaragh-certbot-renew.timer  /etc/systemd/system/
+install -m 0644 /opt/iranyaragh/infrastructure/systemd/iranyaragh-certbot-renew.service /etc/systemd/system/
+install -m 0644 /opt/iranyaragh/infrastructure/systemd/iranyaragh-certbot-renew.timer  /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now iranyaragh-certbot-renew.timer
 systemctl list-timers iranyaragh-certbot-renew.timer
@@ -187,10 +187,33 @@ arrangement: it works, it is publicly trusted, and it keeps itself renewed, but 
 depends on that timer staying armed. Moving to a domain is the change that makes
 the TLS story conventional.
 
+## Host layout
+
+Two roots, so that a `git pull` can never disturb runtime state:
+
+| Path | Holds | Why separate |
+| --- | --- | --- |
+| `/opt/iranyaragh` | the git checkout, pulled and deployed from | replaced on deploy |
+| `/srv/iranyaragh/tls` | `fullchain.pem`, `privkey.pem` | must outlive every deploy; a checkout wipe must not delete the certificate |
+| `/srv/iranyaragh/acme-webroot` | Certbot's HTTP-01 challenge directory | same, and Certbot writes to it between deploys |
+
+The deployment host needs the repository, because `deploy.sh` refuses to run
+outside a checkout and refuses a commit that is not an ancestor of `origin/main`.
+That check is the point: a host that could run an unmerged commit would make the
+reviewed-deployment guarantee meaningless.
+
+```bash
+git clone https://github.com/Hordekiller/Iraniyaragh.git /opt/iranyaragh
+```
+
+`ENV_FILE` and `COMPOSE_FILE` in `ensure-certificate.sh` are derived from the
+script's own location, so the certificate tooling and `deploy.sh` read the same
+env file and compose file without either hardcoding a path.
+
 ## First deploy
 
 ```bash
-cd infrastructure/docker
+cd /opt/iranyaragh/infrastructure/docker
 cp .env.staging.example .env.staging
 $EDITOR .env.staging          # fill in real values; see the blockers below
 chmod +x ../../scripts/deploy/*.sh
