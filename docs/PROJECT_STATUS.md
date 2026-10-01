@@ -307,14 +307,30 @@ G6–G10 have not reached integrated completion.
   deliberately leaves the application tier stopped so it cannot re-apply newer
   migrations onto the restored schema. `rollback.sh` replaces images only and
   never migrates.
-- `deploy.sh` orders backup, build, migrate, start and readiness, and on failure
-  leaves the previous release serving while printing the tag to roll back to.
+- `deploy.sh` orders backup, pull, migrate, start and readiness, and on failure
+  leaves the previous release serving while printing the SHA to roll back to.
+  `rollback.sh` pulls its target and never migrates.
+- Images are built in CI and pulled, never built on a host. `publish-images.yml`
+  builds the four images on merge to `main` and tags each with the full commit
+  SHA, and `compose.staging.yml` carries no `build:` section, so a host cannot
+  quietly build an artifact of its own. `deploy.sh` accepts only a 40-character
+  commit SHA that is an ancestor of `origin/main`, and `compose.staging.yml`
+  refuses to resolve without `IMAGE_TAG`, so `latest` can never be what a host
+  runs. The build definitions live in `compose.staging.build.yml`, used only by
+  CI. The repository is public, so its GHCR packages pull anonymously and no
+  long-lived registry credential exists on a host.
+- The API is published as two images: `api` (the `runtime` target, shared by the
+  API, media worker and media bucket) and `api-migrate` (the `migrate` target).
+  The split keeps the Prisma CLI, a devDependency, out of the long-running
+  container instead of adding it to the runtime image.
 - Verified locally against the real stack: all services healthy, migrations
   applied, storefront/Admin/API reachable through Nginx, and a published image
   fetched over the public media path with its real `Content-Type` before and
-  after a backup/restore round trip.
-- Not yet done: TLS, real secrets, live Zarinpal/SMS.ir acceptance, and a real
-  staff sign-in. See the boundary below.
+  after a backup/restore round trip. The pull path is verified against a local
+  registry: all four tagged images pull by exact SHA, an unpublished SHA fails
+  instead of falling back, and a short SHA is refused.
+- Not yet done: TLS, real secrets, live Zarinpal/SMS.ir acceptance, a real
+  staff sign-in, and a real host deployment. See the boundary below.
 
 ### Provider-disabled staging mode
 

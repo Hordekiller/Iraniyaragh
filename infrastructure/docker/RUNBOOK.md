@@ -12,9 +12,11 @@ inspectable on a real host.
 | `infrastructure/docker/admin.Dockerfile` | Next.js standalone Admin |
 | `infrastructure/docker/web.Dockerfile` | Static storefront, served by the Nginx image |
 | `infrastructure/nginx/storefront.conf` | Public vhost; the only published port |
-| `infrastructure/docker/compose.staging.yml` | Full stack, internal-only data tier |
+| `infrastructure/docker/compose.staging.yml` | Full stack, internal-only data tier. Pulls images; has no `build:` section |
+| `infrastructure/docker/compose.staging.build.yml` | The `build:` sections, for CI. Never passed to a deployment host |
+| `.github/workflows/publish-images.yml` | Builds the images for a commit and tags them with that commit's SHA |
 | `infrastructure/docker/.env.staging.example` | Every variable, with the negative requirements spelled out |
-| `scripts/deploy/deploy.sh` | Build, back up, migrate, start, wait for readiness |
+| `scripts/deploy/deploy.sh` | Pull, back up, migrate, start, wait for readiness |
 | `scripts/deploy/backup-postgres.sh` | Dumped automatically before every migration |
 | `scripts/deploy/restore-postgres.sh` | Destructive restore, with an explicit confirmation flag |
 | `scripts/deploy/rollback.sh` | Return to a named image tag |
@@ -23,6 +25,65 @@ inspectable on a real host.
 `infrastructure/docker/docker-compose.yml` remains the local development stack.
 It is not a deployment target: it publishes Postgres, Redis and the object store
 on host ports and ships dev-only credentials.
+
+## Images are built in CI, not on the host
+
+A deployment host pulls. It never builds.
+
+`publish-images.yml` builds the images for a commit on merge to `main` and tags
+each one with the full 40-character commit SHA, so what a host runs is a
+function of the commit alone. The host sets `IMAGE_TAG` to a SHA and runs
+`docker compose pull`; `compose.staging.yml` has no `build:` section, so there
+is no path by which a host can quietly build something of its own.
+
+Four images are published:
+
+| Image | Compose target | Runs |
+| --- | --- | --- |
+| `iranyaragh/api` | `api.Dockerfile` `runtime` | the API, the media worker and the media bucket |
+| `iranyaragh/api-migrate` | `api.Dockerfile` `migrate` | the one-shot `migrate deploy` |
+| `iranyaragh/admin` | `admin.Dockerfile` | the Admin |
+| `iranyaragh/web` | `web.Dockerfile` | the storefront and Nginx |
+
+`api` is published once and shared by three services, because those three are
+the same Dockerfile target and therefore the same digest.
+
+There are two API images because `prisma migrate deploy` needs the Prisma CLI,
+which is a devDependency, and the runtime image is deliberately deployed with
+production dependencies only. Publishing the CLI separately keeps it out of the
+long-running container; putting it in the runtime image would undo that
+hardening. `api-migrate` is large, since it reuses the full build stage, but it
+is a one-shot container that exits.
+
+The repository is public, so its packages are readable by anyone and a
+deployment host pulls anonymously with no GHCR login. Nothing on the host is a
+long-lived registry credential: the publishing token is minted per CI run.
+
+Three consequences worth knowing:
+
+- **The tag is the whole release identity.** `IMAGE_TAG` must be a full commit
+  SHA. `compose.staging.yml` refuses to resolve without it, so a host that was
+  never given an explicit release fails instead of running `latest`. A rollback
+  names a commit, not a moving target.
+- **A merge is not deployable until the publish run finishes.** The images
+  appear a few minutes after the commit lands. Check the *Publish Images* run
+  before deploying, and deploy the SHA it printed.
+- **`NEXT_PUBLIC_*` is pinned at build time.** The Admin's API base URL and
+  media origin are inlined into its client bundle and must be absolute, so they
+  are set in the publish workflow rather than discovered at runtime. They must
+  match the host's `.env.staging`. They default to the staging host's origin and
+  can be overridden with the `STAGING_ORIGIN`, `STAGING_API_BASE_URL` and
+  `STAGING_MEDIA_ORIGIN` repository variables once a real domain exists.
+
+To build the images on a machine that has good registry access, for example to
+test a Dockerfile change before it is merged:
+
+```bash
+IMAGE_TAG="$(git rev-parse HEAD)" \
+  docker compose --env-file infrastructure/docker/.env.staging \
+  -f infrastructure/docker/compose.staging.yml \
+  -f infrastructure/docker/compose.staging.build.yml build
+```
 
 The object store is **RustFS**, pinned to `rustfs/rustfs:1.0.0`, in both compose
 files. This replaced MinIO, whose upstream image now requires registry
@@ -91,13 +152,15 @@ attempt gets an explicit refusal instead:
 | Call | Result |
 |---|---|
 | `POST /api/v1/orders/:orderId/pay` | `503 PAYMENT_PROVIDER_DISABLED`, attempt recorded `FAILED` with reason `gateway_disabled` |
-| Zarinpal callback verification | `503 PAYMENT_PROVIDER_DISABLED`, payment left `PENDING`, nothing persisted |
+| Zarinpal callback verification | `503 PAYMENT_PROVIDER_DISABLED`, payment left `PENDING`, nothing persisted. If the payment came from a different provider or stored environment, it returns `400 INVALID_REQUEST` instead. |
 | `POST /api/v1/auth/customer/otp/request` | `503 SMS_PROVIDER_DISABLED`, challenge invalidated so no undeliverable code stays live |
 
 Both modes are rejected in `production`, where the real credentials are still
 required. A payment left `PENDING` by a disabled gateway is deliberately not
-marked failed: an authority issued before the gateway was switched off may
-already have been settled, so it is left for reconciliation.
+marked failed: an authority issued while the gateway was live may already have
+been settled, so it is left PENDING without a transition or an outbox event;
+only payments that were issued by this gateway and have no stale environment
+mismatch reach the `PAYMENT_PROVIDER_DISABLED` path.
 
 A deploy with either provider disabled has **not** passed payment or SMS
 acceptance, and the runbook's remaining steps do not substitute for it. Before

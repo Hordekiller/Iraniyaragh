@@ -74,6 +74,21 @@ describe.sequential('PaymentVerificationService database integration', () => {
     audit,
     inventory,
   );
+  // A second instance with the gateway switched off, so the disabled path is
+  // exercised through a real `PaymentGatewayConfig` in `disabled` mode rather
+  // than by mutating a shared one between tests.
+  const disabledGatewayVerification = new PaymentVerificationService(
+    prisma,
+    provider as never as PaymentProvider,
+    {
+      providerName: 'zarinpal',
+      mode: 'disabled',
+      callbackUrl: 'http://localhost:4321/api/v1/payments/zarinpal/callback',
+      timeoutMs: 100,
+    } as never,
+    audit,
+    inventory,
+  );
   const commands = new OrderCommandService(prisma, audit, inventory);
   let connected = false;
 
@@ -298,12 +313,20 @@ describe.sequential('PaymentVerificationService database integration', () => {
     // whether the buyer paid. The payment must therefore stay PENDING with no
     // transition and no reconciliation event, so it can still be settled later
     // once a real gateway is configured.
+    //
+    // The payment is created while the gateway was `sandbox` and the callback
+    // arrives after it was switched off, which is the only order these two
+    // happen in. A payment stored as `disabled` could not exist: initiation
+    // under a disabled gateway records the attempt as FAILED and never leaves
+    // anything PENDING to call back about.
     const order = await createOrderWithReservation('disabled', 3);
-    await createPayment(order.id, 'S-disabled', 'disabled');
+    await createPayment(order.id, 'S-disabled', 'disabled', {
+      gatewayEnvironment: 'sandbox',
+    });
     provider.verify.mockResolvedValue({ status: 'disabled' } as const);
 
     await expect(
-      verification.verify({
+      disabledGatewayVerification.verify({
         authority: 'S-disabled',
         status: 'OK',
         requestId: `${requestIdPrefix}-disabled`,
@@ -316,6 +339,32 @@ describe.sequential('PaymentVerificationService database integration', () => {
     await expect(prisma.paymentTransition.count({ where: { paymentId: payment.id } })).resolves.toBe(0);
     await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id } })).resolves.toBe(0);
     await expect(balanceOf()).resolves.toMatchObject({ onHand: 3, reserved: 3 });
+  });
+
+  it('still refuses a foreign provider while the gateway is disabled', async () => {
+    // The disabled mode is permissive only about which *environment* the
+    // authority came from. A callback for a different provider is a genuine
+    // mismatch and must not be answered with the disabled error, which would
+    // tell the caller their gateway is off when in fact the callback is not ours.
+    const order = await createOrderWithReservation('disabled-foreign', 1);
+    const foreign = await createPayment(order.id, 'S-disabled-foreign', 'disabled-foreign');
+    await prisma.payment.update({
+      where: { id: foreign.id },
+      data: { provider: 'other-gateway' },
+    });
+    provider.verify.mockResolvedValue({ status: 'disabled' } as const);
+
+    await expect(
+      disabledGatewayVerification.verify({
+        authority: 'S-disabled-foreign',
+        status: 'OK',
+        requestId: `${requestIdPrefix}-disabled-foreign`,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'INVALID_REQUEST' } });
+
+    const payment = await prisma.payment.findFirstOrThrow({ where: { orderId: order.id } });
+    expect(payment.status).toBe('PENDING');
+    await expect(prisma.paymentTransition.count({ where: { paymentId: payment.id } })).resolves.toBe(0);
   });
 
   it('surfaces upstream unavailability and leaves the payment untouched', async () => {

@@ -106,21 +106,17 @@ services:
   # One-shot. `prisma migrate deploy` applies pending migrations and exits; the
   # API and Admin depend on it having completed successfully, which guarantees
   # migrate-before-traffic on every `up` and every restart.
+  # `api-migrate` is the api.Dockerfile `migrate` target, not the runtime
+  # image: `prisma migrate deploy` needs the Prisma CLI, which is a devDependency
+  # and is deliberately absent from the long-running runtime image.
   migrate:
-    build:
-      context: ../..
-      dockerfile: infrastructure/docker/api.Dockerfile
-      # The `migrate` target, not the default runtime image: `prisma migrate
-      # deploy` needs the Prisma CLI, which is a devDependency and is absent
-      # from the production runtime image.
-      target: migrate
-    image: iranyaragh/api-migrate:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/api-migrate:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: 'no'
     command: ['pnpm', 'exec', 'prisma', 'migrate', 'deploy']
     working_dir: /repo/apps/api
     env_file: [.env.staging]
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${APP_ENVIRONMENT:-staging}
       DATABASE_URL: ${DATABASE_URL}
     depends_on:
       postgres:
@@ -130,16 +126,12 @@ services:
   # safe to run on every deploy; it is a dependency of the media worker so the
   # bucket always exists before any upload is processed.
   media-bucket:
-    build:
-      context: ../..
-      dockerfile: infrastructure/docker/api.Dockerfile
-      target: runtime
-    image: iranyaragh/api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/api:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: 'no'
     command: ['node', 'scripts/provision-media-bucket.mjs']
     env_file: [.env.staging]
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${APP_ENVIRONMENT:-staging}
       OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT}
       OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}
       OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY}
@@ -150,19 +142,17 @@ services:
 
   # --- application tier -------------------------------------------------------
 
+  # `api`, `media-worker` and `media-bucket` are the same `api.Dockerfile`
+  # `runtime` target, so they share one image and therefore one digest. The
+  # target has to be named explicitly in compose.staging.build.yml because
+  # api.Dockerfile's last stage is `migrate`, and a targetless build would
+  # resolve to that one-shot stage instead of the API.
   api:
-    build:
-      context: ../..
-      dockerfile: infrastructure/docker/api.Dockerfile
-      # Explicit because api.Dockerfile's last stage is `migrate`; without this
-      # a targetless build resolves to that one-shot stage and ships a
-      # 3 GB image that runs migrations instead of the API.
-      target: runtime
-    image: iranyaragh/api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/api:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
     env_file: [.env.staging]
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${APP_ENVIRONMENT:-staging}
       API_PORT: '4000'
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
@@ -180,16 +170,12 @@ services:
     # No `ports:`. The API is only reachable through Nginx on /api.
 
   media-worker:
-    build:
-      context: ../..
-      dockerfile: infrastructure/docker/api.Dockerfile
-      target: runtime
-    image: iranyaragh/api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/api:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
     command: ['node', 'dist/src/media-worker.js']
     env_file: [.env.staging]
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${APP_ENVIRONMENT:-staging}
       # The worker loads the same AppModule as the API, and the shared config
       # validation refuses to boot in staging/production without a port. The
       # worker never listens, it only creates an application context, so this
@@ -229,16 +215,7 @@ services:
         condition: service_completed_successfully
 
   admin:
-    build:
-      context: ../..
-      dockerfile: infrastructure/docker/admin.Dockerfile
-      args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
-        NEXT_PUBLIC_MEDIA_ORIGIN: ${NEXT_PUBLIC_MEDIA_ORIGIN}
-        # Mounts the Admin under /admin on the storefront origin, which the
-        # Nginx vhost proxies. Must match the proxy or Admin assets 404.
-        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/admin}
-    image: iranyaragh/admin:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/admin:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
     env_file: [.env.staging]
     environment:
@@ -251,20 +228,7 @@ services:
 
   # The only published service: static storefront plus the reverse proxy.
   web:
-    build:
-      context: ../..
-      dockerfile: infrastructure/docker/web.Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-        # Unconfirmed business data. Leave these empty to publish nothing: the
-        # storefront then states that contact details are not published yet
-        # instead of showing a number nobody confirmed.
-        VITE_SITE_PHONE: ${VITE_SITE_PHONE:-}
-        VITE_SITE_POSTAL_CODE: ${VITE_SITE_POSTAL_CODE:-}
-        VITE_SITE_ADDRESS: ${VITE_SITE_ADDRESS:-}
-        VITE_SITE_EMAIL: ${VITE_SITE_EMAIL:-}
-        VITE_INSTAGRAM_HANDLE: ${VITE_INSTAGRAM_HANDLE:-}
-    image: iranyaragh/web:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/web:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
     ports:
       - '${HTTP_PORT:-80}:80'

@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 #
-# Build, migrate and roll forward a deployment.
+# Pull, migrate and roll forward a deployment.
+#
+# This host does not build. CI builds the images for a commit and tags them with
+# that commit's SHA, and this script pulls that tag. A host that built would make
+# the running artifact a function of the host's toolchain and network rather than
+# of the commit, and the Server.ir host cannot build these images at all.
 #
 # Order is deliberate and is the reason this script exists rather than a bare
 # `docker compose up`:
 #   1. back up the database *and* the media objects before anything changes
-#   2. build images from the checked-out commit
+#   2. pull the images built for the exact commit being deployed
 #   3. run migrations explicitly, so a schema failure is reported before any new
 #      container is created and the previous release keeps serving
 #   4. start the application services (compose re-runs the migrate gate here,
@@ -33,19 +38,30 @@ command -v docker >/dev/null || fail "docker is not installed."
 
 cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" || fail "not inside a repository."
 
+# The release is the full commit SHA, never a short SHA and never a branch name,
+# because that is the only tag CI publishes and the only tag compose accepts.
+NEW_TAG="$(git rev-parse HEAD)"
+if [[ ! "${NEW_TAG}" =~ ^[0-9a-f]{40}$ ]]; then
+  fail "HEAD is '${NEW_TAG}', which is not a full 40-character commit SHA."
+fi
+
+# Only a merged commit is deployable. Without this the script would happily pull
+# and start images built from an unmerged branch commit, which is exactly the
+# state a reviewed deployment is meant to exclude.
+git fetch --quiet origin main
+git merge-base --is-ancestor "${NEW_TAG}" origin/main \
+  || fail "${NEW_TAG} is not on origin/main. Deploy only a merged commit."
+
 PREVIOUS_TAG="$(grep -E '^IMAGE_TAG=' "${ENV_FILE}" | cut -d= -f2- || true)"
-PREVIOUS_TAG="${PREVIOUS_TAG:-latest}"
-NEW_TAG="$(git rev-parse --short HEAD)"
+PREVIOUS_TAG="${PREVIOUS_TAG:-none}"
 
 log "Backing up the database and media objects before migrating"
 "$(dirname "${BASH_SOURCE[0]}")/backup-postgres.sh" || fail "pre-migrate backup failed; refusing to migrate."
 
-log "Building images for ${NEW_TAG}"
-# The image build itself fails if a fixture flag is set, so a fixture-backed UI
-# cannot be produced here.
-IMAGE_TAG="${NEW_TAG}" compose build \
-  --build-arg NEXT_PUBLIC_API_BASE_URL="$(grep -E '^NEXT_PUBLIC_API_BASE_URL=' "${ENV_FILE}" | cut -d= -f2-)" \
-  --build-arg NEXT_PUBLIC_MEDIA_ORIGIN="$(grep -E '^NEXT_PUBLIC_MEDIA_ORIGIN=' "${ENV_FILE}" | cut -d= -f2-)"
+log "Pulling images for ${NEW_TAG}"
+# No `--quiet`: the pull is the only record of which digests were fetched, and a
+# deployment whose provenance cannot be read back is not auditable.
+IMAGE_TAG="${NEW_TAG}" compose pull || fail "could not pull the images for ${NEW_TAG}."
 
 log "Running migrations"
 IMAGE_TAG="${NEW_TAG}" compose run --rm migrate

@@ -1,0 +1,152 @@
+name: Publish Images
+
+# The deployment host never builds. It pulls the images this workflow built for a
+# commit, tagged with that commit's SHA, so what runs is a function of the
+# commit alone and not of the host's toolchain, network or disk.
+#
+# Publishing on push to main only: the images a deployment can start are exactly
+# the images of a merged commit. A pull request does not publish, so an
+# unreviewed commit never produces a deployable tag.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Required to push to this repository's GHCR namespace. The token is minted per
+  # run and expires with it, so no long-lived registry credential exists on any
+  # host. The repository is public, so a deployment host pulls anonymously and
+  # needs no GHCR login at all.
+  packages: write
+
+concurrency:
+  group: publish-images-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # The tag is the full commit SHA and nothing else. A deployment resolves
+  # `IMAGE_TAG` to a 40-character SHA, so `latest` and branch names can never be
+  # what a host runs, and a rollback names a commit rather than a moving target.
+  IMAGE_TAG: ${{ github.sha }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+  # `NEXT_PUBLIC_*` is inlined into the Admin's client bundle at build time and
+  # must be an absolute URL, so it cannot be discovered from inside the
+  # container. The values are therefore pinned here and must match the host's
+  # .env.staging. Override with repository variables once a real domain exists.
+  STAGING_ORIGIN: ${{ vars.STAGING_ORIGIN || 'http://185.211.59.93' }}
+  STAGING_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL || format('{0}/api/v1', vars.STAGING_ORIGIN || 'http://185.211.59.93') }}
+  STAGING_MEDIA_ORIGIN: ${{ vars.STAGING_MEDIA_ORIGIN || format('{0}/media/products', vars.STAGING_ORIGIN || 'http://185.211.59.93') }}
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # No QEMU: every published image targets linux/amd64, which is both the
+      # runner's architecture and the deployment host's. Emulation would only
+      # slow the build down and change the artifact.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # The repository is public, so its packages are readable by anyone. The
+      # images hold no secrets, but authenticate anyway so a mistaken private
+      # package cannot be created silently.
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.IMAGE_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The API is published twice on purpose. `api` is the `runtime` target and
+      # is what the API, the media worker and the media bucket all run, so those
+      # three share one image and one digest. `api-migrate` is the `migrate`
+      # target, which carries the Prisma CLI that the runtime image deliberately
+      # excludes, and is the one-shot container that runs `migrate deploy`.
+      # Publishing the runtime image only would leave the host with no way to run
+      # migrations, and putting the CLI in the runtime image would undo the
+      # hardening that keeps devDependencies out of the long-running container.
+      - name: Build and push the API runtime image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infrastructure/docker/api.Dockerfile
+          target: runtime
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}/iranyaragh/api:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=api-runtime
+          cache-to: type=gha,mode=max,scope=api-runtime
+
+      - name: Build and push the API migration image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infrastructure/docker/api.Dockerfile
+          target: migrate
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}/iranyaragh/api-migrate:${{ env.IMAGE_TAG }}
+          # Reuses the api-runtime layers: the migrate target is `FROM build`, so
+          # the dependency install and compile are already cached above.
+          cache-from: type=gha,scope=api-runtime
+          cache-to: type=gha,mode=max,scope=api-runtime
+
+      - name: Build and push the Admin image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infrastructure/docker/admin.Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}/iranyaragh/admin:${{ env.IMAGE_TAG }}
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ env.STAGING_API_BASE_URL }}
+            NEXT_PUBLIC_MEDIA_ORIGIN=${{ env.STAGING_MEDIA_ORIGIN }}
+          cache-from: type=gha,scope=admin
+          cache-to: type=gha,mode=max,scope=admin
+
+      # No VITE_SITE_* build args on purpose. The storefront must publish no
+      # contact details it has not been given, and leaving them unset is what
+      # makes the storefront omit them rather than render a placeholder. The
+      # Dockerfile's own guard fails the build if a fixture flag is passed.
+      - name: Build and push the storefront image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infrastructure/docker/web.Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}/iranyaragh/web:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      # Confirm the tag really resolves to a digest before reporting success. A
+      # deployment host pulls this exact tag, so an absent or `latest`-only tag
+      # must fail here rather than on the host.
+      - name: Verify every published tag resolves to a digest
+        run: |
+          set -Eeuo pipefail
+          for image in api api-migrate admin web; do
+            reference="${IMAGE_REGISTRY}/iranyaragh/${image}:${IMAGE_TAG}"
+            digest="$(docker buildx imagetools inspect --format '{{ .Manifest.Digest }}' "$reference")"
+            test -n "$digest" || { echo "no digest for ${reference}" >&2; exit 1; }
+            echo "${image} ${IMAGE_TAG} ${digest}"
+          done
+
+      - name: Record the digests
+        run: |
+          {
+            echo "### Images published for ${IMAGE_TAG}"
+            echo
+            for image in api api-migrate admin web; do
+              digest="$(docker buildx imagetools inspect --format '{{ .Manifest.Digest }}' \
+                "${IMAGE_REGISTRY}/iranyaragh/${image}:${IMAGE_TAG}")"
+              echo "- \`${image}\` \`${IMAGE_TAG}\` \`${digest}\`"
+            done
+            echo
+            echo "Deploy with \`IMAGE_TAG=${IMAGE_TAG}\`."
+          } >> "${GITHUB_STEP_SUMMARY}"
