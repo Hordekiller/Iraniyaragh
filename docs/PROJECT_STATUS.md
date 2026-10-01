@@ -309,7 +309,28 @@ G6–G10 have not reached integrated completion.
   never migrates.
 - `deploy.sh` orders backup, pull, migrate, start and readiness, and on failure
   leaves the previous release serving while printing the SHA to roll back to.
-  `rollback.sh` pulls its target and never migrates.
+  `rollback.sh` pulls its target and never migrates. It also refuses to deploy
+  without a TLS certificate, and verifies the public entry point over HTTPS
+  against the configured public origin name, so a certificate that is valid for
+  something else fails the deploy instead of passing a loopback probe.
+- TLS terminates in the web container on ports 80 and 443: 443 serves everything
+  and 80 exists so the certificate can be renewed without downtime. There is no
+  domain yet, so the certificate is a Let's Encrypt **IP address** certificate,
+  which is only issued under the `shortlived` profile and is valid for 160 hours.
+  `ensure-certificate.sh` obtains and renews it: `--standalone` for the first
+  issuance when port 80 is free, `--webroot` afterwards so no renewal has to stop
+  the proxy, chosen by testing whether port 80 is actually bound rather than by
+  inferring it from Compose state. Certbot's nginx plugin cannot install an IP
+  certificate, so Nginx reads a bind-mounted pair and a deploy hook reloads it.
+  Renewal is a systemd timer, not a deploy step, because a certificate has to keep
+  being renewed whether or not anyone deploys. **This is a staging arrangement**:
+  publicly trusted and self-renewing, but dependent on a six-day cycle and on
+  that timer staying armed. A domain is what makes the TLS story conventional.
+- The API's requirement that public origins be https is enforced by validation,
+  not convention, and was confirmed against the built image: it refuses to boot
+  in staging and production with an http `STOREFRONT_ORIGIN` or
+  `PUBLIC_MEDIA_ORIGIN`, while `NODE_ENV=staging` accepts the disabled provider
+  modes that `NODE_ENV=production` rejects.
 - Images are built in CI and pulled, never built on a host. `publish-images.yml`
   builds the four images on merge to `main` and tags each with the full commit
   SHA, and `compose.staging.yml` carries no `build:` section, so a host cannot
