@@ -90,6 +90,32 @@ renewal_args=(
 # even when the first certificate was issued with --standalone. Without this the
 # bootstrap choice would silently follow the certificate into every renewal.
 #
+# No `--deploy-hook` is passed, deliberately. Certbot runs the hook *before* this
+# script installs the renewed pair, so a hook that reloads nginx can only make it
+# read the files that were already on disk -- the previous certificate. The
+# renewal would succeed, the pair on disk would be new, and the site would carry
+# on serving the old one until something else happened to reload. That is exactly
+# the failure this script exists to prevent, and it was found by forcing a real
+# renewal and comparing the served certificate against the one on disk: they
+# differed, with the site days from expiry. An earlier version also passed the
+# hook inline, which Certbot rejects outright ("Unable to find deploy-hook command
+# set in the PATH"). The reload is now done after the install, further down.
+
+renewal_args=(
+  --cert-name "${CERT_NAME}"
+  --preferred-profile shortlived
+  --non-interactive
+  --agree-tos
+  --register-unsafely-without-email
+  --keep-until-expiring
+)
+[[ ${USE_STAGING} -eq 1 ]] && renewal_args+=(--server https://acme-staging-v02.api.letsencrypt.org/directory)
+
+# Re-running Certbot with the webroot authenticator replaces the stored
+# authentication method for this certificate, so the renew timer uses webroot
+# even when the first certificate was issued with --standalone. Without this the
+# bootstrap choice would silently follow the certificate into every renewal.
+#
 # The hook lives in a file rather than being passed inline. Certbot validates a
 # --deploy-hook by looking for an executable on PATH and rejects a multi-line
 # string outright ("Unable to find deploy-hook command set in the PATH"), so the
@@ -101,27 +127,24 @@ renewal_args=(
 # there is no `web` container yet, which is not a failure, whereas a reload that
 # fails with the container up leaves Nginx serving an expired certificate. Only
 # the second exits non-zero.
-HOOK_PATH="$(mktemp -t iranyaragh-reload-XXXXXX)"
-cat > "${HOOK_PATH}" <<HOOK
-#!/usr/bin/env bash
-set -Eeuo pipefail
+# Deliberately no `--deploy-hook` here. Certbot runs the hook *before* this
+# script installs the renewed pair, so a hook that reloads nginx makes it read the
+# files that were already on disk -- the previous certificate. That is precisely
+# the failure this whole script exists to prevent: the renewal succeeds, the pair
+# on disk is new, and the site keeps serving the old one until something else
+# reloads. Found by forcing a real renewal and comparing the served certificate
+# against the one on disk; they were different, and the site was days from
+# expiring. The reload therefore happens below, after the install.
 
-web_id="\$(docker compose --env-file '${ENV_FILE}' -f '${COMPOSE_FILE}' ps -q web 2>/dev/null || true)"
-if [ -z "\${web_id}" ]; then
-  # On stdout, not stderr: Certbot reports any hook stderr as "ran with error
-  # output", which would read as a failed renewal in the timer log even though
-  # this exit is 0 and the script continued.
-  echo "deploy-hook: no web container running; Nginx picks this pair up on next start"
-  exit 0
-fi
-# nginx -t first, so a bad pair is refused here rather than leaving a running
-# container holding a config it cannot reload.
-docker exec "\${web_id}" nginx -t
-docker exec "\${web_id}" nginx -s reload
-HOOK
-chmod 0755 "${HOOK_PATH}"
-# Removed on exit, so a renewal a week from now cannot inherit a stale copy.
-trap 'rm -f "${HOOK_PATH}"' EXIT
+renewal_args=(
+  --cert-name "${CERT_NAME}"
+  --preferred-profile shortlived
+  --non-interactive
+  --agree-tos
+  --register-unsafely-without-email
+  --keep-until-expiring
+)
+[[ ${USE_STAGING} -eq 1 ]] && renewal_args+=(--server https://acme-staging-v02.api.letsencrypt.org/directory)
 
 renewal_args=(
   --cert-name "${CERT_NAME}"
@@ -184,19 +207,29 @@ fi
 
 case "${MODE}" in
   renew)
-    "${CERTBOT_BIN}" renew "${renewal_args[@]}" --deploy-hook "${HOOK_PATH}"
+    "${CERTBOT_BIN}" renew "${renewal_args[@]}"
     ;;
   webroot)
+    # `--force-renewal` is required for this branch to do anything at all when the
+    # certificate is not yet near expiry, which is every call made with --force.
+    # Without it Certbot answers "Certificate not yet due for renewal" and the
+    # script then installs the pair it already had, so a forced renewal silently
+    # proved nothing. Only added when --force was passed: on the timer-driven
+    # path Certbot's own expiry check is exactly the behaviour wanted, and forcing
+    # there would burn rate limit on every invocation.
+    if [[ ${FORCE} -eq 1 ]]; then
+      renewal_args+=(--force-renewal)
+    fi
     "${CERTBOT_BIN}" certonly "${renewal_args[@]}" \
       --webroot --webroot-path "${ACME_WEBROOT_DIR}" \
       --ip-address "${CERT_NAME}" \
-      --deploy-hook "${HOOK_PATH}"
+     
     ;;
   standalone)
     "${CERTBOT_BIN}" certonly "${renewal_args[@]}" \
       --standalone \
       --ip-address "${CERT_NAME}" \
-      --deploy-hook "${HOOK_PATH}"
+     
     ;;
 esac
 
@@ -209,6 +242,26 @@ install -m 0644 "/etc/letsencrypt/live/${CERT_NAME}/fullchain.pem" "${TLS_DIR}/f
 install -m 0600 "/etc/letsencrypt/live/${CERT_NAME}/privkey.pem"   "${TLS_DIR}/privkey.pem"
 
 log "Certificate in place"
+
+# Reloaded only now that the renewed pair is actually in place. Without this the
+# renewal would be a silent no-op from the outside: the files would be correct and
+# nginx would still be holding the old certificate in memory.
+#
+# The first issuance has no `web` container yet, and that is not a failure -- the
+# upcoming `compose up` starts nginx against the pair just written. A reload that
+# fails with the container up is a failure, because then Nginx is serving a
+# certificate that is about to expire.
+WEB_ID="$(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" ps -q web 2>/dev/null || true)"
+if [[ -z "${WEB_ID}" ]]; then
+  log "No web container yet; nginx will start against the new certificate"
+else
+  # `nginx -t` first, so a bad pair is refused here rather than leaving a running
+  # container unable to reload.
+  docker exec "${WEB_ID}" nginx -t
+  docker exec "${WEB_ID}" nginx -s reload
+  log "Reloaded nginx with the new certificate"
+fi
+
 # Reported with dates because a 6-day certificate that expired silently is the
 # failure mode this whole script exists to prevent.
 openssl x509 -in "${TLS_DIR}/fullchain.pem" -noout -subject -issuer -dates -ext subjectAltName
