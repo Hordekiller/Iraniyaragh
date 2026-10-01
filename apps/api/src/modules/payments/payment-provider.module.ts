@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DisabledPaymentProvider } from './disabled-payment.provider';
 import {
   PAYMENT_GATEWAY_CONFIG,
   PAYMENT_PROVIDER,
+  type PaymentGatewayCallMode,
   type PaymentGatewayConfig,
   type PaymentGatewayEnvironment,
   type PaymentProvider,
@@ -27,10 +29,21 @@ function createPaymentGatewayConfig(config: ConfigService): PaymentGatewayConfig
   const devOrTest = environment === 'development' || environment === 'test';
   const rawMode = config.get<string>('PAYMENT_PROVIDER_MODE');
   const mode: PaymentGatewayEnvironment =
-    rawMode === 'live' || rawMode === 'sandbox' ? rawMode : devOrTest ? 'sandbox' : 'live';
+    rawMode === 'live' || rawMode === 'sandbox' || rawMode === 'disabled'
+      ? rawMode
+      : devOrTest
+        ? 'sandbox'
+        : 'live';
+
+  // `disabled` is a staging affordance for deploying before a gateway account
+  // exists. Production must never resolve to it, otherwise a production
+  // deployment could ship with every payment silently unprocessable.
+  if (mode === 'disabled' && environment === 'production') {
+    throw new Error('PAYMENT_PROVIDER_MODE=disabled is not allowed in production.');
+  }
 
   const callbackUrl = config.get<string>('ZARINPAL_CALLBACK_URL');
-  if (!devOrTest && (callbackUrl === undefined || callbackUrl.length === 0)) {
+  if (!devOrTest && mode !== 'disabled' && (callbackUrl === undefined || callbackUrl.length === 0)) {
     throw new Error('ZARINPAL_CALLBACK_URL is required outside development and test.');
   }
   const resolvedCallbackUrl = callbackUrl ?? DEV_CALLBACK_URL;
@@ -51,9 +64,17 @@ function createPaymentGatewayConfig(config: ConfigService): PaymentGatewayConfig
   });
 }
 
+function createPaymentProvider(config: ConfigService, gateway: PaymentGatewayConfig): PaymentProvider {
+  if (gateway.mode === 'disabled') return new DisabledPaymentProvider();
+  return createZarinpalProvider(config, gateway);
+}
+
 function createZarinpalProvider(config: ConfigService, gateway: PaymentGatewayConfig): PaymentProvider {
+  const mode = gateway.mode;
+  // Narrowed by the caller: only sandbox and live can reach the network.
+  const callableMode: PaymentGatewayCallMode = mode === 'sandbox' ? 'sandbox' : 'live';
   const merchantId =
-    gateway.mode === 'live'
+    callableMode === 'live'
       ? (() => {
           const merchant = config.get<string>('ZARINPAL_MERCHANT_ID');
           if (merchant === undefined || merchant.length === 0) {
@@ -64,7 +85,7 @@ function createZarinpalProvider(config: ConfigService, gateway: PaymentGatewayCo
       : config.get<string>('ZARINPAL_SANDBOX_MERCHANT_ID') ?? SANDBOX_MERCHANT_ID;
   const providerConfig: ZarinpalGatewayConfig = {
     merchantId,
-    mode: gateway.mode,
+    mode: callableMode,
     timeoutMs: gateway.timeoutMs,
     callbackUrl: gateway.callbackUrl,
   };
@@ -82,7 +103,7 @@ function createZarinpalProvider(config: ConfigService, gateway: PaymentGatewayCo
     {
       provide: PAYMENT_PROVIDER,
       inject: [ConfigService, PAYMENT_GATEWAY_CONFIG],
-      useFactory: createZarinpalProvider,
+      useFactory: createPaymentProvider,
     },
   ],
   exports: [PAYMENT_GATEWAY_CONFIG, PAYMENT_PROVIDER],

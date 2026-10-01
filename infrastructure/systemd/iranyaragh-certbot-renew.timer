@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Let's Encrypt IP address certificate renewal twice a day
+Documentation=https://letsencrypt.org/2026/03/11/shorter-certs-certbot
+
+[Timer]
+OnCalendar=*-*-* 03,15:07
+RandomizedDelaySec=30m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

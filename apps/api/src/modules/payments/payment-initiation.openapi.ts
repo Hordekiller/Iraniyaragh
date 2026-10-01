@@ -46,7 +46,7 @@ export const openApiPaymentInitiation = {
     ),
     unprocessable: failureError(['UNPROCESSABLE'], 422),
     serviceUnavailable: failureError(
-      ['UPSTREAM_UNAVAILABLE', 'PAYMENT_RESULT_UNCONFIRMED'],
+      ['UPSTREAM_UNAVAILABLE', 'PAYMENT_RESULT_UNCONFIRMED', 'PAYMENT_PROVIDER_DISABLED'],
       503,
     ),
   },

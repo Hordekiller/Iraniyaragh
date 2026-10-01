@@ -1,0 +1,47 @@
+# Build definitions for the staging topology.
+#
+# compose.staging.yml deliberately has no `build:` sections. A deployment host
+# must not build: it pulls the immutable images that CI built for a commit and
+# tagged with that commit's SHA. Building on the host needs the whole toolchain,
+# takes as long as the slowest network, and produces an image whose contents
+# depend on the host rather than on the commit.
+#
+# This file carries the `build:` sections so `docker compose build` still works
+# where the source is, which is what the image-publishing workflow uses. It is
+# never passed to a deployment host, and a host that pulls images never needs it.
+#
+#   docker compose -f compose.staging.yml -f compose.staging.build.yml build
+#
+# `--env-file` must be supplied: the Compose file itself refuses to resolve
+# without IMAGE_TAG, so a build always has an explicit tag and can never fall
+# back to `latest`.
+
+services:
+  migrate:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      target: migrate
+  media-bucket:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      target: runtime
+  api:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      target: runtime
+  media-worker:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      target: runtime
+  admin:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/admin.Dockerfile
+  web:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/web.Dockerfile

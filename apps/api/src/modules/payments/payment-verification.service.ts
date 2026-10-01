@@ -143,6 +143,16 @@ export class PaymentVerificationService {
         message: 'Payment gateway is unavailable while verifying the callback.',
       });
     }
+    if (verifyResult.status === 'disabled') {
+      // The gateway was never contacted, so this proves nothing about the
+      // transaction: an authority issued before the gateway was switched off may
+      // already have been settled. Persist nothing and keep the payment PENDING,
+      // so settling it later stays possible.
+      throw new ServiceUnavailableException({
+        code: 'PAYMENT_PROVIDER_DISABLED',
+        message: 'Payments are not enabled on this deployment.',
+      });
+    }
 
     // Ambiguous verify (timeout/abort): the gateway may already have settled the
     // money, so it must NOT become a definitive FAILED. The payment stays PENDING
@@ -152,10 +162,25 @@ export class PaymentVerificationService {
   }
 
   private assertPaymentBelongsToGateway(payment: PaymentWithOrder): void {
-    if (
-      payment.provider !== this.gateway.providerName ||
-      payment.gatewayEnvironment !== this.gateway.mode
-    ) {
+    if (payment.provider !== this.gateway.providerName) {
+      throw new BadRequestException({
+        code: 'INVALID_REQUEST',
+        message: 'Payment does not belong to the active gateway.',
+      });
+    }
+
+    // Only enforced when a gateway is actually active. With the gateway switched
+    // off there is no live environment for the payment to match: an authority
+    // was issued while some earlier mode was live, and that is exactly the
+    // callback this deployment has to answer. Comparing the stored environment
+    // against `disabled` would reject every real callback with a generic
+    // INVALID_REQUEST, hiding the explicit "payments are not enabled here" the
+    // deployment is configured to return and losing the reason entirely.
+    //
+    // The provider check above is not relaxed: a callback for a different
+    // provider is still refused, and while disabled nothing is settled either
+    // way, so this only decides which honest error is returned.
+    if (this.gateway.mode !== 'disabled' && payment.gatewayEnvironment !== this.gateway.mode) {
       throw new BadRequestException({
         code: 'INVALID_REQUEST',
         message: 'Payment does not belong to the active gateway.',

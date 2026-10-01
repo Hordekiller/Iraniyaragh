@@ -424,7 +424,7 @@ export const openApiSmsSchemas = {
             required: ['messageId', 'status'],
             properties: {
               messageId: { type: 'string', nullable: true, description: 'Provider message id if known; null on non-delivery outcomes.', example: 'SMSIR-0001' },
-              status: { type: 'string', enum: ['accepted', 'rejected', 'rate_limited', 'unavailable', 'unknown_result'], description: 'Delivery outcome.', example: 'accepted' },
+              status: { type: 'string', enum: ['accepted', 'rejected', 'rate_limited', 'unavailable', 'unknown_result', 'disabled'], description: 'Delivery outcome.', example: 'accepted' },
             },
           },
         },

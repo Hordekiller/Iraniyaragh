@@ -27,12 +27,20 @@ export type SmsRejectionReason =
   | "invalid_request"
   | "unknown";
 
+/**
+ * `disabled` means the transport is switched off for this deployment and no
+ * message left the process. It is distinct from `unavailable`, which implies a
+ * real dispatch attempt that may have been lost upstream, and distinct from
+ * `rejected`, which is a definite "not delivered". Neither `unavailable` nor
+ * `disabled` may ever be reported as `accepted`.
+ */
 export type SmsSendResult =
   | Readonly<{ status: "accepted"; providerMessageId: string }>
   | Readonly<{ status: "rate_limited" }>
   | Readonly<{ status: "rejected"; reason: SmsRejectionReason }>
   | Readonly<{ status: "unavailable" }>
-  | Readonly<{ status: "unknown_result" }>;
+  | Readonly<{ status: "unknown_result" }>
+  | Readonly<{ status: "disabled" }>;
 
 export interface SmsProvider {
   /**

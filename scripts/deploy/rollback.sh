@@ -2,7 +2,11 @@
 #
 # Roll back to a previously deployed image tag.
 #
-#   ./rollback.sh <image-tag>
+#   ./rollback.sh <full-commit-sha>
+#
+# The images are pulled, not built: the rollback target is a commit whose images
+# CI already published, so the host needs the same artefacts it would have run
+# originally rather than a local rebuild.
 #
 # This rolls back the application images only. It deliberately does NOT run any
 # migration: `prisma migrate deploy` only ever moves a schema forward, so
@@ -21,12 +25,21 @@ ENV_FILE="${ENV_FILE:-${INFRA_DIR}/.env.staging}"
 COMPOSE_FILE="${INFRA_DIR}/compose.staging.yml"
 
 TARGET="${1:-}"
-[[ -n "${TARGET}" ]] || { echo "usage: $0 <image-tag>" >&2; exit 1; }
+[[ -n "${TARGET}" ]] || { echo "usage: $0 <full-commit-sha>" >&2; exit 1; }
 [[ -f "${ENV_FILE}" ]] || { echo "missing ${ENV_FILE}" >&2; exit 1; }
+
+# Accept only a full commit SHA, the only tag CI publishes. This keeps a rollback
+# from silently resolving to `latest` or to whatever a branch name points at.
+if [[ ! "${TARGET}" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "${TARGET} is not a full 40-character commit SHA." >&2
+  echo "Look in the env file for the IMAGE_TAG recorded by the last deploy." >&2
+  exit 1
+fi
 
 compose() { IMAGE_TAG="${TARGET}" docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"; }
 
-echo "Rolling back to image tag ${TARGET}"
+echo "Rolling back to ${TARGET}"
+compose pull || { echo "could not pull the images for ${TARGET}" >&2; exit 1; }
 
 # `up` would start the migrate service, which is correct on a normal deploy but
 # wrong here: this schema is whatever the failed deploy left behind, and the old

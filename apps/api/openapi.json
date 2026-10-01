@@ -18434,7 +18434,8 @@
                       "type": "string",
                       "enum": [
                         "UPSTREAM_UNAVAILABLE",
-                        "PAYMENT_RESULT_UNCONFIRMED"
+                        "PAYMENT_RESULT_UNCONFIRMED",
+                        "PAYMENT_PROVIDER_DISABLED"
                       ]
                     },
                     "message": {
@@ -18733,7 +18734,8 @@
                     "code": {
                       "type": "string",
                       "enum": [
-                        "UPSTREAM_UNAVAILABLE"
+                        "UPSTREAM_UNAVAILABLE",
+                        "PAYMENT_PROVIDER_DISABLED"
                       ]
                     },
                     "message": {
@@ -23540,7 +23542,8 @@
                                 "rejected",
                                 "rate_limited",
                                 "unavailable",
-                                "unknown_result"
+                                "unknown_result",
+                                "disabled"
                               ],
                               "description": "Delivery outcome.",
                               "example": "accepted"

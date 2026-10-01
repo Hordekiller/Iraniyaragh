@@ -82,6 +82,8 @@ function farsiError(error: unknown, mobile: string | null): string {
         return 'کد واردشده صحیح نیست.';
       case 'AUTH_CHALLENGE_EXPIRED':
         return 'کد منقضی شده است. کد جدید درخواست کنید.';
+      case 'SMS_PROVIDER_DISABLED':
+        return 'ورود با پیامک روی این استقرار فعال نیست.';
       case 'UPSTREAM_UNAVAILABLE':
       case 'INTERNAL_ERROR':
         return 'سرویس پیامک در دسترس نیست. چند دقیقه دیگر تلاش کنید.';

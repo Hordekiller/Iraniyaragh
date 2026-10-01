@@ -3,7 +3,16 @@ import type { PaymentProviderName } from '@iranyaragh/contracts';
 export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER');
 export const PAYMENT_GATEWAY_CONFIG = Symbol('PAYMENT_GATEWAY_CONFIG');
 
-export type PaymentGatewayEnvironment = 'sandbox' | 'live';
+/**
+ * `disabled` is a fail-closed staging mode for deploying before a gateway
+ * account exists. It is rejected in production. The provider that answers in
+ * this mode never reaches the network: every call resolves to `disabled`, so a
+ * deployment can be exercised without any possibility of a fabricated success.
+ */
+export type PaymentGatewayEnvironment = 'sandbox' | 'live' | 'disabled';
+
+/** The subset of environments a real gateway client can be constructed for. */
+export type PaymentGatewayCallMode = Exclude<PaymentGatewayEnvironment, 'disabled'>;
 
 export type PaymentGatewayConfig = Readonly<{
   providerName: PaymentProviderName;
@@ -32,7 +41,8 @@ export type PaymentAuthorizeResult =
   | Readonly<{ status: 'redirect'; authority: string; redirectUrl: string }>
   | Readonly<{ status: 'rejected'; reason: PaymentRejectionReason }>
   | Readonly<{ status: 'unavailable' }>
-  | Readonly<{ status: 'unknown_result' }>;
+  | Readonly<{ status: 'unknown_result' }>
+  | Readonly<{ status: 'disabled' }>;
 
 export type PaymentVerifyRequest = Readonly<{
   amountMinorUnits: string;
@@ -52,7 +62,8 @@ export type PaymentVerifyResult =
   | Readonly<{ status: 'verified'; referenceId: string }>
   | Readonly<{ status: 'failed'; reason: PaymentRejectionReason }>
   | Readonly<{ status: 'unavailable' }>
-  | Readonly<{ status: 'unknown_result' }>;
+  | Readonly<{ status: 'unknown_result' }>
+  | Readonly<{ status: 'disabled' }>;
 
 export interface PaymentProvider {
   readonly providerName: PaymentProviderName;
@@ -69,6 +80,11 @@ export interface PaymentProvider {
    * already-verified transaction is reported as `verified` with the original
    * reference id so duplicate callbacks replay idempotently. `unknown_result`
    * must be routed to reconciliation, never to a definitive FAILED.
+   *
+   * `disabled` is grouped with the ambiguous outcomes on purpose: the gateway
+   * was never contacted, so this call says nothing about the transaction. A
+   * payment whose authority was issued before the gateway was disabled may
+   * still have been settled, so it must reach reconciliation rather than FAILED.
    */
   verify(request: PaymentVerifyRequest): Promise<PaymentVerifyResult>;
 }

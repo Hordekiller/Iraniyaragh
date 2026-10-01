@@ -40,6 +40,25 @@ const validProductionEnvironment = {
   PRODUCT_MEDIA_MAX_IMAGE_PIXELS: '40000000',
 };
 
+// A staging deployment that exists before a Zarinpal or SMS.ir account does.
+// Both providers are explicitly switched off, so no gateway credential is
+// present and none may be invented.
+const validDisabledStagingEnvironment = {
+  ...validProductionEnvironment,
+  NODE_ENV: 'staging',
+  CORS_ORIGINS: 'https://staging-admin.example.com,https://staging-shop.example.com',
+  STOREFRONT_ORIGIN: 'https://staging-shop.example.com',
+  PAYMENT_PROVIDER_MODE: 'disabled',
+  SMS_PROVIDER_MODE: 'disabled',
+  ZARINPAL_MERCHANT_ID: undefined,
+  ZARINPAL_CALLBACK_URL: undefined,
+  SMS_IR_API_KEY: undefined,
+  SMS_IR_OTP_TEMPLATE_ID: undefined,
+  SMS_IR_ORDER_PAID_TEMPLATE_ID: undefined,
+  SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID: undefined,
+  SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID: undefined,
+};
+
 describe('parseCorsOrigins', () => {
   it('uses only known local origins by default in development', () => {
     expect(parseCorsOrigins(undefined, 'development')).toEqual(['http://localhost:5173', 'http://localhost:3001']);
@@ -366,5 +385,77 @@ describe('validateEnvironment', () => {
     ['PRODUCT_MEDIA_UPLOAD_TTL_SECONDS', '1801'],
   ])('rejects unsafe media policy setting %s=%s', (key, value) => {
     expect(() => validateEnvironment({ ...validDevelopmentEnvironment, [key]: value })).toThrow(key);
+  });
+});
+
+describe('disabled providers', () => {
+  it('boots staging with payments and SMS disabled and no gateway credentials', () => {
+    const result = validateEnvironment(validDisabledStagingEnvironment);
+    expect(result.NODE_ENV).toBe('staging');
+    expect(result.PAYMENT_PROVIDER_MODE).toBe('disabled');
+    expect(result.SMS_PROVIDER_MODE).toBe('disabled');
+  });
+
+  it('still enforces the security-critical staging requirements while disabled', () => {
+    // Disabling the payment and SMS gateways must not become a way to boot a
+    // staging environment without TOTP key protection or media limits.
+    expect(() =>
+      validateEnvironment({ ...validDisabledStagingEnvironment, AUTH_TOTP_ENCRYPTION_KEY: 'too-short' }),
+    ).toThrow('AUTH_TOTP_ENCRYPTION_KEY');
+    expect(() =>
+      validateEnvironment({ ...validDisabledStagingEnvironment, PRODUCT_MEDIA_IMAGE_MAX_BYTES: undefined }),
+    ).toThrow('PRODUCT_MEDIA_IMAGE_MAX_BYTES');
+    expect(() => validateEnvironment({ ...validDisabledStagingEnvironment, PUBLIC_MEDIA_ORIGIN: '' })).toThrow(
+      'PUBLIC_MEDIA_ORIGIN',
+    );
+  });
+
+  it('refuses disabled payments in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProductionEnvironment,
+        PAYMENT_PROVIDER_MODE: 'disabled',
+        ZARINPAL_MERCHANT_ID: undefined,
+      }),
+    ).toThrow('PAYMENT_PROVIDER_MODE=disabled is not allowed in production.');
+  });
+
+  it('refuses disabled SMS in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validProductionEnvironment,
+        SMS_PROVIDER_MODE: 'disabled',
+        SMS_IR_API_KEY: undefined,
+        SMS_IR_OTP_TEMPLATE_ID: undefined,
+      }),
+    ).toThrow('SMS_PROVIDER_MODE=disabled is not allowed in production.');
+  });
+
+  it('still requires real Zarinpal credentials in production', () => {
+    // A production deploy cannot reach "no merchant id" by any route.
+    expect(() => validateEnvironment({ ...validProductionEnvironment, ZARINPAL_MERCHANT_ID: undefined })).toThrow(
+      'ZARINPAL_MERCHANT_ID',
+    );
+    expect(() => validateEnvironment({ ...validProductionEnvironment, ZARINPAL_CALLBACK_URL: '' })).toThrow(
+      'ZARINPAL_CALLBACK_URL',
+    );
+  });
+
+  it('still requires real SMS.ir credentials in production', () => {
+    expect(() => validateEnvironment({ ...validProductionEnvironment, SMS_IR_API_KEY: undefined })).toThrow(
+      'SMS_IR_API_KEY',
+    );
+  });
+
+  it('never accepts the sandbox gateway in staging', () => {
+    // The pre-existing invariant: only live or disabled, so a staging deploy can
+    // never quietly settle against a test merchant.
+    expect(() => validateEnvironment({ ...validDisabledStagingEnvironment, PAYMENT_PROVIDER_MODE: 'sandbox' })).toThrow(
+      'PAYMENT_PROVIDER_MODE',
+    );
+  });
+
+  it.each(['PAYMENT_PROVIDER_MODE', 'SMS_PROVIDER_MODE'])('rejects an unknown %s value', (key) => {
+    expect(() => validateEnvironment({ ...validDisabledStagingEnvironment, [key]: 'mock' })).toThrow(key);
   });
 });
