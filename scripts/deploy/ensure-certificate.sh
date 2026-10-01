@@ -90,28 +90,54 @@ renewal_args=(
 # even when the first certificate was issued with --standalone. Without this the
 # bootstrap choice would silently follow the certificate into every renewal.
 #
-# The hook reloads Nginx, because Nginx reads the certificate at startup and a
-# renewed pair is not live until it does. It is a script rather than a one-liner
-# because the two outcomes have to be told apart: on the very first issuance there
-# is no `web` container yet, and that is not a failure, whereas a reload that
-# fails with the container up leaves Nginx serving an expired certificate. Only the
-# second case exits non-zero.
-read -r -d '' deploy_hook <<'HOOK' || true
-set -eu
-web_id="$(docker compose --env-file "${ENV_FILE}" \
-  -f "${COMPOSE_FILE}" \
-  ps -q web 2>/dev/null || true)"
-if [ -z "${web_id}" ]; then
-  # Nothing is serving yet, so there is nothing to reload. The next `compose up`
-  # starts Nginx against the pair that was just written.
-  echo "deploy-hook: no web container running; Nginx will pick this up on next start" >&2
+# The hook lives in a file rather than being passed inline. Certbot validates a
+# --deploy-hook by looking for an executable on PATH and rejects a multi-line
+# string outright ("Unable to find deploy-hook command set in the PATH"), so the
+# inline form could not have worked on a real host. Found the first time this ran
+# against the real Certbot.
+#
+# Nginx reads the certificate at startup, so a renewed pair is not live until it
+# reloads. The two failure modes are told apart deliberately: on a first issuance
+# there is no `web` container yet, which is not a failure, whereas a reload that
+# fails with the container up leaves Nginx serving an expired certificate. Only
+# the second exits non-zero.
+HOOK_PATH="$(mktemp -t iranyaragh-reload-XXXXXX)"
+cat > "${HOOK_PATH}" <<HOOK
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+web_id="\$(docker compose --env-file '${ENV_FILE}' -f '${COMPOSE_FILE}' ps -q web 2>/dev/null || true)"
+if [ -z "\${web_id}" ]; then
+  # On stdout, not stderr: Certbot reports any hook stderr as "ran with error
+  # output", which would read as a failed renewal in the timer log even though
+  # this exit is 0 and the script continued.
+  echo "deploy-hook: no web container running; Nginx picks this pair up on next start"
   exit 0
 fi
-# `nginx -t` first, so a bad pair is refused here rather than leaving the running
-# container with a config it cannot reload.
-docker exec "${web_id}" nginx -t
-docker exec "${web_id}" nginx -s reload
+# nginx -t first, so a bad pair is refused here rather than leaving a running
+# container holding a config it cannot reload.
+docker exec "\${web_id}" nginx -t
+docker exec "\${web_id}" nginx -s reload
 HOOK
+chmod 0755 "${HOOK_PATH}"
+# Removed on exit, so a renewal a week from now cannot inherit a stale copy.
+trap 'rm -f "${HOOK_PATH}"' EXIT
+
+renewal_args=(
+  --cert-name "${CERT_NAME}"
+  --preferred-profile shortlived
+  --non-interactive
+  --agree-tos
+  --register-unsafely-without-email
+  --keep-until-expiring
+)
+[[ ${USE_STAGING} -eq 1 ]] && renewal_args+=(--server https://acme-staging-v02.api.letsencrypt.org/directory)
+
+# Re-running Certbot with the webroot authenticator replaces the stored
+# authentication method for this certificate, so the renew timer uses webroot
+# even when the first certificate was issued with --standalone. Without this the
+# bootstrap choice would silently follow the certificate into every renewal.
+#
 
 # What decides between --standalone and --webroot is whether something is already
 # bound to port 80, so that is what gets tested, directly. Inferring it from
@@ -158,19 +184,19 @@ fi
 
 case "${MODE}" in
   renew)
-    "${CERTBOT_BIN}" renew "${renewal_args[@]}" --deploy-hook "${deploy_hook}"
+    "${CERTBOT_BIN}" renew "${renewal_args[@]}" --deploy-hook "${HOOK_PATH}"
     ;;
   webroot)
     "${CERTBOT_BIN}" certonly "${renewal_args[@]}" \
       --webroot --webroot-path "${ACME_WEBROOT_DIR}" \
       --ip-address "${CERT_NAME}" \
-      --deploy-hook "${deploy_hook}"
+      --deploy-hook "${HOOK_PATH}"
     ;;
   standalone)
     "${CERTBOT_BIN}" certonly "${renewal_args[@]}" \
       --standalone \
       --ip-address "${CERT_NAME}" \
-      --deploy-hook "${deploy_hook}"
+      --deploy-hook "${HOOK_PATH}"
     ;;
 esac
 

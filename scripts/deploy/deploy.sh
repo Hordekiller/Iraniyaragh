@@ -60,8 +60,21 @@ git merge-base --is-ancestor "${NEW_TAG}" origin/main \
 PREVIOUS_TAG="$(grep -E '^IMAGE_TAG=' "${ENV_FILE}" | cut -d= -f2- || true)"
 PREVIOUS_TAG="${PREVIOUS_TAG:-none}"
 
-log "Backing up the database and media objects before migrating"
-"$(dirname "${BASH_SOURCE[0]}")/backup-postgres.sh" || fail "pre-migrate backup failed; refusing to migrate."
+# The pre-migrate backup is what makes a schema change reversible, so it is
+# mandatory once a database exists. A first deploy is the one case where there is
+# nothing to protect: no container is running and no schema has been created yet,
+# so a dump cannot be taken and cannot fail to be taken. Skipping it here is what
+# lets a fresh host come up at all.
+#
+# Probed with `compose ps`, the same command that later resolves the container, so
+# the check cannot disagree with what the script then operates on.
+PREVIOUS_WEB_ID="$(compose ps -q web 2>/dev/null || true)"
+if [[ -z "${PREVIOUS_WEB_ID}" ]]; then
+  log "No running stack: first deploy, so there is no database to back up yet"
+else
+  log "Backing up the database and media objects before migrating"
+  "$(dirname "${BASH_SOURCE[0]}")/backup-postgres.sh" || fail "pre-migrate backup failed; refusing to migrate."
+fi
 
 log "Pulling images for ${NEW_TAG}"
 # No `--quiet`: the pull is the only record of which digests were fetched, and a
