@@ -10,6 +10,10 @@ dist
 # The staging env template is a documented interface and must be committed.
 # The real .env.staging next to it stays ignored by the .env.* rule above.
 !infrastructure/docker/.env.staging.example
+# The host-network build override is a per-host opt-in, like the env file: the
+# committed copy is the .example, the one deploy.sh looks for is not.
+!infrastructure/docker/compose.staging.host-network.example.yml
+infrastructure/docker/compose.staging.host-network.yml
 # Backups hold customer and staff data and are host-local, never in git.
 infrastructure/docker/backups/
 coverage

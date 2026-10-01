@@ -23,10 +23,22 @@ COMPOSE_FILE="${INFRA_DIR}/compose.staging.yml"
 ENV_FILE="${ENV_FILE:-${INFRA_DIR}/.env.staging}"
 BACKUP_DIR="${BACKUP_DIR:-${INFRA_DIR}/backups}"
 
+# Opt-in, and absent by default: some datacentres throttle Docker's bridge
+# network so badly that the image build cannot fetch packages at all. When the
+# override is copied into place its builds use the host network instead. Runtime
+# networking is untouched either way.
+HOST_NETWORK_OVERRIDE="${HOST_NETWORK_OVERRIDE:-${INFRA_DIR}/compose.staging.host-network.yml}"
+
 log() { printf '\n=== %s\n' "$*"; }
 fail() { printf '\nFAILED: %s\n' "$*" >&2; exit 1; }
 
-compose() { docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"; }
+compose() {
+  if [[ -f "${HOST_NETWORK_OVERRIDE}" ]]; then
+    docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" -f "${HOST_NETWORK_OVERRIDE}" "$@"
+  else
+    docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"
+  fi
+}
 
 [[ -f "${ENV_FILE}" ]] || fail "missing ${ENV_FILE}. Copy .env.staging.example and fill in real values."
 command -v docker >/dev/null || fail "docker is not installed."

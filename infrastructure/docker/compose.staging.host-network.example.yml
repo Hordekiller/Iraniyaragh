@@ -1,0 +1,48 @@
+# Opt-in override for build hosts whose container network is unusable.
+#
+# Some datacentres throttle or drop traffic from Docker's bridge network while
+# the host itself has normal connectivity. On the Server.ir staging VPS this is
+# severe enough to break the image build outright: `apt-get update` inside a
+# build step takes over 100 seconds and eventually times out, so the first
+# `apt-get install` in the API, Admin and web images fails, and a `pnpm install`
+# of this monorepo would be in the same position.
+#
+# This override gives build steps the host's network namespace instead. It
+# changes nothing about the images, the services, or runtime networking: the
+# build only fetches packages from the internet and never needs to reach another
+# service, and every container still runs on the normal Compose bridge.
+#
+# It is deliberately NOT part of compose.staging.yml. Most hosts have no problem
+# here, and silently moving builds onto the host network would be a surprising
+# default. deploy.sh only picks it up when the un-suffixed file exists, so a host
+# opts in the same way it supplies its env file:
+#
+#   cp compose.staging.host-network.example.yml \
+#      compose.staging.host-network.yml
+#
+# Delete it again to go back to bridge-network builds. Confirm the active mode
+# with:
+#
+#   docker compose --env-file .env.staging \
+#     -f compose.staging.yml -f compose.staging.host-network.yml \
+#     config | grep -A2 'build:'
+
+services:
+  migrate:
+    build:
+      network: host
+  media-bucket:
+    build:
+      network: host
+  api:
+    build:
+      network: host
+  media-worker:
+    build:
+      network: host
+  admin:
+    build:
+      network: host
+  web:
+    build:
+      network: host
