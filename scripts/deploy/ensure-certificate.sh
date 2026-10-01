@@ -79,20 +79,65 @@ renewal_args=(
 # authentication method for this certificate, so the renew timer uses webroot
 # even when the first certificate was issued with --standalone. Without this the
 # bootstrap choice would silently follow the certificate into every renewal.
-deploy_hook="docker compose --env-file ${ENV_FILE:-/srv/iranyaragh/.env.staging} -f ${COMPOSE_FILE:-/srv/iranyaragh/infrastructure/docker/compose.staging.yml} exec -T web nginx -s reload"
+#
+# The hook reloads Nginx, because Nginx reads the certificate at startup and a
+# renewed pair is not live until it does. It is a script rather than a one-liner
+# because the two outcomes have to be told apart: on the very first issuance there
+# is no `web` container yet, and that is not a failure, whereas a reload that
+# fails with the container up leaves Nginx serving an expired certificate. Only the
+# second case exits non-zero.
+read -r -d '' deploy_hook <<'HOOK' || true
+set -eu
+web_id="$(docker compose --env-file "${ENV_FILE:-/srv/iranyaragh/.env.staging}" \
+  -f "${COMPOSE_FILE:-/srv/iranyaragh/infrastructure/docker/compose.staging.yml}" \
+  ps -q web 2>/dev/null || true)"
+if [ -z "${web_id}" ]; then
+  # Nothing is serving yet, so there is nothing to reload. The next `compose up`
+  # starts Nginx against the pair that was just written.
+  echo "deploy-hook: no web container running; Nginx will pick this up on next start" >&2
+  exit 0
+fi
+# `nginx -t` first, so a bad pair is refused here rather than leaving the running
+# container with a config it cannot reload.
+docker exec "${web_id}" nginx -t
+docker exec "${web_id}" nginx -s reload
+HOOK
 
-stack_is_up() {
-  docker compose --env-file "${ENV_FILE:-/srv/iranyaragh/.env.staging}" \
-    -f "${COMPOSE_FILE:-/srv/iranyaragh/infrastructure/docker/compose.staging.yml}" \
-    ps --status running --services 2>/dev/null | grep -qx web
+# What decides between --standalone and --webroot is whether something is already
+# bound to port 80, so that is what gets tested, directly. Inferring it from
+# Compose state was wrong in both directions: it reported "not listening" on a
+# host where the proxy was serving, and it would have said "listening" for a
+# container that is up but not published.
+#
+# The consequence of getting this wrong is not a clean failure. With the proxy on
+# port 80, certbot's standalone server can still bind via SO_REUSEPORT, and the
+# kernel then hands each connection to one of the two listeners at random, so
+# validation appears to work on a coin flip rather than failing loudly.
+port_80_busy() {
+  if command -v ss >/dev/null 2>&1; then
+    ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE '(^|:)80$'
+  elif command -v netstat >/dev/null 2>&1; then
+    netstat -ltn 2>/dev/null | awk '{print $4}' | grep -qE '(^|:)80$'
+  else
+    return 1
+  fi
 }
 
-if [[ -f "${TLS_DIR}/fullchain.pem" && -f "${TLS_DIR}/privkey.pem" ]] && [[ ${FORCE} -eq 0 ]]; then
-  log "A certificate is already installed; asking Certbot whether it needs renewing"
+# What decides between renewing and issuing is whether *Certbot* has a renewal
+# configuration for this name, not whether files happen to sit in TLS_DIR. Those
+# files are there on a host that has already been issued, but they are also there
+# after a certificate has been deleted, or when something else wrote them, and
+# `certbot renew` fails outright on a name it has never heard of. Found on the
+# real host, where a placeholder pair left in TLS_DIR to bring Nginx up sent the
+# first real run down this path.
+LETSENCRYPT_HOME="${LETSENCRYPT_HOME:-/etc/letsencrypt}"
+if [[ -f "${LETSENCRYPT_HOME}/renewal/${CERT_NAME}.conf" ]] && [[ ${FORCE} -eq 0 ]]; then
+  log "Certbot already manages ${CERT_NAME}; asking whether it needs renewing"
   MODE=renew
-elif stack_is_up; then
-  # The stack is running, so port 80 is busy and renewal must go through webroot.
-  log "Requesting a certificate via --webroot (the stack is already serving on port 80)"
+elif port_80_busy; then
+  # Port 80 is taken, so --standalone would have to fight for it. Webroot works
+  # because the thing holding port 80 is the proxy that serves the challenge.
+  log "Requesting a certificate via --webroot (something is already serving on port 80)"
   MODE=webroot
 else
   # Nothing is listening on port 80, which is the only situation where
