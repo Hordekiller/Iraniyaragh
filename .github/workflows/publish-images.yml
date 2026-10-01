@@ -50,30 +50,30 @@ jobs:
     name: publish
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      # Lowercased, because Docker requires a repository name to be lowercase and
-      # `github.repository_owner` preserves the owner's own capitalisation. With
-      # the owner as `Hordekiller`, every tag came out as
-      # `ghcr.io/Hordekiller/iranyaragh/api:<sha>`, which `docker buildx` rejects
-      # outright -- the first thing this workflow ever did on a merge.
-      #
-      # Lowercased in a step rather than written as a literal so a transfer or a
-      # rename cannot reintroduce it, and so the value that is pushed is the value
-      # that is reported. GitHub has no expression function for this, which is why
-      # it is not simply `${{ ... }}`.
-      IMAGE_REGISTRY: ghcr.io/${{ steps.registry.outputs.registry }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      # Docker requires a repository name to be lowercase and
+      # `github.repository_owner` preserves the owner's own capitalisation, so
+      # every tag came out as `ghcr.io/Hordekiller/iranyaragh/api:<sha>` and
+      # `docker buildx` rejected the build outright. This is the only thing that
+      # workflow ever did on its first real run.
+      #
+      # Written to GITHUB_ENV rather than to an `env:` key because a `steps.*`
+      # output is not in scope in a job- or workflow-level `env:`. GitHub rejects
+      # that whole file as invalid, and it does so at dispatch time rather than
+      # when the workflow runs, so a workflow_dispatch cannot verify it either.
+      #
+      # Lowercased in a step rather than written as a literal so a transfer or a
+      # rename cannot reintroduce it. GitHub has no expression function for this.
       - name: Derive the lowercase image registry
-        id: registry
         run: |
           set -Eeuo pipefail
           owner="\${GITHUB_REPOSITORY_OWNER,,}"
           [[ -n "${owner}" ]] || { echo "GITHUB_REPOSITORY_OWNER is empty" >&2; exit 1; }
-          echo "registry=ghcr.io/${owner}" >> "${GITHUB_OUTPUT}"
-          echo "publishing to ghcr.io/${owner}"
+          echo "IMAGE_REGISTRY=ghcr.io/${owner}" >> "${GITHUB_ENV}"
+          echo "Publishing to ghcr.io/${owner}"
 
       # No QEMU: every published image targets linux/amd64, which is both the
       # runner's architecture and the deployment host's. Emulation would only
