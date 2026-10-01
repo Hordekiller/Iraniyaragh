@@ -67,17 +67,17 @@ need the web/admin pages. The product-media journey
 Redis, a running media worker, and an S3-compatible object store:
 
 ```bash
-# local infra (ports: postgres 55432, redis 56379, minio 9000/9001)
+# local infra (ports: postgres 55432, redis 56379, object store 9000/9001)
 docker compose -f infrastructure/docker/docker-compose.yml \
-  -f infrastructure/docker/docker-compose.override.yml up -d postgres redis minio
+  -f infrastructure/docker/docker-compose.override.yml up -d postgres redis object-store
 
 # create the bucket + public read policy (reads OBJECT_STORAGE_*)
 OBJECT_STORAGE_ENDPOINT=http://localhost:9000 \
-  OBJECT_STORAGE_ACCESS_KEY=minio OBJECT_STORAGE_SECRET_KEY=change-me-now \
+  OBJECT_STORAGE_ACCESS_KEY=minio OBJECT_STORAGE_SECRET_KEY=change-me \
   pnpm --filter @iranyaragh/api media:bucket
 
-# API and worker must share the MinIO credentials and public origin
-NODE_ENV=test OBJECT_STORAGE_SECRET_KEY=change-me-now \
+# API and worker must share the object store credentials and public origin
+NODE_ENV=test OBJECT_STORAGE_SECRET_KEY=change-me \
   PUBLIC_MEDIA_ORIGIN=http://localhost:9000/products \
   node apps/api/dist/src/media-worker.js &
 
@@ -88,9 +88,12 @@ E2E_STAFF_EMAIL=e2e-admin@iranyaragh.test \
   tests/api-media-publish-to-discovery.spec.ts --project=api-http
 ```
 
-CI provides all of this in the `e2e` job (MinIO service via `docker run`, bucket
-provisioning, media worker) and sets `PUBLIC_MEDIA_ORIGIN`, the object-storage
-variables and the `E2E_STAFF_*` credentials.
+CI provides all of this in the `e2e` job (a pinned community MinIO built with
+`go install`, bucket provisioning, media worker) and sets `PUBLIC_MEDIA_ORIGIN`,
+the object-storage variables and the `E2E_STAFF_*` credentials. CI still uses
+MinIO deliberately: it runs the server as a plain process rather than pulling a
+container image, so the registry-authentication problem that made the local and
+staging compose files unusable does not apply here.
 
 ## Staff sign-in
 

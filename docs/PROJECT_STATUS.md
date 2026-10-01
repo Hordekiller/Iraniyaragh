@@ -235,7 +235,8 @@ G6–G10 have not reached integrated completion.
   `/api/v1`, Helmet and explicit environment-aware CORS validation.
 - PostgreSQL/Prisma with reviewed forward migrations and deterministic, safety-gated
   development/test RBAC seed.
-- Docker Compose baseline for PostgreSQL, Redis and MinIO.
+- Docker Compose baseline for PostgreSQL, Redis and a self-hosted S3 object store
+  (RustFS; see `infrastructure/docker/RUNBOOK.md` for why it replaced MinIO).
 - Database-independent liveness and bounded database readiness endpoints.
 - Request IDs, async context, stable error envelopes, redacted structured logging
   and global exception mapping.
@@ -286,10 +287,42 @@ G6–G10 have not reached integrated completion.
 - HTTP/dependency/worker instrumentation, telemetry export/storage, retention,
   dashboards/alerts and admin diagnostics remain explicit #136 follow-up slices.
 
+### Deployment images and staging topology (deployment-only PR, not yet on `main`)
+
+- Non-root, healthchecked production images for the API, media worker, storefront
+  and Admin. The API image ships a generated Prisma client and a dedicated
+  `migrate` target; a build-time check resolves the query engine for the image's
+  actual OpenSSL version, so a silently mis-detected engine fails the build
+  instead of crash-looping the container on its first query.
+- A full staging stack in `compose.staging.yml`: PostgreSQL, Redis, RustFS
+  (pinned, console disabled, unpublished), migrate, media-bucket, API, media
+  worker, Admin and Nginx. Only Nginx publishes a port. Every dependency edge is
+  a health or completion gate, so a half-migrated or unprovisioned schema never
+  serves traffic.
+- Paired backups. `backup-postgres.sh` dumps the database and the product-media
+  objects under one timestamp and verifies the dump checksum; the object manifest
+  is v2 and records per-object content type, cache control and custom metadata,
+  so a restore reproduces a storefront that still renders its media rather than a
+  bucket of untyped bytes. `restore-postgres.sh` is destructive, verified, and
+  deliberately leaves the application tier stopped so it cannot re-apply newer
+  migrations onto the restored schema. `rollback.sh` replaces images only and
+  never migrates.
+- `deploy.sh` orders backup, build, migrate, start and readiness, and on failure
+  leaves the previous release serving while printing the tag to roll back to.
+- Verified locally against the real stack: all services healthy, migrations
+  applied, storefront/Admin/API reachable through Nginx, and a published image
+  fetched over the public media path with its real `Content-Type` before and
+  after a backup/restore round trip.
+- Not yet done: the real staging deploy on Server.ir, TLS, real secrets, live
+  Zarinpal/SMS.ir acceptance, and a real staff sign-in. See the boundary below.
+
 ### Production-readiness boundary
 
-- Local Docker Compose provides PostgreSQL, Redis and MinIO; production application
-  images and a proven staging/production deployment are absent.
+- Local Docker Compose provides PostgreSQL, Redis and an S3 object store. Production
+  application images now build and run under `compose.staging.yml`, and the full
+  staging stack has been brought up locally end to end, but a *real* staging or
+  production deployment on Server.ir is still absent, along with the real secrets,
+  live Zarinpal/SMS.ir credentials and TLS it requires.
 - CI enforces lint/typecheck/tests/build, PostgreSQL migration/drift/integration,
   browser E2E, dependency review, production audit, CodeQL and real Sonar Quality
   Gates on internal PRs. `sonar` is not yet a required branch-protection context.

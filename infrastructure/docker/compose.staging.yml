@@ -1,0 +1,280 @@
+# Staging-shaped deployment for a single Docker host.
+#
+# Scope: this file is infrastructure only. It contains no product features and
+# no placeholder business data.
+#
+# Security properties that differ from the local-development compose:
+#   * Only `web` (Nginx) publishes a host port. Postgres, Redis, the object
+#     store, the API and the Admin are reachable only on the internal network.
+#   * No default credentials. Every secret comes from an untracked env file.
+#   * Migrations run as a one-shot service that must succeed before the API or
+#     the Admin start, so a deploy never serves traffic against a stale schema.
+#   * All services use `restart: unless-stopped` and declare health checks, so
+#     a host reboot or a crashed dependency recovers without manual steps.
+#
+# Usage:
+#   cp .env.staging.example .env.staging   # then fill in real values
+#   docker compose --env-file .env.staging -f compose.staging.yml up -d
+
+name: iranyaragh
+
+x-restart: &restart unless-stopped
+
+services:
+  # --- data tier --------------------------------------------------------------
+
+  postgres:
+    image: postgres:18-alpine
+    restart: *restart
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Mount the parent, not `/var/lib/postgresql/data`. Postgres 18+ places
+      # its cluster in a versioned subdirectory (`/var/lib/postgresql/<ver>/`),
+      # and the image warns that mounting the data directory directly breaks
+      # `pg_upgrade --link` and major-version upgrades. The local development
+      # compose already mounts the parent for the same reason.
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    # No `ports:` on purpose. The database must not be reachable from outside
+    # the host; only the API and the migration job connect to it.
+
+  redis:
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    restart: *restart
+    # appendonly keeps queue/outbox state across restarts. `requirepass` is set
+    # from the env file so the cache is not an open service on the network.
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  object-store:
+    # RustFS, not MinIO. This is an infrastructure-layer swap only: the API
+    # still talks plain S3 over the same generic OBJECT_STORAGE_* variables and
+    # the same provider-neutral adapter. MinIO's upstream image now requires
+    # registry authentication for anonymous pulls, so it cannot be pulled on a
+    # fresh host.
+    #
+    # Pinned to a specific release, never `latest`: the store that holds
+    # published product media must be the version this deployment was verified
+    # against.
+    image: rustfs/rustfs:1.0.0
+    restart: *restart
+    # Serves the S3 API on :9000. The console is left disabled (the default) so
+    # no admin UI is reachable; enable it on a loopback address only if an
+    # operator needs it, and never publish it.
+    command: server /data --address :9000
+    environment:
+      # Credentials come from the same generic OBJECT_STORAGE_* secrets the API
+      # uses, so there is one place to rotate them. RUSTFS_* are the store's
+      # own variable names; the generic app variables are untouched.
+      RUSTFS_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY}
+    volumes:
+      - object_store_data:/data
+    healthcheck:
+      # Unauthenticated root is expected to be denied (403); any HTTP response
+      # proves the S3 listener is accepting connections.
+      test: ['CMD-SHELL', "curl -s -o /dev/null -w '%{http_code}' http://localhost:9000/ | grep -qE '^(200|400|403)$'"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    # No `ports:`. The object store is reached only by the API/worker on the
+    # internal network and by Nginx for public media reads.
+
+  # --- schema -----------------------------------------------------------------
+
+  # One-shot. `prisma migrate deploy` applies pending migrations and exits; the
+  # API and Admin depend on it having completed successfully, which guarantees
+  # migrate-before-traffic on every `up` and every restart.
+  migrate:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      # The `migrate` target, not the default runtime image: `prisma migrate
+      # deploy` needs the Prisma CLI, which is a devDependency and is absent
+      # from the production runtime image.
+      target: migrate
+    image: iranyaragh/api-migrate:${IMAGE_TAG:-latest}
+    restart: 'no'
+    command: ['pnpm', 'exec', 'prisma', 'migrate', 'deploy']
+    working_dir: /repo/apps/api
+    env_file: [.env.staging]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Creates the media bucket and verifies it is writable. Idempotent, so it is
+  # safe to run on every deploy; it is a dependency of the media worker so the
+  # bucket always exists before any upload is processed.
+  media-bucket:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      target: runtime
+    image: iranyaragh/api:${IMAGE_TAG:-latest}
+    restart: 'no'
+    command: ['node', 'scripts/provision-media-bucket.mjs']
+    env_file: [.env.staging]
+    environment:
+      NODE_ENV: production
+      OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT}
+      OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}
+      OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET}
+    depends_on:
+      object-store:
+        condition: service_healthy
+
+  # --- application tier -------------------------------------------------------
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      # Explicit because api.Dockerfile's last stage is `migrate`; without this
+      # a targetless build resolves to that one-shot stage and ships a
+      # 3 GB image that runs migrations instead of the API.
+      target: runtime
+    image: iranyaragh/api:${IMAGE_TAG:-latest}
+    restart: *restart
+    env_file: [.env.staging]
+    environment:
+      NODE_ENV: production
+      API_PORT: '4000'
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      # Nginx is the only proxy in front of the API, so trust exactly one hop.
+      # The value is a bare hop count: the API parses TRUST_PROXY as a number
+      # (1-5) or a list of IPs/CIDRs, so "hops:1" is rejected at boot.
+      TRUST_PROXY: '1'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # No `ports:`. The API is only reachable through Nginx on /api.
+
+  media-worker:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/api.Dockerfile
+      target: runtime
+    image: iranyaragh/api:${IMAGE_TAG:-latest}
+    restart: *restart
+    command: ['node', 'dist/src/media-worker.js']
+    env_file: [.env.staging]
+    environment:
+      NODE_ENV: production
+      # The worker loads the same AppModule as the API, and the shared config
+      # validation refuses to boot in staging/production without a port. The
+      # worker never listens, it only creates an application context, so this
+      # value is never bound. It is set here so the worker shares exactly the
+      # same validated environment as the API instead of a second, weaker one.
+      API_PORT: '4000'
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT}
+      OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}
+      OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET}
+      PUBLIC_MEDIA_ORIGIN: ${PUBLIC_MEDIA_ORIGIN}
+    # The image ships an HTTP liveness probe, which is correct for the API but can
+    # never pass here: the worker creates an application context and consumes
+    # BullMQ queues, it never binds a port. Left inherited, the container is
+    # reported unhealthy while it is in fact working, and a deploy that waits on
+    # healthy dependencies would hang on it.
+    #
+    # There is no in-container liveness signal to assert instead, because the
+    # worker's liveness is exactly "the process is still running and its Redis
+    # connection is usable", and BullMQ already reconnects and surfaces errors
+    # on its own. So the honest check is process liveness, which Docker gives us
+    # for free: the container running is the signal, and a crashed worker is
+    # restarted by the policy above. The deploy script additionally checks that
+    # this container is up rather than restarting.
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      media-bucket:
+        condition: service_completed_successfully
+
+  admin:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/admin.Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_MEDIA_ORIGIN: ${NEXT_PUBLIC_MEDIA_ORIGIN}
+        # Mounts the Admin under /admin on the storefront origin, which the
+        # Nginx vhost proxies. Must match the proxy or Admin assets 404.
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/admin}
+    image: iranyaragh/admin:${IMAGE_TAG:-latest}
+    restart: *restart
+    env_file: [.env.staging]
+    environment:
+      NODE_ENV: production
+      PORT: '3001'
+    depends_on:
+      api:
+        condition: service_healthy
+    # No `ports:`. The Admin is only reachable through Nginx on /admin.
+
+  # The only published service: static storefront plus the reverse proxy.
+  web:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/web.Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        # Unconfirmed business data. Leave these empty to publish nothing: the
+        # storefront then states that contact details are not published yet
+        # instead of showing a number nobody confirmed.
+        VITE_SITE_PHONE: ${VITE_SITE_PHONE:-}
+        VITE_SITE_POSTAL_CODE: ${VITE_SITE_POSTAL_CODE:-}
+        VITE_SITE_ADDRESS: ${VITE_SITE_ADDRESS:-}
+        VITE_SITE_EMAIL: ${VITE_SITE_EMAIL:-}
+        VITE_INSTAGRAM_HANDLE: ${VITE_INSTAGRAM_HANDLE:-}
+    image: iranyaragh/web:${IMAGE_TAG:-latest}
+    restart: *restart
+    ports:
+      - '${HTTP_PORT:-80}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  object_store_data:
