@@ -44,6 +44,12 @@ env:
   STAGING_ORIGIN: ${{ vars.STAGING_ORIGIN || 'https://185.211.59.93' }}
   STAGING_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL || format('{0}/api/v1', vars.STAGING_ORIGIN || 'https://185.211.59.93') }}
   STAGING_MEDIA_ORIGIN: ${{ vars.STAGING_MEDIA_ORIGIN || format('{0}/media/products', vars.STAGING_ORIGIN || 'https://185.211.59.93') }}
+  # The subpath the Admin is mounted on. NEXT_PUBLIC_BASE_PATH is a build-time
+  # input to next.config.ts, so an image that is not built with this emits
+  # asset URLs for the wrong prefix and the Admin 404s behind Nginx. Defaults
+  # to the same /admin that storefront-locations.conf proxies and that
+  # .env.staging.example documents.
+  ADMIN_BASE_PATH: ${{ vars.ADMIN_BASE_PATH || '/admin' }}
 
 jobs:
   publish:
@@ -133,6 +139,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_BASE_URL=${{ env.STAGING_API_BASE_URL }}
             NEXT_PUBLIC_MEDIA_ORIGIN=${{ env.STAGING_MEDIA_ORIGIN }}
+            NEXT_PUBLIC_BASE_PATH=${{ env.ADMIN_BASE_PATH }}
           cache-from: type=gha,scope=admin
           cache-to: type=gha,mode=max,scope=admin
 
