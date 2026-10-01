@@ -232,6 +232,28 @@ services:
     restart: *restart
     ports:
       - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+    volumes:
+      # Let's Encrypt IP address certificates, bind-mounted read-only from the
+      # host. The container serves TLS itself, so the certs have to be visible
+      # here rather than terminated by something in front of this service.
+      #
+      # This is also why the stack cannot start before a certificate exists:
+      # `nginx -t` opens the files named by `ssl_certificate`, and a missing one
+      # is a startup failure, not a degraded mode. The first deployment therefore
+      # obtains the certificate with --standalone (nothing is listening on 80
+      # yet) and every later one reuses it.
+      - type: bind
+        source: ${TLS_DIR:-/srv/iranyaragh/tls}
+        target: /etc/nginx/tls
+        read_only: true
+      # Certbot's HTTP-01 challenge directory. Certbot runs on the host and
+      # writes the token here; nginx serves it. Renewal never has to stop the
+      # proxy, which matters because these certificates last only 6 days.
+      - type: bind
+        source: ${ACME_WEBROOT_DIR:-/srv/iranyaragh/acme-webroot}
+        target: /var/www/certbot
+        read_only: true
     depends_on:
       api:
         condition: service_healthy

@@ -36,9 +36,15 @@ env:
   # must be an absolute URL, so it cannot be discovered from inside the
   # container. The values are therefore pinned here and must match the host's
   # .env.staging. Override with repository variables once a real domain exists.
-  STAGING_ORIGIN: ${{ vars.STAGING_ORIGIN || 'http://185.211.59.93' }}
-  STAGING_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL || format('{0}/api/v1', vars.STAGING_ORIGIN || 'http://185.211.59.93') }}
-  STAGING_MEDIA_ORIGIN: ${{ vars.STAGING_MEDIA_ORIGIN || format('{0}/media/products', vars.STAGING_ORIGIN || 'http://185.211.59.93') }}
+  #
+  # https, not http: these are baked into the shipped bundle and the Admin's
+  # browser calls would then be plain http against a host that redirects to
+  # https, which turns every call into a redirect the browser can cancel and
+  # breaks the Admin's CORS preflight. The host serves a Let's Encrypt IP address
+  # certificate on 185.211.59.93, so this is a real origin and not a placeholder.
+  STAGING_ORIGIN: ${{ vars.STAGING_ORIGIN || 'https://185.211.59.93' }}
+  STAGING_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL || format('{0}/api/v1', vars.STAGING_ORIGIN || 'https://185.211.59.93') }}
+  STAGING_MEDIA_ORIGIN: ${{ vars.STAGING_MEDIA_ORIGIN || format('{0}/media/products', vars.STAGING_ORIGIN || 'https://185.211.59.93') }}
 
 jobs:
   publish:

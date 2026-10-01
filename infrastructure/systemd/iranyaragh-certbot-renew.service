@@ -1,0 +1,31 @@
+# Renew the Let's Encrypt IP address certificate twice a day.
+#
+# These certificates are valid for just over six days, which is what makes this
+# file necessary rather than nice-to-have: there is no long-lived certificate for
+# an IP identifier, so an unattended host that never renews lapses within a week.
+#
+# The schedule itself lives in the paired .timer, so there is exactly one place
+# that says when this runs. Twice a day is more often than Certbot's default
+# (built around 90-day certificates) because the window here is six days. `renew`
+# only acts inside the renewal threshold, so running often costs a no-op rather
+# than a rate-limit hit, and Let's Encrypt does not count renewals against its
+# issuance limits.
+#
+# Renewal is deliberately independent of deploy.sh: a certificate has to keep
+# being renewed whether or not anyone deploys.
+
+[Unit]
+Description=Renew the Let's Encrypt IP address certificate
+Documentation=https://letsencrypt.org/2026/03/11/shorter-certs-certbot
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# The script exits non-zero on failure, and systemd records that as a failed unit
+# so `systemctl status certbot-renew.timer` is an honest indicator.
+ExecStart=/opt/iranyaragh/scripts/deploy/ensure-certificate.sh
+
+[Install]
+WantedBy=timers.target
