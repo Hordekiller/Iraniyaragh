@@ -110,11 +110,25 @@ try {
       nodeEnvironment: target.nodeEnvironment,
     });
     console.log(
-      `Applied canonical RBAC baseline: ${result.roleCount} role, ` +
-        `${result.permissionCount} permissions, ${result.rolePermissionCount} grants` +
-        (result.restoredGrantCount > 0
-          ? `, ${result.restoredGrantCount} revoked grant(s) restored.`
-          : "."),
+      `Canonical RBAC baseline present: role ${CANONICAL_SYSTEM_ADMIN_ROLE.key}, ` +
+        `${result.permissionCount} permissions, ${result.rolePermissionCount} grants.`,
+    );
+    // Convergent: a converged re-run reports zero changes and writes no row.
+    const changes = [];
+    if (result.roleChanged) changes.push("role definition repaired");
+    if (result.permissionsRepaired > 0) {
+      changes.push(`${result.permissionsRepaired} permission(s) created or repaired`);
+    }
+    if (result.grantsCreated > 0) {
+      changes.push(`${result.grantsCreated} grant(s) created`);
+    }
+    if (result.grantsRestored > 0) {
+      changes.push(`${result.grantsRestored} revoked grant(s) restored`);
+    }
+    console.log(
+      changes.length === 0
+        ? "No change was needed; the baseline was already converged."
+        : `Changes applied: ${changes.join(", ")}.`,
     );
     console.log(
       `No user, credential or demo data was created. Provision the first administrator with apps/api auth:bootstrap.`,

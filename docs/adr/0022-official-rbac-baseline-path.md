@@ -74,9 +74,20 @@ extra grant on `system-admin` is a deliberate operator decision and silently
 removing it would be a privilege change nobody asked for. `--check` reports such
 grants and leaves them in place.
 
+It is also **convergent**, which is stronger than idempotent: a row that already
+matches the canonical definition is not written at all, so a second run issues no
+UPDATE and leaves `updatedAt` untouched. Prisma's `upsert` always writes, which
+would bump `@updatedAt` on every run and make "did anything actually change?"
+unanswerable from the data — the integration test asserts `updatedAt` stability
+specifically. The apply output reports what changed, and says so explicitly when
+the baseline was already converged.
+
 Each run appends one immutable `rbac.baseline.apply` audit row with `actorId`
 null, because a fixed-id upsert — what the seed uses for CI determinism — would
-overwrite the previous run's audit trail.
+overwrite the previous run's audit trail. The two paths keep **distinct action
+names** (`rbac.baseline.apply` vs the seed's `seed.rbac.baseline`); unifying them
+broke `prisma/tests/seed_baseline.sql`, which asserts the seed marker, and both
+names are now pinned by tests.
 
 **3. `apps/api/prisma/seed-demo-staging.mjs`** with
 `demo-staging-policy.mjs` — staging-only demo data. It rejects `production`,

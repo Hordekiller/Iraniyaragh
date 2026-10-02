@@ -255,7 +255,8 @@ async function writeBaselineAudit(transaction, { auditMode, auditSource, databas
 
   // The staging/production path appends one immutable audit row per run so the
   // baseline has a real trail. The deterministic development seed upserts a
-  // fixed row instead, which is what the two-consecutive-runs CI check needs.
+  // fixed row with the seed's own action name instead, which is the marker
+  // apps/api/prisma/tests/seed_baseline.sql verifies.
   if (auditMode === "append") {
     await transaction.auditLog.create({
       data: {
@@ -272,13 +273,13 @@ async function writeBaselineAudit(transaction, { auditMode, auditSource, databas
     where: { id: "seed_audit_rbac_baseline" },
     create: {
       id: "seed_audit_rbac_baseline",
-      action: "rbac.baseline.apply",
+      action: "seed.rbac.baseline",
       entityId: result.roleId,
       entityType: "Role",
       metadata,
     },
     update: {
-      action: "rbac.baseline.apply",
+      action: "seed.rbac.baseline",
       entityId: result.roleId,
       entityType: "Role",
       metadata,
@@ -289,49 +290,90 @@ async function writeBaselineAudit(transaction, { auditMode, auditSource, databas
 /**
  * Create or reconcile the canonical RBAC baseline inside a single transaction.
  *
- * Idempotent: running it twice leaves identical state. Additive: it never
- * removes a role, permission or grant that is not part of the canonical set,
- * so an operator's deliberate extra grant survives a re-run.
+ * Idempotent *and* convergent: when a row already matches the canonical
+ * definition it is not written at all, so a second run touches no row and leaves
+ * `updatedAt` untouched. Prisma's `upsert` always issues an UPDATE, which would
+ * bump `@updatedAt` on every run and make "did anything actually change?"
+ * unanswerable from the data.
+ *
+ * Additive: it never removes a role, permission or grant that is not part of the
+ * canonical set, so an operator's deliberate extra grant survives a re-run.
  */
 export async function reconcileRbacBaseline(prisma, options = {}) {
   const { auditMode = "deterministic", auditSource = "unknown", databaseName = "unknown", nodeEnvironment = "unknown" } = options;
   assertCanonicalIntegrity();
 
+  const canonicalRole = {
+    description: CANONICAL_SYSTEM_ADMIN_ROLE.description,
+    isActive: true,
+    isSystem: true,
+    name: CANONICAL_SYSTEM_ADMIN_ROLE.name,
+  };
+
   return prisma.$transaction(async (transaction) => {
-    const role = await transaction.role.upsert({
+    const changes = { grantsCreated: 0, grantsRestored: 0, permissionsRepaired: 0, roleChanged: false };
+
+    const existingRole = await transaction.role.findUnique({
       where: { key: CANONICAL_SYSTEM_ADMIN_ROLE.key },
-      update: {
-        description: CANONICAL_SYSTEM_ADMIN_ROLE.description,
-        isActive: true,
-        isSystem: true,
-        name: CANONICAL_SYSTEM_ADMIN_ROLE.name,
-      },
-      create: {
-        key: CANONICAL_SYSTEM_ADMIN_ROLE.key,
-        description: CANONICAL_SYSTEM_ADMIN_ROLE.description,
-        isActive: true,
-        isSystem: true,
-        name: CANONICAL_SYSTEM_ADMIN_ROLE.name,
-      },
+      // Select the canonical field names, not their values: spreading
+      // `canonicalRole` here would put strings into the `select` argument.
+      select: { id: true, ...Object.fromEntries(Object.keys(canonicalRole).map(field => [field, true])) },
     });
+
+    let role;
+    if (!existingRole) {
+      role = await transaction.role.create({
+        data: { key: CANONICAL_SYSTEM_ADMIN_ROLE.key, ...canonicalRole },
+      });
+      changes.roleChanged = true;
+    } else {
+      changes.roleChanged = Object.keys(canonicalRole).some(
+        field => existingRole[field] !== canonicalRole[field],
+      );
+      role = changes.roleChanged
+        ? await transaction.role.update({ where: { id: existingRole.id }, data: canonicalRole })
+        : existingRole;
+    }
 
     const permissions = [];
     for (const canonical of CANONICAL_PERMISSIONS) {
+      const existing = await transaction.permission.findUnique({
+        where: { key: canonical.key },
+        select: { id: true, name: true, group: true, description: true, isActive: true },
+      });
+
+      if (!existing) {
+        permissions.push(
+          await transaction.permission.create({ data: { ...canonical, isActive: true } }),
+        );
+        changes.permissionsRepaired += 1;
+        continue;
+      }
+
+      const drifted =
+        existing.name !== canonical.name ||
+        existing.group !== canonical.group ||
+        existing.description !== canonical.description ||
+        existing.isActive !== true;
+
       permissions.push(
-        await transaction.permission.upsert({
-          where: { key: canonical.key },
-          update: {
-            description: canonical.description,
-            group: canonical.group,
-            isActive: true,
-            name: canonical.name,
-          },
-          create: { ...canonical, isActive: true },
-        }),
+        drifted
+          ? await transaction.permission.update({
+              where: { key: canonical.key },
+              data: {
+                description: canonical.description,
+                group: canonical.group,
+                isActive: true,
+                name: canonical.name,
+              },
+            })
+          : existing,
       );
+      if (drifted) {
+        changes.permissionsRepaired += 1;
+      }
     }
 
-    let restoredGrantCount = 0;
     for (const permission of permissions) {
       // A canonical grant that was revoked is restored rather than left missing:
       // the baseline is the system requirement, and a revoked canonical grant is
@@ -342,21 +384,27 @@ export async function reconcileRbacBaseline(prisma, options = {}) {
         },
         select: { id: true, revokedAt: true },
       });
-      if (existing?.revokedAt) {
-        restoredGrantCount += 1;
+
+      if (!existing) {
+        await transaction.rolePermission.create({
+          data: { permissionId: permission.id, roleId: role.id },
+        });
+        changes.grantsCreated += 1;
+        continue;
       }
-      await transaction.rolePermission.upsert({
-        where: {
-          roleId_permissionId: { permissionId: permission.id, roleId: role.id },
-        },
-        update: { revokeReason: null, revokedAt: null, revokedById: null },
-        create: { permissionId: permission.id, roleId: role.id },
-      });
+      if (existing.revokedAt) {
+        await transaction.rolePermission.update({
+          where: { id: existing.id },
+          data: { revokeReason: null, revokedAt: null, revokedById: null },
+        });
+        changes.grantsRestored += 1;
+      }
     }
 
     const result = {
+      ...changes,
       permissionCount: permissions.length,
-      restoredGrantCount,
+      restoredGrantCount: changes.grantsRestored,
       roleCount: 1,
       roleId: role.id,
       rolePermissionCount: permissions.length,

@@ -128,6 +128,15 @@ describe("RBAC baseline path scope", () => {
     assert.match(source, /revokedAt: null/u);
     assert.match(source, /revokeReason: null/u);
   });
+
+  it("keeps the seed audit marker and the operator apply action distinct", () => {
+    // prisma/tests/seed_baseline.sql asserts id + action = seed.rbac.baseline.
+    // Sharing one action name between the two paths silently broke that
+    // contract once, so pin both names here.
+    const source = code("rbac-baseline.mjs");
+    assert.match(source, /"seed\.rbac\.baseline"/u);
+    assert.match(source, /"rbac\.baseline\.apply"/u);
+  });
 });
 
 describe("demo catalog scope", () => {

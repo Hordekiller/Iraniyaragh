@@ -24,6 +24,10 @@ const enabled = process.env.RBAC_BASELINE_INTEGRATION === "true";
 const test = enabled ? it : it.skip;
 const AUDIT_SOURCE = "rbac-baseline-integration-test";
 const runId = randomUUID().replaceAll("-", "").slice(0, 12);
+// Permission keys must satisfy Permission_key_format_check: every dot-separated
+// segment starts with a lowercase letter. Map hex digits to letters so the
+// random suffix stays unique without breaking that format.
+const keySuffix = runId.replace(/\d/gu, "a");
 
 const prisma = new PrismaClient();
 
@@ -73,70 +77,100 @@ describe("official RBAC baseline path against a real database", () => {
     const after = await snapshot();
 
     assert.equal(second.restoredGrantCount, 0);
-    assert.deepEqual(
-      { ...after, roleId: before.roleId },
-      { ...before, roleId: before.roleId },
-    );
+    assert.equal(second.grantsCreated, 0);
+    assert.equal(second.grantsRestored, 0);
+    assert.equal(second.roleChanged, false);
+    assert.equal(second.permissionsRepaired, 0);
+
+    // Convergence, not just equal content: a converged re-run must write no row
+    // at all, so `updatedAt` is untouched. Prisma's upsert would have bumped it.
+    assert.deepEqual(after, before);
+
     // A third run must still be a no-op, proving convergence rather than a
     // one-off coincidence.
     await apply();
-    assert.deepEqual(await snapshot(), after);
+    assert.deepEqual(await snapshot(), before);
   });
 
-  test("restores a revoked canonical grant", async () => {
+test("restores a revoked canonical grant", async () => {
     const role = await prisma.role.findUniqueOrThrow({
       where: { key: CANONICAL_SYSTEM_ADMIN_ROLE.key },
     });
-    const permission = await prisma.permission.findUniqueOrThrow({
-      where: { key: CANONICAL_PERMISSION_KEYS[0] },
-    });
-    await prisma.rolePermission.update({
-      where: {
-        roleId_permissionId: { permissionId: permission.id, roleId: role.id },
-      },
-      data: { revokedAt: new Date(), revokeReason: "integration drift" },
-    });
+    const key = CANONICAL_PERMISSION_KEYS[0];
+    const permission = await prisma.permission.findUniqueOrThrow({ where: { key } });
 
-    const result = await apply();
-    assert.equal(result.restoredGrantCount, 1);
+    try {
+      await prisma.rolePermission.update({
+        where: {
+          roleId_permissionId: { permissionId: permission.id, roleId: role.id },
+        },
+        data: { revokedAt: new Date(), revokeReason: "integration drift" },
+      });
 
-    const grant = await prisma.rolePermission.findUniqueOrThrow({
-      where: {
-        roleId_permissionId: { permissionId: permission.id, roleId: role.id },
-      },
-    });
-    assert.equal(grant.revokedAt, null);
-    assert.equal(grant.revokeReason, null);
-    assert.equal((await inspectRbacBaseline(prisma)).ok, true);
+      const result = await apply();
+      assert.equal(result.grantsRestored, 1);
+
+      const grant = await prisma.rolePermission.findUniqueOrThrow({
+        where: {
+          roleId_permissionId: { permissionId: permission.id, roleId: role.id },
+        },
+      });
+      assert.equal(grant.revokedAt, null);
+      assert.equal(grant.revokeReason, null);
+      assert.equal((await inspectRbacBaseline(prisma)).ok, true);
+    } finally {
+      // Restore directly rather than through apply(), so a failed assertion
+      // cannot leave canonical state corrupted for the next run.
+      await prisma.rolePermission.updateMany({
+        where: { roleId: role.id, permissionId: permission.id },
+        data: { revokedAt: null, revokeReason: null, revokedById: null },
+      });
+    }
   });
 
-  test("reactivates and repairs a drifted permission and role", async () => {
+test("reactivates and repairs a drifted permission and role", async () => {
     const key = CANONICAL_PERMISSION_KEYS[1];
-    await prisma.permission.update({
-      where: { key },
-      data: { isActive: false, name: "Tampered name" },
-    });
+    const canonical = CANONICAL_PERMISSIONS[1];
     const role = await prisma.role.findUniqueOrThrow({
       where: { key: CANONICAL_SYSTEM_ADMIN_ROLE.key },
     });
-    await prisma.role.update({
+    const originalPermission = await prisma.permission.findUniqueOrThrow({
+      where: { key },
+      select: { name: true, group: true, description: true, isActive: true },
+    });
+    const originalRole = await prisma.role.findUniqueOrThrow({
       where: { id: role.id },
-      data: { description: "Tampered", isActive: false },
+      select: { name: true, description: true, isActive: true, isSystem: true },
     });
 
-    const drift = await inspectRbacBaseline(prisma);
-    assert.equal(drift.ok, false);
+    try {
+      await prisma.permission.update({
+        where: { key },
+        data: { isActive: false, name: "Tampered name" },
+      });
+      await prisma.role.update({
+        where: { id: role.id },
+        data: { description: "Tampered", isActive: false },
+      });
 
-    await apply();
+      const drift = await inspectRbacBaseline(prisma);
+      assert.equal(drift.ok, false, "tampering must be detected");
+      assert.deepEqual(drift.driftedPermissions, [{ drift: "inactive", key }]);
 
-    const repaired = await prisma.permission.findUniqueOrThrow({ where: { key } });
-    assert.equal(repaired.isActive, true);
-    assert.equal(repaired.name, CANONICAL_PERMISSIONS[1].name);
-    const repairedRole = await prisma.role.findUniqueOrThrow({ where: { id: role.id } });
-    assert.equal(repairedRole.isActive, true);
-    assert.equal(repairedRole.isSystem, true);
-    assert.equal(repairedRole.description, CANONICAL_SYSTEM_ADMIN_ROLE.description);
-    assert.equal((await inspectRbacBaseline(prisma)).ok, true);
+      await apply();
+
+      const repaired = await prisma.permission.findUniqueOrThrow({ where: { key } });
+      assert.equal(repaired.isActive, true);
+      assert.equal(repaired.name, canonical.name);
+      const repairedRole = await prisma.role.findUniqueOrThrow({ where: { id: role.id } });
+      assert.equal(repairedRole.isActive, true);
+      assert.equal(repairedRole.isSystem, true);
+      assert.equal(repairedRole.description, CANONICAL_SYSTEM_ADMIN_ROLE.description);
+      assert.equal((await inspectRbacBaseline(prisma)).ok, true);
+    } finally {
+      await prisma.permission.update({ where: { key }, data: originalPermission });
+      await prisma.role.update({ where: { id: role.id }, data: originalRole });
+    }
   });
 
   test("never removes a non-canonical grant an operator added", async () => {
@@ -145,32 +179,38 @@ describe("official RBAC baseline path against a real database", () => {
     });
     const permission = await prisma.permission.create({
       data: {
-        key: `zz.integration.${runId}`,
+        key: `zz.integration.${keySuffix}`,
         name: "Operator-added integration permission",
         group: "integration",
         description: "Created by the RBAC baseline integration test.",
       },
     });
-    await prisma.rolePermission.create({
-      data: { permissionId: permission.id, roleId: role.id },
-    });
 
-    const result = await apply();
-    assert.equal(result.restoredGrantCount, 0);
+    try {
+      await prisma.rolePermission.create({
+        data: { permissionId: permission.id, roleId: role.id },
+      });
 
-    const drift = await inspectRbacBaseline(prisma);
-    assert.equal(drift.ok, true, "an extra grant is not baseline drift");
-    assert.deepEqual(drift.extraGrantKeys, [permission.key]);
+      const result = await apply();
+      assert.equal(result.grantsRestored, 0);
+      assert.equal(result.grantsCreated, 0, "an existing grant is not recreated");
 
-    const grant = await prisma.rolePermission.findUniqueOrThrow({
-      where: {
-        roleId_permissionId: { permissionId: permission.id, roleId: role.id },
-      },
-    });
-    assert.ok(grant.id, "the operator grant survived the reconcile");
+      const drift = await inspectRbacBaseline(prisma);
+      assert.equal(drift.ok, true, "an extra grant is not baseline drift");
+      assert.deepEqual(drift.extraGrantKeys, [permission.key]);
 
-    await prisma.rolePermission.delete({ where: { id: grant.id } });
-    await prisma.permission.delete({ where: { id: permission.id } });
+      const grant = await prisma.rolePermission.findUniqueOrThrow({
+        where: {
+          roleId_permissionId: { permissionId: permission.id, roleId: role.id },
+        },
+      });
+      assert.ok(grant.id, "the operator grant survived the reconcile");
+    } finally {
+      // Cleanup in a finally so a failed assertion cannot leak a fixture into a
+      // later run and cascade into unrelated failures.
+      await prisma.rolePermission.deleteMany({ where: { permissionId: permission.id } });
+      await prisma.permission.delete({ where: { id: permission.id } });
+    }
   });
 
   test("writes one immutable audit row per apply, never a user", async () => {
@@ -194,6 +234,24 @@ describe("official RBAC baseline path against a real database", () => {
 
   test("created no user and no credential", async () => {
     assert.equal(await prisma.user.count(), 0);
+  });
+
+  test("uses a distinct audit action per path, keeping the seed marker intact", async () => {
+    // The deterministic development seed marker is the contract that
+    // prisma/tests/seed_baseline.sql verifies, so the two paths must not share
+    // an action name.
+    const deterministic = await prisma.auditLog.findUniqueOrThrow({
+      where: { id: "seed_audit_rbac_baseline" },
+    });
+    assert.equal(deterministic.action, "seed.rbac.baseline");
+
+    await apply();
+    const appended = await prisma.auditLog.findFirstOrThrow({
+      where: { metadata: { path: ["source"], equals: AUDIT_SOURCE } },
+      orderBy: { createdAt: "desc" },
+    });
+    assert.equal(appended.action, "rbac.baseline.apply");
+    assert.notEqual(appended.action, deterministic.action);
   });
 
   test("cleans up the audit rows it appended", async () => {
