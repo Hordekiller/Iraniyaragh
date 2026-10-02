@@ -75,6 +75,8 @@ function farsiError(error: unknown): string {
         return 'هم‌زمانی روی این حساب رخ داد. دوباره تلاش کنید.';
       case 'VALIDATION_ERROR':
         return 'کد تایید باید ۶ رقم باشد.';
+      case 'INVALID_REQUEST':
+        return 'اطلاعات ورود معتبر نیست. رمز عبور باید بین ۱۵ تا ۱۲۸ نویسه باشد.';
       case 'AUTH_CSRF_INVALID':
       case 'UPSTREAM_UNAVAILABLE':
       case 'INTERNAL_ERROR':
@@ -195,6 +197,12 @@ export class StaffLoginController {
     if (!identifier || !password) {
       this.end('password');
       this.patch({ error: 'شناسه و رمز عبور را وارد کنید.' });
+      return;
+    }
+    const passwordLength = Array.from(password).length;
+    if (passwordLength < 15 || passwordLength > 128) {
+      this.end('password');
+      this.patch({ error: 'رمز عبور باید بین ۱۵ تا ۱۲۸ نویسه باشد.' });
       return;
     }
 
