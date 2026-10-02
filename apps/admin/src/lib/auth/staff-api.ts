@@ -19,6 +19,7 @@ export type StaffAuthErrorCode =
   | 'FORBIDDEN'
   | 'RATE_LIMITED'
   | 'VALIDATION_ERROR'
+  | 'INVALID_REQUEST'
   | 'UPSTREAM_UNAVAILABLE'
   /** A concurrent write on the same account lost the race; retrying succeeds. */
   | 'CONFLICT'

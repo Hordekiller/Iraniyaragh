@@ -167,7 +167,8 @@ export function PasswordStep({
         onChange={event => controller.setPassword(event.target.value)}
         disabled={state.busy}
         error={state.error !== null}
-        inputProps={{ 'aria-label': 'رمز عبور' }}
+        helperText="رمز عبور باید بین ۱۵ تا ۱۲۸ نویسه باشد."
+        slotProps={{ htmlInput: { 'aria-label': 'رمز عبور', maxLength: 128 } }}
         sx={{ mb: 2 }}
       />
 

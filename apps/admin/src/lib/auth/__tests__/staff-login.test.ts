@@ -88,6 +88,30 @@ describe('StaffLoginController password step', () => {
     expect(state.error).toBe('شناسه یا رمز عبور نادرست است.');
   });
 
+  it('explains invalid password input instead of reporting a server outage', async () => {
+    const api: StaffAuthApi = {
+      passwordRequest: async () => {
+        throw new StaffAuthError({
+          code: 'INVALID_REQUEST',
+          message: 'password must be longer than or equal to 15 characters',
+          statusCode: 400,
+        });
+      },
+      totpVerify: async () => { throw new Error('unused'); },
+      me: async () => { throw new Error('unused'); },
+      logout: async () => {},
+    };
+    const controller = new StaffLoginController(api, memoryTokenStore());
+    controller.open();
+    controller.setIdentifier(IDENTIFIER);
+    controller.setPassword('short-password');
+
+    await controller.submitPassword();
+
+    expect(controller.getState().phase).toBe('password');
+    expect(controller.getState().error).toBe('اطلاعات ورود معتبر نیست. رمز عبور باید بین ۱۵ تا ۱۲۸ نویسه باشد.');
+  });
+
   it('moves to the totp step and stashes the challenge on success', async () => {
     const { controller } = makeFlow();
     controller.open();

@@ -123,6 +123,7 @@ export class StaffAuthHttpClient implements StaffAuthApi {
     'FORBIDDEN',
     'RATE_LIMITED',
     'VALIDATION_ERROR',
+    'INVALID_REQUEST',
   ]);
 
   private mapError(error: unknown): StaffAuthError {
