@@ -291,9 +291,16 @@ deletes a grant an operator added on purpose — a non-canonical grant is report
 ### 2. Provision the first administrator
 
 ```bash
-cd /opt/iranyaragh/apps/api
-pnpm --filter @iranyaragh/api auth:bootstrap -- --confirm
+cd /opt/iranyaragh/infrastructure/docker
+docker compose --env-file .env.staging -f compose.staging.yml run --rm \
+  api node scripts/bootstrap-admin.mjs --confirm
 ```
+
+It runs in a one-shot container from the release image, like step 1, so the exact
+deployed artifact creates the administrator. It is `node scripts/bootstrap-admin.mjs`,
+**not** `pnpm auth:bootstrap`: the deployment host has no Node or pnpm, because
+"the deployment host never builds" — images are pulled, never compiled. Do not type
+`--no-deps` here; the container needs the `postgres` service this script reads from.
 
 This one is genuinely interactive. It refuses to run without a TTY by design, it
 reads the password without echo, and it will not accept a password outside 15–128

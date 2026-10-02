@@ -28,7 +28,14 @@
 
 set -Eeuo pipefail
 
-INFRA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../infrastructure/docker" && pwd)"
+# Resolved to an absolute path before any `cd`, because `BASH_SOURCE` is
+# whatever path the operator typed. deploy.sh moves to the repository root
+# further down, so a relative `dirname "${BASH_SOURCE[0]}"` would be resolved
+# against the wrong directory afterwards. ensure-certificate.sh already does
+# this; deploy.sh did not, which broke the documented `../../scripts/deploy/deploy.sh`
+# invocation with "backup-postgres.sh: No such file or directory".
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INFRA_DIR="$(cd "${SCRIPT_DIR}/../../infrastructure/docker" && pwd)"
 COMPOSE_FILE="${INFRA_DIR}/compose.staging.yml"
 ENV_FILE="${ENV_FILE:-${INFRA_DIR}/.env.staging}"
 BACKUP_DIR="${BACKUP_DIR:-${INFRA_DIR}/backups}"
@@ -41,7 +48,13 @@ compose() { docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"; }
 [[ -f "${ENV_FILE}" ]] || fail "missing ${ENV_FILE}. Copy .env.staging.example and fill in real values."
 command -v docker >/dev/null || fail "docker is not installed."
 
-cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)" || fail "not inside a repository."
+# Must be run from inside the checkout: NEW_TAG below is read from HEAD, and the
+# ancestor check that follows exists so a host can never deploy an unreviewed
+# commit. Reported here, with the command to run, rather than as a bare
+# `fatal: not a git repository` escaping from git several lines further down.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" \
+  || fail "not inside a git checkout. Run it from the repository, for example: cd /opt/iranyaragh && ./scripts/deploy/deploy.sh"
+cd "${REPO_ROOT}"
 
 # The release is the full commit SHA, never a short SHA and never a branch name,
 # because that is the only tag CI publishes and the only tag compose accepts.
@@ -90,7 +103,7 @@ if [[ -z "${PREVIOUS_WEB_ID}" ]]; then
   log "No running stack: first deploy, so there is no database to back up yet"
 else
   log "Backing up the database and media objects before migrating"
-  "$(dirname "${BASH_SOURCE[0]}")/backup-postgres.sh" || fail "pre-migrate backup failed; refusing to migrate."
+  "${SCRIPT_DIR}/backup-postgres.sh" || fail "pre-migrate backup failed; refusing to migrate."
 fi
 
 log "Pulling images for ${NEW_TAG}"
