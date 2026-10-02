@@ -124,6 +124,23 @@ jobs:
           psql "$PSQL_DATABASE_URL"
           --set ON_ERROR_STOP=1
           --file apps/api/prisma/tests/seed_baseline.sql
+      - name: Verify the official RBAC baseline path refuses a disposable database
+        run: |
+          # The staging/production path is fenced to non-disposable databases, so
+          # running it here must fail. This keeps the fence honest in CI instead
+          # of only asserting it in unit tests.
+          if ALLOW_RBAC_BASELINE=true NODE_ENV=staging \
+            pnpm --filter @iranyaragh/api rbac:baseline -- --apply 2>/dev/null; then
+            echo "::error::The RBAC baseline path must not run against a _test database"
+            exit 1
+          fi
+          echo "Guard correctly refused the disposable test database."
+      - name: Verify official RBAC baseline idempotency and reconcile
+        env:
+          RBAC_BASELINE_INTEGRATION: "true"
+        run: >-
+          pnpm --filter @iranyaragh/api exec
+          node --test prisma/rbac-baseline.integration.test.mjs
       - name: Run database integration tests
         run: pnpm test:integration
 

@@ -231,6 +231,101 @@ become healthy, and verifies the public entry point over HTTPS against the real
 origin name, so a certificate that is valid for something other than the
 configured public origin fails the deploy.
 
+## Provisioning the RBAC baseline and the first administrator
+
+A fresh staging/production database has **no roles at all**. Migrations only grant
+new permissions to an already-existing `system-admin`; they never create one. So
+two separate operator steps are required after `migrate` and before anyone can sign
+in, and `auth:bootstrap` refuses to start until the first of them has run.
+
+These two paths are deliberately narrow and are the only supported way to reach
+either environment. The development seed is *not* one of them, and its guard is
+untouched.
+
+| Step | Command | Creates | Allowed in |
+| --- | --- | --- | --- |
+| 1. RBAC baseline | `rbac:baseline -- --apply` | canonical `Role`/`Permission`/`RolePermission` + one audit row | staging, production |
+| 2. First admin | `auth:bootstrap -- --confirm` | one staff user with password, TOTP secret and 10 recovery codes | any, in a TTY |
+
+### 1. Apply and verify the canonical RBAC baseline
+
+Run it in a one-shot container that has the release image, so the exact deployed
+artifact performs the write:
+
+```bash
+cd /opt/iranyaragh/infrastructure/docker
+docker compose --env-file .env.staging -f compose.staging.yml run --rm --no-deps \
+  api node prisma/apply-rbac-baseline.mjs --apply
+```
+
+It requires `ALLOW_RBAC_BASELINE=true` and `NODE_ENV=staging` (or `production`).
+Add it to `.env.staging` so the authorization is recorded with the deployment:
+
+```dotenv
+ALLOW_RBAC_BASELINE=true
+```
+
+In `production` it also requires a second, deliberate acknowledgement:
+
+```bash
+RBAC_BASELINE_CONFIRM_PRODUCTION=apply-canonical-rbac-baseline
+```
+
+Then verify with the read-only gate, which performs no writes and exits non-zero
+on any drift:
+
+```bash
+docker compose --env-file .env.staging -f compose.staging.yml run --rm --no-deps \
+  api node prisma/apply-rbac-baseline.mjs --check
+```
+
+Both commands print only the target database name and counts. Neither ever prints
+`DATABASE_URL` or any secret.
+
+Re-running `--apply` is safe at any time. It is additive and idempotent: it creates
+what is missing, reactivates a deactivated canonical permission, restores a
+revoked canonical grant, and repairs a drifted name or description. It never
+deletes a grant an operator added on purpose — a non-canonical grant is reported by
+`--check` and left alone, because that is an operator decision rather than drift.
+
+### 2. Provision the first administrator
+
+```bash
+cd /opt/iranyaragh/apps/api
+pnpm --filter @iranyaragh/api auth:bootstrap -- --confirm
+```
+
+This one is genuinely interactive. It refuses to run without a TTY by design, it
+reads the password without echo, and it will not accept a password outside 15–128
+characters. Before it prompts for anything it checks that the `system-admin` role
+exists and prints the exact `--apply` command above if it does not, so you are
+never asked for a secret only to fail later.
+
+It then generates a TOTP secret, prints it and an `otpauth://` URI **once**, and
+waits for a current code from your authenticator app before it commits. Enter the
+secret into Google Authenticator (or any TOTP app) *before* typing the code — a
+code is only useful once the secret is enrolled, and codes rotate every 30
+seconds. The 10 recovery codes are printed once at the end and are not
+recoverable.
+
+### Demo data on staging (optional, separate)
+
+Staging may want catalog rows to look like a shop. That is a different, explicitly
+staged operation and never part of the RBAC baseline:
+
+```bash
+cd /opt/iranyaragh/infrastructure/docker
+docker compose --env-file .env.staging -f compose.staging.yml run --rm --no-deps \
+  api node prisma/seed-demo-staging.mjs --confirm
+```
+
+It requires `ALLOW_DEMO_STAGING_DATA=true` and `NODE_ENV=staging`, and is rejected
+in production, development and test, so demo rows cannot reach CI or a real
+environment. It creates catalog, pricing, warehouse, location and opening
+inventory only. It deliberately creates **no** order, payment, payment confirmation
+or SMS delivery success — see the provider note below for why a fabricated success
+row is worse than no row at all.
+
 ## Ordering guarantees
 
 - **Migrate before traffic.** `migrate` runs `prisma migrate deploy` as a
@@ -243,6 +338,11 @@ configured public origin fails the deploy.
   on every long-running service, so a host reboot recovers without manual steps.
 - **The media bucket is reconciled, not assumed.** `media-bucket` runs before
   the media worker and is idempotent.
+- **RBAC before sign-in.** A fresh database has no roles. The operator applies the
+  canonical baseline (`rbac:baseline -- --apply`) and `auth:bootstrap` refuses to
+  start until `system-admin` exists, so the first administrator is never stranded
+  by a half-provisioned database. See "Provisioning the RBAC baseline and the
+  first administrator" above.
 - **The media worker is checked by state, not by an HTTP probe.** It consumes
   BullMQ queues and never binds a port, so the API image's liveness endpoint
   cannot apply to it. Its healthcheck is disabled and `deploy.sh` asserts the
@@ -263,6 +363,10 @@ These are not conventions to remember. Each one fails a build or a boot:
 | Real secrets | API refuses staging/production secrets shorter than 32 characters or containing a placeholder |
 | https public origins | API rejects `http` for `STOREFRONT_ORIGIN` and `PUBLIC_MEDIA_ORIGIN` |
 | Genuine health | `/api/v1/health/ready` checks Postgres and Redis; liveness alone is not used to accept traffic |
+| RBAC baseline only on staging/production | `rbac-baseline-policy.mjs` rejects any other `NODE_ENV`, requires `ALLOW_RBAC_BASELINE=true`, adds a second confirmation for production, and refuses a `_test`/`_dev` database |
+| No user in the RBAC path | `prisma/rbac-baseline.mjs` writes only `Role`/`Permission`/`RolePermission`/`AuditLog`; asserted by `rbac-baseline.test.mjs` and `bootstrap-artifact-scan.spec.ts` |
+| No demo row in the RBAC path | same assertions reject every demo identifier in the baseline path; demo data exists only behind `NODE_ENV=staging` |
+| No fabricated payment/SMS success | demo path stops at catalog/inventory and touches no order, payment or notification model |
 
 The deliberate consequence: **staging cannot be made to look successful with
 fake providers.** There is no staging payment mode that returns success.
@@ -289,7 +393,7 @@ mismatch reach the `PAYMENT_PROVIDER_DISABLED` path.
 A deploy with either provider disabled has **not** passed payment or SMS
 acceptance, and the runbook's remaining steps do not substitute for it. Before
 enabling real sales, set the mode to `live`/`smsir` with real credentials and
-complete steps 4 and 5 of the acceptance list.
+complete steps 5 and 6 of the acceptance list.
 
 ## Acceptance before calling a deploy done
 
@@ -299,32 +403,36 @@ Run against the real host, not localhost assumptions:
 2. The storefront loads over https and shows a real catalog. With no
    `VITE_SITE_*` values it shows "contact information is not published yet" and
    renders no `tel:` link — that is the correct unconfigured state, not a bug.
-3. A staff operator signs in at `/admin` with a real password and TOTP, through
+3. The canonical RBAC baseline is applied and then verified with the read-only
+   gate — `rbac:baseline -- --apply`, then `rbac:baseline -- --check`. A fresh
+   database must be able to reach "role `system-admin`, all permissions granted"
+   before any sign-in is attempted.
+4. A staff operator signs in at `/admin` with a real password and TOTP, through
    the TTY bootstrap (`pnpm --filter @iranyaragh/api auth:bootstrap -- --confirm`).
    The bootstrap refuses to run without a TTY by design.
-4. A product draft is created, an image uploaded, and the image becomes `READY`.
-5. A real customer order is placed and reaches `PENDING_PAYMENT`. Do **not**
+5. A product draft is created, an image uploaded, and the image becomes `READY`.
+6. A real customer order is placed and reaches `PENDING_PAYMENT`. Do **not**
    assert a successful payment without a real Zarinpal callback. With
    `PAYMENT_PROVIDER_MODE=disabled` this step stops at the gateway refusal, which
    is the expected outcome rather than a skipped check.
-6. `docker compose ... restart` and a host reboot are survivable: containers
+7. `docker compose ... restart` and a host reboot are survivable: containers
    return on their own and volumes persist.
-7. A backup is restored into a scratch database and the row counts are compared.
+8. A backup is restored into a scratch database and the row counts are compared.
    An unverified backup is not a backup.
-8. The certificate is checked from outside, not just from the host: a browser
+9. The certificate is checked from outside, not just from the host: a browser
    or `curl` to the public origin shows no warning, and
    `curl -sS https://<host>/` does not redirect to itself. Then the renewal timer
    is confirmed armed and a forced renewal succeeds:
    `ensure-certificate.sh --force`.
-9. A published product image is fetched through its public URL
-   (`https://<host>/media/<bucket>/<key>`), and it comes back with its real
-   `Content-Type`. A `200` with `application/octet-stream` means the Nginx
-   `/media/` rewrite or the bucket policy is wrong even though bytes are
-   flowing, and it is worth checking explicitly.
-10. An object backup is restored into a scratch bucket and one image is fetched
-   from it. This proves the metadata in the manifest survives the round trip,
-   not just the bytes.
-11. A rollback to the previous image tag is exercised once before production.
+10. A published product image is fetched through its public URL
+    (`https://<host>/media/<bucket>/<key>`), and it comes back with its real
+    `Content-Type`. A `200` with `application/octet-stream` means the Nginx
+    `/media/` rewrite or the bucket policy is wrong even though bytes are
+    flowing, and it is worth checking explicitly.
+11. An object backup is restored into a scratch bucket and one image is fetched
+    from it. This proves the metadata in the manifest survives the round trip,
+    not just the bytes.
+12. A rollback to the previous image tag is exercised once before production.
 
 ## Blockers to clear before this can reach a real host
 

@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import argon2 from 'argon2';
 import { generateSecret, generateURI, verify } from 'otplib';
 import { createFirstAdministrator } from './bootstrap-admin-core.mjs';
+import { assertSystemAdminRolePresent } from '../prisma/rbac-baseline.mjs';
 
 const PASSWORD_MIN_LENGTH = 15;
 const PASSWORD_MAX_LENGTH = 128;
@@ -25,6 +26,12 @@ const hashSecret = required('AUTH_HASH_SECRET');
 const encryptionKey = decodeKey(required('AUTH_TOTP_ENCRYPTION_KEY'));
 
 try {
+  // Formal prerequisite of this path. The canonical RBAC baseline is applied
+  // separately (apps/api rbac:baseline) and this read-only check runs before any
+  // secret is requested, so a fresh database fails with the exact remediation
+  // command instead of stranding a half-entered password in the terminal.
+  await assertSystemAdminRolePresent(prisma);
+
   const email = (await question('Administrator email: ')).trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/u.test(email)) throw new Error('A valid email is required.');
   const password = await hidden('Password: ');
