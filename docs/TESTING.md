@@ -89,7 +89,18 @@ databases: `iraniyaragh_ci_test` and `ci_shadow_test`. It fails when:
 - a PostgreSQL Auth, lifecycle-state or money-migration invariant accepts invalid
   data;
 - either of two consecutive deterministic seed runs fails or their RBAC baseline
-  does not match the verified permission/role/grant contract;
+    does not match the verified permission/role/grant contract;
+- the official `rbac:baseline` path accepts an environment other than
+    staging/production, runs without an explicit opt-in, runs against a `_test` or
+    `_dev` database, or writes without an explicit `--check`/`--apply`;
+- `rbac:baseline -- --apply` is not idempotent, fails to restore a revoked
+    canonical grant, fails to reactivate or repair a drifted permission/role, or
+    removes a non-canonical operator grant (`prisma/rbac-baseline.integration.test.mjs`,
+    enabled with `RBAC_BASELINE_INTEGRATION=true` in the CI `database` job);
+- the RBAC or demo path creates a user, credential, or any demo/order/payment/SMS
+    row (`rbac-baseline.test.mjs`, `bootstrap-artifact-scan.spec.ts`);
+- `auth:bootstrap` prompts for an email, password or TOTP code before verifying the
+    `system-admin` role prerequisite;
 - an integration test violates transaction or idempotency expectations.
 
 Inventory database coverage proves sequential and concurrent idempotency behavior,

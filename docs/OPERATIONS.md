@@ -196,7 +196,7 @@ credentials; do not copy a production `DATABASE_URL` into a developer shell.
 ### Development/test seed
 
 The deterministic seed is deliberately separate from deployment. It creates the
-25 canonical permission definitions, a `system-admin` role, its active grants and
+35 canonical permission definitions, a `system-admin` role, its active grants and
 one safe bootstrap audit marker. It never creates a user, password, session, OTP,
 customer or other PII-bearing fixture. A privileged user must later be created by a
 separate authenticated bootstrap workflow; default admin credentials are forbidden.
@@ -224,6 +224,59 @@ The `payments.reconcile` permission is also registered by forward migration
 `20260925121000_payment_reconciliation_permission` in every environment. An
 existing system-admin role receives the grant; other staff roles require an
 explicit, audited operator grant. Deployment never runs the development seed.
+
+### Three provisioning paths, not one seed
+
+The single development seed cannot reach staging or production by design, and
+that left a real gap: **migrations grant permissions to an existing `system-admin`
+but never create one, so a fresh staging/production database had zero roles and
+`auth:bootstrap` could never succeed.** There are now three explicit paths, and
+only the right one applies in a given environment:
+
+| Path | Command | Environment | Creates |
+| --- | --- | --- | --- |
+| Development/test seed | `prisma:seed` | `NODE_ENV=development` or `test`, guarded by `seed-policy.mjs` | RBAC baseline + demo catalog |
+| Canonical RBAC baseline | `rbac:baseline -- --apply` / `--check` | `NODE_ENV=staging` or `production` | RBAC baseline only |
+| Staging demo data | `demo:staging -- --confirm` | `NODE_ENV=staging` only | RBAC baseline + demo catalog |
+
+The canonical registry itself now lives in one place, `prisma/rbac-baseline.mjs`,
+and all three paths consume it, so the permission set cannot drift between
+environments. `seed-policy.mjs` is unchanged.
+
+The RBAC baseline path is guarded by `rbac-baseline-policy.mjs`, which requires
+`ALLOW_RBAC_BASELINE=true`, allowlists `NODE_ENV` to `staging`/`production` (a
+typo such as `stagign` fails closed rather than falling through), requires a
+second `RBAC_BASELINE_CONFIRM_PRODUCTION` acknowledgement for production, and
+refuses a `_test` or `_dev` database so a misrouted `DATABASE_URL` cannot touch
+CI or scratch state. It requires an explicit `--check` or `--apply` so no bare
+invocation can write.
+
+Reconcile semantics are additive and idempotent: create what is missing,
+reactivate a deactivated canonical permission, restore a revoked canonical grant,
+repair a drifted name or description. It never deletes a non-canonical grant,
+because an extra grant is a deliberate operator decision rather than drift. The
+staging/production path appends one immutable `rbac.baseline.apply` audit row per
+run with `actorId` null; the development seed keeps its deterministic audit row so
+the two-consecutive-runs CI check still holds.
+
+Both provisioning paths create no user and no credential. `auth:bootstrap` now
+performs a read-only `assertSystemAdminRolePresent` check **before** it prompts
+for an email, password or TOTP code, so a missing role fails with the exact
+remediation command instead of stranding a half-entered secret in a terminal.
+
+Demo data is fenced separately by `demo-staging-policy.mjs`, which rejects
+anything other than `NODE_ENV=staging` (including `test`, so CI stays clean) and
+requires `ALLOW_DEMO_STAGING_DATA=true`. Demo fixtures stop at catalog, pricing,
+warehouse, location and opening inventory: no order, no payment, no payment
+confirmation, no SMS delivery success. A fabricated success row would poison
+reconciliation and let a reviewer mistake demo state for a real captured
+transaction.
+
+CI runs the development seed twice and verifies it with
+`apps/api/prisma/tests/seed_baseline.sql`, separately asserts that the RBAC path
+*refuses* a disposable database, and proves reconcile idempotency and drift
+repair against a real database via
+`apps/api/prisma/rbac-baseline.integration.test.mjs` (`RBAC_BASELINE_INTEGRATION=true`).
 
 For Auth persistence changes, verify on a clean PostgreSQL database:
 

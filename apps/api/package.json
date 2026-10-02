@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "scripts": {
     "auth:bootstrap": "node scripts/bootstrap-admin.mjs",
+    "rbac:baseline": "node prisma/apply-rbac-baseline.mjs",
+    "demo:staging": "node prisma/seed-demo-staging.mjs",
     "auth:e2e-staff": "node scripts/provision-e2e-staff.mjs",
     "media:bucket": "node scripts/provision-media-bucket.mjs",
     "dev": "nest start --watch",

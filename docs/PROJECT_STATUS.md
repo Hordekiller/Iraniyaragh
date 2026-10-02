@@ -234,7 +234,11 @@ G6–G10 have not reached integrated completion.
 - NestJS modular-monolith bootstrap, strict validation, URI versioning under
   `/api/v1`, Helmet and explicit environment-aware CORS validation.
 - PostgreSQL/Prisma with reviewed forward migrations and deterministic, safety-gated
-  development/test RBAC seed.
+    development/test RBAC seed.
+  - Three explicit, separately guarded provisioning paths for the canonical RBAC
+    baseline (development/test seed, staging/production `rbac:baseline`, staging-only
+    `demo:staging`) from one shared registry, so a fresh staging or production
+    database can be provisioned without the development seed. See ADR-0022.
 - Docker Compose baseline for PostgreSQL, Redis and a self-hosted S3 object store
   (RustFS; see `infrastructure/docker/RUNBOOK.md` for why it replaced MinIO).
 - Database-independent liveness and bounded database readiness endpoints.
@@ -275,7 +279,7 @@ G6–G10 have not reached integrated completion.
 | Staff UI              | Partial             | Real password/TOTP login and session management exist; complete privileged-user/role administration does not                            |
 | SMS provider          | Implemented adapter | Vendor-neutral port, SMS.ir adapter and fail-closed configuration exist                                                                 |
 | Production acceptance | Blocked             | #114 needs controlled real account/line/template/credential evidence; no production-ready claim is made                                 |
-| Runtime RBAC Admin    | Not implemented     | Seed-owned roles/permissions and guards exist; staff/role assignment/revocation UI/runtime is absent                                    |
+| Runtime RBAC Admin    | Not implemented     | Canonical baseline roles/permissions and guards exist (ADR-0022); staff/role assignment/revocation UI/runtime is absent                                    |
 
 ### Observability foundation
 
@@ -1020,10 +1024,11 @@ security/query review, OpenAPI drift confirmation and merge.
 - VAT policy and tax math (integer-Rial VAT on the sales basis per the permanent
   VAT Law and the configurable-rate design in ADR-0014); electronic-invoice
   (`سامانه مودیان`) emission; both are planned, not implemented.
-- Runtime RBAC administration: roles/permissions are seed-owned only; there is no
-  staff directory, role-assignment/revoke flow or user-status management until
-  ADR-0014 (`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`, accepted via #185) and its
-  G1–G3 slices land.
+- Runtime RBAC administration: roles/permissions are provided by the canonical
+    baseline registry only; there is no staff directory, role-assignment/revoke flow
+    or user-status management until ADR-0014
+    (`docs/RBAC_AND_FINANCIAL_GOVERNANCE.md`, accepted via #185) and its G1–G3 slices
+    land.
 - Inventory Admin/operator modules, reconciliation UI, cancellation/expiry
   compensation and production expiry-worker rollout. Core inventory HTTP,
   optimized expiry batching and Checkout allocation are merged.
