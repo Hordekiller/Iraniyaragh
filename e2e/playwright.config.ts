@@ -5,9 +5,17 @@ const CI = Boolean(process.env.CI);
 const WEB_URL = process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173';
 const ADMIN_URL = process.env.ADMIN_E2E_URL ?? 'http://127.0.0.1:3001';
 const API_URL = process.env.API_E2E_URL ?? 'http://127.0.0.1:4000';
+// The real nginx vhost, from scripts/nginx-routing-proxy.sh. Routing is the one
+// layer no other project here covers, because they all bypass nginx entirely.
+const NGINX_URL = process.env.NGINX_E2E_URL ?? `http://127.0.0.1:${process.env.NGINX_E2E_HTTP_PORT ?? 8080}`;
 
 export default defineConfig({
   testDir: './tests',
+  // The routing project needs the real nginx in front of everything, and it needs
+  // a container whose lifetime is not tied to a webServer process that can be
+  // SIGKILLed. See scripts/nginx-routing-proxy.sh for why.
+  globalSetup: './global-setup.ts',
+  globalTeardown: './global-teardown.ts',
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 2 : 0,
@@ -56,6 +64,21 @@ export default defineConfig({
       name: 'api-http',
       testMatch: /api-.*\.spec\.ts/,
       use: { baseURL: API_URL },
+    },
+    {
+      // Only one project: routing is not viewport-dependent, and a mobile pass
+      // would just re-prove the same redirect table more slowly.
+      name: 'nginx-routing',
+      testMatch: /nginx-.*\.spec\.ts/,
+      // The TLS assertions use the https origin directly with
+      // ignoreHTTPSErrors, because the harness serves a throwaway self-signed
+      // certificate.
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: NGINX_URL,
+        ignoreHTTPSErrors: true,
+        viewport: { width: 1440, height: 900 },
+      },
     },
   ],
   webServer: [
