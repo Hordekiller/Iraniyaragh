@@ -36,6 +36,8 @@ describe('StaffLoginPage steps', () => {
     const identifier = screen.getByLabelText('شناسه کارکن');
     expect(identifier).toHaveFocus();
     expect(screen.getByLabelText('رمز عبور')).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText('رمز عبور')).toHaveAttribute('maxlength', '128');
+    expect(screen.getByText('رمز عبور باید بین ۱۵ تا ۱۲۸ نویسه باشد.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ادامه' })).toBeInTheDocument();
   });
 

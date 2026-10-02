@@ -144,6 +144,14 @@ describe('StaffAuthHttpClient', () => {
       });
     });
 
+    it('passes through INVALID_REQUEST so password validation reaches the login UI', async () => {
+      mockEnvelope('INVALID_REQUEST', 400);
+      await expect(client.passwordRequest({ identifier: 'x', password: 'y' })).rejects.toMatchObject({
+        code: 'INVALID_REQUEST',
+        statusCode: 400,
+      });
+    });
+
     it('preserves Retry-After for rate-limited UI handling', async () => {
       apiFetchMock.mockRejectedValueOnce(
         new ApiClientError(errorEnvelope('RATE_LIMITED', 429), new Headers({ 'Retry-After': '42' })),
