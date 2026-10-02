@@ -199,13 +199,6 @@ export class StaffLoginController {
       this.patch({ error: 'شناسه و رمز عبور را وارد کنید.' });
       return;
     }
-    const passwordLength = Array.from(password).length;
-    if (passwordLength < 15 || passwordLength > 128) {
-      this.end('password');
-      this.patch({ error: 'رمز عبور باید بین ۱۵ تا ۱۲۸ نویسه باشد.' });
-      return;
-    }
-
     const generation = this.generation;
     try {
       const challenge = await this.api.passwordRequest({ identifier, password });
