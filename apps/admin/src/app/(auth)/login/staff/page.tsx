@@ -168,7 +168,7 @@ export function PasswordStep({
         disabled={state.busy}
         error={state.error !== null}
         helperText="رمز عبور باید بین ۱۵ تا ۱۲۸ نویسه باشد."
-        inputProps={{ 'aria-label': 'رمز عبور', maxLength: 128 }}
+        slotProps={{ htmlInput: { 'aria-label': 'رمز عبور', maxLength: 128 } }}
         sx={{ mb: 2 }}
       />
 
