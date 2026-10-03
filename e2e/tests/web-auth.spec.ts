@@ -67,7 +67,7 @@ test.describe('web: customer OTP login (fixture client, #50)', () => {
     const accountButton = page.getByRole('banner').getByRole('button', { name: 'حساب کاربری' });
     await expect(accountButton).toBeVisible();
     await tap(accountButton);
-    await expect(page.getByText('fixture-user-otp-1').first()).toBeVisible();
+    await expect(page.getByRole('menu')).not.toContainText('fixture-user-otp-1');
     await expect(page.getByRole('menuitem', { name: 'خروج از حساب' })).toBeVisible();
 
     await tap(page.getByRole('menuitem', { name: 'خروج از حساب' }));
