@@ -15,11 +15,9 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowRight, Lock, Plus } from 'lucide-react';
-import type { CatalogStatus } from '@iranyaragh/contracts';
+import type { BrandSummary, CategorySummary } from '@iranyaragh/contracts';
 import { ApiAbortError, ApiClientError, ApiNetworkError } from '@/lib/api/client';
 import {
-  createBrand,
-  createCategory,
   createIdempotencyKey,
   createProduct,
   listBrands,
@@ -42,7 +40,7 @@ type ProductDraft = {
   description: string;
   brandId: string;
   categoryId: string;
-  status: CatalogStatus;
+  status: 'DRAFT';
 };
 
 type FieldErrors = Partial<Record<'name' | 'slug' | 'description' | 'brandId' | 'categoryId', string>>;
@@ -63,8 +61,8 @@ export function ProductCreateForm() {
   const { user } = useAuth();
   const canWrite = canWriteCatalog(user);
 
-  const [brands, setBrands] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [brands, setBrands] = useState<BrandSummary[]>([]);
+  const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [referenceError, setReferenceError] = useState<string | null>(null);
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -127,7 +125,7 @@ export function ProductCreateForm() {
       );
       idempotencyKey.current = null;
       feedback.success(`کالای «${result.product.name}» با موفقیت ثبت شد.`);
-      router.replace('/catalog');
+      router.replace(`/catalog/products/${result.product.id}`);
     } catch (error) {
       if (error instanceof ApiClientError) {
         setFormError(error.message);
@@ -257,6 +255,9 @@ export function ProductCreateForm() {
                     </Stack>
                   </FormField>
                 </Stack>
+                <FormField label="وضعیت آغازین" htmlFor="product-initial-status" helperText="کالا به‌صورت پیش‌نویس ذخیره می‌شود؛ انتشار فقط از مسیر بررسی و اقدام مجاز در جزئیات کالا انجام می‌شود.">
+                  <TextField id="product-initial-status" size="small" value="پیش‌نویس" InputProps={{ readOnly: true }} />
+                </FormField>
                 <FormField label="توضیحات" htmlFor="product-description" helperText="اختیاری — حداکثر ۱۰۰۰۰ کاراکتر" error={Boolean(errors.description)} errorText={errors.description}>
                   <RichTextEditor
                     value={draft.description}

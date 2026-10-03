@@ -58,4 +58,13 @@ describe('ProductCreateDto', () => {
     await expect(validate(ok)).resolves.toHaveLength(0);
     expect((await validate(tooLarge)).length).toBeGreaterThan(0);
   });
+
+  it('allows creation only as a draft; other lifecycle states use the status action', async () => {
+    const draft = Object.assign(new ProductCreateDto(), { name: 'Product', slug: 'product', status: 'DRAFT' });
+    const published = Object.assign(new ProductCreateDto(), { name: 'Product', slug: 'product', status: 'PUBLISHED' });
+    const archived = Object.assign(new ProductCreateDto(), { name: 'Product', slug: 'product', status: 'ARCHIVED' });
+    await expect(validate(draft)).resolves.toHaveLength(0);
+    expect((await validate(published)).length).toBeGreaterThan(0);
+    expect((await validate(archived)).length).toBeGreaterThan(0);
+  });
 });

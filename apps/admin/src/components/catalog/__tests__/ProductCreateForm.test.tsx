@@ -15,6 +15,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mocks.replace, push: vi.fn(), refresh: vi.fn() }),
 }));
 
+vi.mock('@/lib/auth/AuthProvider', () => ({
+  useAuth: () => ({ user: { userId: 'staff-1', sessionId: 'session-1', authenticationLevel: 'STAFF_MFA', permissions: ['catalog.write'] } }),
+}));
+
 vi.mock('@/lib/catalog/catalog-api', () => ({
   listBrands: mocks.listBrands,
   listCategories: mocks.listCategories,
@@ -32,11 +36,8 @@ function renderForm() {
 
 async function fillRequiredFields() {
   fireEvent.change(screen.getByLabelText(/نام کالا/), { target: { value: 'قفل دستگیره‌ای' } });
-  fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'LOCK Handle' } });
-  fireEvent.change(screen.getByLabelText(/کد SKU/), { target: { value: 'SKU-1' } });
-  fireEvent.change(screen.getByLabelText(/قیمت خرید/), { target: { value: '100000' } });
-  fireEvent.change(screen.getByLabelText(/قیمت فروش/), { target: { value: '150000' } });
-  await screen.findByText('مشخصات کالا');
+  fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'lock-handle' } });
+  await screen.findByText('مشخصات پایه');
 }
 
 describe('ProductCreateForm', () => {
@@ -45,7 +46,8 @@ describe('ProductCreateForm', () => {
     mocks.listCategories.mockResolvedValue([{ id: 'c1', name: 'قفل‌ها', slug: 'locks', parentId: null, productCount: 0 }]);
     renderForm();
 
-    await screen.findByText('مشخصات کالا');
+    await screen.findByText('مشخصات پایه');
+    expect(screen.getByLabelText('وضعیت آغازین')).toHaveAttribute('readonly');
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'برند' }));
     expect(withinListbox().getByText('آبان لک')).toBeInTheDocument();
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
@@ -66,14 +68,12 @@ describe('ProductCreateForm', () => {
     mocks.listBrands.mockResolvedValue([]);
     mocks.listCategories.mockResolvedValue([]);
     renderForm();
-    await screen.findByText('مشخصات کالا');
+    await screen.findByText('مشخصات پایه');
 
     fireEvent.click(screen.getByRole('button', { name: 'ثبت کالا' }));
 
     expect(screen.getByText('نام کالا الزامی است.')).toBeInTheDocument();
     expect(screen.getByText('شناسه (Slug) الزامی است.')).toBeInTheDocument();
-    expect(screen.getByText('کد SKU الزامی است.')).toBeInTheDocument();
-    expect(screen.getByText('قیمت فروش الزامی است.')).toBeInTheDocument();
     expect(mocks.createProduct).not.toHaveBeenCalled();
   });
 
@@ -81,12 +81,9 @@ describe('ProductCreateForm', () => {
     mocks.listBrands.mockResolvedValue([]);
     mocks.listCategories.mockResolvedValue([]);
     renderForm();
-    await screen.findByText('مشخصات کالا');
+    await screen.findByText('مشخصات پایه');
 
     fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'Lock_Handle!' } });
-    fireEvent.change(screen.getByLabelText(/کد SKU/), { target: { value: 's1' } });
-    fireEvent.change(screen.getByLabelText(/قیمت خرید/), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText(/قیمت فروش/), { target: { value: '2' } });
     fireEvent.click(screen.getByRole('button', { name: 'ثبت کالا' }));
 
     expect(
@@ -103,12 +100,13 @@ describe('ProductCreateForm', () => {
     });
 
     renderForm();
-    await screen.findByText('مشخصات کالا');
+    await screen.findByText('مشخصات پایه');
     fireEvent.change(screen.getByLabelText(/نام کالا/), { target: { value: 'قفل دستگیره‌ای' } });
     fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'LOCK Handle' } });
-    fireEvent.change(screen.getByLabelText(/کد SKU/), { target: { value: 'SKU-1' } });
-    fireEvent.change(screen.getByLabelText(/قیمت خرید/), { target: { value: '100000' } });
-    fireEvent.change(screen.getByLabelText(/قیمت فروش/), { target: { value: '150000' } });
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'برند' }));
+    fireEvent.click(withinListbox().getByText('آبان لک'));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'دسته‌بندی' }));
+    fireEvent.click(withinListbox().getByText('قفل‌ها'));
 
     fireEvent.click(screen.getByRole('button', { name: 'ثبت کالا' }));
 
@@ -117,22 +115,17 @@ describe('ProductCreateForm', () => {
         expect.objectContaining({
           name: 'قفل دستگیره‌ای',
           slug: 'lock-handle',
+          brandId: 'b1',
+          categoryId: 'c1',
           status: 'DRAFT',
-          variants: [
-            expect.objectContaining({
-              sku: 'SKU-1',
-              costPrice: { amount: '100000', currency: 'IRR' },
-              salePrice: { amount: '150000', currency: 'IRR' },
-              isActive: true,
-            }),
-          ],
+          variants: [],
         }),
         expect.any(String),
       ),
     );
 
     expect(await screen.findByText(/کالای «قفل دستگیره‌ای» با موفقیت ثبت شد/)).toBeInTheDocument();
-    expect(mocks.replace).toHaveBeenCalledWith('/catalog');
+    expect(mocks.replace).toHaveBeenCalledWith('/catalog/products/p9');
   }, 15_000);
 
   it('surfaces the API error reply', async () => {
@@ -142,7 +135,7 @@ describe('ProductCreateForm', () => {
       new ApiClientError({ code: 'CATALOG_SLUG_CONFLICT', message: 'این شناسه از قبل ثبت شده', requestId: 'r', statusCode: 409 }),
     );
     renderForm();
-    await screen.findByText('مشخصات کالا');
+    await screen.findByText('مشخصات پایه');
     await fillRequiredFields();
 
     fireEvent.click(screen.getByRole('button', { name: 'ثبت کالا' }));

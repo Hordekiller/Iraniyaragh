@@ -106,6 +106,13 @@ export class CustomerAddressesDto {
   @IsOptional() @IsIn(CUSTOMER_STATUS_VALUES) status?: CustomerStatusValue;
 }
 
+/** Self-service shape deliberately excludes the staff-only lifecycle status. */
+export class CustomerAccountAddressesDto {
+  @Type(() => Number) @IsInt() @Min(0) expectedVersion!: number;
+  @IsArray() @ArrayMaxSize(20) @ValidateNested({ each: true }) @Type(() => CustomerAddressInputDto)
+  addresses!: CustomerAddressInputDto[];
+}
+
 export class CustomerNoteDto {
   @Type(() => Number) @IsInt() @Min(0) expectedVersion!: number;
   @IsIn(CUSTOMER_NOTE_VISIBILITY_VALUES) visibility!: CustomerNoteVisibilityValue;

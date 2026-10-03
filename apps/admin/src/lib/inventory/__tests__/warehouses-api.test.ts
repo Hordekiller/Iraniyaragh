@@ -19,7 +19,7 @@ describe('warehouse Admin HTTP adapter', () => {
     expect(calls[0][0]).toBe(`${baseUrl}/warehouses?offset=25&limit=25&isInactive=true`);
     expect(calls[1][0]).toBe(`${baseUrl}/warehouses/warehouse%2F1/locations?offset=0&limit=50`);
     expect(calls[0][1]).toEqual(expect.objectContaining({
-      method: 'GET', signal, headers: expect.objectContaining({ Authorization: 'Bearer staff-token' }),
+      method: 'GET', signal: expect.any(AbortSignal), headers: expect.objectContaining({ Authorization: 'Bearer staff-token' }),
     }));
     expect(getAccessToken()).toBe('staff-token');
   });

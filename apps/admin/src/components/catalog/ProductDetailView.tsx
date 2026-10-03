@@ -33,7 +33,7 @@ import {
   variantStatusLabel,
   variantStatusTone,
 } from '@/lib/catalog/catalog-labels';
-import { canReadCatalog, canWriteCatalog } from '@/lib/catalog/catalog-permissions';
+import { canReadCatalog, canReadCatalogMedia, canWriteCatalog } from '@/lib/catalog/catalog-permissions';
 import { canReadInventory, canTransferInventory } from '@/lib/inventory/inventory-permissions';
 import { getProduct, listAttributes } from '@/lib/catalog/catalog-api';
 import { AttributeConfigEditor } from './AttributeConfigEditor';
@@ -51,6 +51,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const { user } = useAuth();
   const canRead = canReadCatalog(user);
   const canWrite = canWriteCatalog(user);
+  const canManageMedia = canReadCatalogMedia(user);
   const canViewInventory = canReadInventory(user);
   const canTransfer = canTransferInventory(user);
 
@@ -115,6 +116,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
               <Button component={Link} href="/catalog" size="small" startIcon={<ArrowRight size={18} />}>
                 بازگشت به فهرست
               </Button>
+              {canManageMedia ? <Button component={Link} href={`/catalog/products/${product.id}/media`} size="small">مدیریت رسانه</Button> : null}
               {canWrite ? <ProductStatusActions product={product} onChanged={reload} /> : null}
             </>
           )

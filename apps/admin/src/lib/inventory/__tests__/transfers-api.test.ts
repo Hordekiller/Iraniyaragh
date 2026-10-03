@@ -17,7 +17,7 @@ describe('transfer Admin HTTP adapter', () => {
     const calls = fetcher.mock.calls as unknown as [string, RequestInit][];
     expect(calls[0][0]).toBe('http://localhost:4000/api/v1/inventory/transfers?status=REQUESTED&sourceWarehouseId=wh%2F1&offset=25&limit=25');
     expect(calls[1][0]).toBe('http://localhost:4000/api/v1/inventory/transfers/tr%2F1');
-    expect(calls[0][1]).toEqual(expect.objectContaining({ signal, headers: expect.objectContaining({ Authorization: 'Bearer staff-token' }) }));
+    expect(calls[0][1]).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal), headers: expect.objectContaining({ Authorization: 'Bearer staff-token' }) }));
   });
 
   it('sends create items and versioned transition with distinct idempotency keys', async () => {

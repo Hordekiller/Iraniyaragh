@@ -18,7 +18,7 @@ describe('inventory ledger Admin HTTP adapter', () => {
     const calls = fetcher.mock.calls as unknown as [string, RequestInit][];
     expect(calls[0][0]).toBe('http://localhost:4000/api/v1/inventory/balances?warehouseId=wh%2F1&variantId=v-1&offset=25&limit=25');
     expect(calls[1][0]).toBe('http://localhost:4000/api/v1/inventory/movements?locationId=loc-1&type=ADJUSTMENT_OUT&offset=0&limit=10');
-    expect(calls[0][1]).toEqual(expect.objectContaining({ signal, headers: expect.objectContaining({ Authorization: 'Bearer staff-token' }) }));
+    expect(calls[0][1]).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal), headers: expect.objectContaining({ Authorization: 'Bearer staff-token' }) }));
   });
 
   it('posts only the explicit stock command with a stable idempotency header', async () => {

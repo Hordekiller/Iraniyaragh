@@ -177,9 +177,12 @@ describe('CatalogService', () => {
       expect(ctx.tx.auditLog.create).not.toHaveBeenCalled();
     });
 
-    it('rejects creating an already-published product without a SKU', async () => {
+    it('rejects any non-draft status on create so lifecycle checks cannot be bypassed', async () => {
       await expect(
-        ctx.service.createProduct('actor-1', 'unit-invalid-product', { name: 'Product One', slug: 'product-one', status: 'PUBLISHED' }),
+        ctx.service.createProduct('actor-1', 'unit-invalid-product', { name: 'Product One', slug: 'product-one', status: 'PUBLISHED' } as never),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        ctx.service.createProduct('actor-1', 'unit-invalid-archived-product', { name: 'Product Two', slug: 'product-two', status: 'ARCHIVED' } as never),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
     });

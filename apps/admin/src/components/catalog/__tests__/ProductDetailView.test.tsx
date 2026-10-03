@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedbackProvider } from '@/components/ui/FeedbackProvider';
-import { CATALOG_READ, CATALOG_WRITE } from '@/lib/catalog/catalog-permissions';
+import { CATALOG_MEDIA_READ, CATALOG_READ, CATALOG_WRITE } from '@/lib/catalog/catalog-permissions';
 import type { AttributeDefinitionSummary, ProductDetail } from '@iranyaragh/contracts';
 import { ProductDetailView } from '../ProductDetailView';
 
@@ -126,6 +126,12 @@ describe('ProductDetailView', () => {
     expect(screen.getByTestId('rte')).toHaveValue('توضیح نمونه');
     expect(screen.getByText('LOCK-RED-M')).toBeInTheDocument();
     expect(screen.getByText('رنگ: قرمز')).toBeInTheDocument();
+  });
+
+  it('provides the media continuation path to users who can read product media', async () => {
+    mocks.user = { permissions: [CATALOG_READ, CATALOG_MEDIA_READ] };
+    renderView();
+    expect(await screen.findByRole('link', { name: 'مدیریت رسانه' })).toHaveAttribute('href', '/catalog/products/p1/media');
   });
 
   it('keeps read-only access from exposing mutation controls', async () => {

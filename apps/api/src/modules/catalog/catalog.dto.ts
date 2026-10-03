@@ -48,7 +48,7 @@ export class ProductCreateDto {
   @IsOptional() @IsString() @MaxLength(100_000) description?: string;
   @IsOptional() @IsString() @MaxLength(128) brandId?: string;
   @IsOptional() @IsString() @MaxLength(128) categoryId?: string;
-  @IsOptional() @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED']) status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  @IsOptional() @IsEnum(['DRAFT']) status?: 'DRAFT';
   @IsOptional() @ValidateNested({ each: true }) @Type(() => ProductVariantDto) variants?: ProductVariantDto[];
 }
 

@@ -237,7 +237,7 @@ describe.sequential('CatalogService database integration', () => {
         name: 'Create Published Without SKU',
         slug: `create-published-no-sku-${runId}`,
         status: 'PUBLISHED',
-      }),
+      } as never),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
