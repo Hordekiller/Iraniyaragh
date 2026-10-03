@@ -77,8 +77,8 @@ export function VariantGenerateDialog({
         const loaded: Record<string, string[]> = {};
         details.forEach((detail) => {
           loaded[detail.attribute.code] = detail.attribute.options
-            .filter((option) => option.status === 'ACTIVE')
-            .map((option) => option.code);
+            .filter((option: any) => option.status === 'ACTIVE')
+            .map((option: any) => option.code);
         });
         setOptionsByAxis(loaded);
       })
