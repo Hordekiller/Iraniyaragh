@@ -90,9 +90,6 @@ export function AccountMenu({ onOpenLogin }: AccountMenuProps) {
           >
             <div className="px-3 py-2 mb-1">
               <div className="text-[13px] font-black text-[#0F172A]">حساب کاربری</div>
-              <div dir="ltr" className="text-[11px] text-slate-400 font-medium text-right mt-0.5">
-                {state.principal?.userId}
-              </div>
             </div>
             <div className="h-px bg-slate-100" />
             <Link

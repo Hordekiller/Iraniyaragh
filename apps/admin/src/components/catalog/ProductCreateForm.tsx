@@ -264,7 +264,7 @@ export function ProductCreateForm() {
                         value={draft.brandId}
                         inputProps={{ 'aria-label': 'برند' }}
                         onChange={(event) => setField('brandId', String(event.target.value))}
-                        
+
                       >
                         <MenuItem value="">بدون برند</MenuItem>
                         {brands.map((brand) => (
@@ -287,7 +287,7 @@ export function ProductCreateForm() {
                         value={draft.categoryId}
                         inputProps={{ 'aria-label': 'دسته‌بندی' }}
                         onChange={(event) => setField('categoryId', String(event.target.value))}
-                        
+
                       >
                         <MenuItem value="">بدون دسته‌بندی</MenuItem>
                         {categories.map((category) => (

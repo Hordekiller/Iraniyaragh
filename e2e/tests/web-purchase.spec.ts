@@ -92,6 +92,7 @@ test.describe('web: fixture purchase journey', () => {
           // desktop) instead of depending on a successful profile response.
           await tap(page.getByRole('button', { name: 'حساب کاربری' }).first())
           await tap(page.getByRole('menuitem', { name: /سفارش‌های من/ }))
+          await expect(page.getByRole('menu')).toBeHidden()
         } else {
           await tap(page.getByRole('link', { name: 'پیگیری سفارش' }))
         }

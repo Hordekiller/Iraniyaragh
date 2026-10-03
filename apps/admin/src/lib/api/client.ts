@@ -71,7 +71,7 @@ type RequestOptions = {
   signal?: AbortSignal;
 /** Some existing API routes return the contract body directly, without { data }. */
   responseShape?: 'raw';
-  
+
 };
 
 function resolveUrl(path: string): string {
