@@ -167,6 +167,9 @@ jobs:
       OBJECT_STORAGE_ACCESS_KEY: minio
       OBJECT_STORAGE_SECRET_KEY: change-me-now
       OBJECT_STORAGE_BUCKET: products
+      # Exercise the production scanner integration in the assembled journey.
+      PRODUCT_MEDIA_SCANNER_HOST: 127.0.0.1
+      PRODUCT_MEDIA_SCANNER_PORT: '3310'
       PUBLIC_MEDIA_ORIGIN: http://127.0.0.1:9000/products
       NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4000
       NEXT_PUBLIC_MEDIA_ORIGIN: http://127.0.0.1:9000/products
@@ -199,6 +202,21 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
+      malware-scanner:
+        image: clamav/clamav:1.5.4-debian13-slim@sha256:9bb8712a50f0e75166e936c452cd82dd5e5be0b85586598930b5bbb84a99a578
+        env:
+          CLAMD_CONF_ConcurrentDatabaseReload: 'no'
+          CLAMD_CONF_MaxThreads: '2'
+          CLAMD_CONF_MaxQueue: '4'
+          CLAMD_CONF_StreamMaxLength: '20M'
+        ports:
+          - 3310:3310
+        options: >-
+          --health-cmd clamdcheck.sh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 18
+          --health-start-period 180s
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0

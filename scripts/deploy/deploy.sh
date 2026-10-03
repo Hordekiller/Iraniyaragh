@@ -139,6 +139,7 @@ for _ in $(seq 1 60); do
   if compose ps --format json api 2>/dev/null | grep -q '"Health":"healthy"' \
     && compose ps --format json web 2>/dev/null | grep -q '"Health":"healthy"' \
     && compose ps --format json admin 2>/dev/null | grep -q '"Health":"healthy"' \
+    && compose ps --format json malware-scanner 2>/dev/null | grep -q '"Health":"healthy"' \
     && compose ps --format json media-worker 2>/dev/null | grep -q '"State":"running"'; then
     READY=1
     break

@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { parseCorsOrigins, parseTrustProxy, validateEnvironment } from './environment';
 
+describe('media scanner configuration', () => {
+  it('uses bounded private daemon settings', () => {
+    expect(validateEnvironment({ ...validDevelopmentEnvironment, PRODUCT_MEDIA_SCANNER_HOST: 'malware-scanner' })).toMatchObject({
+      PRODUCT_MEDIA_SCANNER_HOST: 'malware-scanner', PRODUCT_MEDIA_SCANNER_PORT: 3310, PRODUCT_MEDIA_SCANNER_TIMEOUT_MS: 15000,
+    });
+    for (const input of [
+      { PRODUCT_MEDIA_SCANNER_HOST: 'http://scanner:3310' },
+      { PRODUCT_MEDIA_SCANNER_PORT: 0 },
+      { PRODUCT_MEDIA_SCANNER_TIMEOUT_MS: 30001 },
+    ]) expect(() => validateEnvironment({ ...validDevelopmentEnvironment, ...input })).toThrow(/PRODUCT_MEDIA_SCANNER_/u);
+  });
+});
+
 const validDevelopmentEnvironment = {
   NODE_ENV: 'development',
   API_PORT: '4000',

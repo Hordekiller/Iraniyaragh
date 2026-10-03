@@ -47,6 +47,9 @@ export type EnvironmentVariables = {
   PRODUCT_MEDIA_MAX_IMAGE_PIXELS: number;
   PRODUCT_MEDIA_UPLOAD_TTL_SECONDS: number;
   PRODUCT_MEDIA_WORKER_CONCURRENCY: number;
+  PRODUCT_MEDIA_SCANNER_HOST?: string;
+  PRODUCT_MEDIA_SCANNER_PORT: number;
+  PRODUCT_MEDIA_SCANNER_TIMEOUT_MS: number;
 };
 
 const supportedEnvironments = new Set<NodeEnvironment>(['development', 'test', 'staging', 'production']);
@@ -297,6 +300,10 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     'https:',
   ]);
   let objectStorageUploadEndpoint: string | undefined;
+  const scannerHost = typeof config.PRODUCT_MEDIA_SCANNER_HOST === 'string' ? config.PRODUCT_MEDIA_SCANNER_HOST.trim() || undefined : undefined;
+  if (scannerHost && !isIP(scannerHost) && !/^[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?$/u.test(scannerHost)) {
+    throw new Error('PRODUCT_MEDIA_SCANNER_HOST must be a private service hostname or IP, without a URL or path.');
+  }
   if (typeof config.OBJECT_STORAGE_UPLOAD_ENDPOINT === 'string' && config.OBJECT_STORAGE_UPLOAD_ENDPOINT.trim()) {
     const endpoint = new URL(parseUrl(config.OBJECT_STORAGE_UPLOAD_ENDPOINT.trim(), 'OBJECT_STORAGE_UPLOAD_ENDPOINT',
       ['staging', 'production'].includes(environment) ? ['https:'] : ['http:', 'https:']));
@@ -485,6 +492,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
         : parseBoundedInteger(config.ZARINPAL_TIMEOUT_MS, 'ZARINPAL_TIMEOUT_MS', 500, 10_000),
     OBJECT_STORAGE_ENDPOINT: objectStorageEndpoint,
     OBJECT_STORAGE_UPLOAD_ENDPOINT: objectStorageUploadEndpoint,
+    PRODUCT_MEDIA_SCANNER_HOST: scannerHost,
+    PRODUCT_MEDIA_SCANNER_PORT: parseBoundedInteger(config.PRODUCT_MEDIA_SCANNER_PORT ?? 3310, 'PRODUCT_MEDIA_SCANNER_PORT', 1, 65535),
+    PRODUCT_MEDIA_SCANNER_TIMEOUT_MS: parseBoundedInteger(config.PRODUCT_MEDIA_SCANNER_TIMEOUT_MS ?? 15000, 'PRODUCT_MEDIA_SCANNER_TIMEOUT_MS', 500, 30000),
     OBJECT_STORAGE_ACCESS_KEY: requiredString(config, 'OBJECT_STORAGE_ACCESS_KEY'),
     OBJECT_STORAGE_SECRET_KEY: objectStorageSecret,
     OBJECT_STORAGE_BUCKET: requiredString(config, 'OBJECT_STORAGE_BUCKET'),
