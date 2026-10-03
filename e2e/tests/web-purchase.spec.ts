@@ -85,12 +85,13 @@ test.describe('web: fixture purchase journey', () => {
       }
       if (route === '/orders') {
         if (isMobile(page)) {
-          await tap(
-            page
-              .getByRole('navigation', { name: 'ناوبری پایین' })
-              .getByRole('button', { name: 'حساب کاربری' }),
-          )
-          await tap(page.getByRole('link', { name: /سفارش‌های من/ }))
+          // The bottom account tab opens `/account`, whose profile shortcuts
+          // intentionally wait for `/customers/me`. Fixture-auth tokens are
+          // not accepted by the real API, so use the authenticated header menu
+          // for the orders route (the same customer-facing navigation used on
+          // desktop) instead of depending on a successful profile response.
+          await tap(page.getByRole('button', { name: 'حساب کاربری' }).first())
+          await tap(page.getByRole('menuitem', { name: /سفارش‌های من/ }))
         } else {
           await tap(page.getByRole('link', { name: 'پیگیری سفارش' }))
         }

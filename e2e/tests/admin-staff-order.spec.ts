@@ -1,8 +1,10 @@
+import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
 
 const rial = new Intl.NumberFormat('fa-IR');
+const SAMPLE_IMAGE = resolve(__dirname, '../../apps/web/public/images/hero1.jpg');
 
 /** Renders an amount exactly the way the admin `formatRial` helper does. */
 const formatRial = (amount: number): string => `${rial.format(BigInt(amount))} ریال`;
@@ -71,27 +73,27 @@ async function createSellableVariantWithStock(page: Page, suffix: string) {
   await page.locator('#variant-0-cost').fill('100000');
   await page.locator('#variant-0-sale').fill(String(salePrice));
 
-  // The journey must not silently end up ordering the seeded demo SKU: a staff
-  // order can only price sellable goods, and a product is created as a DRAFT.
-  // Publishing it through the form needs no media worker. (The separate
-  // "publish an existing draft" action additionally requires one READY primary
-  // image, which the media pipeline covered by the catalog journey provides.)
-  await tap(page.locator('#product-status'));
-  await tap(page.getByRole('option', { name: 'منتشرشده' }));
-  await expect(page.locator('#product-status')).toHaveText(/منتشرشده/);
-
   await tap(page.getByRole('button', { name: 'ثبت کالا' }));
-  await expect(page).toHaveURL(/\/catalog$/);
-  await expect(
-    page.locator('tr', { hasText: `کالای سفارش حضوری ${suffix}` }).getByText('منتشرشده').first(),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page).toHaveURL(/\/catalog\/products\/(?!new(?:\/|$))[^/]+$/);
+  await expect(page.getByRole('heading', { name: `کالای سفارش حضوری ${suffix}` })).toBeVisible();
+
+  // Create stays DRAFT-only. Upload a real image through the media manager and
+  // publish only through the lifecycle command before it becomes orderable.
+  await tap(page.getByRole('link', { name: /مدیریت رسانه/u }));
+  await expect(page).toHaveURL(/\/catalog\/products\/[^/]+\/media$/);
+  await page.locator('input[type="file"]').setInputFiles(SAMPLE_IMAGE);
+  await expect(page.getByText('آماده', { exact: true }).first()).toBeVisible({ timeout: 120_000 });
+  await navigate(page, 'کالا و SKU', /\/catalog$/);
+  const productRow = page.locator('tr', { hasText: `کالای سفارش حضوری ${suffix}` });
+  await expect(productRow).toBeVisible();
+  await tap(productRow.getByRole('link', { name: `کالای سفارش حضوری ${suffix}` }));
+  await expect(page).toHaveURL(/\/catalog\/products\/(?!new(?:\/|$))[^/]+$/);
+  await tap(page.getByRole('button', { name: `اقدامات کالای سفارش حضوری ${suffix}` }));
+  await tap(page.getByRole('menuitem', { name: 'انتشار' }));
+  await expect(page.getByText('منتشرشده', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
 
   // Open this product's own detail page (other products exist in the catalog) and
   // take the inventory link from the row of the SKU we just created.
-  await tap(
-    page.locator('tr', { hasText: `کالای سفارش حضوری ${suffix}` }).getByRole('link', { name: `کالای سفارش حضوری ${suffix}` }),
-  );
-  await expect(page).toHaveURL(/\/catalog\/products\/.+$/);
   const skuInventoryLink = page
     .locator('tr', { hasText: sku })
     .locator('a[href^="/inventory?variantId="]')
