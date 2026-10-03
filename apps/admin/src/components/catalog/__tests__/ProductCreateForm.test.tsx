@@ -37,6 +37,9 @@ function renderForm() {
 async function fillRequiredFields() {
   fireEvent.change(screen.getByLabelText(/نام کالا/), { target: { value: 'قفل دستگیره‌ای' } });
   fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'lock-handle' } });
+  fireEvent.change(document.getElementById('variant-0-sku')!, { target: { value: 'LOCK-001' } });
+  fireEvent.change(document.getElementById('variant-0-cost')!, { target: { value: '180000' } });
+  fireEvent.change(document.getElementById('variant-0-sale')!, { target: { value: '240000' } });
   await screen.findByText('مشخصات پایه');
 }
 
@@ -103,6 +106,9 @@ describe('ProductCreateForm', () => {
     await screen.findByText('مشخصات پایه');
     fireEvent.change(screen.getByLabelText(/نام کالا/), { target: { value: 'قفل دستگیره‌ای' } });
     fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'LOCK Handle' } });
+    fireEvent.change(document.getElementById('variant-0-sku')!, { target: { value: 'LOCK-001' } });
+    fireEvent.change(document.getElementById('variant-0-cost')!, { target: { value: '180000' } });
+    fireEvent.change(document.getElementById('variant-0-sale')!, { target: { value: '240000' } });
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'برند' }));
     fireEvent.click(withinListbox().getByText('آبان لک'));
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'دسته‌بندی' }));
@@ -118,7 +124,12 @@ describe('ProductCreateForm', () => {
           brandId: 'b1',
           categoryId: 'c1',
           status: 'DRAFT',
-          variants: [],
+          variants: [{
+            sku: 'LOCK-001',
+            costPrice: { amount: '180000', currency: 'IRR' },
+            salePrice: { amount: '240000', currency: 'IRR' },
+            isActive: true,
+          }],
         }),
         expect.any(String),
       ),
@@ -143,6 +154,20 @@ describe('ProductCreateForm', () => {
     expect(await screen.findByText('این شناسه از قبل ثبت شده')).toBeInTheDocument();
     expect(mocks.replace).not.toHaveBeenCalled();
   }, 15_000);
+
+  it('requires at least one complete SKU variant before product creation', async () => {
+    mocks.listBrands.mockResolvedValue([]);
+    mocks.listCategories.mockResolvedValue([]);
+    renderForm();
+    await screen.findByText('مشخصات پایه');
+    fireEvent.change(screen.getByLabelText(/نام کالا/), { target: { value: 'قفل دستگیره‌ای' } });
+    fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'lock-handle' } });
+    fireEvent.change(document.getElementById('variant-0-sku')!, { target: { value: 'LOCK-001' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت کالا' }));
+    expect(await screen.findByText('قیمت خرید الزامی است.')).toBeInTheDocument();
+    expect(screen.getByText('قیمت فروش الزامی است.')).toBeInTheDocument();
+    expect(mocks.createProduct).not.toHaveBeenCalled();
+  });
 });
 
 function withinListbox() {

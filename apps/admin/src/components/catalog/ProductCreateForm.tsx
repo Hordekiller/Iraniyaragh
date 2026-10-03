@@ -8,13 +8,17 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
+  Divider,
+  FormControlLabel,
+  IconButton,
   MenuItem,
   Select,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowRight, Lock, Plus } from 'lucide-react';
+import { ArrowRight, Lock, Plus, Trash2 } from 'lucide-react';
 import type { BrandSummary, CategorySummary } from '@iranyaragh/contracts';
 import { ApiAbortError, ApiClientError, ApiNetworkError } from '@/lib/api/client';
 import {
@@ -23,7 +27,7 @@ import {
   listBrands,
   listCategories,
 } from '@/lib/catalog/catalog-api';
-import { SLUG_PATTERN } from '@/lib/catalog/catalog-labels';
+import { AMOUNT_PATTERN, SLUG_PATTERN } from '@/lib/catalog/catalog-labels';
 import { FormField } from '@/components/ui/FormField';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -41,18 +45,37 @@ type ProductDraft = {
   brandId: string;
   categoryId: string;
   status: 'DRAFT';
+  variants: VariantDraft[];
 };
+
+type VariantDraft = { sku: string; barcode: string; title: string; costPrice: string; salePrice: string; weightGrams: string; isActive: boolean };
+const emptyVariant = (): VariantDraft => ({ sku: '', barcode: '', title: '', costPrice: '', salePrice: '', weightGrams: '', isActive: true });
 
 type FieldErrors = Partial<Record<'name' | 'slug' | 'description' | 'brandId' | 'categoryId', string>>;
 
-function validateDraft(draft: ProductDraft): { fields: FieldErrors } {
+type VariantErrors = Record<number, Partial<Record<keyof VariantDraft, string>>>;
+
+function validateDraft(draft: ProductDraft): { fields: FieldErrors; variants: VariantErrors } {
   const fields: FieldErrors = {};
   if (!draft.name.trim()) fields.name = 'نام کالا الزامی است.';
   else if (draft.name.trim().length > 250) fields.name = 'نام کالا حداکثر ۲۵۰ کاراکتر.';
   if (!draft.slug.trim()) fields.slug = 'شناسه (Slug) الزامی است.';
   else if (!SLUG_PATTERN.test(draft.slug)) fields.slug = 'شناسه فقط شامل a-z، عدد و خط تیره (-) باشد.';
   if (draft.description.trim().length > 10000) fields.description = 'توضیحات حداکثر ۱۰۰۰۰ کاراکتر.';
-  return { fields };
+  const variants: VariantErrors = {};
+  if (!draft.variants.length) variants[0] = { sku: 'حداقل یک تنوع (SKU) لازم است.' };
+  draft.variants.forEach((variant, index) => {
+    const item: Partial<Record<keyof VariantDraft, string>> = {};
+    if (!variant.sku.trim()) item.sku = 'کد SKU الزامی است.';
+    else if (variant.sku.trim().length > 100) item.sku = 'حداکثر ۱۰۰ کاراکتر.';
+    if (!variant.costPrice.trim()) item.costPrice = 'قیمت خرید الزامی است.';
+    else if (!AMOUNT_PATTERN.test(variant.costPrice.trim())) item.costPrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
+    if (!variant.salePrice.trim()) item.salePrice = 'قیمت فروش الزامی است.';
+    else if (!AMOUNT_PATTERN.test(variant.salePrice.trim())) item.salePrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
+    if (variant.weightGrams.trim() && !/^\d{1,10}$/u.test(variant.weightGrams.trim())) item.weightGrams = 'وزن فقط عددی (گرم) است.';
+    if (Object.keys(item).length) variants[index] = item;
+  });
+  return { fields, variants };
 }
 
 export function ProductCreateForm() {
@@ -73,8 +96,10 @@ export function ProductCreateForm() {
     brandId: '',
     categoryId: '',
     status: 'DRAFT',
+    variants: [emptyVariant()],
   });
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [variantErrors, setVariantErrors] = useState<VariantErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const idempotencyKey = useRef<string | null>(null);
@@ -100,10 +125,24 @@ export function ProductCreateForm() {
     setErrors((current) => ({ ...current, [String(key)]: undefined }));
   };
 
+  const setVariantField = (index: number, key: keyof VariantDraft, value: VariantDraft[keyof VariantDraft]) => {
+    idempotencyKey.current = null;
+    setDraft((current) => ({ ...current, variants: current.variants.map((variant, i) => i === index ? { ...variant, [key]: value } : variant) }));
+    setVariantErrors((current) => {
+      const next = { ...current };
+      const item = { ...(next[index] ?? {}) };
+      delete item[key];
+      if (Object.keys(item).length) next[index] = item;
+      else delete next[index];
+      return next;
+    });
+  };
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const { fields } = validateDraft(draft);
-    if (Object.keys(fields).length > 0) {
+    const { fields, variants } = validateDraft(draft);
+    setVariantErrors(variants);
+    if (Object.keys(fields).length > 0 || Object.keys(variants).length > 0) {
       setErrors(fields);
       return;
     }
@@ -119,7 +158,15 @@ export function ProductCreateForm() {
           brandId: draft.brandId || undefined,
           categoryId: draft.categoryId || undefined,
           status: draft.status,
-          variants: [],
+          variants: draft.variants.map((variant) => ({
+            sku: variant.sku.trim(),
+            ...(variant.barcode.trim() ? { barcode: variant.barcode.trim() } : {}),
+            ...(variant.title.trim() ? { title: variant.title.trim() } : {}),
+            costPrice: { amount: variant.costPrice.trim(), currency: 'IRR' },
+            salePrice: { amount: variant.salePrice.trim(), currency: 'IRR' },
+            ...(variant.weightGrams.trim() ? { weightGrams: Number.parseInt(variant.weightGrams.trim(), 10) } : {}),
+            isActive: variant.isActive,
+          })),
         },
         idempotencyKey.current,
       );
@@ -267,6 +314,57 @@ export function ProductCreateForm() {
                     ariaLabel="ویرایشگر توضیحات محصول"
                   />
                 </FormField>
+              </Stack>
+            </CardContent>
+          </Card>
+
+          <Card variant="outlined">
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight={800}>تنوع‌ها و قیمت‌ها (SKU)</Typography>
+                <Button size="small" startIcon={<Plus size={16} />} onClick={() => {
+                  idempotencyKey.current = null;
+                  setDraft((current) => ({ ...current, variants: [...current.variants, emptyVariant()] }));
+                }}>افزودن تنوع</Button>
+              </Box>
+              {draft.variants.length === 0 ? <Alert severity="info">برای ثبت کالا حداقل یک تنوع لازم است.</Alert> : null}
+              <Stack spacing={2}>
+                {draft.variants.map((variant, index) => (
+                  <Box key={index} component="section">
+                    {index > 0 ? <Divider sx={{ my: 2 }} /> : null}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <IconButton size="small" aria-label={`حذف تنوع ${index + 1}`} disabled={draft.variants.length === 1} onClick={() => {
+                        idempotencyKey.current = null;
+                        setDraft((current) => ({ ...current, variants: current.variants.filter((_, i) => i !== index) }));
+                      }}><Trash2 size={17} /></IconButton>
+                    </Box>
+                    <Stack spacing={2}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <FormField label="کد SKU" required htmlFor={`variant-${index}-sku`} error={Boolean(variantErrors[index]?.sku)} errorText={variantErrors[index]?.sku}>
+                          <TextField id={`variant-${index}-sku`} size="small" dir="ltr" value={variant.sku} onChange={(event) => setVariantField(index, 'sku', event.target.value)} />
+                        </FormField>
+                        <FormField label="بارکد" htmlFor={`variant-${index}-barcode`}>
+                          <TextField id={`variant-${index}-barcode`} size="small" dir="ltr" value={variant.barcode} onChange={(event) => setVariantField(index, 'barcode', event.target.value)} />
+                        </FormField>
+                        <FormField label="عنوان تنوع" htmlFor={`variant-${index}-title`}>
+                          <TextField id={`variant-${index}-title`} size="small" value={variant.title} onChange={(event) => setVariantField(index, 'title', event.target.value)} />
+                        </FormField>
+                      </Stack>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <FormField label="قیمت خرید (ریال)" required htmlFor={`variant-${index}-cost`} error={Boolean(variantErrors[index]?.costPrice)} errorText={variantErrors[index]?.costPrice}>
+                          <TextField id={`variant-${index}-cost`} size="small" dir="ltr" inputMode="numeric" value={variant.costPrice} onChange={(event) => setVariantField(index, 'costPrice', event.target.value.replace(/[^\d]/g, ''))} />
+                        </FormField>
+                        <FormField label="قیمت فروش (ریال)" required htmlFor={`variant-${index}-sale`} error={Boolean(variantErrors[index]?.salePrice)} errorText={variantErrors[index]?.salePrice}>
+                          <TextField id={`variant-${index}-sale`} size="small" dir="ltr" inputMode="numeric" value={variant.salePrice} onChange={(event) => setVariantField(index, 'salePrice', event.target.value.replace(/[^\d]/g, ''))} />
+                        </FormField>
+                        <FormField label="وزن (گرم)" htmlFor={`variant-${index}-weight`} error={Boolean(variantErrors[index]?.weightGrams)} errorText={variantErrors[index]?.weightGrams}>
+                          <TextField id={`variant-${index}-weight`} size="small" dir="ltr" inputMode="numeric" value={variant.weightGrams} onChange={(event) => setVariantField(index, 'weightGrams', event.target.value.replace(/[^\d]/g, ''))} />
+                        </FormField>
+                      </Stack>
+                      <FormControlLabel control={<Checkbox checked={variant.isActive} onChange={(event) => setVariantField(index, 'isActive', event.target.checked)} inputProps={{ 'aria-label': `تنوع ${index + 1} فعال` }} />} label="فعال" />
+                    </Stack>
+                  </Box>
+                ))}
               </Stack>
             </CardContent>
           </Card>
