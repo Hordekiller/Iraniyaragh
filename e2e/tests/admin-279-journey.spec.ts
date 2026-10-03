@@ -186,15 +186,11 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     await page.locator('#variant-0-sale').fill('240000');
 
     await tap(page.getByRole('button', { name: 'ثبت کالا' }));
-    await expect(page).toHaveURL(/\/catalog$/, { timeout: 20_000 });
-
-    const detailLink = page.locator(`a[href^="/catalog/products/"]`, { hasText: productName });
-    await expect(detailLink).toBeVisible({ timeout: 15_000 });
-    productHref = (await detailLink.first().getAttribute('href')) ?? '';
+    await expect(page).toHaveURL(/\/catalog\/products\/[^/]+$/, { timeout: 20_000 });
+    productHref = new URL(page.url()).pathname;
     expect(productHref).toMatch(/^\/catalog\/products\/[^/]+$/u);
-
-    await tap(detailLink.first());
-    await expect(page).toHaveURL(new RegExp(`${productHref}$`));
+    await expect(page.getByRole('heading', { name: productName })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('link', { name: /مدیریت رسانه/u })).toHaveAttribute('href', `${productHref}/media`);
   });
 
   test('uploads a product image and waits for the READY state', async ({ page }) => {

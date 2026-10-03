@@ -5,6 +5,7 @@ import type { CustomerAccount, CustomerAccountAddressesRequest } from '@iranyara
 import { useAuth } from '../state/auth-context'
 import { ROUTES } from '../lib/routes'
 import { getCustomerAccount, replaceCustomerAddresses } from '../services/customer-account'
+import { IRAN_PROVINCES, IRAN_PROVINCE_CODES } from '../lib/iran'
 
 type AddressInput = CustomerAccountAddressesRequest['addresses'][number]
 const emptyAddress = (): AddressInput => ({ label: '', receiverName: '', mobile: '', provinceCode: '', city: '', addressLine: '', postalCode: '', isDefault: false })
@@ -74,7 +75,7 @@ export function AccountAddressesPage() {
           <AddressField label="عنوان نشانی" value={address.label} onChange={(value) => changeAddress(index, 'label', value)} maxLength={60} />
           <AddressField label="نام تحویل‌گیرنده" value={address.receiverName} onChange={(value) => changeAddress(index, 'receiverName', value)} maxLength={120} />
           <AddressField label="موبایل تحویل‌گیرنده" value={address.mobile} onChange={(value) => changeAddress(index, 'mobile', value)} maxLength={20} dir="ltr" />
-          <AddressField label="کد استان" value={address.provinceCode} onChange={(value) => changeAddress(index, 'provinceCode', value)} maxLength={32} />
+          <label className="block text-sm font-bold text-slate-700">استان<select required value={IRAN_PROVINCES.find((province) => IRAN_PROVINCE_CODES[province] === address.provinceCode) ?? ''} onChange={(event) => { const province = event.target.value as (typeof IRAN_PROVINCES)[number]; changeAddress(index, 'provinceCode', IRAN_PROVINCE_CODES[province] ?? '') }} className="mt-2 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 font-normal focus:border-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-100"><option value="">انتخاب استان</option>{IRAN_PROVINCES.map((province) => <option key={province} value={province}>{province}</option>)}</select></label>
           <AddressField label="شهر" value={address.city} onChange={(value) => changeAddress(index, 'city', value)} maxLength={100} />
           <AddressField label="کد پستی" value={address.postalCode ?? ''} onChange={(value) => changeAddress(index, 'postalCode', value)} maxLength={20} required={false} />
           <label className="sm:col-span-2 block text-sm font-bold text-slate-700">نشانی کامل
@@ -82,7 +83,7 @@ export function AccountAddressesPage() {
           </label>
           <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3">
             <label className="inline-flex items-center gap-2 text-sm font-bold"><input type="radio" name="default-address" checked={address.isDefault} onChange={() => { retryKey.current = null; setAddresses((items) => items.map((item, i) => ({ ...item, isDefault: i === index }))) }} /> نشانی پیش‌فرض</label>
-            <button type="button" onClick={() => { retryKey.current = null; setAddresses((items) => items.filter((_, i) => i !== index).map((item, i) => ({ ...item, isDefault: item.isDefault || i === 0 }))) }} className="inline-flex items-center gap-2 text-sm font-bold text-red-700"><Trash2 size={16} aria-hidden="true" /> حذف نشانی</button>
+            <button type="button" onClick={() => { if (!window.confirm(`نشانی «${address.label || `شماره ${index + 1}`}» حذف شود؟`)) return; retryKey.current = null; setAddresses((items) => items.filter((_, i) => i !== index).map((item, i) => ({ ...item, isDefault: item.isDefault || i === 0 }))) }} className="inline-flex items-center gap-2 text-sm font-bold text-red-700"><Trash2 size={16} aria-hidden="true" /> حذف نشانی</button>
           </div>
         </div>
       </fieldset>)}

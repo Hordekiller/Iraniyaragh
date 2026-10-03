@@ -75,7 +75,7 @@ describe('AccountPage', () => {
     fireEvent.change(screen.getByLabelText('عنوان نشانی'), { target: { value: 'خانه' } })
     fireEvent.change(screen.getByLabelText('نام تحویل‌گیرنده'), { target: { value: 'آوا رضایی' } })
     fireEvent.change(screen.getByLabelText('موبایل تحویل‌گیرنده'), { target: { value: '09121234567' } })
-    fireEvent.change(screen.getByLabelText('کد استان'), { target: { value: 'THR' } })
+    fireEvent.change(screen.getByLabelText('استان'), { target: { value: 'تهران' } })
     fireEvent.change(screen.getByLabelText('شهر'), { target: { value: 'تهران' } })
     fireEvent.change(screen.getByLabelText('نشانی کامل'), { target: { value: 'خیابان نمونه' } })
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره نشانی‌ها' }))
