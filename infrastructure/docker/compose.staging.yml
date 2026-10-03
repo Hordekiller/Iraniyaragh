@@ -159,6 +159,7 @@ services:
     environment:
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
       API_PORT: '4000'
+      OBJECT_STORAGE_UPLOAD_ENDPOINT: ${OBJECT_STORAGE_UPLOAD_ENDPOINT:?Set the HTTPS browser upload origin}
       # Assembled from the POSTGRES_* credentials rather than read from a
       # separate DATABASE_URL, so the password cannot drift out of sync with
       # the role Postgres was actually initialised with. A hand-edited URL was

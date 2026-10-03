@@ -61,16 +61,17 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
     setSubmitting(true);
     setSubmitError(null);
     try {
+      let saved: { id: string; name: string; slug: string };
       if (brand) {
-        await updateBrand(brand.id, { name: name.trim(), slug: slug.trim() });
+        saved = (await updateBrand(brand.id, { name: name.trim(), slug: slug.trim() })).brand;
         feedback.success(`برند «${name.trim()}» به‌روزرسانی شد.`);
       } else {
         idempotencyKey.current ??= createIdempotencyKey('catalog-brand');
-        await createBrand({ name: name.trim(), slug: slug.trim() }, idempotencyKey.current);
+        saved = (await createBrand({ name: name.trim(), slug: slug.trim() }, idempotencyKey.current)).brand;
         feedback.success(`برند «${name.trim()}» ساخته شد.`);
       }
       idempotencyKey.current = null;
-      onSaved();
+      onSaved(saved);
       onClose();
     } catch (error) {
       setSubmitError(

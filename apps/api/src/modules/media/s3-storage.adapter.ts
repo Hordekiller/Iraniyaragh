@@ -12,19 +12,24 @@ import type { PresignedPut, ProductMediaStorage, StoredObjectHead } from './stor
 
 export class S3ProductMediaStorage implements ProductMediaStorage {
   private readonly client: S3Client;
+  private readonly uploadClient: S3Client;
   private readonly bucket: string;
 
   constructor(config: ConfigService<EnvironmentVariables, true>) {
     this.bucket = config.get('OBJECT_STORAGE_BUCKET', { infer: true });
-    this.client = new S3Client({
-      endpoint: config.get('OBJECT_STORAGE_ENDPOINT', { infer: true }),
+    const options = {
       region: config.get('OBJECT_STORAGE_REGION', { infer: true }),
       forcePathStyle: config.get('OBJECT_STORAGE_FORCE_PATH_STYLE', { infer: true }),
       credentials: {
         accessKeyId: config.get('OBJECT_STORAGE_ACCESS_KEY', { infer: true }),
         secretAccessKey: config.get('OBJECT_STORAGE_SECRET_KEY', { infer: true }),
       },
-    });
+    };
+    const endpoint = config.get('OBJECT_STORAGE_ENDPOINT', { infer: true });
+    this.client = new S3Client({ ...options, endpoint });
+    // Browser PUTs cannot resolve Docker DNS. Sign the public endpoint itself:
+    // replacing a host or stripping a path after signing invalidates SigV4.
+    this.uploadClient = new S3Client({ ...options, endpoint: config.get('OBJECT_STORAGE_UPLOAD_ENDPOINT', { infer: true }) ?? endpoint });
   }
 
   async presignPut(input: {
@@ -39,7 +44,7 @@ export class S3ProductMediaStorage implements ProductMediaStorage {
       ContentType: input.contentType,
       ContentLength: input.bytes,
     });
-    const url = await getSignedUrl(this.client, command, { expiresIn: input.expiresInSeconds });
+    const url = await getSignedUrl(this.uploadClient, command, { expiresIn: input.expiresInSeconds });
     return {
       url,
       requiredHeaders: {

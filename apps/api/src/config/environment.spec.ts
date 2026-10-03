@@ -378,6 +378,13 @@ describe('validateEnvironment', () => {
     ).toThrow('OBJECT_STORAGE_FORCE_PATH_STYLE');
   });
 
+  it('requires an HTTPS origin without mutable signature components for browser uploads', () => {
+    expect(validateEnvironment({ ...validProductionEnvironment, OBJECT_STORAGE_UPLOAD_ENDPOINT: 'https://store.example.com' }).OBJECT_STORAGE_UPLOAD_ENDPOINT).toBe('https://store.example.com');
+    for (const endpoint of ['http://store.example.com', 'https://user:secret@store.example.com', 'https://store.example.com/media', 'https://store.example.com?signature=unsafe', 'https://store.example.com#unsafe']) {
+      expect(() => validateEnvironment({ ...validProductionEnvironment, OBJECT_STORAGE_UPLOAD_ENDPOINT: endpoint })).toThrow('OBJECT_STORAGE_UPLOAD_ENDPOINT');
+    }
+  });
+
   it.each([
     ['PRODUCT_MEDIA_MAX_ASSETS', '101'],
     ['PRODUCT_MEDIA_MAX_VIDEOS', '21'],

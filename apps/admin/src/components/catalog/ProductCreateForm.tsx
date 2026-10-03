@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -33,10 +34,11 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { canWriteCatalog } from '@/lib/catalog/catalog-permissions';
+import { canWriteCatalog, canWriteCatalogMedia } from '@/lib/catalog/catalog-permissions';
 import { RichTextEditor } from '@/components/editor/RichTextEditor';
 import { BrandDialog } from './BrandDialog';
 import { CategoryDialog } from './CategoryDialog';
+import { ProductMediaManager } from './ProductMediaManager';
 
 type ProductDraft = {
   name: string;
@@ -102,7 +104,17 @@ export function ProductCreateForm() {
   const [variantErrors, setVariantErrors] = useState<VariantErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [savedProductId, setSavedProductId] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [referenceAttempt, setReferenceAttempt] = useState(0);
   const idempotencyKey = useRef<string | null>(null);
+
+  useEffect(() => {
+    const urls = files.map(file => URL.createObjectURL(file));
+    setPreviews(urls);
+    return () => urls.forEach(url => URL.revokeObjectURL(url));
+  }, [files]);
 
   useEffect(() => {
     if (!canWrite) return;
@@ -111,13 +123,14 @@ export function ProductCreateForm() {
       .then(([brandList, categoryList]) => {
         setBrands(brandList);
         setCategories(categoryList);
+        setReferenceError(null);
       })
       .catch((error: unknown) => {
         if (error instanceof ApiAbortError) return;
         setReferenceError('بارگیری برندها و دسته‌بندی‌ها ناموفق بود؛ دوباره تلاش کنید.');
       });
     return () => controller.abort();
-  }, [canWrite]);
+  }, [canWrite, referenceAttempt]);
 
   const setField = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => {
     idempotencyKey.current = null;
@@ -140,6 +153,7 @@ export function ProductCreateForm() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (submitting || savedProductId) return;
     const { fields, variants } = validateDraft(draft);
     setVariantErrors(variants);
     if (Object.keys(fields).length > 0 || Object.keys(variants).length > 0) {
@@ -172,7 +186,8 @@ export function ProductCreateForm() {
       );
       idempotencyKey.current = null;
       feedback.success(`کالای «${result.product.name}» با موفقیت ثبت شد.`);
-      router.replace(`/catalog/products/${result.product.id}`);
+      if (files.length) setSavedProductId(result.product.id);
+      else router.replace(`/catalog/products/${result.product.id}`);
     } catch (error) {
       if (error instanceof ApiClientError) {
         setFormError(error.message);
@@ -199,12 +214,18 @@ export function ProductCreateForm() {
     );
   }
 
+  if (savedProductId) return <Stack spacing={3}>
+    <Alert severity="info">پیش‌نویس ذخیره شد. آماده شدن تصاویر را بررسی کنید؛ انتشار از جزئیات کالا انجام می‌شود.</Alert>
+    <Button component={Link} href={`/catalog/products/${savedProductId}`}>جزئیات و انتشار کالا</Button>
+    <ProductMediaManager key={savedProductId} productId={savedProductId} initialFiles={files} />
+  </Stack>;
+
   return (
     <>
       <PageHeader
         title="کالای جدید"
         eyebrow="کاتالوگ"
-        description="ثبت کالا مطابق مدل دامنه - Product به‌عنوان مدل تجاری ثبت می‌شود. پس از ثبت، می‌توانید ویژگی‌ها و انواع را پیکربندی کنید."
+        description="مشخصات، تنوع‌ها، قیمت و تصاویر کالا را ثبت کنید. کالا ابتدا به‌صورت پیش‌نویس ذخیره می‌شود."
         breadcrumbs={[
           { label: 'کالا و انبار' },
           { label: 'کالا و SKU', href: '/catalog' },
@@ -219,7 +240,7 @@ export function ProductCreateForm() {
 
       <Box component="form" onSubmit={handleSubmit} noValidate>
         <Stack spacing={3} sx={{ maxWidth: 860 }}>
-          {referenceError ? <Alert severity="warning">{referenceError}</Alert> : null}
+          {referenceError ? <Alert severity="warning" action={<Button onClick={() => setReferenceAttempt(current => current + 1)}>تلاش دوباره</Button>}>{referenceError}</Alert> : null}
           {formError ? <Alert severity="error">{formError}</Alert> : null}
 
           <Card variant="outlined">
@@ -369,6 +390,27 @@ export function ProductCreateForm() {
             </CardContent>
           </Card>
 
+          {canWriteCatalogMedia(user) && <Card variant="outlined"><CardContent><Stack spacing={2}>
+            <Typography variant="subtitle1" fontWeight={800}>تصاویر کالا</Typography>
+            <Typography variant="body2">تا ۱۲ تصویر JPEG، PNG یا WebP، هرکدام حداکثر ۲۰ مگابایت. ارسال پس از ذخیرهٔ پیش‌نویس آغاز می‌شود.</Typography>
+            <Button component="label" disabled={submitting}>انتخاب تصاویر
+              <input hidden type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="تصاویر کالا" onChange={event => {
+                const selected = Array.from(event.target.files ?? []);
+                event.target.value = '';
+                if (files.length + selected.length > 12 || selected.some(file => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || !file.size || file.size > 20 * 1024 * 1024)) {
+                  setFormError('حداکثر ۱۲ تصویر JPEG، PNG یا WebP، هرکدام حداکثر ۲۰ مگابایت مجاز است.');
+                  return;
+                }
+                setFormError(null);
+                setFiles(current => [...current, ...selected]);
+              }} />
+            </Button>
+            {files.map((file, index) => <Stack key={index} direction="row" alignItems="center" spacing={2}>
+              {previews[index] && <Box component="img" src={previews[index]} alt={`پیش‌نمایش ${file.name}`} sx={{ width: 64, height: 64, objectFit: 'contain' }} />}
+              <Typography>{file.name}</Typography>
+              <IconButton aria-label={`حذف تصویر ${index + 1}`} disabled={submitting} onClick={() => setFiles(current => current.filter((_, i) => i !== index))}><Trash2 size={17} /></IconButton>
+            </Stack>)}
+          </Stack></CardContent></Card>}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1 }}>
             <Button type="submit" variant="contained" size="large" disabled={submitting} startIcon={<ArrowRight size={18} />}>
               {submitting ? 'در حال ثبت…' : 'ثبت کالا'}
@@ -382,12 +424,16 @@ export function ProductCreateForm() {
         onClose={() => setBrandDialogOpen(false)}
         onSaved={(entity) => {
           setBrandDialogOpen(false);
+          if (entity) {
+            setBrands(current => [...current.filter(item => item.id !== entity.id), { ...entity, productCount: 0 }]);
+            setField('brandId', entity.id);
+          }
           listBrands()
             .then((items) => {
               setBrands(items);
               if (entity?.id) setDraft((d) => ({ ...d, brandId: entity.id }));
             })
-            .catch(() => {});
+            .catch(() => setReferenceError('بارگیری برندها ناموفق بود؛ دوباره تلاش کنید.'));
         }}
       />
       <CategoryDialog
@@ -396,12 +442,16 @@ export function ProductCreateForm() {
         onClose={() => setCategoryDialogOpen(false)}
         onSaved={(entity) => {
           setCategoryDialogOpen(false);
+          if (entity) {
+            setCategories(current => [...current.filter(item => item.id !== entity.id), entity]);
+            setField('categoryId', entity.id);
+          }
           listCategories()
             .then((items) => {
               setCategories(items);
               if (entity?.id) setDraft((d) => ({ ...d, categoryId: entity.id }));
             })
-            .catch(() => {});
+            .catch(() => setReferenceError('بارگیری دسته‌بندی‌ها ناموفق بود؛ دوباره تلاش کنید.'));
         }}
       />
     </>

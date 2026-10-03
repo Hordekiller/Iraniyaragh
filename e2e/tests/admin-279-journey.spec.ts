@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Locator, Page, Request } from '@playwright/test';
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
 
 /**
@@ -18,9 +19,8 @@ import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
  * images must be rewritten to the canonical public media origin, and no request
  * may target jodit-cdn.unpkg.com or any other third-party origin.
  *
- * The admin access token is memory-only (AUTH_CONTRACT §7), so authenticated
- * navigation uses client-side transitions only; full page loads after sign-in
- * would drop the session and bounce to /login.
+ * Access tokens stay in memory; reload restores a real cookie session and
+ * rejected access tokens recover by rotating the cookie with CSRF proof.
  */
 
 const storefrontUrl = process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173';
@@ -184,8 +184,15 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     await page.locator('#variant-0-sku').fill(`E2E-LOCK-${stamp}`);
     await page.locator('#variant-0-cost').fill('180000');
     await page.locator('#variant-0-sale').fill('240000');
+    await page.getByLabel('تصاویر کالا', { exact: true }).setInputFiles([
+      { name: 'creation-primary.png', mimeType: 'image/png', buffer: readFileSync(fixtureImage) },
+      { name: 'creation-gallery.png', mimeType: 'image/png', buffer: readFileSync(fixtureImage) },
+    ]);
 
     await tap(page.getByRole('button', { name: 'ثبت کالا' }));
+    await expect(page.getByText('پیش‌نویس ذخیره شد.', { exact: false })).toBeVisible();
+    await expect(page.getByText('آماده', { exact: true })).toHaveCount(2, { timeout: 120_000 });
+    await tap(page.getByRole('link', { name: 'جزئیات و انتشار کالا' }));
     // The create form itself is at `/catalog/products/new`, which also matches
     // a broad `[^/]+` segment. Require a persisted product id before reading
     // the detail route so a no-op submit cannot pass this navigation check.
@@ -202,15 +209,25 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     await tap(page.locator(`a[href="${productHref}/media"]`));
     await expect(page).toHaveURL(new RegExp(`${productHref}/media$`));
 
+    // Real reload, then rotate the backing session outside the UI so its
+    // in-memory access token is genuinely rejected by the API on the next PUT.
+    await page.reload();
+    await expect(page.getByText('creation-gallery.png', { exact: true })).toBeVisible();
+    const cookies = await page.context().cookies(apiOrigin);
+    const csrf = cookies.find(cookie => cookie.name.endsWith('csrf'))?.value;
+    expect(csrf).toBeTruthy();
+    const rotated = await page.context().request.post(`${apiOrigin}/api/v1/auth/refresh`, {
+      headers: { Origin: new URL(page.url()).origin, 'X-CSRF-Token': csrf! },
+    });
+    expect(rotated.status()).toBe(200);
+
     const fileInput = page.locator('input[type="file"]');
     await expect(fileInput).toBeAttached();
-    await fileInput.setInputFiles(fixtureImage);
+    await fileInput.setInputFiles({ name: 'after-reload.png', mimeType: 'image/png', buffer: readFileSync(fixtureImage) });
     await expect(
       page.getByText('در صف پردازش').first().or(page.getByText('در حال پردازش').first()),
     ).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText('آماده', { exact: true }).first()).toBeVisible({
-      timeout: 120_000,
-    });
+    await expect(page.getByText('آماده', { exact: true })).toHaveCount(3, { timeout: 120_000 });
   });
 
   test('composes rich HTML, inserts the product image and saves', async ({ page }) => {
@@ -281,12 +298,9 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
   });
 
   test('renders the description on the storefront with only trusted network origins', async ({ page }) => {
-    // In the CI build the storefront serves the FIXTURE catalog (VITE_FIXTURE_
-    // CATALOG=true), which cannot list the API-created product. The committed
-    // branch therefore asserts against a fixture product whose description is
-    // known. Setting WEB_E2E_REAL_URL (a real-API web build) enables the full
-    // capstone: the product published above with its rich description.
-    const realStorefront = process.env.WEB_E2E_REAL_URL;
+    // The second storefront build has fixture mode off and renders the same
+    // API-created product on its homepage and detail page.
+    const realStorefront = process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174';
     const target = realStorefront
       ? `${realStorefront}/product/${productSlug}`
       : `${storefrontUrl}/product/bosch-gws-750-grinder`;
@@ -296,6 +310,9 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
       tracker.trust(apiOrigin);
       tracker.trust(publicMediaOrigin);
     }
+
+    await page.goto(realStorefront);
+    await expect(page.getByRole('link', { name: new RegExp(productName) }).first()).toBeVisible({ timeout: 20_000 });
 
     await page.goto(target);
     await expect(page).toHaveURL(new RegExp(`/product/[^/]+$`));

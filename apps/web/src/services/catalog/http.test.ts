@@ -76,7 +76,8 @@ describe('CatalogHttpClient', () => {
     const client = new CatalogHttpClient({ fetch: fetcher })
     expect((await client.listProducts({ brand: 'arya' })).meta.total).toBe(0)
     expect((await client.listProducts({ brand: 'missing' })).items).toEqual([])
-    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(fetcher.mock.calls.filter(([url]) => String(url).endsWith('/brands'))).toHaveLength(2)
   })
 
   it('uses a safe placeholder for products without media or price', async () => {

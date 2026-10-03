@@ -70,24 +70,25 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
     setSubmitting(true);
     setSubmitError(null);
     try {
+      let saved: CategorySummary;
       if (category) {
-        await updateCategory(category.id, {
+        saved = { ...(await updateCategory(category.id, {
           name: name.trim(),
           slug: slug.trim(),
           parentId: parentId || null,
-        });
+        })).category, productCount: category.productCount };
         feedback.success(`دسته‌بندی «${name.trim()}» به‌روزرسانی شد.`);
       } else {
         idempotencyKey.current ??= createIdempotencyKey('catalog-category');
-        await createCategory({
+        saved = { ...(await createCategory({
           name: name.trim(),
           slug: slug.trim(),
           ...(parentId ? { parentId } : {}),
-        }, idempotencyKey.current);
+        }, idempotencyKey.current)).category, productCount: 0 };
         feedback.success(`دسته‌بندی «${name.trim()}» ساخته شد.`);
       }
       idempotencyKey.current = null;
-      onSaved();
+      onSaved(saved);
       onClose();
     } catch (error) {
       setSubmitError(

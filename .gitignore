@@ -2,6 +2,7 @@ node_modules
 .pnpm-store
 .turbo
 dist
+apps/web/dist-real/
 .next
 .env
 .env.*

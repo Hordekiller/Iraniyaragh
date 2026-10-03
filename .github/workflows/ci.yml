@@ -162,7 +162,7 @@ jobs:
       AUTH_JWT_ISSUER: iranyaragh-api
       AUTH_HASH_KEY_VERSION: "1"
       AUTH_HASH_SECRET: development-only-hash-root-secret-replace-me
-      CORS_ORIGINS: http://127.0.0.1:3001
+      CORS_ORIGINS: http://127.0.0.1:3001,http://127.0.0.1:4174
       OBJECT_STORAGE_ENDPOINT: http://127.0.0.1:9000
       OBJECT_STORAGE_ACCESS_KEY: minio
       OBJECT_STORAGE_SECRET_KEY: change-me-now

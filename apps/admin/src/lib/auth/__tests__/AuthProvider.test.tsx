@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider, useAuth } from '../AuthProvider';
 import { getAccessToken, setAccessToken } from '../token-store';
+import { recoverApiSession } from '@/lib/api/client';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -54,6 +55,47 @@ describe('AuthProvider', () => {
       </AuthProvider>,
     );
     expect(screen.getByTestId('authed')).toHaveTextContent('no');
+  });
+
+  it('restores a reloaded staff session from cookies after authoritative MFA and permission verification', async () => {
+    document.cookie = 'iranyaragh_customer_csrf=csrf-tok; path=/';
+    const fetchMock = vi.fn(async (url: string) => jsonResponse({ data: url.endsWith('/refresh')
+      ? { accessToken: 'restored' } : { principal: staffPrincipal } }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('yes'));
+    expect(getAccessToken()).toBe('restored');
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      expect.stringContaining('/auth/refresh'), expect.stringContaining('/auth/me'),
+    ]);
+  });
+
+  it('never adopts a customer-level cookie into the staff panel', async () => {
+    document.cookie = 'iranyaragh_customer_csrf=csrf-tok; path=/';
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => jsonResponse({ data: url.endsWith('/refresh')
+      ? { accessToken: 'customer' } : { principal: { ...staffPrincipal, authenticationLevel: 'CUSTOMER_OTP' } } })));
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    await act(async () => { await recoverApiSession().catch(() => undefined); });
+    expect(screen.getByTestId('authed')).toHaveTextContent('no');
+    expect(getAccessToken()).toBeNull();
+  });
+
+  it('ignores a refresh completing after logout', async () => {
+    let resolveRefresh!: (response: Response) => void;
+    vi.stubGlobal('fetch', vi.fn((url: string) => url.endsWith('/refresh')
+      ? new Promise<Response>(resolve => { resolveRefresh = resolve; })
+      : Promise.resolve(jsonResponse({ data: url.endsWith('/me') ? { principal: staffPrincipal } : {} }))));
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    fireEvent.click(screen.getByText('adopt'));
+    const attempt = recoverApiSession().catch(() => undefined);
+    await waitFor(() => expect(resolveRefresh).toBeDefined());
+    fireEvent.click(screen.getByText('signout'));
+    await act(async () => {
+      resolveRefresh(jsonResponse({ data: { accessToken: 'late' } }));
+      await attempt;
+    });
+    expect(screen.getByTestId('authed')).toHaveTextContent('no');
+    expect(getAccessToken()).toBeNull();
   });
 
 

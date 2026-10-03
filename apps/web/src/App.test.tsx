@@ -1,13 +1,22 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
 
-async function mountAt(path: string) {
-  vi.resetModules()
+let App: typeof import('./App')['default']
+
+beforeAll(async () => {
+  // All routes use the same catalog/auth contract. Load this module graph once:
+  // resetting it between routes can race a pending React.lazy import with a new
+  // CatalogContext identity after a slow initial render.
   vi.stubEnv('VITE_FIXTURE_AUTH', 'true')
   vi.stubEnv('VITE_FIXTURE_CATALOG', 'true')
+  App = (await import('./App')).default
+})
+
+afterAll(() => vi.unstubAllEnvs())
+
+function mountAt(path: string) {
   window.history.pushState({}, '', path)
-  const { default: App } = await import('./App')
   render(React.createElement(App))
 }
 
@@ -122,12 +131,11 @@ const routes: Array<[string, () => Promise<void> | void]> = [
 
 describe.each(routes)('App at %s', (_path, assert) => {
   afterEach(() => {
-    vi.unstubAllEnvs()
     window.history.pushState({}, '', '/')
   })
 
   it('serves the route through the storefront shell', async () => {
-    await mountAt(_path)
+    mountAt(_path)
     await assert()
   })
 })

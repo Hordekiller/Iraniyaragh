@@ -34,6 +34,7 @@ export type EnvironmentVariables = {
   ZARINPAL_CALLBACK_URL?: string;
   ZARINPAL_TIMEOUT_MS?: number;
   OBJECT_STORAGE_ENDPOINT: string;
+  OBJECT_STORAGE_UPLOAD_ENDPOINT?: string;
   OBJECT_STORAGE_ACCESS_KEY: string;
   OBJECT_STORAGE_SECRET_KEY: string;
   OBJECT_STORAGE_BUCKET: string;
@@ -295,6 +296,15 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     'http:',
     'https:',
   ]);
+  let objectStorageUploadEndpoint: string | undefined;
+  if (typeof config.OBJECT_STORAGE_UPLOAD_ENDPOINT === 'string' && config.OBJECT_STORAGE_UPLOAD_ENDPOINT.trim()) {
+    const endpoint = new URL(parseUrl(config.OBJECT_STORAGE_UPLOAD_ENDPOINT.trim(), 'OBJECT_STORAGE_UPLOAD_ENDPOINT',
+      ['staging', 'production'].includes(environment) ? ['https:'] : ['http:', 'https:']));
+    if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || endpoint.pathname !== '/') {
+      throw new Error('OBJECT_STORAGE_UPLOAD_ENDPOINT must be an origin without credentials, path, query or fragment.');
+    }
+    objectStorageUploadEndpoint = endpoint.origin;
+  }
   if (['staging', 'production'].includes(environment) && !(typeof config.PUBLIC_MEDIA_ORIGIN === 'string' && config.PUBLIC_MEDIA_ORIGIN.trim())) {
     throw new Error('PUBLIC_MEDIA_ORIGIN is required in staging and production.');
   }
@@ -474,6 +484,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
         ? undefined
         : parseBoundedInteger(config.ZARINPAL_TIMEOUT_MS, 'ZARINPAL_TIMEOUT_MS', 500, 10_000),
     OBJECT_STORAGE_ENDPOINT: objectStorageEndpoint,
+    OBJECT_STORAGE_UPLOAD_ENDPOINT: objectStorageUploadEndpoint,
     OBJECT_STORAGE_ACCESS_KEY: requiredString(config, 'OBJECT_STORAGE_ACCESS_KEY'),
     OBJECT_STORAGE_SECRET_KEY: objectStorageSecret,
     OBJECT_STORAGE_BUCKET: requiredString(config, 'OBJECT_STORAGE_BUCKET'),
