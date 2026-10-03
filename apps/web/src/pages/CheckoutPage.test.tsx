@@ -11,6 +11,11 @@ import {
   testAuthProps,
 } from '../test/commerce'
 import { CheckoutPage } from './CheckoutPage'
+import { getCustomerAccount } from '../services/customer-account'
+
+vi.mock('../services/customer-account', () => ({
+  getCustomerAccount: vi.fn().mockRejectedValue(new Error('unavailable')),
+}))
 
 function renderPage(api = commerceStub(), store = signedInStore()) {
   return render(
@@ -57,6 +62,26 @@ function fillValidAddress() {
 }
 
 describe('CheckoutPage', () => {
+  it('lets a signed-in customer use a saved address without changing its order snapshot', async () => {
+    vi.mocked(getCustomerAccount).mockResolvedValueOnce({
+      id: 'customer-1', mobile: '+989123456789', firstName: 'علی', lastName: 'رضایی', version: 3,
+      addresses: [{
+        id: 'address-1', label: 'خانه', receiverName: 'علی رضایی', mobile: '+989123456789',
+        provinceCode: 'TEH', city: 'تهران', addressLine: 'خیابان ولیعصر، پلاک ۱۰', postalCode: '1234567890',
+        isDefault: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+      }],
+    })
+    const api = commerceStub()
+    renderPage(api)
+    fireEvent.click(await screen.findByRole('button', { name: 'خانه — TEH، تهران' }))
+    fireEvent.click(screen.getByRole('button', { name: 'محاسبه هزینه ارسال' }))
+    await waitFor(() => expect(api.previewCheckout).toHaveBeenCalledWith(expect.objectContaining({
+      recipient: 'علی رضایی', mobile: '09123456789', provinceCode: 'TEH', city: 'تهران',
+      postalCode: '1234567890', address: 'خیابان ولیعصر، پلاک ۱۰',
+    })))
+    expect(screen.getByRole('link', { name: 'مدیریت نشانی‌ها' })).toHaveAttribute('href', '/account/addresses')
+  })
+
   it('defers OTP until Checkout and explains that the Guest Cart is preserved', async () => {
     renderPage(commerceStub(), new MemorySessionStore())
 

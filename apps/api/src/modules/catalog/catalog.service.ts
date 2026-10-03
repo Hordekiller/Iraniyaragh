@@ -159,8 +159,11 @@ export class CatalogService {
   }
 
   async createProduct(actorId: string, idempotencyKey: string, input: ProductCreateDto): Promise<ProductDetailResponse> {
-    if (input.status === 'PUBLISHED' && (!input.variants || input.variants.length === 0)) {
-      throw new ConflictException({ code: 'CONFLICT', message: 'A product must have a SKU before publishing.' });
+    if (input.status !== undefined && input.status !== 'DRAFT') {
+      throw new ConflictException({
+        code: 'CATALOG_STATUS_TRANSITION_REQUIRED',
+        message: 'Products must be created as drafts. Use the authorized product lifecycle action to publish or archive.',
+      });
     }
     const sanitized = input.description === undefined ? undefined : this.sanitizeDescription(input.description, { images: 'drop' });
     const normalized = { ...input, name: input.name.trim(), description: sanitized?.html ?? undefined };

@@ -25,7 +25,7 @@ import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
 
 const storefrontUrl = process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173';
 const apiOrigin = process.env.API_E2E_URL ?? 'http://127.0.0.1:4000';
-const publicMediaOrigin = 'http://127.0.0.1:9000';
+const publicMediaOrigin = process.env.PUBLIC_MEDIA_E2E_URL ?? 'http://127.0.0.1:9000';
 
 const fixtureImage = join(__dirname, 'fixtures', 'product-detail.png');
 
@@ -186,15 +186,14 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     await page.locator('#variant-0-sale').fill('240000');
 
     await tap(page.getByRole('button', { name: 'ثبت کالا' }));
-    await expect(page).toHaveURL(/\/catalog$/, { timeout: 20_000 });
-
-    const detailLink = page.locator(`a[href^="/catalog/products/"]`, { hasText: productName });
-    await expect(detailLink).toBeVisible({ timeout: 15_000 });
-    productHref = (await detailLink.first().getAttribute('href')) ?? '';
+    // The create form itself is at `/catalog/products/new`, which also matches
+    // a broad `[^/]+` segment. Require a persisted product id before reading
+    // the detail route so a no-op submit cannot pass this navigation check.
+    await expect(page).toHaveURL(/\/catalog\/products\/(?!new(?:\/|$))[^/]+$/, { timeout: 20_000 });
+    productHref = new URL(page.url()).pathname;
     expect(productHref).toMatch(/^\/catalog\/products\/[^/]+$/u);
-
-    await tap(detailLink.first());
-    await expect(page).toHaveURL(new RegExp(`${productHref}$`));
+    await expect(page.getByRole('heading', { name: productName })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('link', { name: /مدیریت رسانه/u })).toHaveAttribute('href', `${productHref}/media`);
   });
 
   test('uploads a product image and waits for the READY state', async ({ page }) => {

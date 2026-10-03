@@ -8,6 +8,38 @@ export const CUSTOMER_NOTE_VISIBILITIES = ['INTERNAL', 'CUSTOMER_VISIBLE'] as co
 export type CustomerStatus = (typeof CUSTOMER_STATUSES)[number];
 export type CustomerNoteVisibility = (typeof CUSTOMER_NOTE_VISIBILITIES)[number];
 
+/** Self-service customer projection. It intentionally excludes staff notes and order PII. */
+export type CustomerAccount = {
+  id: string;
+  mobile: string;
+  firstName: string | null;
+  lastName: string | null;
+  version: number;
+  addresses: AdminCustomerAddress[];
+};
+
+export type CustomerAccountResponse = ApiSuccess<{ account: CustomerAccount }>;
+
+export type CustomerAccountUpdateRequest = {
+  expectedVersion: number;
+  firstName?: string | null;
+  lastName?: string | null;
+};
+
+export type CustomerAccountAddressesRequest = {
+  expectedVersion: number;
+  addresses: Array<{
+    label: string;
+    receiverName: string;
+    mobile: string;
+    provinceCode: string;
+    city: string;
+    addressLine: string;
+    postalCode?: string | null;
+    isDefault?: boolean;
+  }>;
+};
+
 /**
  * Staff-facing customer record.
  *

@@ -109,6 +109,38 @@ describe('canonicalMobile', () => {
   });
 });
 
+describe('customer self-service ownership', () => {
+  it('loads only the record linked to the authenticated user and projects no staff data', async () => {
+    const h = harness();
+    h.prisma.customer.findUnique.mockResolvedValue({
+      ...makeRow({ userId: 'user_owner', addresses: [], notes: [{ body: 'private staff note' }], orders: [] }),
+      deactivatedAt: null,
+    });
+
+    const result = await h.service.getOwn('user_owner');
+
+    expect(h.prisma.customer.findUnique).toHaveBeenCalledWith({ where: { userId: 'user_owner' }, select: expect.any(Object) });
+    expect(result).toMatchObject({ id: 'cus_1', mobile: '+989121112233', version: 0, addresses: [] });
+    expect(result).not.toHaveProperty('notes');
+    expect(result).not.toHaveProperty('recentOrders');
+  });
+
+  it('ignores staff-only status changes on self-service address writes', async () => {
+    const h = harness();
+    h.prisma.customer.findUnique.mockResolvedValue({ id: 'cus_owner', status: 'ACTIVE' });
+    const replace = vi.spyOn(h.service, 'replaceAddresses').mockResolvedValue({} as never);
+    vi.spyOn(h.service, 'getOwn').mockResolvedValue({ id: 'cus_owner' } as never);
+
+    await h.service.replaceOwnAddresses('user_owner', {
+      expectedVersion: 2,
+      addresses: [],
+      status: 'INACTIVE',
+    }, context);
+
+    expect(replace).toHaveBeenCalledWith('cus_owner', { expectedVersion: 2, addresses: [] }, context);
+  });
+});
+
 describe('CustomersService.list', () => {
   it('projects the summary and counts with stable id tiebreaker', async () => {
     const h = harness();

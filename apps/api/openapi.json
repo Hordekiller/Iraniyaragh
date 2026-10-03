@@ -21626,6 +21626,485 @@
         ]
       }
     },
+    "/customers/me": {
+      "get": {
+        "operationId": "CustomerSelfController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "account"
+                      ],
+                      "properties": {
+                        "account": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "mobile",
+                            "firstName",
+                            "lastName",
+                            "version",
+                            "addresses"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "mobile": {
+                              "type": "string"
+                            },
+                            "firstName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "lastName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "integer"
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "label",
+                                  "receiverName",
+                                  "mobile",
+                                  "provinceCode",
+                                  "city",
+                                  "addressLine",
+                                  "postalCode",
+                                  "isDefault",
+                                  "createdAt",
+                                  "updatedAt"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "receiverName": {
+                                    "type": "string"
+                                  },
+                                  "mobile": {
+                                    "type": "string"
+                                  },
+                                  "provinceCode": {
+                                    "type": "string"
+                                  },
+                                  "city": {
+                                    "type": "string"
+                                  },
+                                  "addressLine": {
+                                    "type": "string"
+                                  },
+                                  "postalCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "isDefault": {
+                                    "type": "boolean"
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "updatedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get the authenticated customer account and address book",
+        "tags": [
+          "CustomerSelf"
+        ]
+      },
+      "patch": {
+        "operationId": "CustomerSelfController_update",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 100
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "account"
+                      ],
+                      "properties": {
+                        "account": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "mobile",
+                            "firstName",
+                            "lastName",
+                            "version",
+                            "addresses"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "mobile": {
+                              "type": "string"
+                            },
+                            "firstName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "lastName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "integer"
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "label",
+                                  "receiverName",
+                                  "mobile",
+                                  "provinceCode",
+                                  "city",
+                                  "addressLine",
+                                  "postalCode",
+                                  "isDefault",
+                                  "createdAt",
+                                  "updatedAt"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "receiverName": {
+                                    "type": "string"
+                                  },
+                                  "mobile": {
+                                    "type": "string"
+                                  },
+                                  "provinceCode": {
+                                    "type": "string"
+                                  },
+                                  "city": {
+                                    "type": "string"
+                                  },
+                                  "addressLine": {
+                                    "type": "string"
+                                  },
+                                  "postalCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "isDefault": {
+                                    "type": "boolean"
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "updatedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update the authenticated customer name fields",
+        "tags": [
+          "CustomerSelf"
+        ]
+      }
+    },
+    "/customers/me/addresses": {
+      "put": {
+        "operationId": "CustomerSelfController_replaceAddresses",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion",
+                  "addresses"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "addresses": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "label",
+                        "receiverName",
+                        "mobile",
+                        "provinceCode",
+                        "city",
+                        "addressLine"
+                      ],
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "maxLength": 60
+                        },
+                        "receiverName": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "mobile": {
+                          "type": "string"
+                        },
+                        "provinceCode": {
+                          "type": "string",
+                          "maxLength": 32
+                        },
+                        "city": {
+                          "type": "string",
+                          "maxLength": 100
+                        },
+                        "addressLine": {
+                          "type": "string",
+                          "maxLength": 400
+                        },
+                        "postalCode": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 20
+                        },
+                        "isDefault": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "account"
+                      ],
+                      "properties": {
+                        "account": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "mobile",
+                            "firstName",
+                            "lastName",
+                            "version",
+                            "addresses"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "mobile": {
+                              "type": "string"
+                            },
+                            "firstName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "lastName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "integer"
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "label",
+                                  "receiverName",
+                                  "mobile",
+                                  "provinceCode",
+                                  "city",
+                                  "addressLine",
+                                  "postalCode",
+                                  "isDefault",
+                                  "createdAt",
+                                  "updatedAt"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "receiverName": {
+                                    "type": "string"
+                                  },
+                                  "mobile": {
+                                    "type": "string"
+                                  },
+                                  "provinceCode": {
+                                    "type": "string"
+                                  },
+                                  "city": {
+                                    "type": "string"
+                                  },
+                                  "addressLine": {
+                                    "type": "string"
+                                  },
+                                  "postalCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "isDefault": {
+                                    "type": "boolean"
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "updatedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Replace the authenticated customer address book",
+        "tags": [
+          "CustomerSelf"
+        ]
+      }
+    },
     "/notifications/admin/sms-settings": {
       "get": {
         "operationId": "NotificationsAdminController_getSettings",

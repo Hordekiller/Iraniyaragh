@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { REQUIRE_AUTH_LEVEL, REQUIRE_PERMISSION } from '../auth/auth.guard';
+import { REQUIRE_AUTH_LEVEL, REQUIRE_PERMISSION, REQUIRE_SESSION } from '../auth/auth.guard';
 import { CustomersController } from './customers.controller';
+import { CustomerSelfController } from './customer-self.controller';
 import {
   CustomerAddressesDto,
   CustomerCreateDto,
@@ -118,5 +119,34 @@ describe('Customers HTTP boundary', () => {
 
     const detail = await controller.get('cus_1');
     expect(detail.data.customer).toEqual({ id: 'cus_1' });
+  });
+});
+
+describe('Customer self-service HTTP boundary', () => {
+  it('requires a live CUSTOMER_OTP session and has no staff permission dependency', () => {
+    const prototype = CustomerSelfController.prototype;
+    expect(Reflect.getMetadata(REQUIRE_AUTH_LEVEL, CustomerSelfController)).toBe('CUSTOMER_OTP');
+    expect(Reflect.getMetadata(REQUIRE_SESSION, CustomerSelfController)).toBe(true);
+    expect(Reflect.getMetadata(REQUIRE_PERMISSION, CustomerSelfController)).toBeUndefined();
+    for (const method of ['get', 'update', 'replaceAddresses'] as const) {
+      expect(Reflect.getMetadata(REQUIRE_AUTH_LEVEL, prototype[method])).toBeUndefined();
+    }
+  });
+
+  it('derives customer ownership from the principal and forwards idempotency keys', async () => {
+    const service = {
+      getOwn: vi.fn().mockResolvedValue({ id: 'cus_owner' }),
+      updateOwn: vi.fn().mockResolvedValue({ id: 'cus_owner' }),
+      replaceOwnAddresses: vi.fn().mockResolvedValue({ id: 'cus_owner' }),
+    };
+    const controller = new CustomerSelfController(service as never);
+    const principal = { userId: 'user-owner' } as never;
+
+    expect((await controller.get(principal)).data.account.id).toBe('cus_owner');
+    expect(service.getOwn).toHaveBeenCalledWith('user-owner');
+    await controller.update(principal, 'profile-key-001', { expectedVersion: 1, firstName: 'نام' });
+    expect(service.updateOwn).toHaveBeenCalledWith('user-owner', { expectedVersion: 1, firstName: 'نام' }, expect.objectContaining({ actorId: 'user-owner', idempotencyKey: 'profile-key-001' }));
+    await controller.replaceAddresses(principal, 'address-key-001', { expectedVersion: 1, addresses: [] });
+    expect(service.replaceOwnAddresses).toHaveBeenCalledWith('user-owner', { expectedVersion: 1, addresses: [] }, expect.objectContaining({ actorId: 'user-owner', idempotencyKey: 'address-key-001' }));
   });
 });

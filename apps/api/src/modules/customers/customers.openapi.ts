@@ -89,9 +89,46 @@ const envelope = (data: SchemaObject): SchemaObject => ({
   type: 'object', required: ['data'], properties: { data },
 });
 
+const account: SchemaObject = {
+  type: 'object',
+  required: ['id', 'mobile', 'firstName', 'lastName', 'version', 'addresses'],
+  properties: {
+    id: { type: 'string' }, mobile: { type: 'string' },
+    firstName: { type: 'string', nullable: true }, lastName: { type: 'string', nullable: true },
+    version: { type: 'integer' }, addresses: { type: 'array', items: address },
+  },
+};
+
+const addressInput: SchemaObject = {
+  type: 'object',
+  required: ['label', 'receiverName', 'mobile', 'provinceCode', 'city', 'addressLine'],
+  properties: {
+    label: { type: 'string', maxLength: 60 }, receiverName: { type: 'string', maxLength: 120 },
+    mobile: { type: 'string' }, provinceCode: { type: 'string', maxLength: 32 },
+    city: { type: 'string', maxLength: 100 }, addressLine: { type: 'string', maxLength: 400 },
+    postalCode: { type: 'string', nullable: true, maxLength: 20 }, isDefault: { type: 'boolean' },
+  },
+};
+
 export const customersOpenApi = {
   summary,
   detail,
+  account: envelope({ type: 'object', required: ['account'], properties: { account } }),
+  accountUpdate: {
+    type: 'object', required: ['expectedVersion'],
+    properties: {
+      expectedVersion: { type: 'integer', minimum: 0 },
+      firstName: { type: 'string', nullable: true, maxLength: 100 },
+      lastName: { type: 'string', nullable: true, maxLength: 100 },
+    },
+  } satisfies SchemaObject,
+  accountAddresses: {
+    type: 'object', required: ['expectedVersion', 'addresses'],
+    properties: {
+      expectedVersion: { type: 'integer', minimum: 0 },
+      addresses: { type: 'array', maxItems: 20, items: addressInput },
+    },
+  } satisfies SchemaObject,
   list: envelope({ type: 'object', required: ['items', 'meta'], properties: { items: { type: 'array', items: summary }, meta: listMeta } }),
   history: envelope({
     type: 'object', required: ['items', 'meta'],

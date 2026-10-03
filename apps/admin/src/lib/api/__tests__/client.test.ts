@@ -17,12 +17,13 @@ describe('apiFetch', () => {
   it('sends GET to the API base URL with credentials', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: { ok: true } })));
     await apiFetch<{ ok: boolean }>('/health');
-    expect(fetch).toHaveBeenCalledWith(`${getApiBaseUrl()}/api/v1/health`, {
+    expect(fetch).toHaveBeenCalledWith(`${getApiBaseUrl()}/api/v1/health`, expect.objectContaining({
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       body: undefined,
       credentials: 'include',
-    });
+      signal: expect.any(AbortSignal),
+    }));
   });
 
   it('injects the Bearer token when provided', async () => {
@@ -117,7 +118,7 @@ describe('apiFetch', () => {
     await expect(apiFetch<unknown>('/health', { signal: controller.signal })).rejects.toBeInstanceOf(
       ApiAbortError,
     );
-    expect(seenSignalRef.signal).toBe(controller.signal);
+    expect(seenSignalRef.signal?.aborted).toBe(true);
   });
 
   it('throws ApiAbortError when fetch rejects with an aborted signal', async () => {

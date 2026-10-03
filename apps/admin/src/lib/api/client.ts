@@ -69,8 +69,9 @@ type RequestOptions = {
   headers?: Record<string, string>;
   /** Abort controller signal for stale-response protection (list views). */
   signal?: AbortSignal;
-  /** Some existing API routes return the contract body directly, without { data }. */
+/** Some existing API routes return the contract body directly, without { data }. */
   responseShape?: 'raw';
+
 };
 
 function resolveUrl(path: string): string {
@@ -106,8 +107,8 @@ export function apiFetch<T>(path: string, options: RequestOptions & { responseSh
 export function apiFetch<T>(path: string, options?: RequestOptions): Promise<ApiSuccess<T>>;
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T | ApiSuccess<T>> {
   const isFormData = options.body instanceof FormData;
-  const headers: Record<string, string> = { ...options.headers };
-  if (!isFormData) headers['Content-Type'] = 'application/json';
+  const headers: Record<string, string> = { ...(options.headers ?? {}) };
+  if (!isFormData && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
   const method = options.method ?? 'GET';
   if (method !== 'GET' && !headers['X-CSRF-Token']) {
@@ -116,6 +117,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   let response: Response;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
   try {
     const body: BodyInit | undefined =
       options.body === undefined
@@ -128,15 +132,17 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       headers,
       body,
       credentials: 'include',
-      signal: options.signal,
+      signal,
     });
   } catch (error) {
+    clearTimeout(timeoutId);
     if (options.signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
       throw new ApiAbortError();
     }
     throw new ApiNetworkError('امکان برقراری ارتباط با سامانه وجود ندارد.');
   }
 
+  clearTimeout(timeoutId);
   const text = await response.text();
   const payload = text ? (JSON.parse(text) as unknown) : undefined;
 

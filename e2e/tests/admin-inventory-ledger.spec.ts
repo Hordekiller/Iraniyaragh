@@ -24,10 +24,9 @@ test('operator records receipt, reservations and a two-warehouse transfer throug
   await page.locator('#variant-0-cost').fill('100000');
   await page.locator('#variant-0-sale').fill('150000');
   await tap(page.getByRole('button', { name: 'ثبت کالا' }));
-  await expect(page).toHaveURL(/\/catalog$/);
-  const productLink = page.locator('a[href^="/catalog/products/"]', { hasText: `کالای انبار ${suffix}` }).first();
-  await expect(productLink).toBeVisible();
-  await tap(productLink);
+  // Successful creation opens the persisted product detail directly.
+  await expect(page).toHaveURL(/\/catalog\/products\/(?!new(?:\/|$))[^/]+$/);
+  await expect(page.getByRole('heading', { name: `کالای انبار ${suffix}` })).toBeVisible();
   const skuInventoryLink = page.locator('a[href^="/inventory?variantId="]').first();
   await expect(skuInventoryLink).toBeVisible();
   const skuHref = await skuInventoryLink.getAttribute('href');

@@ -23,7 +23,7 @@ type BrandDialogProps = {
   onClose: () => void;
   /** When present the dialog edits this brand instead of creating a new one. */
   brand?: BrandSummary | null;
-  onSaved: () => void;
+  onSaved: (entity?: { id: string; name: string; slug: string } | null) => void;
 };
 
 export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps) {

@@ -1,6 +1,9 @@
+import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { adminSidebar, isMobile, signInDiAsAdmin, tap } from './helpers';
+
+const SAMPLE_IMAGE = resolve(__dirname, '../../apps/web/public/images/hero1.jpg');
 
 async function navigate(page: Page, name: string, path: RegExp) {
   if (isMobile(page)) await tap(page.getByRole('button', { name: 'باز کردن منو' }));
@@ -47,12 +50,25 @@ test('staff creates a purchase order and receives partial/final stock with persi
   await page.locator('#variant-0-sku').fill(sku);
   await page.locator('#variant-0-cost').fill('120000');
   await page.locator('#variant-0-sale').fill('180000');
-  await page.locator('#product-status').focus();
-  await page.keyboard.press('Enter');
-  await tap(page.getByRole('option', { name: 'منتشرشده' }));
   await tap(page.getByRole('button', { name: 'ثبت کالا' }));
-  await expect(page).toHaveURL(/\/catalog$/);
-  await expect(page.locator('a[href^="/catalog/products/"]', { hasText: `کالای خرید ${suffix}` }).first()).toBeVisible();
+  await expect(page).toHaveURL(/\/catalog\/products\/(?!new(?:\/|$))[^/]+$/);
+  await expect(page.getByRole('heading', { name: `کالای خرید ${suffix}` })).toBeVisible();
+
+  // Product creation is DRAFT-only. Make it publishable through the real media
+  // worker, then use the product lifecycle command instead of submitting an
+  // arbitrary status from the create form.
+  await tap(page.getByRole('link', { name: /مدیریت رسانه/u }));
+  await expect(page).toHaveURL(/\/catalog\/products\/[^/]+\/media$/);
+  await page.locator('input[type="file"]').setInputFiles(SAMPLE_IMAGE);
+  await expect(page.getByText('آماده', { exact: true }).first()).toBeVisible({ timeout: 120_000 });
+  await navigate(page, 'کالا و SKU', /\/catalog$/);
+  const productLink = page.locator('a[href^="/catalog/products/"]', { hasText: `کالای خرید ${suffix}` }).first();
+  await expect(productLink).toBeVisible();
+  await tap(productLink);
+  await expect(page).toHaveURL(/\/catalog\/products\/(?!new(?:\/|$))[^/]+$/);
+  await tap(page.getByRole('button', { name: `اقدامات کالای خرید ${suffix}` }));
+  await tap(page.getByRole('menuitem', { name: 'انتشار' }));
+  await expect(page.getByText('منتشرشده', { exact: true }).first()).toBeVisible();
 
   await navigate(page, 'سفارش‌های خرید', /\/purchase-orders$/);
   await tap(page.getByRole('button', { name: 'سفارش جدید' }));

@@ -254,7 +254,9 @@ test('purchase receipts, adjustment, consumed reservation and a transfer reconci
   await page.locator('#variant-0-cost').fill('120000');
   await page.locator('#variant-0-sale').fill('175000');
   await tap(page.getByRole('button', { name: 'ثبت کالا' }));
-  await expect(page).toHaveURL(/\/catalog$/);
+  await expect(page).toHaveURL(/\/catalog\/products\/(?!new(?:\/|$))[^/]+$/);
+  await expect(page.getByRole('heading', { name: productName })).toBeVisible();
+  await navigate(page, 'کالا و SKU', /\/catalog$/);
   const productRow = page.getByRole('row', { name: new RegExp(escapeRegExp(productName)) });
   await expect(productRow).toBeVisible();
 

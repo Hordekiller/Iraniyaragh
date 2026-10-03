@@ -32,7 +32,7 @@ describe('supplier Admin HTTP adapter', () => {
     expect(calls[1][0]).toBe('http://localhost:4000/api/v1/suppliers?offset=0&limit=25');
     expect(calls[2][0]).toBe('http://localhost:4000/api/v1/suppliers/sup%2F1');
     expect(calls[3][0]).toBe('http://localhost:4000/api/v1/suppliers/sup%2F1/history?offset=0&limit=25');
-    expect(calls[0][1]).toEqual(expect.objectContaining({ signal, headers: expect.objectContaining({ Authorization: 'Bearer staff-token' }) }));
+    expect(calls[0][1]).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal), headers: expect.objectContaining({ Authorization: 'Bearer staff-token' }) }));
   });
 
   it('sends create with a generated idempotency key and the trimmed payload', async () => {

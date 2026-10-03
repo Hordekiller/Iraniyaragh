@@ -27,7 +27,7 @@ type CategoryDialogProps = {
   categories: CategorySummary[];
   /** When present the dialog edits this category instead of creating a new one. */
   category?: CategorySummary | null;
-  onSaved: () => void;
+  onSaved: (entity?: CategorySummary | null) => void;
 };
 
 export function CategoryDialog({ open, onClose, categories, category, onSaved }: CategoryDialogProps) {

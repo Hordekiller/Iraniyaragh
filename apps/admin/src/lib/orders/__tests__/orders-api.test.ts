@@ -54,7 +54,7 @@ describe('orders admin api client', () => {
       sortDir: 'asc',
     });
     expect(init.headers).toEqual(expect.objectContaining({ Authorization: 'Bearer staff-access-token' }));
-    expect(init.signal).toBe(controller.signal);
+    expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
   it('fetches detail with an encoded id and unwraps the order', async () => {

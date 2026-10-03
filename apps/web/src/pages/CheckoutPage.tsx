@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Check, MapPin, RefreshCw, ShieldCheck, Truck } from 'lucide-react'
 import type { CheckoutAddress, ShippingQuote } from '@iranyaragh/contracts'
 import { useCart } from '../state/cart-context'
 import { useAuth } from '../state/auth-context'
+import type { CustomerAccount } from '@iranyaragh/contracts'
 import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { createCheckoutIdempotencyKey } from '../services/cart/idempotency'
@@ -17,6 +18,7 @@ import {
   normalizeIranMobile,
   normalizeIranPostalCode,
 } from '../lib/iran'
+import { getCustomerAccount } from '../services/customer-account'
 
 type FormState = {
   recipient: string
@@ -49,7 +51,20 @@ export function CheckoutPage() {
   const [selectedQuoteId, setSelectedQuoteId] = useState('')
   const [busy, setBusy] = useState<'preview' | 'create' | null>(null)
   const [error, setError] = useState<unknown | null>(null)
+  const [savedAddresses, setSavedAddresses] = useState<CustomerAccount['addresses']>([])
+  const [savedAddressesUnavailable, setSavedAddressesUnavailable] = useState(false)
   const checkoutKey = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (auth.state.phase !== 'authenticated') return
+    let active = true
+    void getCustomerAccount(auth.request).then((account) => {
+      if (active) setSavedAddresses(account.addresses)
+    }).catch(() => {
+      if (active) setSavedAddressesUnavailable(true)
+    })
+    return () => { active = false }
+  }, [auth.request, auth.state.phase])
 
   const lines = preview?.cart.lines ?? state.cart.lines
   const quote =
@@ -149,6 +164,24 @@ export function CheckoutPage() {
     }
   }
 
+  function selectSavedAddress(id: string) {
+    const saved = savedAddresses.find((item) => item.id === id)
+    if (!saved) return
+    const province = IRAN_PROVINCES.find((name) => IRAN_PROVINCE_CODES[name] === saved.provinceCode) ?? ''
+    setForm({
+      recipient: saved.receiverName,
+      mobile: normalizeIranMobile(saved.mobile),
+      province,
+      city: saved.city,
+      postalCode: saved.postalCode ?? '',
+      address: saved.addressLine,
+    })
+    setErrors({})
+    setPreview(null)
+    setSelectedQuoteId('')
+    checkoutKey.current = null
+  }
+
   async function handlePreview(event: React.FormEvent) {
     event.preventDefault()
     const next = validate(form)
@@ -217,6 +250,23 @@ export function CheckoutPage() {
             </div>
           )}
           <fieldset disabled={busy !== null}>
+            {(savedAddresses.length > 0 || savedAddressesUnavailable) && (
+              <section className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="saved-address-heading">
+                <h2 id="saved-address-heading" className="font-black text-slate-900">نشانی‌های ذخیره‌شده</h2>
+                {savedAddressesUnavailable ? (
+                  <p className="mt-2 text-sm text-slate-600">دریافت دفتر نشانی ممکن نشد؛ می‌توانید نشانی را دستی وارد کنید یا از بخش حساب دوباره تلاش کنید.</p>
+                ) : (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {savedAddresses.map((saved) => (
+                      <button key={saved.id} type="button" onClick={() => selectSavedAddress(saved.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-sm hover:border-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">
+                        {saved.label || saved.receiverName} — {saved.provinceCode}، {saved.city}
+                      </button>
+                    ))}
+                    <Link to={ROUTES.addresses} className="self-center px-2 text-sm font-bold text-amber-800 underline">مدیریت نشانی‌ها</Link>
+                  </div>
+                )}
+              </section>
+            )}
             <legend className="text-base font-black text-slate-950">
               مشخصات تحویل‌گیرنده
             </legend>

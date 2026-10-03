@@ -21,6 +21,7 @@ import type {
   AdminCustomerNote,
   AdminCustomerOrder,
   AdminCustomerSummary,
+  CustomerAccount,
   CustomerNoteVisibility,
 } from '@iranyaragh/contracts';
 import { advisoryLockIdKey } from '../../common/advisory-lock';
@@ -31,6 +32,7 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { normalizeIranianMobile } from '../auth/mobile';
 import type {
   CustomerAddressesDto,
+  CustomerAccountAddressesDto,
   CustomerCreateDto,
   CustomerListQueryDto,
   CustomerNoteDto,
@@ -193,6 +195,16 @@ const detailSelect = {
   },
 } satisfies Prisma.CustomerSelect;
 
+const accountSelect = {
+  id: true,
+  mobile: true,
+  firstName: true,
+  lastName: true,
+  status: true,
+  version: true,
+  addresses: { orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }] },
+} satisfies Prisma.CustomerSelect;
+
 function publicSummary(row: {
   id: string;
   mobile: string;
@@ -298,6 +310,43 @@ export class CustomersService {
       notes: row.notes.map(publicNote),
       recentOrders: row.orders.map(publicOrder),
     };
+  }
+
+  /** Customer-self projection resolved exclusively through the authenticated user link. */
+  async getOwn(userId: string): Promise<CustomerAccount> {
+    const row = await this.prisma.customer.findUnique({ where: { userId }, select: accountSelect });
+    if (!row || row.status !== 'ACTIVE') throw notFound();
+    return {
+      id: row.id,
+      mobile: row.mobile,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      version: row.version,
+      addresses: row.addresses.map(publicAddress),
+    };
+  }
+
+  async updateOwn(userId: string, input: CustomerUpdateDto, context: CommandContext): Promise<CustomerAccount> {
+    const owner = await this.prisma.customer.findUnique({ where: { userId }, select: { id: true, status: true } });
+    if (!owner || owner.status !== 'ACTIVE') throw notFound();
+    await this.update(owner.id, input, context);
+    return this.getOwn(userId);
+  }
+
+  async replaceOwnAddresses(
+    userId: string,
+    input: CustomerAccountAddressesDto,
+    context: CommandContext,
+  ): Promise<CustomerAccount> {
+    const owner = await this.prisma.customer.findUnique({ where: { userId }, select: { id: true, status: true } });
+    if (!owner || owner.status !== 'ACTIVE') throw notFound();
+    // Never forward the staff-only lifecycle `status` field from CustomerAddressesDto.
+    const selfServiceInput: CustomerAddressesDto = {
+      expectedVersion: input.expectedVersion,
+      addresses: input.addresses,
+    };
+    await this.replaceAddresses(owner.id, selfServiceInput, context);
+    return this.getOwn(userId);
   }
 
   async history(id: string, query: CustomerListQueryDto): Promise<{ items: AdminCustomerAuditEntry[]; total: number }> {

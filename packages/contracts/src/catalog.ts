@@ -125,7 +125,8 @@ export type ProductPayload = {
   variants?: ProductVariantPayload[];
 };
 
-export type ProductCreateRequest = ProductPayload;
+/** Creation starts as a draft; publication and archival use lifecycle commands. */
+export type ProductCreateRequest = Omit<ProductPayload, 'status'> & { status?: 'DRAFT' };
 
 export type ProductUpdateRequest = Partial<Omit<ProductPayload, 'variants'>> & {
   expectedVersion: number;
