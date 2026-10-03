@@ -510,6 +510,11 @@ export function ProductMediaManager({ productId, initialFiles = [] }: { productI
                           item.position + 1,
                         )}
                       </Typography>
+                      {item.state === "READY" && !item.altText ? (
+                        <Typography variant="body2" color="warning.main">
+                          برای نمایش این تصویر در فروشگاه و توضیحات عمومی، متن جایگزین را ثبت کنید.
+                        </Typography>
+                      ) : null}
                       {ACTIVE_PROCESSING.has(item.state) ? (
                         <LinearProgress sx={{ mt: 1 }} />
                       ) : null}

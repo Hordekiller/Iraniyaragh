@@ -32,7 +32,7 @@ function AdoptPanel() {
       >
         adopt
       </button>
-      <button type="button" onClick={() => signOut()}>
+      <button type="button" onClick={() => signOut().catch(() => undefined)}>
         signout
       </button>
     </div>
@@ -76,7 +76,7 @@ describe('AuthProvider', () => {
       ? { accessToken: 'customer' } : { principal: { ...staffPrincipal, authenticationLevel: 'CUSTOMER_OTP' } } })));
     render(<AuthProvider><AdoptPanel /></AuthProvider>);
     await act(async () => { await recoverApiSession().catch(() => undefined); });
-    expect(screen.getByTestId('authed')).toHaveTextContent('no');
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
     expect(getAccessToken()).toBeNull();
   });
 
@@ -127,6 +127,21 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
     expect(getAccessToken()).toBeNull();
     await waitFor(() => expect(screen.getByTestId('email')).toHaveTextContent('none'));
+  });
+
+  it('retains identity when server logout fails so a reload cannot silently undo an apparent logout', async () => {
+    const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce(jsonResponse({ data: {} }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    fireEvent.click(screen.getByText('adopt'));
+    fireEvent.click(screen.getByText('signout'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId('authed')).toHaveTextContent('yes');
+    expect(getAccessToken()).toBe('staff-at-1');
+    fireEvent.click(screen.getByText('signout'));
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(getAccessToken()).toBeNull();
   });
 
   it('sign-out sends /auth/logout with the double-submit CSRF proof so the server session is revoked', async () => {

@@ -139,6 +139,17 @@ describe('AdminShell', () => {
     expect(mocks.refresh).toHaveBeenCalledTimes(1);
   });
 
+  it('shows failed logout and keeps the current route available for retry', async () => {
+    mocks.signOut.mockRejectedValueOnce(new Error('offline'));
+    renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'منوی حساب کاربری' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /خروج از حساب/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('خروج از حساب تأیید نشد');
+    expect(mocks.replace).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'منوی حساب کاربری' })).toBeEnabled();
+  });
+
   it('toggles the collapsed (mini) sidebar on desktop', () => {
     renderShell();
 

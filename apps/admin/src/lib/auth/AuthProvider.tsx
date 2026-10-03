@@ -34,6 +34,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [isRestoring, setIsRestoring] = useState(true);
   const generation = useRef(0);
   const userRef = useRef<AuthUser | null>(null);
+  const loggingOut = useRef(false);
 
   const establishSession = useCallback((input: { accessToken: string; principal: AuthUser }): void => {
     generation.current += 1;
@@ -49,10 +50,11 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, []);
 
   const recoverSession = useCallback(async (): Promise<string> => {
+    if (loggingOut.current) throw new ApiAbortError();
     const attemptGeneration = generation.current;
     const expectedUserId = userRef.current?.userId;
     const rotate = async () => {
-      if (generation.current !== attemptGeneration) throw new ApiAbortError();
+      if (loggingOut.current || generation.current !== attemptGeneration) throw new ApiAbortError();
       const refreshed = await apiFetch<AccessTokenData>('/auth/refresh', { method: 'POST', recoverSession: false });
       const token = refreshed.data.accessToken;
       if (!token) throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
@@ -90,12 +92,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, [recoverSession]);
 
   const signOut = useCallback(async (): Promise<void> => {
+    if (loggingOut.current) throw new ApiAbortError();
     const token = getAccessToken();
+    loggingOut.current = true;
     generation.current += 1;
     const logoutGeneration = generation.current;
-    setAccessToken(null);
-    userRef.current = null;
-    setUser(null);
+    // Invalidate late request replays while retaining identity until revocation
+    // is acknowledged. A network failure must not be presented as logout.
+    setAccessToken(token);
     try {
       // Let any rotation finish first, then revoke the cookie it actually issued.
       await settleSessionRecovery();
@@ -105,8 +109,13 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           await apiFetch<Record<string, never>>('/auth/logout', { method: 'POST', recoverSession: false });
         }
       });
-    } catch {
-      // Idempotent logout: clear local state even if the API is unreachable.
+      if (generation.current === logoutGeneration) {
+        setAccessToken(null);
+        userRef.current = null;
+        setUser(null);
+      }
+    } finally {
+      loggingOut.current = false;
     }
   }, []);
 

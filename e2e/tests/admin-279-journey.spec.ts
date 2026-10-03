@@ -35,14 +35,13 @@ function createOriginGuardTracker(page: Page) {
   const requests: string[] = [];
   const trusted = new Set<string>();
   const adminOrigin = new URL(process.env.ADMIN_E2E_URL ?? 'http://127.0.0.1:3001').origin;
-  const storefrontOrigin = new URL(storefrontUrl).origin;
   const onRequest = (request: Request) => {
     if (!/^https?:\/\//i.test(request.url())) return;
     // Ignore residual prefetches from the admin shell that can still be in
     // flight during the origin switch; they are not storefront behaviour.
     const requestOrigin = new URL(request.url()).origin;
     if (requestOrigin === adminOrigin) return;
-    if (page.url().startsWith(storefrontOrigin)) requests.push(request.url());
+    if (new URL(page.url()).origin !== adminOrigin) requests.push(request.url());
   };
   page.on('request', onRequest);
 
@@ -228,6 +227,20 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
       page.getByText('در صف پردازش').first().or(page.getByText('در حال پردازش').first()),
     ).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('آماده', { exact: true })).toHaveCount(3, { timeout: 120_000 });
+
+    // Public discovery intentionally excludes images without reviewed alt text
+    // (PRODUCT_MEDIA_SPEC and api-media-publish-to-discovery). Exercise the real
+    // metadata path before expecting these images in public rich descriptions.
+    for (const filename of ['creation-primary.png', 'creation-gallery.png', 'after-reload.png']) {
+      const card = page.locator('.MuiCard-root').filter({ has: page.getByText(filename, { exact: true }) });
+      await tap(card.getByRole('button', { name: 'ویرایش متن' }));
+      const dialog = page.getByRole('dialog', { name: 'متادیتای تصویر' });
+      await dialog.getByLabel('متن جایگزین', { exact: true }).fill(`نمای قفل ${filename}`);
+      await dialog.getByLabel('توضیح تصویر', { exact: true }).fill('تصویر بررسی‌شدهٔ محصول');
+      await tap(dialog.getByRole('button', { name: 'ذخیره', exact: true }));
+      await expect(dialog).not.toBeVisible();
+      await expect(card.getByText(`نمای قفل ${filename}`, { exact: false })).toBeVisible();
+    }
   });
 
   test('composes rich HTML, inserts the product image and saves', async ({ page }) => {
