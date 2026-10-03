@@ -41,6 +41,7 @@ function AdoptPanel() {
 
 describe('AuthProvider', () => {
   afterEach(() => {
+    vi.useRealTimers();
     for (const name of ['__Host-iranyaragh_csrf', 'iranyaragh_customer_csrf']) {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
     }
@@ -78,6 +79,38 @@ describe('AuthProvider', () => {
     await act(async () => { await recoverApiSession().catch(() => undefined); });
     await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
     expect(getAccessToken()).toBeNull();
+  });
+
+  it('serializes refresh and logout with the same origin-wide lock used by the storefront', async () => {
+    const request = vi.fn(async (_name: string, _options: LockOptions, operation: () => Promise<unknown>) => operation());
+    vi.stubGlobal('navigator', Object.assign(Object.create(navigator), { locks: { request } }));
+    document.cookie = 'iranyaragh_customer_csrf=csrf-tok; path=/';
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => jsonResponse({ data: url.endsWith('/refresh')
+      ? { accessToken: 'restored' } : url.endsWith('/me') ? { principal: staffPrincipal } : {} })));
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('yes'));
+    fireEvent.click(screen.getByText('signout'));
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
+    expect(request.mock.calls.map(([name]) => name)).toEqual(['iranyaragh:auth:refresh', 'iranyaragh:auth:refresh']);
+  });
+
+  it('bounds waiting for another tab without rotating a cookie outside the shared lock', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn();
+    const request = vi.fn((_name: string, options: LockOptions) => new Promise((_resolve, reject) => {
+      options.signal!.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+    }));
+    vi.stubGlobal('navigator', Object.assign(Object.create(navigator), { locks: { request } }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    fireEvent.click(screen.getByText('adopt'));
+    const recovered = recoverApiSession().catch(error => error);
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
+    expect(await recovered).toBeInstanceOf(DOMException);
+    expect(request.mock.calls[0]![1].signal!.aborted).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(getAccessToken()).toBe('staff-at-1');
+    vi.useRealTimers();
   });
 
   it('ignores a refresh completing after logout', async () => {

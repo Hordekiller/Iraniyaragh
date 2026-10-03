@@ -24,9 +24,16 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function serializeCookieMutation<T>(operation: () => Promise<T>): Promise<T> {
-  return await (typeof navigator !== 'undefined' && navigator.locks
-    ? navigator.locks.request('iranyaragh-auth-refresh', operation)
-    : operation());
+  if (typeof navigator === 'undefined' || !navigator.locks) return operation();
+  const abort = new AbortController();
+  const timeout = setTimeout(() => abort.abort(), 10000);
+  try {
+    // Shared cookie namespace: match Web's CROSS_TAB_REFRESH_LOCK exactly.
+    return await navigator.locks.request('iranyaragh:auth:refresh', { mode: 'exclusive', signal: abort.signal }, () => {
+      clearTimeout(timeout);
+      return operation();
+    });
+  } finally { clearTimeout(timeout); }
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {

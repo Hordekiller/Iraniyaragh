@@ -146,6 +146,10 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
     };
   }, [mobileMenuOpen]);
 
+  if (isRestoring) {
+    return <AuthTransition title="در حال بازیابی نشست" description="اعتبار نشست و مجوزهای شما در حال بررسی است." />;
+  }
+
   if (!isAuthenticated) {
     return (
       <AuthTransition
