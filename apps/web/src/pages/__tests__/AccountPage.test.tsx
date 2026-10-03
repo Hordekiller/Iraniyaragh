@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../components/feedback/Toast'
 import { AccountAddressesPage } from '../AccountAddressesPage'
 import { AccountPage } from '../AccountPage'
+import { AccountSecurityPage } from '../AccountSecurityPage'
 
 const mocks = vi.hoisted(() => ({
   request: vi.fn(),
@@ -52,7 +53,7 @@ describe('AccountPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره پروفایل' }))
 
     await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2))
-    expect(mocks.request).toHaveBeenLastCalledWith('/customers/me', expect.objectContaining({
+    expect(mocks.request).toHaveBeenLastCalledWith('/api/v1/customers/me', expect.objectContaining({
       method: 'PATCH', json: { expectedVersion: 3, firstName: 'نیکا', lastName: 'رضایی' },
       headers: { 'Idempotency-Key': expect.stringMatching(/^customer-profile-/u) },
     }))
@@ -81,9 +82,26 @@ describe('AccountPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره نشانی‌ها' }))
 
     await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2))
-    expect(mocks.request).toHaveBeenLastCalledWith('/customers/me/addresses', expect.objectContaining({
+    expect(mocks.request).toHaveBeenLastCalledWith('/api/v1/customers/me/addresses', expect.objectContaining({
       method: 'PUT', json: { expectedVersion: 3, addresses: [expect.objectContaining({ label: 'خانه', city: 'تهران', isDefault: true })] },
       headers: { 'Idempotency-Key': expect.stringMatching(/^customer-addresses-/u) },
     }))
+  })
+
+  it('loads and revokes only listed customer sessions through the versioned auth API', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mocks.request.mockResolvedValueOnce({ data: { sessions: [{
+      sessionId: 'session-12345678', current: false, deviceName: 'مرورگر', authenticationLevel: 'CUSTOMER_OTP',
+      createdAt: '2026-01-01T00:00:00.000Z', lastUsedAt: null, expiresAt: '2026-01-02T00:00:00.000Z',
+    }] } }).mockResolvedValueOnce({ data: {} })
+    render(<MemoryRouter><AccountSecurityPage /></MemoryRouter>)
+
+    expect(await screen.findByText('مرورگر')).toBeInTheDocument()
+    expect(mocks.request).toHaveBeenCalledWith('/api/v1/auth/sessions')
+    fireEvent.click(screen.getByRole('button', { name: 'بستن نشست' }))
+    await waitFor(() => expect(mocks.request).toHaveBeenLastCalledWith('/api/v1/auth/sessions/session-12345678', { method: 'DELETE' }))
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(screen.queryByText('مرورگر')).not.toBeInTheDocument()
+    confirm.mockRestore()
   })
 })

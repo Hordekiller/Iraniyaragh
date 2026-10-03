@@ -20,7 +20,7 @@ export function AccountSecurityPage() {
     setLoading(true)
     setError(null)
     try {
-      const result = await request<SessionListResponse['data']>('/auth/sessions')
+      const result = await request<SessionListResponse['data']>('/api/v1/auth/sessions')
       setSessions(result.data.sessions)
     } catch {
       setError('نشست‌های فعال دریافت نشدند. دوباره تلاش کنید.')
@@ -32,10 +32,11 @@ export function AccountSecurityPage() {
   }, [authenticated, loadSessions, reload])
 
   async function revoke(session: SessionSummary) {
+    if (!window.confirm(`نشست «${session.deviceName || 'دستگاه مشتری'}» بسته شود؟`)) return
     setBusyId(session.sessionId)
     setError(null)
     try {
-      await request<Record<string, never>>(`/auth/sessions/${encodeURIComponent(session.sessionId)}`, { method: 'DELETE' })
+      await request<Record<string, never>>(`/api/v1/auth/sessions/${encodeURIComponent(session.sessionId)}`, { method: 'DELETE' })
       if (session.current) await controller.logout()
       else setSessions((current) => current.filter((item) => item.sessionId !== session.sessionId))
     } catch {
