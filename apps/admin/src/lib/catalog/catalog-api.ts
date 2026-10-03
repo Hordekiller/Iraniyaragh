@@ -183,14 +183,62 @@ export async function updateCategory(id: string, input: CategoryUpdateRequest): 
 export async function changeVariantStatus(..._args: any[]): Promise<any> { return {} as any; }
 export async function commitCatalogImport(..._args: any[]): Promise<any> { return {} as any; }
 export async function configureProductAttributes(..._args: any[]): Promise<any> { return {} as any; }
-export async function createAttribute(..._args: any[]): Promise<any> { return {} as any; }
-export async function createAttributeOption(..._args: any[]): Promise<any> { return {} as any; }
-export async function generateVariants(..._args: any[]): Promise<any> { return {} as any; }
-export async function getAttribute(..._args: any[]): Promise<any> { return {} as any; }
+
+
+export async function createAttribute(
+  input: any,
+  idempotencyKey?: string,
+): Promise<any> {
+  const response = await apiFetch<any>('/catalog/admin/attributes', {
+    method: 'POST',
+    body: input,
+    token: authToken(),
+    ...(idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : {}),
+  });
+  return response.data;
+}
+
+export async function createAttributeOption(
+  attributeId: string,
+  input: any,
+  idempotencyKey?: string,
+): Promise<any> {
+  const response = await apiFetch<any>(`/catalog/admin/attributes/${attributeId}/options`, {
+    method: 'POST',
+    body: input,
+    token: authToken(),
+    ...(idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : {}),
+  });
+  return response.data;
+}
+export async function generateVariants(productId: string, input: any, idempotencyKey?: string): Promise<any> {
+  const response = await apiFetch<any>(`/catalog/admin/products/${productId}/variants/generate`, {
+    method: 'POST',
+    body: input,
+    token: authToken(),
+    ...(idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : {}),
+  });
+  return response.data;
+}
+export async function getAttribute(id: string, signal?: AbortSignal): Promise<any> {
+  const response = await apiFetch<any>(`/catalog/admin/attributes/${id}`, { token: authToken(), signal });
+  return response.data;
+}
 export async function getCatalogImport(..._args: any[]): Promise<any> { return {} as any; }
 export async function getVariantPriceHistory(..._args: any[]): Promise<any> { return {} as any; }
-export async function listAttributes(..._args: any[]): Promise<any> { return {} as any; }
-export async function previewVariantGeneration(..._args: any[]): Promise<any> { return {} as any; }
+export async function listAttributes(signal?: AbortSignal): Promise<any> {
+  const response = await apiFetch<any>('/catalog/admin/attributes', { token: authToken(), signal });
+  return response.data.items ?? response.data;
+}
+export async function previewVariantGeneration(productId: string, input: any, signal?: AbortSignal): Promise<any> {
+  const response = await apiFetch<any>(`/catalog/admin/products/${productId}/variants/preview`, {
+    method: 'POST',
+    body: input,
+    token: authToken(),
+    signal,
+  });
+  return response.data;
+}
 export async function runCatalogImportDryRun(..._args: any[]): Promise<any> { return {} as any; }
 export async function updateAttribute(..._args: any[]): Promise<any> { return {} as any; }
 export async function updateAttributeOption(..._args: any[]): Promise<any> { return {} as any; }
