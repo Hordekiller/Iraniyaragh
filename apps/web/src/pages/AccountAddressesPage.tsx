@@ -17,6 +17,7 @@ export function AccountAddressesPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   const retryKey = useRef<string | null>(null)
   const authenticated = auth.state.phase === 'authenticated'
 
@@ -33,7 +34,7 @@ export function AccountAddressesPage() {
       finally { if (active) setLoading(false) }
     })
     return () => { active = false }
-  }, [authenticated, auth.request])
+  }, [authenticated, auth.request, reload])
 
   function changeAddress(index: number, field: keyof AddressInput, value: string | boolean) {
     retryKey.current = null
@@ -67,7 +68,7 @@ export function AccountAddressesPage() {
     <h1 className="mt-4 text-2xl font-black text-slate-950">دفتر نشانی‌ها</h1>
     <p className="mt-2 text-sm text-slate-500">نشانی‌های ذخیره‌شده برای سفارش‌های بعدی استفاده می‌شوند. تغییر این فهرست، نشانی سفارش‌های قبلی را تغییر نمی‌دهد.</p>
     {loading && <p className="mt-6" role="status">در حال دریافت نشانی‌ها…</p>}
-    {error && <p className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">{error}</p>}
+    {error && <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert"><p>{error}</p><button type="button" onClick={() => { setLoading(true); setError(null); setReload((value) => value + 1) }} className="mt-3 font-bold underline">تلاش دوباره</button></div>}
     {!loading && account && <form onSubmit={(event) => { void save(event) }} className="mt-6 space-y-5">
       {addresses.map((address, index) => <fieldset key={index} className="rounded-2xl border border-slate-200 bg-white p-5">
         <legend className="px-2 font-black text-slate-900">نشانی {index + 1}</legend>

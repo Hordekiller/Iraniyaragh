@@ -88,6 +88,15 @@ describe('AccountPage', () => {
     }))
   })
 
+  it('offers a retry when the address book cannot be loaded', async () => {
+    mocks.request.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ data: { account } })
+    render(<MemoryRouter><AccountAddressesPage /></MemoryRouter>)
+    expect(await screen.findByRole('alert')).toHaveTextContent('دفتر نشانی دریافت نشد')
+    fireEvent.click(screen.getByRole('button', { name: 'تلاش دوباره' }))
+    expect(await screen.findByText(/نشانی‌های ذخیره‌شده برای سفارش‌های بعدی/)).toBeInTheDocument()
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2))
+  })
+
   it('loads and revokes only listed customer sessions through the versioned auth API', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     mocks.request.mockResolvedValueOnce({ data: { sessions: [{
