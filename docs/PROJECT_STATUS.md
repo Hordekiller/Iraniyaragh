@@ -1057,6 +1057,38 @@ security/query review, OpenAPI drift confirmation and merge.
 
 ## Recently shipped on main
 
+- `#382` merged at `70276b6`: an official guarded RBAC baseline path for staging
+  and production (`apps/api/prisma/apply-rbac-baseline.mjs` over a shared registry,
+  a dev-only demo guard and audit rows with a null actor) that converges instead of
+  failing on a pre-existing role. Applied on the VPS: 35 permissions and 35 live
+  grants, and a second apply reporting "No change was needed".
+- `#384` merged at `d072155`: `deploy.sh` resolves its own directory before
+  changing directories, so the invocation the RUNBOOK documents works from a
+  release checkout, and a checkout outside the tree fails with an actionable
+  message instead of a bare `readlink` error.
+- `#385` merged at `092cc92`: the storefront vhost no longer redirects `/admin`
+  into a loop with `/admin/`. Next.js treats `/admin` as canonical and answers
+  `/admin/` with a 308; the vhost did the reverse with a 301, so the two
+  ping-ponged and the Admin was unreachable through Nginx — while ~30 browser
+  tests stayed green, because every Playwright project talks to the Admin and
+  storefront directly and never had Nginx in the path. `nginx -t` is blind to
+  this class of fault, since a redirect loop is valid syntax. `/admin` is now
+  proxied through and only `/admin/` redirects, to the canonical form and with
+  `$is_args$args` so the query string survives. A new `nginx-routing` e2e project
+  runs the real snippets in a real nginx in front of the real upstreams and
+  asserts actual status codes; restoring the old redirects fails 7 of its
+  assertions. Nginx runs via `globalSetup`/`globalTeardown` because Playwright's
+  `webServer` skips its command when the URL already answers and kills the
+  process with `SIGKILL`, leaving a container that then served the *previous*
+  run's routing to the next one. `e2e/spec-ownership.ts` asserts on every run
+  that each spec is claimed by exactly one `testMatch` pattern, because
+  `admin-*.spec.ts` is an unanchored regex that claimed this spec's original
+  filename and ran it against the Admin's `baseURL` as well. Verified: all CI
+  green including the e2e job (27m56s), then on the host — `/admin` 307 to
+  `/admin/dashboard`, `/admin/` 301 to `/admin`, `/admin/login` 200, a headless
+  browser settling on `/admin/dashboard` with all 18 `/admin/_next` assets 200,
+  and storefront/API unaffected. The media-backed e2e assertions were left to CI:
+  the pinned MinIO release CI installs is no longer published to any registry.
 - `#240` merged at `ce04cce`: Product Media M4 gallery/accessible mixed-media
   presentation and M5 real PostgreSQL/Redis/MinIO/worker publish-to-discovery E2E.
 - `#235`/`#239` merged at `85a8ed2`/`97854ec`: accepted Cart/Checkout contracts
