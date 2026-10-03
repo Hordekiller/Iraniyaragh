@@ -17,6 +17,8 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   isRestoring: boolean;
   signOut: () => Promise<void>;
+  /** Clear this identity only after the API acknowledged its revocation. */
+  endRevokedSession: (sessionId: string) => void;
   /** Adopt the session verified by the real staff password + TOTP login. */
   establishSession: (input: { accessToken: string; principal: AuthUser }) => void;
 };
@@ -113,7 +115,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       await serializeCookieMutation(async () => {
         if (generation.current !== logoutGeneration) return;
         if (token || readCsrfToken(document)) {
-          await apiFetch<Record<string, never>>('/auth/logout', { method: 'POST', recoverSession: false });
+          try {
+            await apiFetch<Record<string, never>>('/auth/logout', { method: 'POST', recoverSession: false });
+          } catch (error) {
+            // Device revocation/logout-all may already have ended this session.
+            // Only an authoritative invalid-session response confirms that;
+            // network, CSRF and other failures must remain retryable errors.
+            if (!(error instanceof ApiClientError && error.statusCode === 401 && error.code === 'AUTH_SESSION_INVALID')) throw error;
+          }
         }
       });
       if (generation.current === logoutGeneration) {
@@ -126,15 +135,24 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   }, []);
 
+  const endRevokedSession = useCallback((sessionId: string): void => {
+    if (userRef.current?.sessionId !== sessionId) return;
+    generation.current += 1;
+    setAccessToken(null);
+    userRef.current = null;
+    setUser(null);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       isAuthenticated: user !== null,
       isRestoring,
       signOut,
+      endRevokedSession,
       establishSession,
     }),
-    [user, isRestoring, signOut, establishSession],
+    [user, isRestoring, signOut, endRevokedSession, establishSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

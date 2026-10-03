@@ -6,7 +6,6 @@ import { useFeedback } from '@/components/ui/FeedbackProvider';
 import {
   SessionExpiredError,
   SessionManagementError,
-  SessionNetworkError,
   SessionNotFoundError,
   SessionReauthenticationRequiredError,
   type SessionManagementPort,
@@ -81,11 +80,12 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
       inflight.current = 'revoke';
       setActionBusy('revoke');
       setBusySessionId(session.sessionId);
+      const onSessionEnded = onSessionEndedRef.current;
       void (async () => {
         try {
           await service.revokeSession(session.sessionId);
           if (session.current) {
-            onSessionEndedRef.current?.();
+            onSessionEnded?.();
             return;
           }
           setSessions((current) => current.filter((item) => item.sessionId !== session.sessionId));
@@ -117,10 +117,12 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
     if (inflight.current !== null) return;
     inflight.current = 'logout-all';
     setActionBusy('logout-all');
+    const onSessionEnded = onSessionEndedRef.current;
     void (async () => {
       try {
         await service.logoutAll();
         feedback.success('از همهٔ دستگاه‌ها خارج شدید.');
+        onSessionEnded?.();
       } catch (error) {
         if (isSessionInvalid(error)) {
           setRequireReauth(true);
@@ -128,15 +130,10 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
           setLoadError(friendlyMessage(error));
           return;
         }
-        if (error instanceof SessionNetworkError) {
-          feedback.warning('اتصال برقرار نشد؛ ولی از این دستگاه خارج می‌شوید. سایر دستگاه‌ها را بعداً بررسی کنید.');
-        } else {
-          feedback.error(friendlyMessage(error));
-        }
+        feedback.error(friendlyMessage(error));
       } finally {
         inflight.current = null;
         setActionBusy(null);
-        onSessionEndedRef.current?.();
       }
     })();
   }, [service, feedback]);

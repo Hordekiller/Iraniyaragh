@@ -111,13 +111,15 @@ describe('useAuthSessions', () => {
     expect(result.current.sessions).toHaveLength(3);
   });
 
-  it('logout-all still ends the session locally when the network fails during it', async () => {
+  it('retains the session and permits retry when logout-all has an uncertain network outcome', async () => {
     const fixture = SessionManagementFixture.create();
+    let attempts = 0;
     const service: SessionManagementPort = {
       listSessions: () => fixture.listSessions(),
       revokeSession: (id) => fixture.revokeSession(id),
       logoutAll: async () => {
-        throw new SessionNetworkError();
+        if (++attempts === 1) throw new SessionNetworkError();
+        await fixture.logoutAll();
       },
     };
     const onSessionEnded = vi.fn();
@@ -125,8 +127,34 @@ describe('useAuthSessions', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'));
 
     act(() => result.current.logoutAll());
+    await expect(screen.findByText('امکان برقراری ارتباط با سامانه وجود ندارد.')).resolves.toBeInTheDocument();
+    await waitFor(() => expect(result.current.actionBusy).toBeNull());
+    expect(onSessionEnded).not.toHaveBeenCalled();
+    act(() => result.current.logoutAll());
     await waitFor(() => expect(onSessionEnded).toHaveBeenCalledTimes(1));
-    await expect(screen.findByText(/اتصال برقرار نشد؛ ولی از این دستگاه خارج می‌شوید/)).resolves.toBeInTheDocument();
+    expect(attempts).toBe(2);
+  });
+
+  it('keeps the revocation callback tied to the session that started the request', async () => {
+    const fixture = SessionManagementFixture.create();
+    let resolve!: () => void;
+    const pending = new Promise<void>((done) => { resolve = done; });
+    const service: SessionManagementPort = {
+      listSessions: () => fixture.listSessions(),
+      revokeSession: (id) => fixture.revokeSession(id),
+      logoutAll: () => pending,
+    };
+    const original = vi.fn();
+    const newer = vi.fn();
+    const { result, rerender } = renderHook(({ onSessionEnded }) => useAuthSessions({ service, onSessionEnded }), {
+      wrapper, initialProps: { onSessionEnded: original },
+    });
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    act(() => result.current.logoutAll());
+    rerender({ onSessionEnded: newer });
+    await act(async () => { resolve(); await pending; });
+    expect(original).toHaveBeenCalledTimes(1);
+    expect(newer).not.toHaveBeenCalled();
   });
 
   it('only surfaces a warning (without ending the session) when logout-all hits a server error', async () => {
@@ -145,7 +173,7 @@ describe('useAuthSessions', () => {
     act(() => result.current.logoutAll());
     await waitFor(() => expect(result.current.actionBusy).toBeNull());
     await expect(screen.findByText('سرور پاسخ نداد.')).resolves.toBeInTheDocument();
-    expect(onSessionEnded).toHaveBeenCalledTimes(1);
+    expect(onSessionEnded).not.toHaveBeenCalled();
   });
 
   it('surfaces an expired session as requireReauth instead of only feedback', async () => {

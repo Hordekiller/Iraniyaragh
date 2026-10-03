@@ -10,7 +10,7 @@ import { SessionManagementPage } from '../SessionManagementPage';
 const { signOutMock } = vi.hoisted(() => ({ signOutMock: vi.fn() }));
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
-  useAuth: () => ({ signOut: signOutMock }),
+  useAuth: () => ({ user: { sessionId: 'fixture-session-current' }, endRevokedSession: signOutMock }),
 }));
 
 describe('SessionManagementPage', () => {

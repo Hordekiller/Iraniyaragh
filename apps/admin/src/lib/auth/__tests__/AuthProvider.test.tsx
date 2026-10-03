@@ -21,7 +21,7 @@ const staffPrincipal = {
 };
 
 function AdoptPanel() {
-  const { isAuthenticated, establishSession, signOut, user } = useAuth();
+  const { isAuthenticated, establishSession, signOut, endRevokedSession, user } = useAuth();
   return (
     <div>
       <span data-testid="authed">{isAuthenticated ? 'yes' : 'no'}</span>
@@ -35,6 +35,8 @@ function AdoptPanel() {
       <button type="button" onClick={() => signOut().catch(() => undefined)}>
         signout
       </button>
+      <button type="button" onClick={() => endRevokedSession(staffPrincipal.sessionId)}>revoked</button>
+      <button type="button" onClick={() => establishSession({ accessToken: 'new-session-token', principal: { ...staffPrincipal, sessionId: 'staff-s-2' } })}>new-session</button>
     </div>
   );
 }
@@ -176,6 +178,51 @@ describe('AuthProvider', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(getAccessToken()).toBeNull();
   });
+
+  it('clears local identity when the server confirms the session was already revoked', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ code: 'AUTH_SESSION_INVALID', message: 'revoked', requestId: 'revoked-test', statusCode: 401 }, false, 401));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    fireEvent.click(screen.getByText('adopt'));
+    fireEvent.click(screen.getByText('signout'));
+    await waitFor(() => expect(screen.getByTestId('authed')).toHaveTextContent('no'));
+    expect(getAccessToken()).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('forgets an acknowledged device revocation without sending another logout after the server cleared CSRF cookies', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    fireEvent.click(screen.getByText('adopt'));
+    fireEvent.click(screen.getByText('revoked'));
+    expect(screen.getByTestId('authed')).toHaveTextContent('no');
+    expect(getAccessToken()).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('does not clear a newer login when an older device revocation finishes late', () => {
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    fireEvent.click(screen.getByText('adopt'));
+    fireEvent.click(screen.getByText('new-session'));
+    fireEvent.click(screen.getByText('revoked'));
+    expect(screen.getByTestId('authed')).toHaveTextContent('yes');
+    expect(getAccessToken()).toBe('new-session-token');
+  });
+
+  it.each([[403, 'CSRF_INVALID'], [401, 'AUTH_REAUTHENTICATION_REQUIRED'], [500, 'INTERNAL_ERROR']])(
+    'does not treat logout HTTP %s / %s as confirmed revocation', async (status, code) => {
+      const fetchMock = vi.fn(async () => jsonResponse({ code, message: 'denied', requestId: 'logout-denied-test', statusCode: status }, false, status));
+      vi.stubGlobal('fetch', fetchMock);
+      render(<AuthProvider><AdoptPanel /></AuthProvider>);
+      fireEvent.click(screen.getByText('adopt'));
+      fireEvent.click(screen.getByText('signout'));
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+      await act(async () => undefined);
+      expect(screen.getByTestId('authed')).toHaveTextContent('yes');
+      expect(getAccessToken()).toBe('staff-at-1');
+    },
+  );
 
   it('sign-out sends /auth/logout with the double-submit CSRF proof so the server session is revoked', async () => {
     document.cookie = 'iranyaragh_customer_csrf=csrf-tok; path=/';
