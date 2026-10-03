@@ -31,15 +31,15 @@ import {
   Star,
   UploadCloud,
 } from "lucide-react";
-import type { AdminProductMedia, ProductDetail } from "@iranyaragh/contracts";
+import type { AdminProductMedia, ProductDetail, ProductMediaUploadRequest, ProductMediaUploadResponse } from "@iranyaragh/contracts";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { useFeedback } from "@/components/ui/FeedbackProvider";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { ApiAbortError, ApiClientError } from "@/lib/api/client";
-import { getProduct } from "@/lib/catalog/catalog-api";
+import { ApiAbortError, ApiClientError, ApiNetworkError } from "@/lib/api/client";
+import { createIdempotencyKey, getProduct } from "@/lib/catalog/catalog-api";
 import {
   canReadCatalogMedia,
   canWriteCatalogMedia,
@@ -69,18 +69,27 @@ const stateLabel: Record<AdminProductMedia["state"], string> = {
 };
 
 function message(error: unknown): string {
-  return error instanceof ApiClientError
+  return error instanceof ApiClientError || error instanceof ApiNetworkError
     ? error.message
     : "عملیات رسانه ناموفق بود؛ دوباره تلاش کنید.";
 }
 
-export function ProductMediaManager({ productId }: { productId: string }) {
+export function ProductMediaManager({ productId, initialFiles = [] }: { productId: string; initialFiles?: File[] }) {
   const { user } = useAuth();
   const feedback = useFeedback();
   const canRead = canReadCatalogMedia(user);
   const canWrite = canWriteCatalogMedia(user);
   const inputRef = useRef<HTMLInputElement>(null);
   const pollCountRef = useRef(0);
+  const initialFilesRef = useRef(initialFiles);
+  const initialStarted = useRef(false);
+  const uploadInFlight = useRef(false);
+  const pendingUploads = useRef<Array<{
+    file: File; input?: ProductMediaUploadRequest;
+    intent?: ProductMediaUploadResponse["data"]["upload"];
+    uploaded?: boolean; uploadKey: string; confirmKey: string;
+  }>>([]);
+  const [hasPendingUploads, setHasPendingUploads] = useState(false);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [items, setItems] = useState<AdminProductMedia[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,6 +136,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
       return;
     }
     const timer = window.setInterval(() => {
+      if (uploadInFlight.current) return;
       pollCountRef.current += 1;
       if (pollCountRef.current >= 150) {
         window.clearInterval(timer);
@@ -138,44 +148,68 @@ export function ProductMediaManager({ productId }: { productId: string }) {
     return () => window.clearInterval(timer);
   }, [items, load]);
 
-  async function upload(files: FileList | File[]) {
-    const file = Array.from(files)[0];
-    if (!file || !product?.version) return;
-    if (!ALLOWED_TYPES.has(file.type))
+  const upload = useCallback(async (files: FileList | File[]) => {
+    if (!canWrite || uploadInFlight.current || !product?.version) return;
+    const selected = Array.from(files);
+    if (selected.some(file => !ALLOWED_TYPES.has(file.type)))
       return setError("فقط تصویر JPEG، PNG یا WebP قابل ارسال است.");
-    if (file.size > MAX_BYTES)
+    if (selected.some(file => file.size > MAX_BYTES || file.size === 0))
       return setError("حجم تصویر باید حداکثر ۲۰ مگابایت باشد.");
-    if (items.length >= 12)
+    if (selected.length && items.length + selected.length > 12)
       return setError("حداکثر ۱۲ رسانه برای هر کالا مجاز است.");
+    if (selected.length) {
+      if (pendingUploads.current.length) return setError("ابتدا ارسال تصاویر قبلی را دوباره تلاش کنید.");
+      pendingUploads.current = selected.map(file => ({ file, uploadKey: createIdempotencyKey("media-upload"), confirmKey: createIdempotencyKey("media-confirm") }));
+    }
+    if (!pendingUploads.current.length) return;
+    uploadInFlight.current = true;
     setBusyId("upload");
     setUploadProgress(0);
     setError(null);
     try {
-      const intent = await initiateMediaUpload(productId, {
+      let currentItems = items;
+      while (pendingUploads.current.length) {
+      const attempt = pendingUploads.current[0]!;
+      const file = attempt.file;
+      attempt.input ??= {
         kind: "IMAGE",
-        role: items.some((item) => item.role === "PRIMARY")
+        role: currentItems.some((item) => item.role === "PRIMARY")
           ? "GALLERY"
           : "PRIMARY",
-        position: Math.max(-1, ...items.map(item => item.position)) + 1,
+        position: Math.max(-1, ...currentItems.map(item => item.position)) + 1,
         originalFilename: file.name,
         declaredMime: file.type as "image/jpeg" | "image/png" | "image/webp",
         bytes: file.size,
         productVersion: product.version,
-      });
-      await uploadMediaObject(intent, file, setUploadProgress);
-      const confirmed = await confirmMediaUpload(productId, intent.mediaId);
-      setItems((current) =>
-        [...current, confirmed].sort((a, b) => a.position - b.position),
-      );
+      };
+      if (!attempt.uploaded) {
+        attempt.intent = await initiateMediaUpload(productId, attempt.input, attempt.uploadKey);
+        await uploadMediaObject(attempt.intent, file, setUploadProgress);
+        attempt.uploaded = true;
+      }
+      const confirmed = await confirmMediaUpload(productId, attempt.intent!.mediaId, attempt.confirmKey);
+      currentItems = [...currentItems.filter(item => item.id !== confirmed.id), confirmed].sort((a, b) => a.position - b.position);
+      setItems(currentItems);
+      pendingUploads.current.shift();
+      }
       feedback.success("تصویر ارسال شد و وارد صف پردازش شد.");
     } catch (caught) {
       setError(message(caught));
+      await load(undefined, true);
     } finally {
       setBusyId(null);
+      uploadInFlight.current = false;
+      setHasPendingUploads(pendingUploads.current.length > 0);
       setUploadProgress(null);
       if (inputRef.current) inputRef.current.value = "";
     }
-  }
+  }, [canWrite, feedback, items, load, product, productId]);
+
+  useEffect(() => {
+    if (loading || !product || !canWrite || initialStarted.current || !initialFilesRef.current.length) return;
+    initialStarted.current = true;
+    void upload(initialFilesRef.current);
+  }, [canWrite, loading, product, upload]);
 
   async function saveOrder(ordered: AdminProductMedia[]) {
     if (!product?.version) return;
@@ -343,7 +377,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
                   event.preventDefault();
-                  if (canWrite) void upload(event.dataTransfer.files);
+                  if (canWrite && !busyId) void upload(event.dataTransfer.files);
                 }}
                 sx={{
                   border: "2px dashed",
@@ -365,6 +399,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
                   ref={inputRef}
                   hidden
                   type="file"
+                  multiple
                   accept="image/jpeg,image/png,image/webp"
                   onChange={(event) =>
                     event.target.files && void upload(event.target.files)
@@ -373,11 +408,18 @@ export function ProductMediaManager({ productId }: { productId: string }) {
                 <Button
                   sx={{ mt: 2 }}
                   variant="contained"
-                  disabled={!canWrite || busyId === "upload"}
+                  disabled={!canWrite || Boolean(busyId) || loading || !product || hasPendingUploads}
                   onClick={() => inputRef.current?.click()}
                 >
                   انتخاب تصویر
                 </Button>
+                {hasPendingUploads && <Button disabled={Boolean(busyId)} onClick={() => void upload([])}>تلاش دوباره برای ارسال تصاویر</Button>}
+                {hasPendingUploads && <Button disabled={Boolean(busyId)} onClick={() => {
+                  pendingUploads.current = [];
+                  setHasPendingUploads(false);
+                  setError(null);
+                  void load();
+                }}>لغو صف ارسال</Button>}
               </Box>
               {uploadProgress !== null ? (
                 <Box aria-live="polite">
@@ -411,7 +453,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
               <Card
                 key={item.id}
                 variant="outlined"
-                draggable={canWrite && item.role !== "PRIMARY"}
+                draggable={canWrite && !busyId && item.role !== "PRIMARY"}
                 onDragStart={() => setDraggingId(item.id)}
                 onDragEnd={() => setDraggingId(null)}
                 onDragOver={(event) => {
@@ -468,6 +510,11 @@ export function ProductMediaManager({ productId }: { productId: string }) {
                           item.position + 1,
                         )}
                       </Typography>
+                      {item.state === "READY" && !item.altText ? (
+                        <Typography variant="body2" color="warning.main">
+                          برای نمایش این تصویر در فروشگاه و توضیحات عمومی، متن جایگزین را ثبت کنید.
+                        </Typography>
+                      ) : null}
                       {ACTIVE_PROCESSING.has(item.state) ? (
                         <LinearProgress sx={{ mt: 1 }} />
                       ) : null}
@@ -479,7 +526,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
                           !canWrite ||
                           index === 0 ||
                           items[index - 1]?.role === "PRIMARY" ||
-                          busyId === "order"
+                          Boolean(busyId)
                         }
                         onClick={() => void move(index, -1)}
                       >
@@ -491,7 +538,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
                           !canWrite ||
                           index === items.length - 1 ||
                           items[index + 1]?.role === "PRIMARY" ||
-                          busyId === "order"
+                          Boolean(busyId)
                         }
                         onClick={() => void move(index, 1)}
                       >
@@ -503,7 +550,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
                           !canWrite ||
                           item.role === "PRIMARY" ||
                           item.state !== "READY" ||
-                          busyId === item.id
+                          Boolean(busyId)
                         }
                         onClick={() => void makePrimary(item)}
                       >
@@ -515,7 +562,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
                       </IconButton>
                       <Button
                         size="small"
-                        disabled={!canWrite}
+                        disabled={!canWrite || Boolean(busyId)}
                         onClick={() => {
                           setEditing(item);
                           setAltText(item.altText ?? "");
@@ -529,7 +576,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
                         color="error"
                         disabled={
                           !canWrite ||
-                          busyId === item.id ||
+                          Boolean(busyId) ||
                           (item.role === "PRIMARY" &&
                             product?.status === "PUBLISHED")
                         }
@@ -575,7 +622,7 @@ export function ProductMediaManager({ productId }: { productId: string }) {
           <Button onClick={() => setEditing(null)}>انصراف</Button>
           <Button
             variant="contained"
-            disabled={busyId === editing?.id}
+            disabled={Boolean(busyId)}
             onClick={() => void saveMetadata()}
           >
             ذخیره

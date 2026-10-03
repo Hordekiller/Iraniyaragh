@@ -50,11 +50,9 @@ export class CatalogHttpClient implements CatalogApi {
           image: PLACEHOLDER_IMAGE,
         })),
       )
-      .catch(error => {
-        // Keep successful category reads coalesced, but let an explicit UI
-        // retry issue a fresh request after an outage.
+      .finally(() => {
+        // Coalesce in-flight reads only; later visits must see catalog changes.
         this.categoriesPromise = undefined
-        throw error
       })
     return this.categoriesPromise
   }
@@ -140,7 +138,7 @@ export class CatalogHttpClient implements CatalogApi {
         name: brand.name,
         slug: brand.slug,
       })),
-    )
+    ).finally(() => { this.brandsPromise = undefined })
     return this.brandsPromise
   }
 

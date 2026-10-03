@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn(async () => undefined),
   auth: {
     isAuthenticated: true,
+    isRestoring: false,
     user: {
       userId: 'dev-admin',
       sessionId: 's-1',
@@ -41,6 +42,7 @@ vi.mock('@/lib/auth/AuthProvider', () => ({
   useAuth: () => ({
     user: mocks.auth.user,
     isAuthenticated: mocks.auth.isAuthenticated,
+    isRestoring: mocks.auth.isRestoring,
     signIn: vi.fn(),
     signOut: mocks.signOut,
   }),
@@ -66,6 +68,7 @@ describe('AdminShell', () => {
     mocks.push.mockReset();
     mocks.signOut.mockReset();
     mocks.auth.isAuthenticated = true;
+    mocks.auth.isRestoring = false;
     mocks.auth.user = {
       userId: 'dev-admin',
       sessionId: 's-1',
@@ -87,6 +90,15 @@ describe('AdminShell', () => {
       'لطفاً چند لحظه منتظر بمانید',
     );
     expect(mocks.replace).toHaveBeenCalledWith('/login');
+  });
+
+  it('waits for cookie recovery without declaring the session missing or redirecting', () => {
+    mocks.auth.isAuthenticated = false;
+    mocks.auth.isRestoring = true;
+    renderShell();
+    expect(screen.getByRole('heading', { name: 'در حال بازیابی نشست' })).toBeVisible();
+    expect(screen.queryByText('نشست فعال یافت نشد')).not.toBeInTheDocument();
+    expect(mocks.replace).not.toHaveBeenCalled();
   });
 
   it('renders the authenticated sidebar and dashboard link', () => {
@@ -137,6 +149,17 @@ describe('AdminShell', () => {
     expect(mocks.signOut).toHaveBeenCalledTimes(1);
     expect(mocks.replace).toHaveBeenCalledWith('/login');
     expect(mocks.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows failed logout and keeps the current route available for retry', async () => {
+    mocks.signOut.mockRejectedValueOnce(new Error('offline'));
+    renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'منوی حساب کاربری' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /خروج از حساب/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('خروج از حساب تأیید نشد');
+    expect(mocks.replace).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'منوی حساب کاربری' })).toBeEnabled();
   });
 
   it('toggles the collapsed (mini) sidebar on desktop', () => {

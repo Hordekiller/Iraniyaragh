@@ -7,10 +7,11 @@ import { S3ProductMediaStorage } from './s3-storage.adapter';
 const signedUrl = vi.hoisted(() => vi.fn());
 vi.mock('@aws-sdk/s3-request-presigner', () => ({ getSignedUrl: signedUrl }));
 
-function adapter() {
+function adapter(uploadEndpoint?: string) {
   const config = new ConfigService<EnvironmentVariables, true>({
     OBJECT_STORAGE_BUCKET: 'private-products',
     OBJECT_STORAGE_ENDPOINT: 'http://127.0.0.1:9000',
+    OBJECT_STORAGE_UPLOAD_ENDPOINT: uploadEndpoint,
     OBJECT_STORAGE_REGION: 'us-east-1',
     OBJECT_STORAGE_FORCE_PATH_STYLE: true,
     OBJECT_STORAGE_ACCESS_KEY: 'test-access',
@@ -63,6 +64,26 @@ describe('S3ProductMediaStorage', () => {
     // upload confirmation silently skips verification when it is absent.
     const [command] = send.mock.calls[0]!;
     expect((command as { input: { ChecksumMode?: string } }).input.ChecksumMode).toBe('ENABLED');
+  });
+
+  it('signs the browser HTTPS host and exact quarantine path, while HEAD stays internal', async () => {
+    vi.useRealTimers();
+    const actual = await vi.importActual<typeof import('@aws-sdk/s3-request-presigner')>('@aws-sdk/s3-request-presigner');
+    signedUrl.mockImplementation(actual.getSignedUrl);
+    const storage = adapter('https://store.test');
+    const result = await storage.presignPut({ objectKey: 'quarantine/products/p1/m1/source.png', contentType: 'image/png', bytes: 123, expiresInSeconds: 600 });
+    const url = new URL(result.url);
+    expect(url.origin).toBe('https://store.test');
+    expect(url.pathname).toBe('/private-products/quarantine/products/p1/m1/source.png');
+    expect(url.searchParams.has('X-Amz-Signature')).toBe(true);
+    expect(url.searchParams.get('X-Amz-Expires')).toBe('600');
+    let internalHost: string | undefined;
+    vi.spyOn(S3Client.prototype, 'send').mockImplementationOnce(async function (this: S3Client) {
+      internalHost = (await this.config.endpoint!()).hostname;
+      return { ContentLength: 123 } as never;
+    });
+    await storage.headObject('quarantine/products/p1/m1/source.png');
+    expect(internalHost).toBe('127.0.0.1');
   });
 
   it('uploads immutable renditions with a storage-verifiable checksum', async () => {

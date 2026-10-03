@@ -42,9 +42,11 @@ export function SessionManagementPage() {
 }
 
 function SessionManagementContent() {
-  const { signOut } = useAuth();
+  const { user, endRevokedSession } = useAuth();
   const service = useMemo(() => resolveSessionManagementService(() => getAccessToken()), []);
-  const model = useAuthSessions({ service, onSessionEnded: () => void signOut() });
+  const model = useAuthSessions({ service, onSessionEnded: () => {
+    if (user) endRevokedSession(user.sessionId);
+  } });
   const fixture = isSessionFixtureEnabled();
   const [confirmTarget, setConfirmTarget] = useState<SessionSummary | 'all' | null>(null);
 

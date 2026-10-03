@@ -81,7 +81,7 @@ function NavLinks({
 export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isRestoring, user } = useAuth();
   const { prefs, updatePrefs } = useAdminPreferences();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
@@ -90,10 +90,10 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const isHorizontal = prefs.layout === 'horizontal';
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !isRestoring) {
       router.replace('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isRestoring, router]);
 
   // Reset per-view UI state when the active route changes.
   useEffect(() => {
@@ -145,6 +145,10 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
       previouslyFocused?.focus();
     };
   }, [mobileMenuOpen]);
+
+  if (isRestoring) {
+    return <AuthTransition title="در حال بازیابی نشست" description="اعتبار نشست و مجوزهای شما در حال بررسی است." />;
+  }
 
   if (!isAuthenticated) {
     return (

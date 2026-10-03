@@ -38,6 +38,7 @@ describe('BrandDialog', () => {
     await waitFor(() => expect(createBrand).toHaveBeenCalledWith({ name: 'آبان', slug: 'ab-an-lock' }, expect.any(String)));
     expect(await screen.findByText(/برند «آبان» ساخته شد/)).toBeInTheDocument();
     expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: 'b1', slug: 'abanlock' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/auth/AuthProvider", () => ({
   useAuth: () => ({ user: mocks.user }),
 }));
-vi.mock("@/lib/catalog/catalog-api", () => ({ getProduct: mocks.getProduct }));
+vi.mock("@/lib/catalog/catalog-api", () => ({ getProduct: mocks.getProduct, createIdempotencyKey: (prefix: string) => `${prefix}-${crypto.randomUUID()}` }));
 vi.mock("@/lib/catalog/media-api", () => ({
   listProductMedia: mocks.listProductMedia,
   reorderMedia: mocks.reorderMedia,
@@ -177,10 +177,37 @@ describe("ProductMediaManager", () => {
     fireEvent.change(input, { target: { files: [file] } });
     await waitFor(() => expect(mocks.initiateMediaUpload).toHaveBeenCalledWith("p1", expect.objectContaining({
       kind: "IMAGE", role: "GALLERY", position: 3, productVersion: 3,
-    })));
+    }), expect.any(String)));
     expect(mocks.uploadMediaObject).toHaveBeenCalledWith(expect.objectContaining({ mediaId: "m4" }), file, expect.any(Function));
-    expect(mocks.confirmMediaUpload).toHaveBeenCalledWith("p1", "m4");
+    expect(mocks.confirmMediaUpload).toHaveBeenCalledWith("p1", "m4", expect.any(String));
     expect(await screen.findByText("m4.webp")).toBeInTheDocument();
+  });
+
+  it("uploads a creation queue sequentially with one primary and distinct positions", async () => {
+    mocks.listProductMedia.mockResolvedValue([]);
+    mocks.initiateMediaUpload
+      .mockResolvedValueOnce({ mediaId: "m1", uploadUrl: "/signed", method: "PUT", requiredHeaders: {} })
+      .mockResolvedValueOnce({ mediaId: "m2", uploadUrl: "/signed", method: "PUT", requiredHeaders: {} });
+    mocks.confirmMediaUpload.mockResolvedValueOnce(media("m1", 0, "PRIMARY")).mockResolvedValueOnce(media("m2", 1, "GALLERY"));
+    const files = [new File(["a"], "first.webp", { type: "image/webp" }), new File(["b"], "second.webp", { type: "image/webp" })];
+    render(<FeedbackProvider><ProductMediaManager productId="p1" initialFiles={files} /></FeedbackProvider>);
+    await waitFor(() => expect(mocks.confirmMediaUpload).toHaveBeenCalledTimes(2));
+    expect(mocks.initiateMediaUpload.mock.calls[0]).toEqual(["p1", expect.objectContaining({ role: "PRIMARY", position: 0 }), expect.any(String)]);
+    expect(mocks.initiateMediaUpload.mock.calls[1]).toEqual(["p1", expect.objectContaining({ role: "GALLERY", position: 1 }), expect.any(String)]);
+    expect(mocks.initiateMediaUpload.mock.calls[0][2]).not.toBe(mocks.initiateMediaUpload.mock.calls[1][2]);
+  });
+
+  it("retries an ambiguous confirmation without another file PUT or upload intent", async () => {
+    mocks.confirmMediaUpload.mockRejectedValueOnce(new Error("lost response"));
+    const view = renderManager();
+    await screen.findByText("m1.webp");
+    fireEvent.change(view.container.querySelector('input[type="file"]')!, { target: { files: [new File(["a"], "retry.webp", { type: "image/webp" })] } });
+    const retry = await screen.findByRole("button", { name: "تلاش دوباره برای ارسال تصاویر" });
+    fireEvent.click(retry);
+    await waitFor(() => expect(mocks.confirmMediaUpload).toHaveBeenCalledTimes(2));
+    expect(mocks.confirmMediaUpload.mock.calls[1]).toEqual(mocks.confirmMediaUpload.mock.calls[0]);
+    expect(mocks.initiateMediaUpload).toHaveBeenCalledTimes(1);
+    expect(mocks.uploadMediaObject).toHaveBeenCalledTimes(1);
   });
 
   it("archives a gallery item only after explicit confirmation", async () => {
@@ -319,8 +346,11 @@ describe("ProductMediaManager", () => {
       await screen.findByText("عملیات رسانه ناموفق بود؛ دوباره تلاش کنید."),
     ).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "انتخاب تصویر" })).toBeEnabled(),
+      expect(screen.getByRole("button", { name: "تلاش دوباره برای ارسال تصاویر" })).toBeEnabled(),
     );
+    fireEvent.click(screen.getByRole("button", { name: "تلاش دوباره برای ارسال تصاویر" }));
+    await waitFor(() => expect(mocks.confirmMediaUpload).toHaveBeenCalledTimes(1));
+    expect(mocks.initiateMediaUpload.mock.calls[1]).toEqual(mocks.initiateMediaUpload.mock.calls[0]);
   });
 
   it("supports keyboard reordering and canceling both dialogs", async () => {
@@ -365,7 +395,7 @@ describe("ProductMediaManager", () => {
     await waitFor(() =>
       expect(mocks.initiateMediaUpload).toHaveBeenCalledWith(
         "p1",
-        expect.objectContaining({ role: "PRIMARY", position: 0 }),
+        expect.objectContaining({ role: "PRIMARY", position: 0 }), expect.any(String),
       ),
     );
   });

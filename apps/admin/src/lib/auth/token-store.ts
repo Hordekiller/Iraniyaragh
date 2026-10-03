@@ -1,10 +1,14 @@
 let accessToken: string | null = null;
+let sessionRevision = 0;
+
+export function getSessionRevision(): number { return sessionRevision; }
 
 export function getAccessToken(): string | null {
   return accessToken;
 }
 
-export function setAccessToken(token: string | null): void {
+export function setAccessToken(token: string | null, sameSession = false): void {
+  if (!sameSession) sessionRevision += 1;
   accessToken = token;
 }
 

@@ -69,4 +69,15 @@ describe('HomePage', () => {
     expect(await screen.findByRole('link', { name: /کالای منتشرشده/ })).toBeInTheDocument()
     expect(listProducts).toHaveBeenCalledTimes(2)
   })
+
+  it('fetches newest products again when returning from publishing in another tab', async () => {
+    const listProducts = vi.fn()
+      .mockResolvedValueOnce({ items: [], meta: { page: 1, perPage: 100, total: 0, pages: 0 } })
+      .mockResolvedValue({ items: [PRODUCT], meta: { page: 1, perPage: 100, total: 1, pages: 1 } })
+    renderHome(catalogApi({ listProducts }))
+    await screen.findByText('در حال حاضر کالای منتشرشده‌ای برای نمایش وجود ندارد.')
+    fireEvent.focus(window)
+    expect(await screen.findByRole('link', { name: /کالای منتشرشده/ })).toBeInTheDocument()
+    expect(listProducts).toHaveBeenLastCalledWith({ sortBy: 'newest' })
+  })
 })
