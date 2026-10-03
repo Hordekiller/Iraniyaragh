@@ -18,14 +18,18 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowRight, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, Lock, Plus, Trash2 } from 'lucide-react';
 import type { CatalogStatus } from '@iranyaragh/contracts';
-import { ApiAbortError, ApiClientError } from '@/lib/api/client';
+import { ApiAbortError, ApiClientError, ApiNetworkError } from '@/lib/api/client';
 import { createIdempotencyKey, createProduct, listBrands, listCategories } from '@/lib/catalog/catalog-api';
 import { AMOUNT_PATTERN, SLUG_PATTERN } from '@/lib/catalog/catalog-labels';
 import { FormField } from '@/components/ui/FormField';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { canWriteCatalog } from '@/lib/catalog/catalog-permissions';
+import { RichTextEditor } from '@/components/editor/RichTextEditor';
 
 type VariantDraft = {
   sku: string;
@@ -68,6 +72,7 @@ function validateDraft(draft: ProductDraft): { fields: FieldErrors; variants: Va
   else if (draft.name.trim().length > 250) fields.name = 'نام کالا حداکثر ۲۵۰ کاراکتر.';
   if (!draft.slug.trim()) fields.slug = 'شناسه (Slug) الزامی است.';
   else if (!SLUG_PATTERN.test(draft.slug)) fields.slug = 'شناسه فقط شامل a-z، عدد و خط تیره (-) باشد.';
+  if (draft.description.trim().length > 10000) fields.description = 'توضیحات حداکثر ۱۰۰۰۰ کاراکتر.';
 
   const variants: VariantErrors = {};
   if (draft.variants.length === 0) {
@@ -93,6 +98,8 @@ function validateDraft(draft: ProductDraft): { fields: FieldErrors; variants: Va
 export function ProductCreateForm() {
   const router = useRouter();
   const feedback = useFeedback();
+  const { user } = useAuth();
+  const canWrite = canWriteCatalog(user);
 
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -115,6 +122,7 @@ export function ProductCreateForm() {
   const idempotencyKey = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!canWrite) return;
     const controller = new AbortController();
     Promise.all([listBrands(controller.signal), listCategories(controller.signal)])
       .then(([brandItems, categoryItems]) => {
@@ -126,7 +134,7 @@ export function ProductCreateForm() {
         setReferenceError('بارگیری برندها و دسته‌بندی‌ها ناموفق بود؛ میتوانید بدون انتخاب ادامه دهید.');
       });
     return () => controller.abort();
-  }, []);
+  }, [canWrite]);
 
   const setField = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => {
     idempotencyKey.current = null;
@@ -160,8 +168,8 @@ export function ProductCreateForm() {
 
     setSubmitting(true);
     setFormError(null);
-    idempotencyKey.current ??= createIdempotencyKey('catalog-product');
     try {
+      idempotencyKey.current ??= createIdempotencyKey('product-create');
       const result = await createProduct({
         name: draft.name.trim(),
         slug: draft.slug.trim(),
@@ -181,15 +189,33 @@ export function ProductCreateForm() {
           isActive: variant.isActive,
         })),
       }, idempotencyKey.current);
-      feedback.success(`کالای «${result.product.name}» با موفقیت ثبت شد.`);
       idempotencyKey.current = null;
+      feedback.success(`کالای «${result.product.name}» با موفقیت ثبت شد.`);
       router.replace('/catalog');
     } catch (error) {
-      if (error instanceof ApiClientError) setFormError(error.message);
-      else setFormError('ثبت کالا ناموفق بود؛ دوباره تلاش کنید.');
+      if (error instanceof ApiClientError) {
+        setFormError(error.message);
+      } else if (error instanceof ApiNetworkError) {
+        setFormError('امکان برقراری ارتباط با سامانه وجود ندارد.');
+      } else {
+        setFormError('ثبت کالا ناموفق بود؛ دوباره تلاش کنید.');
+      }
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (!canWrite) {
+    return (
+      <>
+        <PageHeader title="کالای جدید" />
+        <EmptyState
+          icon={<Lock size={28} />}
+          title="دسترسی ندارید"
+          description="حساب شما برای ساخت کالا مجوز نوشتن کاتالوگ را ندارد."
+        />
+      </>
+    );
   }
 
   return (
@@ -247,14 +273,13 @@ export function ProductCreateForm() {
                     onChange={(event) => setField('slug', event.target.value.toLocaleLowerCase('en-US').replace(/\s+/g, '-'))}
                   />
                 </FormField>
-                <FormField label="توضیحات" htmlFor="product-description" helperText="اختیاری — حداکثر ۱۰۰۰۰ کاراکتر">
-                  <TextField
-                    id="product-description"
-                    size="small"
-                    multiline
-                    minRows={3}
+                <FormField label="توضیحات" htmlFor="product-description" helperText="اختیاری — حداکثر ۱۰۰۰۰ کاراکتر" error={Boolean(errors.fields.description)} errorText={errors.fields.description}>
+                  <RichTextEditor
                     value={draft.description}
-                    onChange={(event) => setField('description', event.target.value)}
+                    onChange={(html) => setField('description', html)}
+                    placeholder="توضیحات محصول را وارد کنید..."
+                    height={200}
+                    ariaLabel="ویرایشگر توضیحات محصول"
                   />
                 </FormField>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -319,10 +344,7 @@ export function ProductCreateForm() {
                 <Button
                   size="small"
                   startIcon={<Plus size={16} />}
-                  onClick={() => {
-                    idempotencyKey.current = null;
-                    setDraft((current) => ({ ...current, variants: [...current.variants, emptyVariant()] }));
-                  }}
+                  onClick={() => setDraft((current) => ({ ...current, variants: [...current.variants, emptyVariant()] }))}
                 >
                   افزودن تنوع
                 </Button>
@@ -344,13 +366,12 @@ export function ProductCreateForm() {
                           size="small"
                           aria-label={`حذف تنوع ${index + 1}`}
                           disabled={draft.variants.length === 1}
-                              onClick={() => {
-                                idempotencyKey.current = null;
-                                setDraft((current) => ({
-                                  ...current,
-                                  variants: current.variants.filter((_, i) => i !== index),
-                                }));
-                              }}
+                          onClick={() =>
+                            setDraft((current) => ({
+                              ...current,
+                              variants: current.variants.filter((_, i) => i !== index),
+                            }))
+                          }
                         >
                           <Trash2 size={17} />
                         </IconButton>
@@ -405,8 +426,9 @@ export function ProductCreateForm() {
                               size="small"
                               dir="ltr"
                               inputMode="numeric"
+                              placeholder="1200000"
                               value={variant.costPrice}
-                              onChange={(event) => setVariantField(index, 'costPrice', event.target.value.replace(/[^\d]/g, ''))}
+                              onChange={(event) => setVariantField(index, 'costPrice', event.target.value.replace(/[^0-9]/g, ''))}
                             />
                           </FormField>
                           <FormField
@@ -421,8 +443,9 @@ export function ProductCreateForm() {
                               size="small"
                               dir="ltr"
                               inputMode="numeric"
+                              placeholder="1450000"
                               value={variant.salePrice}
-                              onChange={(event) => setVariantField(index, 'salePrice', event.target.value.replace(/[^\d]/g, ''))}
+                              onChange={(event) => setVariantField(index, 'salePrice', event.target.value.replace(/[^0-9]/g, ''))}
                             />
                           </FormField>
                           <FormField
@@ -436,10 +459,9 @@ export function ProductCreateForm() {
                               size="small"
                               dir="ltr"
                               inputMode="numeric"
+                              placeholder="100"
                               value={variant.weightGrams}
-                              onChange={(event) =>
-                                setVariantField(index, 'weightGrams', event.target.value.replace(/[^\d]/g, ''))
-                              }
+                              onChange={(event) => setVariantField(index, 'weightGrams', event.target.value.replace(/[^0-9]/g, ''))}
                             />
                           </FormField>
                         </Stack>
@@ -448,7 +470,6 @@ export function ProductCreateForm() {
                             <Checkbox
                               checked={variant.isActive}
                               onChange={(event) => setVariantField(index, 'isActive', event.target.checked)}
-                              inputProps={{ 'aria-label': `تنوع ${index + 1} فعال` }}
                             />
                           }
                           label="فعال"
@@ -461,11 +482,14 @@ export function ProductCreateForm() {
             </CardContent>
           </Card>
 
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-            <Button type="button" variant="outlined" component="a" href="/catalog">
-              انصراف
-            </Button>
-            <Button type="submit" variant="contained" disabled={submitting}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={submitting || draft.variants.length === 0}
+              startIcon={<ArrowRight size={18} />}
+            >
               {submitting ? 'در حال ثبت…' : 'ثبت کالا'}
             </Button>
           </Box>
