@@ -177,10 +177,17 @@ test.describe('nginx: storefront and API do not regress', () => {
     // The routing file strips the /media prefix with a rewrite, because the
     // object store is addressed path-style. A 502 here would mean the rewrite
     // stopped working; a 404 is the store correctly reporting no such key.
-    const response = await request.get(`${HTTP_ORIGIN}/media/products/not-a-real-object.png`, {
+    const response = await request.get(`${HTTP_ORIGIN}/media/products/renditions/products/not-a-real-object.png`, {
       maxRedirects: 0,
     });
 
     expect(response.status()).toBe(404);
+  });
+
+  test('the public media alias cannot read quarantined originals', async ({ request }) => {
+    for (const origin of [HTTP_ORIGIN, HTTPS_ORIGIN]) {
+      const response = await request.get(`${origin}/media/products/quarantine/products/source.png`, { maxRedirects: 0 });
+      expect(response.status()).toBe(403);
+    }
   });
 });
