@@ -22034,8 +22034,22 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing, expired or revoked customer session"
+          },
+          "403": {
+            "description": "Customer authentication level required"
+          },
+          "404": {
+            "description": "No active account linked to the authenticated customer"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Get the authenticated customer account and address book",
         "tags": [
           "CustomerSelf"
@@ -22192,8 +22206,28 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid profile fields or idempotency key"
+          },
+          "401": {
+            "description": "Missing, expired or revoked customer session"
+          },
+          "403": {
+            "description": "Customer authentication level required"
+          },
+          "404": {
+            "description": "No active account linked to the authenticated customer"
+          },
+          "409": {
+            "description": "Version conflict or idempotency key payload mismatch"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Update the authenticated customer name fields",
         "tags": [
           "CustomerSelf"
@@ -22391,8 +22425,28 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid address book, default address or idempotency key"
+          },
+          "401": {
+            "description": "Missing, expired or revoked customer session"
+          },
+          "403": {
+            "description": "Customer authentication level required"
+          },
+          "404": {
+            "description": "No active account linked to the authenticated customer"
+          },
+          "409": {
+            "description": "Version conflict or idempotency key payload mismatch"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Replace the authenticated customer address book",
         "tags": [
           "CustomerSelf"
