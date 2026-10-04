@@ -55,6 +55,7 @@ function createService(
     challenge?: unknown | null;
     smsResult?: SmsSendResult;
     smsProvider?: SmsProvider;
+    resolveTemplateId?: () => Promise<number | undefined>;
   } = {},
 ) {
   const tx = overrides.tx ?? createTx();
@@ -75,6 +76,7 @@ function createService(
   const service = new CustomerOtpService(prisma, hashes as AuthHashService, limits as RateLimitService, smsProvider, {
     templateId: 42,
     codeParameterName: 'Code',
+    resolveTemplateId: overrides.resolveTemplateId,
   });
   return { service, prisma, hashes, limits, tx, smsProvider };
 }
@@ -138,6 +140,7 @@ describe('CustomerOtpService', () => {
         challengeId: 'challenge-1',
         expiresInSeconds: 300,
         resendAfterSeconds: 60,
+        deliveryStatus: 'accepted',
       });
       expect(enforce).toHaveBeenCalledTimes(5);
       expect(tx.otpCode.updateMany).toHaveBeenCalledWith({
@@ -197,7 +200,7 @@ describe('CustomerOtpService', () => {
 
       await expect(
         service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '192.0.2.1'),
-      ).resolves.toMatchObject({ challengeId: 'challenge-1' });
+      ).resolves.toMatchObject({ challengeId: 'challenge-1', deliveryStatus: 'unknown_result' });
       expect(send).toHaveBeenCalledOnce();
       expect(tx.otpCode.updateMany).toHaveBeenCalledTimes(1);
     });
@@ -222,7 +225,6 @@ describe('CustomerOtpService', () => {
 
     it.each([
       { status: 'rejected', reason: 'template' } as const,
-      { status: 'rate_limited' } as const,
       { status: 'unavailable' } as const,
     ])('invalidates the fresh challenge after known delivery failure $status', async smsResult => {
       const tx = createTx();
@@ -242,6 +244,17 @@ describe('CustomerOtpService', () => {
       });
     });
 
+    it('reports provider throttling with a bounded retry window and invalidates the undelivered code', async () => {
+      const tx = createTx();
+      tx.user.findUnique = vi.fn(async () => ({ id: 'user-1' }));
+      const { service } = createService({ tx, smsResult: { status: 'rate_limited' } });
+      await expect(service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '192.0.2.1'))
+        .rejects.toMatchObject({ status: 429, retryAfterSeconds: 60, response: { code: 'RATE_LIMITED' } });
+      expect(tx.otpCode.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
+        data: { invalidatedAt: expect.any(Date) },
+      }));
+    });
+
     it('treats a provider throw as ambiguous without retry or invalidation', async () => {
       const tx = createTx();
       tx.user.findUnique = vi.fn(async () => ({ id: 'user-1' }));
@@ -252,7 +265,7 @@ describe('CustomerOtpService', () => {
 
       await expect(
         service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '192.0.2.1'),
-      ).resolves.toMatchObject({ challengeId: 'challenge-1' });
+      ).resolves.toMatchObject({ challengeId: 'challenge-1', deliveryStatus: 'unknown_result' });
       expect(send).toHaveBeenCalledOnce();
       expect(tx.otpCode.updateMany).toHaveBeenCalledTimes(1);
     });
@@ -462,5 +475,21 @@ describe('CustomerOtpService', () => {
         context: 'ip',
       });
     });
+  });
+});
+
+ describe('Customer OTP dynamic template configuration', () => {
+  it('uses the authoritative template resolver for a real dispatch', async () => {
+    const resolveTemplateId = vi.fn().mockResolvedValue(901);
+    const { service, smsProvider } = createService({ resolveTemplateId });
+    await service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '127.0.0.1');
+    expect(resolveTemplateId).toHaveBeenCalledOnce();
+    expect((smsProvider as FakeSmsProvider).requests[0]?.templateId).toBe(901);
+  });
+  it.each([undefined, 'throw'])('never falls back to a stale template when resolution is %s', async mode => {
+    const resolveTemplateId = mode === 'throw' ? vi.fn().mockRejectedValue(new Error('private')) : vi.fn().mockResolvedValue(undefined);
+    const { service, smsProvider } = createService({ resolveTemplateId });
+    await expect(service.requestOtp({ mobile: '+989123456789', client: 'CUSTOMER_WEB' }, '127.0.0.1')).rejects.toMatchObject({ status: 503 });
+    expect((smsProvider as FakeSmsProvider).requests).toHaveLength(0);
   });
 });

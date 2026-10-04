@@ -276,7 +276,7 @@ describe('validateEnvironment', () => {
     expect(result.SMS_IR_TIMEOUT_MS).toBe(5000);
   });
 
-  it.each(['SMS_IR_API_KEY', 'SMS_IR_OTP_TEMPLATE_ID'])('requires %s outside local environments', (key) => {
+  it.each(['SMS_IR_API_KEY'])('requires %s outside local environments', (key) => {
     expect(() =>
       validateEnvironment({
         ...validProductionEnvironment,
@@ -286,11 +286,12 @@ describe('validateEnvironment', () => {
   });
 
   it.each([
+    'SMS_IR_OTP_TEMPLATE_ID',
     'SMS_IR_ORDER_PAID_TEMPLATE_ID',
     'SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID',
     'SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID',
-  ])('requires a configured %s in production', (key) => {
-    expect(() => validateEnvironment({ ...validProductionEnvironment, [key]: undefined })).toThrow(key);
+  ])('allows Admin-managed %s but rejects invalid environment overrides', (key) => {
+    expect(validateEnvironment({ ...validProductionEnvironment, [key]: undefined })[key]).toBeUndefined();
     expect(() => validateEnvironment({ ...validProductionEnvironment, [key]: '0' })).toThrow(key);
   });
 
@@ -477,5 +478,19 @@ describe('disabled providers', () => {
 
   it.each(['PAYMENT_PROVIDER_MODE', 'SMS_PROVIDER_MODE'])('rejects an unknown %s value', (key) => {
     expect(() => validateEnvironment({ ...validDisabledStagingEnvironment, [key]: 'mock' })).toThrow(key);
+  });
+});
+
+describe('private SMS operator test opt-in', () => {
+  it('defaults off and requires canonical private configuration when enabled', () => {
+    expect(validateEnvironment(validProductionEnvironment)).toMatchObject({ SMS_IR_TEST_SEND_ENABLED: false });
+    expect(validateEnvironment({ ...validProductionEnvironment, SMS_IR_TEST_SEND_ENABLED: 'true',
+      SMS_IR_TEST_MOBILE: '+989121234567' })).toMatchObject({ SMS_IR_TEST_SEND_ENABLED: true });
+    for (const fields of [
+      { SMS_IR_TEST_SEND_ENABLED: 'true' }, { SMS_IR_TEST_MOBILE: '09121234567' },
+      { SMS_IR_TEST_SEND_ENABLED: 'yes' },
+    ]) expect(() => validateEnvironment({ ...validProductionEnvironment, ...fields })).toThrow(/SMS_IR_TEST_/u);
+    expect(() => validateEnvironment({ ...validDisabledStagingEnvironment, SMS_IR_TEST_SEND_ENABLED: 'true',
+      SMS_IR_TEST_MOBILE: '+989121234567' })).toThrow(/SMS_IR_TEST_/u);
   });
 });

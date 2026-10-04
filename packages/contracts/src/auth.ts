@@ -30,6 +30,8 @@ export type CustomerOtpChallenge = {
   challengeId: string;
   expiresInSeconds: 300;
   resendAfterSeconds: 60;
+  /** Absent only on older servers; ambiguous sends never imply provider acceptance. */
+  deliveryStatus?: 'accepted' | 'unknown_result';
 };
 
 export type CustomerOtpChallengeResponse = ApiSuccess<CustomerOtpChallenge>;

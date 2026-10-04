@@ -28,6 +28,7 @@ function createController(overrides: Partial<{
       challengeId: 'challenge-1',
       expiresInSeconds: 300,
       resendAfterSeconds: 60,
+      deliveryStatus: 'accepted',
     })),
     verifyOtp: vi.fn(async (): Promise<OtpVerifyResult> => ({
       challenge: { kind: 'success', userId: 'user-customer-1', deviceName: 'Test device' },
@@ -100,7 +101,7 @@ describe('CustomerAuthController (customer OTP)', () => {
     );
 
     expect(result).toEqual({
-      data: { challengeId: 'challenge-1', expiresInSeconds: 300, resendAfterSeconds: 60 },
+      data: { challengeId: 'challenge-1', expiresInSeconds: 300, resendAfterSeconds: 60, deliveryStatus: 'accepted' },
     });
   });
 

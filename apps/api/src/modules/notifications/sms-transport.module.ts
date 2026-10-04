@@ -1,9 +1,11 @@
+import { DatabaseModule } from '../../database/database.module';
+import { SmsTemplateSettingsService } from './sms-template-settings.service';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DisabledSmsProvider } from './disabled-sms.provider';
 import { FakeSmsProvider } from './fake-sms.provider';
 import { SmsIrProvider } from './sms-ir.provider';
-import { CUSTOMER_OTP_SMS_CONFIG, SMS_PROVIDER, type CustomerOtpSmsConfig, type SmsProvider } from './sms-provider';
+import { CUSTOMER_OTP_SMS_CONFIG, SMS_PROVIDER, SMS_TEMPLATE_RESOLVER, type CustomerOtpSmsConfig, type SmsProvider } from './sms-provider';
 
 function requiredBoundedInteger(value: string | undefined, name: string, minimum: number, maximum: number): number {
   const parsed = Number(value);
@@ -42,7 +44,7 @@ function smsMode(config: ConfigService, environment: string): 'smsir' | 'disable
   return 'smsir';
 }
 
-function createOtpSmsConfig(config: ConfigService): CustomerOtpSmsConfig {
+function createOtpSmsConfig(config: ConfigService, templates: SmsTemplateSettingsService): CustomerOtpSmsConfig {
   const environment = config.get<string>('NODE_ENV') ?? 'development';
   if (environment === 'development' || environment === 'test') {
     return Object.freeze({ templateId: 1, codeParameterName: 'Code' });
@@ -54,13 +56,9 @@ function createOtpSmsConfig(config: ConfigService): CustomerOtpSmsConfig {
     return Object.freeze({ templateId: 0, codeParameterName: 'Code' });
   }
   return Object.freeze({
-    templateId: requiredBoundedInteger(
-      config.get<string>('SMS_IR_OTP_TEMPLATE_ID'),
-      'SMS_IR_OTP_TEMPLATE_ID',
-      1,
-      9_999_999_999,
-    ),
+    templateId: 0,
     codeParameterName: 'Code',
+    resolveTemplateId: () => templates.resolve('customer_login'),
   });
 }
 
@@ -76,11 +74,13 @@ function createSmsProvider(config: ConfigService): SmsProvider {
 }
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, DatabaseModule],
   providers: [
+    SmsTemplateSettingsService,
+    { provide: SMS_TEMPLATE_RESOLVER, useExisting: SmsTemplateSettingsService },
     {
       provide: CUSTOMER_OTP_SMS_CONFIG,
-      inject: [ConfigService],
+      inject: [ConfigService, SmsTemplateSettingsService],
       useFactory: createOtpSmsConfig,
     },
     {
@@ -89,6 +89,6 @@ function createSmsProvider(config: ConfigService): SmsProvider {
       useFactory: createSmsProvider,
     },
   ],
-  exports: [CUSTOMER_OTP_SMS_CONFIG, SMS_PROVIDER],
+  exports: [CUSTOMER_OTP_SMS_CONFIG, SMS_PROVIDER, SMS_TEMPLATE_RESOLVER, SmsTemplateSettingsService],
 })
 export class SmsTransportModule {}

@@ -3,12 +3,17 @@ import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory, type INestApplicationContext } from '@nestjs/core';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DisabledSmsProvider } from './disabled-sms.provider';
 import { FakeSmsProvider } from './fake-sms.provider';
 import { SmsIrProvider } from './sms-ir.provider';
 import { SMS_PROVIDER, type SmsProvider } from './sms-provider';
 import { SmsTransportModule } from './sms-transport.module';
+
+// Bootstrap unit evidence: the database is stubbed; no staging connection or send.
+vi.mock('../../database/prisma.service', () => ({ PrismaService: class {
+  smsTemplateSettings = { findUnique: async () => null };
+} }));
 
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: false }), SmsTransportModule],
@@ -20,6 +25,9 @@ const SMS_ENV = {
   SMS_PROVIDER_MODE: 'smsir',
   SMS_IR_API_KEY: 'staging-sms-ir-api-key',
   SMS_IR_OTP_TEMPLATE_ID: '123456',
+  SMS_IR_ORDER_PAID_TEMPLATE_ID: '123457',
+  SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID: '123458',
+  SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID: '123459',
 } as const;
 
 function applyEnv(values: Record<string, string | undefined>): void {

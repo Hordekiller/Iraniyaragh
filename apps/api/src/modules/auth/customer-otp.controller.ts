@@ -9,6 +9,7 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
+import { ApiBody, ApiResponse } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import type { AccessTokenResponse, CustomerOtpChallengeResponse } from '@iranyaragh/contracts';
 import { AUTH_RUNTIME_CONFIG, type AuthRuntimeConfig } from './auth.config';
@@ -33,6 +34,16 @@ export class CustomerAuthController {
   ) {}
 
   @Post('otp/request')
+  @ApiBody({ schema: { type: 'object', additionalProperties: false, required: ['mobile', 'client'],
+    properties: { mobile: { type: 'string', maxLength: 64 }, client: { type: 'string', enum: ['CUSTOMER_WEB'] } } } })
+  @ApiResponse({ status: 202, description: 'Active challenge. Delivery acceptance is explicit; unknown results must not be automatically retried.',
+    schema: { type: 'object', required: ['data'], properties: { data: { type: 'object',
+      required: ['challengeId', 'expiresInSeconds', 'resendAfterSeconds', 'deliveryStatus'], properties: {
+        challengeId: { type: 'string' }, expiresInSeconds: { type: 'integer', enum: [300] },
+        resendAfterSeconds: { type: 'integer', enum: [60] }, deliveryStatus: { type: 'string', enum: ['accepted', 'unknown_result'] },
+      } } } } })
+  @ApiResponse({ status: 429, description: 'Existing destination/IP policies or explicit provider throttling; Retry-After header.' })
+  @ApiResponse({ status: 503, description: 'SMS_PROVIDER_DISABLED or UPSTREAM_UNAVAILABLE; no successful delivery is claimed.' })
   @HttpCode(HttpStatus.ACCEPTED)
   @Header('Cache-Control', 'no-store')
   @Header('Pragma', 'no-cache')

@@ -1,3 +1,4 @@
+import type { SmsTemplateSettingsService } from './sms-template-settings.service';
 import type {
   SmsDiagnosticsResponse,
   SmsSettingsResponse,
@@ -29,7 +30,7 @@ function createController() {
     sendControlledTest: vi.fn(async (): Promise<SmsTestSendResponse> => ({ data: { outcome: {} as never } })),
     getDiagnostics: vi.fn(async (): Promise<SmsDiagnosticsResponse> => ({ data: { diagnostics: {} as never } })),
   };
-  const controller = new NotificationsAdminController(settings as unknown as SmsSettingsService);
+  const controller = new NotificationsAdminController(settings as unknown as SmsSettingsService, {} as SmsTemplateSettingsService);
   return { settings, controller };
 }
 

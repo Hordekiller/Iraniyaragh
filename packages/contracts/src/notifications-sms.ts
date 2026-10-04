@@ -34,6 +34,8 @@ export type SmsSecretStatus = {
 };
 
 export type SmsSettingsSnapshot = {
+  /** Configured only; provider approval and handset delivery require acceptance. */
+  templates?: { otp: boolean; orderPaid: boolean; shipmentDispatched: boolean; shipmentDelivered: boolean };
   version: number;
   updatedAt: string | null;
   settings: SmsSettingsFields;
@@ -94,3 +96,13 @@ export type SmsDiagnostics = {
 };
 
 export type SmsDiagnosticsResponse = ApiSuccess<{ diagnostics: SmsDiagnostics }>;
+
+export type SmsTemplateFields = {
+  otpTemplateId: number | null;
+  orderPaidTemplateId: number | null;
+  shipmentDispatchedTemplateId: number | null;
+  shipmentDeliveredTemplateId: number | null;
+};
+export type SmsTemplateSettings = SmsTemplateFields & { version: number; updatedAt: string | null };
+export type SmsTemplateSettingsResponse = ApiSuccess<{ templates: SmsTemplateSettings }>;
+export type SmsTemplateSettingsUpdate = SmsTemplateFields & { expectedVersion: number; idempotencyKey: string };

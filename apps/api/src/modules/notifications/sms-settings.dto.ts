@@ -404,6 +404,11 @@ export const openApiSmsSchemas = {
                   lastRotatedAt: { type: 'string', format: 'date-time', nullable: true, description: 'ISO-8601 instant of the last rotation, if any.', example: '2026-09-08T09:00:00.000Z' },
                 },
               },
+              templates: { type: 'object', description: 'Environment template configuration only; not provider approval or delivery evidence.',
+                required: ['otp', 'orderPaid', 'shipmentDispatched', 'shipmentDelivered'], properties: {
+                  otp: { type: 'boolean' }, orderPaid: { type: 'boolean' },
+                  shipmentDispatched: { type: 'boolean' }, shipmentDelivered: { type: 'boolean' },
+                } },
               secretBackend: { type: 'string', enum: ['writable', 'read_only'], description: 'Secret backend capability.', example: 'writable' },
             },
           },
@@ -424,7 +429,7 @@ export const openApiSmsSchemas = {
             required: ['messageId', 'status'],
             properties: {
               messageId: { type: 'string', nullable: true, description: 'Provider message id if known; null on non-delivery outcomes.', example: 'SMSIR-0001' },
-              status: { type: 'string', enum: ['accepted', 'rejected', 'rate_limited', 'unavailable', 'unknown_result', 'disabled'], description: 'Delivery outcome.', example: 'accepted' },
+              status: { type: 'string', enum: ['accepted', 'rejected', 'rate_limited', 'unavailable', 'unknown_result'], description: 'Provider acceptance outcome; not proof of handset delivery.', example: 'accepted' },
             },
           },
         },

@@ -10,6 +10,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { type AuthPrincipalContext, AuthPrincipalService } from '../auth/auth-principal.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { NotificationsAdminController } from './notifications.admin.controller';
+import { SmsTemplateSettingsService } from './sms-template-settings.service';
 import { SmsSettingsService } from './sms-settings.service';
 
 const freshStaffPrincipal: AuthPrincipalContext = Object.freeze({
@@ -93,6 +94,11 @@ function createServiceStub() {
   } as unknown as SmsSettingsService;
 }
 
+const templateStub = {
+  read: vi.fn(async () => ({ version: 1, updatedAt: null, otpTemplateId: null, orderPaidTemplateId: null, shipmentDispatchedTemplateId: null, shipmentDeliveredTemplateId: null })),
+  update: vi.fn(async (_actor: string, _request: string, input: object) => ({ ...input, version: 2, updatedAt: null })),
+};
+
 const serviceStub = createServiceStub();
 
 @Module({
@@ -100,6 +106,7 @@ const serviceStub = createServiceStub();
   controllers: [NotificationsAdminController],
   providers: [
     { provide: SmsSettingsService, useValue: serviceStub },
+    { provide: SmsTemplateSettingsService, useValue: templateStub },
     { provide: AuthPrincipalService, useValue: principalService },
     { provide: APP_GUARD, useValue: new AuthGuard(principalService as unknown as AuthPrincipalService, { record: vi.fn(async () => undefined) } as unknown as AuditLogService) },
   ],
@@ -132,6 +139,7 @@ describe('NotificationsAdminController HTTP authorization', () => {
     serviceStub.validateConfiguration.mockClear();
     serviceStub.sendControlledTest.mockClear();
     serviceStub.getDiagnostics.mockClear();
+    templateStub.read.mockClear(); templateStub.update.mockClear();
   });
 
   afterAll(async () => {
@@ -143,6 +151,7 @@ describe('NotificationsAdminController HTTP authorization', () => {
     { label: 'rotate secret', method: 'POST', path: '/api/v1/notifications/admin/sms-settings/secret', body: { secret: '0123456789abcdef', confirm: true, idempotencyKey: 'rotate-http-1' } },
     { label: 'clear secret', method: 'DELETE', path: '/api/v1/notifications/admin/sms-settings/secret', body: { confirm: true, idempotencyKey: 'clear-http-1' } },
     { label: 'validate configuration', method: 'POST', path: '/api/v1/notifications/admin/sms-settings/validate' },
+    { label: 'update templates', method: 'PUT', path: '/api/v1/notifications/admin/sms-settings/templates', body: { expectedVersion: 1, idempotencyKey: 'template-http-1', otpTemplateId: 123, orderPaidTemplateId: 124, shipmentDispatchedTemplateId: 125, shipmentDeliveredTemplateId: 126 } },
     { label: 'send controlled test', method: 'POST', path: '/api/v1/notifications/admin/sms-settings/test-send', body: { confirm: true, idempotencyKey: 'test-http-1' } },
   ];
 
@@ -265,4 +274,35 @@ describe('NotificationsAdminController HTTP authorization', () => {
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toMatchObject({ code: 'CONFLICT', statusCode: 409 });
   });
+  it.each([
+    { confirm: true, idempotencyKey: 'test-valid-1', destination: '+989121234567' },
+    { confirm: true, idempotencyKey: '' },
+    { confirm: 'yes', idempotencyKey: 'test-valid-1' },
+    { confirm: true, idempotencyKey: 'x'.repeat(97) },
+  ])('rejects unsafe controlled-send bodies before invoking the service', async body => {
+    const response = await fetch(baseUrl + '/api/v1/notifications/admin/sms-settings/test-send', {
+      method: 'POST', headers: { authorization: 'Bearer staff-fresh', 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    expect(response.status).toBe(400);
+    expect(serviceStub.sendControlledTest).not.toHaveBeenCalled();
+    const result = await response.text();
+    expect(result).not.toContain('+989121234567');
+  });
+
+  it.each(['', 'Bearer customer', 'Bearer staff-no-permission'])('denies template reads without staff permission (%s)', async authorization => {
+    const response = await fetch(baseUrl + '/api/v1/notifications/admin/sms-settings/templates', { headers: { authorization } });
+    expect([401, 403]).toContain(response.status); expect(templateStub.read).not.toHaveBeenCalled();
+  });
+  it.each([
+    { otpTemplateId: 0 }, { otpTemplateId: true }, { otpTemplateId: [123] }, { expectedVersion: "1" }, { orderPaidTemplateId: 1.5 }, { shipmentDeliveredTemplateId: 10_000_000_000 },
+    { otpTemplateId: undefined }, { apiKey: 'untrusted-value' }, { destination: '+989121234567' },
+  ])('validates all template fields and rejects secret/destination injection', async change => {
+    const body = { expectedVersion: 1, idempotencyKey: 'template-http-1', otpTemplateId: 123,
+      orderPaidTemplateId: 124, shipmentDispatchedTemplateId: 125, shipmentDeliveredTemplateId: 126, ...change };
+    const response = await fetch(baseUrl + '/api/v1/notifications/admin/sms-settings/templates', { method: 'PUT',
+      headers: { authorization: 'Bearer staff-fresh', 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    expect(response.status).toBe(400); expect(templateStub.update).not.toHaveBeenCalled();
+  });
+
 });
