@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "notice": "STAGING DEMO ONLY. Sample prices, specifications and illustrative images; not live sales or customer reviews.",
+  "products": [
+    {
+      "sourceId": "p-101",
+      "slug": "demo-v1-ronix-2210-hammer-drill",
+      "name": "[دمو] دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰",
+      "brand": "Ronix",
+      "category": "power",
+      "image": "hero1.jpg",
+      "salePriceIRR": "28500000",
+      "costPriceIRR": "22800000",
+      "description": "دریل چکشی ۱۳ میلی‌متری با موتور قدرتمند و سرعت متغیر برای سوراخ‌کاری روی فلز، چوب و بتن."
+    },
+    {
+      "sourceId": "p-102",
+      "slug": "demo-v1-bosch-gws-750-grinder",
+      "name": "[دمو] مینی فرز ۱۱۵ میلی‌متر بوش GWS 750",
+      "brand": "Bosch",
+      "category": "power",
+      "image": "tool2.jpg",
+      "salePriceIRR": "42000000",
+      "costPriceIRR": "33600000",
+      "description": "مینی فرز ۷۵۰ وات با بدنه باریک و ارگونومیک برای برش و سنگ‌زنی در کارگاه و پروژه."
+    },
+    {
+      "sourceId": "p-103",
+      "slug": "demo-v1-hans-24pc-socket-set",
+      "name": "[دمو] ست آچار بکس ۲۴ پارچه هنس",
+      "brand": "Hans",
+      "category": "hand",
+      "image": "tool3.jpg",
+      "salePriceIRR": "18900000",
+      "costPriceIRR": "15120000",
+      "description": "ست آچار بکس ۲۴ پارچه با کیفیت صنعتی و جعبه نگهداری مقاوم."
+    },
+    {
+      "sourceId": "p-104",
+      "slug": "demo-v1-nek-1342-breaker-hammer",
+      "name": "[دمو] چکش تخریب ۷ کیلویی نک NEK 1342",
+      "brand": "Nek",
+      "category": "power",
+      "image": "hero2.jpg",
+      "salePriceIRR": "69800000",
+      "costPriceIRR": "55840000",
+      "description": "چکش تخریب ۷ کیلویی با قابلیت تخریب بتن و آجرکاری با ضربه بالا."
+    },
+    {
+      "sourceId": "p-105",
+      "slug": "demo-v1-dewalt-20v-chainsaw",
+      "name": "[دمو] اره زنجیری شارژی ۲۰ ولت دیوالت",
+      "brand": "DeWalt",
+      "category": "garden",
+      "image": "hero1.jpg",
+      "salePriceIRR": "87500000",
+      "costPriceIRR": "70000000",
+      "description": "اره زنجیری شارژی ۲۰ ولت برای برش شاخه‌ها و هرس درختان بدون نیاز به کابل."
+    },
+    {
+      "sourceId": "p-106",
+      "slug": "demo-v1-tosan-50l-compressor",
+      "name": "[دمو] کمپرسور باد ۵۰ لیتری توسن",
+      "brand": "Tosan",
+      "category": "pneumatic",
+      "image": "tool2.jpg",
+      "salePriceIRR": "54200000",
+      "costPriceIRR": "43360000",
+      "description": "کمپرسور باد ۵۰ لیتری با مخزن و موتور قدرتمند برای مصارف کارگاهی."
+    },
+    {
+      "sourceId": "p-201",
+      "slug": "demo-v1-ronix-8101-screwdriver",
+      "name": "[دمو] پیچ‌گوشتی شارژی ۴ ولت رونیکس ۸۱۰۱",
+      "brand": "Ronix",
+      "category": "power",
+      "image": "tool3.jpg",
+      "salePriceIRR": "9800000",
+      "costPriceIRR": "7840000",
+      "description": "پیچ‌گوشتی شارژی ۴ ولت سبک و جمع‌وجور برای مصارف خانگی و تعمیرات."
+    },
+    {
+      "sourceId": "p-202",
+      "slug": "demo-v1-iran-potk-8in-plier",
+      "name": "[دمو] انبر دست ۸ اینچ ایران پتک",
+      "brand": "Iran Potk",
+      "category": "hand",
+      "image": "hero2.jpg",
+      "salePriceIRR": "4200000",
+      "costPriceIRR": "3360000",
+      "description": "انبر دست ۸ اینچ با فک مقاوم و دسته ارگونومیک."
+    },
+    {
+      "sourceId": "p-203",
+      "slug": "demo-v1-bosch-glm-50-laser",
+      "name": "[دمو] متر لیزری ۵۰ متری بوش GLM 50",
+      "brand": "Bosch",
+      "category": "measuring",
+      "image": "tool2.jpg",
+      "salePriceIRR": "31500000",
+      "costPriceIRR": "25200000",
+      "description": "متر لیزری ۵۰ متری با دقت بالا و صفحه نمایش روشن."
+    },
+    {
+      "sourceId": "p-204",
+      "slug": "demo-v1-safety-pro-cut-gloves",
+      "name": "[دمو] دستکش ایمنی ضد برش",
+      "brand": "Safety Pro",
+      "category": "safety",
+      "image": "hero1.jpg",
+      "salePriceIRR": "1850000",
+      "costPriceIRR": "1480000",
+      "description": "دستکش ایمنی ضد برش با سطح ۵ محافظت در برابر برش."
+    },
+    {
+      "sourceId": "p-205",
+      "slug": "demo-v1-fiskars-garden-shears",
+      "name": "[دمو] قیچی باغبانی حرفه‌ای FISKARS",
+      "brand": "Fiskars",
+      "category": "garden",
+      "image": "hero2.jpg",
+      "salePriceIRR": "7650000",
+      "costPriceIRR": "6120000",
+      "description": "قیچی باغبانی حرفه‌ای با تیغه فولادی تیز و دسته نرم."
+    },
+    {
+      "sourceId": "p-301",
+      "slug": "demo-v1-ronix-8100k-kit",
+      "name": "[دمو] ست دریل و پیچ‌گوشتی شارژی رونیکس ۸۱۰۰K",
+      "brand": "Ronix",
+      "category": "power",
+      "image": "hero1.jpg",
+      "salePriceIRR": "45900000",
+      "costPriceIRR": "36720000",
+      "description": "ست کامل دریل و پیچ‌گوشتی شارژی با دو باتری و کیف حمل."
+    },
+    {
+      "sourceId": "p-302",
+      "slug": "demo-v1-ronix-rp0140-pressure-washer",
+      "name": "[دمو] کارواش فشار قوی ۱۴۰ بار رونیکس RP-0140",
+      "brand": "Ronix",
+      "category": "pneumatic",
+      "image": "tool3.jpg",
+      "salePriceIRR": "38900000",
+      "costPriceIRR": "31120000",
+      "description": "کارواش فشار قوی ۱۴۰ بار برای شست‌وشوی خودرو و سطوح."
+    },
+    {
+      "sourceId": "p-303",
+      "slug": "demo-v1-ronix-5403-sliding-saw",
+      "name": "[دمو] اره فارسی‌بر کشویی رونیکس ۵۴۰۳",
+      "brand": "Ronix",
+      "category": "power",
+      "image": "tool2.jpg",
+      "salePriceIRR": "112000000",
+      "costPriceIRR": "89600000",
+      "description": "اره فارسی‌بر کشویی با برش دقیق و زاویه‌دار برای نجاری."
+    },
+    {
+      "sourceId": "p-304",
+      "slug": "demo-v1-ronix-2701-multitool",
+      "name": "[دمو] بتون‌کن سه‌کاره رونیکس ۲۷۰۱",
+      "brand": "Ronix",
+      "category": "power",
+      "image": "hero2.jpg",
+      "salePriceIRR": "51200000",
+      "costPriceIRR": "40960000",
+      "description": "بتون‌کن سه‌کاره با قابلیت دریل، چکش و تخریب."
+    }
+  ]
+}
