@@ -18,6 +18,7 @@ import type { AttributeDefinitionSummary, ProductAttributeConfigurationPayload, 
 import { FormField } from '@/components/ui/FormField';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { ApiClientError } from '@/lib/api/client';
+import { AttributeDialog } from './AttributeDialog';
 import { configureProductAttributes } from '@/lib/catalog/catalog-api';
 
 function serialize(configs: ProductAttributeConfigurationPayload[]): string {
@@ -37,11 +38,13 @@ export function AttributeConfigEditor({
   allAttributes,
   canWrite,
   onChanged,
+  onAttributeCreated,
 }: {
   product: ProductDetail;
   allAttributes: AttributeDefinitionSummary[];
   canWrite: boolean;
   onChanged: () => void;
+  onAttributeCreated: (attribute: AttributeDefinitionSummary) => void;
 }) {
   const feedback = useFeedback();
   const [draft, setDraft] = useState<ProductAttributeConfigurationPayload[]>(() =>
@@ -51,6 +54,7 @@ export function AttributeConfigEditor({
       isRequired: attribute.isRequired,
     })),
   );
+  const [creating, setCreating] = useState(false);
   const [addCode, setAddCode] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,11 +116,11 @@ export function AttributeConfigEditor({
       feedback.success(`ویژگی‌های «${result.product.name}» به‌روزرسانی شد.`);
       onChanged();
     } catch (error) {
-      if (error instanceof ApiClientError && error.statusCode === 409) {
+      if (error instanceof ApiClientError && error.code === 'STALE_VERSION') {
         setError('اطلاعات کالا در همان لحظه توسط شخص دیگری تغییر کرد؛ صفحه برای بارگذاری نسخهٔ تازه به‌روزرسانی می‌شود.');
         onChanged();
       } else {
-        setError(error instanceof ApiClientError ? error.message : 'ذخیرهٔ ویژگی‌ها ناموفق بود؛ دوباره تلاش کنید.');
+        setError(error instanceof ApiClientError ? error.code === 'AXIS_IN_USE' ? 'ویژگی دارای مقدار ذخیره‌شده را نمی‌توان به محور تبدیل کرد یا محور استفاده‌شده را حذف کرد؛ ابتدا مقادیر مرتبط SKUها را بررسی کنید.' : error.message : 'ذخیرهٔ ویژگی‌ها ناموفق بود؛ دوباره تلاش کنید.');
       }
     } finally {
       setSaving(false);
@@ -126,6 +130,12 @@ export function AttributeConfigEditor({
   return (
     <Box>
       <Stack spacing={2}>
+        {canWrite ? <Button size="small" onClick={() => setCreating(true)} startIcon={<Plus size={16} />}>تعریف ویژگی جدید و گزینه‌های آن</Button> : null}
+        {creating ? <AttributeDialog mode="create" onClose={() => setCreating(false)} onSaved={(attribute) => {
+          onAttributeCreated(attribute);
+          setDraft((current) => [...current, { attributeCode: attribute.code, isVariantAxis: false, isRequired: false }]);
+        }} /> : null}
+        <Typography variant="body2" color="text.secondary">پس از ذخیرهٔ ویژگی‌ها، از اقدامات هر SKU «مقادیر ویژگی‌ها» را انتخاب کنید. محور واریانت برای ترکیب‌های متفاوت مانند رنگ و سایز است.</Typography>
         {error ? <Alert severity="error">{error}</Alert> : null}
         {draft.length === 0 ? (
           <Alert severity="info">ویژگی‌ای به این کالا متصل نیست.{' '}
@@ -145,7 +155,7 @@ export function AttributeConfigEditor({
                     size="small"
                     checked={configuration.isVariantAxis}
                     onChange={(event) => update(index, { isVariantAxis: event.target.checked })}
-                    disabled={!canWrite}
+                    disabled={!canWrite || saving}
                     inputProps={{ 'aria-label': `${configuration.attributeCode} محور واریانت` }}
                   />
                 }
@@ -156,7 +166,7 @@ export function AttributeConfigEditor({
                   <Checkbox
                     size="small"
                     checked={Boolean(configuration.isRequired)}
-                    disabled={!canWrite || !configuration.isVariantAxis}
+                    disabled={!canWrite || saving || !configuration.isVariantAxis}
                     onChange={(event) => update(index, { isRequired: event.target.checked })}
                     inputProps={{ 'aria-label': `${configuration.attributeCode} اجباری` }}
                   />
@@ -166,6 +176,7 @@ export function AttributeConfigEditor({
               {canWrite ? (
                 <IconButton
                   size="small"
+                  disabled={saving}
                   aria-label={`حذف ویژگی ${configuration.attributeCode}`}
                   onClick={() => remove(index)}
                 >
@@ -182,6 +193,7 @@ export function AttributeConfigEditor({
               <Select
                 id="attribute-config-add"
                 size="small"
+                disabled={saving}
                 displayEmpty
                 value={addCode}
                 inputProps={{ 'aria-label': 'افزودن ویژگی' }}
@@ -199,7 +211,7 @@ export function AttributeConfigEditor({
               type="button"
               size="small"
               startIcon={<Plus size={16} />}
-              disabled={!addCode}
+              disabled={!addCode || saving}
               onClick={addSelected}
             >
               افزودن

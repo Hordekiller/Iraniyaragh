@@ -114,6 +114,20 @@ describe('OpenAPI document drift and contract', () => {
     expect(document).toEqual(committed);
   });
 
+  it('documents customer-self session security and mutation conflict recovery', () => {
+    const operations = [document.paths['/customers/me']?.get, document.paths['/customers/me']?.patch, document.paths['/customers/me/addresses']?.put];
+    for (const operation of operations) {
+      expect(operation).toBeDefined();
+      expect(operation?.security).toEqual([{ 'access-token': [] }]);
+      expect(Object.keys(operation?.responses ?? {})).toEqual(expect.arrayContaining(['200', '401', '403', '404']));
+      expect(JSON.stringify(operation?.responses['200'])).not.toMatch(/notes|audit|token|otp|providerSecret/iu);
+    }
+    for (const operation of operations.slice(1)) {
+      expect(Object.keys(operation?.responses ?? {})).toEqual(expect.arrayContaining(['400', '409']));
+      expect(operation?.parameters).toContainEqual(expect.objectContaining({ in: 'header', name: 'Idempotency-Key', required: true }));
+    }
+  });
+
   it('documents stable failure responses for every notifications admin operation', () => {
     const paths = document.paths ?? {};
 

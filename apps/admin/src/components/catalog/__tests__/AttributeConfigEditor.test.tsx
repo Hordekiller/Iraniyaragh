@@ -42,6 +42,7 @@ function renderEditor(props: Partial<Parameters<typeof AttributeConfigEditor>[0]
   return render(
     <FeedbackProvider>
       <AttributeConfigEditor
+        onAttributeCreated={vi.fn()}
         product={product}
         allAttributes={allAttributes}
         canWrite

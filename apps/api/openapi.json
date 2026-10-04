@@ -2727,6 +2727,300 @@
         ]
       }
     },
+    "/catalog/admin/variants/{id}/attributes": {
+      "patch": {
+        "operationId": "CatalogController_updateVariantAttributes",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Stable 8-96 character key retained across ambiguous retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductVariantAttributesUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST",
+                        "VALIDATION_ERROR"
+                      ],
+                      "example": "INVALID_REQUEST"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Request validation failed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ],
+                      "example": 400
+                    }
+                  },
+                  "description": "Request body failed schema validation, or the Idempotency-Key header is missing or malformed."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "NOT_FOUND"
+                      ],
+                      "example": "NOT_FOUND"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Product not found."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ],
+                      "example": 404
+                    }
+                  },
+                  "description": "The requested product does not exist."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "IDEMPOTENCY_CONFLICT",
+                        "CONFLICT",
+                        "STALE_VERSION",
+                        "AXIS_IN_USE",
+                        "DUPLICATE_SKU",
+                        "DUPLICATE_BARCODE",
+                        "DUPLICATE_VARIANT_COMBINATION",
+                        "SKU_CHANGE_NOT_ALLOWED"
+                      ],
+                      "example": "IDEMPOTENCY_CONFLICT"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The idempotency key was already used for a different command."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ],
+                      "example": 409
+                    }
+                  },
+                  "description": "The Idempotency-Key was already used for a different command, or a domain state conflict occurred."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REFERENCE",
+                        "ATTRIBUTE_OPTION_INVALID",
+                        "UNPROCESSABLE",
+                        "COMBINATION_LIMIT_EXCEEDED"
+                      ],
+                      "example": "INVALID_REFERENCE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "A related catalog resource is invalid."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "A related catalog resource is missing or invalid, or the requested combination cannot be represented."
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/catalog/admin/variants/{id}/status": {
       "post": {
         "operationId": "CatalogController_updateVariantStatus",
@@ -21740,8 +22034,22 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Missing, expired or revoked customer session"
+          },
+          "403": {
+            "description": "Customer authentication level required"
+          },
+          "404": {
+            "description": "No active account linked to the authenticated customer"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Get the authenticated customer account and address book",
         "tags": [
           "CustomerSelf"
@@ -21898,8 +22206,28 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid profile fields or idempotency key"
+          },
+          "401": {
+            "description": "Missing, expired or revoked customer session"
+          },
+          "403": {
+            "description": "Customer authentication level required"
+          },
+          "404": {
+            "description": "No active account linked to the authenticated customer"
+          },
+          "409": {
+            "description": "Version conflict or idempotency key payload mismatch"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Update the authenticated customer name fields",
         "tags": [
           "CustomerSelf"
@@ -22097,8 +22425,28 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid address book, default address or idempotency key"
+          },
+          "401": {
+            "description": "Missing, expired or revoked customer session"
+          },
+          "403": {
+            "description": "Customer authentication level required"
+          },
+          "404": {
+            "description": "No active account linked to the authenticated customer"
+          },
+          "409": {
+            "description": "Version conflict or idempotency key payload mismatch"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Replace the authenticated customer address book",
         "tags": [
           "CustomerSelf"
@@ -27051,6 +27399,45 @@
       }
     },
     "schemas": {
+      "VariantAttributeValueDto": {
+        "type": "object",
+        "properties": {
+          "attributeCode": {
+            "type": "string",
+            "maxLength": 40,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "optionCode": {
+            "type": "string",
+            "maxLength": 40,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "required": [
+          "attributeCode",
+          "optionCode"
+        ]
+      },
+      "ProductVariantAttributesUpdateDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0
+          },
+          "values": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantAttributeValueDto"
+            }
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "values"
+        ]
+      },
       "ProductMediaUploadDto": {
         "type": "object",
         "properties": {

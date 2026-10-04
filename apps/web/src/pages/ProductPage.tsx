@@ -287,6 +287,20 @@ export function ProductPage() {
             </fieldset>
           )}
 
+          {selectedVariant && selectedVariant.attributes.length > 0 && (
+            <section className="mt-5" aria-label="ویژگی‌های تنوع انتخاب‌شده">
+              <h2 className="text-sm font-black text-slate-900">مشخصات تنوع</h2>
+              <dl data-testid="product-attributes" className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 px-3">
+                {selectedVariant.attributes.map(value => (
+                  <div key={value.attributeCode} className="flex justify-between gap-3 py-2 text-sm">
+                    <dt className="text-slate-600">{value.attributeName}</dt>
+                    <dd className="font-bold text-slate-900">{value.optionLabel}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
           <div className="mt-5 flex items-baseline gap-3">
             <span className="font-black text-[22px] text-slate-900">
               {selectedVariant || product.priceAvailable !== false

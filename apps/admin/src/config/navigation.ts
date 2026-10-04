@@ -88,6 +88,9 @@ export const navigation: NavigationGroup[] = [
     label: 'کالا و انبار',
     items: [
       { label: 'کالا و SKU', href: '/catalog', icon: PackageSearch, permission: 'catalog.read' },
+      { label: 'دسته‌بندی و زیرمجموعه‌ها', href: '/catalog/categories', icon: Boxes, permission: 'catalog.read' },
+      { label: 'برندها', href: '/catalog/brands', icon: BookmarkCheck, permission: 'catalog.read' },
+      { label: 'ویژگی‌ها و گزینه‌ها', href: '/catalog/attributes', icon: Settings2, permission: 'catalog.read' },
       { label: 'انبارها', href: '/warehouses', icon: Building2, permission: 'inventory.read' },
       { label: 'موجودی و گردش', href: '/inventory', icon: Boxes, permission: 'inventory.read' },
       { label: 'رزروها', href: '/reservations', icon: BookmarkCheck, permission: 'inventory.read' },

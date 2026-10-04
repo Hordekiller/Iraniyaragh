@@ -88,8 +88,8 @@ async function createSellableVariantWithStock(page: Page, suffix: string) {
   await expect(productRow).toBeVisible();
   await tap(productRow.getByRole('link', { name: `کالای سفارش حضوری ${suffix}` }));
   await expect(page).toHaveURL(/\/catalog\/products\/(?!new(?:\/|$))[^/]+$/);
-  await tap(page.getByRole('button', { name: `اقدامات کالای سفارش حضوری ${suffix}` }));
-  await tap(page.getByRole('menuitem', { name: 'انتشار' }));
+  await expect(page.getByRole('button', { name: 'انتشار', exact: true })).toBeVisible();
+  await tap(page.getByRole('button', { name: 'انتشار', exact: true }));
   await expect(page.getByText('منتشرشده', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
 
   // Open this product's own detail page (other products exist in the catalog) and
@@ -103,14 +103,42 @@ async function createSellableVariantWithStock(page: Page, suffix: string) {
   const variantId = new URL(skuHref ?? '', 'http://localhost').searchParams.get('variantId');
   expect(variantId).toBeTruthy();
 
+  const initialWarehouses = page.waitForResponse(response =>
+    response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/v1/inventory/warehouses',
+  );
   await navigate(page, 'انبارها', /\/warehouses$/);
+  const initialWarehousePage = await initialWarehouses;
+  expect(initialWarehousePage.status()).toBe(200);
+  await initialWarehousePage.finished();
   await tap(page.getByRole('button', { name: 'انبار جدید' }));
   const warehouseDialog = page.getByRole('dialog', { name: 'انبار جدید' });
   await warehouseDialog.getByRole('textbox', { name: 'کد یکتا' }).fill(`STAFF-WH-${suffix}`);
   await warehouseDialog.getByRole('textbox', { name: 'نام انبار' }).fill('انبار سفارش حضوری');
+  const refreshedWarehouses = page.waitForResponse(response =>
+    response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/v1/inventory/warehouses',
+  );
   await tap(warehouseDialog.getByRole('button', { name: 'ذخیره' }));
   await expect(warehouseDialog).toBeHidden();
-
+  const firstPage = await refreshedWarehouses;
+  expect(firstPage.status()).toBe(200);
+  let warehousePage = await firstPage.json();
+  const pageSize = Number(new URL(firstPage.url()).searchParams.get('limit'));
+  expect(pageSize).toBeGreaterThan(0);
+  // The real directory is paginated and sorted by code; a newly created
+  // warehouse need not be among its first 25 rows. Follow the actual UI pages.
+  const pages = Math.ceil(warehousePage.count / pageSize);
+  for (let index = 1; index < pages && !warehousePage.items.some((item: { code: string }) => item.code === `STAFF-WH-${suffix}`); index += 1) {
+    const next = page.getByRole('button', { name: 'Go to next page', exact: true }).first();
+    await expect(next).toBeEnabled();
+    const nextPage = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return response.request().method() === 'GET' && url.pathname === '/api/v1/inventory/warehouses' && Number(url.searchParams.get('offset')) === index * pageSize;
+    });
+    await next.click();
+    const response = await nextPage;
+    expect(response.status()).toBe(200);
+    warehousePage = await response.json();
+  }
   const warehouseRow = page.getByRole('row', { name: new RegExp(`STAFF-WH-${suffix}`) });
   await expect(warehouseRow).toBeVisible();
   await tap(warehouseRow.getByRole('button', { name: 'مکان‌ها' }));
@@ -218,6 +246,10 @@ test('staff records a walk-in order with a server-priced total and a real pendin
   // The balance table identifies a row by variantId (its contract identity), so
   // assert on the ordered variant rather than on the seeded demo SKU.
   await navigate(page, 'موجودی و گردش', /\/inventory/);
+  // Query the ordered SKU through the real filter: other journeys may have
+  // already filled the first page of the balance directory.
+  await page.getByRole('textbox', { name: 'شناسه SKU', exact: true }).fill(variantId);
+  await tap(page.getByRole('button', { name: 'اعمال فیلتر', exact: true }));
   const balanceTable = page.getByRole('table', { name: 'ماندهٔ موجودی' });
   const balanceRow = balanceTable.getByRole('row', { name: new RegExp(variantId) });
   await expect(balanceRow).toContainText(rial.format(10));

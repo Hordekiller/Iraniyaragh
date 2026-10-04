@@ -32,6 +32,7 @@ import type {
   ProductVariantResponse,
   ProductVariantStatusRequest,
   ProductVariantUpdateRequest,
+  ProductVariantAttributesUpdateRequest,
   VariantGeneratePreviewRequest,
   VariantGeneratePreviewResponse,
   VariantGenerateRequest,
@@ -262,6 +263,13 @@ export async function updateVariant(id: string, input: ProductVariantUpdateReque
 export async function changeVariantStatus(id: string, input: ProductVariantStatusRequest, idempotencyKey: string): Promise<ProductVariantResponse['data']> {
   const response = await apiFetch<ProductVariantResponse['data']>(`/catalog/admin/variants/${id}/status`, {
     method: 'POST', body: input, token: authToken(), headers: { 'Idempotency-Key': idempotencyKey },
+  });
+  return response.data;
+}
+
+export async function updateVariantAttributes(id: string, input: ProductVariantAttributesUpdateRequest, key: string): Promise<ProductVariantResponse['data']> {
+  const response = await apiFetch<ProductVariantResponse['data']>(`/catalog/admin/variants/${id}/attributes`, {
+    method: 'PATCH', body: input, token: authToken(), headers: { 'Idempotency-Key': key },
   });
   return response.data;
 }

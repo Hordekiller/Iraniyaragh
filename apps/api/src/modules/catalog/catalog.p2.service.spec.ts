@@ -3,13 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { CatalogService } from './catalog.service';
 
 const variant = {
-  id: 'variant-1', sku: 'SKU-1', barcode: '123', title: 'Variant', costPrice: 100n, salePrice: 200n,
+  id: 'variant-1', productId: 'product-1', sku: 'SKU-1', barcode: '123', title: 'Variant', costPrice: 100n, salePrice: 200n,
   weightGrams: 10, lengthCm: null, widthCm: null, heightCm: null, status: 'ACTIVE', isActive: true, version: 3,
   createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-01T00:00:00Z'),
 };
 
 function setup() {
   const tx = {
+    $queryRaw: vi.fn().mockResolvedValue([]),
     attributeDefinition: {
       create: vi.fn().mockResolvedValue({ id: 'attribute-1', code: 'color', name: 'Color', description: null, status: 'ACTIVE', version: 1, createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-01T00:00:00Z'), options: [], _count: { options: 0 } }),
       findUnique: vi.fn().mockResolvedValue({ id: 'attribute-1', code: 'color', name: 'Color', description: null, status: 'ACTIVE', version: 1, createdAt: new Date('2026-01-01T00:00:00Z'), updatedAt: new Date('2026-01-01T00:00:00Z'), options: [], _count: { options: 0 } }),

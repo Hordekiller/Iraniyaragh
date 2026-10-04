@@ -465,3 +465,42 @@ attempted yet:
 - No multi-host, no replicas, no load balancer, no log shipping. This is a
   single-host shape on purpose.
 - No automated seed of business data.
+
+### Complete, labelled staging catalog demo
+
+The prior storefront prototypes can be materialized as 15 labelled DEMO products
+with two SKUs each, integer IRR prices/history, attributes, nested categories,
+real processed images, sanitized descriptions and audited sample stock. Use the
+shipped `scripts/import-demo-catalog.mjs`, not the development seed or fixture
+login. The environment must be `staging`, both providers disabled, the private
+scanner configured, and customer/order/payment/non-demo inventory counts zero.
+The command refuses production and existing rows that differ from its manifest.
+
+1. Deploy the reviewed exact-SHA API/media-worker images through the official
+   pipeline. Verify the database backup by restoring it into an isolated scratch
+   database before any import writes; retain object-storage backup as well.
+2. Obtain the existing maintenance operator's opaque user ID without exporting
+   account/credential data. The account must be active and currently hold
+   `catalog.write`, `catalog.media.write`, and `inventory.adjust`. The command
+   uses authenticated SSH maintenance access; it creates no session or identity
+   and is not evidence of an interactive Admin MFA acceptance.
+3. From the repository deployment directory, run the shipped command:
+
+   ```sh
+   docker compose --env-file .env.staging -f infrastructure/docker/compose.staging.yml exec -T \
+     -e ALLOW_DEMO_STAGING_DATA=true api \
+     node scripts/import-demo-catalog.mjs --confirm --operator-id "$DEMO_OPERATOR_ID"
+   ```
+
+4. Re-run the same command to verify idempotence. Existing stock movements and
+   price history are never rewritten or reset. Import failure leaves real draft
+   or processing state and stops publication; repair the reported dependency.
+5. Run `--verify` in place of `--confirm`, check storefront/API/image paths, safely
+   restart services, then verify again. The importer uses actual signed uploads,
+   worker processing and lifecycle publication; it never sets media READY or
+   product ACTIVE directly.
+
+The manifest and image provenance are documented in
+`apps/api/scripts/demo-catalog/README.md`. Every sample remains explicitly DEMO
+and must stay isolated from production sales. No reviews, customers, orders,
+payments, OTP delivery, video support or provider successes are fabricated.

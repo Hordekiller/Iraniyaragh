@@ -117,7 +117,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 بازگشت به فهرست
               </Button>
               {canManageMedia ? <Button component={Link} href={`/catalog/products/${product.id}/media`} size="small">مدیریت رسانه</Button> : null}
-              {canWrite ? <ProductStatusActions product={product} onChanged={reload} /> : null}
+              {canWrite ? <ProductStatusActions product={product} onChanged={reload} inline /> : null}
             </>
           )
         }
@@ -213,6 +213,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
               <AttributeConfigEditor
                 product={product}
                 allAttributes={attributes}
+                onAttributeCreated={(attribute) => setAttributes((current) => [...current, attribute])}
                 canWrite={canWrite}
                 onChanged={reload}
               />
@@ -317,7 +318,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 actions={canViewInventory || canTransfer || canWrite ? (row) => <Stack direction="row" spacing={1} alignItems="center">
                   {canViewInventory ? <Button size="small" component={Link} href={`/inventory?variantId=${encodeURIComponent(row.id)}`}>موجودی</Button> : null}
                   {canTransfer ? <Button size="small" component={Link} href={`/transfers/new?variantId=${encodeURIComponent(row.id)}`}>انتقال</Button> : null}
-                  {canWrite ? <VariantRowActions variant={row} onChanged={reload} /> : null}
+                  {canWrite ? <VariantRowActions variant={row} attributes={product.attributes} definitions={attributes} onChanged={reload} /> : null}
                 </Stack> : undefined}
                 actionsLabel="عملیات"
               />

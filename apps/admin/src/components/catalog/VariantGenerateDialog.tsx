@@ -60,6 +60,7 @@ export function VariantGenerateDialog({
   const [fieldErrors, setFieldErrors] = useState<{ costPrice?: string; salePrice?: string }>({});
   const [generating, setGenerating] = useState(false);
   const idempotencyKey = useRef<string | null>(null);
+  const commandFingerprint = useRef<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -130,16 +131,19 @@ export function VariantGenerateDialog({
     if (errors.costPrice || errors.salePrice || !preview) return;
 
     setGenerating(true);
+    const input: Parameters<typeof generateVariants>[1] = {
+      optionSelection: selection,
+      costPrice: { amount: costPrice.trim(), currency: 'IRR' },
+      salePrice: { amount: salePrice.trim(), currency: 'IRR' },
+      ...(titlePattern.trim() ? { titlePattern: titlePattern.trim() } : {}),
+    };
+    const fingerprint = JSON.stringify(input);
+    if (commandFingerprint.current !== fingerprint) { idempotencyKey.current = null; commandFingerprint.current = fingerprint; }
     idempotencyKey.current ??= createIdempotencyKey('catalog-variant-generate');
     try {
       await generateVariants(
         product.id,
-        {
-          optionSelection: selection,
-          costPrice: { amount: costPrice.trim(), currency: 'IRR' },
-          salePrice: { amount: salePrice.trim(), currency: 'IRR' },
-          ...(titlePattern.trim() ? { titlePattern: titlePattern.trim() } : {}),
-        },
+        input,
         idempotencyKey.current,
       );
       feedback.success(`تنوع‌های «${product.name}» تولید شدند.`);
