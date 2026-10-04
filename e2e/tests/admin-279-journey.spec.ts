@@ -6,7 +6,7 @@ import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
 
 /**
  * End-to-end verification of the #279 rich-text description stack as assembled
- * on the `feat/279-e2e-verify` branch (self-hosted Jodit + mock media):
+ * on the `feat/279-e2e-verify` branch (self-hosted Jodit + real object storage/image processing):
  *
  *  admin MFA sign-in -> create product draft -> upload product media -> READY
  *    -> open the rich-text editor -> compose HTML (heading, table, link, media
@@ -74,15 +74,13 @@ function richEditorBody(page: Page): Locator {
  */
 async function waitForEditorStable(page: Page, timeoutMs = 8_000) {
   const body = richEditorBody(page);
-  const deadline = Date.now() + timeoutMs;
   let previous = '';
-  while (Date.now() < deadline) {
-    const current = await body.evaluate((element) => element.innerHTML);
-    if (current !== '' && current === previous) return;
+  await expect.poll(async () => {
+    const current = await body.evaluate(element => element.innerHTML);
+    const stable = current !== '' && current === previous;
     previous = current;
-    await page.waitForTimeout(250);
-  }
-  throw new Error('Editor content did not become stable in time.');
+    return stable;
+  }, { timeout: timeoutMs, intervals: [250] }).toBe(true);
 }
 
 async function waitForEditorReady(page: Page) {
@@ -164,6 +162,9 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
   let productName = '';
   let productSlug = '';
   let productHref = '';
+  let attributeCode = '';
+  let attributeName = '';
+  let variantSku = '';
 
   test.beforeEach(async ({ page }) => {
     await signInDiAsAdmin(page);
@@ -174,13 +175,33 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     productName = `قفل اهرمی E2E ${stamp}`;
     productSlug = `279-e2e-lock-${stamp}`;
 
+    const rootName = `دستهٔ E2E ${stamp}`;
+    const childName = `زیرمجموعهٔ E2E ${stamp}`;
+    await page.goto('/catalog/categories');
+    await expect(page.getByRole('button', { name: 'دسته‌بندی جدید', exact: true })).toBeVisible();
+    await tap(page.getByRole('button', { name: 'دسته‌بندی جدید', exact: true }));
+    await page.locator('#category-name').fill(rootName);
+    await page.locator('#category-slug').fill(`e2e-parent-${stamp}`);
+    await tap(page.getByRole('button', { name: 'ساخت دسته‌بندی', exact: true }));
+    await expect(page.getByRole('button', { name: `افزودن زیرمجموعه ${rootName}` })).toBeVisible();
+    await tap(page.getByRole('button', { name: `افزودن زیرمجموعه ${rootName}` }));
+    await expect(page.getByRole('combobox', { name: 'دستهٔ والد' })).toContainText(rootName);
+    await page.locator('#category-name').fill(childName);
+    await page.locator('#category-slug').fill(`e2e-child-${stamp}`);
+    await tap(page.getByRole('button', { name: 'ساخت دسته‌بندی', exact: true }));
+    await expect(page.getByText(`${rootName} / ${childName}`, { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText(`${rootName} / ${childName}`, { exact: true })).toBeVisible();
     await navToCatalog(page);
     await tap(page.locator('a[href="/catalog/products/new"]'));
     await expect(page).toHaveURL(/catalog\/products\/new$/);
 
     await page.locator('#product-name').fill(productName);
     await page.locator('#product-slug').fill(productSlug);
-    await page.locator('#variant-0-sku').fill(`E2E-LOCK-${stamp}`);
+    variantSku = `E2E-LOCK-${stamp}`;
+    await page.locator('#variant-0-sku').fill(variantSku);
+    await tap(page.locator('#product-category'));
+    await tap(page.getByRole('option', { name: childName, exact: true }));
     await page.locator('#variant-0-cost').fill('180000');
     await page.locator('#variant-0-sale').fill('240000');
     await page.getByLabel('تصاویر کالا', { exact: true }).setInputFiles([
@@ -200,6 +221,47 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     expect(productHref).toMatch(/^\/catalog\/products\/[^/]+$/u);
     await expect(page.getByRole('heading', { name: productName })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('link', { name: /مدیریت رسانه/u })).toHaveAttribute('href', `${productHref}/media`);
+  });
+
+  test('defines attributes, saves original SKU values and generates a second combination', async ({ page }) => {
+    await page.goto(productHref);
+    attributeCode = `e2e-color-${Date.now()}`;
+    attributeName = `رنگ E2E ${Date.now()}`;
+    await tap(page.getByRole('button', { name: 'تعریف ویژگی جدید و گزینه‌های آن' }));
+    await page.locator('#attribute-code').fill(attributeCode);
+    await page.locator('#attribute-name').fill(attributeName);
+    for (const [index, code] of ['red', 'blue'].entries()) {
+      await tap(page.getByRole('button', { name: 'افزودن گزینه', exact: true }));
+      await page.locator(`#attribute-option-${index}-code`).fill(code);
+      await page.locator(`#attribute-option-${index}-label`).fill(code === 'red' ? 'قرمز E2E' : 'آبی E2E');
+    }
+    await tap(page.getByRole('dialog').getByRole('button', { name: 'ساخت ویژگی', exact: true }));
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await tap(page.getByLabel(`${attributeCode} محور واریانت`));
+    await tap(page.getByLabel(`${attributeCode} اجباری`));
+    const configurationSaved = page.waitForResponse(response => response.url().endsWith('/attributes') && response.request().method() === 'PATCH');
+    await tap(page.getByRole('button', { name: 'ذخیرهٔ ویژگی‌ها', exact: true }));
+    expect((await configurationSaved).status()).toBe(200);
+    await expect(page.getByRole('button', { name: 'ذخیرهٔ ویژگی‌ها' })).toBeDisabled();
+    await tap(page.getByRole('button', { name: 'انتشار', exact: true }));
+    await expect(page.getByRole('alert').filter({ hasText: 'مقادیر ویژگی‌های اجباری را برای تمام SKUهای فعال ذخیره کنید.' }).first()).toBeVisible();
+    await tap(page.getByRole('button', { name: `اقدامات ${variantSku}`, exact: true }));
+    await tap(page.getByRole('menuitem', { name: 'مقادیر ویژگی‌ها' }));
+    await tap(page.getByRole('dialog').getByRole('combobox', { name: attributeName }));
+    await tap(page.getByRole('option', { name: 'قرمز E2E', exact: true }));
+    await tap(page.getByRole('button', { name: 'ذخیرهٔ مقادیر ویژگی‌ها', exact: true }));
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByText(`${attributeName}: قرمز E2E`, { exact: true })).toBeVisible();
+    await tap(page.getByRole('button', { name: 'تولید تنوع از محورها', exact: true }));
+    await tap(page.getByLabel(`${attributeName}: blue`));
+    await tap(page.getByRole('button', { name: 'پیش‌نمایش ترکیب‌ها', exact: true }));
+    await page.locator('#generate-cost').fill('180000');
+    await page.locator('#generate-sale').fill('240000');
+    await tap(page.getByRole('button', { name: 'ایجاد ۱ تنوع', exact: true }));
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByText(`${attributeName}: قرمز E2E`, { exact: true })).toBeVisible();
+    await expect(page.getByText(`${attributeName}: آبی E2E`, { exact: true })).toBeVisible();
   });
 
   test('uploads a product image and waits for the READY state', async ({ page }) => {
@@ -304,9 +366,8 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     await navToCatalog(page);
     await tap(page.locator(`a[href="${productHref}"]`).first());
     await expect(page).toHaveURL(new RegExp(`${productHref}$`));
-    await expect(page.getByRole('button', { name: `اقدامات ${productName}` })).toBeVisible();
-    await tap(page.getByRole('button', { name: `اقدامات ${productName}` }));
-    await tap(page.getByRole('menuitem', { name: 'انتشار' }));
+    await expect(page.getByRole('button', { name: 'انتشار', exact: true })).toBeVisible();
+    await tap(page.getByRole('button', { name: 'انتشار', exact: true }));
     await expect(page.getByText('منتشرشده', { exact: true }).first()).toBeVisible({ timeout: 20_000 });
   });
 
@@ -335,6 +396,9 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
 
     if (realStorefront) {
       expect(await page.url()).toContain(`/product/${productSlug}`);
+      await expect(page.getByTestId('product-attributes').getByText(attributeName, { exact: true })).toBeVisible();
+      await expect(page.getByTestId('product-attributes').getByText('قرمز E2E', { exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'آبی E2E', exact: true })).toBeVisible();
       const text = (await rich.innerText()) ?? '';
       expect(text).toContain('دربارهٔ این قفل');
       expect(text).toContain('وزن');

@@ -18,7 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Plus, Trash2 } from 'lucide-react';
-import type { AttributeDefinitionSummary, AttributeStatus } from '@iranyaragh/contracts';
+import type { AttributeDefinitionSummary, AttributeDefinitionDetail, AttributeStatus } from '@iranyaragh/contracts';
 import { DialogCloseButton } from '@/components/ui/DialogCloseButton';
 import { FormField } from '@/components/ui/FormField';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
@@ -50,7 +50,7 @@ export function AttributeDialog({
 }: {
   mode: 'create' | 'edit';
   attribute?: AttributeDefinitionSummary;
-  onSaved: () => void;
+  onSaved: (attribute: AttributeDefinitionDetail) => void;
   onClose: () => void;
 }) {
   const feedback = useFeedback();
@@ -63,6 +63,7 @@ export function AttributeDialog({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
   const createKeyRef = useRef<string | null>(null);
+  const createPayloadRef = useRef<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -72,19 +73,22 @@ export function AttributeDialog({
 
     setSaving(true);
     try {
+      let saved: AttributeDefinitionDetail;
       if (editing) {
-        await updateAttribute(attribute!.id, {
+        saved = (await updateAttribute(attribute!.id, {
           ...(name.trim() !== attribute!.name ? { name: name.trim() } : {}),
           ...(description.trim() !== (attribute!.description ?? '')
             ? { description: description.trim() || null }
             : {}),
           ...(status !== attribute!.status ? { status } : {}),
           expectedVersion: attribute!.version,
-        });
+        })).attribute;
         feedback.success(`ویژگی «${name.trim()}» به‌روزرسانی شد.`);
       } else {
+        const fingerprint = JSON.stringify({ code, name, description, options });
+        if (fingerprint !== createPayloadRef.current) { createKeyRef.current = null; createPayloadRef.current = fingerprint; }
         const key = (createKeyRef.current ??= createIdempotencyKey('catalog-attribute'));
-        await createAttribute(
+        saved = (await createAttribute(
           {
             code: code.trim(),
             name: name.trim(),
@@ -97,11 +101,11 @@ export function AttributeDialog({
               : {}),
           },
           key,
-        );
+        )).attribute;
         feedback.success(`ویژگی «${name.trim()}» ساخته شد.`);
         createKeyRef.current = null;
       }
-      onSaved();
+      onSaved(saved);
       onClose();
     } catch (error) {
       feedback.error(error instanceof ApiClientError ? error.message : 'ثبت ویژگی ناموفق بود؛ دوباره تلاش کنید.');
@@ -129,7 +133,7 @@ export function AttributeDialog({
           <DialogTitle id={titleId} sx={{ p: 0, mb: 2 }}>
             {editing ? 'ویرایش ویژگی' : 'ویژگی جدید'}
           </DialogTitle>
-          <Stack spacing={2.5}>
+          <Stack component="fieldset" disabled={saving} sx={{ border: 0, p: 0, m: 0 }} spacing={2.5}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormField
                 label="کد"

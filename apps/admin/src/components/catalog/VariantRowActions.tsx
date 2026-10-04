@@ -10,16 +10,19 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Archive, Banknote, MoreVertical, Pencil, PowerOff, Rocket } from 'lucide-react';
-import type { ProductVariant, VariantStatus } from '@iranyaragh/contracts';
+import type { ProductVariant, VariantStatus, ProductAttributeConfiguration, AttributeDefinitionSummary } from '@iranyaragh/contracts';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { ApiClientError } from '@/lib/api/client';
 import { changeVariantStatus, createIdempotencyKey } from '@/lib/catalog/catalog-api';
 import { variantStatusLabel } from '@/lib/catalog/catalog-labels';
+import { VariantAttributesDialog } from './VariantAttributesDialog';
 import { VariantEditDialog } from './VariantEditDialog';
 import { VariantPriceDialog } from './VariantPriceDialog';
 
 type Props = {
   variant: ProductVariant;
+  attributes?: ProductAttributeConfiguration[];
+  definitions?: AttributeDefinitionSummary[];
   onChanged: () => void;
 };
 
@@ -29,11 +32,11 @@ const STATUS_TARGETS: { status: VariantStatus; label: string; icon: React.ReactN
   { status: 'ARCHIVED', label: 'بایگانی', icon: <Archive size={18} /> },
 ];
 
-export function VariantRowActions({ variant, onChanged }: Props) {
+export function VariantRowActions({ variant, attributes = [], definitions = [], onChanged }: Props) {
   const feedback = useFeedback();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [busy, setBusy] = useState<false | VariantStatus>(false);
-  const [mode, setMode] = useState<'edit' | 'price' | null>(null);
+  const [mode, setMode] = useState<'edit' | 'price' | 'attributes' | null>(null);
   const idempotencyKeys = useRef<Partial<Record<VariantStatus, string>>>({});
   const open = Boolean(anchor);
 
@@ -99,6 +102,9 @@ export function VariantRowActions({ variant, onChanged }: Props) {
           </ListItemIcon>
           <ListItemText>قیمت و تاریخچه</ListItemText>
         </MenuItem>
+        {attributes.length ? <MenuItem dense onClick={() => { setAnchor(null); setMode('attributes'); }}>
+          <ListItemIcon><Pencil size={18} /></ListItemIcon><ListItemText>مقادیر ویژگی‌ها</ListItemText>
+        </MenuItem> : null}
         {STATUS_TARGETS.filter((target) => target.status !== status).map((target) => (
           <MenuItem key={target.status} dense onClick={() => void run(target.status)}>
             <ListItemIcon>{target.icon}</ListItemIcon>
@@ -109,6 +115,7 @@ export function VariantRowActions({ variant, onChanged }: Props) {
       {mode === 'edit' ? (
         <VariantEditDialog variant={variant} onSaved={onChanged} onClose={() => setMode(null)} />
       ) : null}
+      {mode === 'attributes' ? <VariantAttributesDialog variant={variant} configurations={attributes} definitions={definitions} onSaved={onChanged} onClose={() => setMode(null)} /> : null}
       {mode === 'price' ? (
         <VariantPriceDialog variant={variant} onSaved={onChanged} onClose={() => setMode(null)} />
       ) : null}

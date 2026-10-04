@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
+import { Alert, Button, Stack, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import { Archive, MoreVertical, Rocket, Undo2 } from 'lucide-react';
 import type { ProductListItem } from '@iranyaragh/contracts';
 import { ApiClientError } from '@/lib/api/client';
@@ -16,6 +16,7 @@ type StatusAction = {
 
 type ProductStatusActionsProps = {
   product: ProductListItem;
+  inline?: boolean;
   /** Called after a successful command so the parent can refresh the list. */
   onChanged: () => void;
 };
@@ -26,9 +27,10 @@ const STATUS_LABEL: Record<StatusAction['action'], string> = {
   archive: 'بایگانی‌شده',
 };
 
-export function ProductStatusActions({ product, onChanged }: ProductStatusActionsProps) {
+export function ProductStatusActions({ product, onChanged, inline = false }: ProductStatusActionsProps) {
   const feedback = useFeedback();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const idempotencyKeys = useRef<Partial<Record<StatusAction['action'], string>>>({});
   const open = Boolean(anchor);
@@ -49,6 +51,7 @@ export function ProductStatusActions({ product, onChanged }: ProductStatusAction
     setAnchor(null);
     const label = STATUS_LABEL[action];
     setBusy(true);
+    setErrorMessage(null);
     idempotencyKeys.current[action] ??= createIdempotencyKey(`catalog-status-${product.id}-${action}`);
     try {
       await changeProductStatus(product.id, action, idempotencyKeys.current[action]!);
@@ -56,13 +59,25 @@ export function ProductStatusActions({ product, onChanged }: ProductStatusAction
       onChanged();
       delete idempotencyKeys.current[action];
     } catch (error) {
-      feedback.error(
-        error instanceof ApiClientError ? error.message : 'تغییر وضعیت ناموفق بود؛ دوباره تلاش کنید.',
-      );
+      const message = error instanceof ApiClientError
+        ? error.code === 'MEDIA_PRIMARY_REQUIRED' ? 'برای انتشار، در «مدیریت رسانه» یک تصویر اصلی بارگذاری کنید و منتظر وضعیت آماده بمانید.'
+          : error.code === 'ATTRIBUTE_OPTION_INVALID' ? 'مقادیر ویژگی‌های اجباری را برای تمام SKUهای فعال ذخیره کنید.'
+          : error.code === 'UNPROCESSABLE' ? 'برای انتشار، حداقل یک SKU فعال لازم است.' : error.message
+        : 'تغییر وضعیت ناموفق بود؛ دوباره تلاش کنید.';
+      setErrorMessage(message);
+      feedback.error(message);
     } finally {
       setBusy(false);
     }
   }
+
+  if (inline) return <Stack spacing={1}>
+    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+      {options.map(option => <Button key={option.action} size="small" variant={option.action === 'publish' ? 'contained' : 'outlined'} startIcon={option.icon} disabled={busy} onClick={() => void run(option.action)}>{busy ? 'در حال ثبت…' : option.label}</Button>)}
+      {product.status === 'PUBLISHED' ? <Button component="a" href={`/product/${encodeURIComponent(product.slug)}`} target="_blank" rel="noopener noreferrer" size="small">مشاهده در فروشگاه</Button> : null}
+    </Stack>
+    {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
+  </Stack>;
 
   return (
     <>

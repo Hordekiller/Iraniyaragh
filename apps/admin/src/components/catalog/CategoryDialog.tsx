@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Button,
@@ -16,6 +16,7 @@ import {
 import type { CategorySummary } from '@iranyaragh/contracts';
 import { ApiClientError } from '@/lib/api/client';
 import { createCategory, createIdempotencyKey, updateCategory } from '@/lib/catalog/catalog-api';
+import { categoryDescendants, categoryPaths } from '@/lib/catalog/category-hierarchy';
 import { SLUG_PATTERN } from '@/lib/catalog/catalog-labels';
 import { FormField } from '@/components/ui/FormField';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
@@ -27,10 +28,11 @@ type CategoryDialogProps = {
   categories: CategorySummary[];
   /** When present the dialog edits this category instead of creating a new one. */
   category?: CategorySummary | null;
+  initialParentId?: string;
   onSaved: (entity?: CategorySummary | null) => void;
 };
 
-export function CategoryDialog({ open, onClose, categories, category, onSaved }: CategoryDialogProps) {
+export function CategoryDialog({ open, onClose, categories, category, initialParentId, onSaved }: CategoryDialogProps) {
   const feedback = useFeedback();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -44,15 +46,16 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
     if (open) {
       setName(category?.name ?? '');
       setSlug(category?.slug ?? '');
-      setParentId(category?.parentId ?? '');
+      setParentId(category?.parentId ?? initialParentId ?? '');
       setErrors({});
       setSubmitError(null);
       idempotencyKey.current = null;
     }
-  }, [open, category]);
+  }, [open, category, initialParentId]);
 
-  // A category must never become its own parent.
-  const parentOptions = categories.filter((item) => item.id !== category?.id);
+  const descendants = category ? categoryDescendants(categories, category.id) : new Set<string>();
+  const paths = useMemo(() => categoryPaths(categories), [categories]);
+  const parentOptions = categories.filter(item => !descendants.has(item.id));
 
   function validate(): boolean {
     const next: { name?: string; slug?: string } = {};
@@ -102,7 +105,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
   }
 
   return (
-    <Dialog open={open} onClose={() => { idempotencyKey.current = null; onClose(); }} fullWidth maxWidth="sm" aria-labelledby="category-dialog-title">
+    <Dialog open={open} onClose={submitting ? undefined : () => { idempotencyKey.current = null; onClose(); }} fullWidth maxWidth="sm" aria-labelledby="category-dialog-title">
       <DialogTitle id="category-dialog-title">{category ? 'ویرایش دسته‌بندی' : 'دسته‌بندی جدید'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2.5} sx={{ mt: 1 }}>
@@ -117,6 +120,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
             <TextField
               id="category-name"
               size="small"
+              disabled={submitting}
               autoFocus
               value={name}
               onChange={(event) => { idempotencyKey.current = null; setName(event.target.value); }}
@@ -133,6 +137,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
             <TextField
               id="category-slug"
               size="small"
+              disabled={submitting}
               dir="ltr"
               value={slug}
               onChange={(event) => { idempotencyKey.current = null; setSlug(event.target.value.toLocaleLowerCase('en-US').replace(/\s+/g, '-')); }}
@@ -142,15 +147,16 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
             <Select
               id="category-parent"
               size="small"
+              disabled={submitting}
               displayEmpty
               value={parentId}
               inputProps={{ 'aria-label': 'دستهٔ والد' }}
-              onChange={(event) => setParentId(String(event.target.value))}
+              onChange={(event) => { idempotencyKey.current = null; setParentId(String(event.target.value)); }}
             >
               <MenuItem value="">بدون والد</MenuItem>
               {parentOptions.map((item) => (
                 <MenuItem key={item.id} value={item.id}>
-                  {item.name}
+                  {paths.get(item.id) ?? item.name}
                 </MenuItem>
               ))}
             </Select>
@@ -158,7 +164,7 @@ export function CategoryDialog({ open, onClose, categories, category, onSaved }:
         </Stack>
       </DialogContent>
       <DialogActions>
-          <Button type="button" onClick={() => { idempotencyKey.current = null; onClose(); }} color="inherit">
+          <Button type="button" disabled={submitting} onClick={() => { idempotencyKey.current = null; onClose(); }} color="inherit">
           انصراف
         </Button>
         <Button type="submit" variant="contained" disabled={submitting} onClick={(e) => void submit(e)}>

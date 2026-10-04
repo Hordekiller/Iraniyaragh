@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 import { ApiAbortError } from '@/lib/api/client';
 import { listCategories } from '@/lib/catalog/catalog-api';
 import { canReadCatalog, canWriteCatalog } from '@/lib/catalog/catalog-permissions';
+import { categoryPaths } from '@/lib/catalog/category-hierarchy';
 import { CategoryDialog } from './CategoryDialog';
 
 export function CategoriesView() {
@@ -24,6 +25,7 @@ export function CategoriesView() {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [initialParentId, setInitialParentId] = useState<string | undefined>();
   const [editing, setEditing] = useState<CategorySummary | null>(null);
 
   useEffect(() => {
@@ -43,6 +45,7 @@ export function CategoriesView() {
     return () => controller.abort();
   }, [canRead, reloadKey]);
 
+  const paths = useMemo(() => categoryPaths(categories), [categories]);
   const nameById = useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
     [categories],
@@ -66,7 +69,7 @@ export function CategoriesView() {
       <PageHeader
         title="دسته‌بندی‌ها"
         eyebrow="کاتالوگ"
-        description="ساختار دسته‌ها برای نمایش فروشگاهی و دسته‌بندی کالاها. والد فقط تا سه سطح مرسوم است."
+        description="ساختار دسته‌ها برای نمایش فروشگاهی و دسته‌بندی کالاها. هر دسته می‌تواند زیرمجموعه داشته باشد؛ مسیر کامل دسته و والد آن در این بخش قابل تنظیم است."
         breadcrumbs={[{ label: 'کالا و انبار' }, { label: 'کالا و SKU', href: '/catalog' }, { label: 'دسته‌بندی‌ها' }]}
         actions={
           <>
@@ -79,6 +82,7 @@ export function CategoriesView() {
                 variant="contained"
                 startIcon={<Plus size={18} />}
                 onClick={() => {
+                  setInitialParentId(undefined);
                   setEditing(null);
                   setDialogOpen(true);
                 }}
@@ -103,7 +107,7 @@ export function CategoriesView() {
             id: 'name',
             label: 'نام دسته',
             width: 260,
-            render: (row) => <Typography fontWeight={700}>{row.name}</Typography>,
+            render: (row) => <Stack><Typography fontWeight={700}>{row.name}</Typography>{row.parentId ? <Typography variant="caption" color="text.secondary">{paths.get(row.id) ?? row.name}</Typography> : null}</Stack>,
           },
           {
             id: 'slug',
@@ -141,6 +145,7 @@ export function CategoriesView() {
         actions={
           canWrite
             ? (row) => (
+                <Stack direction="row">
                 <IconButton
                   size="small"
                   aria-label={`ویرایش ${row.name}`}
@@ -151,10 +156,12 @@ export function CategoriesView() {
                 >
                   <Edit size={17} />
                 </IconButton>
+                <IconButton size="small" aria-label={`افزودن زیرمجموعه ${row.name}`} onClick={() => { setEditing(null); setInitialParentId(row.id); setDialogOpen(true); }}><Plus size={17} /></IconButton>
+                </Stack>
               )
             : undefined
         }
-        actionsLabel="ویرایش"
+        actionsLabel="ویرایش و زیرمجموعه"
         toolbar={
           !loading ? (
             <Stack direction="row" spacing={1} alignItems="center">
@@ -173,6 +180,7 @@ export function CategoriesView() {
         open={dialogOpen}
         categories={categories}
         category={editing}
+        initialParentId={initialParentId}
         onClose={() => setDialogOpen(false)}
         onSaved={() => setReloadKey((current) => current + 1)}
       />
