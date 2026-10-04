@@ -24,3 +24,17 @@ export function validateCatalogDemoManifest(manifest) {
     if (!['power', 'hand', 'pneumatic', 'safety', 'measuring', 'garden'].includes(product.category)) throw new Error('Unexpected demo category.');
   }
 }
+
+// Only the configured HTTPS storage/public-media prefix can receive sample
+// bytes or supply public images. Redirects are rejected by the caller.
+export function assertCatalogDemoUrl(value, configuredPrefix, { signedUpload = false } = {}) {
+  const url = new URL(value);
+  const prefix = new URL(configuredPrefix);
+  if (prefix.protocol !== 'https:' || prefix.username || prefix.password || prefix.search || prefix.hash ||
+      url.protocol !== 'https:' || url.username || url.password || url.hash ||
+      url.origin !== prefix.origin || !url.pathname.startsWith(`${prefix.pathname.replace(/\/$/u, '')}/`) ||
+      (!signedUpload && url.search)) {
+    throw new Error('Demo HTTP target must remain inside the configured HTTPS media prefix.');
+  }
+  return url;
+}

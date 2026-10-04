@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { assertCatalogDemoEnvironment, validateCatalogDemoManifest } from './demo-catalog/policy.mjs';
+import { assertCatalogDemoEnvironment, assertCatalogDemoUrl, validateCatalogDemoManifest } from './demo-catalog/policy.mjs';
 
 const require = createRequire(import.meta.url);
 const { NestFactory } = require('@nestjs/core');
@@ -84,7 +84,8 @@ try {
       const intent = await media.initiateUpload(actorId, key(item.sourceId, 'image', position, attempt), productId, { kind: 'IMAGE', role: position === 0 ? 'PRIMARY' : 'GALLERY', position, originalFilename: filename, declaredMime: 'image/jpeg', bytes: bytes.length, productVersion: product.version });
       const upload = intent.data.upload;
       // Use the exact signed HTTPS URL/headers; never copy bytes into a running service.
-      const response = await fetch(upload.uploadUrl, { method: upload.method, headers: upload.requiredHeaders, body: bytes, signal: AbortSignal.timeout(30000) });
+      const uploadUrl = assertCatalogDemoUrl(upload.uploadUrl, process.env.OBJECT_STORAGE_UPLOAD_ENDPOINT, { signedUpload: true });
+      const response = await fetch(uploadUrl, { method: upload.method, headers: upload.requiredHeaders, body: bytes, redirect: 'error', signal: AbortSignal.timeout(30000) });
       if (!response.ok) throw new CatalogDemoError(`Demo image upload failed with HTTP ${response.status}.`);
       await media.confirmUpload(actorId, key('confirm', upload.mediaId), productId, upload.mediaId, { checksumSha256: createHash('sha256').update(bytes).digest('hex') });
       existing = await prisma.productMedia.findUniqueOrThrow({ where: { id: upload.mediaId } });
@@ -157,7 +158,8 @@ try {
       for (const variant of product.variants) if (variant.salePrice.amount !== item.salePriceIRR || variant.attributeValues?.length !== 2 || 'costPrice' in variant || 'barcode' in variant) throw new CatalogDemoError('Demo variant public acceptance failed.');
       for (const asset of product.media) {
         if (asset.kind !== 'IMAGE' || !asset.alt.includes('دمو') || !asset.sources.length) throw new CatalogDemoError('Demo media public acceptance failed.');
-        const response = await fetch(asset.sources[0].url, { signal: AbortSignal.timeout(15000) });
+        const publicUrl = assertCatalogDemoUrl(asset.sources[0].url, process.env.PUBLIC_MEDIA_ORIGIN);
+        const response = await fetch(publicUrl, { redirect: 'error', signal: AbortSignal.timeout(15000) });
         if (!response.ok || !response.headers.get('content-type')?.startsWith('image/')) throw new CatalogDemoError('Demo public image path failed.');
       }
     }
