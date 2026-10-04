@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SmsSettingsFixture } from '@/lib/sms/sms-settings-fixture';
 import { SmsSettingsPage } from '@/components/sms/SmsSettingsPage';
 import {
   resetSmsSettingsFixtureForTests,
@@ -85,7 +86,7 @@ describe('SMS settings page (fixture flow)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ارسال پیام آزمایشی' }));
     fireEvent.click(screen.getByRole('button', { name: 'ارسال آزمایشی' }));
 
-    await screen.findByText('پیام آزمایشی ارسال شد.');
+    await screen.findByText('سرویس پیامک درخواست آزمایشی را پذیرفت؛ دریافت روی گوشی را بررسی کنید.');
     expect(screen.getByText('ارجاع داده شد')).toBeInTheDocument();
   });
 
@@ -119,4 +120,19 @@ describe('SMS settings page (fixture flow)', () => {
     await screen.findByText('نمایش تنظیمات سرویس پیامک ممکن نیست');
     expect(screen.getByRole('button', { name: 'تلاش مجدد' })).toBeInTheDocument();
   });
+  it('shows read-only environment settings while retaining safe validation and diagnostics', async () => {
+    const fixture = new SmsSettingsFixture({ secretBackend: 'read_only' });
+    const update = vi.spyOn(fixture, 'update');
+    setSmsSettingsServiceOverrideForTests(fixture);
+    render(<SmsSettingsPage />);
+    await screen.findByText('وضعیت سرویس پیامک');
+    expect(screen.getByLabelText('شناسهٔ قالب تأیید (templateId)')).toBeDisabled();
+    expect(screen.getByLabelText('ارسال پیامک OTP فعال باشد')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'ذخیرهٔ تنظیمات' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'چرخش کلید' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'بررسی پیکربندی' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیرهٔ تنظیمات' }));
+    expect(update).not.toHaveBeenCalled();
+  });
+
 });

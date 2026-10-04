@@ -43,6 +43,12 @@ export function SmsSettingsSummary({ snapshot, diagnostics }: SmsSettingsSummary
           <SummaryItem term="اعتبار کلید" value={yesNo(snapshot.secret.validated)} />
           <SummaryItem term="نمایش کلید" value={snapshot.secret.masked ?? '—'} />
           <SummaryItem term="آخرین چرخش" value={formatDateTime(snapshot.secret.lastRotatedAt)} />
+          {snapshot.templates ? <>
+            <SummaryItem term="قالب ورود تنظیم شده" value={yesNo(snapshot.templates.otp)} />
+            <SummaryItem term="قالب پرداخت تنظیم شده" value={yesNo(snapshot.templates.orderPaid)} />
+            <SummaryItem term="قالب ارسال تنظیم شده" value={yesNo(snapshot.templates.shipmentDispatched)} />
+            <SummaryItem term="قالب تحویل تنظیم شده" value={yesNo(snapshot.templates.shipmentDelivered)} />
+          </> : null}
           <SummaryItem term="نسخهٔ تنظیمات" value={String(snapshot.version)} />
           <SummaryItem term="آخرین به‌روزرسانی" value={formatDateTime(snapshot.updatedAt)} />
         </Box>

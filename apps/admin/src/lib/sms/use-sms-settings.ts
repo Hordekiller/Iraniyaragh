@@ -94,6 +94,15 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
     void load();
   }, [load]);
 
+  const refreshConfiguration = useCallback(async () => {
+    try {
+      setSnapshot(await service.getSnapshot());
+    } catch (error) {
+      if (error instanceof SmsSessionExpiredError || error instanceof SmsReauthenticationRequiredError) setRequireReauth(true);
+      feedback.error(friendlyMessage(error));
+    }
+  }, [service, feedback]);
+
   const beginIdempotencyKey = useCallback((key: Exclude<SmsActionKey, null>): string => {
     if (pendingAttempt.current?.key === key) return pendingAttempt.current.idempotencyKey;
     const idempotencyKey = makeIdempotencyKey();
@@ -193,7 +202,7 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
       });
       setLastOutcome(outcome);
       if (outcome.status === 'accepted') {
-        feedback.success('پیام آزمایشی ارسال شد.');
+        feedback.success('سرویس پیامک درخواست آزمایشی را پذیرفت؛ دریافت روی گوشی را بررسی کنید.');
       } else if (outcome.status === 'unknown_result') {
         feedback.warning('نتیجهٔ ارسال نامشخص است؛ برای اطلاع از وضعیت سرویس، وضعیت‌سنجی را بررسی کنید.');
       } else {
@@ -220,6 +229,7 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
     busy,
     requireReauth,
     reload: load,
+    refreshConfiguration,
     save,
     rotate,
     clear,

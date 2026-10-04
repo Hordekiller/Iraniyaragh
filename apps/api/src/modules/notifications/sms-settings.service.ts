@@ -248,7 +248,8 @@ export class SmsSettingsService {
     await this.audit.record(
       this.baseRecord(ctx, 'sms-settings.test-send.outcome', {
         metadata: idempotencyMetadata,
-        after: { outcome: 'success', sendStatus: outcome.status, messageId: outcome.messageId },
+        after: { outcome: outcome.status === 'accepted' ? 'success' : outcome.status === 'unknown_result' ? 'unknown' : 'rejected',
+          sendStatus: outcome.status, messageId: outcome.messageId },
       }),
     );
     return { data: { outcome } };

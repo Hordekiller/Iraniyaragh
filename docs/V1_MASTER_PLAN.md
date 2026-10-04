@@ -123,6 +123,8 @@ team/provider decisions
 - [x] Accept #78: weekly capacity, review SLA, decision owner and release authority
       (accepted via merged #172, 2026-09-12).
 - [x] Accept ADR-0011 for the SMS.ir provider boundary via merged PR #116.
+- [ ] Admin template entry supports non-secret IDs; activation remains environment-managed.
+  See [the acceptance runbook](SMS_IR_STAGING_ACCEPTANCE.md). Preparation is not provider acceptance.
 - [ ] #114 remains open for real-account, approved-sender/template and handset
       acceptance. The OTP adapter/admin settings and #314 transactional attempt
       worker are merged; code presence alone is not provider acceptance.

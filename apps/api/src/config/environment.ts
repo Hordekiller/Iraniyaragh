@@ -22,6 +22,9 @@ export type EnvironmentVariables = {
   AUTH_JWT_ISSUER: string;
   JWT_ACCESS_SECRET: string;
   AUTH_TOTP_ENCRYPTION_KEY?: string;
+  SMS_PROVIDER_MODE?: 'smsir' | 'disabled';
+  SMS_IR_TEST_MOBILE?: string;
+  SMS_IR_TEST_SEND_ENABLED?: boolean;
   SMS_IR_API_KEY?: string;
   SMS_IR_OTP_TEMPLATE_ID?: number;
   SMS_IR_ORDER_PAID_TEMPLATE_ID?: number;
@@ -393,6 +396,13 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   if (smsMode === 'disabled' && environment === 'production') {
     throw new Error('SMS_PROVIDER_MODE=disabled is not allowed in production.');
   }
+  const smsTestSendEnabled = parseBoolean(config.SMS_IR_TEST_SEND_ENABLED, 'SMS_IR_TEST_SEND_ENABLED', false);
+  const smsTestMobile = config.SMS_IR_TEST_MOBILE;
+  if (smsTestMobile !== undefined && smsTestMobile !== '' &&
+    (typeof smsTestMobile !== 'string' || !/^\+989\d{9}$/u.test(smsTestMobile)))
+    throw new Error('SMS_IR_TEST_MOBILE must be canonical Iranian E.164.');
+  if (smsTestSendEnabled && (!smsTestMobile || smsMode !== 'smsir'))
+    throw new Error('SMS_IR_TEST_SEND_ENABLED requires an approved private destination and active SMS provider.');
   const rawPaymentMode = config.PAYMENT_PROVIDER_MODE;
   const paymentMode =
     rawPaymentMode === undefined || rawPaymentMode === null || rawPaymentMode === ''
@@ -428,12 +438,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
 
   if (['staging', 'production'].includes(environment) && smsMode === 'smsir') {
     if (smsApiKey === undefined) throw new Error('SMS_IR_API_KEY is required in staging and production.');
-    if (smsTemplateId === undefined) {
-      throw new Error('SMS_IR_OTP_TEMPLATE_ID is required in staging and production.');
-    }
-    if (!paidTemplateId || !dispatchedTemplateId || !deliveredTemplateId) {
-      throw new Error('SMS_IR_ORDER_PAID_TEMPLATE_ID, SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID and SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID are required in staging and production.');
-    }
+    // Effective template IDs may be persisted through the permissioned Admin
+    // command. SmsTemplateSettingsService verifies all four at bootstrap.
+
   }
   if (['staging', 'production'].includes(environment)) {
     if (config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === undefined || config.PRODUCT_MEDIA_IMAGE_MAX_BYTES === '') {
@@ -467,6 +474,9 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     AUTH_JWT_ISSUER: parseAuthIssuer(config.AUTH_JWT_ISSUER),
     JWT_ACCESS_SECRET: accessSecret,
     AUTH_TOTP_ENCRYPTION_KEY: totpEncryptionKey,
+    SMS_PROVIDER_MODE: smsMode,
+    SMS_IR_TEST_MOBILE: typeof smsTestMobile === 'string' && smsTestMobile !== '' ? smsTestMobile : undefined,
+    SMS_IR_TEST_SEND_ENABLED: smsTestSendEnabled,
     SMS_IR_API_KEY: smsApiKey,
     SMS_IR_OTP_TEMPLATE_ID: smsTemplateId,
     SMS_IR_ORDER_PAID_TEMPLATE_ID: paidTemplateId,

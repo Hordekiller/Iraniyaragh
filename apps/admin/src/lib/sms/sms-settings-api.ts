@@ -1,5 +1,9 @@
+import type { SmsTemplatesPort } from './sms-templates-port';
 import { ApiClientError, ApiNetworkError, apiFetch } from '@/lib/api/client';
 import type {
+  SmsTemplateSettings,
+  SmsTemplateSettingsResponse,
+  SmsTemplateSettingsUpdate,
   SmsDiagnostics,
   SmsDiagnosticsResponse,
   SmsSendOutcome,
@@ -41,7 +45,7 @@ const SMS_SETTINGS_PATH = '/notifications/admin/sms-settings';
  * Every mutation requires STAFF_MFA + settings.manage (fresh auth on the server);
  * the client only maps the resulting error kinds so the UI can react.
  */
-export class SmsSettingsApiClient implements SmsSettingsPort {
+export class SmsSettingsApiClient implements SmsSettingsPort, SmsTemplatesPort {
   constructor(private readonly getToken: () => string | null) {}
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -66,6 +70,7 @@ export class SmsSettingsApiClient implements SmsSettingsPort {
         return new SmsVersionConflictError();
       case 'OPERATION_UNSUPPORTED':
         return new SmsUnsupportedOperationError(error.message, error.code);
+      case 'INVALID_REQUEST':
       case 'VALIDATION_ERROR':
         return new SmsInvalidInputError(error.message);
       case 'AUTH_REAUTHENTICATION_REQUIRED':
@@ -81,6 +86,14 @@ export class SmsSettingsApiClient implements SmsSettingsPort {
       default:
         return new SmsUpstreamError(error.message, error.code, error.requestId);
     }
+  }
+
+  getTemplates(): Promise<SmsTemplateSettings> {
+    return this.request<SmsTemplateSettingsResponse['data']>('GET', `${SMS_SETTINGS_PATH}/templates`).then(data => data.templates);
+  }
+
+  updateTemplates(input: SmsTemplateSettingsUpdate): Promise<SmsTemplateSettings> {
+    return this.request<SmsTemplateSettingsResponse['data']>('PUT', `${SMS_SETTINGS_PATH}/templates`, input).then(data => data.templates);
   }
 
   getSnapshot(): Promise<SmsSettingsSnapshot> {

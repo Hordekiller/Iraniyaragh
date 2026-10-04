@@ -6,7 +6,7 @@ import { getRequestId } from '../../common/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthHashService } from './auth-hash.service';
 import { normalizeIranianMobile } from './mobile';
-import { RateLimitService } from './rate-limit.service';
+import { RateLimitException, RateLimitService } from './rate-limit.service';
 import {
   CUSTOMER_OTP_SMS_CONFIG,
   SMS_PROVIDER,
@@ -26,6 +26,7 @@ export type OtpIssueResult = Readonly<{
   challengeId: string;
   expiresInSeconds: typeof OTP_TTL_SECONDS;
   resendAfterSeconds: typeof OTP_RESEND_AFTER_SECONDS;
+  deliveryStatus: 'accepted' | 'unknown_result';
 }>;
 
 export type OtpChallengeResult =
@@ -96,6 +97,7 @@ export class CustomerOtpService {
     const delivery = await this.dispatchOnce(mobile, issued.challengeId, issued.code);
     if (delivery.status !== 'accepted' && delivery.status !== 'unknown_result') {
       await this.invalidateAfterKnownDeliveryFailure(issued.challengeId, delivery);
+      if (delivery.status === 'rate_limited') throw new RateLimitException(OTP_RESEND_AFTER_SECONDS);
       if (delivery.status === 'disabled') {
         // No message was attempted, so the challenge is invalidated rather than
         // left live: a code that could never have been delivered must not remain
@@ -121,6 +123,7 @@ export class CustomerOtpService {
       challengeId: issued.challengeId,
       expiresInSeconds: OTP_TTL_SECONDS,
       resendAfterSeconds: OTP_RESEND_AFTER_SECONDS,
+      deliveryStatus: delivery.status,
     });
   }
 
@@ -209,11 +212,17 @@ export class CustomerOtpService {
   }
 
   private async dispatchOnce(mobile: string, challengeId: string, code: string): Promise<SmsSendResult> {
+    let templateId = this.smsConfig.templateId;
+    if (this.smsConfig.resolveTemplateId) {
+      try { templateId = await this.smsConfig.resolveTemplateId() ?? 0; }
+      catch { return { status: 'unavailable' }; } // No request was dispatched.
+      if (templateId === 0) return { status: 'unavailable' };
+    }
     try {
       return await this.smsProvider.send({
         purpose: 'customer_login',
         destination: mobile,
-        templateId: this.smsConfig.templateId,
+        templateId,
         parameters: { [this.smsConfig.codeParameterName]: code },
         correlationId: challengeId,
       });

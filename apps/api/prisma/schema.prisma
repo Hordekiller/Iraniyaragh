@@ -253,6 +253,7 @@ model User {
   mfaChallenges               MfaChallenge[]
   totpCredential              TotpCredential?
   catalogIdempotencyRecords   CatalogIdempotencyRecord[]
+  smsTemplateCommands        SmsTemplateCommandRecord[]
   supplierCommandRecords      SupplierCommandRecord[]
   purchaseOrderCommandRecords PurchaseOrderCommandRecord[]
   purchaseReceipts            PurchaseReceipt[]
@@ -1531,4 +1532,39 @@ model AuditLog {
   @@index([actorId, createdAt])
   @@index([action, createdAt])
   @@index([requestId])
+}
+
+/// At-most-once operator test claims. No secret, mobile or OTP is persisted.
+model SmsOperatorTestSend {
+  keyHash           String   @id @db.Char(64)
+  configurationHash String   @db.Char(64)
+  status            String   @default("unknown_result") @db.VarChar(32)
+  providerMessageId String?  @db.VarChar(128)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([createdAt])
+}
+
+/// Non-secret template IDs. API credentials remain environment-managed.
+model SmsTemplateSettings {
+  id                           String   @id @db.VarChar(32)
+  version                      Int      @default(1)
+  otpTemplateId                BigInt?
+  orderPaidTemplateId          BigInt?
+  shipmentDispatchedTemplateId BigInt?
+  shipmentDeliveredTemplateId  BigInt?
+  updatedAt                    DateTime @updatedAt
+}
+
+model SmsTemplateCommandRecord {
+  id           String   @id @default(cuid())
+  actorId      String
+  keyHash      String   @db.Char(64)
+  payloadHash  String   @db.Char(64)
+  responseJson Json
+  createdAt    DateTime @default(now())
+  actor        User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
 }

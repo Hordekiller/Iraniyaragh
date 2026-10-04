@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useMemo } from 'react';
 import { Alert, Box, Button, Skeleton } from '@mui/material';
 import { KeySquare, MessageSquareText } from 'lucide-react';
@@ -9,6 +11,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { resolveSmsSettingsService, isSmsSettingsFixtureEnabled } from '@/lib/sms/sms-settings-guard';
 import { useSmsSettings } from '@/lib/sms/use-sms-settings';
 import { getAccessToken } from '@/lib/auth/token-store';
+import { SmsTemplatesPanel } from './SmsTemplatesPanel';
+import type { SmsTemplatesPort } from '@/lib/sms/sms-templates-port';
 import { SmsSettingsSummary } from './SmsSettingsSummary';
 import { SmsSettingsForm, type SmsSettingsUpdatePatch } from './SmsSettingsForm';
 import { SmsSecretPanel } from './SmsSecretPanel';
@@ -53,7 +57,7 @@ function SmsSettingsContent() {
           title="نشست شما منقضی شده است"
           description="برای ادامهٔ مدیریت سرویس پیامک، لازم است دوباره با حساب مدیریتی خود وارد شوید."
           action={
-            <Button variant="contained" href="/login" component="a">
+            <Button variant="contained" href="/login" component={Link}>
               ورود مجدد به پنل
             </Button>
           }
@@ -86,6 +90,8 @@ function SmsSettingsContent() {
       {model.status === 'ready' && model.snapshot ? (
         <Box sx={{ display: 'grid', gap: 3 }}>
           <SmsSettingsSummary snapshot={model.snapshot} diagnostics={model.diagnostics} />
+          {'getTemplates' in service && 'updateTemplates' in service ?
+            <SmsTemplatesPanel service={service as SmsTemplatesPort} onSaved={() => void model.refreshConfiguration()} /> : null}
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 3 }}>
             <SmsSettingsForm

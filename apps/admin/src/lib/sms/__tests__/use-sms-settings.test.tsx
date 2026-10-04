@@ -135,7 +135,7 @@ describe('useSmsSettings', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'));
 
     act(() => result.current.testSend());
-    await waitFor(() => expect(screen.findByText('پیام آزمایشی ارسال شد.')).resolves.toBeInTheDocument());
+    await waitFor(() => expect(screen.findByText('سرویس پیامک درخواست آزمایشی را پذیرفت؛ دریافت روی گوشی را بررسی کنید.')).resolves.toBeInTheDocument());
     expect(result.current.lastOutcome?.status).toBe('accepted');
   });
 
@@ -181,7 +181,7 @@ describe('useSmsSettings', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'));
 
     act(() => result.current.testSend());
-    await waitFor(() => expect(screen.findByText('پیام آزمایشی ارسال شد.')).resolves.toBeInTheDocument());
+    await waitFor(() => expect(screen.findByText('سرویس پیامک درخواست آزمایشی را پذیرفت؛ دریافت روی گوشی را بررسی کنید.')).resolves.toBeInTheDocument());
 
     act(() => result.current.testSend());
     await waitFor(() => expect(receivedKeys).toHaveLength(2));

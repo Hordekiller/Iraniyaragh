@@ -1,9 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OutboxEffectKind, OutboxEffectStatus } from '@prisma/client';
 import type { EnvironmentVariables } from '../../config/environment';
 import { PrismaService } from '../../database/prisma.service';
-import { SMS_PROVIDER, type SmsProvider, type SmsSendResult } from './sms-provider';
+import { SMS_PROVIDER, SMS_TEMPLATE_RESOLVER, type SmsProvider, type SmsSendResult, type SmsTemplateResolver } from './sms-provider';
 
 const KINDS = [
   OutboxEffectKind.CUSTOMER_ORDER_PAID,
@@ -18,6 +18,7 @@ export class CustomerSmsDeliveryService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(SMS_PROVIDER) private readonly provider: SmsProvider,
     @Inject(ConfigService) private readonly config: ConfigService<EnvironmentVariables, true>,
+    @Optional() @Inject(SMS_TEMPLATE_RESOLVER) private readonly templates?: SmsTemplateResolver,
   ) {}
 
   /** A bounded worker pass. FAILED is the durable pre-send claim: a crash or
@@ -45,7 +46,7 @@ export class CustomerSmsDeliveryService {
       });
       if (claim.count !== 1) continue;
       claimed++;
-      const templateId = this.templateId(effect.kind);
+      const templateId = await this.templateId(effect.kind);
       const order = await this.prisma.order.findUnique({
         where: { id: effect.subjectId },
         select: { number: true, customer: { select: { mobile: true } } },
@@ -73,7 +74,8 @@ export class CustomerSmsDeliveryService {
     return { claimed, accepted, pending, failed };
   }
 
-  private templateId(kind: OutboxEffectKind): number | undefined {
+  private async templateId(kind: OutboxEffectKind): Promise<number | undefined> {
+    if (this.templates) return this.templates.resolve(this.purpose(kind));
     if (kind === OutboxEffectKind.CUSTOMER_ORDER_PAID) return this.config.get('SMS_IR_ORDER_PAID_TEMPLATE_ID', { infer: true });
     if (kind === OutboxEffectKind.CUSTOMER_SHIPMENT_DISPATCHED) return this.config.get('SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID', { infer: true });
     return this.config.get('SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID', { infer: true });

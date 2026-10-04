@@ -187,9 +187,87 @@
       "post": {
         "operationId": "CustomerAuthController_requestOtp",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mobile",
+                  "client"
+                ],
+                "properties": {
+                  "mobile": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "client": {
+                    "type": "string",
+                    "enum": [
+                      "CUSTOMER_WEB"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "202": {
-            "description": ""
+            "description": "Active challenge. Delivery acceptance is explicit; unknown results must not be automatically retried.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "challengeId",
+                        "expiresInSeconds",
+                        "resendAfterSeconds",
+                        "deliveryStatus"
+                      ],
+                      "properties": {
+                        "challengeId": {
+                          "type": "string"
+                        },
+                        "expiresInSeconds": {
+                          "type": "integer",
+                          "enum": [
+                            300
+                          ]
+                        },
+                        "resendAfterSeconds": {
+                          "type": "integer",
+                          "enum": [
+                            60
+                          ]
+                        },
+                        "deliveryStatus": {
+                          "type": "string",
+                          "enum": [
+                            "accepted",
+                            "unknown_result"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Existing destination/IP policies or explicit provider throttling; Retry-After header."
+          },
+          "503": {
+            "description": "SMS_PROVIDER_DISABLED or UPSTREAM_UNAVAILABLE; no successful delivery is claimed."
           }
         },
         "tags": [
@@ -22618,6 +22696,30 @@
                                 }
                               }
                             },
+                            "templates": {
+                              "type": "object",
+                              "description": "Environment template configuration only; not provider approval or delivery evidence.",
+                              "required": [
+                                "otp",
+                                "orderPaid",
+                                "shipmentDispatched",
+                                "shipmentDelivered"
+                              ],
+                              "properties": {
+                                "otp": {
+                                  "type": "boolean"
+                                },
+                                "orderPaid": {
+                                  "type": "boolean"
+                                },
+                                "shipmentDispatched": {
+                                  "type": "boolean"
+                                },
+                                "shipmentDelivered": {
+                                  "type": "boolean"
+                                }
+                              }
+                            },
                             "secretBackend": {
                               "type": "string",
                               "enum": [
@@ -22986,6 +23088,30 @@
                                 }
                               }
                             },
+                            "templates": {
+                              "type": "object",
+                              "description": "Environment template configuration only; not provider approval or delivery evidence.",
+                              "required": [
+                                "otp",
+                                "orderPaid",
+                                "shipmentDispatched",
+                                "shipmentDelivered"
+                              ],
+                              "properties": {
+                                "otp": {
+                                  "type": "boolean"
+                                },
+                                "orderPaid": {
+                                  "type": "boolean"
+                                },
+                                "shipmentDispatched": {
+                                  "type": "boolean"
+                                },
+                                "shipmentDelivered": {
+                                  "type": "boolean"
+                                }
+                              }
+                            },
                             "secretBackend": {
                               "type": "string",
                               "enum": [
@@ -23165,6 +23291,48 @@
                     }
                   },
                   "description": "Optimistic concurrency conflict: the expectedVersion is stale and the write was rejected."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Environment-managed settings are read-only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UNPROCESSABLE",
+                        "OPERATION_UNSUPPORTED"
+                      ],
+                      "example": "UNPROCESSABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The request cannot be processed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "Domain-level rejection: missing explicit confirmation or an unsupported operation."
                 }
               }
             }
@@ -23420,6 +23588,30 @@
                                   "nullable": true,
                                   "description": "ISO-8601 instant of the last rotation, if any.",
                                   "example": "2026-09-08T09:00:00.000Z"
+                                }
+                              }
+                            },
+                            "templates": {
+                              "type": "object",
+                              "description": "Environment template configuration only; not provider approval or delivery evidence.",
+                              "required": [
+                                "otp",
+                                "orderPaid",
+                                "shipmentDispatched",
+                                "shipmentDelivered"
+                              ],
+                              "properties": {
+                                "otp": {
+                                  "type": "boolean"
+                                },
+                                "orderPaid": {
+                                  "type": "boolean"
+                                },
+                                "shipmentDispatched": {
+                                  "type": "boolean"
+                                },
+                                "shipmentDelivered": {
+                                  "type": "boolean"
                                 }
                               }
                             },
@@ -23848,6 +24040,30 @@
                                   "nullable": true,
                                   "description": "ISO-8601 instant of the last rotation, if any.",
                                   "example": "2026-09-08T09:00:00.000Z"
+                                }
+                              }
+                            },
+                            "templates": {
+                              "type": "object",
+                              "description": "Environment template configuration only; not provider approval or delivery evidence.",
+                              "required": [
+                                "otp",
+                                "orderPaid",
+                                "shipmentDispatched",
+                                "shipmentDelivered"
+                              ],
+                              "properties": {
+                                "otp": {
+                                  "type": "boolean"
+                                },
+                                "orderPaid": {
+                                  "type": "boolean"
+                                },
+                                "shipmentDispatched": {
+                                  "type": "boolean"
+                                },
+                                "shipmentDelivered": {
+                                  "type": "boolean"
                                 }
                               }
                             },
@@ -24369,10 +24585,9 @@
                                 "rejected",
                                 "rate_limited",
                                 "unavailable",
-                                "unknown_result",
-                                "disabled"
+                                "unknown_result"
                               ],
-                              "description": "Delivery outcome.",
+                              "description": "Provider acceptance outcome; not proof of handset delivery.",
                               "example": "accepted"
                             }
                           }
@@ -24508,6 +24723,47 @@
               }
             }
           },
+          "409": {
+            "description": "Idempotency key conflicts with changed private test configuration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CONFLICT"
+                      ],
+                      "example": "CONFLICT"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The settings changed concurrently. Refresh and retry."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ],
+                      "example": 409
+                    }
+                  },
+                  "description": "Optimistic concurrency conflict: the expectedVersion is stale and the write was rejected."
+                }
+              }
+            }
+          },
           "422": {
             "description": "Domain-level rejection: missing explicit confirmation or an unsupported operation.",
             "content": {
@@ -24549,6 +24805,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Controlled test cooldown; Retry-After header is authoritative."
           },
           "503": {
             "description": "The provider store or upstream service is unavailable; retry is only safe with the same idempotency key.",
@@ -24598,6 +24857,522 @@
           }
         ],
         "summary": "Send a controlled SMS test to the approved operator destination.",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/notifications/admin/sms-settings/templates": {
+      "get": {
+        "operationId": "NotificationsAdminController_getTemplates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "templates"
+                      ],
+                      "properties": {
+                        "templates": {
+                          "type": "object",
+                          "required": [
+                            "version",
+                            "updatedAt",
+                            "otpTemplateId",
+                            "orderPaidTemplateId",
+                            "shipmentDispatchedTemplateId",
+                            "shipmentDeliveredTemplateId"
+                          ],
+                          "properties": {
+                            "otpTemplateId": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1,
+                              "maximum": 9999999999
+                            },
+                            "orderPaidTemplateId": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1,
+                              "maximum": 9999999999
+                            },
+                            "shipmentDispatchedTemplateId": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1,
+                              "maximum": 9999999999
+                            },
+                            "shipmentDeliveredTemplateId": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1,
+                              "maximum": 9999999999
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read the four non-secret template IDs; configured does not mean provider approved.",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "operationId": "NotificationsAdminController_updateTemplates",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "expectedVersion",
+                  "idempotencyKey",
+                  "otpTemplateId",
+                  "orderPaidTemplateId",
+                  "shipmentDispatchedTemplateId",
+                  "shipmentDeliveredTemplateId"
+                ],
+                "properties": {
+                  "otpTemplateId": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 9999999999
+                  },
+                  "orderPaidTemplateId": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 9999999999
+                  },
+                  "shipmentDispatchedTemplateId": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 9999999999
+                  },
+                  "shipmentDeliveredTemplateId": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 9999999999
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483646
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 96,
+                    "pattern": "^[\\w-]{8,96}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "templates"
+                      ],
+                      "properties": {
+                        "templates": {
+                          "type": "object",
+                          "required": [
+                            "version",
+                            "updatedAt",
+                            "otpTemplateId",
+                            "orderPaidTemplateId",
+                            "shipmentDispatchedTemplateId",
+                            "shipmentDeliveredTemplateId"
+                          ],
+                          "properties": {
+                            "otpTemplateId": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1,
+                              "maximum": 9999999999
+                            },
+                            "orderPaidTemplateId": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1,
+                              "maximum": 9999999999
+                            },
+                            "shipmentDispatchedTemplateId": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1,
+                              "maximum": 9999999999
+                            },
+                            "shipmentDeliveredTemplateId": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1,
+                              "maximum": 9999999999
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ],
+                      "example": "INVALID_REQUEST"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Request validation failed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ],
+                      "example": 400
+                    }
+                  },
+                  "description": "Request body failed schema validation (unknown, blank or out-of-range fields)."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ],
+                      "example": "AUTH_SESSION_INVALID"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication is required."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ],
+                      "example": 401
+                    }
+                  },
+                  "description": "Missing, invalid, revoked or expired authentication, or stale fresh-auth window."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ],
+                      "example": "FORBIDDEN"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Access denied."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ],
+                      "example": 403
+                    }
+                  },
+                  "description": "Authenticated but lacking the required permission or authentication level."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CONFLICT"
+                      ],
+                      "example": "CONFLICT"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The settings changed concurrently. Refresh and retry."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ],
+                      "example": 409
+                    }
+                  },
+                  "description": "Optimistic concurrency conflict: the expectedVersion is stale and the write was rejected."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "UNPROCESSABLE",
+                        "OPERATION_UNSUPPORTED"
+                      ],
+                      "example": "UNPROCESSABLE"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "The request cannot be processed."
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "Request correlation id, echoed from the x-request-id flow."
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        422
+                      ],
+                      "example": 422
+                    }
+                  },
+                  "description": "Domain-level rejection: missing explicit confirmation or an unsupported operation."
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Persist approved template IDs with version checking and idempotent replay; never enables SMS or changes its secret.",
         "tags": [
           "notifications"
         ]

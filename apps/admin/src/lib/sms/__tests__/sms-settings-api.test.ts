@@ -69,3 +69,15 @@ describe('SmsSettingsApiClient error mapping', () => {
     expect(result.version).toBe(3);
   });
 });
+ describe('SmsSettingsApiClient template persistence contract', () => {
+  const client = new SmsSettingsApiClient(() => 'unit-access');
+  const templates = { version: 1, otpTemplateId: 123, orderPaidTemplateId: null, shipmentDispatchedTemplateId: null, shipmentDeliveredTemplateId: null, updatedAt: null };
+  it('uses authenticated GET and PUT against the templates endpoint', async () => {
+    apiFetchMock.mockResolvedValue({ data: { templates } });
+    expect(await client.getTemplates()).toEqual(templates);
+    expect(apiFetchMock).toHaveBeenLastCalledWith('/notifications/admin/sms-settings/templates', { method: 'GET', token: 'unit-access', body: undefined });
+    const update = { ...templates, expectedVersion: 0, idempotencyKey: 'template-test-1' };
+    expect(await client.updateTemplates(update)).toEqual(templates);
+    expect(apiFetchMock).toHaveBeenLastCalledWith('/notifications/admin/sms-settings/templates', { method: 'PUT', token: 'unit-access', body: update });
+  });
+});
