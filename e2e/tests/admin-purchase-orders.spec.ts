@@ -66,8 +66,8 @@ test('staff creates a purchase order and receives partial/final stock with persi
   await expect(productLink).toBeVisible();
   await tap(productLink);
   await expect(page).toHaveURL(/\/catalog\/products\/(?!new(?:\/|$))[^/]+$/);
-  await tap(page.getByRole('button', { name: `اقدامات کالای خرید ${suffix}` }));
-  await tap(page.getByRole('menuitem', { name: 'انتشار' }));
+  await expect(page.getByRole('button', { name: 'انتشار', exact: true })).toBeVisible();
+  await tap(page.getByRole('button', { name: 'انتشار', exact: true }));
   await expect(page.getByText('منتشرشده', { exact: true }).first()).toBeVisible();
 
   await navigate(page, 'سفارش‌های خرید', /\/purchase-orders$/);
