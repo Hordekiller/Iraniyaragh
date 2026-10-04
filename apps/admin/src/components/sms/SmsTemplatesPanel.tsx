@@ -1,4 +1,6 @@
 "use client";
+
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -210,7 +212,7 @@ export function SmsTemplatesPanel({ service, onSaved }: { service: SmsTemplatesP
               </Alert>
             ) : null}
             {reauth ? (
-              <Button component="a" href="/login">
+              <Button component={Link} href="/login">
                 ورود مجدد به پنل
               </Button>
             ) : null}

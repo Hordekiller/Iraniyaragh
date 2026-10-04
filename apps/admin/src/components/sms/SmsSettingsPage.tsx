@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useMemo } from 'react';
 import { Alert, Box, Button, Skeleton } from '@mui/material';
 import { KeySquare, MessageSquareText } from 'lucide-react';
@@ -55,7 +57,7 @@ function SmsSettingsContent() {
           title="نشست شما منقضی شده است"
           description="برای ادامهٔ مدیریت سرویس پیامک، لازم است دوباره با حساب مدیریتی خود وارد شوید."
           action={
-            <Button variant="contained" href="/login" component="a">
+            <Button variant="contained" href="/login" component={Link}>
               ورود مجدد به پنل
             </Button>
           }
