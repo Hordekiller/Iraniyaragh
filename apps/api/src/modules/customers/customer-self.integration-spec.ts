@@ -54,6 +54,7 @@ describe.sequential('Customer-self real HTTP/session/PostgreSQL security', () =>
   let origin: string;
   let foreignBefore: unknown;
   let orderId: string;
+  let connected = false;
   const request = (method: string, path = '', body?: unknown, token = access[0], key = `self-${randomUUID()}`) =>
     fetch(`${origin}/api/v1/customers/me${path}`, {
       method, headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -66,6 +67,7 @@ describe.sequential('Customer-self real HTTP/session/PostgreSQL security', () =>
   beforeAll(async () => {
     assertIsolatedTestDatabase({ databaseUrl: process.env.DATABASE_URL, nodeEnvironment: process.env.NODE_ENV });
     await prisma.$connect();
+    connected = true;
     for (const [index, id] of users.entries()) {
       await prisma.user.create({ data: { id, mobile: mobiles[index], status: 'ACTIVE', createdAt: new Date(Date.now() - 60000), isMobileVerified: true, mobileVerifiedAt: new Date() } });
       const row = await prisma.customer.create({ data: { userId: id, mobile: mobiles[index], firstName: index ? 'مشتری ب' : 'مشتری الف' } });
@@ -81,6 +83,7 @@ describe.sequential('Customer-self real HTTP/session/PostgreSQL security', () =>
     await app.listen(0, '127.0.0.1'); origin = await app.getUrl();
   });
   afterAll(async () => {
+    if (!connected) return;
     await app?.close();
     await prisma.auditLog.deleteMany({ where: { actorId: { in: users } } });
     await prisma.customerCommandRecord.deleteMany({ where: { actorId: { in: users } } });
