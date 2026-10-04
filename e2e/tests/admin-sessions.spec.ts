@@ -26,6 +26,16 @@ function currentSessionRow(page: Page) {
   return page.locator('li').filter({ hasText: 'این دستگاه' }).first();
 }
 
+async function rotateCookieSession(page: Page) {
+  const origin = process.env.API_E2E_URL ?? 'http://127.0.0.1:4000';
+  const csrf = (await page.context().cookies(origin)).find(cookie => cookie.name.endsWith('csrf'))?.value;
+  expect(csrf).toBeTruthy();
+  const rotated = await page.context().request.post(`${origin}/api/v1/auth/refresh`, {
+    headers: { Origin: new URL(page.url()).origin, 'X-CSRF-Token': csrf! },
+  });
+  expect(rotated.status()).toBe(200);
+}
+
 test.describe('admin: session and device management', () => {
   test('lists the live sessions through the real API (no fixture banner)', async ({ page }) => {
     await openSessionsPage(page);
@@ -51,11 +61,24 @@ test.describe('admin: session and device management', () => {
 
   test('logout-all revokes every session and redirects to /login', async ({ page }) => {
     await openSessionsPage(page);
+    await rotateCookieSession(page);
 
     await tap(page.getByRole('button', { name: 'خروج از همهٔ دستگاه‌ها' }));
     await expect(page.getByText(/از تمام نشست‌های فعال این حساب خارج می‌شوید/)).toBeVisible();
 
     await tap(page.getByTestId('session-confirm-button'));
     await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
+  });
+
+  test('refreshes devices when the selected current session has already rotated', async ({ page }) => {
+    await openSessionsPage(page);
+    await rotateCookieSession(page);
+    await tap(currentSessionRow(page).getByRole('button', { name: /خروج از دستگاه/ }));
+    await tap(page.getByTestId('session-confirm-button'));
+    await expect(page.getByText('نشست شما تغییر کرده است؛ فهرست دستگاه‌ها به‌روز شد.')).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: 'این دستگاه' })).toHaveCount(1);
+    await expect(page).toHaveURL(/\/settings\/sessions$/);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'نشست‌ها و دستگاه‌ها' })).toBeVisible();
   });
 });

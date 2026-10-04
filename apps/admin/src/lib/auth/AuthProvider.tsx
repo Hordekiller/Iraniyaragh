@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AccessTokenData, CurrentPrincipalResponse } from '@iranyaragh/contracts';
 import { ApiAbortError, ApiClientError, apiFetch, readCsrfToken, recoverApiSession, registerSessionRecovery, settleSessionRecovery } from '@/lib/api/client';
-import { getAccessToken, setAccessToken } from './token-store';
+import { getAccessToken, getSessionRevision, setAccessToken } from './token-store';
 
 export type AuthUser = {
   userId: string;
@@ -18,7 +18,7 @@ type AuthContextValue = {
   isRestoring: boolean;
   signOut: () => Promise<void>;
   /** Clear this identity only after the API acknowledged its revocation. */
-  endRevokedSession: (sessionId: string) => void;
+  endRevokedSession: (expectedRevision: number, sessionId?: string) => boolean;
   /** Adopt the session verified by the real staff password + TOTP login. */
   establishSession: (input: { accessToken: string; principal: AuthUser }) => void;
 };
@@ -135,12 +135,15 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   }, []);
 
-  const endRevokedSession = useCallback((sessionId: string): void => {
-    if (userRef.current?.sessionId !== sessionId) return;
+  const endRevokedSession = useCallback((expectedRevision: number, sessionId?: string): boolean => {
+    // Rotation stays in the same logical login. Logout-all ends that login even
+    // if its backing session rotated; a device-specific revoke only ends its ID.
+    if (!userRef.current || getSessionRevision() !== expectedRevision || (sessionId && userRef.current.sessionId !== sessionId)) return false;
     generation.current += 1;
     setAccessToken(null);
     userRef.current = null;
     setUser(null);
+    return true;
   }, []);
 
   const value = useMemo<AuthContextValue>(

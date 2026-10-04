@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SessionSummary } from '@iranyaragh/contracts';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
+import { getSessionRevision } from './token-store';
 import {
   SessionExpiredError,
   SessionManagementError,
@@ -18,7 +19,7 @@ export type SessionActionKey = 'revoke' | 'logout-all' | null;
 export type UseAuthSessionsOptions = {
   service: SessionManagementPort;
   /** Invoked when the current session is revoked or when logout-all runs. */
-  onSessionEnded?: () => void;
+  onSessionEnded?: (revokedSessionId: string | undefined, expectedRevision: number) => boolean | void;
 };
 
 function friendlyMessage(error: unknown): string {
@@ -81,11 +82,15 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
       setActionBusy('revoke');
       setBusySessionId(session.sessionId);
       const onSessionEnded = onSessionEndedRef.current;
+      const sessionRevision = getSessionRevision();
       void (async () => {
         try {
           await service.revokeSession(session.sessionId);
           if (session.current) {
-            onSessionEnded?.();
+            if (onSessionEnded?.(session.sessionId, sessionRevision) === false) {
+              await load();
+              feedback.warning('نشست شما تغییر کرده است؛ فهرست دستگاه‌ها به‌روز شد.');
+            }
             return;
           }
           setSessions((current) => current.filter((item) => item.sessionId !== session.sessionId));
@@ -118,11 +123,12 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
     inflight.current = 'logout-all';
     setActionBusy('logout-all');
     const onSessionEnded = onSessionEndedRef.current;
+    const sessionRevision = getSessionRevision();
     void (async () => {
       try {
         await service.logoutAll();
         feedback.success('از همهٔ دستگاه‌ها خارج شدید.');
-        onSessionEnded?.();
+        onSessionEnded?.(undefined, sessionRevision);
       } catch (error) {
         if (isSessionInvalid(error)) {
           setRequireReauth(true);

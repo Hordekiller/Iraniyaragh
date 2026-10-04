@@ -71,6 +71,18 @@ describe('useAuthSessions', () => {
     await expect(screen.findByText('از همهٔ دستگاه‌ها خارج شدید.')).resolves.toBeInTheDocument();
   });
 
+  it('reloads a rotated current device instead of claiming that the replacement session ended', async () => {
+    const service = SessionManagementFixture.create();
+    const onSessionEnded = vi.fn(() => false);
+    const { result } = renderHook(() => useAuthSessions({ service, onSessionEnded }), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    const current = await currentSession(service);
+    act(() => result.current.revoke(current));
+    await expect(screen.findByText('نشست شما تغییر کرده است؛ فهرست دستگاه‌ها به‌روز شد.')).resolves.toBeInTheDocument();
+    expect(onSessionEnded).toHaveBeenCalledWith(current.sessionId, expect.any(Number));
+    expect(result.current.sessions.some(item => item.sessionId === current.sessionId)).toBe(false);
+  });
+
   it('surface NOT_FOUND on revoke as a warning and reloads the list', async () => {
     const fixture = SessionManagementFixture.create();
     const service: SessionManagementPort = {

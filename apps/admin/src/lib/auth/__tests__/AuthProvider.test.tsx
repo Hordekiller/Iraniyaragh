@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider, useAuth } from '../AuthProvider';
 import { getAccessToken, setAccessToken } from '../token-store';
 import { recoverApiSession } from '@/lib/api/client';
+import { useRef } from 'react';
+import { getSessionRevision } from '../token-store';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -22,20 +24,25 @@ const staffPrincipal = {
 
 function AdoptPanel() {
   const { isAuthenticated, establishSession, signOut, endRevokedSession, user } = useAuth();
+  const revocationRevision = useRef(0);
   return (
     <div>
       <span data-testid="authed">{isAuthenticated ? 'yes' : 'no'}</span>
       <span data-testid="email">{user?.userId ?? 'none'}</span>
       <button
         type="button"
-        onClick={() => establishSession({ accessToken: 'staff-at-1', principal: staffPrincipal })}
+        onClick={() => {
+          establishSession({ accessToken: 'staff-at-1', principal: staffPrincipal });
+          revocationRevision.current = getSessionRevision();
+        }}
       >
         adopt
       </button>
       <button type="button" onClick={() => signOut().catch(() => undefined)}>
         signout
       </button>
-      <button type="button" onClick={() => endRevokedSession(staffPrincipal.sessionId)}>revoked</button>
+      <button type="button" onClick={() => endRevokedSession(revocationRevision.current, staffPrincipal.sessionId)}>revoked</button>
+      <button type="button" onClick={() => endRevokedSession(revocationRevision.current)}>revoked-all</button>
       <button type="button" onClick={() => establishSession({ accessToken: 'new-session-token', principal: { ...staffPrincipal, sessionId: 'staff-s-2' } })}>new-session</button>
     </div>
   );
@@ -208,6 +215,21 @@ describe('AuthProvider', () => {
     fireEvent.click(screen.getByText('revoked'));
     expect(screen.getByTestId('authed')).toHaveTextContent('yes');
     expect(getAccessToken()).toBe('new-session-token');
+    fireEvent.click(screen.getByText('revoked-all'));
+    expect(getAccessToken()).toBe('new-session-token');
+  });
+
+  it('logout-all ends the same logical login after rotation, while a stale device revoke preserves the replacement session', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => jsonResponse({ data: url.endsWith('/refresh')
+      ? { accessToken: 'rotated-token' } : { principal: { ...staffPrincipal, sessionId: 'rotated-s-2' } } })));
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    fireEvent.click(screen.getByText('adopt'));
+    await act(async () => { await recoverApiSession(); });
+    fireEvent.click(screen.getByText('revoked'));
+    expect(getAccessToken()).toBe('rotated-token');
+    fireEvent.click(screen.getByText('revoked-all'));
+    expect(screen.getByTestId('authed')).toHaveTextContent('no');
+    expect(getAccessToken()).toBeNull();
   });
 
   it.each([[403, 'CSRF_INVALID'], [401, 'AUTH_REAUTHENTICATION_REQUIRED'], [500, 'INTERNAL_ERROR']])(
