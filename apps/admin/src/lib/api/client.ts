@@ -1,6 +1,11 @@
+import { getAccessToken, getSessionRevision } from '@/lib/auth/token-store';
+
 const API_PREFIX = '/api/v1';
 
 export function getApiBaseUrl(): string {
+  // The published Admin is mounted behind the same-origin /admin proxy.
+  // Keep host-only session/CSRF cookies on the actual domain in the address bar.
+  if (process.env.NEXT_PUBLIC_BASE_PATH && typeof window !== 'undefined') return window.location.origin;
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!configuredBaseUrl) {
     throw new Error('NEXT_PUBLIC_API_BASE_URL must be set to the API origin.');
@@ -34,7 +39,9 @@ export class ApiClientError extends Error {
   readonly retryAfterSeconds?: number;
 
   constructor(failure: ApiErrorEnvelope, headers?: Headers) {
-    super(failure.message);
+    super(['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED', 'AUTH_REAUTHENTICATION_REQUIRED'].includes(failure.code)
+      ? 'نشست شما معتبر نیست یا به پایان رسیده است. دوباره وارد شوید.'
+      : failure.message);
     this.name = 'ApiClientError';
     this.code = failure.code;
     this.requestId = failure.requestId;
@@ -69,10 +76,32 @@ type RequestOptions = {
   headers?: Record<string, string>;
   /** Abort controller signal for stale-response protection (list views). */
   signal?: AbortSignal;
-/** Some existing API routes return the contract body directly, without { data }. */
+  /** Auth bootstrap/logout must never recursively refresh or resurrect a session. */
+  recoverSession?: boolean;
+  /** Some existing API routes return the contract body directly, without { data }. */
   responseShape?: 'raw';
 
 };
+
+let sessionRecovery: (() => Promise<string>) | null = null;
+let recoveryInFlight: Promise<string> | null = null;
+
+export function registerSessionRecovery(recover: () => Promise<string>): () => void {
+  sessionRecovery = recover;
+  return () => { if (sessionRecovery === recover) sessionRecovery = null; };
+}
+
+/** Concurrent 401s share one cookie rotation; duplicate refreshes revoke the family. */
+export function recoverApiSession(): Promise<string> {
+  if (recoveryInFlight) return recoveryInFlight;
+  if (!sessionRecovery) return Promise.reject(new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 }));
+  recoveryInFlight = sessionRecovery().finally(() => { recoveryInFlight = null; });
+  return recoveryInFlight;
+}
+
+export async function settleSessionRecovery(): Promise<void> {
+  await recoveryInFlight?.catch(() => undefined);
+}
 
 function resolveUrl(path: string): string {
   return `${getApiBaseUrl()}${API_PREFIX}${path}`;
@@ -106,6 +135,7 @@ export function readCsrfToken(document: Document): string | null {
 export function apiFetch<T>(path: string, options: RequestOptions & { responseShape: 'raw' }): Promise<T>;
 export function apiFetch<T>(path: string, options?: RequestOptions): Promise<ApiSuccess<T>>;
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T | ApiSuccess<T>> {
+  const sessionRevision = getSessionRevision();
   const isFormData = options.body instanceof FormData;
   const headers: Record<string, string> = { ...(options.headers ?? {}) };
   if (!isFormData && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
@@ -134,11 +164,12 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       credentials: 'include',
       signal,
     });
-  } catch (error) {
+  } catch {
     clearTimeout(timeoutId);
-    if (options.signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+    if (options.signal?.aborted) {
       throw new ApiAbortError();
     }
+    if (controller.signal.aborted) throw new ApiNetworkError('زمان دریافت پاسخ به پایان رسید. دوباره تلاش کنید.');
     throw new ApiNetworkError('امکان برقراری ارتباط با سامانه وجود ندارد.');
   }
 
@@ -153,6 +184,14 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       requestId: '',
       statusCode: response.status,
     };
+    if (response.status === 401 && failure.code === 'AUTH_SESSION_INVALID' && options.token && options.recoverSession !== false && sessionRecovery) {
+      if (getSessionRevision() !== sessionRevision) throw new ApiAbortError();
+      const currentToken = getAccessToken();
+      const freshToken = currentToken && currentToken !== options.token ? currentToken : await recoverApiSession();
+      if (options.signal?.aborted || getSessionRevision() !== sessionRevision) throw new ApiAbortError();
+      // Keep the body and idempotency key unchanged, and retry at most once.
+      return apiFetch<T>(path, { ...options, token: freshToken, recoverSession: false });
+    }
     throw new ApiClientError(failure, response.headers);
   }
 

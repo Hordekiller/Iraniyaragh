@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Avatar,
+  Alert,
   Box,
   Divider,
   IconButton,
@@ -11,6 +12,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Snackbar,
   Typography,
 } from '@mui/material';
 import { LogOut } from 'lucide-react';
@@ -21,17 +23,26 @@ export function ProfileMenu() {
   const { user, signOut } = useAuth();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const open = Boolean(anchor);
+  const [signingOut, setSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   async function handleSignOut() {
     setAnchor(null);
-    await signOut();
-    router.replace('/login');
-    router.refresh();
+    setSigningOut(true);
+    setLogoutError(null);
+    try {
+      await signOut();
+      router.replace('/login');
+      router.refresh();
+    } catch {
+      setLogoutError('خروج از حساب تأیید نشد. ارتباط را بررسی و دوباره تلاش کنید.');
+    } finally { setSigningOut(false); }
   }
 
   return (
     <>
       <IconButton
+        disabled={signingOut}
         onClick={(event) => setAnchor(event.currentTarget)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -67,6 +78,9 @@ export function ProfileMenu() {
           <ListItemText sx={{ color: 'error.main' }}>خروج از حساب</ListItemText>
         </MenuItem>
       </Menu>
+      <Snackbar open={Boolean(logoutError)} onClose={() => setLogoutError(null)}>
+        <Alert severity="error" role="alert" onClose={() => setLogoutError(null)}>{logoutError}</Alert>
+      </Snackbar>
     </>
   );
 }

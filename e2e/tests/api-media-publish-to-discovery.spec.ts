@@ -162,6 +162,13 @@ async function uploadImage(
   });
   expect(put.status()).toBe(200);
 
+  // The signature authorizes PUT only. The source is private before and after
+  // processing; anonymous GET must fail at storage itself, without nginx.
+  const source = new URL(intent.uploadUrl);
+  source.search = "";
+  const privateSource = await request.get(source.toString());
+  expect(privateSource.status()).toBe(403);
+
   const confirmKey = newKey();
   const confirm = await request.post(
     `${API}/catalog/admin/products/${product.id}/media/${intent.mediaId}/confirm`,

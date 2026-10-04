@@ -43,6 +43,7 @@ export async function listProductMediaPicker(
 export async function initiateMediaUpload(
   productId: string,
   input: ProductMediaUploadRequest,
+  idempotencyKey = createIdempotencyKey("media-upload"),
 ) {
   const response = await apiFetch<ProductMediaUploadResponse["data"]>(
     `${root(productId)}/uploads`,
@@ -50,7 +51,7 @@ export async function initiateMediaUpload(
       method: "POST",
       token: token(),
       body: input,
-      headers: { "Idempotency-Key": createIdempotencyKey("media-upload") },
+      headers: { "Idempotency-Key": idempotencyKey },
     },
   );
   return response.data.upload;
@@ -64,6 +65,8 @@ export function uploadMediaObject(
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open(upload.method, upload.uploadUrl);
+    request.timeout = 120000;
+    request.addEventListener("timeout", () => reject(new ApiNetworkError("زمان ارسال تصویر به پایان رسید؛ دوباره تلاش کنید.")));
     for (const [name, value] of Object.entries(upload.requiredHeaders))
       request.setRequestHeader(name, value);
     request.upload.addEventListener("progress", (event) => {
@@ -90,6 +93,7 @@ export function uploadMediaObject(
 export async function confirmMediaUpload(
   productId: string,
   mediaId: string,
+  idempotencyKey = createIdempotencyKey("media-confirm"),
 ): Promise<AdminProductMedia> {
   const response = await apiFetch<AdminProductMediaResponse["data"]>(
     `${root(productId)}/${mediaId}/confirm`,
@@ -97,7 +101,7 @@ export async function confirmMediaUpload(
       method: "POST",
       token: token(),
       body: {},
-      headers: { "Idempotency-Key": createIdempotencyKey("media-confirm") },
+      headers: { "Idempotency-Key": idempotencyKey },
     },
   );
   return response.data.media;

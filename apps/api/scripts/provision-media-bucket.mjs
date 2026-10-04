@@ -53,7 +53,9 @@ async function allowPublicRead() {
         Effect: "Allow",
         Principal: { AWS: ["*"] },
         Action: ["s3:GetObject"],
-        Resource: [`arn:aws:s3:::${bucket}/*`],
+        // Original uploads remain private until verified and re-encoded by the
+        // worker. Only its immutable public rendition namespace is readable.
+        Resource: [`arn:aws:s3:::${bucket}/renditions/products/*`],
       },
     ],
   };
@@ -69,7 +71,7 @@ try {
   const state = await ensureBucket();
   await allowPublicRead();
   console.log(
-    `Object-storage bucket "${bucket}" ${state}; public read policy applied.`,
+    `Object-storage bucket "${bucket}" ${state}; rendition-only public read policy applied.`,
   );
 } catch (error) {
   console.error(

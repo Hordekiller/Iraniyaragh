@@ -31,17 +31,29 @@ export function HomePage() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([api.listCategories(), api.listProducts()])
+    let request = 0
+    const refresh = () => {
+      const current = ++request
+      void Promise.all([api.listCategories(), api.listProducts({ sortBy: 'newest' })])
       .then(([categories, result]) => {
-        if (cancelled) return
+        if (cancelled || current !== request) return
         setCatalog({ categories, products: result.items })
         setError(false)
       })
       .catch(() => {
-        if (cancelled) return
+        if (cancelled || current !== request) return
         setError(true)
       })
-    return () => { cancelled = true }
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
+    refresh()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
   }, [api, attempt])
 
   function retry() {

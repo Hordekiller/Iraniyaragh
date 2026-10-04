@@ -147,6 +147,29 @@ services:
 
   # --- application tier -------------------------------------------------------
 
+  # ClamD is unauthenticated TCP: keep it on the private Compose network only.
+  # Preloaded signatures allow startup; FreshClam maintains the persistent DB.
+  malware-scanner:
+    image: clamav/clamav:1.5.4-debian13-slim@sha256:9bb8712a50f0e75166e936c452cd82dd5e5be0b85586598930b5bbb84a99a578
+    restart: *restart
+    mem_limit: 3g
+    environment:
+      # The 4 GiB staging host cannot hold two ClamD engines during reload.
+      # Scans pause during reload and the worker retries unavailability safely.
+      CLAMD_CONF_ConcurrentDatabaseReload: 'no'
+      CLAMD_CONF_MaxThreads: '2'
+      CLAMD_CONF_MaxQueue: '4'
+      CLAMD_CONF_StreamMaxLength: '20M'
+      FRESHCLAM_CHECKS: '12'
+    volumes:
+      - malware_signatures:/var/lib/clamav
+    healthcheck:
+      test: ['CMD', 'clamdcheck.sh']
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 180s
+
   # `api`, `media-worker` and `media-bucket` are the same `api.Dockerfile`
   # `runtime` target, so they share one image and therefore one digest. The
   # target has to be named explicitly in compose.staging.build.yml because
@@ -159,6 +182,7 @@ services:
     environment:
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
       API_PORT: '4000'
+      OBJECT_STORAGE_UPLOAD_ENDPOINT: ${OBJECT_STORAGE_UPLOAD_ENDPOINT:?Set the HTTPS browser upload origin}
       # Assembled from the POSTGRES_* credentials rather than read from a
       # separate DATABASE_URL, so the password cannot drift out of sync with
       # the role Postgres was actually initialised with. A hand-edited URL was
@@ -185,6 +209,9 @@ services:
     command: ['node', 'dist/src/media-worker.js']
     env_file: [.env.staging]
     environment:
+      PRODUCT_MEDIA_SCANNER_HOST: malware-scanner
+      PRODUCT_MEDIA_SCANNER_PORT: '3310'
+      PRODUCT_MEDIA_SCANNER_TIMEOUT_MS: '15000'
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
       # The worker loads the same AppModule as the API, and the shared config
       # validation refuses to boot in staging/production without a port. The
@@ -228,6 +255,8 @@ services:
         condition: service_completed_successfully
       media-bucket:
         condition: service_completed_successfully
+      malware-scanner:
+        condition: service_healthy
 
   admin:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/admin:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
@@ -279,3 +308,4 @@ volumes:
   postgres_data:
   redis_data:
   object_store_data:
+  malware_signatures:

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientError } from '@/lib/api/client';
 import { FeedbackProvider } from '@/components/ui/FeedbackProvider';
 import { ProductCreateForm } from '../ProductCreateForm';
@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   listBrands: vi.fn(),
   listCategories: vi.fn(),
   createProduct: vi.fn(),
+  createBrand: vi.fn(),
+  createCategory: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -16,15 +18,20 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/auth/AuthProvider', () => ({
-  useAuth: () => ({ user: { userId: 'staff-1', sessionId: 'session-1', authenticationLevel: 'STAFF_MFA', permissions: ['catalog.write'] } }),
+  useAuth: () => ({ user: { userId: 'staff-1', sessionId: 'session-1', authenticationLevel: 'STAFF_MFA', permissions: ['catalog.write', 'catalog.media.read', 'catalog.media.write'] } }),
 }));
 
 vi.mock('@/lib/catalog/catalog-api', () => ({
   listBrands: mocks.listBrands,
   listCategories: mocks.listCategories,
   createProduct: mocks.createProduct,
+  createBrand: mocks.createBrand,
+  createCategory: mocks.createCategory,
   createIdempotencyKey: (prefix: string) => `${prefix}-test-key`,
 }));
+
+vi.mock('../ProductMediaManager', () => ({ ProductMediaManager: ({ productId, initialFiles }: { productId: string; initialFiles: File[] }) =>
+  <div data-testid="creation-upload-queue">{productId}:{initialFiles.map(file => file.name).join(',')}</div> }));
 
 function renderForm() {
   return render(
@@ -44,6 +51,7 @@ async function fillRequiredFields() {
 }
 
 describe('ProductCreateForm', () => {
+  afterEach(() => vi.unstubAllGlobals());
   it('loads brand and category references', async () => {
     mocks.listBrands.mockResolvedValue([{ id: 'b1', name: 'آبان لک', slug: 'abanlock', productCount: 0 }]);
     mocks.listCategories.mockResolvedValue([{ id: 'c1', name: 'قفل‌ها', slug: 'locks', parentId: null, productCount: 0 }]);
@@ -167,6 +175,46 @@ describe('ProductCreateForm', () => {
     expect(await screen.findByText('قیمت خرید الزامی است.')).toBeInTheDocument();
     expect(screen.getByText('قیمت فروش الزامی است.')).toBeInTheDocument();
     expect(mocks.createProduct).not.toHaveBeenCalled();
+  });
+
+  it('selects a newly created brand even if the following reference refresh fails', async () => {
+    mocks.listBrands.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('offline'));
+    mocks.listCategories.mockResolvedValue([]);
+    mocks.createBrand.mockResolvedValue({ brand: { id: 'new-brand', name: 'برند تازه', slug: 'new-brand' } });
+    mocks.createProduct.mockResolvedValue({ product: { id: 'p9', name: 'قفل' } });
+    renderForm();
+    await fillRequiredFields();
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن برند' }));
+    const dialog = within(screen.getByRole('dialog'));
+    fireEvent.change(dialog.getByLabelText(/نام برند/), { target: { value: 'برند تازه' } });
+    fireEvent.change(dialog.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'new-brand' } });
+    fireEvent.click(dialog.getByRole('button', { name: 'ساخت برند' }));
+    expect(await screen.findByText('بارگیری برندها ناموفق بود؛ دوباره تلاش کنید.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('combobox', { name: 'برند' })).toHaveTextContent('برند تازه');
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت کالا' }));
+    await waitFor(() => expect(mocks.createProduct).toHaveBeenCalledWith(expect.objectContaining({ brandId: 'new-brand' }), expect.any(String)));
+  });
+
+  it('keeps selected images attached to the saved draft instead of navigating away or creating twice', async () => {
+    vi.stubGlobal('URL', class extends URL {
+      static createObjectURL() { return 'blob:preview'; }
+      static revokeObjectURL() { /* preview released */ }
+    });
+    mocks.listBrands.mockResolvedValue([]);
+    mocks.listCategories.mockResolvedValue([]);
+    mocks.createProduct.mockResolvedValue({ product: { id: 'saved-draft', name: 'قفل' } });
+    renderForm();
+    await fillRequiredFields();
+    const input = screen.getByLabelText('تصاویر کالا', { exact: true });
+    fireEvent.change(input, { target: { files: [new File(['image'], 'queued.png', { type: 'image/png' })] } });
+    expect(await screen.findByAltText('پیش‌نمایش queued.png')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت کالا' }));
+    expect(await screen.findByTestId('creation-upload-queue')).toHaveTextContent('saved-draft:queued.png');
+    expect(mocks.createProduct).toHaveBeenCalledTimes(1);
+    expect(mocks.replace).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'جزئیات و انتشار کالا' })).toHaveAttribute('href', '/catalog/products/saved-draft');
+    expect(screen.queryByRole('button', { name: 'ثبت کالا' })).not.toBeInTheDocument();
   });
 });
 

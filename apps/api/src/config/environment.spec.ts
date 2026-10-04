@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { parseCorsOrigins, parseTrustProxy, validateEnvironment } from './environment';
 
+describe('media scanner configuration', () => {
+  it('uses bounded private daemon settings', () => {
+    expect(validateEnvironment({ ...validDevelopmentEnvironment, PRODUCT_MEDIA_SCANNER_HOST: 'malware-scanner' })).toMatchObject({
+      PRODUCT_MEDIA_SCANNER_HOST: 'malware-scanner', PRODUCT_MEDIA_SCANNER_PORT: 3310, PRODUCT_MEDIA_SCANNER_TIMEOUT_MS: 15000,
+    });
+    for (const input of [
+      { PRODUCT_MEDIA_SCANNER_HOST: 'http://scanner:3310' },
+      { PRODUCT_MEDIA_SCANNER_PORT: 0 },
+      { PRODUCT_MEDIA_SCANNER_TIMEOUT_MS: 30001 },
+    ]) expect(() => validateEnvironment({ ...validDevelopmentEnvironment, ...input })).toThrow(/PRODUCT_MEDIA_SCANNER_/u);
+  });
+});
+
 const validDevelopmentEnvironment = {
   NODE_ENV: 'development',
   API_PORT: '4000',
@@ -376,6 +389,13 @@ describe('validateEnvironment', () => {
         OBJECT_STORAGE_FORCE_PATH_STYLE: 'yes',
       }),
     ).toThrow('OBJECT_STORAGE_FORCE_PATH_STYLE');
+  });
+
+  it('requires an HTTPS origin without mutable signature components for browser uploads', () => {
+    expect(validateEnvironment({ ...validProductionEnvironment, OBJECT_STORAGE_UPLOAD_ENDPOINT: 'https://store.example.com' }).OBJECT_STORAGE_UPLOAD_ENDPOINT).toBe('https://store.example.com');
+    for (const endpoint of ['http://store.example.com', 'https://user:secret@store.example.com', 'https://store.example.com/media', 'https://store.example.com?signature=unsafe', 'https://store.example.com#unsafe']) {
+      expect(() => validateEnvironment({ ...validProductionEnvironment, OBJECT_STORAGE_UPLOAD_ENDPOINT: endpoint })).toThrow('OBJECT_STORAGE_UPLOAD_ENDPOINT');
+    }
   });
 
   it.each([

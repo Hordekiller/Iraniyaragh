@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, ApiAbortError, ApiClientError, ApiNetworkError, getApiBaseUrl, readCsrfToken } from '../client';
+import { apiFetch, ApiAbortError, ApiClientError, ApiNetworkError, getApiBaseUrl, readCsrfToken, registerSessionRecovery } from '../client';
+import { setAccessToken } from '@/lib/auth/token-store';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -12,6 +13,7 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
 describe('apiFetch', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    setAccessToken(null);
   });
 
   it('sends GET to the API base URL with credentials', async () => {
@@ -139,5 +141,80 @@ describe('apiFetch', () => {
     const error = new ApiClientError({ code: 'X', message: 'm', requestId: 'r', statusCode: 500 });
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe('m');
+  });
+
+  it('coalesces simultaneous expired-token requests and replays the exact mutation only once', async () => {
+    setAccessToken('old');
+    const recovery = vi.fn(async () => { setAccessToken('fresh', true); return 'fresh'; });
+    const unregister = registerSessionRecovery(recovery);
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) =>
+      (init.headers as Record<string, string>).Authorization === 'Bearer old'
+        ? jsonResponse({ code: 'AUTH_SESSION_INVALID', message: 'expired', statusCode: 401 }, false, 401)
+        : jsonResponse({ data: { ok: true } }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await Promise.all([1, 2].map(() => apiFetch('/catalog/admin/products', {
+        method: 'POST', token: 'old', body: { name: 'draft' }, headers: { 'Idempotency-Key': 'same-key' },
+      })));
+      expect(recovery).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      for (const [, init] of fetchMock.mock.calls) {
+        expect(init.body).toBe('{"name":"draft"}');
+        expect(init.headers).toMatchObject({ 'Idempotency-Key': 'same-key' });
+      }
+    } finally { unregister(); }
+  });
+
+  it('fails closed on revoked refresh and never retries the protected mutation', async () => {
+    const failure = new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: 'r', statusCode: 401 });
+    const unregister = registerSessionRecovery(async () => { throw failure; });
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ code: failure.code, statusCode: 401 }, false, 401)));
+    try {
+      await expect(apiFetch('/catalog/admin/products', { token: 'old' })).rejects.toBe(failure);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    } finally { unregister(); }
+  });
+
+  it('does not replay a late 401 after logout or a different login', async () => {
+    setAccessToken('old');
+    const recovery = vi.fn(async () => 'fresh');
+    const unregister = registerSessionRecovery(recovery);
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      setAccessToken('another-user');
+      return jsonResponse({ code: 'AUTH_SESSION_INVALID', statusCode: 401 }, false, 401);
+    }));
+    try {
+      await expect(apiFetch('/catalog/admin/products', { token: 'old' })).rejects.toBeInstanceOf(ApiAbortError);
+      expect(recovery).not.toHaveBeenCalled();
+    } finally { unregister(); }
+  });
+
+  it('does not loop when the refreshed token is rejected too', async () => {
+    setAccessToken('old');
+    const recovery = vi.fn(async () => { setAccessToken('fresh', true); return 'fresh'; });
+    const unregister = registerSessionRecovery(recovery);
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ code: 'AUTH_SESSION_INVALID', statusCode: 401 }, false, 401)));
+    try {
+      await expect(apiFetch('/catalog/admin/products', { token: 'old' })).rejects.toBeInstanceOf(ApiClientError);
+      expect(recovery).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally { unregister(); }
+  });
+
+  it('uses the already rotated token for a late 401 without rotating cookies again', async () => {
+    setAccessToken('old');
+    const recovery = vi.fn(async () => 'unnecessary');
+    const unregister = registerSessionRecovery(recovery);
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      if ((init.headers as Record<string, string>).Authorization === 'Bearer old') {
+        setAccessToken('already-fresh', true);
+        return jsonResponse({ code: 'AUTH_SESSION_INVALID', statusCode: 401 }, false, 401);
+      }
+      return jsonResponse({ data: { ok: true } });
+    }));
+    try {
+      await expect(apiFetch('/catalog/admin/products', { token: 'old' })).resolves.toEqual({ data: { ok: true } });
+      expect(recovery).not.toHaveBeenCalled();
+    } finally { unregister(); }
   });
 });
