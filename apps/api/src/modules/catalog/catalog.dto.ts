@@ -1,5 +1,6 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsNotIn, IsObject, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsNotIn, IsObject, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const AMOUNT = /^\d{1,15}$/u;
@@ -129,6 +130,20 @@ export class ProductVariantUpdateDto {
   @IsOptional() @IsInt() @Min(0) widthCm?: number | null;
   @IsOptional() @IsInt() @Min(0) heightCm?: number | null;
   @IsInt() @Min(0) expectedVersion!: number;
+}
+
+export class VariantAttributeValueDto {
+  @ApiProperty({ type: String, maxLength: 40, pattern: ATTRIBUTE_CODE.source })
+  @IsString() @Matches(ATTRIBUTE_CODE) @MaxLength(40) attributeCode!: string;
+  @ApiProperty({ type: String, maxLength: 40, pattern: ATTRIBUTE_CODE.source })
+  @IsString() @Matches(ATTRIBUTE_CODE) @MaxLength(40) optionCode!: string;
+}
+
+export class ProductVariantAttributesUpdateDto {
+  @ApiProperty({ type: Number, minimum: 0 })
+  @IsInt() @Min(0) expectedVersion!: number;
+  @ApiProperty({ type: [VariantAttributeValueDto], maxItems: 100 })
+  @IsArray() @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => VariantAttributeValueDto) values!: VariantAttributeValueDto[];
 }
 
 export class ProductVariantStatusDto {

@@ -46,6 +46,7 @@ describe('CatalogService product attribute configuration and generation', () => 
       ...dates,
     };
     const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
       product: { findUnique: vi.fn().mockResolvedValue(current), updateMany: vi.fn(), findUniqueOrThrow: vi.fn() },
       attributeDefinition: { findMany: vi.fn().mockResolvedValue([{ id: 'color-id', code: 'color' }]) },
       productVariantAttributeValue: { count: vi.fn().mockResolvedValue(1) },
@@ -60,6 +61,7 @@ describe('CatalogService product attribute configuration and generation', () => 
 
   it('persists generated variants atomically with server-owned SKUs', async () => {
     const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
       product: { findUnique: vi.fn().mockResolvedValue({ slug: 'shirt', attributes: [{ attribute: { id: 'color-id', code: 'color', name: 'Color', options: [{ id: 'red-id', code: 'red', label: 'Red', status: 'ACTIVE' }] } }] }) },
       productVariant: { create: vi.fn().mockResolvedValue({ id: 'variant-1', sku: 'shirt-red', barcode: null, title: 'Red', costPrice: 100n, salePrice: 200n, weightGrams: null, lengthCm: null, widthCm: null, heightCm: null, status: 'ACTIVE', isActive: true, version: 1, createdAt: dates.createdAt, updatedAt: dates.updatedAt, attributeValues: [{ attribute: { code: 'color', name: 'Color' }, option: { code: 'red', label: 'Red' } }] }) },
     };

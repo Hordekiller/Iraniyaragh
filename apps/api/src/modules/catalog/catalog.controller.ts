@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UnprocessableEntityException, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiHeader, ApiOkResponse, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiHeader, ApiOkResponse, ApiParam, ApiResponse } from '@nestjs/swagger';
 import type { AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CatalogImportCommitResponse, CatalogImportDetailResponse, CatalogImportDryRunResponse, CatalogImportUploadResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse, ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse } from '@iranyaragh/contracts';
 import { CurrentPrincipal, RequireAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { CatalogService } from './catalog.service';
-import { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductDescriptionDto, ProductListQueryDto, ProductStatusDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
+import { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductDescriptionDto, ProductListQueryDto, ProductStatusDto, ProductVariantAttributesUpdateDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
 import { PublicCatalogCache } from './public-catalog-cache.interceptor';
 import { CatalogImportService } from './catalog-import.service';
 import { openApiCatalogFailures, openApiPublicCatalog } from './catalog.openapi';
@@ -168,6 +168,22 @@ export class CatalogController {
   @RequireAuthentication('STAFF_MFA')
   @RequirePermission('catalog.write')
   async updateVariant(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Body() input: ProductVariantUpdateDto): Promise<ProductVariantResponse> { return this.catalog.updateVariant(principal.userId, id, input); }
+
+  @Patch('admin/variants/:id/attributes')
+  @ApiBearerAuth('access-token')
+  @ApiBody({ type: ProductVariantAttributesUpdateDto })
+  @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })
+  @RequireAuthentication('STAFF_MFA')
+  @RequirePermission('catalog.write')
+  @ApiResponse({ status: 400, schema: catalogFailure.validation })
+  @ApiResponse({ status: 401, schema: catalogFailure.unauthorized })
+  @ApiResponse({ status: 403, schema: catalogFailure.forbidden })
+  @ApiResponse({ status: 404, schema: catalogFailure.descriptionNotFound })
+  @ApiResponse({ status: 409, schema: catalogFailure.idempotencyConflict })
+  @ApiResponse({ status: 422, schema: catalogFailure.invalidReference })
+  async updateVariantAttributes(@CurrentPrincipal() principal: AuthPrincipalContext, @Headers('idempotency-key') idempotencyKey: string, @Param('id') id: string, @Body() input: ProductVariantAttributesUpdateDto): Promise<ProductVariantResponse> {
+    return this.catalog.updateVariantAttributes(principal.userId, idempotencyKey, id, input);
+  }
 
   @Post('admin/variants/:id/status')
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'Stable 8-96 character key retained across ambiguous retries.' })

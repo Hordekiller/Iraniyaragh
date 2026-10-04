@@ -293,6 +293,11 @@ export type ProductVariantUpdateRequest = {
   expectedVersion: number;
 };
 
+export type ProductVariantAttributesUpdateRequest = {
+  expectedVersion: number;
+  values: VariantAttributeValuePayload[];
+};
+
 export type ProductVariantStatusRequest = {
   status: VariantStatus;
   expectedVersion: number;

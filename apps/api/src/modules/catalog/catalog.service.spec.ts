@@ -24,6 +24,7 @@ const readyPrimaryMedia = {
 
 function createFakeClient(overrides: Record<string, unknown> = {}) {
   return {
+    $queryRaw: vi.fn().mockResolvedValue([]),
     product: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
@@ -94,7 +95,7 @@ describe('CatalogService', () => {
           include: expect.objectContaining({
             brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } },
             category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } },
-            variants: { where: { isActive: true } },
+            variants: expect.objectContaining({ where: { isActive: true } }),
           }),
         }),
       );
