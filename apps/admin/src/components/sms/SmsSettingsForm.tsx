@@ -90,6 +90,7 @@ function isUnchanged(values: FormValues, settings: SmsSettingsSnapshot['settings
  * summary card. Save always carries `expectedVersion` from the hook for CAS.
  */
 export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormProps) {
+  const readOnly = snapshot.secretBackend === 'read_only';
   const initial = useMemo(() => toFormValues(snapshot.settings), [snapshot.settings]);
 
   const form = useInHouseForm<FormValues>({
@@ -122,7 +123,8 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
           تنظیمات سرویس پیامک
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          فقط تنظیمات غیرمحرمانه از اینجا قابل ویرایش است؛ کلید پیامک از بخش «مدیریت کلید» اداره می‌شود.
+          {readOnly ? 'تنظیمات و کلید پیامک از محیط امن سرور مدیریت می‌شوند و اینجا فقط قابل مشاهده‌اند.'
+            : 'تنظیمات غیرمحرمانه از اینجا قابل ویرایش است؛ کلید از بخش مدیریت کلید اداره می‌شود.'}
         </Typography>
         <Divider sx={{ my: 2 }} />
 
@@ -135,20 +137,20 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
                 gap: 2,
               }}
             >
-              <FormField label="سرویس پیامک">
+              <FormField disabled={busy || readOnly} label="سرویس پیامک">
                 <FormControlRow
                   checked={form.values.enabled}
                   onChange={(checked) => form.handleChange('enabled', checked)}
                   label="ارسال پیامک OTP فعال باشد"
-                  disabled={busy}
+                  disabled={busy || readOnly}
                 />
               </FormField>
-              <FormField label="درگاه اعلان وضعیت">
+              <FormField disabled={busy || readOnly} label="درگاه اعلان وضعیت">
                 <FormControlRow
                   checked={form.values.deliveryStatusEnabled}
                   onChange={(checked) => form.handleChange('deliveryStatusEnabled', checked)}
                   label="دریافت وضعیت تحویل پیام‌ها"
-                  disabled={busy}
+                  disabled={busy || readOnly}
                 />
               </FormField>
             </Box>
@@ -157,32 +159,32 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
               <TextField
                 {...form.getFieldProps('templateId')}
                 label="شناسهٔ قالب تأیید (templateId)"
-                disabled={busy}
+                disabled={busy || readOnly}
                 slotProps={{ htmlInput: { inputMode: 'numeric', 'aria-required': true } }}
               />
               <TextField
                 {...form.getFieldProps('timeoutMs')}
                 label="مهلت درخواست (میلی‌ثانیه)"
-                disabled={busy}
+                disabled={busy || readOnly}
                 slotProps={{ htmlInput: { inputMode: 'numeric' } }}
               />
             </Box>
 
-            <FormField label="خط فرستنده (برای تشخیص)" helperText="درخواست تأیید، فیلد خط فرستنده نمی‌پذیرد؛ این مقدار فقط برای گزارش است.">
+            <FormField disabled={busy || readOnly} label="خط فرستنده (برای تشخیص)" helperText="درخواست تأیید، فیلد خط فرستنده نمی‌پذیرد؛ این مقدار فقط برای گزارش است.">
               <TextField
                 {...form.getFieldProps('senderLine')}
                 placeholder="مثال: +989120000000"
-                disabled={busy}
+                disabled={busy || readOnly}
               />
             </FormField>
 
-            <FormField label="پیام «قطع سرویس» (خروجی اضطراری)">
+            <FormField disabled={busy || readOnly} label="پیام «قطع سرویس» (خروجی اضطراری)">
               <TextField
                 {...form.getFieldProps('maintenanceMessage')}
                 multiline
                 minRows={2}
                 placeholder="در صورت فعال بودن حالت قطع سرویس نمایش داده می‌شود"
-                disabled={busy}
+                disabled={busy || readOnly}
               />
             </FormField>
 
@@ -196,22 +198,22 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
               <TextField
                 {...form.getFieldProps('failureWindowMinutes')}
                 label="دورهٔ خطا (دقیقه)"
-                disabled={busy}
+                disabled={busy || readOnly}
                 slotProps={{ htmlInput: { inputMode: 'numeric' } }}
               />
               <TextField
                 {...form.getFieldProps('failureCount')}
                 label="آستانهٔ شمارش خطا"
-                disabled={busy}
+                disabled={busy || readOnly}
                 slotProps={{ htmlInput: { inputMode: 'numeric' } }}
               />
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <FormField label="حالت قطع سرویس">
+                <FormField disabled={busy || readOnly} label="حالت قطع سرویس">
                   <FormControlRow
                     checked={form.values.outageMode}
                     onChange={(checked) => form.handleChange('outageMode', checked)}
                     label="fail-closed (توقف ارسال برابر با قطع سرویس)"
-                    disabled={busy}
+                    disabled={busy || readOnly}
                   />
                 </FormField>
               </Box>
@@ -228,11 +230,11 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
                 variant="outlined"
                 color="secondary"
                 onClick={form.reset}
-                disabled={busy || unchanged}
+                disabled={readOnly || busy || unchanged}
               >
                 بازنشانی
               </Button>
-              <Button variant="contained" type="submit" disabled={busy || unchanged || form.submitting}>
+              <Button variant="contained" type="submit" disabled={readOnly || busy || unchanged || form.submitting}>
                 ذخیرهٔ تنظیمات
               </Button>
             </Box>
@@ -256,7 +258,7 @@ function FormControlRow({
 }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Switch checked={checked} onChange={(event) => onChange(event.target.checked)} disabled={disabled} inputProps={{ 'aria-label': label }} />
+      <Switch checked={checked} onChange={(event) => onChange(event.target.checked)} disabled={disabled} slotProps={{ input: { 'aria-label': label } }} />
       <Typography variant="body2">{label}</Typography>
     </Box>
   );

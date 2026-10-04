@@ -221,7 +221,11 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                 </h2>
                 <p className="text-[13px] text-slate-500 mt-1 leading-6">
                   {state.phase === 'code' ? (
-                    <>کدی که برای {state.mobile} پیامک شد را وارد کنید</>
+                    state.challenge?.deliveryStatus === 'unknown_result' ? (
+                      <>نتیجهٔ ارسال مشخص نیست. اگر کد را دریافت کردید وارد کنید؛ برای ارسال مجدد تا پایان شمارش صبر کنید.</>
+                    ) : (
+                      <>کد دریافتی برای {state.mobile} را وارد کنید</>
+                    )
                   ) : (
                     <>کد تایید یک‌بارمصرف برای شما پیامک می‌شود</>
                   )}

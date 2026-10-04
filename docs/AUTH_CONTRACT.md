@@ -175,10 +175,17 @@ request always returns the same `202` shape:
   "data": {
     "challengeId": "opaque-id",
     "expiresInSeconds": 300,
-    "resendAfterSeconds": 60
+    "resendAfterSeconds": 60,
+    "deliveryStatus": "accepted"
   }
 }
 ```
+
+`deliveryStatus` is `accepted` only after authoritative provider acceptance.
+`unknown_result` preserves the challenge for a code that may arrive, but the UI
+must explain the uncertainty and retain the resend cooldown. Older servers may
+omit this additive field. Explicit provider throttling returns 429 RATE_LIMITED
+with Retry-After 60; known failed sends invalidate the challenge.
 
 The endpoint fixes purpose to `SIGN_IN` and channel to `SMS`; clients cannot choose
 an enum value. Resend invalidates any prior active challenge for the same canonical

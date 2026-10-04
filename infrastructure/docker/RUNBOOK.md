@@ -366,7 +366,7 @@ These are not conventions to remember. Each one fails a build or a boot:
 | No fixture staff client in a deployed Admin | `admin.Dockerfile` fails the build on `NEXT_PUBLIC_FIXTURE_AUTH` |
 | No development access code | removed from the product in #372; no compose service re-enables it |
 | Real payment gateway | API refuses to boot unless `PAYMENT_PROVIDER_MODE` is `live` with a merchant id and https callback, or `disabled`, which no-ops every call |
-| Real SMS delivery | API refuses to boot without `SMS_IR_API_KEY` and all four template ids, unless `SMS_PROVIDER_MODE=disabled` |
+| Real SMS delivery | API refuses to boot without `SMS_IR_API_KEY` and all four effective template ids (Admin DB or environment fallback), unless `SMS_PROVIDER_MODE=disabled` |
 | Real secrets | API refuses staging/production secrets shorter than 32 characters or containing a placeholder |
 | https public origins | API rejects `http` for `STOREFRONT_ORIGIN` and `PUBLIC_MEDIA_ORIGIN` |
 | Genuine health | `/api/v1/health/ready` checks Postgres and Redis; liveness alone is not used to accept traffic |
@@ -504,3 +504,15 @@ The manifest and image provenance are documented in
 `apps/api/scripts/demo-catalog/README.md`. Every sample remains explicitly DEMO
 and must stay isolated from production sales. No reviews, customers, orders,
 payments, OTP delivery, video support or provider successes are fabricated.
+
+
+### SMS.ir real staging acceptance (#114)
+
+Follow [SMS_IR_STAGING_ACCEPTANCE.md](../../docs/SMS_IR_STAGING_ACCEPTANCE.md)
+for private credential/template approval, bounded non-sending account checks,
+durable controlled operator tests and real handset evidence. Environment-managed
+activation/timeout/secrets remain read-only in Admin; approved template IDs are
+editable in the separate **قالب‌های SMS.ir** section and persisted in PostgreSQL. `SMS_IR_TEST_SEND_ENABLED` defaults to
+false; an approved private `SMS_IR_TEST_MOBILE` is required for a confirmed test.
+Deploy environment changes through the official exact-SHA release path. Keep
+payment mode unchanged. Missing approvals or handset evidence keep #114 open.

@@ -19,6 +19,8 @@ result or a missing template stays `FAILED` for human investigation. Never
 blindly reset `FAILED` to `PENDING`; first check the provider dashboard for
 the effect's `providerMessageId`/time and the customer's delivery evidence.
 
+The Admin template section persists non-secret IDs and dispatch reads them live.
+Private environment IDs remain fallback only until the first database save.
 Staging/production configuration requires distinct approved verification
 template IDs: `SMS_IR_ORDER_PAID_TEMPLATE_ID`,
 `SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID`, and
@@ -34,3 +36,16 @@ join `OutboxEvent` to distinguish unprojected from undelivered effects. No
 automatic replay of uncertain results is provided. The worker logs aggregate
 counts only. A future operations UI can expose masked diagnostics and a
 reviewed manual retry policy, but that is not a pretext to resend unknowns.
+
+
+## Real provider acceptance
+
+See [SMS.ir staging acceptance](SMS_IR_STAGING_ACCEPTANCE.md) for approved private
+templates and real handset evidence. Network/TLS/stream failures, HTTP 5xx,
+unprovable success and generic/undocumented provider results are `unknown_result`;
+no automatic resend follows them. Customer OTP exposes this uncertainty without
+invalidating a potentially delivered challenge or bypassing cooldown. A provider
+throttle invalidates the undelivered challenge and returns 429 with Retry-After.
+Admin account validation uses the non-sending credit endpoint and never projects
+credit, secrets, raw responses or full destinations. Controlled operator tests
+have a separate durable pre-dispatch claim; they are not login challenges.
