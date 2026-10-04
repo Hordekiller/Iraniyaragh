@@ -68,6 +68,33 @@ describe.sequential(
       await prisma.$disconnect();
     });
 
+    it("rejects duplicate purpose bindings at the API service, active bootstrap and database", async () => {
+      await expect(
+        settings().update(
+          actorId,
+          "request-duplicate",
+          input({ orderPaidTemplateId: 201 }),
+        ),
+      ).rejects.toMatchObject({ status: 400 });
+      expect((await settings().read()).version).toBe(0);
+      await expect(
+        settings({
+          SMS_PROVIDER_MODE: "smsir",
+          SMS_IR_ORDER_PAID_TEMPLATE_ID: 101,
+        }).onApplicationBootstrap(),
+      ).rejects.toThrow("distinct");
+      await expect(
+        prisma.smsTemplateSettings.create({
+          data: {
+            id: "customer-sms",
+            otpTemplateId: 201,
+            orderPaidTemplateId: 201,
+          },
+        }),
+      ).rejects.toThrow();
+      expect((await settings().read()).version).toBe(0);
+    });
+
     it("uses environment fallback until the first persisted configuration, then treats null as authoritative", async () => {
       expect(await settings().read()).toMatchObject({
         version: 0,

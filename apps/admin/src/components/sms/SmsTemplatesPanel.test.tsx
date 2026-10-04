@@ -74,7 +74,9 @@ describe("Admin approved template entry", () => {
   });
   it("reuses the same idempotent request after an ambiguous network result", async () => {
     const service = harness();
-    service.updateTemplates.mockRejectedValueOnce(new SmsNetworkError("offline"));
+    service.updateTemplates.mockRejectedValueOnce(
+      new SmsNetworkError("offline"),
+    );
     await edit();
     save();
     await screen.findByText(/نتیجهٔ ذخیره مشخص نیست/);
@@ -141,5 +143,22 @@ describe("Admin approved template entry", () => {
     const form = screen.getByLabelText(labels[0]!).closest("form")!;
     fireEvent.submit(form);
     expect(service.updateTemplates).toHaveBeenCalledOnce();
+  });
+});
+
+describe("distinct SMS purpose templates", () => {
+  it("rejects reuse of the OTP template for an order notification", async () => {
+    const service = harness();
+    await edit();
+    fireEvent.change(screen.getByLabelText(labels[1]!), {
+      target: { value: "123" },
+    });
+    save();
+    expect(
+      await screen.findByText(
+        "برای هر نوع پیام، شناسهٔ قالب جداگانه وارد کنید.",
+      ),
+    ).toBeInTheDocument();
+    expect(service.updateTemplates).not.toHaveBeenCalled();
   });
 });

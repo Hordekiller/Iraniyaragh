@@ -70,7 +70,9 @@ names and proposed Persian copy appear beside each field. IDs are non-secret
 configuration. They persist in PostgreSQL, survive reload/restart, and are read
 by OTP and transactional dispatch without restarting the API or worker.
 
-A missing field may remain blank while SMS is disabled. Saving does not register
+A missing field may remain blank while SMS is disabled. Non-null IDs must be
+distinct for all four purposes; API, bootstrap and a forward database constraint
+reject reuse of one template for different customer-facing messages. Saving does not register
 or approve a provider template, send an SMS, enable the provider, or rotate a key.
 The first saved database configuration becomes authoritative for all four fields,
 including blank values. Before the first save, private environment template IDs

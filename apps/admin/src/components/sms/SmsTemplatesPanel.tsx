@@ -78,7 +78,13 @@ function parseId(value: string): number | null {
   return Number(normalized);
 }
 
-export function SmsTemplatesPanel({ service, onSaved }: { service: SmsTemplatesPort; onSaved?: () => void }) {
+export function SmsTemplatesPanel({
+  service,
+  onSaved,
+}: {
+  service: SmsTemplatesPort;
+  onSaved?: () => void;
+}) {
   const [snapshot, setSnapshot] = useState<SmsTemplateSettings | null>(null);
   const [values, setValues] = useState<Values>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -157,6 +163,13 @@ export function SmsTemplatesPanel({ service, onSaved }: { service: SmsTemplatesP
       };
     } catch (cause) {
       showError(cause);
+      return;
+    }
+    const configured = FIELDS.map(([field]) => payload[field]).filter(
+      (value) => value !== null,
+    );
+    if (new Set(configured).size !== configured.length) {
+      setError("برای هر نوع پیام، شناسهٔ قالب جداگانه وارد کنید.");
       return;
     }
     pending.current = payload;

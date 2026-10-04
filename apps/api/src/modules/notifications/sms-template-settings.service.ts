@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -37,6 +38,13 @@ const PURPOSE_FIELD: Record<SmsPurpose, (typeof FIELDS)[number]> = {
   shipment_delivered: "shipmentDeliveredTemplateId",
 };
 
+function hasDistinctTemplates(settings: SmsTemplateFields): boolean {
+  const configured = FIELDS.map((field) => settings[field]).filter(
+    (value) => value !== null,
+  );
+  return new Set(configured).size === configured.length;
+}
+
 /** Non-secret configuration, read on dispatch so API/worker restarts are unnecessary. */
 @Injectable()
 export class SmsTemplateSettingsService
@@ -54,6 +62,8 @@ export class SmsTemplateSettingsService
       throw new Error(
         "Active SMS delivery requires all four configured templates in Admin or the private environment.",
       );
+    if (!hasDistinctTemplates(settings))
+      throw new Error("SMS purposes require four distinct approved templates.");
   }
 
   private activeRealProvider(): boolean {
@@ -146,6 +156,11 @@ export class SmsTemplateSettingsService
           code: "OPERATION_UNSUPPORTED",
           message:
             "Disable SMS through deployment configuration before clearing an active template.",
+        });
+      if (!hasDistinctTemplates(input))
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "Each SMS purpose requires a distinct approved template ID.",
         });
       const row = await tx.smsTemplateSettings.findUnique({
         where: { id: SETTINGS_ID },
