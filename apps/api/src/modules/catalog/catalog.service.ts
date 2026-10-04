@@ -39,7 +39,7 @@ type PublicMediaRow = { id: string; kind: string; role: string; position: number
 type ProductDetailRow = { id: string; name: string; slug: string; description: string | null; status: ProductStatus; version: number; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; brand: BrandRow | null; category: CategoryRow | null; variants: VariantRow[]; attributes?: ProductAttributeRow[]; media?: PublicMediaRow[] };
 type GenerationOption = { attributeId: string; attributeCode: string; attributeName: string; optionId: string; optionCode: string; optionLabel: string };
 type GenerationCombination = { signature: string; values: GenerationOption[] };
-type GenerationContext = { slug: string; axes: Array<{ id: string; code: string; name: string; options: GenerationOption[] }> };
+type GenerationContext = { slug: string; status: ProductStatus; requiredAttributes: Array<{ attributeId: string; isRequired: boolean }>; axes: Array<{ id: string; code: string; name: string; options: GenerationOption[] }> };
 
 @Injectable()
 export class CatalogService {
@@ -120,6 +120,7 @@ export class CatalogService {
         await this.lockProduct(tx, id);
         const context = await this.loadGenerationContext(tx, id);
         const combinations = this.buildCombinations(context, input.optionSelection);
+        if (context.status === ProductStatus.ACTIVE) this.assertRequiredVariantValues(context.requiredAttributes, combinations.map(combination => ({ status: 'ACTIVE', attributeValues: combination.values })));
         const created = [];
         for (const combination of combinations) {
           const sku = this.generatedSku(context.slug, combination);
@@ -623,9 +624,9 @@ export class CatalogService {
     return { ...this.attributeSummary(attribute), options: attribute.options.map(option => this.optionSummary(option)) };
   }
   private async loadGenerationContext(client: PrismaService | Prisma.TransactionClient, productId: string): Promise<GenerationContext> {
-    const product = await client.product.findUnique({ where: { id: productId }, select: { slug: true, attributes: { where: { isVariantAxis: true, attribute: { status: 'ACTIVE' } }, orderBy: { attribute: { code: 'asc' } }, include: { attribute: { include: { options: { where: { status: 'ACTIVE' }, orderBy: { code: 'asc' } } } } } } } });
+    const product = await client.product.findUnique({ where: { id: productId }, select: { slug: true, status: true, attributes: { orderBy: { attribute: { code: 'asc' } }, include: { attribute: { include: { options: { where: { status: 'ACTIVE' }, orderBy: { code: 'asc' } } } } } } } });
     if (!product) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
-    return { slug: product.slug, axes: product.attributes.map(axis => ({ id: axis.attribute.id, code: axis.attribute.code, name: axis.attribute.name, options: axis.attribute.options.map(option => ({ attributeId: axis.attribute.id, attributeCode: axis.attribute.code, attributeName: axis.attribute.name, optionId: option.id, optionCode: option.code, optionLabel: option.label })) })) };
+    return { slug: product.slug, status: product.status, requiredAttributes: product.attributes, axes: product.attributes.filter(axis => axis.isVariantAxis && axis.attribute.status === 'ACTIVE').map(axis => ({ id: axis.attribute.id, code: axis.attribute.code, name: axis.attribute.name, options: axis.attribute.options.map(option => ({ attributeId: axis.attribute.id, attributeCode: axis.attribute.code, attributeName: axis.attribute.name, optionId: option.id, optionCode: option.code, optionLabel: option.label })) })) };
   }
   private buildCombinations(context: GenerationContext, selection: Record<string, string[]>): GenerationCombination[] {
     if (!selection || typeof selection !== 'object' || Array.isArray(selection)) throw new UnprocessableEntityException({ code: 'ATTRIBUTE_OPTION_INVALID', message: 'optionSelection must be an object.' });

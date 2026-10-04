@@ -141,6 +141,17 @@ describe.sequential('Catalog authoring: persisted attributes and category hierar
     expect((await catalog.categoryTree()).data.tree.find(node => node.id === root)?.children.map(node => node.id)).toContain(child);
   });
 
+  it('cannot generate an incomplete active SKU under a published product', async () => {
+    const current = (await catalog.getAdminProduct(product)).data.product;
+    await catalog.configureProductAttributes(actor, product, { expectedVersion: current.version!, configurations: [
+      { attributeCode: `${prefix}-color`, isVariantAxis: true, isRequired: true },
+      { attributeCode: `${prefix}-material`, isVariantAxis: false, isRequired: true },
+    ] });
+    const count = await prisma.productVariant.count({ where: { productId: product } });
+    await expect(catalog.generateVariants(actor, key('incomplete-generate'), product, { optionSelection: { [`${prefix}-color`]: ['red'] }, costPrice: { amount: '100000', currency: 'IRR' }, salePrice: { amount: '125000', currency: 'IRR' } })).rejects.toMatchObject({ response: { code: 'ATTRIBUTE_OPTION_INVALID' } });
+    expect(await prisma.productVariant.count({ where: { productId: product } })).toBe(count);
+  });
+
   it('cannot activate an incomplete SKU under a published product', async () => {
     const inactive = await prisma.productVariant.create({ data: { productId: product, sku: `${prefix}-INCOMPLETE`, skuKey: `${prefix}-INCOMPLETE`, combinationSignature: `${prefix}-pending-inactive`, costPrice: 100000n, salePrice: 125000n, status: 'INACTIVE', isActive: false } });
     await expect(catalog.updateVariantStatus(actor, key('incomplete-activate'), inactive.id, { expectedVersion: inactive.version, status: 'ACTIVE' })).rejects.toMatchObject({ response: { code: 'ATTRIBUTE_OPTION_INVALID' } });
