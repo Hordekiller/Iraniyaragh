@@ -1,3 +1,4 @@
+import type { SmsValidation } from "@iranyaragh/contracts";
 import type {
   SmsProvider,
   SmsRejectionReason,
@@ -56,7 +57,9 @@ function parseAcceptedMessageId(data: unknown): string | null {
     (typeof messageId === "number" &&
       Number.isSafeInteger(messageId) &&
       messageId > 0) ||
-    (typeof messageId === "string" && /^[1-9]\d*$/u.test(messageId))
+    (typeof messageId === "string" &&
+      messageId.length <= 128 &&
+      /^[1-9]\d*$/u.test(messageId))
   )
     return String(messageId);
   return null;
@@ -70,8 +73,10 @@ async function readBoundedEnvelope(
     declaredLength !== null &&
     /^\d+$/u.test(declaredLength) &&
     Number(declaredLength) > MAX_RESPONSE_BYTES
-  )
+  ) {
+    await response.body?.cancel().catch(() => undefined);
     return null;
+  }
   if (response.body === null) return null;
 
   const reader = response.body.getReader();
@@ -99,7 +104,12 @@ async function readBoundedEnvelope(
     offset += chunk.byteLength;
   }
   try {
-    return JSON.parse(new TextDecoder().decode(body)) as SmsIrEnvelope;
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(body));
+    return typeof parsed === "object" &&
+      parsed !== null &&
+      !Array.isArray(parsed)
+      ? (parsed as SmsIrEnvelope)
+      : null;
   } catch {
     return null;
   }
@@ -118,12 +128,77 @@ export class SmsIrProvider implements SmsProvider {
   ) {
     if (
       config.apiKey.length === 0 ||
-      config.apiKey.trim() !== config.apiKey ||
+      [...config.apiKey].some((character) => {
+        const point = character.codePointAt(0) ?? 0;
+        return /\s/u.test(character) || point <= 31 || point === 127;
+      }) ||
       !Number.isInteger(config.timeoutMs) ||
       config.timeoutMs < 1 ||
       config.timeoutMs > 10_000
     ) {
       throw new Error("SMS.ir provider configuration is invalid.");
+    }
+  }
+
+  async checkHealth(): Promise<SmsValidation> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+    const result = (
+      providerHealth: SmsValidation["providerHealth"],
+      errorClass: SmsValidation["errorClass"],
+    ): SmsValidation => ({
+      checked: true,
+      providerHealth,
+      errorClass,
+      lastCheckedAt: new Date().toISOString(),
+    });
+    try {
+      // The official account-credit endpoint does not dispatch a message.
+      const response = await this.fetcher("https://api.sms.ir/v1/credit", {
+        method: "GET",
+        redirect: "error",
+        headers: {
+          accept: "application/json",
+          "x-api-key": this.config.apiKey,
+        },
+        signal: controller.signal,
+      });
+      if ([401, 403, 429].includes(response.status) || response.status >= 500) {
+        await response.body?.cancel().catch(() => undefined);
+        return result(
+          response.status === 429 ? "degraded" : "down",
+          response.status === 429
+            ? "rate_limit"
+            : response.status < 500
+              ? "auth"
+              : "provider_error",
+        );
+      }
+      const envelope = await readBoundedEnvelope(response);
+      if (
+        response.ok &&
+        envelope?.status === 1 &&
+        typeof envelope.data === "number" &&
+        Number.isFinite(envelope.data) &&
+        envelope.data >= 0
+      )
+        return result(
+          envelope.data > 0 ? "ok" : "degraded",
+          envelope.data > 0 ? null : "provider_error",
+        );
+      if (
+        typeof envelope?.status === "number" &&
+        rejectionReason(envelope.status) === "authentication"
+      )
+        return result("down", "auth");
+      return result("unknown", "provider_error");
+    } catch {
+      return result(
+        "down",
+        controller.signal.aborted ? "timeout" : "provider_error",
+      );
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -157,6 +232,8 @@ export class SmsIrProvider implements SmsProvider {
     try {
       const response = await this.fetcher(SMS_IR_VERIFY_URL, {
         method: "POST",
+        // Never forward the API key or OTP to a redirected origin.
+        redirect: "error",
         headers: {
           "content-type": "application/json",
           accept: "application/json",
@@ -169,11 +246,16 @@ export class SmsIrProvider implements SmsProvider {
         }),
         signal: controller.signal,
       });
-      if (response.status === 429) return { status: "rate_limited" };
-      if (response.status >= 500) return { status: "unavailable" };
+      if (response.status === 429 || response.status >= 500) {
+        await response.body?.cancel().catch(() => undefined);
+        // A gateway failure can follow an accepted dispatch.
+        return {
+          status: response.status === 429 ? "rate_limited" : "unknown_result",
+        };
+      }
       const envelope = await readBoundedEnvelope(response);
       if (envelope === null) {
-        if (response.status === 401)
+        if (response.status === 401 || response.status === 403)
           return { status: "rejected", reason: "authentication" };
         if (response.status >= 400 && response.status < 500)
           return { status: "rejected", reason: "invalid_request" };
@@ -185,22 +267,24 @@ export class SmsIrProvider implements SmsProvider {
           ? { status: "accepted", providerMessageId }
           : { status: "unknown_result" };
       }
-      if (envelope.status === 0) return { status: "unavailable" };
+      if (envelope.status === 1) return { status: "unknown_result" };
+      if (envelope.status === 0) return { status: "unknown_result" };
       if (envelope.status === 20) return { status: "rate_limited" };
-      if (typeof envelope.status === "number")
-        return { status: "rejected", reason: rejectionReason(envelope.status) };
-      if (response.status === 401)
+      if (typeof envelope.status === "number") {
+        const reason = rejectionReason(envelope.status);
+        return reason === "unknown"
+          ? { status: "unknown_result" }
+          : { status: "rejected", reason };
+      }
+      if (response.status === 401 || response.status === 403)
         return { status: "rejected", reason: "authentication" };
       if (response.status >= 400 && response.status < 500)
         return { status: "rejected", reason: "invalid_request" };
       return { status: "unknown_result" };
-    } catch (error) {
-      if (
-        controller.signal.aborted ||
-        (error instanceof Error && error.name === "AbortError")
-      )
-        return { status: "unknown_result" };
-      return { status: "unavailable" };
+    } catch {
+      // Fetch cannot prove whether a request reached the provider. Network,
+      // TLS, redirect, timeout and response-stream errors remain ambiguous.
+      return { status: "unknown_result" };
     } finally {
       clearTimeout(timeout);
     }

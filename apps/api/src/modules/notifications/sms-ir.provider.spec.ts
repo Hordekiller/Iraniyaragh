@@ -29,6 +29,17 @@ describe("SmsIrProvider", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it.each(["unit key", "unit\nkey", "unit\u0000key", "unit\u007fkey"])(
+    "rejects invalid key characters without exposing the value",
+    (apiKey) => {
+      const fetcher = vi.fn();
+      expect(
+        () => new SmsIrProvider({ apiKey, timeoutMs: 100 }, fetcher),
+      ).toThrow("SMS.ir provider configuration is invalid.");
+      expect(fetcher).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     [{ destination: "09121234567" }, "destination"],
     [{ templateId: 0 }, "invalid_request"],
@@ -58,6 +69,7 @@ describe("SmsIrProvider", () => {
       fetcher,
     ).send(request);
     expect(result).toEqual({ status: "accepted", providerMessageId: "42" });
+    expect(fetcher.mock.calls[0]?.[1]).toMatchObject({ redirect: "error" });
     expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body))).toEqual({
       mobile: "9121234567",
       templateId: 123456,
@@ -81,6 +93,9 @@ describe("SmsIrProvider", () => {
 
   it.each([
     [10, "authentication"],
+    [11, "authentication"],
+    [12, "authentication"],
+    [13, "account"],
     [14, "account"],
     [101, "sender"],
     [102, "credit"],
@@ -88,8 +103,8 @@ describe("SmsIrProvider", () => {
     [115, "destination"],
     [114, "content"],
     [113, "template"],
+    [119, "template"],
     [109, "invalid_request"],
-    [999, "unknown"],
   ])(
     "maps vendor status %s without leaking its response",
     async (vendorStatus, reason) => {
@@ -103,12 +118,21 @@ describe("SmsIrProvider", () => {
     },
   );
 
-  it("maps vendor status 0 to unavailable", async () => {
+  it("keeps vendor internal errors ambiguous", async () => {
     expect(
       await new SmsIrProvider({ apiKey: "secret", timeoutMs: 100 }, async () =>
         response(200, { status: 0 }),
       ).send(request),
-    ).toEqual({ status: "unavailable" });
+    ).toEqual({ status: "unknown_result" });
+  });
+
+  it("does not classify an undocumented vendor code as a definite rejection", async () => {
+    expect(
+      await new SmsIrProvider(
+        { apiKey: "unit-test-key", timeoutMs: 100 },
+        async () => response(200, { status: 999 }),
+      ).send(request),
+    ).toEqual({ status: "unknown_result" });
   });
 
   it("never accepts a success-shaped envelope on non-success HTTP", async () => {
@@ -116,11 +140,12 @@ describe("SmsIrProvider", () => {
       await new SmsIrProvider({ apiKey: "secret", timeoutMs: 100 }, async () =>
         response(400, { status: 1, data: { messageId: 42 } }),
       ).send(request),
-    ).toEqual({ status: "rejected", reason: "unknown" });
+    ).toEqual({ status: "unknown_result" });
   });
 
   it.each([
     [401, "authentication"],
+    [403, "authentication"],
     [400, "invalid_request"],
   ])("maps a non-JSON HTTP %s response safely", async (status, reason) => {
     const plain = new Response("not-json", { status });
@@ -135,12 +160,12 @@ describe("SmsIrProvider", () => {
   it.each([
     [500, { status: 0 }],
     [503, null],
-  ])("maps HTTP %s to unavailable", async (status, body) => {
+  ])("keeps HTTP %s ambiguous", async (status, body) => {
     expect(
       await new SmsIrProvider({ apiKey: "secret", timeoutMs: 100 }, async () =>
         response(status, body),
       ).send(request),
-    ).toEqual({ status: "unavailable" });
+    ).toEqual({ status: "unknown_result" });
   });
 
   it("maps malformed or unprovable success responses to unknown_result", async () => {
@@ -168,6 +193,93 @@ describe("SmsIrProvider", () => {
     ).toEqual({ status: "unknown_result" });
   });
 
+  it.each([null, [], "text", 42, true])(
+    "keeps non-object JSON ambiguous (%j)",
+    async (body) => {
+      expect(
+        await new SmsIrProvider(
+          { apiKey: "unit-test-key", timeoutMs: 100 },
+          async () => response(200, body),
+        ).send(request),
+      ).toEqual({ status: "unknown_result" });
+    },
+  );
+
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.MAX_SAFE_INTEGER + 1,
+    "0",
+    "-1",
+    "x",
+    "1".repeat(129),
+    null,
+  ])("never accepts an invalid message id (%j)", async (messageId) => {
+    expect(
+      await new SmsIrProvider(
+        { apiKey: "unit-test-key", timeoutMs: 100 },
+        async () => response(200, { status: 1, data: { messageId } }),
+      ).send(request),
+    ).toEqual({ status: "unknown_result" });
+  });
+
+  it("accepts a positive decimal-string id without converting its precision", async () => {
+    expect(
+      await new SmsIrProvider(
+        { apiKey: "unit-test-key", timeoutMs: 100 },
+        async () =>
+          response(200, { status: 1, data: { messageId: "9007199254740993" } }),
+      ).send(request),
+    ).toEqual({ status: "accepted", providerMessageId: "9007199254740993" });
+  });
+
+  it("cancels a declared oversized response before reading its stream", async () => {
+    const cancel = vi.fn();
+    const body = new ReadableStream<Uint8Array>({ cancel });
+    expect(
+      await new SmsIrProvider(
+        { apiKey: "unit-test-key", timeoutMs: 100 },
+        async () =>
+          new Response(body, { headers: { "content-length": "32769" } }),
+      ).send(request),
+    ).toEqual({ status: "unknown_result" });
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(body.locked).toBe(false);
+  });
+
+  it("keeps interrupted response streams ambiguous without logging sensitive exceptions", async () => {
+    const log = vi.spyOn(console, "error");
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.error(new Error("private-body"));
+      },
+    });
+    const fetcher = vi.fn(async () => new Response(body));
+    expect(
+      await new SmsIrProvider(
+        { apiKey: "unit-test-key", timeoutMs: 100 },
+        fetcher,
+      ).send(request),
+    ).toEqual({ status: "unknown_result" });
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(log).not.toHaveBeenCalled();
+    expect(body.locked).toBe(false);
+  });
+
+  it.each([429, 500, 503])(
+    "cancels HTTP %s response bodies",
+    async (status) => {
+      const cancel = vi.fn();
+      const body = new ReadableStream<Uint8Array>({ cancel });
+      await new SmsIrProvider(
+        { apiKey: "unit-test-key", timeoutMs: 100 },
+        async () => new Response(body, { status }),
+      ).send(request);
+      expect(cancel).toHaveBeenCalledOnce();
+    },
+  );
+
   it("maps a timeout after dispatch to unknown_result and never retries", async () => {
     const fetcher = vi.fn(
       (_url: string, init: RequestInit) =>
@@ -185,7 +297,7 @@ describe("SmsIrProvider", () => {
     expect(fetcher).toHaveBeenCalledOnce();
   });
 
-  it("maps pre-response transport failure to unavailable", async () => {
+  it("keeps network failure ambiguous", async () => {
     expect(
       await new SmsIrProvider(
         { apiKey: "secret", timeoutMs: 100 },
@@ -193,7 +305,7 @@ describe("SmsIrProvider", () => {
           throw new Error("network");
         },
       ).send(request),
-    ).toEqual({ status: "unavailable" });
+    ).toEqual({ status: "unknown_result" });
   });
 });
 
@@ -201,5 +313,67 @@ describe("toSmsIrMobile", () => {
   it("accepts only the canonical project format", () => {
     expect(toSmsIrMobile("+989121234567")).toBe("9121234567");
     expect(() => toSmsIrMobile("09121234567")).toThrow();
+  });
+});
+
+describe("SmsIrProvider account health", () => {
+  it("checks authentication without dispatching or projecting account credit", async () => {
+    const fetcher = vi.fn(async () => response(200, { status: 1, data: 100 }));
+    const result = await new SmsIrProvider(
+      { apiKey: "unit-test-key", timeoutMs: 100 },
+      fetcher,
+    ).checkHealth();
+    expect(result).toMatchObject({
+      checked: true,
+      providerHealth: "ok",
+      errorClass: null,
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.sms.ir/v1/credit",
+      expect.objectContaining({ method: "GET", redirect: "error" }),
+    );
+    expect(Object.keys(result).sort()).toEqual([
+      "checked",
+      "errorClass",
+      "lastCheckedAt",
+      "providerHealth",
+    ]);
+  });
+  it.each([
+    [200, { status: 1, data: 0 }, "degraded", "provider_error"],
+    [401, null, "down", "auth"],
+    [403, null, "down", "auth"],
+    [429, null, "degraded", "rate_limit"],
+    [503, null, "down", "provider_error"],
+    [200, { status: 11 }, "down", "auth"],
+    [200, { status: 1, data: "100" }, "unknown", "provider_error"],
+    [200, null, "unknown", "provider_error"],
+  ] as const)(
+    "sanitizes account health (%s/%j)",
+    async (status, body, providerHealth, errorClass) => {
+      expect(
+        await new SmsIrProvider(
+          { apiKey: "unit-test-key", timeoutMs: 100 },
+          async () => response(status, body),
+        ).checkHealth(),
+      ).toMatchObject({ checked: true, providerHealth, errorClass });
+    },
+  );
+  it("bounds health timeouts without retry", async () => {
+    const fetcher = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) =>
+          init.signal?.addEventListener("abort", () =>
+            reject(new Error("private-network-error")),
+          ),
+        ),
+    );
+    expect(
+      await new SmsIrProvider(
+        { apiKey: "unit-test-key", timeoutMs: 1 },
+        fetcher,
+      ).checkHealth(),
+    ).toMatchObject({ providerHealth: "down", errorClass: "timeout" });
+    expect(fetcher).toHaveBeenCalledOnce();
   });
 });
