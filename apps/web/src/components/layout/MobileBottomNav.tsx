@@ -1,92 +1,43 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Home, LayoutGrid, ShoppingBag, Search, User } from 'lucide-react'
+import { Home, LayoutGrid, ShoppingBag, Search, User, PackageSearch } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
 import { SECTION_IDS } from '../../lib/site-config'
 import { useAuth } from '../../state/auth-context'
 
-type MobileBottomNavProps = {
-  onOpenSearch: () => void
-  onOpenLogin: () => void
-}
+type MobileBottomNavProps = { onOpenSearch: () => void; onOpenLogin: () => void }
 
 export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavProps) {
   const navigate = useNavigate()
-  const location = useLocation()
+  const { pathname } = useLocation()
   const { state: authState } = useAuth()
 
   function openCategories() {
-    const scrollToCategories = () => {
+    if (pathname === ROUTES.home) {
       document.getElementById(SECTION_IDS.categories)?.scrollIntoView({ behavior: 'smooth' })
-    }
-    if (location.pathname === ROUTES.home) {
-      scrollToCategories()
-      return
-    }
-    navigate(ROUTES.home, { state: { scrollToCategories: true } })
+    } else navigate(ROUTES.home, { state: { scrollToCategories: true } })
   }
 
-  return (
-    <>
-      {/* Floating Detached Bottom Menu - Style 03 */}
-      <nav aria-label="ناوبری پایین" className="lg:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none">
-        {/* safe area background */}
-        <div className="mx-auto max-w-[480px] px-4 pb-4 pt-2">
-          <div className="pointer-events-auto bg-white rounded-[28px] shadow-[0_12px_40px_rgba(0,0,0,0.16),0_4px_12px_rgba(0,0,0,0.08)] border border-slate-100 flex items-center justify-between px-2 py-2">
-            <button
-              onClick={() => navigate(ROUTES.home)}
-              aria-label="خانه"
-              className="flex flex-col items-center gap-1 min-w-[64px] py-1.5 rounded-2xl transition text-[#6842ff]"
-            >
-              <Home size={22} className="fill-[#6842ff]/15" strokeWidth={2.3} />
-              <span className="text-[11px] font-bold leading-none text-[#6842ff]">خانه</span>
-              <span className="w-1 h-1 rounded-full bg-[#6842ff] mt-0.5" />
-            </button>
+  const items = [
+    { label: 'خانه', icon: Home, active: pathname === ROUTES.home, action: () => navigate(ROUTES.home) },
+    { label: 'جستجو', icon: Search, active: pathname === ROUTES.search, action: () => { onOpenSearch(); window.scrollTo({ top: 0, behavior: 'smooth' }) } },
+    { label: 'دسته‌بندی‌ها', short: 'دسته‌ها', icon: LayoutGrid, active: pathname.startsWith('/category/'), action: openCategories },
+    { label: 'سبد خرید', icon: ShoppingBag, active: pathname === ROUTES.cart || pathname === ROUTES.checkout, action: () => navigate(ROUTES.cart) },
+    { label: 'پیگیری سفارش‌ها', short: 'پیگیری', icon: PackageSearch, active: pathname === ROUTES.orders || pathname.startsWith(`${ROUTES.orders}/`), action: () => navigate(ROUTES.orders) },
+    { label: 'حساب کاربری', short: 'پروفایل', icon: User, active: pathname === ROUTES.account || pathname.startsWith(`${ROUTES.account}/`), action: () => { if (authState.phase === 'authenticated') navigate(ROUTES.account); else onOpenLogin() } },
+  ]
 
-            <button
-              onClick={() => { onOpenSearch(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-              aria-label="جستجو"
-              className="flex flex-col items-center gap-1 min-w-[64px] py-1.5 transition text-slate-500"
-            >
-              <Search size={22} strokeWidth={1.9} />
-              <span className="text-[11px] font-medium leading-none text-slate-500">جستجو</span>
-            </button>
-
-            <button
-              onClick={openCategories}
-              aria-label="دسته‌بندی‌ها"
-              className="flex flex-col items-center gap-1 min-w-[64px] -mt-2"
-            >
-              <span className="w-[52px] h-[52px] rounded-full bg-[#6842ff] text-white flex items-center justify-center shadow-lg shadow-[#6842ff]/30 border-[3.5px] border-white">
-                <LayoutGrid size={22} strokeWidth={2.2} />
-              </span>
-              <span className="text-[11px] font-bold leading-none text-slate-500">دسته‌ها</span>
-            </button>
-
-            <button onClick={() => navigate(ROUTES.cart)} aria-label="سبد خرید" className="flex min-w-[64px] flex-col items-center gap-1 py-1.5 text-slate-500">
-              <ShoppingBag size={22} strokeWidth={1.9} />
-              <span className="text-[11px] font-medium leading-none">سبد خرید</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (authState.phase === 'authenticated') navigate(ROUTES.account)
-                else onOpenLogin()
-              }}
-              aria-label="حساب کاربری"
-              className="flex flex-col items-center gap-1 min-w-[64px] py-1.5 transition text-slate-500"
-            >
-              <User size={22} strokeWidth={1.9} />
-              <span className="text-[11px] font-medium leading-none text-slate-500">پروفایل</span>
-            </button>
-          </div>
-          <div className="flex justify-center mt-2">
-            <div className="w-32 h-1 rounded-full bg-white/80 shadow-sm" />
-          </div>
+  return <>
+    <nav aria-label="ناوبری پایین" className="pointer-events-none fixed inset-x-0 bottom-0 z-50 lg:hidden">
+      <div className="mx-auto max-w-[480px] px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-auto grid grid-cols-6 rounded-3xl border border-slate-200 bg-white px-1 py-2 shadow-xl">
+          {items.map(({ label, short, icon: Icon, active, action }) => <button type="button" key={label} onClick={action} aria-label={label} aria-current={active ? 'page' : undefined}
+            className={`flex min-h-12 min-w-11 flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-2 text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-700 ${active ? 'bg-orange-50 text-orange-800' : 'text-slate-600 hover:bg-slate-100'}`}>
+            <Icon size={21} strokeWidth={active ? 2.3 : 1.9} aria-hidden="true" />
+            <span>{short ?? label}</span>
+          </button>)}
         </div>
-      </nav>
-
-      {/* Bottom padding for floating menu */}
-      <div className="h-24 lg:h-0" />
-    </>
-  )
+      </div>
+    </nav>
+    <div aria-hidden="true" className="h-[calc(6rem+env(safe-area-inset-bottom))] lg:h-0" />
+  </>
 }

@@ -23,6 +23,14 @@ function RouteProbe() {
 }
 
 describe('MobileBottomNav', () => {
+  it('routes tracking to owned orders and marks order detail active', () => {
+    render(<MemoryRouter initialEntries={['/orders/order-1']}><Harness /></MemoryRouter>)
+    const tracking = screen.getByRole('button', { name: 'پیگیری سفارش‌ها' })
+    expect(tracking).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'خانه' })).not.toHaveAttribute('aria-current')
+    fireEvent.click(tracking)
+    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.orders)
+  })
   beforeEach(() => {
     window.scrollTo = vi.fn()
   })
