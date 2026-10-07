@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AccessTokenData, CurrentPrincipalResponse } from '@iranyaragh/contracts';
-import { ApiAbortError, ApiClientError, apiFetch, readCsrfToken, recoverApiSession, registerSessionRecovery, settleSessionRecovery } from '@/lib/api/client';
+import { ApiAbortError, ApiClientError, apiFetch, readCsrfToken, recoverApiSession, registerSessionRecovery, settleSessionRecovery, registerAuthenticationFailure, notifyFreshAuthentication } from '@/lib/api/client';
 import { getAccessToken, getSessionRevision, setAccessToken } from './token-store';
 
 export type AuthUser = {
@@ -16,6 +16,11 @@ type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isRestoring: boolean;
+  freshAuthenticationRequired: boolean;
+  freshAuthenticationOpen: boolean;
+  showFreshAuthentication: () => void;
+  dismissFreshAuthentication: () => void;
+  reauthenticate: (operation: () => Promise<{ accessToken: string; principal: AuthUser }>) => Promise<void>;
   signOut: () => Promise<void>;
   /** Clear this identity only after the API acknowledged its revocation. */
   endRevokedSession: (expectedRevision: number, sessionId?: string) => boolean;
@@ -41,6 +46,8 @@ async function serializeCookieMutation<T>(operation: () => Promise<T>): Promise<
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
+  const [freshAuthenticationRequired, setFreshAuthenticationRequired] = useState(false);
+  const [freshAuthenticationOpen, setFreshAuthenticationOpen] = useState(false);
   const generation = useRef(0);
   const userRef = useRef<AuthUser | null>(null);
   const loggingOut = useRef(false);
@@ -56,6 +63,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       permissions: input.principal.permissions,
     });
     setIsRestoring(false);
+    setFreshAuthenticationRequired(false);
+    setFreshAuthenticationOpen(false);
   }, []);
 
   const recoverSession = useCallback(async (): Promise<string> => {
@@ -69,7 +78,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (!token) throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
       const verified = await apiFetch<CurrentPrincipalResponse['data']>('/auth/me', { token, recoverSession: false });
       if (verified.data.principal.authenticationLevel !== 'STAFF_MFA' || (expectedUserId && verified.data.principal.userId !== expectedUserId)) {
-        throw new ApiClientError({ code: 'AUTH_REAUTHENTICATION_REQUIRED', message: '', requestId: '', statusCode: 401 });
+        throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
       }
       if (generation.current !== attemptGeneration) throw new ApiAbortError();
       setAccessToken(token, true);
@@ -78,10 +87,15 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       return token;
     };
     try {
+      // A revoked device command clears both cookies. Without the server-issued
+      // CSRF proof, an already-invalid bearer cannot be recovered; keep the
+      // authoritative invalid-session outcome instead of attempting a refresh
+      // that only returns a misleading CSRF error and leaves stale navigation.
+      if (!readCsrfToken(document)) throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
       // Cookies are shared across tabs. Serialize rotations across the origin too.
       return await serializeCookieMutation(rotate);
     } catch (error) {
-      if (generation.current === attemptGeneration && error instanceof ApiClientError && (error.statusCode === 401 || error.statusCode === 403)) {
+      if (generation.current === attemptGeneration && error instanceof ApiClientError && ['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED', 'FORBIDDEN'].includes(error.code)) {
         setAccessToken(null);
         userRef.current = null;
         setUser(null);
@@ -93,12 +107,56 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   useEffect(() => {
     let active = true;
     const unregister = registerSessionRecovery(recoverSession);
+    const unregisterFailure = registerAuthenticationFailure((error, revision) => {
+      if (loggingOut.current || !userRef.current || revision !== getSessionRevision()) return;
+      if (error.code === 'AUTH_REAUTHENTICATION_REQUIRED') {
+        setFreshAuthenticationRequired(true);
+        setFreshAuthenticationOpen(true);
+      } else if (error.code === 'AUTH_SESSION_INVALID' || error.code === 'AUTH_SESSION_REPLAYED') {
+        generation.current += 1;
+        setAccessToken(null);
+        userRef.current = null;
+        setUser(null);
+      }
+    });
     if (readCsrfToken(document)) {
       void recoverApiSession().catch(() => { /* Recovery fails closed; the login surface handles reauthentication. */ })
         .finally(() => { if (active) setIsRestoring(false); });
     } else setIsRestoring(false);
-    return () => { active = false; unregister(); };
+    return () => { active = false; unregister(); unregisterFailure(); };
   }, [recoverSession]);
+
+  const reauthenticate = useCallback(async (operation: () => Promise<{ accessToken: string; principal: AuthUser }>): Promise<void> => {
+    const expectedUserId = userRef.current?.userId;
+    const expectedGeneration = generation.current;
+    if (!expectedUserId || loggingOut.current) throw new ApiAbortError();
+    await settleSessionRecovery();
+    await serializeCookieMutation(async () => {
+      if (loggingOut.current || expectedGeneration !== generation.current) throw new ApiAbortError();
+      // Discard late failures/replays for the previous token before issuing a
+      // fresh session. The mounted form survives; nothing is auto-submitted.
+      generation.current += 1;
+      const attemptGeneration = generation.current;
+      setAccessToken(getAccessToken());
+      const result = await operation();
+      if (loggingOut.current || attemptGeneration !== generation.current) throw new ApiAbortError();
+      if (!result.accessToken || result.principal.authenticationLevel !== 'STAFF_MFA' || result.principal.userId !== expectedUserId) {
+        setAccessToken(null);
+        userRef.current = null;
+        setUser(null);
+        throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
+      }
+      setAccessToken(result.accessToken, true);
+      userRef.current = result.principal;
+      setUser(result.principal);
+      setFreshAuthenticationRequired(false);
+      setFreshAuthenticationOpen(false);
+      notifyFreshAuthentication();
+    });
+  }, []);
+
+  const showFreshAuthentication = useCallback(() => { setFreshAuthenticationOpen(true); }, []);
+  const dismissFreshAuthentication = useCallback(() => { setFreshAuthenticationOpen(false); }, []);
 
   const signOut = useCallback(async (): Promise<void> => {
     if (loggingOut.current) throw new ApiAbortError();
@@ -151,11 +209,16 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       user,
       isAuthenticated: user !== null,
       isRestoring,
+      freshAuthenticationRequired,
+      freshAuthenticationOpen,
+      showFreshAuthentication,
+      dismissFreshAuthentication,
+      reauthenticate,
       signOut,
       endRevokedSession,
       establishSession,
     }),
-    [user, isRestoring, signOut, endRevokedSession, establishSession],
+    [user, isRestoring, freshAuthenticationRequired, freshAuthenticationOpen, showFreshAuthentication, dismissFreshAuthentication, reauthenticate, signOut, endRevokedSession, establishSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

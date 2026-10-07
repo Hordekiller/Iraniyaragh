@@ -78,7 +78,7 @@ export class StaffAuthHttpClient implements StaffAuthApi {
 
   async me(): Promise<AuthPrincipal> {
     try {
-      const response = await apiFetch<CurrentStaffPrincipalPayload>('/auth/me', { token: this.store.get() });
+      const response = await apiFetch<CurrentStaffPrincipalPayload>('/auth/me', { token: this.store.get(), recoverSession: false });
       return response.data.principal;
     } catch (error) {
       throw this.mapError(error);
