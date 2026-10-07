@@ -6,6 +6,7 @@ import { MobileBottomNav } from './MobileBottomNav'
 import { SiteFooter } from './SiteFooter'
 import { LoginDialog } from '../auth/LoginDialog'
 import { SECTION_IDS } from '../../lib/site-config'
+import { useRouteMetadata } from '../../lib/use-route-metadata'
 import { useAuth } from '../../state/auth-context'
 
 /**
@@ -19,6 +20,7 @@ export function AppLayout() {
   const [showSearch, setShowSearch] = useState(false)
   const [searchParams] = useSearchParams()
   const location = useLocation()
+  useRouteMetadata(location.pathname)
   const urlQuery = searchParams.get('q') ?? ''
 
   const [resolvedUrlQuery, setResolvedUrlQuery] = useState(urlQuery)
@@ -72,6 +74,11 @@ export function AppLayout() {
 
 function routeAnnouncement(pathname: string): string {
   if (pathname === '/') return 'صفحه خانه'
+  if (pathname === '/privacy') return 'صفحه حریم خصوصی'
+  if (pathname === '/terms') return 'صفحه قوانین و شرایط فروش'
+  if (pathname === '/account/addresses') return 'صفحه دفتر نشانی‌ها'
+  if (pathname === '/account/security') return 'صفحه امنیت و نشست‌ها'
+  if (pathname === '/account') return 'صفحه حساب کاربری'
   if (pathname === '/cart') return 'صفحه سبد خرید'
   if (pathname === '/checkout') return 'صفحه تکمیل سفارش'
   if (pathname === '/orders') return 'صفحه سفارش‌های من'

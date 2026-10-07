@@ -21,6 +21,8 @@ const AccountAddressesPage = lazy(() => import('./pages/AccountAddressesPage').t
 const AccountSecurityPage = lazy(() => import('./pages/AccountSecurityPage').then(module => ({ default: module.AccountSecurityPage })))
 const OrdersPage = lazy(() => import('./pages/OrdersPage').then(module => ({ default: module.OrdersPage })))
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage').then(module => ({ default: module.OrderDetailPage })))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then(module => ({ default: module.PrivacyPage })))
+const TermsPage = lazy(() => import('./pages/TermsPage').then(module => ({ default: module.TermsPage })))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(module => ({ default: module.NotFoundPage })))
 
 function RouteLoading() {
@@ -56,6 +58,8 @@ export default function App() {
                       <Route path={ROUTE_PATHS.sessions} element={<AccountSecurityPage />} />
                       <Route path={ROUTE_PATHS.orders} element={<OrdersPage />} />
                       <Route path={ROUTE_PATHS.order} element={<OrderDetailPage />} />
+                      <Route path={ROUTE_PATHS.privacy} element={<PrivacyPage />} />
+                      <Route path={ROUTE_PATHS.terms} element={<TermsPage />} />
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
                   </Routes>
