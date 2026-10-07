@@ -143,6 +143,9 @@ describe('AuthGuard HTTP behavior', () => {
     });
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('pragma')).toBe('no-cache');
+    expect(response.headers.get('etag')).toBeNull();
     await expect(response.json()).resolves.toEqual({
       userId: 'user-1',
       permissions: ['catalog.read', 'catalog.write'],
@@ -152,6 +155,9 @@ describe('AuthGuard HTTP behavior', () => {
   it('returns a stable 401 envelope for missing or invalid credentials', async () => {
     const missing = await fetch(`${baseUrl}/api/v1/principal-test/staff`);
     expect(missing.status).toBe(401);
+    expect(missing.headers.get('cache-control')).toBe('no-store');
+    expect(missing.headers.get('pragma')).toBe('no-cache');
+    expect(missing.headers.get('etag')).toBeNull();
     expect(missing.headers.get('x-request-id')).toBeTruthy();
     const missingBody = (await missing.json()) as { code: string; requestId: string; statusCode: number };
     expect(missingBody).toMatchObject({ code: 'AUTH_SESSION_INVALID', statusCode: 401 });
@@ -161,6 +167,8 @@ describe('AuthGuard HTTP behavior', () => {
       headers: { authorization: 'Bearer garbage' },
     });
     expect(invalid.status).toBe(401);
+    expect(invalid.headers.get('cache-control')).toBe('no-store');
+    expect(invalid.headers.get('etag')).toBeNull();
     const invalidBody = (await invalid.json()) as { code: string; requestId: string; statusCode: number };
     expect(invalidBody).toMatchObject({
       code: 'AUTH_SESSION_INVALID',
@@ -175,6 +183,9 @@ describe('AuthGuard HTTP behavior', () => {
     });
 
     expect(response.status).toBe(403);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('pragma')).toBe('no-cache');
+    expect(response.headers.get('etag')).toBeNull();
     await expect(response.json()).resolves.toMatchObject({
       code: 'FORBIDDEN',
       statusCode: 403,
