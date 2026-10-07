@@ -35,15 +35,15 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-100">
       <div className="max-w-[1280px] mx-auto px-4 lg:px-6">
-        <div className="flex items-center gap-4 lg:gap-8 h-[64px] lg:h-[76px]">
+        <div className="flex items-center gap-2 sm:gap-4 lg:gap-8 h-[64px] lg:h-[76px]">
           {/* Logo */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-xl bg-[#FF4D00] flex items-center justify-center text-white font-black text-xl leading-none rotate-3">
               <span className="-rotate-3">آ</span>
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="font-black text-[17px] lg:text-[19px] leading-none text-[#0F172A] tracking-tight">{SITE_NAME}</div>
-              <div className="text-[11px] text-slate-600 font-medium tracking-widest">{SITE_TAGLINE}</div>
+              <div className="hidden sm:block text-[11px] text-slate-600 font-medium tracking-widest">{SITE_TAGLINE}</div>
             </div>
             <span className="hidden lg:inline-flex mr-4 px-2.5 py-1 rounded-full bg-[#FF4D00]/10 text-[#C2410C] text-[11px] font-bold">فروشگاه تخصصی</span>
           </div>
@@ -75,7 +75,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 mr-auto lg:mr-0">
+          <div className="flex shrink-0 items-center gap-2 mr-auto lg:mr-0">
             <button onClick={onToggleSearch} aria-label="جستجو" className="lg:hidden w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center"><Search size={18} /></button>
             {HAS_SITE_PHONE && (
               <a href={`tel:${SITE_PHONE}`} className="hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-[#0F172A] text-white text-[13px] font-bold hover:bg-black transition">

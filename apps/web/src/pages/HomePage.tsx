@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import { HeroSlider } from '../components/content/HeroSlider'
 import { NewsletterStatus } from '../components/content/NewsletterStatus'
 import { ProductGrid } from '../components/product/ProductGrid'
 import { ROUTES } from '../lib/routes'
-import { SECTION_IDS, SITE_NAME, SITE_TAGLINE } from '../lib/site-config'
+import { SECTION_IDS } from '../lib/site-config'
 import type { CatalogCategory, CatalogProduct } from '../services/catalog/types'
 import { useCatalogApi } from '../state/catalog-context'
 
@@ -72,19 +73,7 @@ export function HomePage() {
         </div>
       )}
       <section className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
-        <div className="relative overflow-hidden rounded-[24px] lg:rounded-[28px] bg-[#0F172A] px-6 py-12 lg:px-14 lg:py-20 text-white">
-          <div aria-hidden="true" className="absolute -left-24 -top-32 size-80 rounded-full bg-[#FF4D00]/20 blur-3xl" />
-          <div className="relative max-w-2xl">
-            <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold">{SITE_NAME}</span>
-            <h1 className="mt-5 text-[30px] leading-tight lg:text-[48px] font-black">{SITE_TAGLINE}</h1>
-            <p className="mt-4 text-sm lg:text-base leading-8 text-white/80">
-              کالاهای منتشرشدهٔ فروشگاه را ببینید، قیمت و وضعیت موجودی را بررسی کنید و سفارش خود را از مسیر امن فروشگاه ثبت کنید.
-            </p>
-            <Link to={ROUTES.search} className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#C2410C] px-6 py-3 text-sm font-bold text-white hover:bg-[#9A3412] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F172A]">
-              <Search size={18} aria-hidden="true" /> جستجوی کالا
-            </Link>
-          </div>
-        </div>
+        <HeroSlider />
       </section>
 
       {error && (
