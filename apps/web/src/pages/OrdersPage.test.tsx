@@ -20,11 +20,13 @@ function renderPage(store = signedInStore(), api = commerceStub()) {
 }
 
 describe('OrdersPage', () => {
-  it('does not query orders for guests', () => {
+  it('does not query orders while restoring a guest session or after restore fails', async () => {
     const api = commerceStub()
     renderPage(new MemorySessionStore(), api)
+    expect(screen.getByRole('status')).toHaveTextContent('در حال بازیابی نشست')
+    expect(api.listOrders).not.toHaveBeenCalled()
     expect(
-      screen.getByRole('heading', { name: 'برای مشاهده سفارش‌ها وارد شوید' }),
+      await screen.findByRole('heading', { name: 'برای مشاهده سفارش‌ها وارد شوید' }),
     ).toBeInTheDocument()
     expect(api.listOrders).not.toHaveBeenCalled()
   })

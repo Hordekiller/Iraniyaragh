@@ -73,13 +73,29 @@ describe('CheckoutPage', () => {
     })
     const api = commerceStub()
     renderPage(api)
-    fireEvent.click(await screen.findByRole('button', { name: 'خانه — TEH، تهران' }))
+    fireEvent.click(await screen.findByRole('button', { name: /خانه — TEH، تهران/ }))
     fireEvent.click(screen.getByRole('button', { name: 'محاسبه هزینه ارسال' }))
     await waitFor(() => expect(api.previewCheckout).toHaveBeenCalledWith(expect.objectContaining({
       recipient: 'علی رضایی', mobile: '09123456789', provinceCode: 'TEH', city: 'تهران',
       postalCode: '1234567890', address: 'خیابان ولیعصر، پلاک ۱۰',
     })))
     expect(screen.getByRole('link', { name: 'مدیریت نشانی‌ها' })).toHaveAttribute('href', '/account/addresses')
+  })
+
+  it('retries the owned address book without overwriting a manually entered checkout address', async () => {
+    vi.mocked(getCustomerAccount).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({
+      id: 'customer-1', mobile: '+989123456789', firstName: null, lastName: null, version: 3, addresses: [],
+    })
+    renderPage()
+    await screen.findByRole('button', { name: 'دریافت دوباره نشانی‌ها' })
+    fillValidAddress()
+    fireEvent.click(screen.getByRole('button', { name: 'دریافت دوباره نشانی‌ها' }))
+    await screen.findByText(/هنوز نشانی ذخیره نکرده‌اید/)
+    expect(screen.getByLabelText('نام تحویل‌گیرنده')).toHaveValue('علی رضایی')
+    expect(screen.getByLabelText('نشانی کامل')).toHaveValue('خیابان امام خمینی، پلاک ۴۲')
+    expect(screen.queryByRole('button', { name: 'دریافت دوباره نشانی‌ها' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'حریم خصوصی' })).toHaveAttribute('href', '/privacy')
+    expect(screen.getByRole('link', { name: 'قوانین و شرایط فروش' })).toHaveAttribute('href', '/terms')
   })
 
   it('defers OTP until Checkout and explains that the Guest Cart is preserved', async () => {

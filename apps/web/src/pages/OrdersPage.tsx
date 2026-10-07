@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Package, RefreshCw } from 'lucide-react'
 import type { OrderSummary } from '@iranyaragh/contracts'
+import { AccountNavigation, SessionRestoring } from '../components/account/AccountNavigation'
 import { useOrderApi } from '../state/order-context'
 import { useAuth } from '../state/auth-context'
 import { formatTimestamp, formatToman, toPersianDigits } from '../lib/format'
@@ -17,7 +18,7 @@ export function OrdersPage() {
   const api = useOrderApi()
   const auth = useAuth()
   const [reload, setReload] = useState(0)
-  const requestKey = `${auth.state.phase}:${reload}`
+  const requestKey = `${auth.state.phase}:${auth.state.principal?.userId ?? "guest"}:${reload}`
   const [result, setResult] = useState<{
     key: string
     items: OrderSummary[] | null
@@ -44,6 +45,7 @@ export function OrdersPage() {
   const items = result.key === requestKey ? result.items : null
   const error = result.key === requestKey ? result.error : null
 
+  if (auth.state.phase !== 'authenticated' && (!auth.restored || auth.state.restoring)) return <SessionRestoring />
   if (auth.state.phase !== 'authenticated')
     return (
       <Centered
@@ -73,6 +75,7 @@ export function OrdersPage() {
           بازگشت به فروشگاه
         </Link>
       </div>
+      <AccountNavigation />
       {items === null && !error && (
         <div
           role="status"

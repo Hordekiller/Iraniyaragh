@@ -25,6 +25,7 @@ describe("LoginDialog delivery evidence", () => {
     render(
       <AuthContext.Provider
         value={{
+          restored: true,
           state: controller.getState(),
           controller,
           request: async () => ({ data: {} as never }),

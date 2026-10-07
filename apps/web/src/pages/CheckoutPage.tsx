@@ -18,6 +18,7 @@ import {
   normalizeIranMobile,
   normalizeIranPostalCode,
 } from '../lib/iran'
+import { SessionRestoring } from '../components/account/AccountNavigation'
 import { getCustomerAccount } from '../services/customer-account'
 
 type FormState = {
@@ -42,6 +43,12 @@ const inputClass =
   'h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 disabled:bg-slate-100'
 
 export function CheckoutPage() {
+  const auth = useAuth()
+  if (auth.state.phase !== 'authenticated' && (!auth.restored || auth.state.restoring)) return <SessionRestoring />
+  return <CheckoutContents key={auth.state.principal?.userId ?? 'guest'} />
+}
+
+function CheckoutContents() {
   const { state, api, reload } = useCart()
   const auth = useAuth()
   const navigate = useNavigate()
@@ -53,18 +60,20 @@ export function CheckoutPage() {
   const [error, setError] = useState<unknown | null>(null)
   const [savedAddresses, setSavedAddresses] = useState<CustomerAccount['addresses']>([])
   const [savedAddressesUnavailable, setSavedAddressesUnavailable] = useState(false)
+  const [addressReload, setAddressReload] = useState(0)
+  const [addressesLoading, setAddressesLoading] = useState(true)
   const checkoutKey = useRef<string | null>(null)
 
   useEffect(() => {
     if (auth.state.phase !== 'authenticated') return
     let active = true
     void getCustomerAccount(auth.request).then((account) => {
-      if (active) setSavedAddresses(account.addresses)
+      if (active) { setSavedAddresses(account.addresses); setSavedAddressesUnavailable(false) }
     }).catch(() => {
       if (active) setSavedAddressesUnavailable(true)
-    })
+    }).finally(() => { if (active) setAddressesLoading(false) })
     return () => { active = false }
-  }, [auth.request, auth.state.phase])
+  }, [auth.request, auth.state.phase, addressReload])
 
   const lines = preview?.cart.lines ?? state.cart.lines
   const quote =
@@ -250,23 +259,19 @@ export function CheckoutPage() {
             </div>
           )}
           <fieldset disabled={busy !== null}>
-            {(savedAddresses.length > 0 || savedAddressesUnavailable) && (
-              <section className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="saved-address-heading">
-                <h2 id="saved-address-heading" className="font-black text-slate-900">نشانی‌های ذخیره‌شده</h2>
-                {savedAddressesUnavailable ? (
-                  <p className="mt-2 text-sm text-slate-600">دریافت دفتر نشانی ممکن نشد؛ می‌توانید نشانی را دستی وارد کنید یا از بخش حساب دوباره تلاش کنید.</p>
-                ) : (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {savedAddresses.map((saved) => (
-                      <button key={saved.id} type="button" onClick={() => selectSavedAddress(saved.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-sm hover:border-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">
-                        {saved.label || saved.receiverName} — {saved.provinceCode}، {saved.city}
-                      </button>
-                    ))}
-                    <Link to={ROUTES.addresses} className="self-center px-2 text-sm font-bold text-amber-800 underline">مدیریت نشانی‌ها</Link>
-                  </div>
-                )}
-              </section>
-            )}
+            <section className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="saved-address-heading">
+              <h2 id="saved-address-heading" className="font-black text-slate-900">نشانی‌های ذخیره‌شده</h2>
+              {addressesLoading ? <p className="mt-2 text-sm" role="status">در حال دریافت نشانی‌ها…</p> : savedAddressesUnavailable ? <div className="mt-2 text-sm text-slate-600">
+                <p>دریافت دفتر نشانی ممکن نشد؛ نشانی را دستی وارد کنید یا دوباره تلاش کنید.</p>
+                <button type="button" onClick={() => { setAddressesLoading(true); setAddressReload((value) => value + 1) }} className="mt-2 font-bold underline">دریافت دوباره نشانی‌ها</button>
+              </div> : savedAddresses.length === 0 ? <p className="mt-2 text-sm text-slate-600">هنوز نشانی ذخیره نکرده‌اید؛ نشانی تحویل را در فرم زیر وارد کنید.</p> : <div className="mt-3 flex flex-wrap gap-2">
+                {savedAddresses.map((saved) => <button key={saved.id} type="button" onClick={() => selectSavedAddress(saved.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-sm hover:border-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500">
+                  {saved.label || saved.receiverName} — {saved.provinceCode}، {saved.city}
+                  {saved.isDefault && <span className="mr-2 text-xs font-bold text-amber-800">پیش‌فرض</span>}
+                </button>)}
+              </div>}
+              <Link to={ROUTES.addresses} className="mt-3 inline-block text-sm font-bold text-amber-800 underline">مدیریت نشانی‌ها</Link>
+            </section>
             <legend className="text-base font-black text-slate-950">
               مشخصات تحویل‌گیرنده
             </legend>
@@ -480,6 +485,7 @@ export function CheckoutPage() {
               ثبت سفارش به معنی پرداخت نیست؛ پرداخت فقط پس از تأیید درگاه در
               سرور ثبت می‌شود.
             </div>
+            <p className="mt-4 text-xs leading-7 text-slate-300">پیش از ثبت سفارش، <Link to={ROUTES.terms} className="font-bold text-white underline">قوانین و شرایط فروش</Link> و <Link to={ROUTES.privacy} className="font-bold text-white underline">حریم خصوصی</Link> را بررسی کنید.</p>
             <button
               type="button"
               onClick={() => void handleCreate()}

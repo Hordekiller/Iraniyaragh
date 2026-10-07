@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import {
   BrowserRefreshCoordinator,
@@ -50,6 +50,7 @@ const nowClock = (): number => Date.now();
  * `VITE_FIXTURE_AUTH=true` is set.
  */
 export function AuthProvider({ children, api, store, bus, refreshCoordinator }: AuthProviderProps) {
+  const [restored, setRestored] = useState(false);
   const value = useMemo(() => {
     const sessionStore = store ?? new MemorySessionStore();
     const sessionBus = bus ?? new CrossTabSessionBus();
@@ -119,13 +120,14 @@ export function AuthProvider({ children, api, store, bus, refreshCoordinator }: 
     // once per page lifetime; on SESSION_INVALID/REPLAYED it latches and never
     // auto-retries (AUTH_CONTRACT §7 / #50 no-retry).
     controller.connect();
-    void controller.restoreSession();
-    return () => controller.dispose();
+    let active = true;
+    void controller.restoreSession().then(() => { if (active) setRestored(true); }, () => { if (active) setRestored(true); });
+    return () => { active = false; controller.dispose(); };
   }, []);
 
   const contextValue = useMemo(
-    () => ({ ...value, state: snapshots }),
-    [value, snapshots],
+    () => ({ ...value, state: snapshots, restored }),
+    [value, snapshots, restored],
   );
 
   return (
