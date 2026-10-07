@@ -2,7 +2,7 @@ import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider, useAuth } from '../AuthProvider';
 import { getAccessToken, setAccessToken } from '../token-store';
-import { recoverApiSession } from '@/lib/api/client';
+import { apiFetch, readCsrfToken, recoverApiSession } from '@/lib/api/client';
 import { useRef } from 'react';
 import { getSessionRevision } from '../token-store';
 
@@ -32,6 +32,8 @@ function AdoptPanel() {
       <button
         type="button"
         onClick={() => {
+          // The real successful password/TOTP response issues this cookie.
+          if (!readCsrfToken(document)) document.cookie = 'iranyaragh_customer_csrf=test-csrf; path=/';
           establishSession({ accessToken: 'staff-at-1', principal: staffPrincipal });
           revocationRevision.current = getSessionRevision();
         }}
@@ -147,6 +149,18 @@ describe('AuthProvider', () => {
     await act(async () => { await recoverApiSession().catch(() => undefined); });
     expect(getAccessToken()).toBe('staff-at-1');
     expect(screen.getByTestId('authed')).toHaveTextContent('yes');
+  });
+
+  it('ends a revoked identity when the server cleared its CSRF cookie, without an impossible refresh', async () => {
+    const mock = vi.fn(async () => jsonResponse({ code: 'AUTH_SESSION_INVALID', message: 'revoked', requestId: 'test-revoked-cookie', statusCode: 401 }, false, 401));
+    vi.stubGlobal('fetch', mock);
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    fireEvent.click(screen.getByText('adopt'));
+    document.cookie = 'iranyaragh_customer_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    await act(async () => { await apiFetch('/protected', { token: getAccessToken() }).catch(() => undefined); });
+    expect(screen.getByTestId('authed')).toHaveTextContent('no');
+    expect(getAccessToken()).toBeNull();
+    expect(mock).toHaveBeenCalledTimes(1);
   });
 
 

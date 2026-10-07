@@ -72,14 +72,14 @@ describe('StaffAuthHttpClient', () => {
     apiFetchMock.mockResolvedValueOnce({ data: { principal: PRINCIPAL } });
     const principal = await client.me();
     expect(principal).toEqual(PRINCIPAL);
-    expect(apiFetchMock).toHaveBeenCalledWith('/auth/me', { token: 'at-1' });
+    expect(apiFetchMock).toHaveBeenCalledWith('/auth/me', { token: 'at-1', recoverSession: false });
   });
 
   it('sends no token on /auth/me when the store is empty', async () => {
     store.set(null);
     apiFetchMock.mockResolvedValueOnce({ data: { principal: PRINCIPAL } });
     await client.me();
-    expect(apiFetchMock).toHaveBeenCalledWith('/auth/me', { token: null });
+    expect(apiFetchMock).toHaveBeenCalledWith('/auth/me', { token: null, recoverSession: false });
   });
 
   it('posts to /auth/logout so the server can revoke the session', async () => {

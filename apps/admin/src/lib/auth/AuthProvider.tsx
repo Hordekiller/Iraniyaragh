@@ -87,6 +87,11 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       return token;
     };
     try {
+      // A revoked device command clears both cookies. Without the server-issued
+      // CSRF proof, an already-invalid bearer cannot be recovered; keep the
+      // authoritative invalid-session outcome instead of attempting a refresh
+      // that only returns a misleading CSRF error and leaves stale navigation.
+      if (!readCsrfToken(document)) throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
       // Cookies are shared across tabs. Serialize rotations across the origin too.
       return await serializeCookieMutation(rotate);
     } catch (error) {

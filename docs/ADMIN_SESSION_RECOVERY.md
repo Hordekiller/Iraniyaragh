@@ -40,6 +40,13 @@ Headless application contexts (media worker) do not require an HTTP adapter.
 Cookie names/attributes, Origin validation, CSRF, inactivity limits, rate limits,
 RBAC and the freshness window are not changed.
 
+The real browser test reproduced one additional stale-shell case: revoking the
+current device clears the server-issued CSRF cookie; a subsequent invalid bearer
+previously caused an impossible refresh, received `AUTH_CSRF_INVALID`, and kept
+navigation mounted. Recovery now fails closed as invalid session when its CSRF
+proof is absent. A CSRF rejection with the cookie still present remains a
+recoverable error rather than confirmed logout.
+
 ## Verification and release
 
 Unit/HTTP tests cover fresh authentication, explicit resubmit, draft retention,
