@@ -20,7 +20,7 @@ commerce/auth replacement is needed.
 
 - Footer: account, cart, privacy and terms.
 - Mobile navigation: cart and account entry points.
-- Account navigation: profile, owned orders, address book, active sessions, cart.
+- Account navigation: profile, paginated owned orders, address book, active sessions, cart.
 - Checkout: owned saved-address picker, retry and manual address entry, account
   address management, terms and privacy links before order submission.
 

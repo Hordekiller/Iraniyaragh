@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { MapPin, Package, Shield, UserRound } from 'lucide-react'
 import type { CustomerAccount } from '@iranyaragh/contracts'
 import { useAuth } from '../state/auth-context'
-import { useToast } from '../components/feedback/toast-context'
 import { ROUTES } from '../lib/routes'
 import { toPersianDigits } from '../lib/format'
 import { updateCustomerAccount } from '../services/customer-account'
@@ -42,7 +41,6 @@ export function AccountPage() {
 
 function ProfileEditor() {
   const { controller, request } = useAuth()
-  const { show } = useToast()
   const editor = useCustomerAccountEditor(request, profileDraft, persistProfile, 'customer-profile', 'اطلاعات حساب دریافت نشد. اتصال را بررسی و دوباره تلاش کنید.')
   const { account, draft, loading, saving, error, conflict, message } = editor
   const locked = saving || loading || editor.uncertain
@@ -83,7 +81,7 @@ function ProfileEditor() {
           <AccountLink to={ROUTES.orders} icon={<Package aria-hidden="true" />} title="مشاهده سفارش‌ها" description="مشاهده وضعیت سفارش، پرداخت و ارسال" />
           <AccountLink to={ROUTES.addresses} icon={<MapPin aria-hidden="true" />} title="مدیریت نشانی‌ها" description={`${toPersianDigits(account.addresses.length)} نشانی ذخیره‌شده`} />
           <AccountLink to={ROUTES.sessions} icon={<Shield aria-hidden="true" />} title="مدیریت نشست‌ها" description="بررسی و بستن نشست‌های فعال" />
-          <button type="button" onClick={() => { void controller.logout().then(() => show('از حساب خارج شدید')) }} className="mt-2 h-11 rounded-xl border-2 border-slate-900 font-black text-slate-900 transition hover:bg-slate-900 hover:text-white">خروج از حساب</button>
+          <button type="button" onClick={() => { void controller.logout() }} className="mt-2 h-11 rounded-xl border-2 border-slate-900 font-black text-slate-900 transition hover:bg-slate-900 hover:text-white">خروج از حساب</button>
         </div>
       </div>}
     </div>
