@@ -18,4 +18,11 @@ describe('ProductCard', () => {
     expect(screen.getByText('قیمت در دسترس نیست')).toBeInTheDocument()
     expect(screen.queryByText('۰ تومان')).not.toBeInTheDocument()
   })
+
+  it('does not round a valid nonzero integer IRR price down to free', () => {
+    const pricedProduct: CatalogProduct = { ...product, priceAvailable: true, price: { amount: '5', currency: 'IRR' } }
+    render(<MemoryRouter><ProductCard product={pricedProduct} /></MemoryRouter>)
+    expect(screen.getByText('۰٫۵ تومان')).toBeInTheDocument()
+    expect(screen.queryByText('۰ تومان')).not.toBeInTheDocument()
+  })
 })
