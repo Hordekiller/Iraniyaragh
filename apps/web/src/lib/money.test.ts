@@ -21,8 +21,8 @@ describe('toMoney', () => {
     expect(toMoney(123)).toEqual({ amount: '123', currency: 'IRR' })
   })
 
-  it('truncates fractional input from a number', () => {
-    expect(toMoney(12.9)).toEqual({ amount: '12', currency: 'IRR' })
+  it.each([12.9, -0.9])('rejects fractional Rial input %s without silently changing its value', (value) => {
+    expect(() => toMoney(value)).toThrow()
   })
 
   it('builds from a string', () => {
