@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SessionSummary } from '@iranyaragh/contracts';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { getSessionRevision } from './token-store';
+import { onFreshAuthentication } from '@/lib/api/client';
 import {
   SessionExpiredError,
   SessionManagementError,
@@ -46,6 +47,7 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [requireReauth, setRequireReauth] = useState(false);
+  const [reauthReason, setReauthReason] = useState<'fresh' | 'expired' | null>(null);
   const [actionBusy, setActionBusy] = useState<SessionActionKey>(null);
   const [busySessionId, setBusySessionId] = useState<string | null>(null);
   const inflight = useRef<SessionActionKey>(null);
@@ -61,6 +63,7 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
       setStatus('ready');
     } catch (error) {
       if (isSessionInvalid(error)) {
+        setReauthReason(error instanceof SessionReauthenticationRequiredError ? 'fresh' : 'expired');
         setRequireReauth(true);
         setStatus('error');
         setLoadError(friendlyMessage(error));
@@ -74,6 +77,7 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => onFreshAuthentication(() => { setRequireReauth(false); setReauthReason(null); void load(); }), [load]);
 
   const revoke = useCallback(
     (session: SessionSummary) => {
@@ -97,6 +101,7 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
           feedback.success('خروج از این دستگاه انجام شد.');
         } catch (error) {
           if (isSessionInvalid(error)) {
+            setReauthReason(error instanceof SessionReauthenticationRequiredError ? 'fresh' : 'expired');
             setRequireReauth(true);
             setStatus('error');
             setLoadError(friendlyMessage(error));
@@ -131,6 +136,7 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
         onSessionEnded?.(undefined, sessionRevision);
       } catch (error) {
         if (isSessionInvalid(error)) {
+          setReauthReason(error instanceof SessionReauthenticationRequiredError ? 'fresh' : 'expired');
           setRequireReauth(true);
           setStatus('error');
           setLoadError(friendlyMessage(error));
@@ -149,6 +155,7 @@ export function useAuthSessions({ service, onSessionEnded }: UseAuthSessionsOpti
     loadError,
     sessions,
     requireReauth,
+    reauthReason,
     actionBusy,
     busySessionId,
     reload: load,

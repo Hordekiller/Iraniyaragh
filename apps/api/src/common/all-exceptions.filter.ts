@@ -71,6 +71,8 @@ export class AllExceptionsFilter implements OnModuleInit {
   catch(exception: unknown, host: ArgumentsHost): void {
     const response: Response = host.switchToHttp().getResponse();
     const requestId = getRequestId();
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Pragma', 'no-cache');
 
     if (exception instanceof HttpException) {
       const { statusCode, code, message, details } = normalizeHttpError(exception);

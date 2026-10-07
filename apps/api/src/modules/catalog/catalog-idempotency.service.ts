@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { retryDelayMs, sleep } from '../../common/retry';
+import { isPrismaTransactionConflict } from '../../common/serializable-retry';
 import { PrismaService } from '../../database/prisma.service';
 
 const KEY_PATTERN = /^[A-Za-z0-9_-]{8,96}$/u;
@@ -103,7 +104,10 @@ export class CatalogIdempotencyService {
           return result.response;
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034' && attempt < SERIALIZABLE_RETRIES) {
+        if (isPrismaTransactionConflict(error)) {
+          if (attempt === SERIALIZABLE_RETRIES) {
+            throw new ConflictException({ code: 'CONFLICT', message: 'The command could not be committed safely; retry with the same key.' });
+          }
           await sleep(retryDelayMs(attempt));
           continue;
         }

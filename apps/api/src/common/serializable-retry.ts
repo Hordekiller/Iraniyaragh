@@ -3,6 +3,13 @@ import { Prisma } from "@prisma/client";
 
 export const SERIALIZABLE_RETRIES = 3;
 
+/** Raw SQL surfaces PostgreSQL transaction aborts as P2010, not always P2034. */
+export function isPrismaTransactionConflict(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  return error.code === 'P2034' || (error.code === 'P2010' &&
+    (error.meta?.code === '40001' || error.meta?.code === '40P01'));
+}
+
 export function isPrismaSerializableContention(error: unknown): boolean {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&

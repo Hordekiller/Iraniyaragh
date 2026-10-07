@@ -10,6 +10,7 @@ import type {
 } from '@iranyaragh/contracts';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { randomUuid } from '@/lib/crypto/random-uuid';
+import { onFreshAuthentication } from '@/lib/api/client';
 import {
   SmsNetworkError,
   SmsReauthenticationRequiredError,
@@ -64,8 +65,10 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
   const [lastOutcome, setLastOutcome] = useState<SmsSendOutcome | null>(null);
   const [busy, setBusy] = useState<SmsActionKey>(null);
   const [requireReauth, setRequireReauth] = useState(false);
+  const [reauthReason, setReauthReason] = useState<'fresh' | 'expired' | null>(null);
   const inFlight = useRef<SmsActionKey>(null);
   const pendingAttempt = useRef<{ key: Exclude<SmsActionKey, null>; idempotencyKey: string } | null>(null);
+  useEffect(() => onFreshAuthentication(() => { setRequireReauth(false); setReauthReason(null); }), []);
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -80,6 +83,7 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
       setStatus('ready');
     } catch (error) {
       if (error instanceof SmsSessionExpiredError || error instanceof SmsReauthenticationRequiredError) {
+        setReauthReason(error instanceof SmsReauthenticationRequiredError ? 'fresh' : 'expired');
         setRequireReauth(true);
         setStatus('error');
         setLoadError(friendlyMessage(error));
@@ -98,7 +102,10 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
     try {
       setSnapshot(await service.getSnapshot());
     } catch (error) {
-      if (error instanceof SmsSessionExpiredError || error instanceof SmsReauthenticationRequiredError) setRequireReauth(true);
+      if (error instanceof SmsSessionExpiredError || error instanceof SmsReauthenticationRequiredError) {
+        setReauthReason(error instanceof SmsReauthenticationRequiredError ? 'fresh' : 'expired');
+        setRequireReauth(true);
+      }
       feedback.error(friendlyMessage(error));
     }
   }, [service, feedback]);
@@ -131,6 +138,7 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
           return;
         }
         if (error instanceof SmsSessionExpiredError || error instanceof SmsReauthenticationRequiredError) {
+          setReauthReason(error instanceof SmsReauthenticationRequiredError ? 'fresh' : 'expired');
           endIdempotencyKey();
           setRequireReauth(true);
           feedback.error(friendlyMessage(error));
@@ -228,6 +236,7 @@ export function useSmsSettings({ service }: UseSmsSettingsOptions) {
     lastOutcome,
     busy,
     requireReauth,
+    reauthReason,
     reload: load,
     refreshConfiguration,
     save,

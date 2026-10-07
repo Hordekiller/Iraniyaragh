@@ -26,6 +26,7 @@ import {
   SmsVersionConflictError,
 } from "@/lib/sms/sms-settings-port";
 import { randomUuid } from "@/lib/crypto/random-uuid";
+import { onFreshAuthentication } from "@/lib/api/client";
 
 const FIELDS = [
   [
@@ -92,9 +93,15 @@ export function SmsTemplatesPanel({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [reauth, setReauth] = useState(false);
+  const [expired, setExpired] = useState(false);
   const alive = useRef(true);
   const inFlight = useRef(false);
   const pending = useRef<SmsTemplateSettingsUpdate | null>(null);
+  useEffect(() => onFreshAuthentication(() => {
+    setReauth(false);
+    setExpired(false);
+    setError("تأیید مجدد انجام شد؛ برای ذخیره، درخواست را دوباره ارسال کنید.");
+  }), []);
 
   const showError = useCallback((cause: unknown) => {
     if (
@@ -102,7 +109,10 @@ export function SmsTemplatesPanel({
       cause instanceof SmsReauthenticationRequiredError
     ) {
       setReauth(true);
-      setError("برای ذخیرهٔ قالب‌ها دوباره با حساب مدیریتی وارد شوید.");
+      setExpired(cause instanceof SmsSessionExpiredError);
+      setError(cause instanceof SmsReauthenticationRequiredError
+        ? "برای ذخیرهٔ قالب‌ها تأیید تازهٔ دومرحله‌ای لازم است؛ فرم شما حفظ شده است."
+        : "نشست شما معتبر نیست؛ دوباره وارد شوید.");
     } else if (cause instanceof SmsNetworkError) {
       setError(
         "ارتباط قطع شد؛ نتیجهٔ ذخیره مشخص نیست. با همان درخواست دوباره تلاش کنید.",
@@ -224,11 +234,7 @@ export function SmsTemplatesPanel({
                 همچنان باید بررسی شوند.
               </Alert>
             ) : null}
-            {reauth ? (
-              <Button component={Link} href="/login">
-                ورود مجدد به پنل
-              </Button>
-            ) : null}
+            {expired ? <Button component={Link} href="/login">ورود مجدد به پنل</Button> : null}
             {snapshot ? (
               <Box component="form" onSubmit={save}>
                 <Stack spacing={3}>

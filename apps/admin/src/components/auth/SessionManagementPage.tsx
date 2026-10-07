@@ -70,13 +70,9 @@ function SessionManagementContent() {
       {model.requireReauth ? (
         <EmptyState
           icon={<KeySquare size={30} />}
-          title="نشست شما منقضی شده است"
-          description="برای ادامهٔ مدیریت نشست‌ها، لازم است دوباره با حساب مدیریتی خود وارد شوید."
-          action={
-            <Button variant="contained" href="/login" component="a">
-              ورود مجدد به پنل
-            </Button>
-          }
+          title={model.reauthReason === 'fresh' ? 'تأیید مجدد عملیات حساس' : 'نشست شما منقضی شده است'}
+          description={model.reauthReason === 'fresh' ? 'پس از تأیید دومرحله‌ای در همین صفحه، عملیات را خودتان دوباره ارسال کنید.' : 'برای ادامهٔ مدیریت نشست‌ها، لازم است دوباره با حساب مدیریتی خود وارد شوید.'}
+          action={model.reauthReason === 'expired' ? <Button variant="contained" href="/login" component="a">ورود مجدد به پنل</Button> : undefined}
         />
       ) : null}
 
