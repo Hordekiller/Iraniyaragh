@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { AuthTransition } from '@/components/auth/AuthTransition';
+import { Alert, Button } from '@mui/material';
+import { FreshAuthenticationDialog } from '@/components/auth/FreshAuthenticationDialog';
 import { filterNavigationByPermissions, navigation } from '@/config/navigation';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useAdminPreferences } from '@/lib/preferences/AdminPreferencesProvider';
@@ -81,7 +83,7 @@ function NavLinks({
 export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, isRestoring, user } = useAuth();
+  const { isAuthenticated, isRestoring, user, freshAuthenticationRequired, freshAuthenticationOpen, showFreshAuthentication } = useAuth();
   const { prefs, updatePrefs } = useAdminPreferences();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
@@ -268,9 +270,13 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
         </a>
         <RouteAnnouncer />
         <main className={styles.main} id="admin-main-content" tabIndex={-1}>
+          {freshAuthenticationRequired ? <Alert severity="warning" sx={{ mb: 2 }} action={<Button onClick={showFreshAuthentication}>تأیید مجدد</Button>}>
+            برای عملیات حساس، تأیید تازهٔ دومرحله‌ای لازم است؛ نشست شما همچنان فعال است.
+          </Alert> : null}
           {children}
         </main>
       </div>
+      {freshAuthenticationOpen ? <FreshAuthenticationDialog /> : null}
     </div>
   );
 }

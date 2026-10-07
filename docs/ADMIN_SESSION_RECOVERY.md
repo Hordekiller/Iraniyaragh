@@ -1,0 +1,57 @@
+# Admin session recovery (#400)
+
+## Supported outcomes
+
+The API keeps its five-minute fresh-authentication window for sensitive commands.
+Normal access-token rotation does not advance the original authentication time.
+The Admin distinguishes the following authoritative responses:
+
+| Response | Admin behavior |
+| --- | --- |
+| `AUTH_SESSION_INVALID` with expired access | One shared refresh, followed by at most one replay with unchanged body/idempotency key |
+| Terminal `AUTH_SESSION_INVALID` or `AUTH_SESSION_REPLAYED` | Clear the current identity; the shell redirects to login |
+| `AUTH_REAUTHENTICATION_REQUIRED` | Keep the session and mounted draft; request real password + TOTP in a dialog |
+| `FORBIDDEN` on the operation | Keep the identity and report the permission denial |
+| CSRF/network failure | Report the failure; do not claim logout or successful mutation |
+
+Fresh authentication uses the existing staff HTTP client, login controller and
+form components. It never uses the staff fixture. Cookie issuance is serialized
+with refresh/logout using the same origin-wide Web Lock as the storefront.
+The returned `STAFF_MFA` principal must match the current staff user; a different
+identity ends the local session rather than applying the previous user's draft.
+Late responses cannot clear or replay a newer login. Passwords, challenge tokens,
+TOTP codes and access tokens stay in memory.
+
+After MFA, the user must explicitly resubmit the original operation. Closing the
+dialog keeps the draft and a banner allows reopening it. SMS template editing
+and settings remain mounted, and their blocked UI states are released without
+saving or sending SMS. Session management may refresh its read-only list; no
+revoke/logout-all command is automatically repeated.
+
+## Cache policy
+
+Admin API calls use `cache: 'no-store'`. API middleware sets `no-store` and
+`Pragma: no-cache` before auth guards for bearer requests and auth routes. The
+exception filter applies the same policy to errors, including anonymous guard
+failures. Express automatic weak ETags are disabled. The public catalog's
+explicit strong ETags/conditional-revalidation interceptor is preserved.
+Headless application contexts (media worker) do not require an HTTP adapter.
+
+Cookie names/attributes, Origin validation, CSRF, inactivity limits, rate limits,
+RBAC and the freshness window are not changed.
+
+## Verification and release
+
+Unit/HTTP tests cover fresh authentication, explicit resubmit, draft retention,
+terminal revocation/replay, different identity, delayed failures, CSRF/network
+errors, refresh coalescing and auth error cache headers. PostgreSQL integration
+tests cover session rotation, replay, ownership and concurrency. The browser
+journey uses real password/TOTP, settings commands, reload and session revocation.
+Only an isolated loopback `*_test` database can age its own test session to
+exercise the boundary without a five-minute sleep. The API and UI contain no
+test-only time or authentication endpoint.
+
+Release requires green CI/security checks, official exact-SHA images, verified
+backup and deployment through `scripts/deploy/deploy.sh`. Issue #400 remains
+open until the operator's real staging login/reload/MFA/logout acceptance has
+evidence. Local or CI tests do not substitute for that staging evidence.

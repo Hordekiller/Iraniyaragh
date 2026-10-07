@@ -24,6 +24,7 @@ describe('apiFetch', () => {
       headers: { 'Content-Type': 'application/json' },
       body: undefined,
       credentials: 'include',
+      cache: 'no-store',
       signal: expect.any(AbortSignal),
     }));
   });

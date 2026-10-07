@@ -39,9 +39,11 @@ export class ApiClientError extends Error {
   readonly retryAfterSeconds?: number;
 
   constructor(failure: ApiErrorEnvelope, headers?: Headers) {
-    super(['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED', 'AUTH_REAUTHENTICATION_REQUIRED'].includes(failure.code)
-      ? 'نشست شما معتبر نیست یا به پایان رسیده است. دوباره وارد شوید.'
-      : failure.message);
+    super(failure.code === 'AUTH_REAUTHENTICATION_REQUIRED'
+      ? 'برای این عملیات حساس، تأیید تازهٔ رمز عبور و کد دومرحله‌ای لازم است.'
+      : ['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED'].includes(failure.code)
+        ? 'نشست شما معتبر نیست یا به پایان رسیده است. دوباره وارد شوید.'
+        : failure.message);
     this.name = 'ApiClientError';
     this.code = failure.code;
     this.requestId = failure.requestId;
@@ -85,6 +87,23 @@ type RequestOptions = {
 
 let sessionRecovery: (() => Promise<string>) | null = null;
 let recoveryInFlight: Promise<string> | null = null;
+let authenticationFailure: ((error: ApiClientError, revision: number) => void) | null = null;
+
+export function registerAuthenticationFailure(handler: (error: ApiClientError, revision: number) => void): () => void {
+  authenticationFailure = handler;
+  return () => { if (authenticationFailure === handler) authenticationFailure = null; };
+}
+
+const freshAuthenticationListeners = new Set<() => void>();
+export function onFreshAuthentication(listener: () => void): () => void {
+  freshAuthenticationListeners.add(listener);
+  return () => { freshAuthenticationListeners.delete(listener); };
+}
+
+/** UI notification only: no request is resubmitted and the server still authorizes every action. */
+export function notifyFreshAuthentication(): void {
+  for (const listener of freshAuthenticationListeners) listener();
+}
 
 export function registerSessionRecovery(recover: () => Promise<string>): () => void {
   sessionRecovery = recover;
@@ -162,6 +181,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       headers,
       body,
       credentials: 'include',
+      cache: 'no-store',
       signal,
     });
   } catch {
@@ -192,7 +212,13 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       // Keep the body and idempotency key unchanged, and retry at most once.
       return apiFetch<T>(path, { ...options, token: freshToken, recoverSession: false });
     }
-    throw new ApiClientError(failure, response.headers);
+    const error = new ApiClientError(failure, response.headers);
+    // Only the current app identity may be invalidated. An old request or a
+    // page-scoped sign-in token must not sign out a newer/different login.
+    if (response.status === 401 && options.token && options.token === getAccessToken() && getSessionRevision() === sessionRevision) {
+      authenticationFailure?.(error, sessionRevision);
+    }
+    throw error;
   }
 
   if (options.responseShape === 'raw') return payload as T;

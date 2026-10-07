@@ -140,6 +140,15 @@ describe('AuthProvider', () => {
     expect(getAccessToken()).toBeNull();
   });
 
+  it('preserves an established identity after a CSRF failure during refresh', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ code: 'AUTH_CSRF_INVALID', message: 'denied', requestId: 'csrf-test', statusCode: 403 }, false, 403)));
+    render(<AuthProvider><AdoptPanel /></AuthProvider>);
+    fireEvent.click(screen.getByText('adopt'));
+    await act(async () => { await recoverApiSession().catch(() => undefined); });
+    expect(getAccessToken()).toBe('staff-at-1');
+    expect(screen.getByTestId('authed')).toHaveTextContent('yes');
+  });
+
 
   it('adopts a staff-verified session: sets the user and stores the token for apiFetch', () => {
     render(

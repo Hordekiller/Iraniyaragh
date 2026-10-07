@@ -1,12 +1,14 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { SmsTemplateSettings } from "@iranyaragh/contracts";
 import {
   SmsNetworkError,
   SmsSessionExpiredError,
+  SmsReauthenticationRequiredError,
   SmsVersionConflictError,
 } from "@/lib/sms/sms-settings-port";
 import { SmsTemplatesPanel } from "./SmsTemplatesPanel";
+import { notifyFreshAuthentication } from "@/lib/api/client";
 const initial: SmsTemplateSettings = {
   otpTemplateId: null,
   orderPaidTemplateId: null,
@@ -42,6 +44,21 @@ function save() {
 }
 
 describe("Admin approved template entry", () => {
+  it("preserves the template draft through MFA and requires explicit resubmit", async () => {
+    const service = harness();
+    service.updateTemplates.mockRejectedValueOnce(new SmsReauthenticationRequiredError());
+    await edit();
+    save();
+    await screen.findByText(/تأیید تازهٔ دومرحله‌ای لازم است/);
+    expect(screen.queryByRole('link', { name: 'ورود مجدد به پنل' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(labels[0]!)).toHaveValue('۱۲۳');
+    act(() => notifyFreshAuthentication());
+    expect(service.updateTemplates).toHaveBeenCalledOnce();
+    expect(screen.getByLabelText(labels[0]!)).toHaveValue('۱۲۳');
+    save();
+    await screen.findByRole('status');
+    expect(service.updateTemplates).toHaveBeenCalledTimes(2);
+  });
   it("loads four non-secret fields and saves Persian numeric IDs through the server contract", async () => {
     const service = harness();
     await edit();
