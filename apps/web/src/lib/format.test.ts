@@ -59,7 +59,17 @@ describe('Rial / Toman presentation', () => {
     expect(formatToman(2850000)).toBe('۲۸۵٬۰۰۰ تومان')
     expect(formatToman(250000)).toBe('۲۵٬۰۰۰ تومان')
     expect(formatToman(10)).toBe('۱ تومان')
-    expect(formatToman(5)).toBe('۰ تومان')
+    expect(formatToman(5)).toBe('۰٫۵ تومان')
+  })
+
+  it.each([
+    [1, '۰٫۱ تومان'],
+    [9, '۰٫۹ تومان'],
+    [11, '۱٫۱ تومان'],
+    ['123456789012345', '۱۲٬۳۴۵٬۶۷۸٬۹۰۱٬۲۳۴٫۵ تومان'],
+    ['9223372036854775807', '۹۲۲٬۳۳۷٬۲۰۳٬۶۸۵٬۴۷۷٬۵۸۰٫۷ تومان'],
+  ])('preserves every integer Rial when displaying %s', (amount, expected) => {
+    expect(formatToman(amount)).toBe(expected)
   })
 
   it('degrades gracefully on invalid input', () => {

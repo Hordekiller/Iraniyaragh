@@ -26,7 +26,7 @@ export function isMoney(value: unknown): value is Money {
 
 /** Build a contract Money value (amount is Rial). */
 export function toMoney(rials: number | string): Money {
-  const amount = typeof rials === 'number' ? String(Math.trunc(rials)) : rials
+  const amount = String(rials)
   if (!/^\d+$/.test(amount) || Number(amount) > Number.MAX_SAFE_INTEGER) {
     throw new Error(`toMoney: invalid Rial amount "${amount}".`)
   }

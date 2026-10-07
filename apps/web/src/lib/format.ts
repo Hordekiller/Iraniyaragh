@@ -184,12 +184,17 @@ export function formatRial(input: string | number): string {
 
 /** Format a Rial amount as Toman with Persian digits and a "تومان" suffix. */
 export function formatToman(input: string | number): string {
-  const value = Number(input)
-  if (!Number.isSafeInteger(value) || value < 0) {
+  if ((typeof input === 'number' && (!Number.isSafeInteger(input) || input < 0)) || !/^\d+$/.test(String(input))) {
     return toPersianDigits(String(input))
   }
-  const toman = Math.trunc(value / RIALS_PER_TOMAN)
-  return `${formatPersianNumber(toman)} تومان`
+  // Money is an integer IRR string. Keep its exact tenth of a Toman, including
+  // amounts outside Number's safe range; display never changes stored units.
+  const rials = BigInt(input)
+  const ratio = BigInt(RIALS_PER_TOMAN)
+  const whole = formatPersianNumber((rials / ratio).toString())
+  const remainder = rials % ratio
+  const fraction = remainder === 0n ? '' : `٫${toPersianDigits(remainder.toString())}`
+  return `${whole}${fraction} تومان`
 }
 
 /** Current date formatted as Persian text, e.g. «چهارشنبه ۱۸ شهریور ۱۴۰۵». */
