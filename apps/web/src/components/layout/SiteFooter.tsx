@@ -39,6 +39,8 @@ export function SiteFooter() {
               <li><Link to={ROUTES.search} className="hover:text-[#C2410C] focus-visible:underline">جستجوی کالا</Link></li>
               <li><Link to={ROUTES.cart} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline"><ShoppingBag size={15} aria-hidden="true" /> سبد خرید</Link></li>
               <li><Link to={ROUTES.account} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline"><UserRound size={15} aria-hidden="true" /> حساب کاربری</Link></li>
+              <li><Link to={ROUTES.privacy} className="hover:text-[#C2410C] focus-visible:underline">حریم خصوصی</Link></li>
+              <li><Link to={ROUTES.terms} className="hover:text-[#C2410C] focus-visible:underline">قوانین و شرایط فروش</Link></li>
             </ul>
           </nav>
 

@@ -82,9 +82,9 @@ export class CustomerCreateDto {
 
 export class CustomerUpdateDto {
   @Type(() => Number) @IsInt() @Min(0) expectedVersion!: number;
-  @ValidateIf((_object, value) => value !== undefined)
+  @ValidateIf((_object, value) => value !== undefined && value !== null)
   @Transform(nullableTrim) @IsString() @MaxLength(100) firstName?: string | null;
-  @ValidateIf((_object, value) => value !== undefined)
+  @ValidateIf((_object, value) => value !== undefined && value !== null)
   @Transform(nullableTrim) @IsString() @MaxLength(100) lastName?: string | null;
 }
 

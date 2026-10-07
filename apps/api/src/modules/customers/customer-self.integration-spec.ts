@@ -130,6 +130,23 @@ describe.sequential('Customer-self real HTTP/session/PostgreSQL security', () =>
     expect((await request('PATCH', '', { ...input, firstName: 'stale' })).status).toBe(409);
     expect(await foreignState()).toEqual(foreignBefore);
   });
+  it('accepts contract-defined nullable names, including blank-name clearing, and replays once', async () => {
+    const before = await account();
+    const input = { expectedVersion: before.version, firstName: null, lastName: '   ' };
+    const key = `self-clear-names-${runId}`;
+    const first = await request('PATCH', '', input, access[0], key);
+    expect(first.status).toBe(200);
+    const firstBody = await first.json();
+    expect(firstBody.data.account).toMatchObject({ firstName: null, lastName: null, version: before.version + 1 });
+    const replay = await request('PATCH', '', input, access[0], key);
+    expect(replay.status).toBe(200);
+    expect(await replay.json()).toEqual(firstBody);
+    expect((await account()).version).toBe(before.version + 1);
+    const invalid = await request('PATCH', '', { expectedVersion: before.version + 1, firstName: 42 });
+    expect(invalid.status).toBe(400);
+    expect((await account()).version).toBe(before.version + 1);
+    expect(await foreignState()).toEqual(foreignBefore);
+  });
   it('allows exactly one concurrent profile version winner', async () => {
     const before = await account();
     const responses = await Promise.all(['one', 'two'].map(lastName => request('PATCH', '', { expectedVersion: before.version, lastName })));

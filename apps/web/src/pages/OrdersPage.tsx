@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Package, RefreshCw } from 'lucide-react'
 import type { OrderSummary } from '@iranyaragh/contracts'
+import { AccountNavigation, SessionRestoring } from '../components/account/AccountNavigation'
+import type { CustomerOrderPage } from '../services/commerce/types'
 import { useOrderApi } from '../state/order-context'
 import { useAuth } from '../state/auth-context'
 import { formatTimestamp, formatToman, toPersianDigits } from '../lib/format'
@@ -16,34 +18,40 @@ import {
 export function OrdersPage() {
   const api = useOrderApi()
   const auth = useAuth()
+  const [params, setParams] = useSearchParams()
+  const requestedPage = Number(params.get('page') ?? 1)
+  const currentPage = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
   const [reload, setReload] = useState(0)
-  const requestKey = `${auth.state.phase}:${reload}`
+  const requestKey = `${auth.state.phase}:${auth.state.principal?.userId ?? "guest"}:${currentPage}:${reload}`
   const [result, setResult] = useState<{
     key: string
+    meta: CustomerOrderPage['meta'] | null
     items: OrderSummary[] | null
     error: unknown | null
-  }>({ key: '', items: null, error: null })
+  }>({ key: '', items: null, meta: null, error: null })
 
   useEffect(() => {
     if (auth.state.phase !== 'authenticated') return
     let active = true
     api
-      .listOrders()
+      .listOrders(currentPage)
       .then((page) => {
         if (active)
-          setResult({ key: requestKey, items: page.items, error: null })
+          setResult({ key: requestKey, items: page.items, meta: page.meta, error: null })
       })
       .catch((cause) => {
-        if (active) setResult({ key: requestKey, items: null, error: cause })
+        if (active) setResult({ key: requestKey, items: null, meta: null, error: cause })
       })
     return () => {
       active = false
     }
-  }, [api, auth.state.phase, requestKey])
+  }, [api, auth.state.phase, requestKey, currentPage])
 
   const items = result.key === requestKey ? result.items : null
+  const meta = result.key === requestKey ? result.meta : null
   const error = result.key === requestKey ? result.error : null
 
+  if (auth.state.phase !== 'authenticated' && (!auth.restored || auth.state.restoring)) return <SessionRestoring />
   if (auth.state.phase !== 'authenticated')
     return (
       <Centered
@@ -73,6 +81,7 @@ export function OrdersPage() {
           بازگشت به فروشگاه
         </Link>
       </div>
+      <AccountNavigation />
       {items === null && !error && (
         <div
           role="status"
@@ -100,8 +109,8 @@ export function OrdersPage() {
       )}
       {items?.length === 0 && !error && (
         <Centered
-          title="هنوز سفارشی ندارید"
-          description="پس از ثبت سفارش، وضعیت پرداخت و ارسال از همین‌جا قابل پیگیری است."
+          title={meta && meta.total > 0 ? 'در این صفحه سفارشی نیست' : 'هنوز سفارشی ندارید'}
+          description={meta && meta.total > 0 ? 'برای مشاهده سفارش‌ها به صفحه قبلی برگردید.' : 'پس از ثبت سفارش، وضعیت پرداخت و ارسال از همین‌جا قابل پیگیری است.'}
           action={
             <Link to={ROUTES.home} className={buttonClass}>
               شروع خرید
@@ -169,6 +178,11 @@ export function OrdersPage() {
           ))}
         </ul>
       )}
+      {meta && (meta.pages > 1 || currentPage > 1) && <nav aria-label="صفحه‌بندی سفارش‌ها" className="mt-6 flex flex-wrap items-center justify-center gap-4">
+        <button type="button" disabled={currentPage <= 1} onClick={() => setParams({ page: String(currentPage - 1) })} className={`${buttonClass} disabled:opacity-50`}>صفحه قبلی</button>
+        <p className="text-sm text-slate-600">صفحه {toPersianDigits(meta.page)} از {toPersianDigits(Math.max(1, meta.pages))} · {toPersianDigits(meta.total)} سفارش</p>
+        <button type="button" disabled={currentPage >= meta.pages} onClick={() => setParams({ page: String(currentPage + 1) })} className={`${buttonClass} disabled:opacity-50`}>صفحه بعدی</button>
+      </nav>}
     </div>
   )
 }

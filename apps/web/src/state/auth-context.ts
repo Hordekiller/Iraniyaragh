@@ -9,6 +9,8 @@ export type AuthenticatedJsonRequest = <T>(
 ) => Promise<ApiSuccess<T>>
 
 export type AuthContextValue = {
+  /** Initial silent-restore attempt has finished; this is not an authentication claim. */
+  restored: boolean
   state: CustomerOtpUiState
   controller: CustomerOtpController
   request: AuthenticatedJsonRequest
