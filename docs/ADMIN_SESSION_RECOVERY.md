@@ -62,3 +62,25 @@ Release requires green CI/security checks, official exact-SHA images, verified
 backup and deployment through `scripts/deploy/deploy.sh`. Issue #400 remains
 open until the operator's real staging login/reload/MFA/logout acceptance has
 evidence. Local or CI tests do not substitute for that staging evidence.
+
+### Database gate repair
+
+CI run `37619618045` exposed a pre-existing catalog concurrency failure:
+`catalog-authoring.integration-spec.ts` / `serializes concurrent edits, with one
+version winner and no mixed values`. A raw row-lock query surfaced PostgreSQL
+`40001` through Prisma `P2010`; catalog idempotency only retried `P2034`, leaking
+the aborted transaction instead of reaching the existing `STALE_VERSION` rule.
+Eight local race runs passed before the fix, so occurrence depends on scheduling;
+three deterministic regression tests failed on the captured error envelope.
+
+The catalog now recognizes only authoritative transaction conflicts (`P2034` or
+raw `P2010` with `40001`/`40P01`) and reruns the complete rolled-back transaction,
+with the same payload/key and the existing three attempts/backoff. Exhaustion is
+a stable conflict, never success. Syntax/permission/unique/network raw errors
+are not blindly retried. No concurrency assertion was removed or weakened.
+Twenty-seven unit tests and 21 real catalog/idempotency integration tests passed.
+The helper is used by catalog idempotency; SMS/payment send retry rules are not
+changed.
+
+References: [Prisma error envelopes](https://docs.prisma.io/docs/orm/reference/error-reference),
+[PostgreSQL transaction retry rules](https://www.postgresql.org/docs/18/mvcc-serialization-failure-handling.html).

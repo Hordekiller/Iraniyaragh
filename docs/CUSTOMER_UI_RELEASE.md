@@ -32,9 +32,11 @@ profile persistence and shipment acceptance still require staging evidence.
    contracts explicitly open.
 4. #388: staff product/SKU/IRR pricing/description/image -> publish -> storefront
    acceptance; video remains open unless actual worker and authoring support exist.
-5. #114: operator reported one received test SMS; retain the issue until real OTP
-   login and applicable transactional, duplicate/replay/failure acceptance are
-   evidenced. Never change payment mode as part of SMS work.
+5. #114 is closed at the operator's request after private staging configuration
+   and an operator-reported received test SMS. #403 retains real customer OTP,
+   applicable transactional handset and duplicate/replay/failure acceptance.
+   The running provider is `smsir`, all four template IDs are configured, and
+   payment remains disabled. Configuration is not full handset acceptance.
 6. #393: verified automatic ClamAV signature maintenance is an independent gate.
 7. #347/#352, #348, #338/#336, #358 and #359 remain separate domain/security
    work: stocktake, returns, credit ledger, reports and role management.
