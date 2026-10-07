@@ -12,6 +12,7 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
 
 describe('apiFetch', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     setAccessToken(null);
   });
@@ -104,6 +105,41 @@ describe('apiFetch', () => {
   it('throws ApiNetworkError when fetch throws', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new Error('boom'))));
     await expect(apiFetch<unknown>('/auth/me')).rejects.toBeInstanceOf(ApiNetworkError);
+  });
+
+  it('keeps the request timeout active while the response body is stalled', async () => {
+    vi.useFakeTimers();
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      signal = init.signal as AbortSignal;
+      return { ok: true, status: 200, text: () => new Promise<string>((_resolve, reject) => {
+        signal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+      }) } as Response;
+    }));
+    const result = apiFetch('/auth/me');
+    const rejected = expect(result).rejects.toBeInstanceOf(ApiNetworkError);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(signal?.aborted).toBe(true);
+    await rejected;
+  });
+
+  it('classifies cancellation during response reading without attempting auth recovery', async () => {
+    const controller = new AbortController();
+    const recovery = vi.fn(async () => 'unused');
+    const unregister = registerSessionRecovery(recovery);
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, text: async () => {
+      controller.abort();
+      throw new DOMException('Aborted', 'AbortError');
+    } }) as unknown as Response));
+    try {
+      await expect(apiFetch('/auth/me', { token: 'current', signal: controller.signal })).rejects.toBeInstanceOf(ApiAbortError);
+      expect(recovery).not.toHaveBeenCalled();
+    } finally { unregister(); }
+  });
+
+  it('reports an unreadable response without logging its content or claiming success', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, text: async () => '<html>upstream error</html>' }) as Response));
+    await expect(apiFetch('/auth/me')).rejects.toBeInstanceOf(ApiNetworkError);
   });
 
   it('forwards the abort signal and throws ApiAbortError when already aborted', async () => {

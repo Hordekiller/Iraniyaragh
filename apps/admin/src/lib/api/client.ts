@@ -166,6 +166,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   let response: Response;
+  let payload: unknown;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
   const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
@@ -184,18 +185,19 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       cache: 'no-store',
       signal,
     });
+    // The fetch signal also bounds body consumption. Headers alone do not
+    // complete a request, and an interrupted/malformed body is not success.
+    const text = await response.text();
+    payload = text ? (JSON.parse(text) as unknown) : undefined;
   } catch {
-    clearTimeout(timeoutId);
     if (options.signal?.aborted) {
       throw new ApiAbortError();
     }
     if (controller.signal.aborted) throw new ApiNetworkError('زمان دریافت پاسخ به پایان رسید. دوباره تلاش کنید.');
     throw new ApiNetworkError('امکان برقراری ارتباط با سامانه وجود ندارد.');
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  clearTimeout(timeoutId);
-  const text = await response.text();
-  const payload = text ? (JSON.parse(text) as unknown) : undefined;
 
   if (!response.ok) {
     const failure = (payload as ApiErrorEnvelope | undefined) ?? {

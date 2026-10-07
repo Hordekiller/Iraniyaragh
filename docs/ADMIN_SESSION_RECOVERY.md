@@ -40,6 +40,13 @@ Headless application contexts (media worker) do not require an HTTP adapter.
 Cookie names/attributes, Origin validation, CSRF, inactivity limits, rate limits,
 RBAC and the freshness window are not changed.
 
+Final review found that the Admin request timer was cleared after headers, before
+reading the response body. Three regression tests reproduced an unbounded stalled
+body, misclassified caller cancellation and leaked JSON-parser error text. The
+existing 30-second bound now covers body reading/parsing; cancellation and failed
+or unreadable responses become sanitized abort/network errors, never successful
+authentication or mutation. No automatic retry is added for these outcomes.
+
 The real browser test reproduced one additional stale-shell case: revoking the
 current device clears the server-issued CSRF cookie; a subsequent invalid bearer
 previously caused an impossible refresh, received `AUTH_CSRF_INVALID`, and kept
