@@ -14,6 +14,8 @@ The first release supports two first-party browser clients:
 Native/mobile token delivery, social login, passkeys/WebAuthn, production SMS vendor
 selection and implicit `User`/`Customer` linkage are out of scope. They require a
 compatible contract extension, not an undocumented switch in transport.
+The explicit customer-self onboarding extension below supplies new-profile
+creation; matching an existing customer mobile still never grants ownership.
 
 `MUST`, `MUST NOT`, `SHOULD` and `MAY` are normative. Time is UTC and ISO-8601 in
 JSON. Durations in responses are integer seconds. IDs are opaque strings.
@@ -206,6 +208,33 @@ text, trimmed, control-character-free and limited to 150 characters. Success
 atomically consumes the challenge, verifies/creates the principal, sets canonical
 mobile verification state and creates the session. A new security principal becomes
 `ACTIVE`; no `Customer` record is created or linked.
+
+### 6.2.1 Explicit customer-self commerce onboarding
+
+`PUT /api/v1/customers/me` requires a live `CUSTOMER_OTP` session and an
+`ACTIVE` principal with a verified canonical mobile. The command accepts no
+client-supplied fields, IDs, mobile, status or name. It initializes a new, empty
+commerce profile linked only to `principal.userId`; successful repeats return
+the existing active own account without resetting its version or personal data.
+A per-principal transaction lock and unique indexes serialize parallel commands.
+This naturally idempotent PUT does not require a client idempotency key. Creation
+and the PII-free audit entry commit together. GET remains read-only.
+
+If any existing commerce profile has the same mobile but is not already linked
+to this principal, return `409 CUSTOMER_ACCOUNT_LINK_REQUIRED`. Do not attach,
+merge, reactivate, or reveal that profile, its addresses, or order history.
+Ownership reconciliation is an independent controlled operation. Missing
+customer Cart/Guest Cart merge returns `409 CUSTOMER_ACCOUNT_REQUIRED` before
+any cart mutation. The Web may then initialize its own account and replay that
+cart command once with exactly the original payload/idempotency key. Network,
+authentication, version, and generic conflict failures never trigger onboarding.
+The complete recovery operation is bound to its starting principal and login
+generation. Logout, expiry, or switching customers invalidates it before any
+subsequent request/replay; normal same-customer token rotation retains the
+generation. Late responses cannot refresh, provision, or mutate a newer login.
+Profile/address loads may initialize only after an authoritative `404 NOT_FOUND`
+from the read-only customer-self account endpoint. Disabled payment and SMS
+provider behavior are unchanged.
 
 ### 6.3 Staff password and TOTP
 

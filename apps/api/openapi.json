@@ -13691,7 +13691,8 @@
                       "enum": [
                         "CART_LINE_LIMIT_EXCEEDED",
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "CUSTOMER_ACCOUNT_REQUIRED"
                       ]
                     },
                     "message": {
@@ -14133,7 +14134,8 @@
                       "enum": [
                         "CART_LINE_LIMIT_EXCEEDED",
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "CUSTOMER_ACCOUNT_REQUIRED"
                       ]
                     },
                     "message": {
@@ -14621,7 +14623,8 @@
                       "enum": [
                         "CART_LINE_LIMIT_EXCEEDED",
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "CUSTOMER_ACCOUNT_REQUIRED"
                       ]
                     },
                     "message": {
@@ -15045,7 +15048,8 @@
                       "enum": [
                         "CART_LINE_LIMIT_EXCEEDED",
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "CUSTOMER_ACCOUNT_REQUIRED"
                       ]
                     },
                     "message": {
@@ -15458,7 +15462,8 @@
                       "enum": [
                         "CART_LINE_LIMIT_EXCEEDED",
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "CUSTOMER_ACCOUNT_REQUIRED"
                       ]
                     },
                     "message": {
@@ -16212,7 +16217,8 @@
                       "enum": [
                         "CART_LINE_LIMIT_EXCEEDED",
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "CUSTOMER_ACCOUNT_REQUIRED"
                       ]
                     },
                     "message": {
@@ -16740,7 +16746,8 @@
                       "enum": [
                         "CART_LINE_LIMIT_EXCEEDED",
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "CUSTOMER_ACCOUNT_REQUIRED"
                       ]
                     },
                     "message": {
@@ -17204,7 +17211,8 @@
                       "enum": [
                         "CART_LINE_LIMIT_EXCEEDED",
                         "IDEMPOTENCY_CONFLICT",
-                        "CONFLICT"
+                        "CONFLICT",
+                        "CUSTOMER_ACCOUNT_REQUIRED"
                       ]
                     },
                     "message": {
@@ -22129,6 +22137,158 @@
           }
         ],
         "summary": "Get the authenticated customer account and address book",
+        "tags": [
+          "CustomerSelf"
+        ]
+      },
+      "put": {
+        "operationId": "CustomerSelfController_initialize",
+        "parameters": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "account"
+                      ],
+                      "properties": {
+                        "account": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "mobile",
+                            "firstName",
+                            "lastName",
+                            "version",
+                            "addresses"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "mobile": {
+                              "type": "string"
+                            },
+                            "firstName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "lastName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "integer"
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "label",
+                                  "receiverName",
+                                  "mobile",
+                                  "provinceCode",
+                                  "city",
+                                  "addressLine",
+                                  "postalCode",
+                                  "isDefault",
+                                  "createdAt",
+                                  "updatedAt"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "receiverName": {
+                                    "type": "string"
+                                  },
+                                  "mobile": {
+                                    "type": "string"
+                                  },
+                                  "provinceCode": {
+                                    "type": "string"
+                                  },
+                                  "city": {
+                                    "type": "string"
+                                  },
+                                  "addressLine": {
+                                    "type": "string"
+                                  },
+                                  "postalCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "isDefault": {
+                                    "type": "boolean"
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "updatedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Account ownership and mobile cannot be supplied by the client"
+          },
+          "401": {
+            "description": "Missing, expired or revoked customer session"
+          },
+          "403": {
+            "description": "Customer authentication level required"
+          },
+          "404": {
+            "description": "No active account linked to the authenticated customer"
+          },
+          "409": {
+            "description": "CUSTOMER_ACCOUNT_LINK_REQUIRED: existing commerce profile requires controlled ownership reconciliation"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Initialize an empty account for the verified customer; repeat submits return the existing own account",
         "tags": [
           "CustomerSelf"
         ]

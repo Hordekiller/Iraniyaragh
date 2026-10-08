@@ -17,6 +17,9 @@ import { AuthTokenService } from '../auth/auth-token.service';
 import { CustomerSelfController } from './customer-self.controller';
 import { CustomerAccountAddressesDto, CustomerUpdateDto } from './customers.dto';
 import { CustomersService } from './customers.service';
+import { CartService } from '../orders/cart.service';
+import { CartController } from '../orders/cart.controller';
+import { AllExceptionsFilter } from '../../common/all-exceptions.filter';
 
 // Only disposable PostgreSQL: setup provisions two synthetic identities and
 // sessions through the real session service. It does not accept an SMS provider
@@ -37,17 +40,19 @@ const principal = new AuthPrincipalService(prisma, tokens, new AuthPermissionSer
 // esbuild omits design metadata; these are the production tsc constructor/body
 // types. The actual auth metadata and guards remain untouched.
 Reflect.defineMetadata('design:paramtypes', [CustomersService], CustomerSelfController);
+Reflect.defineMetadata('design:paramtypes', [CartService], CartController);
 Reflect.defineMetadata('design:paramtypes', [Object, String, CustomerUpdateDto], CustomerSelfController.prototype, 'update');
 Reflect.defineMetadata('design:paramtypes', [Object, String, CustomerAccountAddressesDto], CustomerSelfController.prototype, 'replaceAddresses');
-@Module({ imports: [ApiFoundationModule], controllers: [CustomerSelfController], providers: [
+@Module({ imports: [ApiFoundationModule], controllers: [CustomerSelfController, CartController], providers: [
   { provide: CustomersService, useValue: customers },
+  { provide: CartService, useValue: new CartService(prisma) },
   { provide: APP_GUARD, useValue: new AuthGuard(principal, audit) },
 ] })
 class CustomerSelfIntegrationModule {}
 
 describe.sequential('Customer-self real HTTP/session/PostgreSQL security', () => {
-  const users = [`self-a-${runId}`, `self-b-${runId}`];
-  const mobiles = [0, 1].map(index => `+989${randomInt(100_000_000, 899_999_999) + index}`);
+  const users = [`self-a-${runId}`, `self-b-${runId}`, `self-new-${runId}`];
+  const mobiles = [0, 1, 2].map(index => `+989${randomInt(100_000_000, 899_999_999) + index}`);
   const ids: string[] = [];
   const access: string[] = [];
   let app: INestApplication;
@@ -70,8 +75,10 @@ describe.sequential('Customer-self real HTTP/session/PostgreSQL security', () =>
     connected = true;
     for (const [index, id] of users.entries()) {
       await prisma.user.create({ data: { id, mobile: mobiles[index], status: 'ACTIVE', createdAt: new Date(Date.now() - 60000), isMobileVerified: true, mobileVerifiedAt: new Date() } });
-      const row = await prisma.customer.create({ data: { userId: id, mobile: mobiles[index], firstName: index ? 'مشتری ب' : 'مشتری الف' } });
-      ids.push(row.id);
+      if (index < 2) {
+        const row = await prisma.customer.create({ data: { userId: id, mobile: mobiles[index], firstName: index ? 'مشتری ب' : 'مشتری الف' } });
+        ids.push(row.id);
+      }
       access.push((await sessions.createSession({ userId: id, authenticationLevel: 'CUSTOMER_OTP', authenticatedAt: new Date(Date.now() - 1000) })).accessToken);
     }
     await prisma.customerAddress.create({ data: { customerId: ids[1], ...address('فقط مشتری ب'), mobile: mobiles[1] } });
@@ -80,6 +87,7 @@ describe.sequential('Customer-self real HTTP/session/PostgreSQL security', () =>
     app = await NestFactory.create(CustomerSelfIntegrationModule, { logger: false });
     app.setGlobalPrefix('api'); app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
     app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }));
+    app.useGlobalFilters(new AllExceptionsFilter());
     await app.listen(0, '127.0.0.1'); origin = await app.getUrl();
   });
   afterAll(async () => {
@@ -88,7 +96,7 @@ describe.sequential('Customer-self real HTTP/session/PostgreSQL security', () =>
     await prisma.auditLog.deleteMany({ where: { actorId: { in: users } } });
     await prisma.customerCommandRecord.deleteMany({ where: { actorId: { in: users } } });
     if (orderId) await prisma.order.deleteMany({ where: { id: orderId } });
-    await prisma.customer.deleteMany({ where: { id: { in: ids } } });
+    await prisma.customer.deleteMany({ where: { userId: { in: users } } });
     await prisma.user.deleteMany({ where: { id: { in: users } } });
     await prisma.$disconnect();
   });
@@ -96,6 +104,58 @@ describe.sequential('Customer-self real HTTP/session/PostgreSQL security', () =>
   it('denies anonymous reads and mutations', async () => {
     for (const [method, path, body] of [['GET', '', undefined], ['PATCH', '', { expectedVersion: 0, firstName: 'x' }], ['PUT', '/addresses', { expectedVersion: 0, addresses: [] }]] as const)
       expect((await request(method, path, body, '')).status).toBe(401);
+    expect((await request('PUT', '', undefined, '')).status).toBe(401);
+  });
+  it('initializes a verified new principal exactly once, including concurrent submits and restart', async () => {
+    expect((await request('GET', '', undefined, access[2])).status).toBe(404);
+    expect(await prisma.customer.count({ where: { userId: users[2] } })).toBe(0);
+    const cartRequest = () => fetch(`${origin}/api/v1/cart`, { headers: { Authorization: `Bearer ${access[2]}` } });
+    const missingCart = await cartRequest();
+    expect(missingCart.status).toBe(409);
+    expect((await missingCart.json()).code).toBe('CUSTOMER_ACCOUNT_REQUIRED');
+    const responses = await Promise.all(Array.from({ length: 4 }, () => request('PUT', '', undefined, access[2])));
+    expect(responses.map(response => response.status)).toEqual([200, 200, 200, 200]);
+    const accounts = await Promise.all(responses.map(async response => (await response.json()).data.account));
+    expect(new Set(accounts.map(result => result.id)).size).toBe(1);
+    expect(accounts[0]).toMatchObject({ mobile: mobiles[2], firstName: null, lastName: null, addresses: [], version: 0 });
+    expect(await prisma.customer.count({ where: { userId: users[2] } })).toBe(1);
+    expect(await prisma.auditLog.count({ where: { actorId: users[2], action: 'customer.self_initialized' } })).toBe(1);
+    const restartedService = new CustomersService(prisma, audit);
+    expect(await restartedService.getOwn(users[2])).toEqual(accounts[0]);
+    const cart = await cartRequest();
+    expect(cart.status).toBe(200);
+    expect((await cart.json()).data.cart.lines).toEqual([]);
+    expect(await foreignState()).toEqual(foreignBefore);
+  });
+  it('rejects every client supplied ownership, mobile, name or status on initialization', async () => {
+    for (const body of [{ userId: users[1] }, { customerId: ids[1] }, { mobile: mobiles[1] }, { firstName: 'injected' }, { status: 'ACTIVE' }, []]) {
+      const response = await request('PUT', '', body);
+      expect(response.status).toBe(400);
+      expect((await response.json()).code).toBe('VALIDATION_ERROR');
+    }
+    expect(await foreignState()).toEqual(foreignBefore);
+  });
+  it('never attaches an unlinked historical profile with the same verified mobile', async () => {
+    const mobile = `+989${randomInt(100_000_000, 899_999_999)}`;
+    const userId = `self-collision-${runId}`;
+    const historical = await prisma.customer.create({ data: { mobile, firstName: 'isolated-history-marker' } });
+    try {
+      await prisma.user.create({ data: { id: userId, mobile, status: 'ACTIVE', createdAt: new Date(Date.now() - 60_000), isMobileVerified: true, mobileVerifiedAt: new Date() } });
+      const token = (await sessions.createSession({ userId, authenticationLevel: 'CUSTOMER_OTP', authenticatedAt: new Date() })).accessToken;
+      const response = await request('PUT', '', undefined, token);
+      expect(response.status).toBe(409);
+      const failure = await response.json();
+      expect(failure.code).toBe('CUSTOMER_ACCOUNT_LINK_REQUIRED');
+      expect(JSON.stringify(failure)).not.toContain('isolated-history-marker');
+      const unchanged = await prisma.customer.findUniqueOrThrow({ where: { id: historical.id } });
+      expect(unchanged.userId).toBe(null);
+      expect(unchanged.firstName).toBe('isolated-history-marker');
+      expect(await prisma.customer.count({ where: { mobile } })).toBe(1);
+    } finally {
+      await prisma.auditLog.deleteMany({ where: { actorId: userId } });
+      await prisma.customer.delete({ where: { id: historical.id } });
+      await prisma.user.deleteMany({ where: { id: userId } });
+    }
   });
   it('reads only the principal account even with foreign query IDs and exposes no staff data', async () => {
     const response = await request('GET', `?customerId=${ids[1]}&userId=${users[1]}`);

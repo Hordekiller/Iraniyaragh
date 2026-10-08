@@ -230,8 +230,8 @@ export class GuestCartService {
     });
     if (!customer) {
       throw new ConflictException({
-        code: 'CONFLICT',
-        message: 'Customer profile is not linked to the authenticated user.',
+        code: 'CUSTOMER_ACCOUNT_REQUIRED',
+        message: 'Initialize an owned customer profile before merging the guest cart.',
       });
     }
 

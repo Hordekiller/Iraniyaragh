@@ -63,7 +63,7 @@ export const openApiCart = {
     unavailable: failureError(["UPSTREAM_UNAVAILABLE"], 503),
     notFound: failureError(["SKU_NOT_FOUND"], 404),
     conflict: failureError(
-      ["CART_LINE_LIMIT_EXCEEDED", "IDEMPOTENCY_CONFLICT", "CONFLICT"],
+      ["CART_LINE_LIMIT_EXCEEDED", "IDEMPOTENCY_CONFLICT", "CONFLICT", "CUSTOMER_ACCOUNT_REQUIRED"],
       409,
     ),
     unprocessable: failureError(["CART_QUANTITY_INVALID"], 422),
