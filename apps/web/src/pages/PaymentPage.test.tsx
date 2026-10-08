@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthApiError } from '../lib/auth/errors'
@@ -9,8 +9,15 @@ import {
   commerceStub,
   signedInStore,
   testAuthProps,
+  testAuthContext,
 } from '../test/commerce'
 import { PaymentPage } from './PaymentPage'
+import { AuthContext, type AuthContextValue } from '../state/auth-context'
+import type { CommerceApi } from '../services/commerce/types'
+
+function sessionPage(auth: AuthContextValue, api: CommerceApi) {
+  return <MemoryRouter initialEntries={['/payment/order-1']}><AuthContext.Provider value={auth}><OrderProvider api={api}><Routes><Route path="/payment/:id" element={<PaymentPage />} /></Routes></OrderProvider></AuthContext.Provider></MemoryRouter>
+}
 
 const gateway = vi.hoisted(() => ({ redirect: vi.fn() }))
 vi.mock('../services/commerce/payment', async (importOriginal) => {
@@ -43,6 +50,39 @@ function renderPage(order = ORDER, overrides = {}, returnMode = false) {
 
 describe('PaymentPage', () => {
   beforeEach(() => gateway.redirect.mockReset())
+
+  it('clears the previous customer order when the principal changes without an anonymous render', async () => {
+    const auth = testAuthContext()
+    const api = commerceStub({ getOrder: vi.fn().mockResolvedValueOnce(ORDER).mockRejectedValue(new AuthApiError({ code: 'ORDER_NOT_FOUND', statusCode: 404, message: 'not owned' })) })
+    const page = render(sessionPage(auth, api))
+    await screen.findByText(/سفارش IR-0001/)
+    page.rerender(sessionPage({ ...auth, identityVersion: auth.identityVersion + 1, state: { ...auth.state, principal: { ...auth.state.principal!, userId: 'other-customer' } } }, api))
+    expect(screen.queryByText(/سفارش IR-0001/)).not.toBeInTheDocument()
+    await screen.findByRole('heading', { name: 'وضعیت پرداخت دریافت نشد' })
+    expect(api.getOrder).toHaveBeenCalledTimes(2)
+  })
+
+  it('preserves an unconfirmed attempt through normal token/session rotation', async () => {
+    const auth = testAuthContext()
+    const api = commerceStub({ initiatePayment: vi.fn().mockRejectedValue(new AuthApiError({ code: 'PAYMENT_RESULT_UNCONFIRMED', statusCode: 503, message: 'pending' })) })
+    const page = render(sessionPage(auth, api))
+    fireEvent.click(await screen.findByRole('button', { name: /پرداخت با زرین‌پال/ }))
+    await screen.findByRole('alert')
+    page.rerender(sessionPage({ ...auth, state: { ...auth.state, principal: { ...auth.state.principal!, sessionId: 'rotated-session' } } }, api))
+    expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
+    expect(api.initiatePayment).toHaveBeenCalledOnce()
+  })
+
+  it('does not redirect a new customer from a previous customer late initiation', async () => {
+    const auth = testAuthContext()
+    let finish!: (value: Awaited<ReturnType<CommerceApi['initiatePayment']>>) => void
+    const api = commerceStub({ initiatePayment: vi.fn(() => new Promise<Awaited<ReturnType<CommerceApi['initiatePayment']>>>((resolve) => { finish = resolve })) })
+    const page = render(sessionPage(auth, api))
+    fireEvent.click(await screen.findByRole('button', { name: /پرداخت با زرین‌پال/ }))
+    page.rerender(sessionPage({ ...auth, identityVersion: auth.identityVersion + 1, state: { ...auth.state, principal: { ...auth.state.principal!, userId: 'other-customer' } } }, api))
+    await act(async () => finish({ paymentId: 'p', status: 'PENDING', provider: 'zarinpal', amount: ORDER.totals.total, authority: 'A1', redirectUrl: 'https://payment.zarinpal.com/pg/StartPay/A1' }))
+    expect(gateway.redirect).not.toHaveBeenCalled()
+  })
 
   it('offers an explicit payment action without assuming settlement', async () => {
     renderPage()

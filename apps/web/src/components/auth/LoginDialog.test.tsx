@@ -26,6 +26,7 @@ describe("LoginDialog delivery evidence", () => {
     render(
       <AuthContext.Provider
         value={{
+          identityVersion: store.getIdentityVersion(),
           restored: true,
           state: controller.getState(),
           controller,

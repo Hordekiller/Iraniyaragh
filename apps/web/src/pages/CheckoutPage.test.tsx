@@ -12,6 +12,7 @@ import {
 } from '../test/commerce'
 import { CheckoutPage } from './CheckoutPage'
 import { getCustomerAccount } from '../services/customer-account'
+import { AuthApiError } from '../lib/auth/errors'
 
 vi.mock('../services/customer-account', () => ({
   getCustomerAccount: vi.fn().mockRejectedValue(new Error('unavailable')),
@@ -155,9 +156,13 @@ describe('CheckoutPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'عملیات انجام نشد',
+      'نتیجه ثبت سفارش هنوز مشخص نیست',
     )
-    fireEvent.click(screen.getByRole('button', { name: 'ثبت سفارش' }))
+    expect(screen.getByLabelText('نام تحویل‌گیرنده')).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'محاسبه دوباره' })).toBeDisabled()
+    expect(screen.getByRole('radio')).toBeDisabled()
+    expect(screen.getByRole('link', { name: 'مشاهده سفارش‌ها' })).toHaveAttribute('href', '/orders')
+    fireEvent.click(screen.getByRole('button', { name: 'بررسی دوباره ثبت سفارش' }))
     expect(await screen.findByTestId('payment-route')).toBeInTheDocument()
     expect(createCheckout).toHaveBeenCalledTimes(2)
     const first = createCheckout.mock.calls[0][2]
@@ -185,9 +190,24 @@ describe('CheckoutPage', () => {
     fireEvent.click(button)
     await waitFor(() => expect(createCheckout).toHaveBeenCalledTimes(1))
     expect(button).toBeDisabled()
+    expect(screen.getByRole('radio')).toBeDisabled()
     fireEvent.click(button)
     expect(createCheckout).toHaveBeenCalledTimes(1)
     resolve({ id: ORDER.id })
     await waitFor(() => expect(createCheckout).toHaveBeenCalledTimes(1))
+  })
+
+  it('requires a fresh shipping review after an authoritative quote rejection', async () => {
+    const api = commerceStub({ createCheckout: vi.fn().mockRejectedValue(new AuthApiError({ code: 'SHIPPING_QUOTE_CHANGED', statusCode: 409, message: 'expired quote' })) })
+    renderPage(api)
+    await screen.findByText('دریل رونیکس ۲۲۱۰')
+    fillValidAddress()
+    fireEvent.click(screen.getByRole('button', { name: 'محاسبه هزینه ارسال' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'ثبت سفارش' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/هزینه ارسال را دوباره محاسبه کنید/)
+    await waitFor(() => expect(screen.getByLabelText('نام تحویل‌گیرنده')).toBeEnabled())
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'ثبت سفارش' })).toBeDisabled()
+    expect(screen.getByLabelText('نام تحویل‌گیرنده')).toHaveValue('علی رضایی')
   })
 })

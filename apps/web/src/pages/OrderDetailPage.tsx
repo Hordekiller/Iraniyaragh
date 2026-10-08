@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CreditCard, MapPin, Package, RefreshCw, Truck } from 'lucide-react'
 import type { OrderDetail } from '@iranyaragh/contracts'
@@ -13,12 +13,30 @@ import {
   PAYMENT_STATUS_LABEL,
   orderStatusClass,
 } from '../services/commerce/presentation'
+import { SessionRestoring } from '../components/account/AccountNavigation'
 
 export function OrderDetailPage() {
+  const auth = useAuth()
+  const { id = '' } = useParams<{ id: string }>()
+  if (auth.state.phase !== 'authenticated' && (!auth.restored || auth.state.restoring)) return <SessionRestoring />
+  return <OrderDetailContents key={`${auth.state.principal?.userId}:${auth.identityVersion}:${id}`} />
+}
+
+function OrderDetailContents() {
   const api = useOrderApi()
   const auth = useAuth()
   const { id = '' } = useParams<{ id: string }>()
   const [reload, setReload] = useState(0)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState<unknown>(null)
+  const cancelKey = useRef<string | null>(null)
+  const inFlight = useRef(false)
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => { active.current = false }
+  }, [])
   const requestKey = `${auth.state.phase}:${id}:${reload}`
   const [result, setResult] = useState<{
     key: string
@@ -44,6 +62,26 @@ export function OrderDetailPage() {
 
   const order = result.key === requestKey ? result.order : null
   const error = result.key === requestKey ? result.error : null
+
+  async function cancelOrder() {
+    if (!order || order.status !== 'PENDING_PAYMENT' || !confirmCancel || inFlight.current) return
+    inFlight.current = true
+    setCancelling(true)
+    setCancelError(null)
+    try {
+      cancelKey.current ??= `order-cancel-${crypto.randomUUID()}`
+      const cancelled = await api.cancelOrder(order.id, cancelKey.current)
+      if (!active.current) return
+      if (cancelled.id !== order.id || cancelled.status !== 'CANCELLED') throw new Error('Unconfirmed cancellation')
+      setConfirmCancel(false)
+      setReload((value) => value + 1)
+    } catch (cause) {
+      if (active.current) setCancelError(cause)
+    } finally {
+      inFlight.current = false
+      if (active.current) setCancelling(false)
+    }
+  }
 
   if (auth.state.phase !== 'authenticated')
     return (
@@ -100,6 +138,9 @@ export function OrderDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button type="button" disabled={cancelling} onClick={() => setReload((value) => value + 1)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold">
+            به‌روزرسانی وضعیت سفارش
+          </button>
           <span
             className={`rounded-full border px-3 py-1.5 text-xs font-bold ${orderStatusClass(order.status)}`}
           >
@@ -115,6 +156,17 @@ export function OrderDetailPage() {
           )}
         </div>
       </div>
+
+      {order.status === 'PENDING_PAYMENT' && <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4" aria-label="لغو سفارش">
+        {!confirmCancel ? <button type="button" onClick={() => setConfirmCancel(true)} className="text-sm font-bold text-red-700 underline">لغو سفارش پرداخت‌نشده</button> : <div>
+          <p className="text-sm leading-7 text-slate-700">این سفارش را لغو می‌کنید؟ موجودی رزروشده آزاد می‌شود. اگر پرداختی در درگاه انجام داده‌اید، پیش از لغو وضعیت پرداخت را بررسی کنید؛ لغو سفارش به معنی استرداد وجه نیست.</p>
+          <div className="mt-3 flex gap-3">
+            <button type="button" disabled={cancelling} onClick={() => void cancelOrder()} className="rounded-xl bg-red-700 px-4 py-2 text-sm font-bold text-white">{cancelling ? 'در حال بررسی لغو…' : 'تأیید لغو سفارش'}</button>
+            <button type="button" disabled={cancelling} onClick={() => setConfirmCancel(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold">انصراف</button>
+          </div>
+        </div>}
+        {Boolean(cancelError) && <p role="alert" className="mt-3 text-sm font-bold text-red-700">لغو سفارش تأیید نشد. وضعیت سفارش را به‌روزرسانی کنید؛ تلاش دوباره با همان درخواست انجام می‌شود. {commerceErrorMessage(cancelError)}</p>}
+      </section>}
 
       <section className="mt-6 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="flex items-center gap-2 font-black text-slate-950">

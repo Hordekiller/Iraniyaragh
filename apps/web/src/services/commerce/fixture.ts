@@ -4,6 +4,7 @@ import type {
   CheckoutAddress,
   OrderDetail,
   OrderSummary,
+  OrderCommandResult,
   PaymentInitiation,
   ShippingQuote,
 } from '@iranyaragh/contracts'
@@ -173,6 +174,10 @@ export class CommerceFixtureClient implements CommerceApi {
     const order = this.orders.get(id)
     if (!order) throw this.failure('NOT_FOUND', 'سفارش یافت نشد.', 404)
     return structuredClone(order)
+  }
+
+  async cancelOrder(): Promise<OrderCommandResult> {
+    throw new AuthApiError({ code: 'UPSTREAM_UNAVAILABLE', message: 'The fixture store cannot cancel a real order.', statusCode: 503 })
   }
 
   async initiatePayment(): Promise<PaymentInitiation> {

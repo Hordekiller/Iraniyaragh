@@ -9,6 +9,18 @@ import { MemorySessionStore } from '../lib/auth/session-store'
 import { LocalRefreshCoordinator } from '../lib/auth/session-store'
 import { AuthFixtureClient } from '../lib/auth/fixtures'
 import type { CommerceApi } from '../services/commerce/types'
+import type { AuthContextValue } from '../state/auth-context'
+import { CustomerOtpController } from '../lib/auth/ui'
+import { createAuthenticatedRequest } from '../lib/auth/authenticated-request'
+
+export function testAuthContext(store = signedInStore()): AuthContextValue {
+  const props = testAuthProps(store)
+  const controller = new CustomerOtpController(props.api, store)
+  return {
+    restored: true, identityVersion: store.getIdentityVersion(), state: controller.getState(), controller,
+    request: createAuthenticatedRequest(store, async () => false), open: () => controller.open(), close: () => controller.close(),
+  }
+}
 
 export function signedInStore() {
   const store = new MemorySessionStore()
@@ -175,6 +187,7 @@ export function commerceStub(
       meta: { page: 1, perPage: 25, total: 1, pages: 1 },
     })),
     getOrder: vi.fn(async () => ORDER),
+    cancelOrder: vi.fn(async () => ({ id: ORDER.id, number: ORDER.number, status: 'CANCELLED' as const, releasedReservations: 1, cancelledAt: ORDER.updatedAt })),
     initiatePayment: vi.fn(async () => ({
       paymentId: 'payment-1',
       status: 'PENDING' as const,

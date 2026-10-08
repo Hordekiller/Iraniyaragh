@@ -21,8 +21,16 @@ import {
   redirectToPaymentGateway,
 } from '../services/commerce/payment'
 import { PAYMENT_STATUS_LABEL } from '../services/commerce/presentation'
+import { SessionRestoring } from '../components/account/AccountNavigation'
 
 export function PaymentPage({ returnMode = false }: { returnMode?: boolean }) {
+  const auth = useAuth()
+  const { id = '' } = useParams<{ id: string }>()
+  if (auth.state.phase !== 'authenticated' && (!auth.restored || auth.state.restoring)) return <SessionRestoring />
+  return <PaymentContents key={`${auth.state.principal?.userId}:${auth.identityVersion}:${id}`} returnMode={returnMode} />
+}
+
+function PaymentContents({ returnMode }: { returnMode: boolean }) {
   const api = useOrderApi()
   const auth = useAuth()
   const { id = '' } = useParams<{ id: string }>()
@@ -35,6 +43,11 @@ export function PaymentPage({ returnMode = false }: { returnMode?: boolean }) {
   const [uncertainOrderId, setUncertainOrderId] = useState<string | null>(null)
   const paymentKey = useRef<{ orderId: string; key: string } | null>(null)
   const inFlight = useRef(false)
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => { active.current = false }
+  }, [])
   const requestKey = `${auth.state.phase}:${id}:${reload}`
   const [result, setResult] = useState<{
     key: string
@@ -80,6 +93,7 @@ export function PaymentPage({ returnMode = false }: { returnMode?: boolean }) {
       if (paymentKey.current?.orderId !== id)
         paymentKey.current = { orderId: id, key: newPaymentIdempotencyKey() }
       const payment = await api.initiatePayment(order.id, paymentKey.current.key)
+      if (!active.current) return
       const redirectUrl = paymentRedirectUrl(
         payment,
         order.totals.total.amount,

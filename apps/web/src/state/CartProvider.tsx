@@ -41,8 +41,8 @@ export function CartProvider({
   )
 
   useEffect(() => {
-    value.controller.setAuthenticated(auth.state.phase === 'authenticated')
-  }, [auth.state.phase, value.controller])
+    value.controller.setAuthenticated(auth.state.phase === 'authenticated', auth.identityVersion)
+  }, [auth.state.phase, auth.identityVersion, value.controller])
 
   const contextValue = useMemo(
     () => ({

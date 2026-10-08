@@ -30,10 +30,18 @@ export function commerceErrorMessage(error: unknown): string {
       return 'قیمت یا موجودی سبد تغییر کرده است. سبد را دوباره بررسی کنید.'
     case 'SHIPPING_QUOTE_CHANGED':
       return 'مهلت پیشنهاد ارسال تمام شده است. هزینه ارسال را دوباره محاسبه کنید.'
+    case 'SHIPPING_UNAVAILABLE':
+      return 'روش ارسال فعالی برای ثبت سفارش در دسترس نیست. با پشتیبانی فروشگاه تماس بگیرید.'
     case 'CART_EMPTY':
       return 'سبد خرید خالی است.'
     case 'NOT_FOUND':
       return 'اطلاعات درخواستی یافت نشد.'
+    case 'ORDER_NOT_FOUND':
+      return 'سفارش در حساب شما یافت نشد.'
+    case 'ORDER_STATE_CONFLICT':
+      return 'وضعیت سفارش یا مهلت رزرو موجودی تغییر کرده است. وضعیت سفارش را دوباره بررسی کنید.'
+    case 'INSUFFICIENT_STOCK':
+      return 'موجودی برای ثبت این سفارش کافی نیست. سبد خرید را دوباره بررسی کنید.'
     case 'NETWORK_ERROR':
       return 'ارتباط با سرور برقرار نشد. اینترنت را بررسی کنید.'
     case 'TIMEOUT':

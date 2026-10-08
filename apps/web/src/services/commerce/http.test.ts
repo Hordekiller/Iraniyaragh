@@ -63,6 +63,15 @@ function scopedStub(request: ReturnType<typeof vi.fn>): AuthenticatedJsonRequest
 }
 
 describe('CommerceHttpClient', () => {
+  it('cancels through the owned customer command with a stable idempotency key and no body ids', async () => {
+    const order = { id: 'owned-order', number: 'N1', status: 'CANCELLED' as const, releasedReservations: 1, cancelledAt: ORDER.updatedAt }
+    const request = vi.fn().mockResolvedValue({ data: { order } })
+    const client = new CommerceHttpClient(scopedStub(request), '/backend')
+    expect(await client.cancelOrder('owned-order', 'cancel-original-key')).toEqual(order)
+    expect(request).toHaveBeenCalledWith('/api/v1/orders/owned-order/cancel', {
+      baseUrl: '/backend', method: 'POST', credentials: 'include', headers: { 'Idempotency-Key': 'cancel-original-key' },
+    })
+  })
   it('initializes the owned profile after a missing-account merge and replays the same command once', async () => {
     const request = vi.fn().mockRejectedValueOnce(new AuthApiError({ code: 'CUSTOMER_ACCOUNT_REQUIRED', statusCode: 409, message: 'missing profile' }))
       .mockResolvedValueOnce({ data: { account: { id: 'own-profile' } } })
