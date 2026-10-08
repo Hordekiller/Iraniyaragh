@@ -72,6 +72,8 @@ export interface PaymentProvider {
    * never be called from inside a long-running database transaction. The caller
    * must not automatically retry an `unknown_result` because the gateway may
    * already have accepted the request.
+   * `unavailable` in this phase means an explicit refusal/throttle that proves
+   * no authorization was accepted; transport uncertainty is `unknown_result`.
    */
   authorize(request: PaymentAuthorizeRequest): Promise<PaymentAuthorizeResult>;
   /**

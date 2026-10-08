@@ -243,7 +243,7 @@ describe('PaymentVerificationService', () => {
     });
   });
 
-  it('marks a NOK callback as NOT_PAID without contacting the gateway', async () => {
+  it('keeps an unsigned NOK callback pending and reconcilable without claiming failure', async () => {
     const result = await ctx.service.verify({
       authority: 'AUTHORITY-1',
       status: 'NOK',
@@ -251,24 +251,14 @@ describe('PaymentVerificationService', () => {
     });
     expect(ctx.provider.verify).not.toHaveBeenCalled();
     const transitions = ctx.tx.paymentTransition.create as ReturnType<typeof vi.fn>;
-    expect(transitions).toHaveBeenCalledOnce();
-    expect(transitions).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          from: 'PENDING',
-          to: 'FAILED',
-          reason: 'gateway_not_paid',
-          requestId: 'req-1',
-        }),
-      }),
-    );
+    expect(transitions).not.toHaveBeenCalled();
     expect(ctx.auditLog.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'payment.failed' }),
+      expect.objectContaining({ action: 'payment.verification.unconfirmed' }),
       expect.anything(),
     );
     expect(result.data.verification).toMatchObject({
-      status: 'FAILED',
-      outcome: 'NOT_PAID',
+      status: 'PENDING',
+      outcome: 'ACCEPTED_UNCONFIRMED',
       orderStatus: 'PENDING_PAYMENT',
     });
   });

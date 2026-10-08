@@ -4,6 +4,9 @@ import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 import type { PaymentAuthorizeRequest, PaymentAuthorizeResult, PaymentGatewayConfig } from './payment-provider.port';
 import { PaymentInitiationService } from './payment-initiation.service';
+import { AuditLogService } from '../audit/audit-log.service';
+import { InventoryService } from '../inventory/inventory.service';
+import { OrderCommandService } from '../orders/order-command.service';
 
 function hash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -28,21 +31,6 @@ class FakeProvider {
       redirectUrl: `https://sandbox.zarinpal.com/pg/StartPay/S${request.correlationId}-authority`,
     }),
   );
-}
-
-function createBarrier(parties: number): { wait: () => Promise<void> } {
-  let arrived = 0;
-  let release: (() => void) | null = null;
-  const open = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  return {
-    wait: async () => {
-      arrived += 1;
-      if (arrived >= parties) release?.();
-      await open;
-    },
-  };
 }
 
 describe.sequential('PaymentInitiationService database integration', () => {
@@ -107,6 +95,10 @@ describe.sequential('PaymentInitiationService database integration', () => {
 
   afterAll(async () => {
     if (!connected) return;
+    await prisma.orderCommandIdempotencyRecord.deleteMany({ where: { orderId: { in: createdOrderIds } } });
+    await prisma.orderTransition.deleteMany({ where: { orderId: { in: createdOrderIds } } });
+    await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: createdOrderIds } } });
+    await prisma.auditLog.deleteMany({ where: { entityId: { in: createdOrderIds } } });
     await prisma.paymentTransition.deleteMany({
       where: { payment: { orderId: { in: createdOrderIds } } },
     });
@@ -249,14 +241,16 @@ describe.sequential('PaymentInitiationService database integration', () => {
     await expect(prisma.payment.count({ where: { orderId: id, status: 'PENDING' } })).resolves.toBe(1);
   });
 
-  it('never lets a slow concurrent authorization overwrite the stored authority', async () => {
+  it('calls the gateway once across concurrent keys and replays after completion', async () => {
     const { id } = await createOrder('raceauthority', customerId);
-    const gate = createBarrier(2);
+    let started!: () => void;
+    let finish!: () => void;
+    const start = new Promise<void>((resolve) => { started = resolve; });
+    const gate = new Promise<void>((resolve) => { finish = resolve; });
     const concurrent = new FakeProvider();
     concurrent.authorize.mockImplementation(async (request: PaymentAuthorizeRequest) => {
-      // Both in-flight authorizations are held until the second one is also
-      // waiting, so the slower response is guaranteed to write last.
-      await gate.wait();
+      started();
+      await gate;
       return {
         status: 'redirect' as const,
         authority: `S${request.correlationId}-authority`,
@@ -269,20 +263,24 @@ describe.sequential('PaymentInitiationService database integration', () => {
       gatewayConfig as never,
     );
 
-    const [slow, fast] = await Promise.all([
-      racing.initiate({
+    const first = racing.initiate({
         userId,
         orderId: id,
         idempotencyKey: `key-${runId}-race-slow`,
         requestId: `${runId}-race-slow`,
-      }),
-      racing.initiate({
+      });
+    await start;
+    try {
+      await expect(racing.initiate({
         userId,
         orderId: id,
         idempotencyKey: `key-${runId}-race-fast`,
         requestId: `${runId}-race-fast`,
-      }),
-    ]);
+      })).rejects.toMatchObject({ response: { code: 'PAYMENT_RESULT_UNCONFIRMED' } });
+      expect(concurrent.authorize).toHaveBeenCalledOnce();
+    } finally { finish(); }
+    const slow = await first;
+    const fast = await racing.initiate({ userId, orderId: id, idempotencyKey: `key-${runId}-race-fast`, requestId: `${runId}-race-replay` });
 
     const stored = await prisma.payment.findFirstOrThrow({
       where: { orderId: id, status: 'PENDING' },
@@ -298,6 +296,7 @@ describe.sequential('PaymentInitiationService database integration', () => {
       new Set([stored.id]),
     );
     expect(new Set([slow.data.payment.authority, fast.data.payment.authority]).size).toBe(1);
+    expect(concurrent.authorize).toHaveBeenCalledOnce();
   });
 
   it('does not expose a foreign order to the caller', async () => {
@@ -309,6 +308,47 @@ describe.sequential('PaymentInitiationService database integration', () => {
         requestId: `${runId}-foreign`,
       }),
     ).rejects.toMatchObject({ response: { code: 'ORDER_NOT_FOUND' } });
+    expect(provider.authorize).not.toHaveBeenCalled();
+  });
+
+  it('retains authority but refuses a redirect when the normal cancellation command wins the race', async () => {
+    const { id } = await createOrder('cancel-race', customerId);
+    let started!: () => void;
+    let finish!: () => void;
+    const start = new Promise<void>((resolve) => { started = resolve; });
+    const gate = new Promise<void>((resolve) => { finish = resolve; });
+    provider.authorize.mockImplementation(async () => { started(); await gate; return { status: 'redirect', authority: `S-${runId}-cancel-race`, redirectUrl: 'unused' }; });
+    const attempt = service.initiate({ userId, orderId: id, idempotencyKey: `key-${runId}-cancel-race`, requestId: `${runId}-cancel-race` });
+    const outcome = expect(attempt).rejects.toMatchObject({ response: { code: 'ORDER_STATE_CONFLICT' } });
+    await start;
+    const audit = new AuditLogService(prisma);
+    const commands = new OrderCommandService(prisma, audit, new InventoryService(prisma, audit));
+    try { await commands.cancelAsCustomer(userId, id, { idempotencyKey: `cancel-${runId}`, requestId: `${runId}-cancel` }); }
+    finally { finish(); }
+    await outcome;
+    await expect(prisma.order.findUnique({ where: { id } })).resolves.toMatchObject({ status: 'CANCELLED' });
+    await expect(prisma.payment.findFirst({ where: { orderId: id } })).resolves.toMatchObject({ status: 'PENDING', authority: `S-${runId}-cancel-race` });
+    expect(provider.authorize).toHaveBeenCalledOnce();
+  });
+
+  it('refuses expired reservations before contacting the provider', async () => {
+    const { id } = await createOrder('expired', customerId);
+    await prisma.order.update({ where: { id }, data: { reservationExpiresAt: new Date(0) } });
+    await expect(service.initiate({ userId, orderId: id, idempotencyKey: `key-${runId}-expired`, requestId: `${runId}-expired` }))
+      .rejects.toMatchObject({ response: { code: 'ORDER_STATE_CONFLICT' } });
+    expect(provider.authorize).not.toHaveBeenCalled();
+    await expect(prisma.payment.count({ where: { orderId: id } })).resolves.toBe(0);
+  });
+
+  it('blocks historical ambiguous transport failures with a new key', async () => {
+    const { id } = await createOrder('legacy-transport', customerId);
+    const payment = await prisma.payment.create({ data: { orderId: id, provider: 'zarinpal', amount: 150n, status: 'PENDING', idempotencyKey: hash(`legacy-${runId}`), idempotencyFingerprint: initiationFingerprint(id), gatewayEnvironment: 'sandbox' } });
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.update({ where: { id: payment.id }, data: { status: 'FAILED' } });
+      await tx.paymentTransition.create({ data: { paymentId: payment.id, from: 'PENDING', to: 'FAILED', reason: 'gateway_unavailable', requestId: `${runId}-legacy` } });
+    });
+    await expect(service.initiate({ userId, orderId: id, idempotencyKey: `key-${runId}-legacy-new`, requestId: `${runId}-legacy-new` }))
+      .rejects.toMatchObject({ response: { code: 'PAYMENT_RESULT_UNCONFIRMED' } });
     expect(provider.authorize).not.toHaveBeenCalled();
   });
 
@@ -351,7 +391,7 @@ describe.sequential('PaymentInitiationService database integration', () => {
     });
   });
 
-  it('persists an unconfirmed FAILED outcome without auto-retry on unknown_result', async () => {
+  it('keeps ambiguous authorization pending across retries, new keys and a process restart', async () => {
     const { id } = await createOrder('unconfirmed', customerId);
     provider.authorize.mockImplementation(async () => ({ status: 'unknown_result' }));
 
@@ -369,13 +409,19 @@ describe.sequential('PaymentInitiationService database integration', () => {
     expect(provider.authorize).toHaveBeenCalledOnce();
 
     const payment = await prisma.payment.findFirst({
-      where: { orderId: id, status: 'FAILED' },
+      where: { orderId: id, status: 'PENDING' },
     });
     expect(payment).not.toBeNull();
     const transition = await prisma.paymentTransition.findFirst({
       where: { paymentId: payment?.id },
     });
-    expect(transition?.reason).toBe('gateway_unconfirmed');
+    expect(transition).toBeNull();
+    const restarted = new PaymentInitiationService(prisma, provider as never, gatewayConfig);
+    await expect(attempt()).rejects.toMatchObject({ response: { code: 'PAYMENT_RESULT_UNCONFIRMED' } });
+    await expect(restarted.initiate({ userId, orderId: id, idempotencyKey: `key-${runId}-unconfirmed-new`, requestId: `${runId}-unconfirmed-new` }))
+      .rejects.toMatchObject({ response: { code: 'PAYMENT_RESULT_UNCONFIRMED' } });
+    expect(provider.authorize).toHaveBeenCalledOnce();
+    await expect(prisma.payment.count({ where: { orderId: id } })).resolves.toBe(1);
   });
 });
 

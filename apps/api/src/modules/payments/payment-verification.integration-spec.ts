@@ -268,7 +268,7 @@ describe.sequential('PaymentVerificationService database integration', () => {
     await expect(balanceOf()).resolves.toMatchObject({ onHand: 0, reserved: 0 });
   });
 
-  it('marks a NOK callback as NOT_PAID without contacting the gateway', async () => {
+  it('keeps unsigned NOK pending so a later real OK callback can settle exactly once', async () => {
     const order = await createOrderWithReservation('nok', 2);
     await createPayment(order.id, 'S-nok', 'nok');
 
@@ -279,15 +279,19 @@ describe.sequential('PaymentVerificationService database integration', () => {
     });
 
     expect(provider.verify).not.toHaveBeenCalled();
-    expect(result.data.verification).toMatchObject({ status: 'FAILED', outcome: 'NOT_PAID' });
+    expect(result.data.verification).toMatchObject({ status: 'PENDING', outcome: 'ACCEPTED_UNCONFIRMED' });
     const payment = await prisma.payment.findFirstOrThrow({ where: { orderId: order.id } });
-    expect(payment.status).toBe('FAILED');
+    expect(payment.status).toBe('PENDING');
     await expect(
-      prisma.paymentTransition.findFirstOrThrow({ where: { paymentId: payment.id } }),
-    ).resolves.toMatchObject({ from: 'PENDING', to: 'FAILED', reason: 'gateway_not_paid' });
+      prisma.paymentTransition.count({ where: { paymentId: payment.id } }),
+    ).resolves.toBe(0);
     await expect(prisma.order.findUniqueOrThrow({ where: { id: order.id } })).resolves.toMatchObject({ status: 'PENDING_PAYMENT' });
     await expect(prisma.stockReservation.count({ where: { orderId: order.id, status: 'ACTIVE' } })).resolves.toBe(1);
     await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id } })).resolves.toBe(0);
+    const verified = await verification.verify({ authority: 'S-nok', status: 'OK', requestId: `${requestIdPrefix}-nok-then-ok` });
+    expect(verified.data.verification).toMatchObject({ status: 'PAID', outcome: 'VERIFIED' });
+    expect(provider.verify).toHaveBeenCalledOnce();
+    await expect(prisma.stockReservation.count({ where: { orderId: order.id, status: 'CONSUMED' } })).resolves.toBe(1);
   });
 
   it('records NOT_PAID when the provider deterministically reports no settlement', async () => {
