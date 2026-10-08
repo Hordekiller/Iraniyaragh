@@ -1198,11 +1198,27 @@ model ShippingMethod {
   amount         BigInt
   policyRevision String          @db.VarChar(100)
   isActive       Boolean         @default(true)
+  version        Int             @default(0)
   quotes         ShippingQuote[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
   @@index([isActive, code])
+}
+
+/// Retry evidence for permissioned shipping configuration, never provider secrets.
+model ShippingMethodMutation {
+  id          String   @id @default(cuid())
+  actorId     String
+  code        String   @db.VarChar(64)
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, code, keyHash])
+  @@index([expiresAt])
 }
 
 model ShippingQuote {

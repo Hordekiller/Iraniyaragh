@@ -1,0 +1,32 @@
+import { randomUUID } from 'node:crypto';
+import { expect, test } from '@playwright/test';
+import { signInDiAsAdmin, tap } from './helpers';
+
+test('staff configures an inactive fixed IRR tariff through the real API and reloads it', async ({ page }) => {
+  await signInDiAsAdmin(page);
+  await page.goto('/settings/shipping');
+  const code = `e2e-${randomUUID()}`;
+  const title = `تعرفهٔ آزمون ${code}`;
+  await expect(page.getByRole('heading', { name: 'روش‌ها و تعرفهٔ ارسال' })).toBeVisible();
+  await page.getByLabel(/کد روش ارسال/).fill(code);
+  await page.getByLabel(/نام قابل نمایش/).fill(title);
+  await page.getByLabel(/هزینهٔ مصوب ارسال/).fill('۵۰۰۰۰');
+  await expect(page.getByRole('switch', { name: 'فعال در فرایند خرید مشتری' })).not.toBeChecked();
+  const created = page.waitForResponse(response => response.url().endsWith(`/settings/admin/shipping-methods/${code}`) && response.request().method() === 'PUT');
+  await tap(page.getByRole('button', { name: 'ذخیره تعرفهٔ مصوب' }));
+  expect((await created).status()).toBe(200);
+  await expect(page.getByText(/تعرفه در سرور ذخیره شد/)).toBeVisible();
+  await page.reload();
+  await tap(page.getByRole('button', { name: `${title} — غیرفعال` }));
+  await expect(page.getByLabel(/کد روش ارسال/)).toHaveValue(code);
+  await expect(page.getByLabel(/هزینهٔ مصوب ارسال/)).toHaveValue('50000');
+  await expect(page.getByLabel(/کد روش ارسال/)).toBeDisabled();
+  await page.getByLabel(/هزینهٔ مصوب ارسال/).fill('۶۰۰۰۰');
+  const updated = page.waitForResponse(response => response.url().endsWith(`/settings/admin/shipping-methods/${code}`) && response.request().method() === 'PUT');
+  await tap(page.getByRole('button', { name: 'ذخیره تعرفهٔ مصوب' }));
+  expect((await updated).status()).toBe(200);
+  await page.reload();
+  await tap(page.getByRole('button', { name: `${title} — غیرفعال` }));
+  await expect(page.getByLabel(/هزینهٔ مصوب ارسال/)).toHaveValue('60000');
+  await expect(page.getByRole('switch', { name: 'فعال در فرایند خرید مشتری' })).not.toBeChecked();
+});

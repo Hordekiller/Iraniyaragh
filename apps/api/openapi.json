@@ -17761,6 +17761,7 @@
                         "CART_EMPTY",
                         "QUOTE_CHANGED",
                         "SHIPPING_QUOTE_CHANGED",
+                        "SHIPPING_UNAVAILABLE",
                         "INSUFFICIENT_STOCK",
                         "IDEMPOTENCY_CONFLICT",
                         "CONFLICT"
@@ -18405,6 +18406,7 @@
                         "CART_EMPTY",
                         "QUOTE_CHANGED",
                         "SHIPPING_QUOTE_CHANGED",
+                        "SHIPPING_UNAVAILABLE",
                         "INSUFFICIENT_STOCK",
                         "IDEMPOTENCY_CONFLICT",
                         "CONFLICT"
@@ -18472,6 +18474,498 @@
         "summary": "Create one reserved pending-payment order atomically",
         "tags": [
           "checkout"
+        ]
+      }
+    },
+    "/settings/admin/shipping-methods": {
+      "get": {
+        "operationId": "ShippingSettingsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "maxItems": 100,
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "code",
+                              "title",
+                              "amount",
+                              "isActive",
+                              "version",
+                              "policyRevision",
+                              "updatedAt"
+                            ],
+                            "properties": {
+                              "title": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 120
+                              },
+                              "amount": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^(0|[1-9][0-9]{0,18})$",
+                                    "description": "Nonnegative integer IRR, at most PostgreSQL signed BIGINT maximum."
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "isActive": {
+                                "type": "boolean"
+                              },
+                              "code": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9-]{0,63}$"
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "policyRevision": {
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List configured fixed shipping tariffs, including inactive methods",
+        "tags": [
+          "shipping-settings"
+        ]
+      }
+    },
+    "/settings/admin/shipping-methods/{code}": {
+      "put": {
+        "operationId": "ShippingSettingsController_update",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title",
+                  "amount",
+                  "isActive",
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "amount": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "amount",
+                      "currency"
+                    ],
+                    "properties": {
+                      "amount": {
+                        "type": "string",
+                        "pattern": "^(0|[1-9][0-9]{0,18})$",
+                        "description": "Nonnegative integer IRR, at most PostgreSQL signed BIGINT maximum."
+                      },
+                      "currency": {
+                        "type": "string",
+                        "enum": [
+                          "IRR"
+                        ]
+                      }
+                    }
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "nullable": true,
+                    "description": "Null only for a new code; use current version to update."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "method"
+                      ],
+                      "properties": {
+                        "method": {
+                          "type": "object",
+                          "required": [
+                            "code",
+                            "title",
+                            "amount",
+                            "isActive",
+                            "version",
+                            "policyRevision",
+                            "updatedAt"
+                          ],
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 120
+                            },
+                            "amount": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "pattern": "^(0|[1-9][0-9]{0,18})$",
+                                  "description": "Nonnegative integer IRR, at most PostgreSQL signed BIGINT maximum."
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "isActive": {
+                              "type": "boolean"
+                            },
+                            "code": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9-]{0,63}$"
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "policyRevision": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "STALE_VERSION",
+                        "IDEMPOTENCY_CONFLICT",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Create or update an approved fixed shipping tariff with version and retry protection",
+        "tags": [
+          "shipping-settings"
         ]
       }
     },
