@@ -55,18 +55,20 @@ and future gateway choices are explicitly open.
      `gatewayEnvironment` (sandbox or live).
   2. The row is committed. Then, **outside any database transaction**, the
      gateway port is called with a bounded timeout.
-  3. Gateway outcomes are persisted as the only post-call step: redirect writes
-     the `authority`; every other outcome writes one immutable
-     `PaymentTransition` (`PENDING → FAILED`) with the reason and request ID.
-     `unknown_result` is persisted as a distinct failure reason (`unconfirmed`)
-     so reconciliation can distinguish it and no automatic retry occurs.
-     The `authority` write is a compare-and-set on `status = PENDING AND
-     authority IS NULL`: two concurrent initiations of one order both authorize
-     the same row, so the slower response replays the authority the faster
-     response already stored instead of overwriting it. An overwritten authority
-     would match no payment row, so a real capture could never be settled. The
-     gateway transaction created by the losing call is orphaned and can never be
-     paid, because its URL is never returned to the caller.
+  3. Only the request that creates the attempt calls the provider. Redirect writes
+     `authority` with a compare-and-set on `status = PENDING AND authority IS NULL`.
+     Explicit rejection, throttling or disabled delivery records an immutable
+     `PENDING → FAILED` transition. Timeout, lost connection, HTTP 408/5xx or an
+     unprovable response leaves the attempt `PENDING` without authority and returns
+     `PAYMENT_RESULT_UNCONFIRMED`. An existing attempt without authority may be
+     in flight or already accepted; it must never authorize again, even after a
+     restart or with a new key. Earlier `FAILED/gateway_unconfirmed` and
+     `FAILED/gateway_unavailable` attempts also
+     block new authorization. Reconciliation requires provider evidence; a row
+     without authority cannot be automatically verified. Do not manually invent
+     an authority or a terminal payment outcome.
+     Initiation also rejects an expired stock reservation before contacting the
+     provider. A late callback still follows the existing compensation rules.
 - Idempotent replay: the same hashed idempotency key and payload fingerprint
   returns the stored initiation outcome; a different payload under the same key is
   `IDEMPOTENCY_CONFLICT`.

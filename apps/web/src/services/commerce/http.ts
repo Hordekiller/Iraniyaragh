@@ -1,4 +1,5 @@
 import type {
+  OrderCancelResponse,
   CartMergeResponse,
   CartResponse,
   CheckoutAddress,
@@ -170,6 +171,14 @@ export class CommerceHttpClient implements CommerceApi {
       },
     )
     return response.data.payment
+  }
+
+  async cancelOrder(id: string, idempotencyKey: string) {
+    const response = await this.request<OrderCancelResponse['data']>(
+      `/api/v1/orders/${encodeURIComponent(id)}/cancel`,
+      { baseUrl: this.baseUrl, method: 'POST', credentials: 'include', headers: { 'Idempotency-Key': idempotencyKey } },
+    )
+    return response.data.order
   }
 
   private cartPath(owner: CartOwner): '/api/v1/cart' | '/api/v1/guest-cart' {

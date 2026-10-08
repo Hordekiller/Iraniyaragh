@@ -16,6 +16,7 @@ export class CommerceCartController {
   private readonly retryKeys = new Map<string, string>()
   private readonly inflightMutations = new Set<Promise<unknown>>()
   private authenticated: boolean | null = null
+  private identityVersion: number | null = null
   private authEpoch = 0
   private requestSequence = 0
   private lastAppliedRequest = 0
@@ -33,13 +34,14 @@ export class CommerceCartController {
     return () => this.listeners.delete(listener)
   }
 
-  setAuthenticated(authenticated: boolean): void {
-    if (this.authenticated === authenticated) return
+  setAuthenticated(authenticated: boolean, identityVersion = 0): void {
+    if (this.authenticated === authenticated && this.identityVersion === identityVersion) return
+    this.identityVersion = identityVersion
     this.authenticated = authenticated
     this.authEpoch += 1
     this.retryKeys.clear()
     this.lastAppliedRequest = 0
-    this.patch({ error: null, pendingVariantIds: [] })
+    this.patch({ cart: EMPTY_CART, owner: 'guest', error: null, pendingVariantIds: [], mergeWarnings: [] })
     if (authenticated)
       void this.mergeAfterGuestMutations(this.authEpoch).catch(() => undefined)
     else {

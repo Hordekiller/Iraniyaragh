@@ -14,6 +14,7 @@ export * from './payments';
 export * from './reports';
 export * from './audit';
 export * from './shipments';
+export * from './shipping-settings';
 export * from './suppliers';
 export * from './purchasing';
 

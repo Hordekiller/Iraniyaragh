@@ -28,6 +28,8 @@ import { ShipmentReadController } from './shipment-read.controller';
 import { ShipmentReadService } from './shipment-read.service';
 import { StaffOrderController } from './staff-order.controller';
 import { StaffOrderService } from './staff-order.service';
+import { ShippingSettingsController } from './shipping-settings.controller';
+import { ShippingSettingsService } from './shipping-settings.service';
 
 @Module({
   imports: [AuditModule, AuthModule, InventoryModule],
@@ -47,6 +49,7 @@ import { StaffOrderService } from './staff-order.service';
     CartMergeController,
     GuestCartController,
     CheckoutController,
+    ShippingSettingsController,
   ],
   providers: [
     CartService,
@@ -62,6 +65,7 @@ import { StaffOrderService } from './staff-order.service';
     ShipmentDeliveryService,
     ShipmentReadService,
     ConfiguredShippingQuoteAdapter,
+    ShippingSettingsService,
     {
       provide: SHIPPING_QUOTE_PORT,
       useExisting: ConfiguredShippingQuoteAdapter,

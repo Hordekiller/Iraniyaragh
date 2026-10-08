@@ -115,7 +115,10 @@ export class PaymentVerificationService {
     }
 
     if (input.status === 'NOK') {
-      const outcome = await this.markNotPaid(payment, input.requestId);
+      // Status is an unsigned browser query. It cannot prove that a known
+      // authority was not paid, nor suppress a later authoritative OK callback.
+      // Reconciliation may verify server-side; the browser return alone may not.
+      const outcome = await this.recordUnconfirmed(payment, input.requestId);
       return { data: { verification: this.asResponse(outcome) } };
     }
 

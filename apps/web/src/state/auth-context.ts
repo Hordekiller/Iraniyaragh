@@ -10,6 +10,8 @@ export type AuthenticatedJsonRequest = {
 }
 
 export type AuthContextValue = {
+  /** Changes on logout/new login, but not on a same-customer token refresh. */
+  identityVersion: number
   /** Initial silent-restore attempt has finished; this is not an authentication claim. */
   restored: boolean
   state: CustomerOtpUiState

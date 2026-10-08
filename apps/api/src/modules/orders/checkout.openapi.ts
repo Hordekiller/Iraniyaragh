@@ -231,6 +231,7 @@ export const openApiCheckout = {
         "CART_EMPTY",
         "QUOTE_CHANGED",
         "SHIPPING_QUOTE_CHANGED",
+        "SHIPPING_UNAVAILABLE",
         "INSUFFICIENT_STOCK",
         "IDEMPOTENCY_CONFLICT",
         "CONFLICT",

@@ -18,6 +18,7 @@ import {
   PAYMENT_PROVIDER,
   type PaymentGatewayConfig,
   type PaymentProvider,
+  type PaymentAuthorizeResult,
 } from './payment-provider.port';
 
 const PAYMENT_SCOPE = 'payment.initiation';
@@ -70,38 +71,27 @@ export class PaymentInitiationService {
       return { data: this.asOutcome(attempt.payment) };
     }
 
-    const authorizeResult = await this.provider.authorize({
-      orderId: input.orderId,
-      orderNumber: attempt.orderNumber,
-      amountMinorUnits: attempt.amount.toString(),
-      currency: 'IRR',
-      callbackUrl: this.gateway.callbackUrl,
-      correlationId: input.requestId,
-    });
+    let authorizeResult: PaymentAuthorizeResult;
+    try {
+      authorizeResult = await this.provider.authorize({
+        orderId: input.orderId,
+        orderNumber: attempt.orderNumber,
+        amountMinorUnits: attempt.amount.toString(),
+        currency: 'IRR',
+        callbackUrl: this.gateway.callbackUrl,
+        correlationId: input.requestId,
+      });
+    } catch {
+      // A thrown transport error cannot prove that the gateway never accepted
+      // the request. Keep the durable attempt pending; never log its raw error.
+      throw this.unconfirmed();
+    }
 
     if (authorizeResult.status === 'redirect') {
-      // The authority is claimed with a compare-and-set: the row must still be
-      // PENDING *and* must not have an authority yet. Two concurrent
-      // initiations of the same order both authorize the same row, and without
-      // this guard the slower response would overwrite the authority the faster
-      // response already handed to the buyer. The overwritten authority would
-      // then match no payment, so a real capture could never be settled.
-      const claimed = await this.prisma.payment.updateMany({
-        where: { id: attempt.paymentId, status: 'PENDING', authority: null },
-        data: { authority: authorizeResult.authority },
-      });
-      if (claimed.count !== 1) {
-        return this.asClaimedElsewhere(attempt.paymentId);
-      }
-      return {
-        data: this.asOutcome({
-          paymentId: attempt.paymentId,
-          authority: authorizeResult.authority,
-          amount: attempt.amount,
-          gatewayEnvironment: this.gateway.mode,
-        }),
-      };
+      return this.persistAuthorization(input.orderId, attempt.paymentId, attempt.amount, authorizeResult.authority);
     }
+
+    if (authorizeResult.status === 'unknown_result') throw this.unconfirmed();
 
     const reasonKey = this.transitionReason(authorizeResult.status);
     await this.markFailed(attempt.paymentId, input.requestId, reasonKey);
@@ -122,14 +112,8 @@ export class PaymentInitiationService {
       });
     }
     throw new ServiceUnavailableException({
-      code:
-        authorizeResult.status === 'unknown_result'
-          ? 'PAYMENT_RESULT_UNCONFIRMED'
-          : 'UPSTREAM_UNAVAILABLE',
-      message:
-        authorizeResult.status === 'unknown_result'
-          ? 'Payment gateway did not confirm the result; the attempt is recorded and must not be retried automatically.'
-          : 'Payment gateway is unavailable; the attempt is recorded as failed. Retry with a new idempotency key.',
+      code: 'UPSTREAM_UNAVAILABLE',
+      message: 'Payment gateway is unavailable; the attempt is recorded as failed. Retry with a new idempotency key.',
     });
   }
 
@@ -165,7 +149,7 @@ export class PaymentInitiationService {
 
             const order = await tx.order.findUnique({
               where: { id: orderId },
-              select: { id: true, number: true, customerId: true, status: true, grandTotal: true },
+              select: { id: true, number: true, customerId: true, status: true, grandTotal: true, reservationExpiresAt: true },
             });
             if (!order || order.customerId !== customer.id) {
               throw new NotFoundException({
@@ -173,10 +157,10 @@ export class PaymentInitiationService {
                 message: 'Order not found.',
               });
             }
-            if (order.status !== 'PENDING_PAYMENT') {
+            if (order.status !== 'PENDING_PAYMENT' || order.reservationExpiresAt <= new Date()) {
               throw new ConflictException({
                 code: ORDER_STATE_CONFLICT_ERROR,
-                message: 'Order is no longer pending payment.',
+                message: 'Order is no longer payable or its stock reservation expired.',
               });
             }
 
@@ -188,7 +172,15 @@ export class PaymentInitiationService {
             }
 
             const active = await tx.payment.findFirst({
-              where: { orderId, status: 'PENDING' },
+              where: {
+                orderId,
+                OR: [
+                  { status: 'PENDING' },
+                  // Earlier releases misclassified ambiguous authorization as
+                  // FAILED. Do not allow a new key to repeat those sends either.
+                  { status: 'FAILED', transitions: { some: { reason: { in: ['gateway_unconfirmed', 'gateway_unavailable'] } } } },
+                ],
+              },
               orderBy: { createdAt: 'asc' },
             });
             if (active) {
@@ -234,6 +226,7 @@ export class PaymentInitiationService {
         message: 'Idempotency key payload conflict.',
       });
     }
+    if (!compareFingerprint && payment.status === 'FAILED') throw this.unconfirmed();
     if (payment.status !== 'PENDING') {
       throw new ConflictException({
         code: 'PAYMENT_STATE_CONFLICT',
@@ -247,14 +240,10 @@ export class PaymentInitiationService {
       });
     }
     if (payment.authority === null) {
-      // The previous registration committed but the provider was never reached
-      // (crash window). Re-authorize against the same row instead of duplicating.
-      return {
-        kind: 'authorize',
-        paymentId: payment.id,
-        orderNumber: order.number,
-        amount: order.grandTotal,
-      };
+      // A missing authority cannot distinguish an in-flight call, a crash
+      // before sending, or an accepted request whose response was lost.
+      // Re-authorizing would issue another external request without evidence.
+      throw this.unconfirmed();
     }
     return {
       kind: 'replay',
@@ -267,28 +256,25 @@ export class PaymentInitiationService {
     };
   }
 
-  private async asClaimedElsewhere(paymentId: string): Promise<PaymentInitiationResponse> {
-    const stored = await this.prisma.payment.findUnique({
-      where: { id: paymentId },
-      select: { status: true, authority: true, amount: true, gatewayEnvironment: true },
+  private async persistAuthorization(orderId: string, paymentId: string, amount: bigint, authority: string): Promise<PaymentInitiationResponse> {
+    const result = await withSerializableRetry({
+      isContention: (error) => error instanceof PaymentInitiationContentionError,
+      conflictMessage: 'Payment changed concurrently; reconcile the recorded attempt.',
+      operation: () => this.prisma.$transaction(async (tx) => {
+        await this.acquireOrderLock(tx, orderId);
+        const order = await tx.order.findUnique({ where: { id: orderId }, select: { status: true, reservationExpiresAt: true } });
+        // Retain the received authority even if cancellation released stock:
+        // a later real callback must remain matchable for compensation.
+        const claimed = await tx.payment.updateMany({ where: { id: paymentId, status: 'PENDING', authority: null }, data: { authority } });
+        const payment = claimed.count === 1
+          ? { status: 'PENDING', authority, gatewayEnvironment: this.gateway.mode }
+          : await tx.payment.findUnique({ where: { id: paymentId }, select: { status: true, authority: true, gatewayEnvironment: true } });
+        const payable = order?.status === 'PENDING_PAYMENT' && order.reservationExpiresAt > new Date() && payment?.status === 'PENDING' && payment.authority !== null;
+        return payable && payment ? this.asOutcome({ paymentId, amount, authority: payment.authority!, gatewayEnvironment: payment.gatewayEnvironment }) : null;
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
     });
-    // Another in-flight initiation of the same payment claimed the authority
-    // first. Its outcome is the only one that can be settled, so this response
-    // replays it instead of leaking an authority that will never be stored.
-    if (stored?.status === 'PENDING' && stored.authority !== null) {
-      return {
-        data: this.asOutcome({
-          paymentId,
-          authority: stored.authority,
-          amount: stored.amount,
-          gatewayEnvironment: stored.gatewayEnvironment,
-        }),
-      };
-    }
-    throw new ConflictException({
-      code: ORDER_STATE_CONFLICT_ERROR,
-      message: 'Order changed concurrently while authorizing the payment.',
-    });
+    if (!result) throw new ConflictException({ code: ORDER_STATE_CONFLICT_ERROR, message: 'Order changed or its stock reservation expired while authorizing payment.' });
+    return { data: result };
   }
 
   private async markFailed(paymentId: string, requestId: string, reason: string): Promise<void> {
@@ -314,18 +300,23 @@ export class PaymentInitiationService {
   }
 
   private transitionReason(
-    status: 'rejected' | 'unavailable' | 'unknown_result' | 'disabled',
+    status: 'rejected' | 'unavailable' | 'disabled',
   ): string {
     switch (status) {
       case 'rejected':
         return 'gateway_rejected';
-      case 'unknown_result':
-        return 'gateway_unconfirmed';
       case 'unavailable':
-        return 'gateway_unavailable';
+        return 'gateway_authorization_throttled';
       case 'disabled':
         return 'gateway_disabled';
     }
+  }
+
+  private unconfirmed(): ServiceUnavailableException {
+    return new ServiceUnavailableException({
+      code: 'PAYMENT_RESULT_UNCONFIRMED',
+      message: 'Payment initiation is pending or unconfirmed; reconcile the recorded attempt before another gateway request.',
+    });
   }
 
   private asOutcome(payment: {

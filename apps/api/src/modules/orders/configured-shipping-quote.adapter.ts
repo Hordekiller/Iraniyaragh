@@ -68,7 +68,7 @@ export class ConfiguredShippingQuoteAdapter implements ShippingQuotePort {
       });
       if (methods.length === 0) {
         throw new ConflictException({
-          code: 'SHIPPING_QUOTE_CHANGED',
+          code: 'SHIPPING_UNAVAILABLE',
           message: 'No shipping method is currently available.',
         });
       }

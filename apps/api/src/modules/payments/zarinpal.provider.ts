@@ -24,7 +24,7 @@ const CONTROL_CHARACTER = /\s/u;
 // HTTP answers that describe our transport rather than the request itself. They
 // never mean "the request was invalid", so the adapter must not turn them into a
 // deterministic gateway rejection.
-const TRANSIENT_HTTP_STATUS = new Set([408, 425, 429]);
+const THROTTLED_HTTP_STATUS = new Set([425, 429]);
 
 // Typed against the callable subset only: this client always talks to a real
 // gateway host, so it must be impossible to construct one for the `disabled`
@@ -47,16 +47,12 @@ type ZarinpalPayload = Readonly<{
   metadata: Readonly<{ order_id: string }>;
 }>;
 
-// Request-phase gateway codes only (documented v4 values). Non-100 codes in the
-// request phase are deterministic rejections; codes we cannot attribute are
-// reported as `unknown`. NOTE: the same code namespace means different things in
-// the verify phase — verify returns 100 once and 101 on every later repeat of an
-// already-verified transaction, so the future verification slice must treat
-// verify-phase 101 as success, never as `authentication`.
+// Documented v4 negative request codes; unknown codes remain unproved.
+// Verify-phase 101 means an already verified settlement, never an auth error.
 function rejectionReason(code: number): PaymentRejectionReason {
-  if (code === 101) return 'authentication';
-  if (code === 102) return 'amount';
-  if (code >= 10 && code <= 99) return 'invalid_request';
+  if ([-10, -11, -15, -16, -17, -19].includes(code)) return 'authentication';
+  if (code === -41) return 'amount';
+  if ([-9, -13, -14, -18, -40].includes(code)) return 'invalid_request';
   return 'unknown';
 }
 
@@ -82,12 +78,14 @@ function parseVerifiedReference(body: unknown): string | null {
       ? String(rawReference)
       : null;
   }
-  return typeof rawReference === 'string' && rawReference.length > 0 ? rawReference : null;
+  return typeof rawReference === 'string' && /^[1-9][0-9]{0,63}$/u.test(rawReference) ? rawReference : null;
 }
 
-function verifyRejectionReason(code: number): PaymentRejectionReason {
-  if (code === 102) return 'amount';
-  return 'unknown';
+function providerCode(record: Record<string, unknown>): number {
+  const data = record.data as Record<string, unknown> | undefined;
+  const errors = record.errors as Record<string, unknown> | undefined;
+  const rawCode = data?.code ?? errors?.code ?? record.code ?? record.status;
+  return typeof rawCode === 'number' && Number.isInteger(rawCode) ? rawCode : 0;
 }
 
 function assertValidConfig(config: ZarinpalGatewayConfig): void {
@@ -161,9 +159,8 @@ function parseAuthority(payload: unknown): { code: number; authority: string | n
   const record = payload as Record<string, unknown>;
   const data = (record.data ?? record) as Record<string, unknown> | undefined;
   const authority =
-    typeof data?.authority === 'string' && data.authority.length > 0 ? data.authority : null;
-  const rawCode = data?.code ?? record.status;
-  const code = typeof rawCode === 'number' ? rawCode : 0;
+    typeof data?.authority === 'string' && /^[A-Za-z0-9-]{1,128}$/u.test(data.authority) ? data.authority : null;
+  const code = providerCode(record);
   return { code, authority };
 }
 
@@ -218,8 +215,8 @@ export class ZarinpalProvider implements PaymentProvider {
       });
 
       if (response.status === 401) return { status: 'rejected', reason: 'authentication' };
-      if (response.status >= 500) return { status: 'unavailable' };
-      if (TRANSIENT_HTTP_STATUS.has(response.status)) return { status: 'unavailable' };
+      if (response.status >= 500 || response.status === 408) return { status: 'unknown_result' };
+      if (THROTTLED_HTTP_STATUS.has(response.status)) return { status: 'unavailable' };
 
       const body = await readBoundedBody(response);
       if (response.status < 200 || response.status >= 300) {
@@ -235,7 +232,9 @@ export class ZarinpalProvider implements PaymentProvider {
           redirectUrl: `${this.redirectBaseUrl}${authority}`,
         };
       }
-      if (code !== 0) return { status: 'rejected', reason: rejectionReason(code) };
+      if (code === -12) return { status: 'unavailable' };
+      if ([-9, -10, -11, -13, -14, -15, -16, -17, -18, -19, -40, -41].includes(code))
+        return { status: 'rejected', reason: rejectionReason(code) };
       return { status: 'unknown_result' };
     } catch (error) {
       if (
@@ -244,7 +243,9 @@ export class ZarinpalProvider implements PaymentProvider {
       ) {
         return { status: 'unknown_result' };
       }
-      return { status: 'unavailable' };
+      // A connection failure can occur after the remote server consumed the
+      // request. Only explicit rejection proves it safe to start a new attempt.
+      return { status: 'unknown_result' };
     } finally {
       clearTimeout(timeout);
     }
@@ -312,14 +313,15 @@ export class ZarinpalProvider implements PaymentProvider {
       }
 
       const record = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
-      const data = (record.data ?? record) as Record<string, unknown> | undefined;
-      const rawCode = data?.code ?? record.status;
-      const code = typeof rawCode === 'number' ? rawCode : 0;
+      const code = providerCode(record);
       // A settlement-shaped code (100/101) without a reference id claims a paid
       // transaction but cannot prove it: routed to reconciliation, never to a
       // definitive FAILED.
       if (code === 100 || code === 101) return { status: 'unknown_result' };
-      if (code !== 0) return { status: 'failed', reason: verifyRejectionReason(code) };
+      if (code === -51) return { status: 'failed', reason: 'unknown' };
+      // Credential, amount, authority and provider errors do not prove an
+      // unpaid transaction. Keep them reconcilable instead of recording FAILED.
+      if (code !== 0) return { status: 'unavailable' };
       return { status: 'unknown_result' };
     } catch (error) {
       if (

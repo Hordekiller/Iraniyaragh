@@ -25,6 +25,7 @@ const orderRow = {
   customerId: 'customer-1',
   status: 'PENDING_PAYMENT',
   grandTotal: 250000n,
+  reservationExpiresAt: new Date('2099-01-01T00:00:00Z'),
 };
 
 type PaymentRow = {
@@ -242,22 +243,15 @@ describe('PaymentInitiationService', () => {
     expect(result.data.payment.authority).toBe('ACTIVE-AUTHORITY');
   });
 
-  it('recovers a committed-but-not-authorized attempt against the same row', async () => {
+  it('does not resend a committed attempt without an authoritative gateway result', async () => {
     ctx = setup({ existing: paymentRow({ id: 'payment-crashed' }) });
-    const result = await ctx.service.initiate({
+    await expect(ctx.service.initiate({
       userId: 'user-1',
       orderId: 'order-1',
       idempotencyKey: 'key-1',
       requestId: 'req-1',
-    });
-    expect(ctx.provider.authorize).toHaveBeenCalledOnce();
-    expect(ctx.provider.authorize).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderNumber: 'ORD-001',
-        amountMinorUnits: '250000',
-      }),
-    );
-    expect(result.data.payment.paymentId).toBe('payment-crashed');
+    })).rejects.toMatchObject({ response: { code: 'PAYMENT_RESULT_UNCONFIRMED' } });
+    expect(ctx.provider.authorize).not.toHaveBeenCalled();
   });
 
   it('does not allow initiating payment for a foreign order', async () => {
@@ -303,6 +297,14 @@ describe('PaymentInitiationService', () => {
     });
   });
 
+  it('refuses to contact the gateway after stock reservation expiry', async () => {
+    ctx = setup({ order: { ...orderRow, reservationExpiresAt: new Date(0) } });
+    await expect(ctx.service.initiate({ userId: 'user-1', orderId: 'order-1', idempotencyKey: 'key-1', requestId: 'req-1' }))
+      .rejects.toMatchObject({ response: { code: 'ORDER_STATE_CONFLICT' } });
+    expect(ctx.provider.authorize).not.toHaveBeenCalled();
+    expect(ctx.tx.payment.create).not.toHaveBeenCalled();
+  });
+
   it.each([
     [
       { status: 'rejected', reason: 'invalid_request' } as const,
@@ -313,16 +315,9 @@ describe('PaymentInitiationService', () => {
     ],
     [
       { status: 'unavailable' } as const,
-      'gateway_unavailable',
+      'gateway_authorization_throttled',
       ServiceUnavailableException,
       'UPSTREAM_UNAVAILABLE',
-      503,
-    ],
-    [
-      { status: 'unknown_result' } as const,
-      'gateway_unconfirmed',
-      ServiceUnavailableException,
-      'PAYMENT_RESULT_UNCONFIRMED',
       503,
     ],
     // The gateway is switched off for this deployment. The attempt is still
@@ -387,19 +382,34 @@ describe('PaymentInitiationService', () => {
       response: { code: 'PAYMENT_RESULT_UNCONFIRMED' },
     });
     expect(ctx.provider.authorize).toHaveBeenCalledOnce();
+    expect(ctx.tx.paymentTransition.create).not.toHaveBeenCalled();
+  });
+
+  it('blocks a new key for a legacy ambiguous FAILED attempt', async () => {
+    ctx = setup({ active: paymentRow({ status: 'FAILED' }) });
+    await expect(ctx.service.initiate({ userId: 'user-1', orderId: 'order-1', idempotencyKey: 'new-key', requestId: 'req-1' }))
+      .rejects.toMatchObject({ response: { code: 'PAYMENT_RESULT_UNCONFIRMED' } });
+    expect(ctx.provider.authorize).not.toHaveBeenCalled();
+  });
+
+  it('keeps an unexpected provider exception pending without exposing its contents', async () => {
+    ctx.provider.authorize.mockRejectedValue(new Error('private transport diagnostics'));
+    await expect(ctx.service.initiate({ userId: 'user-1', orderId: 'order-1', idempotencyKey: 'key-1', requestId: 'req-1' }))
+      .rejects.toMatchObject({ response: { code: 'PAYMENT_RESULT_UNCONFIRMED' } });
+    expect(ctx.tx.paymentTransition.create).not.toHaveBeenCalled();
   });
 
   it('fails closed when the order moves on while the gateway call is in flight', async () => {
     ctx = setup({ authorizeResult: { status: 'redirect', authority: 'A', redirectUrl: 'R' } });
-    (ctx.prisma.payment as Record<string, ReturnType<typeof vi.fn>>).updateMany.mockResolvedValue({
+    ctx.tx.payment.updateMany.mockResolvedValue({
       count: 0,
     });
-    (ctx.prisma.payment as Record<string, ReturnType<typeof vi.fn>>).findUnique.mockResolvedValue({
+    ctx.tx.payment.findUnique.mockImplementation((args: { where: { id?: string } }) => args.where.id ? {
       status: 'FAILED',
       authority: null,
       amount: 1000n,
       gatewayEnvironment: 'sandbox',
-    });
+    } : null);
     await expect(
       ctx.service.initiate({
         userId: 'user-1',
@@ -412,15 +422,15 @@ describe('PaymentInitiationService', () => {
 
   it('replays the authority a concurrent initiation already claimed', async () => {
     ctx = setup({ authorizeResult: { status: 'redirect', authority: 'LOSER', redirectUrl: 'R' } });
-    (ctx.prisma.payment as Record<string, ReturnType<typeof vi.fn>>).updateMany.mockResolvedValue({
+    ctx.tx.payment.updateMany.mockResolvedValue({
       count: 0,
     });
-    (ctx.prisma.payment as Record<string, ReturnType<typeof vi.fn>>).findUnique.mockResolvedValue({
+    ctx.tx.payment.findUnique.mockImplementation((args: { where: { id?: string } }) => args.where.id ? {
       status: 'PENDING',
       authority: 'WINNER',
       amount: 1000n,
       gatewayEnvironment: 'sandbox',
-    });
+    } : null);
 
     const result = await ctx.service.initiate({
       userId: 'user-1',

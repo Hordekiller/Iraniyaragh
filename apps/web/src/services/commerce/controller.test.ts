@@ -24,6 +24,20 @@ async function authenticatedController(api = commerceStub()) {
 }
 
 describe('CommerceCartController', () => {
+  it('clears a previous customer cart when the login identity changes without an anonymous interval', async () => {
+    let finish!: (value: CartMergeResult) => void
+    const api = commerceStub({ mergeGuestCart: vi.fn().mockResolvedValueOnce({ cart: CART, warnings: [] }).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve })) })
+    const controller = new CommerceCartController(api, cryptoSource)
+    controller.setAuthenticated(true, 1)
+    await vi.waitFor(() => expect(controller.getState().phase).toBe('ready'))
+    controller.setAuthenticated(true, 2)
+    expect(controller.getState().cart.lines).toEqual([])
+    await vi.waitFor(() => expect(api.mergeGuestCart).toHaveBeenCalledTimes(2))
+    finish({ cart: { ...CART, lines: [] }, warnings: [] })
+    await vi.waitFor(() => expect(controller.getState().phase).toBe('ready'))
+    controller.setAuthenticated(true, 2)
+    expect(api.mergeGuestCart).toHaveBeenCalledTimes(2)
+  })
   it('loads and mutates the server-owned Guest Cart before sign-in', async () => {
     const api = commerceStub()
     const { controller } = await guestController(api)

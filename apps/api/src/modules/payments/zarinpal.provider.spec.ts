@@ -133,19 +133,17 @@ describe("ZarinpalProvider", () => {
   });
 
   it.each([
-    [101, "authentication"],
-    [102, "amount"],
-    [42, "invalid_request"],
-    [99, "invalid_request"],
-    [103, "unknown"],
-    [104, "unknown"],
-    [999, "unknown"],
+    [-10, "authentication"],
+    [-11, "authentication"],
+    [-41, "amount"],
+    [-9, "invalid_request"],
+    [-14, "invalid_request"],
   ])(
     "maps gateway code %s to a rejection reason",
     async (code, reason) => {
       const result = await new ZarinpalProvider(
         config,
-        async () => response(200, { data: { code, message: "raw vendor text" } }),
+        async () => response(200, { data: {}, errors: { code, message: "raw vendor text" } }),
       ).authorize(request);
       expect(result).toEqual({ status: "rejected", reason });
       expect(JSON.stringify(result)).not.toContain("raw vendor text");
@@ -173,17 +171,17 @@ describe("ZarinpalProvider", () => {
   });
 
   it.each([[500, null], [502, { data: {} }], [503, { errors: [] }]])(
-    "maps HTTP %s to unavailable",
+    "keeps HTTP %s ambiguous because the gateway may have accepted the request",
     async (status, body) => {
       expect(
         await new ZarinpalProvider(config, async () => response(status, body)).authorize(
           request,
         ),
-      ).toEqual({ status: "unavailable" });
+      ).toEqual({ status: "unknown_result" });
     },
   );
 
-  it.each([408, 425, 429])(
+  it.each([425, 429])(
     "does not report a transport-level HTTP %s as a rejected request",
     async (status) => {
       expect(
@@ -211,6 +209,17 @@ describe("ZarinpalProvider", () => {
     ).toEqual({ status: "unknown_result" });
   });
 
+  it.each([101, 102, 999])('keeps undocumented request code %s ambiguous', async (code) => {
+    expect(await new ZarinpalProvider(config, async () => response(200, { data: { code } })).authorize(request)).toEqual({ status: 'unknown_result' });
+  });
+  it('classifies only explicit throttling as safe unavailability', async () => {
+    expect(await new ZarinpalProvider(config, async () => response(200, { data: {}, errors: { code: -12 } })).authorize(request)).toEqual({ status: 'unavailable' });
+    expect(await new ZarinpalProvider(config, async () => response(408, {})).authorize(request)).toEqual({ status: 'unknown_result' });
+  });
+  it.each(['unsafe/authority', 'A'.repeat(129)])('refuses an unsafe or oversized gateway authority', async (authority) => {
+    expect(await new ZarinpalProvider(config, async () => response(200, { data: { code: 100, authority } })).authorize(request)).toEqual({ status: 'unknown_result' });
+  });
+
   it("rejects an oversized provider response without parsing it", async () => {
     const oversized = new Response("x".repeat(32 * 1024 + 1), { status: 200 });
     expect(
@@ -233,12 +242,12 @@ describe("ZarinpalProvider", () => {
     expect(fetcher).toHaveBeenCalledOnce();
   });
 
-  it("maps pre-response transport failure to unavailable", async () => {
+  it("keeps a lost transport response ambiguous", async () => {
     expect(
       await new ZarinpalProvider(config, async () => {
         throw new Error("network");
       }).authorize(request),
-    ).toEqual({ status: "unavailable" });
+    ).toEqual({ status: "unknown_result" });
   });
 
   describe("verify", () => {
@@ -251,10 +260,10 @@ describe("ZarinpalProvider", () => {
 
     it("sends the server-composed merchant payload for verification", async () => {
       const fetcher = vi.fn(async () =>
-        response(200, { data: { code: 100, message: "paid", ref_id: "R123" } }),
+        response(200, { data: { code: 100, message: "paid", ref_id: "123" } }),
       );
       const result = await new ZarinpalProvider(config, fetcher).verify(verifyRequest);
-      expect(result).toEqual({ status: "verified", referenceId: "R123" });
+      expect(result).toEqual({ status: "verified", referenceId: "123" });
       expect(String(fetcher.mock.calls[0]?.[0])).toBe(
         "https://sandbox.zarinpal.com/pg/v4/payment/verify.json",
       );
@@ -269,25 +278,25 @@ describe("ZarinpalProvider", () => {
     it("reports the first verify (code 100) as settled", async () => {
       const result = await new ZarinpalProvider(
         config,
-        async () => response(200, { data: { code: 100, message: "Success", ref_id: "REF-1" } }),
+        async () => response(200, { data: { code: 100, message: "Success", ref_id: "1" } }),
       ).verify(verifyRequest);
-      expect(result).toEqual({ status: "verified", referenceId: "REF-1" });
+      expect(result).toEqual({ status: "verified", referenceId: "1" });
     });
 
     it("reports a repeat verify (code 101 already-verified) as settled, not as a credential failure", async () => {
       const result = await new ZarinpalProvider(
         config,
-        async () => response(200, { data: { code: 101, message: "Already verified", ref_id: "REF-1" } }),
+        async () => response(200, { data: { code: 101, message: "Already verified", ref_id: "1" } }),
       ).verify(verifyRequest);
-      expect(result).toEqual({ status: "verified", referenceId: "REF-1" });
+      expect(result).toEqual({ status: "verified", referenceId: "1" });
     });
 
     it("supports a top-level status envelope", async () => {
       const result = await new ZarinpalProvider(
         config,
-        async () => response(200, { status: 100, ref_id: "REF-1" }),
+        async () => response(200, { status: 100, ref_id: "1" }),
       ).verify(verifyRequest);
-      expect(result).toEqual({ status: "verified", referenceId: "REF-1" });
+      expect(result).toEqual({ status: "verified", referenceId: "1" });
     });
 
     it("routes a success-shaped code without a reference id to unknown_result", async () => {
@@ -322,6 +331,9 @@ describe("ZarinpalProvider", () => {
       ["boolean", true],
       ["object", { value: 5 }],
       ["empty string", ""],
+      ["arbitrary string", "REF-1"],
+      ["string zero", "0"],
+      ["oversized string", "1".repeat(65)],
     ])("refuses a %s ref_id and keeps the settlement unproved", async (_label, refId) => {
       const result = await new ZarinpalProvider(
         config,
@@ -349,17 +361,17 @@ describe("ZarinpalProvider", () => {
       expect(result).toEqual({ status: "unavailable" });
     });
 
-    it("maps deterministic non-settlement codes to failed with a sanitized reason", async () => {
+    it("keeps an amount mismatch reconcilable and accepts only documented non-payment evidence", async () => {
       const result = await new ZarinpalProvider(
         config,
-        async () => response(200, { data: { code: 102, message: "stale amount", ref_id: null } }),
+        async () => response(200, { data: {}, errors: { code: -50, message: "stale amount" } }),
       ).verify(verifyRequest);
-      expect(result).toEqual({ status: "failed", reason: "amount" });
+      expect(result).toEqual({ status: "unavailable" });
       expect(JSON.stringify(result)).not.toContain("stale amount");
       expect(
         await new ZarinpalProvider(
           config,
-          async () => response(200, { data: { code: 202, message: "canceled" } }),
+          async () => response(200, { data: {}, errors: { code: -51, message: "not paid" } }),
         ).verify(verifyRequest),
       ).toEqual({ status: "failed", reason: "unknown" });
     });

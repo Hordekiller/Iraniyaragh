@@ -20,6 +20,7 @@ import {
 } from '../lib/iran'
 import { SessionRestoring } from '../components/account/AccountNavigation'
 import { getCustomerAccount } from '../services/customer-account'
+import { AuthApiError } from '../lib/auth/errors'
 
 type FormState = {
   recipient: string
@@ -45,7 +46,7 @@ const inputClass =
 export function CheckoutPage() {
   const auth = useAuth()
   if (auth.state.phase !== 'authenticated' && (!auth.restored || auth.state.restoring)) return <SessionRestoring />
-  return <CheckoutContents key={auth.state.principal?.userId ?? 'guest'} />
+  return <CheckoutContents key={`${auth.state.principal?.userId}:${auth.identityVersion}`} />
 }
 
 function CheckoutContents() {
@@ -63,6 +64,13 @@ function CheckoutContents() {
   const [addressReload, setAddressReload] = useState(0)
   const [addressesLoading, setAddressesLoading] = useState(true)
   const checkoutKey = useRef<string | null>(null)
+  const submitting = useRef(false)
+  const [unconfirmed, setUnconfirmed] = useState(false)
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => { active.current = false }
+  }, [])
 
   useEffect(() => {
     if (auth.state.phase !== 'authenticated') return
@@ -114,7 +122,7 @@ function CheckoutContents() {
         }
       />
     )
-  if (state.phase === 'error' && state.owner === 'guest')
+  if (state.phase === 'error')
     return (
       <Centered
         title="اتصال سبد کامل نشد"
@@ -146,9 +154,10 @@ function CheckoutContents() {
         title="سبد خرید خالی است"
         description="برای ثبت سفارش، ابتدا یک تنوع موجود به سبد اضافه کنید."
         action={
-          <Link to={ROUTES.home} className={primaryButton}>
-            بازگشت به فروشگاه
-          </Link>
+          <div>
+            <Link to={ROUTES.orders} className={primaryButton}>بررسی سفارش‌های ثبت‌شده</Link>
+            <Link to={ROUTES.home} className={`${primaryButton} mr-2`}>بازگشت به فروشگاه</Link>
+          </div>
         }
       />
     )
@@ -193,6 +202,7 @@ function CheckoutContents() {
 
   async function handlePreview(event: React.FormEvent) {
     event.preventDefault()
+    if (submitting.current || busy || unconfirmed) return
     const next = validate(form)
     setErrors(next)
     if (Object.values(next).some(Boolean)) return
@@ -200,6 +210,7 @@ function CheckoutContents() {
     setError(null)
     try {
       const result = await api.previewCheckout(address())
+      if (!active.current) return
       setPreview(result)
       setSelectedQuoteId(result.shipping[0]?.quoteId ?? '')
       checkoutKey.current = null
@@ -211,7 +222,8 @@ function CheckoutContents() {
   }
 
   async function handleCreate() {
-    if (!preview || !quote || busy) return
+    if (!preview || !quote || busy || submitting.current) return
+    submitting.current = true
     setBusy('create')
     setError(null)
     try {
@@ -221,11 +233,23 @@ function CheckoutContents() {
         quote.quoteId,
         checkoutKey.current,
       )
+      setUnconfirmed(false)
       await reload().catch(() => undefined)
+      if (!active.current) return
       navigate(ROUTES.payment(order.id), { replace: true })
     } catch (cause) {
       setError(cause)
+      const ambiguous = !(cause instanceof AuthApiError) ||
+        ['NETWORK_ERROR', 'TIMEOUT', 'PARSE_ERROR', 'INTERNAL_ERROR'].includes(cause.code) || (cause.statusCode ?? 0) >= 500
+      setUnconfirmed(ambiguous)
+      if (!ambiguous) {
+        checkoutKey.current = null
+        setPreview(null)
+        setSelectedQuoteId('')
+        await reload().catch(() => undefined)
+      }
     } finally {
+      submitting.current = false
       setBusy(null)
     }
   }
@@ -255,10 +279,13 @@ function CheckoutContents() {
               aria-live="assertive"
               className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800"
             >
-              {commerceErrorMessage(error)}
+              {unconfirmed
+                ? 'نتیجه ثبت سفارش هنوز مشخص نیست. برای بازیابی، همین درخواست را دوباره بررسی کنید؛ نشانی و روش ارسال تا تعیین نتیجه تغییر نمی‌کنند. سفارش‌های حساب خود را هم بررسی کنید.'
+                : commerceErrorMessage(error)}
+              {unconfirmed && <Link to={ROUTES.orders} className="mr-2 underline">مشاهده سفارش‌ها</Link>}
             </div>
           )}
-          <fieldset disabled={busy !== null}>
+          <fieldset disabled={busy !== null || unconfirmed}>
             <section className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="saved-address-heading">
               <h2 id="saved-address-heading" className="font-black text-slate-900">نشانی‌های ذخیره‌شده</h2>
               {addressesLoading ? <p className="mt-2 text-sm" role="status">در حال دریافت نشانی‌ها…</p> : savedAddressesUnavailable ? <div className="mt-2 text-sm text-slate-600">
@@ -393,7 +420,7 @@ function CheckoutContents() {
           </fieldset>
           <button
             type="submit"
-            disabled={busy !== null}
+            disabled={busy !== null || unconfirmed}
             className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 font-black text-white hover:bg-black disabled:opacity-60 sm:w-auto sm:px-7"
           >
             <RefreshCw
@@ -412,7 +439,7 @@ function CheckoutContents() {
           </button>
 
           {preview && (
-            <fieldset className="mt-7 border-t border-slate-200 pt-6">
+            <fieldset disabled={busy !== null || unconfirmed} className="mt-7 border-t border-slate-200 pt-6">
               <legend className="text-base font-black text-slate-950">
                 روش ارسال
               </legend>
@@ -493,7 +520,7 @@ function CheckoutContents() {
               className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Check size={18} />
-              {busy === 'create' ? 'در حال ثبت سفارش…' : 'ثبت سفارش'}
+              {busy === 'create' ? 'در حال ثبت سفارش…' : unconfirmed ? 'بررسی دوباره ثبت سفارش' : 'ثبت سفارش'}
             </button>
           </div>
         </aside>

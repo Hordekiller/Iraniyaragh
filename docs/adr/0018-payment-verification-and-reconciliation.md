@@ -29,9 +29,10 @@ produce a double stock consume, a lost settlement, or a lost refund signal.
 - The public `GET /api/v1/payments/zarinpal/callback` route accepts only
   `Authority` and optional `Status`. The authority is looked up; an unknown
   authority returns `404 NOT_FOUND` and never calls the provider.
-- `Status=NOK` is a fast-path **intent** that deterministically records
-  `Payment PENDING → FAILED` with reason `gateway_not_paid` — it never contacts
-  the provider and never moves an order by itself. Any status other than `OK`/
+- `Status=NOK` is an unsigned browser intent. It leaves the payment `PENDING`
+  and emits the deduplicated reconciliation event; it never contacts the provider,
+  claims definitive failure or prevents a later authoritative `OK` settlement.
+  Any status other than `OK`/
   `NOK` (or `Authority` outside the 128-character bound) is `400 INVALID_REQUEST`.
 - `Status=OK` (or absent) triggers the provider `verify` call, which is the only
   thing that can prove settlement.
@@ -97,7 +98,7 @@ consumed-reservation count and fulfillment id, so the gateway stops retrying.
 
 ### Failure, availability and reconciliation
 
-- `failed` (provider or `NOK` intent) → short serializable transaction records
+- `failed` (authoritative provider evidence only) → short serializable transaction records
   `Payment PENDING → FAILED` (`gateway_not_paid`); no order, stock, fulfillment
   or outbox write. Ordered `NOT_PAID`.
 - `unavailable` → HTTP 503 `UPSTREAM_UNAVAILABLE`; **nothing is persisted**, the

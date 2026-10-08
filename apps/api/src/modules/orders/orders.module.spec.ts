@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { describe, expect, it } from 'vitest';
 import { OrderReadController } from './order-read.controller';
 import { StaffOrderController } from './staff-order.controller';
+import { OrdersModule } from './orders.module';
 
 /**
  * Guards a route-registration invariant that has no other observable test.
@@ -13,8 +14,7 @@ import { StaffOrderController } from './staff-order.controller';
  * catch a reorder here because it declares its own module.
  */
 describe('OrdersModule controller registration order', () => {
-  it('registers the static staff sub-routes before the parametric admin detail route', async () => {
-    const { OrdersModule } = await import('./orders.module');
+  it('registers the static staff sub-routes before the parametric admin detail route', () => {
     const controllers = (Reflect.getMetadata('controllers', OrdersModule) ??
       []) as unknown[];
 

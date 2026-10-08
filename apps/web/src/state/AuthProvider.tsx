@@ -68,6 +68,7 @@ export function AuthProvider({ children, api, store, bus, refreshCoordinator }: 
     );
     const request = createAuthenticatedRequest(sessionStore, () => controller.refreshSession());
     return {
+      getIdentityVersion: () => sessionStore.getIdentityVersion(),
       state: controller.getState(),
       controller,
       request,
@@ -99,7 +100,10 @@ export function AuthProvider({ children, api, store, bus, refreshCoordinator }: 
   }, []);
 
   const contextValue = useMemo(
-    () => ({ ...value, state: snapshots, restored }),
+    () => {
+      const { getIdentityVersion, ...context } = value;
+      return { ...context, state: snapshots, restored, identityVersion: getIdentityVersion() };
+    },
     [value, snapshots, restored],
   );
 

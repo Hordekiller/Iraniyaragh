@@ -449,7 +449,7 @@ describe.sequential('CheckoutService database integration', () => {
     });
 
     await expect(checkout.previewForUser(userId, address)).rejects.toMatchObject({
-      response: { code: 'SHIPPING_QUOTE_CHANGED' },
+      response: { code: 'SHIPPING_UNAVAILABLE' },
     });
     await expect(prisma.shippingQuote.count({ where: { customerId } })).resolves.toBe(
       0,
