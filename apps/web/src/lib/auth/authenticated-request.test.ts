@@ -75,6 +75,35 @@ describe('customer request identity boundaries', () => {
     expect(second.headers).toMatchObject({ Authorization: 'Bearer refreshed-test-token', 'Idempotency-Key': 'original-key' })
   })
 
+  it('joins one refresh when profile and cart expire together', async () => {
+    const store = new MemorySessionStore()
+    store.setAuthenticated(login('customer-a', 'expired-test-token'))
+    let finish!: () => void
+    const barrier = new Promise<void>(resolve => { finish = resolve })
+    const refresh = vi.fn(async () => {
+      await barrier
+      store.setAuthenticated(login('customer-a', 'refreshed-test-token'))
+      return true
+    })
+    const fetcher = vi.fn(async (_path: string, options: RequestInit) => {
+      return (options.headers as Record<string, string>).Authorization === 'Bearer expired-test-token'
+        ? rejected('AUTH_SESSION_INVALID', 401) : response({ data: { ok: true } })
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const request = createAuthenticatedRequest(store, refresh)
+    const pending = Promise.all([
+      request.forCurrentPrincipal()('/api/v1/customers/me'),
+      request.forCurrentPrincipal()('/api/v1/cart'),
+    ])
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalled())
+    const refreshCallsBeforeCompletion = refresh.mock.calls.length
+    finish()
+    expect(await pending).toEqual([{ data: { ok: true } }, { data: { ok: true } }])
+    expect(refreshCallsBeforeCompletion).toBe(1)
+    expect(fetcher).toHaveBeenCalledTimes(4)
+  })
+
   it('does not refresh B because an old A request returned 401', async () => {
     const store = new MemorySessionStore()
     store.setAuthenticated(login('customer-a'))

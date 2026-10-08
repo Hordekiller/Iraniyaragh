@@ -5,15 +5,29 @@ import type { ApiSuccess } from './types'
 import type { AuthenticatedJsonRequest } from '../../state/auth-context'
 
 type Identity = { userId: string | null; version: number }
+type RefreshState = { pending: Promise<boolean> | null; version: number | null }
 
 export function createAuthenticatedRequest(
   store: MemorySessionStore,
   refresh: () => Promise<boolean>,
   boundIdentity?: Identity,
+  sharedRefresh: RefreshState = { pending: null, version: null },
 ): AuthenticatedJsonRequest {
   const currentIdentity = (): Identity => ({
     userId: store.getPrincipal()?.userId ?? null, version: store.getIdentityVersion(),
   })
+  const refreshOnce = (identity: Identity): Promise<boolean> => {
+    if (sharedRefresh.pending && sharedRefresh.version === identity.version) return sharedRefresh.pending
+    const pending = refresh().finally(() => {
+      if (sharedRefresh.pending === pending) {
+        sharedRefresh.pending = null
+        sharedRefresh.version = null
+      }
+    })
+    sharedRefresh.pending = pending
+    sharedRefresh.version = identity.version
+    return pending
+  }
   const request = async <T>(path: string, options: Omit<RequestOptions, 'accessToken'> = {}): Promise<ApiSuccess<T>> => {
     const identity = boundIdentity ?? currentIdentity()
     const assertIdentity = () => {
@@ -35,11 +49,11 @@ export function createAuthenticatedRequest(
     } catch (error) {
       if (!(error instanceof AuthApiError) || error.statusCode !== 401) throw error
       assertIdentity()
-      if (!(await refresh())) throw error
+      if (!(await refreshOnce(identity))) throw error
       return send()
     }
   }
   return Object.assign(request, {
-    forCurrentPrincipal: () => createAuthenticatedRequest(store, refresh, boundIdentity ?? currentIdentity()),
+    forCurrentPrincipal: () => createAuthenticatedRequest(store, refresh, boundIdentity ?? currentIdentity(), sharedRefresh),
   })
 }

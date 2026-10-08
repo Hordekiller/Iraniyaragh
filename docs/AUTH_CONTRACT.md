@@ -232,6 +232,9 @@ The complete recovery operation is bound to its starting principal and login
 generation. Logout, expiry, or switching customers invalidates it before any
 subsequent request/replay; normal same-customer token rotation retains the
 generation. Late responses cannot refresh, provision, or mutate a newer login.
+Concurrent requests from the same login share one pending refresh result; they
+do not dispatch additional refresh requests or misclassify an in-flight refresh
+as a failed session. Recovery remains bounded to one replay per request.
 Profile/address loads may initialize only after an authoritative `404 NOT_FOUND`
 from the read-only customer-self account endpoint. Disabled payment and SMS
 provider behavior are unchanged.
