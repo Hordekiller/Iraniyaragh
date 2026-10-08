@@ -3,6 +3,8 @@ import { AuthApiError } from '../../lib/auth/errors'
 import { commerceErrorMessage } from './errors'
 
 const cases = [
+  ['CUSTOMER_ACCOUNT_REQUIRED', 'حساب خرید هنوز آماده نشده است. دوباره تلاش کنید.'],
+  ['CUSTOMER_ACCOUNT_LINK_REQUIRED', 'برای اتصال امن حساب خرید با پشتیبانی تماس بگیرید.'],
   ['AUTH_SESSION_INVALID', 'نشست شما پایان یافته است. دوباره وارد شوید.'],
   [
     'AUTH_REAUTHENTICATION_REQUIRED',

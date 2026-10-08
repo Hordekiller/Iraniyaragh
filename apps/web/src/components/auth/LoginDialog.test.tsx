@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthFixtureClient } from "../../lib/auth/fixtures";
 import { MemorySessionStore } from "../../lib/auth/session-store";
+import { createAuthenticatedRequest } from "../../lib/auth/authenticated-request";
 import { CustomerOtpController } from "../../lib/auth/ui";
 import { AuthContext } from "../../state/auth-context";
 import { LoginDialog } from "./LoginDialog";
@@ -28,7 +29,7 @@ describe("LoginDialog delivery evidence", () => {
           restored: true,
           state: controller.getState(),
           controller,
-          request: async () => ({ data: {} as never }),
+          request: createAuthenticatedRequest(store, async () => false),
           open: () => controller.open(),
           close: () => controller.close(),
         }}

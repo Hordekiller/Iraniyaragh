@@ -19,7 +19,7 @@ vi.mock('../../state/auth-context', () => ({
     restored: true,
     state: mocks.state,
     controller: { open: mocks.open, logout: mocks.logout },
-    request: mocks.request,
+    request: Object.assign(mocks.request, { forCurrentPrincipal: () => mocks.request }),
     open: mocks.open,
     close: vi.fn(),
   }),
