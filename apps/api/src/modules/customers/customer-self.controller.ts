@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Put, Patch, Header } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Put, Patch, Header } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiBearerAuth, ApiBody, ApiConflictResponse, ApiForbiddenResponse, ApiHeader, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import type { CustomerAccountResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
@@ -26,6 +26,21 @@ export class CustomerSelfController {
   @ApiOkResponse({ schema: customersOpenApi.account })
   async get(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<CustomerAccountResponse> {
     return { data: { account: await this.customers.getOwn(principal.userId) } };
+  }
+
+  @Put()
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  @ApiOperation({ summary: 'Initialize an empty account for the verified customer; repeat submits return the existing own account' })
+  @ApiBody({ required: false, schema: { type: 'object', additionalProperties: false, properties: {} } })
+  @ApiOkResponse({ schema: customersOpenApi.account })
+  @ApiBadRequestResponse({ description: 'Account ownership and mobile cannot be supplied by the client' })
+  @ApiConflictResponse({ description: 'CUSTOMER_ACCOUNT_LINK_REQUIRED: existing commerce profile requires controlled ownership reconciliation' })
+  async initialize(@CurrentPrincipal() principal: AuthPrincipalContext, @Body() body?: unknown): Promise<CustomerAccountResponse> {
+    if (body !== undefined && body !== null && (typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length > 0)) {
+      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Account initialization accepts no client-supplied fields.' });
+    }
+    return { data: { account: await this.customers.initializeOwn(principal.userId, getRequestId()) } };
   }
 
   @Patch()

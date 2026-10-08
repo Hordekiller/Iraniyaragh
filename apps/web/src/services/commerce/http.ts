@@ -15,6 +15,7 @@ import { readGuestCartCsrfCookie } from '../cart/guest-session'
 import type { AuthenticatedJsonRequest } from '../../state/auth-context'
 import type { ApiSuccess } from '../../lib/auth/types'
 import type { CartOwner, CommerceApi } from './types'
+import { initializeCustomerAccount } from '../customer-account'
 
 type PublicJsonRequest = <T>(
   path: string,
@@ -96,7 +97,7 @@ export class CommerceHttpClient implements CommerceApi {
 
   async mergeGuestCart(idempotencyKey: string) {
     const csrfToken = this.readGuestCsrf()
-    const response = await this.request<CartMergeResponse['data']>(
+    const response = await this.customerRequest<CartMergeResponse['data']>(
       '/api/v1/cart/merge-guest',
       {
         baseUrl: this.baseUrl,
@@ -178,7 +179,7 @@ export class CommerceHttpClient implements CommerceApi {
   private cartRequest<T>(owner: CartOwner, path: string) {
     const options = { baseUrl: this.baseUrl, credentials: 'include' as const }
     return owner === 'customer'
-      ? this.request<T>(path, options)
+      ? this.customerRequest<T>(path, options)
       : this.publicRequest<T>(path, options)
   }
 
@@ -188,7 +189,7 @@ export class CommerceHttpClient implements CommerceApi {
     options: RequestOptions,
   ): Promise<ApiSuccess<CartResponse['data']>> {
     if (owner === 'customer') {
-      return this.request<CartResponse['data']>(path, {
+      return this.customerRequest<CartResponse['data']>(path, {
         ...options,
         baseUrl: this.baseUrl,
         credentials: 'include',
@@ -213,6 +214,19 @@ export class CommerceHttpClient implements CommerceApi {
       }
     }
     throw new Error('Unreachable Guest Cart mutation state.')
+  }
+
+  private async customerRequest<T>(path: string, options: RequestOptions): Promise<ApiSuccess<T>> {
+    const scopedRequest = this.request.forCurrentPrincipal()
+    try {
+      return await scopedRequest<T>(path, options)
+    } catch (error) {
+      if (!(error instanceof AuthApiError) || error.code !== 'CUSTOMER_ACCOUNT_REQUIRED') throw error
+      await initializeCustomerAccount(scopedRequest, this.baseUrl)
+      // The first request was authoritatively rejected before any cart write.
+      // Replay exactly once, with its original body and idempotency key.
+      return scopedRequest<T>(path, options)
+    }
   }
 
   private async ensureGuestSession(): Promise<string> {

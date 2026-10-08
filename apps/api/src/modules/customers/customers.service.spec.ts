@@ -52,11 +52,13 @@ function harness() {
   const customerNote = { create: vi.fn() };
   const customerCommandRecord = { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() };
   const auditLog = { findMany: vi.fn(), count: vi.fn() };
+  const user = { findUnique: vi.fn() };
   // $transaction is overloaded: reads pass an array of promises, commands pass
   // a callback. Both forms have to work for the harness to be honest.
   const $transaction = vi.fn(async (arg: unknown) =>
     Array.isArray(arg) ? Promise.all(arg) : (arg as (tx: unknown) => Promise<unknown>)({
       $executeRaw: vi.fn(),
+      user,
       customer,
       customerAddress,
       customerNote,
@@ -69,6 +71,7 @@ function harness() {
     customerNote,
     customerCommandRecord,
     auditLog,
+    user,
     $transaction,
   } as unknown as PrismaService;
   const audit = { record: vi.fn() } as unknown as AuditLogService;
@@ -80,6 +83,7 @@ function harness() {
       customerNote: typeof customerNote;
       customerCommandRecord: typeof customerCommandRecord;
       auditLog: typeof auditLog;
+      user: typeof user;
       $transaction: ReturnType<typeof vi.fn>;
     },
     audit,
@@ -92,6 +96,57 @@ function withTransaction<T>(h: ReturnType<typeof harness>, fn: () => Promise<T>)
 }
 
 const context = { actorId: 'usr_1', requestId: 'req_1', idempotencyKey: KEY };
+
+describe('verified customer self initialization', () => {
+  let h: ReturnType<typeof harness>;
+  beforeEach(() => {
+    h = harness();
+    h.prisma.user.findUnique.mockResolvedValue({ status: 'ACTIVE', mobile: '+989121112233', isMobileVerified: true });
+    h.prisma.customer.findUnique.mockResolvedValue(null);
+    h.prisma.customer.create.mockResolvedValue(makeRow({ firstName: null, lastName: null, userId: 'usr_1', addresses: [] }));
+  });
+  it('creates only the verified principal own empty profile and audits without PII', async () => {
+    expect(await h.service.initializeOwn('usr_1', 'req_1')).toMatchObject({ firstName: null, lastName: null, addresses: [] });
+    expect(h.prisma.customer.create).toHaveBeenCalledWith(expect.objectContaining({ data: { userId: 'usr_1', mobile: '+989121112233' } }));
+    const event = vi.mocked(h.audit.record).mock.calls[0][0];
+    expect(event).toMatchObject({ actorId: 'usr_1', action: 'customer.self_initialized', metadata: { hasUserAccount: true } });
+    expect(JSON.stringify(event)).not.toContain('+989');
+    expect(h.prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: 'ReadCommitted' });
+  });
+  it('returns an existing linked account without resetting names, addresses, or version', async () => {
+    h.prisma.customer.findUnique.mockResolvedValue(makeRow({ userId: 'usr_1', addresses: [], version: 7 }));
+    expect(await h.service.initializeOwn('usr_1', 'req_1')).toMatchObject({ firstName: 'زهرا', lastName: 'کریمی', version: 7 });
+    expect(h.prisma.customer.create).not.toHaveBeenCalled();
+    expect(h.audit.record).not.toHaveBeenCalled();
+  });
+  it.each([null, { status: 'PENDING', mobile: '+989121112233', isMobileVerified: true },
+    { status: 'ACTIVE', mobile: '+989121112233', isMobileVerified: false },
+    { status: 'ACTIVE', mobile: null, isMobileVerified: true }])('denies ineligible principal %j', async user => {
+    h.prisma.user.findUnique.mockResolvedValue(user);
+    await expect(h.service.initializeOwn('usr_1', 'req_1')).rejects.toMatchObject({ response: { code: 'FORBIDDEN' } });
+    expect(h.prisma.customer.create).not.toHaveBeenCalled();
+  });
+  it('never reactivates an inactive linked account', async () => {
+    h.prisma.customer.findUnique.mockResolvedValue(makeRow({ status: 'INACTIVE', addresses: [] }));
+    await expect(h.service.initializeOwn('usr_1', 'req_1')).rejects.toMatchObject({ response: { code: 'FORBIDDEN' } });
+    expect(h.prisma.customer.create).not.toHaveBeenCalled();
+  });
+  it('never claims an existing commerce profile based on matching mobile', async () => {
+    h.prisma.customer.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'foreign-profile' });
+    await expect(h.service.initializeOwn('usr_1', 'req_1')).rejects.toMatchObject({ response: { code: 'CUSTOMER_ACCOUNT_LINK_REQUIRED' } });
+    expect(h.prisma.customer.create).not.toHaveBeenCalled();
+    expect(h.prisma.customer.updateMany).not.toHaveBeenCalled();
+  });
+  it('requires reconciliation if a concurrent staff profile wins the unique mobile', async () => {
+    h.prisma.customer.create.mockRejectedValue(new Prisma.PrismaClientKnownRequestError('unique', { code: 'P2002', clientVersion: 'test' }));
+    await expect(h.service.initializeOwn('usr_1', 'req_1')).rejects.toMatchObject({ response: { code: 'CUSTOMER_ACCOUNT_LINK_REQUIRED' } });
+  });
+  it('propagates persistence failure without false success', async () => {
+    const failure = new Error('test database unavailable');
+    h.prisma.customer.create.mockRejectedValue(failure);
+    await expect(h.service.initializeOwn('usr_1', 'req_1')).rejects.toBe(failure);
+  });
+});
 
 describe('canonicalMobile', () => {
   it.each([

@@ -147,8 +147,10 @@ export class BrowserRefreshCoordinator implements RefreshCoordinator {
 
 export class MemorySessionStore {
   private state: AuthSessionState = { status: 'anonymous' };
+  private identityVersion = 0;
 
   setAuthenticated(data: AccessTokenData): void {
+    if (this.getPrincipal()?.userId !== data.principal.userId) this.identityVersion += 1;
     this.state = {
       status: 'authenticated',
       accessToken: data.accessToken,
@@ -158,6 +160,10 @@ export class MemorySessionStore {
 
   getAccessToken(): string | null {
     return this.state.status === 'authenticated' ? this.state.accessToken : null;
+  }
+
+  getIdentityVersion(): number {
+    return this.identityVersion;
   }
 
   getPrincipal(): AuthPrincipal | null {
@@ -181,11 +187,13 @@ export class MemorySessionStore {
   }
 
   expire(reason: 'invalid' | 'replayed' = 'invalid'): void {
+    this.identityVersion += 1;
     this.state = { status: 'expired', reason };
   }
 
   /** Clear all in-memory auth state (logout / refresh failure / CSRF clear). */
   clear(): void {
+    this.identityVersion += 1;
     this.state = { status: 'anonymous' };
   }
 

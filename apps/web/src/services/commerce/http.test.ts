@@ -58,11 +58,55 @@ function requestStub() {
   )
 }
 
+function scopedStub(request: ReturnType<typeof vi.fn>): AuthenticatedJsonRequest {
+  return Object.assign(request, { forCurrentPrincipal: () => request }) as unknown as AuthenticatedJsonRequest
+}
+
 describe('CommerceHttpClient', () => {
+  it('initializes the owned profile after a missing-account merge and replays the same command once', async () => {
+    const request = vi.fn().mockRejectedValueOnce(new AuthApiError({ code: 'CUSTOMER_ACCOUNT_REQUIRED', statusCode: 409, message: 'missing profile' }))
+      .mockResolvedValueOnce({ data: { account: { id: 'own-profile' } } })
+      .mockResolvedValueOnce({ data: { cart: CART, warnings: [] } });
+    const client = new CommerceHttpClient(scopedStub(request), '/backend');
+    expect(await client.mergeGuestCart('merge-original-key')).toEqual({ cart: CART, warnings: [] });
+    expect(request.mock.calls[1]).toEqual(['/api/v1/customers/me', { method: 'PUT', baseUrl: '/backend' }]);
+    expect(request.mock.calls[2]).toEqual(request.mock.calls[0]);
+    expect(request.mock.calls[2][1].headers).toMatchObject({ 'Idempotency-Key': 'merge-original-key' });
+  });
+  it('recovers a missing customer cart without changing its mutation body or key', async () => {
+    const request = vi.fn().mockRejectedValueOnce(new AuthApiError({ code: 'CUSTOMER_ACCOUNT_REQUIRED', statusCode: 409, message: 'missing' }))
+      .mockResolvedValueOnce({ data: { account: { id: 'own' } } })
+      .mockResolvedValueOnce({ data: { cart: CART } });
+    const client = new CommerceHttpClient(scopedStub(request));
+    expect(await client.addLine('customer', 'variant-1', 2, 'original-key')).toEqual(CART);
+    expect(request.mock.calls[2]).toEqual(request.mock.calls[0]);
+  });
+  it.each(['CONFLICT', 'AUTH_SESSION_INVALID', 'NETWORK_ERROR', 'CUSTOMER_ACCOUNT_LINK_REQUIRED'] as const)('never treats %s as new-account onboarding', async code => {
+    const error = new AuthApiError({ code, message: 'failed' });
+    const request = vi.fn().mockRejectedValue(error);
+    const client = new CommerceHttpClient(scopedStub(request));
+    await expect(client.getCart('customer')).rejects.toBe(error);
+    expect(request).toHaveBeenCalledOnce();
+  });
+  it('stops when onboarding fails instead of replaying or claiming cart success', async () => {
+    const error = new AuthApiError({ code: 'CUSTOMER_ACCOUNT_LINK_REQUIRED', statusCode: 409, message: 'reconcile' });
+    const request = vi.fn().mockRejectedValueOnce(new AuthApiError({ code: 'CUSTOMER_ACCOUNT_REQUIRED', statusCode: 409, message: 'missing' }))
+      .mockRejectedValueOnce(error);
+    const client = new CommerceHttpClient(scopedStub(request));
+    await expect(client.getCart('customer')).rejects.toBe(error);
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  it('bounds cart replay to one attempt even if missing-account response persists', async () => {
+    const error = new AuthApiError({ code: 'CUSTOMER_ACCOUNT_REQUIRED', statusCode: 409, message: 'missing' });
+    const request = vi.fn().mockRejectedValueOnce(error).mockResolvedValueOnce({ data: { account: { id: 'own' } } }).mockRejectedValueOnce(error);
+    const client = new CommerceHttpClient(scopedStub(request));
+    await expect(client.getCart('customer')).rejects.toBe(error);
+    expect(request).toHaveBeenCalledTimes(3);
+  });
   it('uses authenticated Cart routes with credentials and idempotency keys', async () => {
     const request = requestStub()
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
       '/backend',
     )
 
@@ -116,7 +160,7 @@ describe('CommerceHttpClient', () => {
       return { data: { cart: CART } }
     })
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
       '/backend',
       cookieDocument,
       publicRequest as unknown as PublicRequest,
@@ -191,7 +235,7 @@ describe('CommerceHttpClient', () => {
       },
     )
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
       '',
       cookieDocument,
       publicRequest as unknown as PublicRequest,
@@ -247,7 +291,7 @@ describe('CommerceHttpClient', () => {
       },
     )
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
       '',
       cookieDocument,
       publicRequest as unknown as PublicRequest,
@@ -273,7 +317,7 @@ describe('CommerceHttpClient', () => {
     const request = requestStub()
     const publicRequest = vi.fn(async () => ({ data: undefined }))
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
       '',
       { cookie: '' },
       publicRequest as unknown as PublicRequest,
@@ -307,7 +351,7 @@ describe('CommerceHttpClient', () => {
       },
     )
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
       '',
       cookieDocument,
       publicRequest as unknown as PublicRequest,
@@ -325,7 +369,7 @@ describe('CommerceHttpClient', () => {
   it('merges with optional Guest CSRF proof and authenticated credentials', async () => {
     const request = requestStub()
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
       '/backend',
       { cookie: '__Host-iranyaragh_guest_csrf=merge-csrf' },
     )
@@ -346,7 +390,7 @@ describe('CommerceHttpClient', () => {
   it('merges an authenticated customer without inventing Guest proof when no Guest cookie exists', async () => {
     const request = requestStub()
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
       '/backend',
       { cookie: '' },
     )
@@ -364,7 +408,7 @@ describe('CommerceHttpClient', () => {
   it('sends only address and the selected server quote to checkout', async () => {
     const request = requestStub()
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
     )
 
     await client.previewCheckout(ADDRESS)
@@ -390,7 +434,7 @@ describe('CommerceHttpClient', () => {
   it('loads only customer-scoped order routes and encodes identifiers', async () => {
     const request = requestStub()
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
     )
 
     await expect(client.listOrders()).resolves.toMatchObject({
@@ -414,7 +458,7 @@ describe('CommerceHttpClient', () => {
   it('initiates an owned order payment with the provided retry key and no client amount', async () => {
     const request = requestStub()
     const client = new CommerceHttpClient(
-      request as unknown as AuthenticatedJsonRequest,
+      scopedStub(request),
       '/backend',
     )
 

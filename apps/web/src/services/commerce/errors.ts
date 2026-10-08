@@ -4,6 +4,10 @@ export function commerceErrorMessage(error: unknown): string {
   if (!(error instanceof AuthApiError))
     return 'عملیات انجام نشد. دوباره تلاش کنید.'
   switch (error.code) {
+    case 'CUSTOMER_ACCOUNT_REQUIRED':
+      return 'حساب خرید هنوز آماده نشده است. دوباره تلاش کنید.'
+    case 'CUSTOMER_ACCOUNT_LINK_REQUIRED':
+      return 'برای اتصال امن حساب خرید با پشتیبانی تماس بگیرید.'
     case 'AUTH_SESSION_INVALID':
     case 'AUTH_REAUTHENTICATION_REQUIRED':
       return 'نشست شما پایان یافته است. دوباره وارد شوید.'

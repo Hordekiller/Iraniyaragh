@@ -50,8 +50,9 @@ export function useCustomerAccountEditor<T>(request: AuthenticatedJsonRequest, f
       setConflict(false)
       setUncertain(false)
       setError(null)
-    }).catch(() => {
-      if (active) setError(loadError)
+    }).catch((cause: unknown) => {
+      if (active) setError(cause instanceof AuthApiError && cause.code === 'CUSTOMER_ACCOUNT_LINK_REQUIRED'
+        ? 'برای اتصال امن حساب خرید با پشتیبانی تماس بگیرید.' : loadError)
     }).finally(() => { if (active) setLoading(false) })
     return () => { active = false; mounted.current = false }
   }, [request, fromAccount, reload, loadError])

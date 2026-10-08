@@ -3,10 +3,11 @@ import type { CustomerOtpController, CustomerOtpUiState } from '../lib/auth/ui'
 import type { RequestOptions } from '../lib/auth/request'
 import type { ApiSuccess } from '../lib/auth/types'
 
-export type AuthenticatedJsonRequest = <T>(
-  path: string,
-  options?: Omit<RequestOptions, 'accessToken'>,
-) => Promise<ApiSuccess<T>>
+export type AuthenticatedJsonRequest = {
+  <T>(path: string, options?: Omit<RequestOptions, 'accessToken'>): Promise<ApiSuccess<T>>
+  /** Keep a multi-request operation under its original customer/login lifetime. */
+  forCurrentPrincipal: () => AuthenticatedJsonRequest
+}
 
 export type AuthContextValue = {
   /** Initial silent-restore attempt has finished; this is not an authentication claim. */

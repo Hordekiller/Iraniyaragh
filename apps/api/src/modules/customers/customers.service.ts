@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -205,6 +206,16 @@ const accountSelect = {
   addresses: { orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }] },
 } satisfies Prisma.CustomerSelect;
 
+function publicAccount(row: Prisma.CustomerGetPayload<{ select: typeof accountSelect }>): CustomerAccount {
+  return { id: row.id, mobile: row.mobile, firstName: row.firstName, lastName: row.lastName,
+    version: row.version, addresses: row.addresses.map(publicAddress) };
+}
+
+function accountLinkRequired(): ConflictException {
+  return new ConflictException({ code: 'CUSTOMER_ACCOUNT_LINK_REQUIRED',
+    message: 'An existing commerce profile requires controlled ownership reconciliation.' });
+}
+
 function publicSummary(row: {
   id: string;
   mobile: string;
@@ -316,14 +327,38 @@ export class CustomersService {
   async getOwn(userId: string): Promise<CustomerAccount> {
     const row = await this.prisma.customer.findUnique({ where: { userId }, select: accountSelect });
     if (!row || row.status !== 'ACTIVE') throw notFound();
-    return {
-      id: row.id,
-      mobile: row.mobile,
-      firstName: row.firstName,
-      lastName: row.lastName,
-      version: row.version,
-      addresses: row.addresses.map(publicAddress),
-    };
+    return publicAccount(row);
+  }
+
+  /** Explicit idempotent onboarding; never infer ownership of an existing profile from mobile. */
+  async initializeOwn(userId: string, requestId: string): Promise<CustomerAccount> {
+    try {
+      return await this.prisma.$transaction(async tx => {
+        const [hi, lo] = advisoryLockIdKey('customer-self-onboarding', userId);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${hi}::int, ${lo}::int)`;
+        const user = await tx.user.findUnique({ where: { id: userId },
+          select: { mobile: true, status: true, isMobileVerified: true } });
+        if (!user || user.status !== 'ACTIVE' || !user.isMobileVerified || !user.mobile) {
+          throw new ForbiddenException({ code: 'FORBIDDEN', message: 'A verified active customer principal is required.' });
+        }
+        const existing = await tx.customer.findUnique({ where: { userId }, select: accountSelect });
+        if (existing) {
+          if (existing.status !== 'ACTIVE') throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Customer account is inactive.' });
+          return publicAccount(existing);
+        }
+        const mobile = canonicalMobile(user.mobile);
+        if (await tx.customer.findUnique({ where: { mobile }, select: { id: true } })) throw accountLinkRequired();
+        const created = await tx.customer.create({ data: { userId, mobile }, select: accountSelect });
+        await this.audit.record({ actorId: userId, requestId, action: 'customer.self_initialized',
+          entityType: 'Customer', entityId: created.id, metadata: { hasUserAccount: true } }, tx);
+        return publicAccount(created);
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+    } catch (error) {
+      // A staff-created profile may win the mobile unique index after the read.
+      // Roll back and require reconciliation; never attach or expose that row.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw accountLinkRequired();
+      throw error;
+    }
   }
 
   async updateOwn(userId: string, input: CustomerUpdateDto, context: CommandContext): Promise<CustomerAccount> {
