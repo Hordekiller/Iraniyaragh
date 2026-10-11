@@ -80,6 +80,7 @@ test.describe('web: fixture purchase journey', () => {
 
     await tap(page.getByRole('link', { name: /سبد خرید،/ }).first())
     for (const route of ['/cart', '/checkout', '/orders']) {
+      const network = createExternalRequestsTracker(page)
       if (route === '/checkout') {
         await tap(page.getByRole('link', { name: 'ادامه فرایند خرید' }))
       }
@@ -98,7 +99,7 @@ test.describe('web: fixture purchase journey', () => {
         }
       }
       await expect(page).toHaveURL(new RegExp(`${route}$`))
-      await page.waitForLoadState('networkidle')
+      await network.assertNone()
       const results = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
         .analyze()

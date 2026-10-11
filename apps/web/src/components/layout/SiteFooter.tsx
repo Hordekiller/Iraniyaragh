@@ -63,6 +63,26 @@ export function SiteFooter() {
                 اطلاعات تماس فروشگاه هنوز منتشر نشده است.
               </p>
             )}
+            <a
+              href="https://trustseal.enamad.ir/?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3"
+              target="_blank"
+              rel="noopener"
+              referrerPolicy="origin"
+              className="mt-6 inline-flex rounded-lg border border-slate-100 p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]"
+              aria-label="نماد اعتماد الکترونیکی ایران یراق؛ باز شدن در پنجرهٔ جدید"
+            >
+              <img
+                referrerPolicy="origin"
+                src="https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3"
+                alt="نماد اعتماد الکترونیکی ایران یراق"
+                width={128}
+                height={128}
+                loading="lazy"
+                decoding="async"
+                className="cursor-pointer object-contain"
+                {...{ code: 'rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3' }}
+              />
+            </a>
           </div>
         </div>
         <div className="border-t border-slate-100 py-5 text-xs text-slate-500">

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page, Request } from '@playwright/test';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
+import { adminSidebar, createApplicationRequestTracker, isApprovedEnamadImageRequest, signInDiAsAdmin, tap } from './helpers';
 
 /**
  * End-to-end verification of the #279 rich-text description stack as assembled
@@ -17,7 +17,8 @@ import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
  * Security assertions are observations of the *running* stack (real API + MinIO
  * + postgres + Redis): hostile markup must not survive a save, description
  * images must be rewritten to the canonical public media origin, and no request
- * may target jodit-cdn.unpkg.com or any other third-party origin.
+ * may target jodit-cdn.unpkg.com or unapproved third-party assets. The exact
+ * operator-approved storefront Enamad image is the only remote seal allowed.
  *
  * Access tokens stay in memory; reload restores a real cookie session and
  * rejected access tokens recover by rotating the cookie with CSRF proof.
@@ -34,14 +35,30 @@ const EDITOR_BODY = '[data-rich-text-editor] .jodit-wysiwyg';
 function createOriginGuardTracker(page: Page) {
   const requests: string[] = [];
   const trusted = new Set<string>();
+  const storefrontOrigins = new Set([
+    new URL(storefrontUrl).origin,
+    new URL(process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174').origin,
+  ]);
   const adminOrigin = new URL(process.env.ADMIN_E2E_URL ?? 'http://127.0.0.1:3001').origin;
+  const isResidualAdminPrefetch = (request: Request) => {
+    const headers = request.headers();
+    return new URL(request.url()).origin === adminOrigin
+      && headers['next-router-prefetch'] === '1'
+      && new URL(headers.referer ?? page.url()).origin === adminOrigin;
+  };
+  // Next prefetches initiated by the previous admin document can be abandoned
+  // on navigation without a finished/failed event. They are not resources of
+  // the storefront document; ordinary requests to admin remain subject to the
+  // origin guard and readiness assertion.
+  const application = createApplicationRequestTracker(page, request => !isResidualAdminPrefetch(request));
   const onRequest = (request: Request) => {
     if (!/^https?:\/\//i.test(request.url())) return;
     // Ignore residual prefetches from the admin shell that can still be in
     // flight during the origin switch; they are not storefront behaviour.
-    const requestOrigin = new URL(request.url()).origin;
-    if (requestOrigin === adminOrigin) return;
-    if (new URL(page.url()).origin !== adminOrigin) requests.push(request.url());
+    if (isResidualAdminPrefetch(request)) return;
+    const sourceOrigin = new URL(request.headers().referer ?? page.url()).origin;
+    if (storefrontOrigins.has(sourceOrigin) && isApprovedEnamadImageRequest(request)) return;
+    if (sourceOrigin !== adminOrigin) requests.push(request.url());
   };
   page.on('request', onRequest);
 
@@ -50,8 +67,12 @@ function createOriginGuardTracker(page: Page) {
       trusted.add(new URL(origin).origin);
     },
     async assertOnlyTrustedOrigins() {
-      await page.waitForLoadState('networkidle').catch(() => undefined);
-      page.off('request', onRequest);
+      try {
+        await application.wait();
+      } finally {
+        application.stop();
+        page.off('request', onRequest);
+      }
       const pageOrigin = new URL(page.url()).origin;
       const offenders = requests.filter((url) => {
         const origin = new URL(url).origin;

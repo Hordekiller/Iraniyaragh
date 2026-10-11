@@ -213,6 +213,12 @@ enum StocktakeStatus {
   CANCELLED
 }
 
+enum StocktakeScopeType {
+  WAREHOUSE
+  LOCATIONS
+  VARIANTS
+}
+
 model User {
   id                          String                       @id @default(cuid())
   mobile                      String?                      @unique @db.VarChar(13)
@@ -253,13 +259,18 @@ model User {
   mfaChallenges               MfaChallenge[]
   totpCredential              TotpCredential?
   catalogIdempotencyRecords   CatalogIdempotencyRecord[]
-  smsTemplateCommands        SmsTemplateCommandRecord[]
+  smsTemplateCommands         SmsTemplateCommandRecord[]
   supplierCommandRecords      SupplierCommandRecord[]
   purchaseOrderCommandRecords PurchaseOrderCommandRecord[]
   purchaseReceipts            PurchaseReceipt[]
   variantPriceRecords         VariantPriceRecord[]
   catalogImportRecords        CatalogImportRecord[]
   createdProductMedia         ProductMedia[]               @relation("ProductMediaCreator")
+  stocktakesCreated           Stocktake[]                  @relation("StocktakeCreator")
+  stocktakesCounted           Stocktake[]                  @relation("StocktakeCounter")
+  stocktakesApproved          Stocktake[]                  @relation("StocktakeApprover")
+  stocktakeLinesCounted       StocktakeItem[]              @relation("StocktakeLineCounter")
+  stocktakeCommandRecords     StocktakeCommandRecord[]
   customer                    Customer?
 
   @@index([status, createdAt])
@@ -762,6 +773,7 @@ model InventoryMovement {
   location            WarehouseLocation     @relation(fields: [locationId], references: [id])
   variant             ProductVariant        @relation(fields: [variantId], references: [id])
   purchaseReceiptLine PurchaseReceiptLine?
+  stocktakeItem       StocktakeItem?
   createdAt           DateTime              @default(now())
 
   @@index([warehouseId, variantId, createdAt])
@@ -854,6 +866,7 @@ model WarehouseLocation {
   movements            InventoryMovement[]
   reservations         StockReservation[]
   purchaseReceiptLines PurchaseReceiptLine[]
+  stocktakeItems       StocktakeItem[]
   sourceTransferItems  StockTransferItem[]   @relation("TransferItemSource")
   targetTransferItems  StockTransferItem[]   @relation("TransferItemTarget")
   createdAt            DateTime              @default(now())
@@ -972,30 +985,67 @@ model PurchaseReceiptLine {
 }
 
 model Stocktake {
-  id          String          @id @default(cuid())
-  number      String          @unique
-  warehouseId String
-  status      StocktakeStatus @default(DRAFT)
-  notes       String?
-  warehouse   Warehouse       @relation(fields: [warehouseId], references: [id])
-  items       StocktakeItem[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id           String             @id @default(cuid())
+  number       String             @unique
+  warehouseId  String
+  status       StocktakeStatus    @default(DRAFT)
+  scopeType    StocktakeScopeType @default(WAREHOUSE)
+  scope        Json               @default("{}")
+  version      Int                @default(0)
+  notes        String?
+  createdById  String
+  countedById  String?
+  approvedById String?
+  startedAt    DateTime?
+  submittedAt  DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  warehouse    Warehouse          @relation(fields: [warehouseId], references: [id])
+  items        StocktakeItem[]
+  createdBy    User               @relation("StocktakeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  countedBy    User?              @relation("StocktakeCounter", fields: [countedById], references: [id], onDelete: Restrict)
+  approvedBy   User?              @relation("StocktakeApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@index([warehouseId, status])
+  @@index([status, createdAt])
 }
 
 model StocktakeItem {
-  id          String         @id @default(cuid())
+  id          String             @id @default(cuid())
   stocktakeId String
+  locationId  String
   variantId   String
   expectedQty Int
   countedQty  Int?
   difference  Int?
-  stocktake   Stocktake      @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
-  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  countedAt   DateTime?
+  movementId  String?            @unique
+  notes       String?
+  countedById String?
+  countedBy   User?              @relation("StocktakeLineCounter", fields: [countedById], references: [id], onDelete: Restrict)
+  stocktake   Stocktake          @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
+  variant     ProductVariant     @relation(fields: [variantId], references: [id])
+  location    WarehouseLocation  @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  movement    InventoryMovement? @relation(fields: [movementId], references: [id], onDelete: Restrict)
 
-  @@unique([stocktakeId, variantId])
+  @@unique([stocktakeId, locationId, variantId], map: "StocktakeItem_stocktake_location_variant_key")
+  @@index([variantId])
+  @@index([locationId])
+}
+
+model StocktakeCommandRecord {
+  id          String   @id @default(cuid())
+  actorId     String
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  scope       String   @db.VarChar(100)
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json?
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, scope, keyHash])
 }
 
 model Customer {

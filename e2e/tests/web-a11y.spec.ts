@@ -1,13 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { isMobile } from './helpers';
+import { createExternalRequestsTracker, isMobile } from './helpers';
 
 test.describe('web: a11y baseline (#82)', () => {
   test('homepage has no critical or serious axe violations on desktop', async ({ page }) => {
     test.skip(isMobile(page), 'desktop viewshed');
 
+    const network = createExternalRequestsTracker(page);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await network.assertNone();
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -22,8 +23,9 @@ test.describe('web: a11y baseline (#82)', () => {
   test('homepage has no critical or serious axe violations on mobile', async ({ page }) => {
     test.skip(!isMobile(page), 'mobile viewshed');
 
+    const network = createExternalRequestsTracker(page);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await network.assertNone();
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

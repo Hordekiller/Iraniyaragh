@@ -7,6 +7,26 @@ import {
 } from './helpers';
 
 test.describe('web: storefront shell', () => {
+  test('remains usable while the approved Enamad image request is pending', async ({ page }) => {
+    const logo = 'https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3';
+    // Model an unavailable external image without fabricating a successful
+    // response or replacing any application/API path.
+    await page.route(logo, () => {});
+    const network = createExternalRequestsTracker(page);
+    await page.goto('/');
+    const imageRequest = page.waitForRequest(logo);
+    await page.getByRole('img', { name: 'نماد اعتماد الکترونیکی ایران یراق' }).scrollIntoViewIfNeeded();
+    expect((await imageRequest).resourceType()).toBe('image');
+    await expect(page.getByRole('banner')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'نماد اعتماد الکترونیکی ایران یراق؛ باز شدن در پنجرهٔ جدید' })).toBeVisible();
+    // Preserve the tracker across full document replacement, like the real
+    // admin-to-homepage-to-product description journey.
+    await page.goto('/');
+    await expect(page.getByRole('banner')).toBeVisible();
+    await page.getByRole('img', { name: 'نماد اعتماد الکترونیکی ایران یراق' }).scrollIntoViewIfNeeded();
+    await network.assertNone();
+  });
+
   test('renders the RTL storefront with landmarks and core content', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
@@ -34,6 +54,16 @@ test.describe('web: storefront shell', () => {
     await expect(page.getByText(/کابینت‌سازان/)).toHaveCount(0);
     await expect(page.getByText(/ارسال رایگان برای خرید بالای/)).toHaveCount(0);
     await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
+
+    const seal = page.getByRole('link', { name: 'نماد اعتماد الکترونیکی ایران یراق؛ باز شدن در پنجرهٔ جدید' });
+    await expect(seal).toHaveAttribute('href', 'https://trustseal.enamad.ir/?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3');
+    await expect(seal).toHaveAttribute('target', '_blank');
+    await expect(seal).toHaveAttribute('rel', 'noopener');
+    await expect(seal).toHaveAttribute('referrerpolicy', 'origin');
+    const sealImage = seal.getByRole('img', { name: 'نماد اعتماد الکترونیکی ایران یراق' });
+    await expect(sealImage).toHaveAttribute('src', 'https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3');
+    await expect(sealImage).toHaveAttribute('referrerpolicy', 'origin');
+    await expect(sealImage).toHaveAttribute('code', 'rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3');
 
     await network.assertNone();
   });
