@@ -5,6 +5,45 @@ import type { Locator, Page, Request, Response } from '@playwright/test';
 
 export const isMobile = (page: Page): boolean => (page.viewportSize()?.width ?? 1440) < 768;
 
+/** Exact operator-approved storefront image; no scripts or origin-wide allowance. */
+export function isApprovedEnamadImageRequest(request: Request): boolean {
+  return request.resourceType() === 'image'
+    && request.url() === 'https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3';
+}
+
+function isApprovedStorefrontSeal(page: Page, request: Request): boolean {
+  // A request event can precede page.url() changing during a cross-origin
+  // navigation. The browser's Referer identifies the initiating document.
+  const origin = new URL(request.headers().referer ?? page.url()).origin;
+  return [
+    new URL(process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173').origin,
+    new URL(process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174').origin,
+  ].includes(origin) && isApprovedEnamadImageRequest(request);
+}
+
+/** Await application resources; an unavailable external seal is not app readiness. */
+export function createApplicationRequestTracker(page: Page, include: (request: Request) => boolean = () => true) {
+  const pending = new Set<Request>();
+  const started = (request: Request) => {
+    if (/^https?:\/\//.test(request.url()) && include(request) && !isApprovedStorefrontSeal(page, request)) pending.add(request);
+  };
+  const settled = (request: Request) => { pending.delete(request); };
+  page.on('request', started);
+  page.on('requestfinished', settled);
+  page.on('requestfailed', settled);
+  return {
+    async wait() {
+      await page.waitForLoadState('load');
+      await expect.poll(() => pending.size, { message: 'Application resources must settle' }).toBe(0);
+    },
+    stop() {
+      page.off('request', started);
+      page.off('requestfinished', settled);
+      page.off('requestfailed', settled);
+    },
+  };
+}
+
 /**
  * Stable locator for the admin sidebar drawer.
  *
@@ -159,22 +198,26 @@ export async function tap(locator: Locator) {
  * Records every http(s) request the page makes and fails the test as soon as an
  * assertion runs if any of them target an origin different from the page origin.
  *
- * Both app shells are self-hosted foundations: the storefront and the admin
- * panel must never load third-party assets (fonts, scripts, images). The web
- * app self-hosts Vazirmatn as a variable woff2; the admin uses local fonts and
- * a strict CSP.
+ * Admin assets remain entirely self-hosted. The storefront also self-hosts
+ * fonts/scripts and permits only the operator-approved Enamad image URL.
  */
 export function createExternalRequestsTracker(page: Page) {
   const requests: string[] = [];
+  const application = createApplicationRequestTracker(page);
   const onRequest = (request: Request) => {
+    if (isApprovedStorefrontSeal(page, request)) return;
     if (/^https?:\/\//.test(request.url())) requests.push(request.url());
   };
   page.on('request', onRequest);
 
   return {
     async assertNone() {
-      await page.waitForLoadState('networkidle').catch(() => undefined);
-      page.off('request', onRequest);
+      try {
+        await application.wait();
+      } finally {
+        application.stop();
+        page.off('request', onRequest);
+      }
       const pageOrigin = new URL(page.url()).origin;
       const external = requests.filter(url => new URL(url).origin !== pageOrigin);
       expect(external, `External asset requests observed: ${external.join(', ')}`).toEqual([]);
