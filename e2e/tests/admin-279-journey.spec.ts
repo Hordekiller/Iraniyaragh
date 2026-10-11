@@ -35,6 +35,10 @@ const EDITOR_BODY = '[data-rich-text-editor] .jodit-wysiwyg';
 function createOriginGuardTracker(page: Page) {
   const requests: string[] = [];
   const trusted = new Set<string>();
+  const storefrontOrigins = new Set([
+    new URL(storefrontUrl).origin,
+    new URL(process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174').origin,
+  ]);
   const adminOrigin = new URL(process.env.ADMIN_E2E_URL ?? 'http://127.0.0.1:3001').origin;
   const onRequest = (request: Request) => {
     if (!/^https?:\/\//i.test(request.url())) return;
@@ -42,7 +46,7 @@ function createOriginGuardTracker(page: Page) {
     // flight during the origin switch; they are not storefront behaviour.
     const requestOrigin = new URL(request.url()).origin;
     if (requestOrigin === adminOrigin) return;
-    if (new URL(page.url()).origin === new URL(storefrontUrl).origin && isApprovedEnamadImageRequest(request)) return;
+    if (storefrontOrigins.has(new URL(page.url()).origin) && isApprovedEnamadImageRequest(request)) return;
     if (new URL(page.url()).origin !== adminOrigin) requests.push(request.url());
   };
   page.on('request', onRequest);
