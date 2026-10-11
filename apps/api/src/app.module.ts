@@ -13,6 +13,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
+import { StocktakeModule } from './modules/stocktake/stocktake.module';
 import { validateEnvironment } from './config/environment';
 import { RedisModule } from './modules/redis/redis.module';
 import { MediaModule } from './modules/media/media.module';
@@ -41,6 +42,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     NotificationsModule,
     SuppliersModule,
     PurchasingModule,
+    StocktakeModule,
     ReportsModule,
     OutboxModule,
     AuditModule,

@@ -17,6 +17,7 @@ export * from './shipments';
 export * from './shipping-settings';
 export * from './suppliers';
 export * from './purchasing';
+export * from './stocktake';
 
 export type InventorySnapshot = {
   warehouseId: string;
