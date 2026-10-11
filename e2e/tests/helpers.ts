@@ -5,6 +5,12 @@ import type { Locator, Page, Request, Response } from '@playwright/test';
 
 export const isMobile = (page: Page): boolean => (page.viewportSize()?.width ?? 1440) < 768;
 
+/** Exact operator-approved storefront image; no scripts or origin-wide allowance. */
+export function isApprovedEnamadImageRequest(request: Request): boolean {
+  return request.resourceType() === 'image'
+    && request.url() === 'https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3';
+}
+
 /**
  * Stable locator for the admin sidebar drawer.
  *
@@ -159,14 +165,14 @@ export async function tap(locator: Locator) {
  * Records every http(s) request the page makes and fails the test as soon as an
  * assertion runs if any of them target an origin different from the page origin.
  *
- * Both app shells are self-hosted foundations: the storefront and the admin
- * panel must never load third-party assets (fonts, scripts, images). The web
- * app self-hosts Vazirmatn as a variable woff2; the admin uses local fonts and
- * a strict CSP.
+ * Admin assets remain entirely self-hosted. The storefront also self-hosts
+ * fonts/scripts and permits only the operator-approved Enamad image URL.
  */
 export function createExternalRequestsTracker(page: Page) {
   const requests: string[] = [];
+  const storefrontOrigin = new URL(process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173').origin;
   const onRequest = (request: Request) => {
+    if (new URL(page.url()).origin === storefrontOrigin && isApprovedEnamadImageRequest(request)) return;
     if (/^https?:\/\//.test(request.url())) requests.push(request.url());
   };
   page.on('request', onRequest);

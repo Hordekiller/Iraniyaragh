@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page, Request } from '@playwright/test';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
+import { adminSidebar, isApprovedEnamadImageRequest, signInDiAsAdmin, tap } from './helpers';
 
 /**
  * End-to-end verification of the #279 rich-text description stack as assembled
@@ -17,7 +17,8 @@ import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
  * Security assertions are observations of the *running* stack (real API + MinIO
  * + postgres + Redis): hostile markup must not survive a save, description
  * images must be rewritten to the canonical public media origin, and no request
- * may target jodit-cdn.unpkg.com or any other third-party origin.
+ * may target jodit-cdn.unpkg.com or unapproved third-party assets. The exact
+ * operator-approved storefront Enamad image is the only remote seal allowed.
  *
  * Access tokens stay in memory; reload restores a real cookie session and
  * rejected access tokens recover by rotating the cookie with CSRF proof.
@@ -41,6 +42,7 @@ function createOriginGuardTracker(page: Page) {
     // flight during the origin switch; they are not storefront behaviour.
     const requestOrigin = new URL(request.url()).origin;
     if (requestOrigin === adminOrigin) return;
+    if (new URL(page.url()).origin === new URL(storefrontUrl).origin && isApprovedEnamadImageRequest(request)) return;
     if (new URL(page.url()).origin !== adminOrigin) requests.push(request.url());
   };
   page.on('request', onRequest);

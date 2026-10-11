@@ -35,6 +35,16 @@ test.describe('web: storefront shell', () => {
     await expect(page.getByText(/ارسال رایگان برای خرید بالای/)).toHaveCount(0);
     await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
 
+    const seal = page.getByRole('link', { name: 'نماد اعتماد الکترونیکی ایران یراق؛ باز شدن در پنجرهٔ جدید' });
+    await expect(seal).toHaveAttribute('href', 'https://trustseal.enamad.ir/?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3');
+    await expect(seal).toHaveAttribute('target', '_blank');
+    await expect(seal).toHaveAttribute('rel', 'noopener');
+    await expect(seal).toHaveAttribute('referrerpolicy', 'origin');
+    const sealImage = seal.getByRole('img', { name: 'نماد اعتماد الکترونیکی ایران یراق' });
+    await expect(sealImage).toHaveAttribute('src', 'https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3');
+    await expect(sealImage).toHaveAttribute('referrerpolicy', 'origin');
+    await expect(sealImage).toHaveAttribute('code', 'rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3');
+
     await network.assertNone();
   });
 

@@ -2,8 +2,8 @@
 /**
  * Runtime asset policy for the storefront.
  *
- * Mirrors the admin panel policy: the web shell must not reference any remote
- * asset at runtime. Vazirmatn is self-hosted as a variable woff2 (see
+ * The web shell stays self-hosted except for the operator-approved Enamad
+ * verification image in SiteFooter. Vazirmatn is self-hosted (see
  * public/fonts/) and no `https?://` reference or remote CSS `@import` may be
  * shipped in built output sources.
  */
@@ -26,11 +26,20 @@ const LEGAL_TXT = /(?:^|\/)(OFL\.txt|LICEN[CS]E.*|NOTICE.*|COPYING.*)$/i;
  */
 const NAVIGATION_ONLY_DOMAINS = ['instagram.com'];
 
-function remoteUrls(content) {
+// These exact, public seal URLs were supplied by the operator. This exception
+// is scoped to the footer; other hosts, paths, seals and source files stay denied.
+const ENAMAD_FOOTER_URLS = new Set([
+  'https://trustseal.enamad.ir/?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3',
+  'https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3',
+]);
+const ENAMAD_FOOTER_FILE = fileURLToPath(new URL('../src/components/layout/SiteFooter.tsx', import.meta.url));
+
+function remoteUrls(file, content) {
   const matches = [];
   const re = new RegExp(REMOTE_URL_SRC.source, 'g');
   let match = null;
   while ((match = re.exec(content)) !== null) {
+    if (file === ENAMAD_FOOTER_FILE && ENAMAD_FOOTER_URLS.has(match[0])) continue;
     if (!NAVIGATION_ONLY_DOMAINS.some(domain => match[0].includes(domain))) {
       matches.push(match[0]);
     }
@@ -79,7 +88,7 @@ for (const root of ROOTS) {
     if (isTestSource(file)) continue;
     if (BINARY_EXT.has(file.split('.').pop().toLowerCase())) continue;
     const content = contentToInspect(file, readFileSync(file, 'utf8'));
-    for (const url of remoteUrls(content)) {
+    for (const url of remoteUrls(file, content)) {
       violations.push(`  - ${file}: remote asset URL reference (${url})`);
     }
     if (REMOTE_CSS_IMPORT.test(content)) violations.push(`  - ${file}: remote CSS @import`);
@@ -92,4 +101,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('Runtime asset policy passed: no remote asset references found.');
+console.log('Runtime asset policy passed: only the approved Enamad footer seal may be remote.');
