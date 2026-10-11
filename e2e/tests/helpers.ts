@@ -11,6 +11,37 @@ export function isApprovedEnamadImageRequest(request: Request): boolean {
     && request.url() === 'https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3';
 }
 
+function isApprovedStorefrontSeal(page: Page, request: Request): boolean {
+  const origin = new URL(page.url()).origin;
+  return [
+    new URL(process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173').origin,
+    new URL(process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174').origin,
+  ].includes(origin) && isApprovedEnamadImageRequest(request);
+}
+
+/** Await application resources; an unavailable external seal is not app readiness. */
+export function createApplicationRequestTracker(page: Page) {
+  const pending = new Set<Request>();
+  const started = (request: Request) => {
+    if (/^https?:\/\//.test(request.url()) && !isApprovedStorefrontSeal(page, request)) pending.add(request);
+  };
+  const settled = (request: Request) => { pending.delete(request); };
+  page.on('request', started);
+  page.on('requestfinished', settled);
+  page.on('requestfailed', settled);
+  return {
+    async wait() {
+      await page.waitForLoadState('load');
+      await expect.poll(() => pending.size, { message: 'Application resources must settle' }).toBe(0);
+    },
+    stop() {
+      page.off('request', started);
+      page.off('requestfinished', settled);
+      page.off('requestfailed', settled);
+    },
+  };
+}
+
 /**
  * Stable locator for the admin sidebar drawer.
  *
@@ -170,17 +201,21 @@ export async function tap(locator: Locator) {
  */
 export function createExternalRequestsTracker(page: Page) {
   const requests: string[] = [];
-  const storefrontOrigin = new URL(process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173').origin;
+  const application = createApplicationRequestTracker(page);
   const onRequest = (request: Request) => {
-    if (new URL(page.url()).origin === storefrontOrigin && isApprovedEnamadImageRequest(request)) return;
+    if (isApprovedStorefrontSeal(page, request)) return;
     if (/^https?:\/\//.test(request.url())) requests.push(request.url());
   };
   page.on('request', onRequest);
 
   return {
     async assertNone() {
-      await page.waitForLoadState('networkidle').catch(() => undefined);
-      page.off('request', onRequest);
+      try {
+        await application.wait();
+      } finally {
+        application.stop();
+        page.off('request', onRequest);
+      }
       const pageOrigin = new URL(page.url()).origin;
       const external = requests.filter(url => new URL(url).origin !== pageOrigin);
       expect(external, `External asset requests observed: ${external.join(', ')}`).toEqual([]);

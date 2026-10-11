@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page, Request } from '@playwright/test';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { adminSidebar, isApprovedEnamadImageRequest, signInDiAsAdmin, tap } from './helpers';
+import { adminSidebar, createApplicationRequestTracker, isApprovedEnamadImageRequest, signInDiAsAdmin, tap } from './helpers';
 
 /**
  * End-to-end verification of the #279 rich-text description stack as assembled
@@ -34,6 +34,7 @@ const EDITOR_BODY = '[data-rich-text-editor] .jodit-wysiwyg';
 
 function createOriginGuardTracker(page: Page) {
   const requests: string[] = [];
+  const application = createApplicationRequestTracker(page);
   const trusted = new Set<string>();
   const storefrontOrigins = new Set([
     new URL(storefrontUrl).origin,
@@ -56,8 +57,12 @@ function createOriginGuardTracker(page: Page) {
       trusted.add(new URL(origin).origin);
     },
     async assertOnlyTrustedOrigins() {
-      await page.waitForLoadState('networkidle').catch(() => undefined);
-      page.off('request', onRequest);
+      try {
+        await application.wait();
+      } finally {
+        application.stop();
+        page.off('request', onRequest);
+      }
       const pageOrigin = new URL(page.url()).origin;
       const offenders = requests.filter((url) => {
         const origin = new URL(url).origin;

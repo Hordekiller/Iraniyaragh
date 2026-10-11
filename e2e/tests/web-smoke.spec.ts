@@ -7,6 +7,21 @@ import {
 } from './helpers';
 
 test.describe('web: storefront shell', () => {
+  test('remains usable while the approved Enamad image request is pending', async ({ page }) => {
+    const logo = 'https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3';
+    // Model an unavailable external image without fabricating a successful
+    // response or replacing any application/API path.
+    await page.route(logo, () => {});
+    const network = createExternalRequestsTracker(page);
+    await page.goto('/');
+    const imageRequest = page.waitForRequest(logo);
+    await page.getByRole('img', { name: 'نماد اعتماد الکترونیکی ایران یراق' }).scrollIntoViewIfNeeded();
+    expect((await imageRequest).resourceType()).toBe('image');
+    await expect(page.getByRole('banner')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'نماد اعتماد الکترونیکی ایران یراق؛ باز شدن در پنجرهٔ جدید' })).toBeVisible();
+    await network.assertNone();
+  });
+
   test('renders the RTL storefront with landmarks and core content', async ({ page }) => {
     const network = createExternalRequestsTracker(page);
 
