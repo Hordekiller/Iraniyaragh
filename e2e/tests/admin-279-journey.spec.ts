@@ -34,21 +34,31 @@ const EDITOR_BODY = '[data-rich-text-editor] .jodit-wysiwyg';
 
 function createOriginGuardTracker(page: Page) {
   const requests: string[] = [];
-  const application = createApplicationRequestTracker(page);
   const trusted = new Set<string>();
   const storefrontOrigins = new Set([
     new URL(storefrontUrl).origin,
     new URL(process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174').origin,
   ]);
   const adminOrigin = new URL(process.env.ADMIN_E2E_URL ?? 'http://127.0.0.1:3001').origin;
+  const isResidualAdminPrefetch = (request: Request) => {
+    const headers = request.headers();
+    return new URL(request.url()).origin === adminOrigin
+      && headers['next-router-prefetch'] === '1'
+      && new URL(headers.referer ?? page.url()).origin === adminOrigin;
+  };
+  // Next prefetches initiated by the previous admin document can be abandoned
+  // on navigation without a finished/failed event. They are not resources of
+  // the storefront document; ordinary requests to admin remain subject to the
+  // origin guard and readiness assertion.
+  const application = createApplicationRequestTracker(page, request => !isResidualAdminPrefetch(request));
   const onRequest = (request: Request) => {
     if (!/^https?:\/\//i.test(request.url())) return;
     // Ignore residual prefetches from the admin shell that can still be in
     // flight during the origin switch; they are not storefront behaviour.
-    const requestOrigin = new URL(request.url()).origin;
-    if (requestOrigin === adminOrigin) return;
-    if (storefrontOrigins.has(new URL(page.url()).origin) && isApprovedEnamadImageRequest(request)) return;
-    if (new URL(page.url()).origin !== adminOrigin) requests.push(request.url());
+    if (isResidualAdminPrefetch(request)) return;
+    const sourceOrigin = new URL(request.headers().referer ?? page.url()).origin;
+    if (storefrontOrigins.has(sourceOrigin) && isApprovedEnamadImageRequest(request)) return;
+    if (sourceOrigin !== adminOrigin) requests.push(request.url());
   };
   page.on('request', onRequest);
 

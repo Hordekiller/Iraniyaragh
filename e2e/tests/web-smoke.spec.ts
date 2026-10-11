@@ -19,6 +19,11 @@ test.describe('web: storefront shell', () => {
     expect((await imageRequest).resourceType()).toBe('image');
     await expect(page.getByRole('banner')).toBeVisible();
     await expect(page.getByRole('link', { name: 'نماد اعتماد الکترونیکی ایران یراق؛ باز شدن در پنجرهٔ جدید' })).toBeVisible();
+    // Preserve the tracker across full document replacement, like the real
+    // admin-to-homepage-to-product description journey.
+    await page.goto('/');
+    await expect(page.getByRole('banner')).toBeVisible();
+    await page.getByRole('img', { name: 'نماد اعتماد الکترونیکی ایران یراق' }).scrollIntoViewIfNeeded();
     await network.assertNone();
   });
 

@@ -12,7 +12,9 @@ export function isApprovedEnamadImageRequest(request: Request): boolean {
 }
 
 function isApprovedStorefrontSeal(page: Page, request: Request): boolean {
-  const origin = new URL(page.url()).origin;
+  // A request event can precede page.url() changing during a cross-origin
+  // navigation. The browser's Referer identifies the initiating document.
+  const origin = new URL(request.headers().referer ?? page.url()).origin;
   return [
     new URL(process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173').origin,
     new URL(process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174').origin,
@@ -20,10 +22,10 @@ function isApprovedStorefrontSeal(page: Page, request: Request): boolean {
 }
 
 /** Await application resources; an unavailable external seal is not app readiness. */
-export function createApplicationRequestTracker(page: Page) {
+export function createApplicationRequestTracker(page: Page, include: (request: Request) => boolean = () => true) {
   const pending = new Set<Request>();
   const started = (request: Request) => {
-    if (/^https?:\/\//.test(request.url()) && !isApprovedStorefrontSeal(page, request)) pending.add(request);
+    if (/^https?:\/\//.test(request.url()) && include(request) && !isApprovedStorefrontSeal(page, request)) pending.add(request);
   };
   const settled = (request: Request) => { pending.delete(request); };
   page.on('request', started);
