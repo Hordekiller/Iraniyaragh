@@ -57,7 +57,8 @@ describe('GlobalSearch', () => {
     expect(screen.getByRole('button', { name: /داشبورد عملیات/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /سفارش‌ها/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /کالا و SKU/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /تنظیمات/ })).toBeEnabled();
+    expect(screen.getByText('تنظیمات', { exact: true }).closest('[role="button"]')).toBeEnabled();
+    expect(screen.getByRole('button', { name: /تنظیمات فاکتور/ })).toBeEnabled();
 
     expect(screen.getByRole('button', { name: /پرداخت‌ها/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /مشتریان/ })).toBeEnabled();
