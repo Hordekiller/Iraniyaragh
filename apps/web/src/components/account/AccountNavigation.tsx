@@ -6,7 +6,7 @@ export function AccountNavigation() {
     {[
       [ROUTES.account, 'پروفایل'], [ROUTES.orders, 'سفارش‌های من'],
       [ROUTES.addresses, 'دفتر نشانی‌ها'], [ROUTES.sessions, 'امنیت و نشست‌ها'],
-      [ROUTES.cart, 'سبد خرید'],
+      [ROUTES.credit, 'صورتحساب و بدهی'], [ROUTES.cart, 'سبد خرید'],
     ].map(([to, title]) => <NavLink key={to} to={to} end className={({ isActive }) => `rounded-xl border px-4 py-3 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 ${isActive ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-orange-400'}`}>{title}</NavLink>)}
   </nav>
 }

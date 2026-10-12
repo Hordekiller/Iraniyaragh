@@ -16,6 +16,7 @@ const CartPage = lazy(() => import('./pages/CartPage').then(module => ({ default
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then(module => ({ default: module.CheckoutPage })))
 const PaymentPage = lazy(() => import('./pages/PaymentPage').then(module => ({ default: module.PaymentPage })))
 const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage').then(module => ({ default: module.PaymentReturnPage })))
+const AccountCreditPage = lazy(() => import('./pages/AccountCreditPage').then(module => ({ default: module.AccountCreditPage })))
 const AccountPage = lazy(() => import('./pages/AccountPage').then(module => ({ default: module.AccountPage })))
 const AccountAddressesPage = lazy(() => import('./pages/AccountAddressesPage').then(module => ({ default: module.AccountAddressesPage })))
 const AccountSecurityPage = lazy(() => import('./pages/AccountSecurityPage').then(module => ({ default: module.AccountSecurityPage })))
@@ -53,6 +54,7 @@ export default function App() {
                       <Route path={ROUTE_PATHS.payment} element={<PaymentPage />} />
                       <Route path={ROUTE_PATHS.paymentResult} element={<PaymentPage returnMode />} />
                       <Route path={ROUTE_PATHS.paymentReturn} element={<PaymentReturnPage />} />
+                      <Route path={ROUTE_PATHS.credit} element={<AccountCreditPage />} />
                       <Route path={ROUTE_PATHS.account} element={<AccountPage />} />
                       <Route path={ROUTE_PATHS.addresses} element={<AccountAddressesPage />} />
                       <Route path={ROUTE_PATHS.sessions} element={<AccountSecurityPage />} />

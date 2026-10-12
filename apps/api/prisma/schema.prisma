@@ -238,6 +238,10 @@ model User {
   deletedAt                   DateTime?
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
+  creditEntries               CreditLedgerEntry[]
+  creditDocuments             ReceivableDocument[]
+  creditReceipts              CreditReceipt[]
+  creditCommands              CreditCommandRecord[]
   sessions                    Session[]
   otpCodes                    OtpCode[]
   loginAttempts               LoginAttempt[]
@@ -1057,6 +1061,7 @@ model Customer {
   status                     CustomerStatus              @default(ACTIVE)
   deactivatedAt              DateTime?
   version                    Int                         @default(0)
+  creditAccount              CreditAccount?
   orders                     Order[]
   addresses                  CustomerAddress[]
   notes                      CustomerNote[]
@@ -1633,4 +1638,126 @@ model SmsTemplateCommandRecord {
   actor        User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
 
   @@unique([actorId, keyHash])
+}
+
+
+enum CreditAccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ReceivableDocumentKind {
+  OPENING_BALANCE
+}
+
+enum CreditEntryKind {
+  OPENING_BALANCE
+  RECEIPT
+  RECEIPT_REVERSAL
+  DEBIT_ADJUSTMENT
+  CREDIT_NOTE
+}
+
+enum CreditReceiptMethod {
+  CASH
+  BANK_TRANSFER
+}
+
+/// Policy only. Outstanding amounts are derived exclusively from the ledger.
+model CreditAccount {
+  id          String              @id @default(cuid())
+  customerId  String              @unique
+  status      CreditAccountStatus @default(SUSPENDED)
+  creditLimit BigInt              @default(0)
+  termsDays   Int                 @default(0)
+  version     Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  customer    Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  documents   ReceivableDocument[]
+  receipts    CreditReceipt[]
+  entries     CreditLedgerEntry[]
+}
+
+/// Immutable debt snapshot; this first slice admits evidenced historical debt only.
+model ReceivableDocument {
+  id                String                 @id @default(cuid())
+  accountId         String
+  kind              ReceivableDocumentKind
+  amount            BigInt
+  issuedAt          DateTime
+  dueAt             DateTime
+  termsDays         Int
+  sourceReference   String                 @db.VarChar(128)
+  actorId           String
+  requestId         String                 @db.VarChar(100)
+  createdAt         DateTime               @default(now())
+  account           CreditAccount          @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  actor             User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  entries           CreditLedgerEntry[]
+
+  @@unique([accountId, kind])
+  @@unique([id, accountId])
+  @@index([accountId, dueAt])
+}
+
+/// Evidence for an external receipt already performed by staff, not a gateway Payment.
+model CreditReceipt {
+  id                String              @id @default(cuid())
+  accountId         String
+  amount            BigInt
+  method            CreditReceiptMethod
+  evidenceReference String              @db.VarChar(128)
+  evidenceHash      String              @unique @db.Char(64)
+  effectiveAt       DateTime
+  actorId           String
+  requestId         String              @db.VarChar(100)
+  createdAt         DateTime            @default(now())
+  account           CreditAccount       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  actor             User                @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  entries           CreditLedgerEntry[]
+
+  @@unique([id, accountId])
+  @@index([accountId, effectiveAt])
+}
+
+/// One receipt entry per document is the immutable allocation; reversal points to it.
+model CreditLedgerEntry {
+  id              String          @id @default(cuid())
+  accountId       String
+  documentId      String
+  receiptId       String?
+  reversalOfId    String?         @unique
+  kind            CreditEntryKind
+  amount          BigInt
+  evidenceReference String?       @db.VarChar(128)
+  reason          String?         @db.VarChar(500)
+  evidenceHash    String?         @unique @db.Char(64)
+  effectiveAt     DateTime
+  actorId         String
+  requestId       String          @db.VarChar(100)
+  createdAt       DateTime        @default(now())
+  account         CreditAccount   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  document        ReceivableDocument @relation(fields: [documentId, accountId], references: [id, accountId], onDelete: Restrict, onUpdate: NoAction)
+  receipt         CreditReceipt?  @relation(fields: [receiptId, accountId], references: [id, accountId], onDelete: Restrict, onUpdate: NoAction)
+  actor           User            @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  reversalOf      CreditLedgerEntry? @relation("CreditReversal", fields: [reversalOfId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reversal        CreditLedgerEntry? @relation("CreditReversal")
+
+  @@unique([receiptId, documentId, kind])
+  @@index([accountId, createdAt, id])
+  @@index([documentId])
+}
+
+model CreditCommandRecord {
+  id          String   @id @default(cuid())
+  actorId     String
+  scope       String   @db.VarChar(100)
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json?
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, scope, keyHash])
 }

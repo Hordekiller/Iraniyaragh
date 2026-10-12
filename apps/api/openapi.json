@@ -23185,6 +23185,2032 @@
         ]
       }
     },
+    "/credit/admin/customers/{customerId}": {
+      "get": {
+        "operationId": "CreditController_statement",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "nullable": true
+                    },
+                    "documents": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "OPENING_BALANCE"
+                            ]
+                          },
+                          "originalAmount": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "IRR"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "currency"
+                            ]
+                          },
+                          "effectivePrincipal": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "IRR"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "currency"
+                            ]
+                          },
+                          "outstanding": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "IRR"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "currency"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "UNPAID",
+                              "PARTIALLY_PAID",
+                              "PAID",
+                              "OVERDUE"
+                            ]
+                          },
+                          "issuedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "dueAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "termsDays": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "originalAmount",
+                          "effectivePrincipal",
+                          "outstanding",
+                          "status",
+                          "issuedAt",
+                          "dueAt",
+                          "termsDays"
+                        ]
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "account",
+                    "documents",
+                    "total",
+                    "offset",
+                    "limit"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read a customer credit statement without private receipt evidence",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/credit/admin/customers/{customerId}/ledger": {
+      "get": {
+        "operationId": "CreditController_ledger",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "documentId": {
+                            "type": "string"
+                          },
+                          "receiptId": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "reversalOfId": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "OPENING_BALANCE",
+                              "RECEIPT",
+                              "RECEIPT_REVERSAL",
+                              "DEBIT_ADJUSTMENT",
+                              "CREDIT_NOTE"
+                            ]
+                          },
+                          "amount": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "IRR"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "currency"
+                            ]
+                          },
+                          "effectiveAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "documentId",
+                          "receiptId",
+                          "reversalOfId",
+                          "kind",
+                          "amount",
+                          "effectiveAt",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "offset",
+                    "limit"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read immutable signed receivable movements",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/credit/admin/customers/{customerId}/policy": {
+      "post": {
+        "operationId": "CreditController_policy",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647,
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "SUSPENDED"
+                    ]
+                  },
+                  "creditLimit": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,18})$",
+                    "description": "Canonical integer IRR, at most signed BIGINT. Never Toman or floating-point."
+                  },
+                  "termsDays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 365
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "status",
+                  "creditLimit",
+                  "termsDays"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "type": "string"
+                    },
+                    "entryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Create or version a customer credit policy; never edit financial balances",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/credit/admin/customers/{customerId}/opening": {
+      "post": {
+        "operationId": "CreditController_opening",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,18})$",
+                    "description": "Canonical integer IRR, at most signed BIGINT. Never Toman or floating-point."
+                  },
+                  "issuedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "dueAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "sourceReference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "amount",
+                  "issuedAt",
+                  "dueAt",
+                  "sourceReference"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "type": "string"
+                    },
+                    "entryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record one evidenced historical opening balance; creates no order or payment",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/credit/admin/customers/{customerId}/receipts": {
+      "post": {
+        "operationId": "CreditController_receipt",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,18})$",
+                    "description": "Canonical integer IRR, at most signed BIGINT. Never Toman or floating-point."
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "CASH",
+                      "BANK_TRANSFER"
+                    ]
+                  },
+                  "effectiveAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "evidenceReference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "allocations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "documentId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^(0|[1-9][0-9]{0,18})$",
+                          "description": "Canonical integer IRR, at most signed BIGINT. Never Toman or floating-point."
+                        }
+                      },
+                      "required": [
+                        "documentId",
+                        "amount"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "amount",
+                  "method",
+                  "effectiveAt",
+                  "evidenceReference",
+                  "allocations"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "type": "string"
+                    },
+                    "entryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record already-received money allocated exactly to this customer debt",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/credit/admin/customers/{customerId}/receipts/{receiptId}/reverse": {
+      "post": {
+        "operationId": "CreditController_reverseReceipt",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "receiptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "effectiveAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "evidenceReference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "effectiveAt",
+                  "evidenceReference",
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "type": "string"
+                    },
+                    "entryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Append a whole-receipt reversal retaining the original receipt and evidence",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/credit/admin/customers/{customerId}/documents/{documentId}/adjust": {
+      "post": {
+        "operationId": "CreditController_adjust",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "effectiveAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "evidenceReference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "DEBIT_ADJUSTMENT",
+                      "CREDIT_NOTE"
+                    ]
+                  },
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,18})$",
+                    "description": "Canonical integer IRR, at most signed BIGINT. Never Toman or floating-point."
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "effectiveAt",
+                  "evidenceReference",
+                  "reason",
+                  "kind",
+                  "amount"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "type": "string"
+                    },
+                    "entryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Append an evidenced debit adjustment or bounded unpaid credit note",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/customers/me/credit": {
+      "get": {
+        "operationId": "CustomerCreditController_statement",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "account": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "customerId": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "ACTIVE",
+                                "SUSPENDED"
+                              ]
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 2147483647
+                            },
+                            "creditLimit": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "amount",
+                                "currency"
+                              ]
+                            },
+                            "termsDays": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 365
+                            },
+                            "outstanding": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "amount",
+                                "currency"
+                              ]
+                            },
+                            "availableCredit": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "amount",
+                                "currency"
+                              ]
+                            },
+                            "overdue": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "amount": {
+                                  "type": "string",
+                                  "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "amount",
+                                "currency"
+                              ]
+                            },
+                            "overLimit": {
+                              "type": "boolean"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "customerId",
+                            "status",
+                            "version",
+                            "creditLimit",
+                            "termsDays",
+                            "outstanding",
+                            "availableCredit",
+                            "overdue",
+                            "overLimit",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "nullable": true
+                        },
+                        "documents": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "OPENING_BALANCE"
+                                ]
+                              },
+                              "originalAmount": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ]
+                              },
+                              "effectivePrincipal": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ]
+                              },
+                              "outstanding": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ]
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "UNPAID",
+                                  "PARTIALLY_PAID",
+                                  "PAID",
+                                  "OVERDUE"
+                                ]
+                              },
+                              "issuedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "dueAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "termsDays": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "originalAmount",
+                              "effectivePrincipal",
+                              "outstanding",
+                              "status",
+                              "issuedAt",
+                              "dueAt",
+                              "termsDays"
+                            ]
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "account",
+                        "documents",
+                        "total",
+                        "offset",
+                        "limit"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read only the authenticated customer receivable statement",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
     "/notifications/admin/sms-settings": {
       "get": {
         "operationId": "NotificationsAdminController_getSettings",

@@ -5,6 +5,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { CreditModule } from './modules/credit/credit.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { HealthModule } from './modules/health/health.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
@@ -39,6 +40,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     OrdersModule,
     PaymentsModule,
     CustomersModule,
+    CreditModule,
     NotificationsModule,
     SuppliersModule,
     PurchasingModule,
