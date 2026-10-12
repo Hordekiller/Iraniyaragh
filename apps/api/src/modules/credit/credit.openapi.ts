@@ -7,8 +7,8 @@ const object = (properties: Record<string, SchemaObject>, required = Object.keys
 const money = object({ amount: { type: 'string', pattern: '^-?(0|[1-9][0-9]{0,18})$' }, currency: { type: 'string', enum: ['IRR'] } });
 const account = object({ id: string, customerId: string, status: { type: 'string', enum: ['ACTIVE', 'SUSPENDED'] }, version,
   creditLimit: money, termsDays: { type: 'integer', minimum: 0, maximum: 365 }, outstanding: money, availableCredit: money,
-  overdue: money, overLimit: { type: 'boolean' }, createdAt: timestamp, updatedAt: timestamp });
-const document = object({ id: string, kind: { type: 'string', enum: ['OPENING_BALANCE'] }, originalAmount: money,
+  overdue: money, openingRecorded: { type: 'boolean' }, overLimit: { type: 'boolean' }, createdAt: timestamp, updatedAt: timestamp });
+const document = object({ id: string, kind: { type: 'string', enum: ['OPENING_BALANCE', 'SALE'] }, orderId: { ...string, nullable: true }, originalAmount: money,
   effectivePrincipal: money, outstanding: money, status: { type: 'string', enum: ['UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE'] },
   issuedAt: timestamp, dueAt: timestamp, termsDays: { type: 'integer' } });
 const pagination = { total: { type: 'integer' } as const, offset: { type: 'integer' } as const, limit: { type: 'integer' } as const };
@@ -18,9 +18,10 @@ const nullableString = { type: 'string', nullable: true } as const;
 export const creditOpenApi = {
   statement: object({ account: { ...account, nullable: true }, documents: { type: 'array', items: document }, ...pagination }),
   ledger: object({ items: { type: 'array', items: object({ id: string, documentId: string, receiptId: nullableString, reversalOfId: nullableString,
-    kind: { type: 'string', enum: ['OPENING_BALANCE', 'RECEIPT', 'RECEIPT_REVERSAL', 'DEBIT_ADJUSTMENT', 'CREDIT_NOTE'] },
+    kind: { type: 'string', enum: ['SALE', 'OPENING_BALANCE', 'RECEIPT', 'RECEIPT_REVERSAL', 'DEBIT_ADJUSTMENT', 'CREDIT_NOTE'] },
     amount: money, effectiveAt: timestamp, createdAt: timestamp }) }, ...pagination }),
-  result: object({ account, documentId: string, receiptId: string, entryIds: { type: 'array', items: string } }, ['account']),
+  result: object({ account, order: object({ id: string, status: { type: 'string', enum: ['CREDIT_APPROVED'] }, version }), documentId: string, receiptId: string, entryIds: { type: 'array', items: string } }, ['account']),
+  approval: object({ expectedVersion: version, expectedOrderVersion: version }),
   policy: object({ expectedVersion: { ...version, nullable: true }, status: { type: 'string', enum: ['ACTIVE', 'SUSPENDED'] }, creditLimit: amount, termsDays: { type: 'integer', minimum: 0, maximum: 365 } }),
   opening: object({ expectedVersion: version, amount, issuedAt: timestamp, dueAt: timestamp, sourceReference: evidence }),
   receipt: object({ expectedVersion: version, amount, method: { type: 'string', enum: ['CASH', 'BANK_TRANSFER'] }, effectiveAt: timestamp, evidenceReference: evidence,

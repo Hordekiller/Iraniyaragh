@@ -182,7 +182,7 @@ async function createCustomer(page: Page, suffix: string) {
   return { mobile, canonicalMobile };
 }
 
-test('staff records a walk-in order with a server-priced total and a real pending payment state', async ({ page }) => {
+test('staff records a server-priced pending walk-in order then explicitly approves customer credit and fulfillment', async ({ page }) => {
   // Building product, stock, warehouse and customer through the real UI is
   // the same shape as the other admin journeys.
   test.setTimeout(420_000);
@@ -192,6 +192,7 @@ test('staff records a walk-in order with a server-priced total and a real pendin
   const { sku, variantId, salePrice } = await test.step('prepare sellable stock', () =>
     createSellableVariantWithStock(page, suffix),
   );
+  let orderHref = '';
   const { mobile, canonicalMobile } = await test.step('register the customer', () =>
     createCustomer(page, suffix),
   );
@@ -238,6 +239,8 @@ test('staff records a walk-in order with a server-priced total and a real pendin
   await expect(firstRow).toContainText('بدون تلاش پرداخت');
   // Fulfillment is a separate machine and has not started either.
   await expect(firstRow).toContainText('شروع نشده');
+  orderHref = await firstRow.locator('a[href^="/orders/"]').first().getAttribute('href') ?? '';
+  expect(orderHref).toMatch(/^\/orders\/[^/]+$/);
   });
 
   await test.step('the stock is held, not silently spent', async () => {
@@ -257,5 +260,39 @@ test('staff records a walk-in order with a server-priced total and a real pendin
   await expect(balanceRow).toContainText(rial.format(8));
   // And the reservation is reachable as a hold rather than a silent stock cut.
   await expect(balanceRow.getByRole('link', { name: 'رزروها' })).toBeVisible();
+  });
+  await test.step('approve an explicit customer credit policy and the real staff sale', async () => {
+    await page.goto(orderHref);
+    await expect(page.getByRole('heading', { name: 'فروش نسیه به مشتری شناخته‌شده' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'تأیید فروش نسیه و ثبت بدهی' })).toBeDisabled();
+    await tap(page.getByRole('link', { name: 'تنظیم اعتبار و مشاهدهٔ دفترکل مشتری' }));
+    await tap(page.getByRole('button', { name: 'تنظیم اعتبار', exact: true }));
+    const policy = page.getByRole('dialog', { name: 'تنظیم اعتبار مشتری' });
+    await policy.getByRole('combobox', { name: 'وضعیت اعتبار' }).dispatchEvent('mousedown');
+    await tap(page.getByRole('option', { name: 'فعال', exact: true }));
+    await policy.getByRole('textbox', { name: 'سقف اعتبار (ریال)' }).fill(String(salePrice * 4));
+    await policy.getByRole('textbox', { name: 'مهلت پرداخت (روز)' }).fill('30');
+    await tap(policy.getByRole('button', { name: 'تأیید و ثبت' }));
+    await expect(policy).toBeHidden();
+    await page.goto(orderHref);
+    const approve = page.getByRole('button', { name: 'تأیید فروش نسیه و ثبت بدهی' });
+    await expect(approve).toBeEnabled();
+    await tap(approve);
+    const creditStatus = page.locator('.MuiChip-root').filter({ hasText: /^فروش نسیهٔ تأییدشده$/ });
+    await expect(creditStatus).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'فروش نسیهٔ تأییدشده', exact: true })).toBeVisible();
+    await expect(page.getByText('بدون تلاش پرداخت', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(creditStatus).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'فروش نسیهٔ تأییدشده', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'تأیید فروش نسیه و ثبت بدهی' })).toHaveCount(0);
+    await tap(page.getByRole('button', { name: 'شروع پردازش' }));
+    await expect(page.getByRole('button', { name: 'ثبت برداشت' })).toBeVisible();
+    await tap(page.getByRole('button', { name: 'ثبت برداشت' }));
+    await expect(page.getByRole('button', { name: 'آمادهٔ ارسال' })).toBeEnabled();
+    await tap(page.getByRole('button', { name: 'آمادهٔ ارسال' }));
+    await expect(page.getByLabel('کد رهگیری')).toBeVisible();
+    await page.reload();
+    await expect(page.locator('.MuiChip-root').filter({ hasText: /^آماده ارسال$/ })).toBeVisible();
   });
 });

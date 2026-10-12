@@ -1,3 +1,4 @@
+import { hasFulfillmentFinancialProof } from './fulfillment-financial-proof';
 import { createHash } from "node:crypto";
 import {
   ConflictException,
@@ -102,13 +103,12 @@ export class FulfillmentCommandService {
               });
             }
             if (
-              order.status !== "PAID" ||
-              order.fulfillment?.status !== transition.from ||
-              order.payments.length === 0
+              !(await hasFulfillmentFinancialProof(tx, orderId, order.status, order.payments)) ||
+              order.fulfillment?.status !== transition.from
             ) {
               throw new ConflictException({
                 code: "FULFILLMENT_STATE_CONFLICT",
-                message: "Fulfillment is not in the required paid-order state.",
+                message: "Fulfillment is not in the required financially authorized order state.",
               });
             }
             // Settlement must have consumed every order reservation before any operator work begins.
@@ -122,7 +122,7 @@ export class FulfillmentCommandService {
               if (total === 0 || consumed !== total) {
                 throw new ConflictException({
                   code: "FULFILLMENT_STATE_CONFLICT",
-                  message: "Paid order inventory has not been consumed.",
+                  message: "Financially authorized order inventory has not been consumed.",
                 });
               }
             }

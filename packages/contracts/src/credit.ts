@@ -2,14 +2,14 @@ import type { Money } from './index';
 
 export type CreditAccountStatus = 'ACTIVE' | 'SUSPENDED';
 export type ReceivableStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
-export type CreditEntryKind = 'OPENING_BALANCE' | 'RECEIPT' | 'RECEIPT_REVERSAL' | 'DEBIT_ADJUSTMENT' | 'CREDIT_NOTE';
+export type CreditEntryKind = 'SALE' | 'OPENING_BALANCE' | 'RECEIPT' | 'RECEIPT_REVERSAL' | 'DEBIT_ADJUSTMENT' | 'CREDIT_NOTE';
 export type CreditAccountSummary = {
   id: string; customerId: string; status: CreditAccountStatus; version: number;
   creditLimit: Money; termsDays: number; outstanding: Money; availableCredit: Money;
-  overdue: Money; overLimit: boolean; createdAt: string; updatedAt: string;
+  overdue: Money; overLimit: boolean; openingRecorded: boolean; createdAt: string; updatedAt: string;
 };
 export type CreditDocument = {
-  id: string; kind: 'OPENING_BALANCE'; originalAmount: Money; effectivePrincipal: Money;
+  id: string; kind: 'OPENING_BALANCE' | 'SALE'; orderId: string | null; originalAmount: Money; effectivePrincipal: Money;
   outstanding: Money; status: ReceivableStatus; issuedAt: string; dueAt: string; termsDays: number;
 };
 export type CreditStatement = {
@@ -40,5 +40,7 @@ export type CreditReversalRequest = {
   expectedVersion: number; effectiveAt: string; evidenceReference: string; reason: string;
 };
 export type CreditCommandResult = {
-  account: CreditAccountSummary; documentId?: string; receiptId?: string; entryIds?: string[];
+  account: CreditAccountSummary; order?: { id: string; status: 'CREDIT_APPROVED'; version: number }; documentId?: string; receiptId?: string; entryIds?: string[];
 };
+
+export type CreditSaleApprovalRequest = { expectedVersion: number; expectedOrderVersion: number };

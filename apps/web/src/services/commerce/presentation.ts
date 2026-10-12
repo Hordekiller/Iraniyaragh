@@ -5,6 +5,7 @@ import type {
 } from '@iranyaragh/contracts'
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  CREDIT_APPROVED: 'فروش نسیهٔ تأییدشده',
   DRAFT: 'پیش‌نویس',
   PENDING_PAYMENT: 'در انتظار پرداخت',
   PAID: 'پرداخت‌شده',

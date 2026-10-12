@@ -14,6 +14,7 @@ export type DashboardStatus =
   | TransferStatus;
 
 const STATUS_LABELS: Record<DashboardStatus, string> = {
+  CREDIT_APPROVED: 'فروش نسیهٔ تأییدشده',
   DRAFT: 'پیش‌نویس',
   PENDING_PAYMENT: 'در انتظار پرداخت',
   PAID: 'پرداخت‌شده',

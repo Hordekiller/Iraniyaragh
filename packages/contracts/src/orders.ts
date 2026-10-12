@@ -4,6 +4,7 @@ import type { CheckoutAddress } from './cart';
 export const ORDER_STATUSES = [
   'DRAFT',
   'PENDING_PAYMENT',
+  'CREDIT_APPROVED',
   'PAID',
   'CANCELLED',
   'RETURNED',
@@ -175,6 +176,8 @@ export type AdminOrderDetail = Omit<
   OrderDetail,
   'address' | 'timeline' | 'truncation'
 > & {
+  version: number;
+  creditSaleEligible: boolean;
   customer: AdminOrderCustomer;
   address: AdminOrderAddress | null;
   timeline: AdminOrderTimelineEntry[];

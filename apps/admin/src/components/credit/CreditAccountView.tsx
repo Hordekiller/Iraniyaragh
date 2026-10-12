@@ -128,12 +128,12 @@ export function CreditAccountView({ customerId }: { customerId: string }) {
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ my: 2 }}>
       <Button disabled={locked} onClick={refresh}>بازخوانی وضعیت</Button>
       {can('credit.manage') ? <Button disabled={locked} onClick={() => open('policy')}>تنظیم اعتبار</Button> : null}
-      {account && can('credit.opening') && statement?.total === 0 ? <Button disabled={locked} onClick={() => open('opening')}>ثبت ماندهٔ اول دوره</Button> : null}
+      {account && can('credit.opening') && !account.openingRecorded ? <Button disabled={locked} onClick={() => open('opening')}>ثبت ماندهٔ اول دوره</Button> : null}
       {account && can('credit.receive') ? <Button disabled={locked || account.outstanding.amount === '0'} onClick={() => open('receipt')}>ثبت دریافت واقعی</Button> : null}
     </Stack>
     {statement ? <>
       <DataTable caption="اسناد بدهی مشتری" rows={statement.documents} rowKey={row => row.id} emptyTitle="سند بدهی ثبت نشده" emptyDescription="ماندهٔ بدهی فقط با سند معتبر ثبت می‌شود." columns={[
-        { id: 'kind', label: 'سند', render: row => creditKindLabels[row.kind] },
+        { id: 'kind', label: 'سند', render: row => row.orderId ? <Link href={`/orders/${encodeURIComponent(row.orderId)}`}>{creditKindLabels[row.kind]}</Link> : creditKindLabels[row.kind] },
         { id: 'principal', label: 'مبلغ اصل / اصلاح‌شده', render: row => `${creditRial(row.originalAmount.amount)} / ${creditRial(row.effectivePrincipal.amount)}` },
         { id: 'outstanding', label: 'بدهی باز', render: row => creditRial(row.outstanding.amount) },
         { id: 'due', label: 'سررسید', render: row => creditDate(row.dueAt) },

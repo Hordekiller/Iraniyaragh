@@ -7,6 +7,7 @@ import type {
 } from './orders-types';
 
 const ORDER_STATUS_META: Record<AdminOrderStatus, { label: string; tone: StatusTone }> = {
+  CREDIT_APPROVED: { label: 'فروش نسیهٔ تأییدشده', tone: 'info' },
   DRAFT: { label: 'پیش‌نویس', tone: 'neutral' },
   PENDING_PAYMENT: { label: 'در انتظار پرداخت', tone: 'warning' },
   PAID: { label: 'پرداخت‌شده', tone: 'success' },

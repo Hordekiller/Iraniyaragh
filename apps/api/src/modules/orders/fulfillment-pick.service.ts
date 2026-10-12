@@ -1,3 +1,4 @@
+import { hasFulfillmentFinancialProof } from './fulfillment-financial-proof';
 import { createHash } from 'node:crypto';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -76,15 +77,15 @@ export class FulfillmentPickService {
         }
         const item = order.items[0];
         if (!item) throw new NotFoundException({ code: 'ORDER_ITEM_NOT_FOUND', message: 'Order item not found.' });
-        if (order.status !== 'PAID' || order.fulfillment?.status !== 'PROCESSING' || order.payments.length === 0) {
-          throw pickConflict('Paid order must be processing before pick proof.');
+        if (!(await hasFulfillmentFinancialProof(tx, orderId, order.status, order.payments)) || order.fulfillment?.status !== 'PROCESSING') {
+          throw pickConflict('Financially authorized order must be processing before pick proof.');
         }
         if (quantity !== item.quantity) throw pickConflict('Pick quantity must equal the ordered line quantity.');
         const [total, consumed] = await Promise.all([
           tx.stockReservation.count({ where: { orderId } }),
           tx.stockReservation.count({ where: { orderId, status: 'CONSUMED' } }),
         ]);
-        if (total === 0 || consumed !== total) throw pickConflict('Paid order inventory has not been consumed.');
+        if (total === 0 || consumed !== total) throw pickConflict('Financially authorized order inventory has not been consumed.');
         if (await tx.fulfillmentPick.findUnique({ where: { orderItemId: itemId }, select: { id: true } })) {
           throw pickConflict('This order item has already been picked.');
         }

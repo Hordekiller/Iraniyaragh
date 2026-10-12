@@ -97,3 +97,30 @@ Complete quality/database/E2E/security gates precede merge; exact-SHA official i
 precede staging deployment. Restore a fresh pre-migration backup in isolated storage.
 Do not close #336/#338 based on this foundation: sale/fulfillment, full statement UI,
 returns/corrections and real operator acceptance remain separate evidence gates.
+
+## Staff credit-sale approval contract (dependent slice)
+
+An existing server-priced staff order may be approved through
+`POST /api/v1/credit/admin/customers/:customerId/orders/:orderId/approve`.
+The body contains only `expectedVersion` (account) and `expectedOrderVersion`;
+amounts, customer ownership, terms and due date are derived server-side.
+The command requires current STAFF_MFA, fresh authentication, `credit.approve`
+and `orders.manage`, and a durable actor/resource-scoped Idempotency-Key.
+
+The transaction locks the order before the customer account, rejects every
+existing payment attempt (including ambiguous attempts), checks the staff-source
+record, active customer/account, headroom and overdue balances, validates exact
+unexpired reservations, creates one immutable SALE debt document and SALE ledger
+posting, consumes reservations through InventoryService, and records
+PENDING_PAYMENT → CREDIT_APPROVED with a PENDING fulfillment. It never emits a
+payment-confirmed/order-paid event or creates a Payment. Gateway authorization
+shares the order lock and still only accepts PENDING_PAYMENT.
+
+Fulfillment accepts either the existing settled-payment proof or CREDIT_APPROVED
+with its matching immutable order/customer/amount debt document and original SALE
+posting. State alone never authorizes credit fulfillment. Picking, reservation
+consumption, dispatch and delivery proof remain mandatory. Issuance/publication of
+an invoice is a separate document lifecycle. Existing cancellation/refund commands
+do not cancel or refund a credit sale; that requires a reviewed compensating
+return command. Customer statements expose the sale order ID, without staff
+notes, bank evidence, actor identity or audit internals.
