@@ -111,6 +111,7 @@ Shared contracts stay in `packages/contracts`, OpenAPI in the existing API gener
 | Proposed model | Purpose and constraints |
 | --- | --- |
 | InvoiceDraft / DraftLine | Editable bounded customer/real SKU inputs, notes/address, requested discount, version, actor; no final number or stock movement. Optional sourceOrderId/sourceOrderVersion. Order-backed price snapshots preserve original price; catalog quotations carry price revision/expiry. |
+| InvoiceFinancialPolicyRevision | Approved immutable tax/discount/treatment/seller-policy revision with effective interval, approval evidence and typed bounds; active-pointer changes versioned and audited. Missing configuration fails closed. Shared calculation port; no secret store or silent change to existing order totals. |
 | InvoiceDocument / DocumentLine | Append-only issued snapshot: kind SALE/CORRECTION/CREDIT_NOTE, customer/order references, source versions, seller/buyer/address snapshots, line ordinals/quantity/unit/price/discount/tax, IRR totals, policy revisions, issuedAt/issuedBy, number/series/period, canonical payload hash. FKs Restrict; no issued payload update/delete. |
 | InvoiceSeriesCounter | Unique series+period, transactional next counter/format revision; no MAX(number)+1. Fiscal scheme remains a separate decision. |
 | InvoiceEvent | Append-only issued/cancelled/correction-linked/publication lifecycle evidence, actor/reason/requestId/time; original document remains retrievable. Financial payload not duplicated into audit JSON. |
@@ -278,32 +279,36 @@ schema-only deployment. First PR is this audit/design, without runtime changes.
    official-tax scope, tax/discount treatment, numbering/calendar, cancellation,
    correction delta and order reconciliation, RBAC projection and bounded PDF/export
    resources. Mark undecided business/fiscal inputs explicitly; no runtime tax defaults.
-2. **I1 — Draft and backend quote** (I0): real selection, version/idempotency,
+2. **I1a — Approved financial policy/calculation** (I0): typed versioned revisions,
+   configured tax/discount treatment/caps and seller data, fresh-MFA policy activation,
+   integer calculation/overflow/allocation tests. No historical rate defaults and
+   no silent checkout/payment change; changed commerce contracts need a separate review.
+3. **I1b — Draft and backend quote** (I0, I1a): real selection, version/idempotency,
    original-order snapshots vs catalog quote, neutral stock/payment behavior,
    approved money policy and cart-independent shipping adapter if needed.
-3. **I2 — Issue/number/immutable evidence** (I1): transactional counter,
+4. **I2 — Issue/number/immutable evidence** (I1b): transactional counter,
    document constraints, duplicate-key/different-key concurrent uniqueness,
    source-version check, event/audit consistency, issue/read API.
-4. **I3 — Publication and customer ownership** (I2): publish/revoke,
+5. **I3 — Publication and customer ownership** (I2): publish/revoke,
    principal-derived reads, history and authenticated secure links.
-5. **I4 — Persian private PDF pipeline** (I2): local assets/font embedding,
+6. **I4 — Persian private PDF pipeline** (I2): local assets/font embedding,
    A4/RTL/shaping, bounded worker, safe private artifacts and failure/restart tests.
-6. **I5 — Integrated Admin/Web invoice journeys** (I1–I4): original order entry,
+7. **I5 — Integrated Admin/Web invoice journeys** (I1b–I4): original order entry,
    create/edit/quote/issue/publish/account/PDF/print, conflict/retry/responsive a11y.
-7. **I6 — Corrections/cancellation/credit documents** (I2, I0; financial paths
+8. **I6 — Corrections/cancellation/credit documents** (I2, I0; financial paths
    additionally #336/#338/#348 as applicable): preserve originals, cumulative caps,
    separate document and monetary events; no invented refunds/stock movements.
-8. **R0 — #358 operational reports API/Admin** (I0 report definitions, existing commerce):
+9. **R0 — #358 operational reports API/Admin** (I0 report definitions, existing commerce):
    sales/orders/payment/refunds/top-products/live quantities can proceed without credit;
    invoice report waits I2/I6. Do not block unrelated bounded reports on debtor gates.
-9. **R1 — Costing policy and valuation evidence** (#358, accepted costing/opening policy):
+10. **R1 — Costing policy and valuation evidence** (#358, accepted costing/opening policy):
    choose FIFO/WAC/other through review, cover unattributed ledger movements and historical
    data without fabricated costs. Its approved implementation unlocks financial valuation.
-10. **R2 — Secure CSV/Excel/PDF report exports** (R0; PDF also I4): job ownership,
+11. **R2 — Secure CSV/Excel/PDF report exports** (R0; PDF also I4): job ownership,
     snapshot/expiry/download audit, injection/PII/precision/resource tests.
-11. **R3 — Debtors reporting dependency** (#336/#338): attach criteria to #358;
+12. **R3 — Debtors reporting dependency** (#336/#338): attach criteria to #358;
     no duplicate credit module or issue pretending it exists.
-12. **G — Integrated acceptance/release** (enabled I/R slices): evidence matrix,
+13. **G — Integrated acceptance/release** (enabled I/R slices): evidence matrix,
     complete required gates, migration/backup restore and exact-SHA rollout plan;
     deployment requires explicit approval for this task.
 
