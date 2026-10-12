@@ -365,3 +365,23 @@ financial cancellation/correction/credit allocation; approved notification templ
 for invoice links; PDF resource budget/retention. Technical architecture can be
 reviewed now; affected financial commands stay gated until their decisions are accepted.
 This is not legal advice or a claim of current tax/Moadian compliance.
+
+## 11. Created tracking issues
+
+Design PR: [#412](https://github.com/Hordekiller/Iraniyaragh/pull/412).
+Invoice Epic: [#413](https://github.com/Hordekiller/Iraniyaragh/issues/413).
+Reporting parent: [#358](https://github.com/Hordekiller/Iraniyaragh/issues/358).
+
+| Slice | Issue | Depends on |
+| --- | --- | --- |
+| I0 | [#414](https://github.com/Hordekiller/Iraniyaragh/issues/414) | #412 / decisions |
+| I1a | [#415](https://github.com/Hordekiller/Iraniyaragh/issues/415) | #414 |
+| I1b | [#416](https://github.com/Hordekiller/Iraniyaragh/issues/416) | #414, #415 |
+| I2 | [#417](https://github.com/Hordekiller/Iraniyaragh/issues/417) | #416 |
+| I3 | [#418](https://github.com/Hordekiller/Iraniyaragh/issues/418) | #417 |
+| I4 | [#419](https://github.com/Hordekiller/Iraniyaragh/issues/419) | #417 |
+| I5 | [#420](https://github.com/Hordekiller/Iraniyaragh/issues/420) | #416, #417, #418, #419 |
+| I6 | [#421](https://github.com/Hordekiller/Iraniyaragh/issues/421) | #414, #417 |
+| R1 | [#422](https://github.com/Hordekiller/Iraniyaragh/issues/422) | #414 |
+| R2 | [#423](https://github.com/Hordekiller/Iraniyaragh/issues/423) | #414, #358, #419 for PDF |
+| G | [#424](https://github.com/Hordekiller/Iraniyaragh/issues/424) | #420, #421, #422, #423, #358 and applicable #336/#338/#348 |
