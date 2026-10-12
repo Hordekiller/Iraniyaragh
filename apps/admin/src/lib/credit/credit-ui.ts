@@ -12,6 +12,11 @@ export function creditError(error: unknown, command = true): string {
       CREDIT_ADJUSTMENT_CONFLICT: 'بستانکاری نمی‌تواند بیشتر از بدهی پرداخت‌نشده باشد.',
       CREDIT_RECEIPT_REVERSED: 'این دریافت قبلاً برگشت خورده است.',
       CREDIT_EVIDENCE_CONFLICT: 'این سند دریافت قبلاً ثبت شده است.',
+      CREDIT_SALE_CONFLICT: 'فقط سفارش حضوری با رزرو معتبر و بدون شروع ارسال قابل تأیید نسیه است.',
+      CREDIT_PAYMENT_CONFLICT: 'برای این سفارش تلاش پرداخت ثبت شده؛ امکان تبدیل به نسیه وجود ندارد.',
+      CREDIT_ACCOUNT_INACTIVE: 'اعتبار یا حساب مشتری فعال نیست.',
+      CREDIT_OVERDUE: 'مشتری بدهی سررسیدگذشته دارد؛ ابتدا آن را تسویه یا بررسی کنید.',
+      CREDIT_LIMIT_EXCEEDED: 'مبلغ سفارش بیشتر از اعتبار قابل استفادهٔ مشتری است.',
       CREDIT_NOT_FOUND: 'حساب یا سند موردنظر پیدا نشد.',
       IDEMPOTENCY_CONFLICT: 'کلید ثبت با دادهٔ دیگری استفاده شده؛ نتیجهٔ قبلی را بررسی کنید.',
       VALIDATION_ERROR: 'مبلغ ریالی، تاریخ، تخصیص یا سند مرجع معتبر نیست.',
@@ -29,5 +34,5 @@ export function parseCreditIrr(value: string, zero = false): string | null {
 }
 export const creditRial = (amount: string) => `${new Intl.NumberFormat('fa-IR').format(BigInt(amount))} ریال`;
 export const creditDate = (value: string) => new Intl.DateTimeFormat('fa-IR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
-export const creditKindLabels = { OPENING_BALANCE: 'ماندهٔ اول دوره', RECEIPT: 'دریافت وجه', RECEIPT_REVERSAL: 'برگشت دریافت', DEBIT_ADJUSTMENT: 'اصلاح بدهکار', CREDIT_NOTE: 'اصلاح بستانکار' };
+export const creditKindLabels = { SALE: 'فروش نسیه', OPENING_BALANCE: 'ماندهٔ اول دوره', RECEIPT: 'دریافت وجه', RECEIPT_REVERSAL: 'برگشت دریافت', DEBIT_ADJUSTMENT: 'اصلاح بدهکار', CREDIT_NOTE: 'اصلاح بستانکار' };
 export const receivableLabels = { UNPAID: 'پرداخت‌نشده', PARTIALLY_PAID: 'پرداخت جزئی', PAID: 'تسویه‌شده', OVERDUE: 'سررسید گذشته' };

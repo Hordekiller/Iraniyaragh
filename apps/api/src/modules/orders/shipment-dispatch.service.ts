@@ -1,3 +1,4 @@
+import { hasFulfillmentFinancialProof } from './fulfillment-financial-proof';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { ShipmentDispatchResponse } from '@iranyaragh/contracts';
@@ -48,8 +49,8 @@ export class ShipmentDispatchService {
           if (prior.responseJson) return prior.responseJson as unknown as ShipmentDispatchResponse;
           throw shipmentConflict('Shipment dispatch is still running.');
         }
-        if (order.status !== 'PAID' || order.fulfillment?.status !== 'READY_TO_SHIP' || order.payments.length === 0 || order.shipment) {
-          throw shipmentConflict('Only a paid, ready-to-ship order without a shipment can be dispatched.');
+        if (!(await hasFulfillmentFinancialProof(tx, orderId, order.status, order.payments)) || order.fulfillment?.status !== 'READY_TO_SHIP' || order.shipment) {
+          throw shipmentConflict('Only a financially authorized, ready-to-ship order without a shipment can be dispatched.');
         }
         if (order.items.length === 0 || order.items.some((item) => item.fulfillmentPick?.quantity !== item.quantity)) {
           throw shipmentConflict('Every order line must have exact pick proof.');
@@ -59,7 +60,7 @@ export class ShipmentDispatchService {
           tx.stockReservation.count({ where: { orderId } }),
           tx.stockReservation.count({ where: { orderId, status: 'CONSUMED' } }),
         ]);
-        if (total === 0 || consumed !== total) throw shipmentConflict('Paid order inventory has not been consumed.');
+        if (total === 0 || consumed !== total) throw shipmentConflict('Financially authorized order inventory has not been consumed.');
         const shipment = await tx.shipment.create({
           data: {
             orderId, fulfillmentId: order.fulfillment.id, carrier, trackingCode,

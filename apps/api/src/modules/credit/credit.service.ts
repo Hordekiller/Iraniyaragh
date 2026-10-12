@@ -93,7 +93,7 @@ export class CreditService {
     const creditLimit = creditAmount(input.creditLimit, true);
     if (!['ACTIVE', 'SUSPENDED'].includes(input.status) || !Number.isInteger(input.termsDays) || input.termsDays < 0 || input.termsDays > 365) throw invalid('Invalid account status or payment terms.');
     this.versionInput(input.expectedVersion, true);
-    return this.command(customerId, 'policy', input, context, async tx => {
+    return this.executeCommand(customerId, 'policy', input, context, async tx => {
       const customer = await tx.customer.findUnique({ where: { id: customerId }, select: { id: true, status: true } });
       if (!customer) throw missing();
       if (input.status === 'ACTIVE' && customer.status !== 'ACTIVE') throw conflict('CUSTOMER_INACTIVE', 'An inactive customer cannot receive active credit.');
@@ -113,7 +113,7 @@ export class CreditService {
     const sourceReference = text(input.sourceReference, 128);
     const termsDays = Math.ceil((dueAt.getTime() - issuedAt.getTime()) / 86_400_000);
     if (termsDays < 0 || termsDays > 365) throw invalid('Opening due date must be within 365 days of issuance.');
-    return this.command(customerId, 'opening', { ...input, sourceReference }, context, async tx => {
+    return this.executeCommand(customerId, 'opening', { ...input, sourceReference }, context, async tx => {
       const account = await this.account(tx, customerId, input.expectedVersion);
       if (await tx.receivableDocument.count({ where: { accountId: account.id, kind: 'OPENING_BALANCE' } })) throw conflict('CREDIT_OPENING_EXISTS', 'An opening balance already exists; append an evidenced correction.');
       await this.checkDebtBound(tx, account.id, amount);
@@ -130,7 +130,7 @@ export class CreditService {
     if (!['CASH', 'BANK_TRANSFER'].includes(input.method) || !Array.isArray(input.allocations) || input.allocations.length < 1 || input.allocations.length > 100) throw invalid('A receipt needs a supported method and 1–100 allocations.');
     const allocations = input.allocations.map(item => ({ documentId: text(item.documentId, 128), amount: creditAmount(item.amount).toString() })).sort((a, b) => compareKeys(a.documentId, b.documentId));
     if (new Set(allocations.map(item => item.documentId)).size !== allocations.length || allocations.reduce((sum, item) => sum + BigInt(item.amount), 0n) !== amount) throw invalid('Allocations must be distinct and exactly equal the receipt amount.');
-    return this.command(customerId, 'receipt', { ...input, evidenceReference, allocations }, context, async tx => {
+    return this.executeCommand(customerId, 'receipt', { ...input, evidenceReference, allocations }, context, async tx => {
       const account = await this.account(tx, customerId, input.expectedVersion);
       const evidenceHash = hash(evidenceReference.normalize('NFKC').toUpperCase());
       if (await tx.creditReceipt.findUnique({ where: { evidenceHash }, select: { id: true } })) throw conflict('CREDIT_EVIDENCE_CONFLICT', 'This receipt evidence was already recorded.');
@@ -154,7 +154,7 @@ export class CreditService {
 
   async reverseReceipt(customerId: string, receiptId: string, input: CreditReversalRequest, context: CreditContext): Promise<CreditCommandResult> {
     const effectiveAt = date(input.effectiveAt); const reason = text(input.reason, 500); const evidenceReference = text(input.evidenceReference, 128);
-    return this.command(customerId, `reverse:${receiptId}`, { ...input, reason, evidenceReference }, context, async tx => {
+    return this.executeCommand(customerId, `reverse:${receiptId}`, { ...input, reason, evidenceReference }, context, async tx => {
       const account = await this.account(tx, customerId, input.expectedVersion);
       const receipt = await tx.creditReceipt.findFirst({ where: { id: receiptId, accountId: account.id }, include: { entries: { where: { kind: 'RECEIPT' }, include: { reversal: { select: { id: true } } } } } });
       if (!receipt) throw missing();
@@ -176,7 +176,7 @@ export class CreditService {
     const reason = text(input.reason, 500); const evidenceReference = text(input.evidenceReference, 128);
     if (!['DEBIT_ADJUSTMENT', 'CREDIT_NOTE'].includes(input.kind)) throw invalid('Invalid adjustment kind.');
     const amount = input.kind === 'CREDIT_NOTE' ? -unsigned : unsigned;
-    return this.command(customerId, `adjust:${documentId}`, { ...input, reason, evidenceReference }, context, async tx => {
+    return this.executeCommand(customerId, `adjust:${documentId}`, { ...input, reason, evidenceReference }, context, async tx => {
       const account = await this.account(tx, customerId, input.expectedVersion);
       const balance = (await this.balances(tx, account.id, [documentId]))[0];
       if (!balance) throw missing();
@@ -199,7 +199,7 @@ export class CreditService {
     const [summary, rows, total] = await Promise.all([
       this.summary(tx, account.id),
       tx.receivableDocument.findMany({ where, orderBy: [{ issuedAt: 'desc' }, { id: 'desc' }], skip: query.offset, take: query.limit,
-        select: { id: true, kind: true, amount: true, issuedAt: true, dueAt: true, termsDays: true } }),
+        select: { id: true, kind: true, orderId: true, amount: true, issuedAt: true, dueAt: true, termsDays: true } }),
       tx.receivableDocument.count({ where }),
     ]);
     const balances = await this.balances(tx, account.id, rows.map(row => row.id));
@@ -208,7 +208,7 @@ export class CreditService {
       const balance = balances.find(item => item.id === row.id);
       if (!balance) throw conflict('CREDIT_RECONCILIATION_REQUIRED', 'Document ledger evidence is missing.');
       const outstanding = BigInt(balance.outstanding); const principal = BigInt(balance.principal);
-      return { id: row.id, kind: row.kind, originalAmount: money(row.amount), effectivePrincipal: money(principal), outstanding: money(outstanding),
+      return { id: row.id, kind: row.kind, orderId: row.orderId, originalAmount: money(row.amount), effectivePrincipal: money(principal), outstanding: money(outstanding),
         status: outstanding === 0n ? 'PAID' : row.dueAt.getTime() < now ? 'OVERDUE' : outstanding < principal ? 'PARTIALLY_PAID' : 'UNPAID',
         issuedAt: row.issuedAt.toISOString(), dueAt: row.dueAt.toISOString(), termsDays: row.termsDays };
     }), total, ...query };
@@ -217,27 +217,28 @@ export class CreditService {
   private async balances(tx: Prisma.TransactionClient, accountId: string, ids: string[]): Promise<DocumentBalance[]> {
     if (!ids.length) return [];
     return tx.$queryRaw<DocumentBalance[]>`SELECT d."id", d."issuedAt", SUM(e."amount")::text AS outstanding,
-      SUM(CASE WHEN e."kind"::text IN ('OPENING_BALANCE','DEBIT_ADJUSTMENT','CREDIT_NOTE') THEN e."amount" ELSE 0 END)::text AS principal
+      SUM(CASE WHEN e."kind"::text IN ('OPENING_BALANCE','SALE','DEBIT_ADJUSTMENT','CREDIT_NOTE') THEN e."amount" ELSE 0 END)::text AS principal
       FROM "ReceivableDocument" d JOIN "CreditLedgerEntry" e ON e."documentId" = d."id" AND e."accountId" = d."accountId"
       WHERE d."accountId" = ${accountId} AND d."id" IN (${Prisma.join(ids)}) GROUP BY d."id"`;
   }
 
-  private async summary(tx: Prisma.TransactionClient, id: string): Promise<CreditAccountSummary> {
+  async summary(tx: Prisma.TransactionClient, id: string): Promise<CreditAccountSummary> {
     const account = await tx.creditAccount.findUniqueOrThrow({ where: { id }, include: { customer: { select: { status: true } } } });
     const [totals] = await tx.$queryRaw<Totals[]>`SELECT COALESCE(SUM(b.amount),0)::text AS outstanding,
       COALESCE(SUM(CASE WHEN b."dueAt" < CURRENT_TIMESTAMP AND b.amount > 0 THEN b.amount ELSE 0 END),0)::text AS overdue
       FROM (SELECT d."id", d."dueAt", COALESCE(SUM(e."amount"),0) AS amount FROM "ReceivableDocument" d
         LEFT JOIN "CreditLedgerEntry" e ON e."documentId" = d."id" AND e."accountId" = d."accountId"
         WHERE d."accountId" = ${id} GROUP BY d."id") b`;
+    const openingRecorded = await tx.receivableDocument.count({ where: { accountId: id, kind: 'OPENING_BALANCE' } }) > 0;
     const outstanding = BigInt(totals.outstanding); const overdue = BigInt(totals.overdue);
     const available = account.status === 'ACTIVE' && account.customer.status === 'ACTIVE' && overdue === 0n && account.creditLimit > outstanding ? account.creditLimit - outstanding : 0n;
     return { id: account.id, customerId: account.customerId, status: account.status, version: account.version,
       creditLimit: money(account.creditLimit), termsDays: account.termsDays, outstanding: money(outstanding),
-      availableCredit: money(available), overdue: money(overdue), overLimit: outstanding > account.creditLimit,
+      availableCredit: money(available), overdue: money(overdue), openingRecorded, overLimit: outstanding > account.creditLimit,
       createdAt: account.createdAt.toISOString(), updatedAt: account.updatedAt.toISOString() };
   }
 
-  private async account(tx: Prisma.TransactionClient, customerId: string, expectedVersion: number) {
+  async account(tx: Prisma.TransactionClient, customerId: string, expectedVersion: number) {
     this.versionInput(expectedVersion);
     const account = await tx.creditAccount.findUnique({ where: { customerId } });
     if (!account) throw missing();
@@ -257,8 +258,8 @@ export class CreditService {
     return this.audit.record({ action, entityType: 'credit', entityId, actorId: context.actorId, requestId: context.requestId, metadata }, tx);
   }
 
-  private async command(customerId: string, command: string, payload: unknown, context: CreditContext,
-    execute: (tx: Prisma.TransactionClient) => Promise<CreditCommandResult>): Promise<CreditCommandResult> {
+  async executeCommand(customerId: string, command: string, payload: unknown, context: CreditContext,
+    execute: (tx: Prisma.TransactionClient) => Promise<CreditCommandResult>, orderLockId?: string): Promise<CreditCommandResult> {
     const keyHash = hash(normalizeIdempotencyKey(context.idempotencyKey));
     const payloadHash = hash(stable(payload));
     // Store hashes rather than a resource ID in the bounded command scope.
@@ -266,6 +267,13 @@ export class CreditService {
     if (!context.actorId || !context.requestId || context.requestId.length > 100) throw invalid('A tracked actor and request are required.');
     try {
       return await withSerializableRetry({ isContention: isPrismaTransactionConflict, operation: () => this.prisma.$transaction(async tx => {
+        if (orderLockId) {
+          const [orderHi, orderLo] = advisoryLockIdKey('order', orderLockId);
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${orderHi}::int, ${orderLo}::int)`;
+          // Also serialize SQL/payment writers through the FK parent row. The
+          // payment trigger locks this row before accepting a payment attempt.
+          await tx.$queryRaw`SELECT "id" FROM "Order" WHERE "id" = ${orderLockId} FOR UPDATE`;
+        }
         // A customer-scoped lock also serializes first account creation. Every posting
         // updates account.version in the database trigger, making stale snapshots conflict.
         const [hi, lo] = advisoryLockIdKey('credit-account', customerId);

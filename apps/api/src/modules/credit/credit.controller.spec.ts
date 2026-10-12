@@ -6,12 +6,17 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthPrincipalService, type AuthPrincipalContext } from '../auth/auth-principal.service';
 import { AuthSessionException } from '../auth/auth-session.service';
+import { CreditSaleController } from './credit-sale.controller';
+import { CreditSaleService } from './credit-sale.service';
+import { CreditSaleApprovalDto } from './credit.dto';
 import { CreditController, CustomerCreditController } from './credit.controller';
 import { CreditAdjustmentDto, CreditOpeningDto, CreditPageDto, CreditPolicyDto, CreditReceiptDto, CreditReversalDto } from './credit.dto';
 import { PrismaService } from '../../database/prisma.service';
 import { RedactedLogger } from '../../common/redacted-logger';
 import { CreditService, creditAmount, MAX_CREDIT_IRR } from './credit.service';
 
+Reflect.defineMetadata('design:paramtypes', [CreditSaleService], CreditSaleController);
+Reflect.defineMetadata('design:paramtypes', [String, String, CreditSaleApprovalDto, String, Object], CreditSaleController.prototype, 'approve');
 Reflect.defineMetadata('design:paramtypes', [CreditService], CreditController);
 Reflect.defineMetadata('design:paramtypes', [CreditService], CustomerCreditController);
 for (const [method, types] of Object.entries({ statement: [String, CreditPageDto], ledger: [String, CreditPageDto],
@@ -20,15 +25,16 @@ for (const [method, types] of Object.entries({ statement: [String, CreditPageDto
   adjust: [Object, String, String, String, CreditAdjustmentDto],
 })) Reflect.defineMetadata('design:paramtypes', types, CreditController.prototype, method);
 Reflect.defineMetadata('design:paramtypes', [Object, CreditPageDto], CustomerCreditController.prototype, 'statement');
-const service = Object.fromEntries(['statement', 'ledger', 'policy', 'opening', 'receipt', 'reverseReceipt', 'adjust', 'customerStatement'].map(method => [method, vi.fn().mockResolvedValue({ account: null, documents: [], total: 0, offset: 0, limit: 25 })]));
-const staff: AuthPrincipalContext = { userId: 'credit-staff', sessionId: 'isolated-session', tokenId: 'isolated-token', authenticationLevel: 'STAFF_MFA', authenticatedAt: new Date(), accessExpiresAt: new Date(Date.now() + 600_000), permissions: new Set(['credit.read', 'credit.manage', 'credit.opening', 'credit.receive', 'credit.adjust']) };
+const service = Object.fromEntries(['statement', 'ledger', 'policy', 'opening', 'receipt', 'reverseReceipt', 'adjust', 'customerStatement', 'approve'].map(method => [method, vi.fn().mockResolvedValue({ account: null, documents: [], total: 0, offset: 0, limit: 25 })]));
+const staff: AuthPrincipalContext = { userId: 'credit-staff', sessionId: 'isolated-session', tokenId: 'isolated-token', authenticationLevel: 'STAFF_MFA', authenticatedAt: new Date(), accessExpiresAt: new Date(Date.now() + 600_000), permissions: new Set(['credit.read', 'credit.manage', 'credit.opening', 'credit.receive', 'credit.adjust', 'credit.approve', 'orders.manage']) };
 let current = staff;
 const principals = { resolveBearerToken: vi.fn(async (authorization?: string) => {
   if (authorization !== 'Bearer isolated-test-token') throw new AuthSessionException('AUTH_SESSION_INVALID');
   return current;
 }) };
-@Module({ imports: [ApiFoundationModule], controllers: [CreditController, CustomerCreditController], providers: [
+@Module({ imports: [ApiFoundationModule], controllers: [CreditSaleController, CreditController, CustomerCreditController], providers: [
   { provide: CreditService, useValue: service },
+  { provide: CreditSaleService, useValue: service },
   { provide: APP_GUARD, useValue: new AuthGuard(principals as unknown as AuthPrincipalService, { record: vi.fn() } as unknown as AuditLogService) },
 ] }) class CreditHttpTestModule {}
 const at = '2026-10-01T12:00:00Z';
@@ -37,6 +43,7 @@ const opening = { expectedVersion: 0, amount: '1000', issuedAt: at, dueAt: at, s
 const receipt = { expectedVersion: 1, amount: '100', method: 'CASH', effectiveAt: at, evidenceReference: 'isolated-receipt-proof', allocations: [{ documentId: 'own-document', amount: '100' }] };
 const correction = { expectedVersion: 2, effectiveAt: at, evidenceReference: 'isolated-correction-proof', reason: 'Isolated correction' };
 const routes = [
+  ['approve', 'POST', '/own-customer/orders/own-order/approve', 'credit.approve', { expectedVersion: 0, expectedOrderVersion: 0 }],
   ['statement', 'GET', '/own-customer', 'credit.read', undefined],
   ['ledger', 'GET', '/own-customer/ledger', 'credit.read', undefined],
   ['policy', 'POST', '/own-customer/policy', 'credit.manage', policy],
@@ -80,6 +87,17 @@ describe('Credit server permission, fresh MFA and strict HTTP contract', () => {
     expect(response.status).toBe(method === 'POST' ? 201 : 200);
     expect(service[name]).toHaveBeenCalledOnce();
     expect(response.headers.get('cache-control')).toContain('no-store');
+  });
+  it('requires order-management permission as well as credit approval and rejects injected amounts', async () => {
+    current = { ...staff, permissions: new Set(['credit.approve']) };
+    const body = { expectedVersion: 0, expectedOrderVersion: 0 };
+    expect((await request('POST', '/own-customer/orders/own-order/approve', body)).status).toBe(403);
+    expect(service.approve).not.toHaveBeenCalled();
+    current = staff;
+    expect((await request('POST', '/own-customer/orders/own-order/approve', { ...body, amount: '1', status: 'PAID' })).status).toBe(400);
+    expect(service.approve).not.toHaveBeenCalled();
+    expect((await request('POST', '/own-customer/orders/own-order/approve', body)).status).toBe(201);
+    expect(service.approve).toHaveBeenCalledWith('own-customer', 'own-order', body, expect.objectContaining({ actorId: staff.userId }));
   });
   it('passes only authenticated actor and middleware request ID; no caller-supplied actor or balance is allowed', async () => {
     expect((await request('POST', '/own-customer/policy', { ...policy, actorId: 'forged', balance: '0' })).status).toBe(400);

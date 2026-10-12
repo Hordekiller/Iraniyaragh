@@ -322,9 +322,11 @@ const customerDetail: SchemaObject = {
 const adminDetail: SchemaObject = {
   type: "object",
   additionalProperties: false,
-  required: [...commonDetailRequired, "customer", "audit"],
+  required: [...commonDetailRequired, "customer", "audit", "version", "creditSaleEligible"],
   properties: {
     ...commonDetailProperties,
+    version: { type: "integer", minimum: 0 },
+    creditSaleEligible: { type: "boolean" },
     address: adminAddress,
     customer,
     timeline: { type: "array", maxItems: 100, items: adminTimelineEntry },

@@ -121,6 +121,7 @@ enum MediaRenditionPurpose {
 }
 
 enum OrderStatus {
+  CREDIT_APPROVED
   DRAFT
   PENDING_PAYMENT
   PAID
@@ -1214,6 +1215,7 @@ model Order {
   shippingQuote              ShippingQuote?
   checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
   commandIdempotencyRecords  OrderCommandIdempotencyRecord[]
+  receivableDocument         ReceivableDocument?
   staffCommandRecords        StaffOrderCommandRecord[]
   version                    Int                             @default(0)
   staffNote                  String?                         @db.VarChar(500)
@@ -1647,10 +1649,12 @@ enum CreditAccountStatus {
 }
 
 enum ReceivableDocumentKind {
+  SALE
   OPENING_BALANCE
 }
 
 enum CreditEntryKind {
+  SALE
   OPENING_BALANCE
   RECEIPT
   RECEIPT_REVERSAL
@@ -1679,10 +1683,12 @@ model CreditAccount {
   entries     CreditLedgerEntry[]
 }
 
-/// Immutable debt snapshot; this first slice admits evidenced historical debt only.
+/// Immutable evidenced debt, either historical opening or an approved staff sale.
 model ReceivableDocument {
   id                String                 @id @default(cuid())
   accountId         String
+  orderId           String?                @unique
+  order             Order?                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
   kind              ReceivableDocumentKind
   amount            BigInt
   issuedAt          DateTime
@@ -1696,7 +1702,6 @@ model ReceivableDocument {
   actor             User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
   entries           CreditLedgerEntry[]
 
-  @@unique([accountId, kind])
   @@unique([id, accountId])
   @@index([accountId, dueAt])
 }

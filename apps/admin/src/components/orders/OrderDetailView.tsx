@@ -1,5 +1,6 @@
 'use client';
 
+import { CreditSaleApproval } from '@/components/credit/CreditSaleApproval';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -277,6 +278,12 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
       </Stack>
 
       <Stack spacing={3}>
+        {order.creditSaleEligible ? <CreditSaleApproval key={order.id} customerId={order.customer.id} orderId={order.id}
+          orderVersion={order.version} orderTotal={order.totals.total.amount} onApproved={async () => {
+            const [updated, updatedPicks] = await Promise.all([ordersApi.getOrder(orderId), ordersApi.getPicks(orderId)]);
+            setOrder(updated); setPicks(updatedPicks); setPickError(null);
+          }} /> : null}
+        {order.status === 'CREDIT_APPROVED' ? <Alert severity="info">این سفارش با اعتبار مشتری تأیید شده است؛ وضعیت وصول وجه در دفترکل مشتری ثبت می‌شود.</Alert> : null}
         {order.fulfillment ? (
           <Card>
             <CardContent>

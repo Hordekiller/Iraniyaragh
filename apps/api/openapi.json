@@ -8321,6 +8321,7 @@
             "in": "query",
             "schema": {
               "enum": [
+                "CREDIT_APPROVED",
                 "DRAFT",
                 "PENDING_PAYMENT",
                 "PAID",
@@ -8399,6 +8400,7 @@
                               "status": {
                                 "type": "string",
                                 "enum": [
+                                  "CREDIT_APPROVED",
                                   "DRAFT",
                                   "PENDING_PAYMENT",
                                   "PAID",
@@ -8779,7 +8781,9 @@
                             "timeline",
                             "truncation",
                             "customer",
-                            "audit"
+                            "audit",
+                            "version",
+                            "creditSaleEligible"
                           ],
                           "properties": {
                             "id": {
@@ -8791,6 +8795,7 @@
                             "status": {
                               "type": "string",
                               "enum": [
+                                "CREDIT_APPROVED",
                                 "DRAFT",
                                 "PENDING_PAYMENT",
                                 "PAID",
@@ -9203,6 +9208,13 @@
                               },
                               "nullable": true
                             },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "creditSaleEligible": {
+                              "type": "boolean"
+                            },
                             "customer": {
                               "type": "object",
                               "additionalProperties": false,
@@ -9252,6 +9264,7 @@
                                     "type": "string",
                                     "nullable": true,
                                     "enum": [
+                                      "CREDIT_APPROVED",
                                       "DRAFT",
                                       "PENDING_PAYMENT",
                                       "PAID",
@@ -9270,6 +9283,7 @@
                                   "to": {
                                     "type": "string",
                                     "enum": [
+                                      "CREDIT_APPROVED",
                                       "DRAFT",
                                       "PENDING_PAYMENT",
                                       "PAID",
@@ -9526,6 +9540,7 @@
             "in": "query",
             "schema": {
               "enum": [
+                "CREDIT_APPROVED",
                 "DRAFT",
                 "PENDING_PAYMENT",
                 "PAID",
@@ -9603,6 +9618,7 @@
                               "status": {
                                 "type": "string",
                                 "enum": [
+                                  "CREDIT_APPROVED",
                                   "DRAFT",
                                   "PENDING_PAYMENT",
                                   "PAID",
@@ -9972,6 +9988,7 @@
                             "status": {
                               "type": "string",
                               "enum": [
+                                "CREDIT_APPROVED",
                                 "DRAFT",
                                 "PENDING_PAYMENT",
                                 "PAID",
@@ -10409,6 +10426,7 @@
                                     "type": "string",
                                     "nullable": true,
                                     "enum": [
+                                      "CREDIT_APPROVED",
                                       "DRAFT",
                                       "PENDING_PAYMENT",
                                       "PAID",
@@ -10427,6 +10445,7 @@
                                   "to": {
                                     "type": "string",
                                     "enum": [
+                                      "CREDIT_APPROVED",
                                       "DRAFT",
                                       "PENDING_PAYMENT",
                                       "PAID",
@@ -23185,6 +23204,266 @@
         ]
       }
     },
+    "/credit/admin/customers/{customerId}/orders/{orderId}/approve": {
+      "post": {
+        "operationId": "CreditSaleController_approve",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "expectedOrderVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "expectedOrderVersion"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "openingRecorded",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "order": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "CREDIT_APPROVED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "version"
+                      ]
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "type": "string"
+                    },
+                    "entryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Approve a server-priced staff credit sale; atomically post debt and consume reserved stock without recording payment",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
     "/credit/admin/customers/{customerId}": {
       "get": {
         "operationId": "CreditController_statement",
@@ -23334,6 +23613,9 @@
                             "currency"
                           ]
                         },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
                         "overLimit": {
                           "type": "boolean"
                         },
@@ -23356,6 +23638,7 @@
                         "outstanding",
                         "availableCredit",
                         "overdue",
+                        "openingRecorded",
                         "overLimit",
                         "createdAt",
                         "updatedAt"
@@ -23374,8 +23657,13 @@
                           "kind": {
                             "type": "string",
                             "enum": [
-                              "OPENING_BALANCE"
+                              "OPENING_BALANCE",
+                              "SALE"
                             ]
+                          },
+                          "orderId": {
+                            "type": "string",
+                            "nullable": true
                           },
                           "originalAmount": {
                             "type": "object",
@@ -23461,6 +23749,7 @@
                         "required": [
                           "id",
                           "kind",
+                          "orderId",
                           "originalAmount",
                           "effectivePrincipal",
                           "outstanding",
@@ -23569,6 +23858,7 @@
                           "kind": {
                             "type": "string",
                             "enum": [
+                              "SALE",
                               "OPENING_BALANCE",
                               "RECEIPT",
                               "RECEIPT_REVERSAL",
@@ -23828,6 +24118,9 @@
                             "currency"
                           ]
                         },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
                         "overLimit": {
                           "type": "boolean"
                         },
@@ -23850,9 +24143,35 @@
                         "outstanding",
                         "availableCredit",
                         "overdue",
+                        "openingRecorded",
                         "overLimit",
                         "createdAt",
                         "updatedAt"
+                      ]
+                    },
+                    "order": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "CREDIT_APPROVED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "version"
                       ]
                     },
                     "documentId": {
@@ -24067,6 +24386,9 @@
                             "currency"
                           ]
                         },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
                         "overLimit": {
                           "type": "boolean"
                         },
@@ -24089,9 +24411,35 @@
                         "outstanding",
                         "availableCredit",
                         "overdue",
+                        "openingRecorded",
                         "overLimit",
                         "createdAt",
                         "updatedAt"
+                      ]
+                    },
+                    "order": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "CREDIT_APPROVED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "version"
                       ]
                     },
                     "documentId": {
@@ -24335,6 +24683,9 @@
                             "currency"
                           ]
                         },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
                         "overLimit": {
                           "type": "boolean"
                         },
@@ -24357,9 +24708,35 @@
                         "outstanding",
                         "availableCredit",
                         "overdue",
+                        "openingRecorded",
                         "overLimit",
                         "createdAt",
                         "updatedAt"
+                      ]
+                    },
+                    "order": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "CREDIT_APPROVED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "version"
                       ]
                     },
                     "documentId": {
@@ -24577,6 +24954,9 @@
                             "currency"
                           ]
                         },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
                         "overLimit": {
                           "type": "boolean"
                         },
@@ -24599,9 +24979,35 @@
                         "outstanding",
                         "availableCredit",
                         "overdue",
+                        "openingRecorded",
                         "overLimit",
                         "createdAt",
                         "updatedAt"
+                      ]
+                    },
+                    "order": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "CREDIT_APPROVED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "version"
                       ]
                     },
                     "documentId": {
@@ -24833,6 +25239,9 @@
                             "currency"
                           ]
                         },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
                         "overLimit": {
                           "type": "boolean"
                         },
@@ -24855,9 +25264,35 @@
                         "outstanding",
                         "availableCredit",
                         "overdue",
+                        "openingRecorded",
                         "overLimit",
                         "createdAt",
                         "updatedAt"
+                      ]
+                    },
+                    "order": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "CREDIT_APPROVED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "version"
                       ]
                     },
                     "documentId": {
@@ -25039,6 +25474,9 @@
                                 "currency"
                               ]
                             },
+                            "openingRecorded": {
+                              "type": "boolean"
+                            },
                             "overLimit": {
                               "type": "boolean"
                             },
@@ -25061,6 +25499,7 @@
                             "outstanding",
                             "availableCredit",
                             "overdue",
+                            "openingRecorded",
                             "overLimit",
                             "createdAt",
                             "updatedAt"
@@ -25079,8 +25518,13 @@
                               "kind": {
                                 "type": "string",
                                 "enum": [
-                                  "OPENING_BALANCE"
+                                  "OPENING_BALANCE",
+                                  "SALE"
                                 ]
+                              },
+                              "orderId": {
+                                "type": "string",
+                                "nullable": true
                               },
                               "originalAmount": {
                                 "type": "object",
@@ -25166,6 +25610,7 @@
                             "required": [
                               "id",
                               "kind",
+                              "orderId",
                               "originalAmount",
                               "effectivePrincipal",
                               "outstanding",
@@ -32934,8 +33379,8 @@
                               "properties": {
                                 "ordersByStatus": {
                                   "type": "array",
-                                  "minItems": 5,
-                                  "maxItems": 5,
+                                  "minItems": 6,
+                                  "maxItems": 6,
                                   "items": {
                                     "type": "object",
                                     "additionalProperties": false,
@@ -32947,6 +33392,7 @@
                                       "status": {
                                         "type": "string",
                                         "enum": [
+                                          "CREDIT_APPROVED",
                                           "DRAFT",
                                           "PENDING_PAYMENT",
                                           "PAID",

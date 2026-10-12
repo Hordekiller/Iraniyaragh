@@ -18,6 +18,7 @@ describe('orders-labels', () => {
     expect(ORDER_STATUS_LABELS).toEqual({
       DRAFT: 'پیش‌نویس',
       PENDING_PAYMENT: 'در انتظار پرداخت',
+      CREDIT_APPROVED: 'فروش نسیهٔ تأییدشده',
       PAID: 'پرداخت‌شده',
       CANCELLED: 'لغوشده',
       RETURNED: 'مرجوع‌شده',

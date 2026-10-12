@@ -41,3 +41,8 @@ export class CreditAdjustmentDto extends CreditReversalDto implements CreditAdju
   @IsIn(['DEBIT_ADJUSTMENT', 'CREDIT_NOTE']) kind!: 'DEBIT_ADJUSTMENT' | 'CREDIT_NOTE';
   @IsString() @Matches(/^[1-9][0-9]{0,18}$/u) amount!: string;
 }
+
+export class CreditSaleApprovalDto {
+  @IsInt() @Min(0) @Max(2_147_483_647) expectedVersion!: number;
+  @IsInt() @Min(0) @Max(2_147_483_647) expectedOrderVersion!: number;
+}

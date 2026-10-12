@@ -106,6 +106,8 @@ const customerDetailSelect = {
 
 const adminDetailSelect = {
   ...customerDetailSelect,
+  version: true,
+  staffCommandRecords: { select: { id: true }, take: 1 },
   customer: {
     select: { id: true, firstName: true, lastName: true, mobile: true },
   },
@@ -473,6 +475,8 @@ function adminOrderDetail(
   const { address: customerAddress, ...safeDetail } = detail;
   return {
     ...safeDetail,
+    version: row.version,
+    creditSaleEligible: row.status === 'PENDING_PAYMENT' && row.staffCommandRecords.length > 0 && row._count.payments === 0 && !row.fulfillment,
     customer: adminCustomer(row.customer),
     address: adminAddress(customerAddress),
     timeline: timeline.admin,

@@ -1,4 +1,4 @@
-import type { CreditAdjustmentRequest, CreditCommandResult, CreditLedgerPage, CreditOpeningRequest, CreditPolicyRequest, CreditReceiptRequest, CreditReversalRequest, CreditStatement } from '@iranyaragh/contracts';
+import type { CreditSaleApprovalRequest, CreditAdjustmentRequest, CreditCommandResult, CreditLedgerPage, CreditOpeningRequest, CreditPolicyRequest, CreditReceiptRequest, CreditReversalRequest, CreditStatement } from '@iranyaragh/contracts';
 import { apiFetch } from '@/lib/api/client';
 import { getAccessToken } from '@/lib/auth/token-store';
 const base = (customerId: string) => `/credit/admin/customers/${encodeURIComponent(customerId)}`;
@@ -12,3 +12,5 @@ export const recordCreditOpening = (id: string, input: CreditOpeningRequest, key
 export const recordCreditReceipt = (id: string, input: CreditReceiptRequest, key: string) => command(id, '/receipts', input, key);
 export const adjustCreditDocument = (id: string, documentId: string, input: CreditAdjustmentRequest, key: string) => command(id, `/documents/${encodeURIComponent(documentId)}/adjust`, input, key);
 export const reverseCreditReceipt = (id: string, receiptId: string, input: CreditReversalRequest, key: string) => command(id, `/receipts/${encodeURIComponent(receiptId)}/reverse`, input, key);
+
+export const approveCreditSale = (id: string, orderId: string, input: CreditSaleApprovalRequest, key: string) => command(id, `/orders/${encodeURIComponent(orderId)}/approve`, input, key);
