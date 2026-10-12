@@ -104,6 +104,7 @@ export function CustomerDetailDialog({
         ) : null}
         {detail ? (
           <Stack spacing={2}>
+            {user?.permissions.includes('credit.read') ? <Button component={Link} href={`/customers/${encodeURIComponent(detail.id)}/credit`}>اعتبار و دفترکل مشتری</Button> : null}
             <Stack spacing={0.5}>
               <Typography variant="h6">{customerDisplayName(detail)}</Typography>
               <Typography variant="body2" dir="ltr" sx={{ textAlign: 'right' }}>
