@@ -3,7 +3,7 @@ import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsIn, IsInt, IsStrin
 import type { CreditAdjustmentRequest, CreditOpeningRequest, CreditPolicyRequest, CreditReceiptRequest, CreditReversalRequest } from '@iranyaragh/contracts';
 
 export class CreditPageDto {
-  @Type(() => Number) @IsInt() @Min(0) offset = 0;
+  @Type(() => Number) @IsInt() @Min(0) @Max(1_000_000) offset = 0;
   @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 25;
 }
 export class CreditPolicyDto implements CreditPolicyRequest {

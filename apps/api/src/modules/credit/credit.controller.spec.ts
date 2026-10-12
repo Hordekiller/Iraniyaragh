@@ -106,7 +106,7 @@ describe('Credit server permission, fresh MFA and strict HTTP contract', () => {
     expect(service.opening).not.toHaveBeenCalled();
   });
   it('bounds pages, versions, evidence and allocation counts and never accepts an arbitrary status', async () => {
-    for (const query of ['?limit=101', '?offset=-1', '?limit=NaN']) expect((await request('GET', `/own-customer${query}`)).status).toBe(400);
+    for (const query of ['?limit=101', '?offset=-1', '?offset=1000001', '?limit=NaN']) expect((await request('GET', `/own-customer${query}`)).status).toBe(400);
     for (const input of [{ ...policy, termsDays: 366 }, { ...policy, expectedVersion: -1 }, { ...policy, status: 'PAID' }]) expect((await request('POST', '/own-customer/policy', input)).status).toBe(400);
     expect((await request('POST', '/own-customer/receipts', { ...receipt, allocations: [] })).status).toBe(400);
     expect((await request('POST', '/own-customer/receipts', { ...receipt, evidenceReference: 'x'.repeat(129) })).status).toBe(400);

@@ -56,7 +56,7 @@ describe.sequential('Credit immutable evidence, ownership and PostgreSQL concurr
     const customer = await prisma.customer.create({ data: { mobile: `+989${String(Date.now() % 1_000_000_000).padStart(9, '0')}` } }); customers.push(customer.id);
     const input = { expectedVersion: null, status: 'SUSPENDED' as const, creditLimit: '0', termsDays: 0 };
     const ctx = context();
-    const result = await Promise.all([service.policy(customer.id, input, ctx), service.policy(customer.id, input, ctx)]);
+    const result = await Promise.all([service.policy(customer.id, input, ctx), service.policy(customer.id, { termsDays: 0, creditLimit: '0', status: 'SUSPENDED', expectedVersion: null }, ctx)]);
     expect(result[1]).toEqual(result[0]);
     expect(result[0].account).toMatchObject({ status: 'SUSPENDED', version: 0, outstanding: { amount: '0', currency: 'IRR' } });
     expect(await prisma.creditAccount.count({ where: { customerId: customer.id } })).toBe(1);
@@ -169,6 +169,10 @@ describe.sequential('Credit immutable evidence, ownership and PostgreSQL concurr
     for (const field of ['sourceReference', 'evidenceReference', 'reason', 'actorId', 'requestId', 'mobile', 'email']) expect(serialized).not.toContain(field);
     expect(await service.customerStatement(actorId, { offset: 0, limit: 25 })).toMatchObject({ account: null, documents: [] });
     await expect(service.adjust(a.customerId, b.opening.documentId!, { expectedVersion: a.opening.account.version, kind: 'CREDIT_NOTE', amount: '1', effectiveAt: now(), evidenceReference: 'isolated-forged-id', reason: 'Cross-account access' }, context())).rejects.toEqual(code('CREDIT_NOT_FOUND'));
+  });
+
+  it('returns not-found for an unknown staff customer instead of reporting a successful empty account', async () => {
+    await expect(statement(`missing-${run}`)).rejects.toEqual(code('CREDIT_NOT_FOUND'));
   });
 
   it('rejects duplicate allocations, allocation mismatch and empty/future evidence without writing financial rows', async () => {

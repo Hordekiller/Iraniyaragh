@@ -23205,6 +23205,7 @@
             "in": "query",
             "schema": {
               "minimum": 0,
+              "maximum": 1000000,
               "type": "number"
             }
           },
@@ -23523,6 +23524,7 @@
             "in": "query",
             "schema": {
               "minimum": 0,
+              "maximum": 1000000,
               "type": "number"
             }
           },
@@ -24910,6 +24912,7 @@
             "in": "query",
             "schema": {
               "minimum": 0,
+              "maximum": 1000000,
               "type": "number"
             }
           }

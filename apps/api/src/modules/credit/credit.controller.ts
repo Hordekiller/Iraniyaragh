@@ -21,7 +21,7 @@ export class CreditController {
   @Get(':customerId') @RequirePermission('credit.read')
   @ApiOperation({ summary: 'Read a customer credit statement without private receipt evidence' })
   @ApiParam({ name: 'customerId', type: String })
-  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0 })
+  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0, maximum: 1_000_000 })
   @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 100 })
   @ApiOkResponse({ schema: creditOpenApi.statement })
   statement(@Param('customerId') id: string, @Query() query: CreditPageDto): Promise<CreditStatement> { return this.credit.statement(id, query); }
@@ -29,7 +29,7 @@ export class CreditController {
   @Get(':customerId/ledger') @RequirePermission('credit.read')
   @ApiOperation({ summary: 'Read immutable signed receivable movements' })
   @ApiParam({ name: 'customerId', type: String })
-  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0 })
+  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0, maximum: 1_000_000 })
   @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 100 })
   @ApiOkResponse({ schema: creditOpenApi.ledger })
   ledger(@Param('customerId') id: string, @Query() query: CreditPageDto): Promise<CreditLedgerPage> { return this.credit.ledger(id, query); }
@@ -88,7 +88,7 @@ export class CustomerCreditController {
   constructor(private readonly credit: CreditService) {}
   @Get()
   @ApiOperation({ summary: 'Read only the authenticated customer receivable statement' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0 })
+  @ApiQuery({ name: 'offset', required: false, type: Number, minimum: 0, maximum: 1_000_000 })
   @ApiQuery({ name: 'limit', required: false, type: Number, minimum: 1, maximum: 100 })
   @ApiOkResponse({ schema: { type: 'object', required: ['data'], properties: { data: creditOpenApi.statement } } })
   statement(@CurrentPrincipal() principal: AuthPrincipalContext, @Query() query: CreditPageDto): Promise<{ data: CreditStatement }> {

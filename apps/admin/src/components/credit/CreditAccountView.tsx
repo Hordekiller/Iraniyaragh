@@ -13,7 +13,7 @@ import { useCreditCommand } from '@/lib/credit/useCreditCommand';
 
 type Action = { kind: 'policy' | 'opening' | 'receipt' | 'adjust' | 'reverse'; version: number | null; documentId?: string; receiptId?: string };
 const titles = { policy: 'تنظیم اعتبار مشتری', opening: 'ثبت ماندهٔ اول دوره', receipt: 'ثبت دریافت واقعی', adjust: 'ثبت سند اصلاحی', reverse: 'برگشت دریافت' };
-const localNow = () => { const date = new Date(); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
+const localNow = () => { const date = new Date(); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, -1); };
 const iso = (value: string) => { const date = new Date(value); return value && Number.isFinite(date.getTime()) ? date.toISOString() : null; };
 const permission = { policy: 'credit.manage', opening: 'credit.opening', receipt: 'credit.receive', adjust: 'credit.adjust', reverse: 'credit.adjust' };
 
@@ -60,7 +60,8 @@ export function CreditAccountView({ customerId }: { customerId: string }) {
     if (locked) return;
     setAction({ kind, version: statement?.account?.version ?? null, ...ids });
     setStatus(statement?.account?.status ?? 'SUSPENDED'); setLimit(statement?.account?.creditLimit.amount ?? '0'); setTerms(String(statement?.account?.termsDays ?? 0));
-    setAmount(''); setReference(''); setReason(''); setEffectiveAt(localNow()); setDueAt(localNow()); setAllocations({});
+    const timestamp = localNow();
+    setAmount(''); setReference(''); setReason(''); setEffectiveAt(timestamp); setDueAt(timestamp); setAllocations({});
     setMessage(null); command.setError(null);
   }
   function submit() {
@@ -170,8 +171,8 @@ export function CreditAccountView({ customerId }: { customerId: string }) {
                   {action?.kind !== 'reverse' ? <TextField label={action?.kind === 'receipt' ? 'مبلغ دریافت (ریال)' : 'مبلغ سند (ریال)'} value={amount} onChange={event => setAmount(event.target.value)} required inputProps={{ inputMode: 'numeric' }} /> : null}
                   {action?.kind === 'adjust' ? <TextField select label="نوع اصلاح" value={adjustmentKind} onChange={event => setAdjustmentKind(event.target.value as typeof adjustmentKind)}><MenuItem value="CREDIT_NOTE">بستانکار؛ کاهش بدهی</MenuItem><MenuItem value="DEBIT_ADJUSTMENT">بدهکار؛ افزایش بدهی</MenuItem></TextField> : null}
                   <TextField label="شناسهٔ سند مرجع" value={reference} onChange={event => setReference(event.target.value)} required inputProps={{ maxLength: 128 }} helperText="مرجع دفتر قبلی یا رسید معتبر؛ رمز و اطلاعات حساس وارد نکنید." />
-                  <TextField label={action?.kind === 'opening' ? 'تاریخ ایجاد بدهی (زمان محلی)' : 'تاریخ عملیات (زمان محلی)'} type="datetime-local" value={effectiveAt} onChange={event => setEffectiveAt(event.target.value)} required InputLabelProps={{ shrink: true }} />
-                  {action?.kind === 'opening' ? <TextField label="سررسید (زمان محلی)" type="datetime-local" value={dueAt} onChange={event => setDueAt(event.target.value)} required InputLabelProps={{ shrink: true }} /> : null}
+                  <TextField label={action?.kind === 'opening' ? 'تاریخ ایجاد بدهی (زمان محلی)' : 'تاریخ عملیات (زمان محلی)'} type="datetime-local" value={effectiveAt} onChange={event => setEffectiveAt(event.target.value)} required inputProps={{ step: '0.001' }} InputLabelProps={{ shrink: true }} />
+                  {action?.kind === 'opening' ? <TextField label="سررسید (زمان محلی)" type="datetime-local" value={dueAt} onChange={event => setDueAt(event.target.value)} required inputProps={{ step: '0.001' }} InputLabelProps={{ shrink: true }} /> : null}
                   {action?.kind === 'receipt' ? <>
                     <TextField select label="روش دریافت" value={method} onChange={event => setMethod(event.target.value as typeof method)}><MenuItem value="BANK_TRANSFER">انتقال بانکی ثبت‌شده</MenuItem><MenuItem value="CASH">وجه نقد دریافت‌شده</MenuItem></TextField>
                     <Typography variant="body2">مبلغ هر تخصیص را وارد کنید. مجموع باید دقیقاً برابر مبلغ دریافت باشد؛ کنترل نهایی در سرور است.</Typography>

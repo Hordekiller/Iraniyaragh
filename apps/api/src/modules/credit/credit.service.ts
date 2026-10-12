@@ -11,6 +11,8 @@ import { AuditLogService } from '../audit/audit-log.service';
 
 export const MAX_CREDIT_IRR = 9_223_372_036_854_775_807n;
 export type CreditContext = { actorId: string; requestId: string; idempotencyKey: string };
+// Canonical hashes use binary code-unit order, independent of locale/ICU upgrades.
+const compareKeys = (left: string, right: string) => left < right ? -1 : left > right ? 1 : 0;
 const hash = (value: string) => createHash('sha256').update(value, 'utf8').digest('hex');
 const money = (amount: bigint): Money => ({ amount: amount.toString(), currency: 'IRR' });
 const invalid = (message: string) => new BadRequestException({ code: 'VALIDATION_ERROR', message });
@@ -40,10 +42,10 @@ function stable(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
   const row = value as Record<string, unknown>;
-  return `{${Object.keys(row).sort().map(key => `${JSON.stringify(key)}:${stable(row[key])}`).join(',')}}`;
+  return `{${Object.keys(row).sort(compareKeys).map(key => `${JSON.stringify(key)}:${stable(row[key])}`).join(',')}}`;
 }
 function page(input: { offset: number; limit: number }) {
-  if (!Number.isInteger(input.offset) || input.offset < 0 || !Number.isInteger(input.limit) || input.limit < 1 || input.limit > 100) throw invalid('Invalid statement pagination.');
+  if (!Number.isInteger(input.offset) || input.offset < 0 || input.offset > 1_000_000 || !Number.isInteger(input.limit) || input.limit < 1 || input.limit > 100) throw invalid('Invalid statement pagination.');
   return input;
 }
 
@@ -56,7 +58,11 @@ export class CreditService {
 
   async statement(customerId: string, query: { offset: number; limit: number }): Promise<CreditStatement> {
     page(query);
-    return this.prisma.$transaction(tx => this.statementIn(tx, customerId, query), { isolationLevel: 'RepeatableRead' });
+    return this.prisma.$transaction(async tx => {
+      const customer = await tx.customer.findUnique({ where: { id: customerId }, select: { id: true } });
+      if (!customer) throw missing();
+      return this.statementIn(tx, customerId, query);
+    }, { isolationLevel: 'RepeatableRead' });
   }
 
   async customerStatement(userId: string, query: { offset: number; limit: number }): Promise<CreditStatement> {
@@ -122,7 +128,7 @@ export class CreditService {
     const amount = creditAmount(input.amount); const effectiveAt = date(input.effectiveAt);
     const evidenceReference = text(input.evidenceReference, 128);
     if (!['CASH', 'BANK_TRANSFER'].includes(input.method) || !Array.isArray(input.allocations) || input.allocations.length < 1 || input.allocations.length > 100) throw invalid('A receipt needs a supported method and 1–100 allocations.');
-    const allocations = input.allocations.map(item => ({ documentId: text(item.documentId, 128), amount: creditAmount(item.amount).toString() })).sort((a, b) => a.documentId < b.documentId ? -1 : a.documentId > b.documentId ? 1 : 0);
+    const allocations = input.allocations.map(item => ({ documentId: text(item.documentId, 128), amount: creditAmount(item.amount).toString() })).sort((a, b) => compareKeys(a.documentId, b.documentId));
     if (new Set(allocations.map(item => item.documentId)).size !== allocations.length || allocations.reduce((sum, item) => sum + BigInt(item.amount), 0n) !== amount) throw invalid('Allocations must be distinct and exactly equal the receipt amount.');
     return this.command(customerId, 'receipt', { ...input, evidenceReference, allocations }, context, async tx => {
       const account = await this.account(tx, customerId, input.expectedVersion);
