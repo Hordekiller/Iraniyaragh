@@ -126,7 +126,10 @@ describe('Stocktake count sheet operator states', () => {
     render(<StocktakeDetailView stocktakeId="sheet-1" />);
     const buttons = await screen.findAllByRole('button', { name: 'تلاش دوباره' });
     fireEvent.click(buttons[0]);
-    expect(await screen.findByRole('table', { name: 'تاریخچهٔ انبارگردانی' })).toHaveTextContent('staff-1');
+    // The table shell mounts before its independent history request resolves.
+    // Await the actual row content rather than treating table existence as readiness.
+    const history = await screen.findByRole('table', { name: 'تاریخچهٔ انبارگردانی' });
+    await waitFor(() => expect(history).toHaveTextContent('staff-1'));
     expect(mocks.history).toHaveBeenCalledWith('sheet-1', { offset: 0, limit: 10 }, expect.any(AbortSignal));
   });
 });

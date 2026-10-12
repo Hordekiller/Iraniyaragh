@@ -278,10 +278,13 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     const approve = page.getByRole('button', { name: 'تأیید فروش نسیه و ثبت بدهی' });
     await expect(approve).toBeEnabled();
     await tap(approve);
-    await expect(page.getByText('فروش نسیهٔ تأییدشده', { exact: true })).toBeVisible();
+    const creditStatus = page.locator('.MuiChip-root').filter({ hasText: /^فروش نسیهٔ تأییدشده$/ });
+    await expect(creditStatus).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'فروش نسیهٔ تأییدشده', exact: true })).toBeVisible();
     await expect(page.getByText('بدون تلاش پرداخت', { exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByText('فروش نسیهٔ تأییدشده', { exact: true })).toBeVisible();
+    await expect(creditStatus).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'فروش نسیهٔ تأییدشده', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'تأیید فروش نسیه و ثبت بدهی' })).toHaveCount(0);
     await tap(page.getByRole('button', { name: 'شروع پردازش' }));
     await expect(page.getByRole('button', { name: 'ثبت برداشت' })).toBeVisible();
@@ -290,6 +293,6 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await tap(page.getByRole('button', { name: 'آمادهٔ ارسال' }));
     await expect(page.getByLabel('کد رهگیری')).toBeVisible();
     await page.reload();
-    await expect(page.getByText('آماده ارسال', { exact: true })).toBeVisible();
+    await expect(page.locator('.MuiChip-root').filter({ hasText: /^آماده ارسال$/ })).toBeVisible();
   });
 });
