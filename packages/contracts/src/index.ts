@@ -30,3 +30,4 @@ export type InventorySnapshot = {
 export * from './media';
 
 export * from './credit';
+export * from './invoice-policy';

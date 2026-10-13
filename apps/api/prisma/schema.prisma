@@ -245,6 +245,8 @@ model User {
   creditDocuments             ReceivableDocument[]
   creditReceipts              CreditReceipt[]
   creditCommands              CreditCommandRecord[]
+  invoicePolicies             InvoicePolicyRevision[]
+  invoicePolicyCommands       InvoicePolicyCommand[]
   sessions                    Session[]
   otpCodes                    OtpCode[]
   loginAttempts               LoginAttempt[]
@@ -1830,4 +1832,43 @@ model CreditRefundPayout {
   actor             User                @relation(fields: [actorId], references: [id], onDelete: Restrict)
 
   @@index([returnId])
+}
+
+enum InvoiceTaxTreatment {
+  EXCLUSIVE
+  INCLUSIVE
+  EXEMPT
+}
+
+model InvoicePolicyRevision {
+  id              String                 @id @default(cuid())
+  version         Int                    @unique
+  sellerName      String                 @db.VarChar(200)
+  sellerAddress   String                 @db.VarChar(1000)
+  sellerContact   String                 @db.VarChar(200)
+  taxTreatment    InvoiceTaxTreatment
+  taxRateBps      Int
+  exemptionReason String?                @db.VarChar(500)
+  discountCapBps  Int
+  shippingTaxable Boolean
+  isActive        Boolean
+  reason          String                 @db.VarChar(500)
+  actorId         String
+  requestId       String                 @db.VarChar(100)
+  createdAt       DateTime               @default(now())
+  actor           User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  commands        InvoicePolicyCommand[]
+}
+
+model InvoicePolicyCommand {
+  id          String                @id @default(cuid())
+  actorId     String
+  keyHash     String                @db.Char(64)
+  payloadHash String                @db.Char(64)
+  revisionId  String
+  createdAt   DateTime              @default(now())
+  actor       User                  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  revision    InvoicePolicyRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
 }
