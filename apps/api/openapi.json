@@ -26417,8 +26417,7 @@
                       "type": "string",
                       "enum": [
                         "VALIDATION_ERROR",
-                        "INVALID_REQUEST",
-                        "IDEMPOTENCY_KEY_REQUIRED"
+                        "INVALID_REQUEST"
                       ]
                     },
                     "message": {
@@ -27293,8 +27292,7 @@
                       "type": "string",
                       "enum": [
                         "VALIDATION_ERROR",
-                        "INVALID_REQUEST",
-                        "IDEMPOTENCY_KEY_REQUIRED"
+                        "INVALID_REQUEST"
                       ]
                     },
                     "message": {
@@ -27631,8 +27629,7 @@
                       "type": "string",
                       "enum": [
                         "VALIDATION_ERROR",
-                        "INVALID_REQUEST",
-                        "IDEMPOTENCY_KEY_REQUIRED"
+                        "INVALID_REQUEST"
                       ]
                     },
                     "message": {
@@ -28490,8 +28487,7 @@
                       "type": "string",
                       "enum": [
                         "VALIDATION_ERROR",
-                        "INVALID_REQUEST",
-                        "IDEMPOTENCY_KEY_REQUIRED"
+                        "INVALID_REQUEST"
                       ]
                     },
                     "message": {
@@ -29365,8 +29361,7 @@
                       "type": "string",
                       "enum": [
                         "VALIDATION_ERROR",
-                        "INVALID_REQUEST",
-                        "IDEMPOTENCY_KEY_REQUIRED"
+                        "INVALID_REQUEST"
                       ]
                     },
                     "message": {
@@ -29727,8 +29722,7 @@
                       "type": "string",
                       "enum": [
                         "VALIDATION_ERROR",
-                        "INVALID_REQUEST",
-                        "IDEMPOTENCY_KEY_REQUIRED"
+                        "INVALID_REQUEST"
                       ]
                     },
                     "message": {
@@ -30604,8 +30598,7 @@
                       "type": "string",
                       "enum": [
                         "VALIDATION_ERROR",
-                        "INVALID_REQUEST",
-                        "IDEMPOTENCY_KEY_REQUIRED"
+                        "INVALID_REQUEST"
                       ]
                     },
                     "message": {
@@ -31481,8 +31474,7 @@
                       "type": "string",
                       "enum": [
                         "VALIDATION_ERROR",
-                        "INVALID_REQUEST",
-                        "IDEMPOTENCY_KEY_REQUIRED"
+                        "INVALID_REQUEST"
                       ]
                     },
                     "message": {
@@ -32358,8 +32350,7 @@
                       "type": "string",
                       "enum": [
                         "VALIDATION_ERROR",
-                        "INVALID_REQUEST",
-                        "IDEMPOTENCY_KEY_REQUIRED"
+                        "INVALID_REQUEST"
                       ]
                     },
                     "message": {

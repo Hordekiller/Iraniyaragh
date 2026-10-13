@@ -24,7 +24,7 @@ const schemas = { read: object({ draft }), command: object({ draft, committedVer
   options: object({ items: { type: 'array', items: { type: 'object', properties: { id: text, label: text, detail: text }, required: ['id', 'label'], additionalProperties: false } }, count: integer }) };
 export function InvoiceDraftResponses(kind: keyof typeof schemas, created = false) {
   return applyDecorators((created ? ApiCreatedResponse : ApiOkResponse)({ schema: object({ data: schemas[kind] }) }),
-    ApiResponse({ status: 400, schema: failureError(['VALIDATION_ERROR','INVALID_REQUEST','IDEMPOTENCY_KEY_REQUIRED'], 400) }),
+    ApiResponse({ status: 400, schema: failureError(['VALIDATION_ERROR','INVALID_REQUEST'], 400) }),
     ApiResponse({ status: 401, schema: failureError(['AUTH_SESSION_INVALID','AUTH_SESSION_REPLAYED'], 401) }),
     ApiResponse({ status: 403, schema: failureError(['FORBIDDEN'], 403) }),
     ApiResponse({ status: 404, schema: failureError(['INVOICE_DRAFT_NOT_FOUND','ORDER_NOT_FOUND','CUSTOMER_NOT_FOUND','SKU_NOT_FOUND'], 404) }),
