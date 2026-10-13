@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AdminOrderDetail } from '@iranyaragh/contracts';
 import { ApiNetworkError } from '@/lib/api/client';
@@ -44,4 +44,12 @@ describe('Credit-sale cancellation and real refund UI', () => {
     expect(screen.getByText(/این دکمه انتقال بانکی انجام نمی‌دهد/)).toBeInTheDocument();
     expect(screen.getByRole('button',{name:'ثبت سند بازپرداخت انجام‌شده'})).toBeDisabled(); expect(mocks.payout).not.toHaveBeenCalled();
   });
+  it('does not replay a financial write after its identity-scoped view unmounts during reconciliation', async () => {
+    mocks.cancel.mockRejectedValue(new ApiNetworkError('offline')); const view = mount(); await fill(); fireEvent.click(screen.getByRole('button',{name:'لغو پیش از ارسال و بازگرداندن کالا به محل اصلی'}));
+    const retry = await screen.findByRole('button',{name:'بررسی و تکرار همان فرمان'});
+    let resolve!: (value: unknown) => void; mocks.returns.mockImplementationOnce(() => new Promise(done => { resolve = done; })); fireEvent.click(retry);
+    await waitFor(() => expect(mocks.returns).toHaveBeenCalledTimes(2)); view.unmount();
+    await act(async () => { resolve({items:[]}); }); expect(mocks.cancel).toHaveBeenCalledOnce();
+  });
+
 });

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, CardContent, Checkbox, FormControlLabel, MenuItem, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import type { AdminOrderDetail, FulfillmentPickListResponse, CreditSaleReturns, CreditStatement, Warehouse, WarehouseLocation } from '@iranyaragh/contracts';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -10,6 +10,8 @@ import { listWarehouses, listLocations } from '@/lib/inventory/warehouses-api';
 
 export function CreditSaleCompensation({ order, picks, onChanged }: { order: AdminOrderDetail; picks: FulfillmentPickListResponse['data'] | null; onChanged: () => Promise<void> }) {
   const { user } = useAuth();
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const read = !!user?.permissions.includes('credit.read');
   const mayReturn = ['credit.adjust','orders.manage','inventory.adjust'].every(permission => user?.permissions.includes(permission));
   const mayPayout = ['credit.adjust','credit.receive'].every(permission => user?.permissions.includes(permission));
@@ -24,7 +26,7 @@ export function CreditSaleCompensation({ order, picks, onChanged }: { order: Adm
   const [optionsLoading, setOptionsLoading] = useState(false); const [optionsError, setOptionsError] = useState<string | null>(null);
   const [returnId, setReturnId] = useState(''); const [amount, setAmount] = useState(''); const [method, setMethod] = useState<'CASH'|'BANK_TRANSFER'>('CASH'); const [effectiveAt, setEffectiveAt] = useState('');
   const [saved, setSaved] = useState(false);
-  const command = useCreditCommand(() => { setSaved(true); void onChanged().catch(failure => setError(creditError(failure, false))); });
+  const command = useCreditCommand(() => { if (!alive.current) return; setSaved(true); void onChanged().catch(failure => setError(creditError(failure, false))); });
   useEffect(() => {
     if (!read) return;
     setLoading(true); setError(null);
@@ -33,11 +35,11 @@ export function CreditSaleCompensation({ order, picks, onChanged }: { order: Adm
     return () => controller.abort();
   }, [read, order.customer.id, order.id, order.version]);
   useEffect(() => {
-    if (!mayReturn || order.fulfillment?.status !== 'DELIVERED' || !user?.permissions.includes('inventory.read')) return;
+    if (!read || !mayReturn || order.fulfillment?.status !== 'DELIVERED' || !user?.permissions.includes('inventory.read')) return;
     const controller = new AbortController(); setOptionsLoading(true);
     listWarehouses({ offset: 0, limit: 100, isActive: true }, controller.signal).then(result => { if (!controller.signal.aborted) { setWarehouses(result.items); setWarehouseMore(result.count > result.items.length); } }).catch(failure => { if (!controller.signal.aborted) setOptionsError(creditError(failure, false)); }).finally(() => { if (!controller.signal.aborted) setOptionsLoading(false); });
     return () => controller.abort();
-  }, [mayReturn, order.fulfillment?.status, user?.permissions]);
+  }, [read, mayReturn, order.fulfillment?.status, user?.permissions]);
   useEffect(() => {
     setLocationId(''); setLocations([]); setLocationMore(false);
     if (!warehouseId) return;
@@ -47,7 +49,7 @@ export function CreditSaleCompensation({ order, picks, onChanged }: { order: Adm
   }, [warehouseId]);
   async function reload() {
     setLoading(true); setError(null);
-    try { const [account, documents] = await Promise.all([getCreditStatement(order.customer.id), getCreditReturns(order.customer.id, order.id)]); await onChanged(); setStatement(account); setReturns(documents); return documents; }
+    try { const [account, documents] = await Promise.all([getCreditStatement(order.customer.id), getCreditReturns(order.customer.id, order.id)]); if (!alive.current) return; await onChanged(); if (!alive.current) return; setStatement(account); setReturns(documents); return documents; }
     catch (failure) { setError(creditError(failure, false)); throw failure; } finally { setLoading(false); }
   }
   async function moreOptions(location: boolean) {

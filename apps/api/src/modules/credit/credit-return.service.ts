@@ -87,12 +87,12 @@ export class CreditReturnService {
       for (const line of lines) {
         if (!await tx.warehouse.findFirst({ where: { id: line.warehouseId, isActive: true }, select: { id: true } })) throw conflict('Return destination warehouse must be active.');
         const item = order.items.find(item => item.id === line.orderItemId);
-        if (!item || item.total !== item.unitPrice * BigInt(item.quantity) || item.unitPrice <= 0n) throw conflict('The return line does not match immutable sale terms.');
+        if (!item || item.total !== item.unitPrice * BigInt(item.quantity) || item.unitPrice < 0n) throw conflict('The return line does not match immutable sale terms.');
         const totalQuantity = (returned.get(item.id) ?? 0) + line.quantity;
         if (totalQuantity > item.quantity) throw conflict('Returned quantities exceed the original sale.');
         returned.set(item.id, totalQuantity); amount += item.unitPrice * BigInt(line.quantity);
       }
-      if (amount <= 0n || amount > order.grandTotal || order.items.reduce((sum, item) => sum + item.total, 0n) !== order.grandTotal) throw conflict('Sale totals do not reconcile.');
+      if (amount < 0n || amount > order.grandTotal || order.items.reduce((sum, item) => sum + item.total, 0n) !== order.grandTotal) throw conflict('Sale totals do not reconcile.');
       const outstanding = document.entries.reduce((sum, entry) => sum + entry.amount, 0n);
       const debtCredit = amount < outstanding ? amount : outstanding;
       const refundDue = amount - debtCredit;

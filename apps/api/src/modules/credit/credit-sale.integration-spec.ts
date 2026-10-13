@@ -23,7 +23,7 @@ describe.sequential('Staff credit sale, stock, fulfillment and financial concurr
   const returns = new CreditReturnService(prisma, credit, inventory, audit);
   const sales = new CreditSaleService(credit, inventory, audit); const staffOrders = new StaffOrderService(prisma, audit);
   const run = randomUUID().replaceAll('-', ''); const requestId = `credit-sale-it-${run}`;
-  const customers: string[] = []; let actorId = ''; let variantId = ''; let warehouseId = ''; let locationId = ''; let productId = ''; let connected = false; let sequence = 0;
+  const customers: string[] = []; const extraVariants: string[] = []; const extraProducts: string[] = []; let actorId = ''; let variantId = ''; let warehouseId = ''; let locationId = ''; let productId = ''; let connected = false; let sequence = 0;
   const context = (key = `credit-sale-${run}-${sequence++}`) => ({ actorId, requestId: `${requestId}-${sequence++}`, idempotencyKey: key });
   const code = (value: string) => expect.objectContaining({ response: expect.objectContaining({ code: value }) });
   const statement = (customerId: string) => credit.statement(customerId, { offset: 0, limit: 25 });
@@ -48,7 +48,7 @@ describe.sequential('Staff credit sale, stock, fulfillment and financial concurr
     await prisma.fulfillmentPick.deleteMany({ where: { orderItem: { orderId: { in: orders } } } });
     await prisma.fulfillmentTransition.deleteMany({ where: { fulfillment: { orderId: { in: orders } } } });
     await prisma.fulfillment.deleteMany({ where: { orderId: { in: orders } } });
-    await prisma.inventoryMovement.deleteMany({ where: { variantId } });
+    await prisma.inventoryMovement.deleteMany({ where: { variantId: { in: [variantId,...extraVariants] } } });
     await prisma.stockReservation.deleteMany({ where: { orderId: { in: orders } } });
     await prisma.payment.deleteMany({ where: { orderId: { in: orders } } });
     await prisma.orderCommandIdempotencyRecord.deleteMany({ where: { orderId: { in: orders } } });
@@ -57,7 +57,9 @@ describe.sequential('Staff credit sale, stock, fulfillment and financial concurr
     await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: orders } } });
     await prisma.order.deleteMany({ where: { id: { in: orders } } });
     await prisma.customer.deleteMany({ where: { id: { in: customers } } });
-    await prisma.inventoryBalance.deleteMany({ where: { variantId } });
+    await prisma.inventoryBalance.deleteMany({ where: { variantId: { in: [variantId,...extraVariants] } } });
+    await prisma.productVariant.deleteMany({ where: { id: { in: extraVariants } } });
+    await prisma.product.deleteMany({ where: { id: { in: extraProducts } } });
     await prisma.productVariant.delete({ where: { id: variantId } }); await prisma.product.delete({ where: { id: productId } });
     await prisma.warehouseLocation.delete({ where: { id: locationId } }); await prisma.warehouse.delete({ where: { id: warehouseId } });
     await prisma.auditLog.deleteMany({ where: { requestId: { startsWith: requestId } } }); await prisma.user.delete({ where: { id: actorId } });
@@ -210,7 +212,7 @@ describe.sequential('Staff credit sale, stock, fulfillment and financial concurr
     const commands = new FulfillmentCommandService(prisma, audit);
     await commands.execute(data.order.id, 'start', context());
     const item = await prisma.orderItem.findFirstOrThrow({ where: { orderId: data.order.id } });
-    await new FulfillmentPickService(prisma, audit).record(data.order.id, item.id, item.quantity, context());
+    for (const line of await prisma.orderItem.findMany({ where: { orderId: data.order.id } })) await new FulfillmentPickService(prisma, audit).record(data.order.id, line.id, line.quantity, context());
     await commands.execute(data.order.id, 'ready', context());
     await new ShipmentDispatchService(prisma, audit).dispatch(data.order.id, { carrier: 'Isolated return carrier', trackingCode: `RETURN-${run}-${sequence++}` }, context());
     await new ShipmentDeliveryService(prisma, audit).confirm(data.order.id, { proofReference: `ISOLATED-RETURN-${run}` }, context());
@@ -355,6 +357,26 @@ describe.sequential('Staff credit sale, stock, fulfillment and financial concurr
     const result = await returns.receive(actual.customerId,actual.order.id,input,context());
     await expect(returns.receive(actual.customerId,actual.order.id,{...input,expectedVersion:result.account.version,expectedOrderVersion:result.order!.version},context())).rejects.toEqual(code('CREDIT_RETURN_CONFLICT'));
     expect(await prisma.creditSaleReturn.count({ where: { orderId: actual.order.id } })).toBe(1);
+  });
+
+  it('receives a legitimate zero-priced promotional item without money fabrication and requires all quantities for terminal return', async () => {
+    const data = await fixture();
+    const product = await prisma.product.create({ data: { name: 'Isolated free promotion', slug: `isolated-free-${run}`, status: 'ACTIVE' } }); extraProducts.push(product.id);
+    const sku = `FREE-${run}`;
+    const free = await prisma.productVariant.create({ data: { productId: product.id, sku, skuKey: canonicalizeSku(sku), combinationSignature: EMPTY_AXIS_SIGNATURE, salePrice: 0n, costPrice: 0n, status: 'ACTIVE', isActive: true } }); extraVariants.push(free.id);
+    await prisma.inventoryBalance.create({ data: { variantId: free.id, warehouseId, locationId, onHand: 10, reserved: 0, available: 10 } });
+    const real = await staffOrders.create({ ...context(), payload: { customerId: data.customerId, lines: [{ variantId, quantity: 2 }, { variantId: free.id, quantity: 1 }], address: { provinceCode: 'THR',city: 'Isolated city',address: 'Isolated address',postalCode: '1234567890',recipient: 'Isolated test',mobile: '+989120000000' } } });
+    const combined = { ...data, order: real.data.order, input: { expectedVersion: data.policy.account.version, expectedOrderVersion: real.data.order.version } };
+    const { approved } = await delivered(combined);
+    const freeItem = await prisma.orderItem.findFirstOrThrow({ where: { orderId: combined.order.id, variantId: free.id } });
+    const paidItem = await prisma.orderItem.findFirstOrThrow({ where: { orderId: combined.order.id, variantId } });
+    const pricedReturn = await returns.receive(data.customerId,combined.order.id,returnInput(combined,paidItem.id,2,approved.account.version),context());
+    expect(pricedReturn.order!.status).toBe('CREDIT_APPROVED'); expect(pricedReturn.account.outstanding.amount).toBe('0');
+    const freeReturn = await returns.receive(data.customerId,combined.order.id,returnInput(combined,freeItem.id,1,pricedReturn.account.version,pricedReturn.order!.version),context());
+    expect(freeReturn.order!.status).toBe('RETURNED');
+    const row = await prisma.creditSaleReturn.findUniqueOrThrow({ where: { id: freeReturn.returnId } });
+    expect(row).toMatchObject({ amount: 0n, debtCredit: 0n, refundDue: 0n, entryId: null });
+    expect(await prisma.payment.count({ where: { orderId: combined.order.id } })).toBe(0);
   });
 
 });
