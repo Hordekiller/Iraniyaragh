@@ -27584,12 +27584,14 @@
                                 "type": "string"
                               },
                               "detail": {
-                                "type": "string"
+                                "type": "string",
+                                "nullable": true
                               }
                             },
                             "required": [
                               "id",
-                              "label"
+                              "label",
+                              "detail"
                             ],
                             "additionalProperties": false
                           }

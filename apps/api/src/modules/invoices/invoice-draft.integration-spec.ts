@@ -100,6 +100,9 @@ describe.sequential('Independent invoice draft PostgreSQL financial/security acc
   });
   it('uses approved configured shipping tariffs without creating a fake cart or checkout quote', async () => {
     await prisma.shippingMethod.create({ data: { code: `INV-${run}`, title: 'Approved isolated carrier', amount: 500n, policyRevision: 'approved-it-v1' } });
+    const options = await service.options('shipping');
+    expect(options.data.items).toContainEqual({ id: 'PICKUP', label: 'تحویل حضوری', detail: null });
+    expect(options.data.items).toContainEqual({ id: `INV-${run}`, label: 'Approved isolated carrier', detail: null });
     const carts = await prisma.cart.count(); const quotes = await prisma.shippingQuote.count();
     const draft = (await create({ ...input(), shippingMethodCode: `INV-${run}` })).draft;
     expect(draft.shipping.amount.amount).toBe('500'); expect(draft.quote!.total.amount).toBe('2700');

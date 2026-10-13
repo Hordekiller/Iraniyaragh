@@ -21,7 +21,7 @@ const draft = object({ ...summary, sourceOrderVersion: { ...integer, nullable: t
 const page = (items: SchemaObject) => object({ items: { type: 'array', items }, count: integer, offset: integer, limit: { type: 'integer', minimum: 1, maximum: 100 } });
 const schemas = { read: object({ draft }), command: object({ draft, committedVersion: integer, replayed: { type: 'boolean', description: 'Replay returns the current workspace and the originally committed version.' } }),
   list: page(object(summary)), history: page(object({ version: integer, action: { type: 'string', enum: ['CREATED', 'EDITED', 'REQUOTED', 'CANCELLED'] }, actorId: text, createdAt: date })),
-  options: object({ items: { type: 'array', items: { type: 'object', properties: { id: text, label: text, detail: text }, required: ['id', 'label'], additionalProperties: false } }, count: integer }) };
+  options: object({ items: { type: 'array', items: { type: 'object', properties: { id: text, label: text, detail: nullableText }, required: ['id', 'label', 'detail'], additionalProperties: false } }, count: integer }) };
 export function InvoiceDraftResponses(kind: keyof typeof schemas, created = false) {
   return applyDecorators((created ? ApiCreatedResponse : ApiOkResponse)({ schema: object({ data: schemas[kind] }) }),
     ApiResponse({ status: 400, schema: failureError(['VALIDATION_ERROR','INVALID_REQUEST'], 400) }),

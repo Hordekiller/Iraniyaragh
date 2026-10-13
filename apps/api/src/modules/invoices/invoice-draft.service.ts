@@ -102,7 +102,7 @@ export class InvoiceDraftService {
     try {
       if (kind !== 'shipping') return await this.catalog.options({ kind, search, offset, limit });
       const methods = await this.prisma.shippingMethod.findMany({ where: { isActive: true, code: { not: STAFF_PICKUP_POLICY.code } }, orderBy: { code: 'asc' }, take: 100 });
-      return { data: { items: [{ id: STAFF_PICKUP_POLICY.code, label: STAFF_PICKUP_POLICY.title }, ...methods.map(method => ({ id: method.code, label: method.title }))], count: methods.length + 1 } };
+      return { data: { items: [{ id: STAFF_PICKUP_POLICY.code, label: STAFF_PICKUP_POLICY.title, detail: null }, ...methods.map(method => ({ id: method.code, label: method.title, detail: null }))], count: methods.length + 1 } };
     } catch (error) { return this.safeFailure(error); }
   }
 
