@@ -24,7 +24,7 @@ describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', ()
     await prisma.$executeRawUnsafe('TRUNCATE "InvoiceIssueCommand", "InvoiceDocumentEvent", "InvoiceDocumentLine", "InvoiceDocument", "InvoiceSeriesCounter", "InvoiceDraftCommand", "InvoiceDraftRevision", "InvoiceDraftLine", "InvoiceDraft", "InvoicePolicyCommand", "InvoicePolicyRevision"');
   }
   async function policy(taxTreatment: 'INCLUSIVE'|'EXCLUSIVE' = 'INCLUSIVE', taxRateBps = 0) {
-    const previous = await policies.read();
+    const previous = await policies.current();
     return policies.update(actorId,requestId,{ expectedVersion: previous?.version ?? null, sellerName: 'Isolated seller', sellerAddress: 'Isolated seller address', sellerContact: 'Public test contact',
       taxTreatment, taxRateBps, exemptionReason: null, discountCapBps: 10000, shippingTaxable: false, isActive: true, reason: 'Isolated accepted test policy' },key());
   }
@@ -120,7 +120,7 @@ describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', ()
       prisma.$executeRaw`DELETE FROM "InvoiceDocumentEvent" WHERE "documentId" = ${documentId}`,
       prisma.$executeRaw`UPDATE "InvoiceSeriesCounter" SET "lastNumber" = 1 WHERE "series" = 'SALE'`,
     ]) await expect(sql).rejects.toBeDefined();
-    const original=await prisma.invoiceDocumentLine.findFirstOrThrow({where:{documentId}});const {id:_id,...line}=original;
+    const original=await prisma.invoiceDocumentLine.findFirstOrThrow({where:{documentId}});const {id: originalId,...line}=original;expect(originalId).toBeTruthy();
     await expect(prisma.invoiceDocumentLine.create({data:{...line,ordinal:49}})).rejects.toBeDefined();
     expect(await service.read(documentId)).toEqual(issued.document);
   });

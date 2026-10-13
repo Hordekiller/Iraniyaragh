@@ -290,6 +290,63 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await expect(items.getByRole('row', { name: new RegExp(sku) })).toContainText(rial.format(2));
   });
 
+  await test.step('issue an immutable store invoice through approved settings and the real source order', async () => {
+    // All settings and documents belong to the disposable E2E database. No
+    // tax assumption or financial seed is introduced on the live server.
+    await page.goto('/settings/invoices');
+    const seller = `فروشندهٔ صدور ایزوله ${suffix}`;
+    await page.getByRole('textbox', { name: /نام فروشنده \/ فروشگاه/ }).fill(seller);
+    await page.getByRole('textbox', { name: /نشانی عمومی فروشنده/ }).fill('نشانی عمومی فروشندهٔ آزمون');
+    await page.getByRole('textbox', { name: /اطلاعات تماس عمومی فروشنده/ }).fill('invoice.example.test');
+    await page.getByRole('combobox', { name: /مبنای مالیات مصوب/ }).dispatchEvent('mousedown');
+    await tap(page.getByRole('option', { name: 'مالیات داخل مبلغ پس از تخفیف' }));
+    await page.getByRole('textbox', { name: /نرخ مالیات \(واحد پایه\)/ }).fill('1000');
+    await page.getByRole('textbox', { name: /سقف تخفیف \(واحد پایه\)/ }).fill('2000');
+    await page.getByRole('combobox', { name: /مالیات هزینهٔ ارسال/ }).dispatchEvent('mousedown');
+    await tap(page.getByRole('option', { name: 'بدون مالیات ارسال' }));
+    await page.getByRole('switch', { name: 'فعال برای صدور فاکتور پس از تأیید سیاست' }).check();
+    await page.getByRole('textbox', { name: /دلیل ثبت نسخهٔ جدید/ }).fill('تصویب سیاست صدور در پایگاه آزمون ایزوله');
+    const savePolicy = page.waitForResponse(response => response.url().endsWith('/api/v1/settings/admin/invoice-policy') && response.request().method() === 'PUT');
+    await tap(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' }));
+    expect((await savePolicy).status()).toBe(200);
+    await expect(page.getByText(/نسخهٔ \d+ در سرور ثبت شد/)).toBeVisible();
+    await page.goto(orderHref);
+    await tap(page.getByRole('button', { name: 'ساخت پیش‌فاکتور از سفارش' }));
+    await expect(page).toHaveURL(/\/invoices\/drafts\/[^/]+$/);
+    await expect(page.getByText(`مبلغ نهایی: ${salePrice * 2} ریال`, { exact: true })).toBeVisible();
+    await page.getByRole('checkbox', { name: 'مبلغ، اقلام، مشخصات فروشنده و سفارش مبنا را برای صدور نهایی بررسی کردم' }).check();
+    const issue = page.waitForResponse(response => /\/api\/v1\/invoices\/admin\/drafts\/[^/]+\/issue$/.test(new URL(response.url()).pathname) && response.request().method() === 'POST');
+    await tap(page.getByRole('button', { name: 'صدور سند نهایی با شمارهٔ یکتا' }));
+    expect((await issue).status()).toBe(201);
+    await expect(page.getByText('وضعیت: صادرشده — نسخهٔ 1', { exact: true })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /تعداد 1/ })).toBeDisabled();
+    const documentLink = page.getByRole('link', { name: 'مشاهدهٔ سند نهایی' });
+    await expect(documentLink).toBeVisible();
+    const documentHref = await documentLink.getAttribute('href');
+    expect(documentHref).toMatch(/^\/invoices\/documents\/[^/]+$/);
+    await tap(documentLink);
+    await expect(page.getByRole('heading', { name: /^فاکتور IRY-\d{4}-\d+$/ })).toBeVisible();
+    await expect(page.getByText(seller, { exact: true })).toBeVisible();
+    await expect(page.getByRole('table', { name: 'اقلام فاکتور صادرشده' })).toContainText(sku);
+    await page.reload();
+    await expect(page.getByText(seller, { exact: true })).toBeVisible();
+
+    // Restore inactive settings via their real command. Changing policy must
+    // leave the issued snapshot intact and not affect later test projects.
+    await page.goto('/settings/invoices');
+    await page.getByRole('switch', { name: 'فعال برای صدور فاکتور پس از تأیید سیاست' }).uncheck();
+    await page.getByRole('textbox', { name: /نام فروشنده \/ فروشگاه/ }).fill(`فروشندهٔ بعد از صدور ${suffix}`);
+    await page.getByRole('textbox', { name: /دلیل ثبت نسخهٔ جدید/ }).fill('پایان آزمون صدور؛ غیرفعال‌سازی سیاست ایزوله');
+    const deactivate = page.waitForResponse(response => response.url().endsWith('/api/v1/settings/admin/invoice-policy') && response.request().method() === 'PUT');
+    await tap(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' }));
+    expect((await deactivate).status()).toBe(200);
+    await page.goto(documentHref!);
+    await expect(page.getByText(seller, { exact: true })).toBeVisible();
+    await page.goto(orderHref);
+    await expect(page.getByText('بدون تلاش پرداخت', { exact: true })).toBeVisible();
+    await expect(page.locator('.MuiChip-root').filter({ hasText: /^در انتظار پرداخت$/ })).toBeVisible();
+  });
+
   await test.step('the stock is held, not silently spent', async () => {
 
   // The reservation is real: the ledger no longer shows all ten units free.

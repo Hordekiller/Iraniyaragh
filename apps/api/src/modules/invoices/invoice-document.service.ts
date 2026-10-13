@@ -33,6 +33,11 @@ export class InvoiceDocumentService {
     try { const row = await this.prisma.invoiceDocument.findUnique({ where: { id } }); if (!row) throw missing(); return view(row); }
     catch (error) { return this.safeFailure(error); }
   }
+  async fromDraft(draftId: string): Promise<InvoiceDocument> {
+    invoiceDraftId(draftId);
+    try { const row = await this.prisma.invoiceDocument.findUnique({ where: { draftId } }); if (!row) throw missing(); return view(row); }
+    catch (error) { return this.safeFailure(error); }
+  }
   async list(offset = 0, limit = 25): Promise<{ items: InvoiceDocumentSummary[]; count: number; offset: number; limit: number }> {
     if (!Number.isInteger(offset) || offset < 0 || offset > 1000000 || !Number.isInteger(limit) || limit < 1 || limit > 100) throw invoiceInvalid('Bounded pagination is required.');
     try { return await this.prisma.$transaction(async tx => {

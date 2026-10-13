@@ -26329,7 +26329,8 @@
                                 "type": "string",
                                 "enum": [
                                   "DRAFT",
-                                  "CANCELLED"
+                                  "CANCELLED",
+                                  "ISSUED"
                                 ]
                               },
                               "source": {
@@ -26720,7 +26721,8 @@
                               "type": "string",
                               "enum": [
                                 "DRAFT",
-                                "CANCELLED"
+                                "CANCELLED",
+                                "ISSUED"
                               ]
                             },
                             "source": {
@@ -27927,7 +27929,8 @@
                               "type": "string",
                               "enum": [
                                 "DRAFT",
-                                "CANCELLED"
+                                "CANCELLED",
+                                "ISSUED"
                               ]
                             },
                             "source": {
@@ -28791,7 +28794,8 @@
                               "type": "string",
                               "enum": [
                                 "DRAFT",
-                                "CANCELLED"
+                                "CANCELLED",
+                                "ISSUED"
                               ]
                             },
                             "source": {
@@ -29659,7 +29663,8 @@
                                   "CREATED",
                                   "EDITED",
                                   "REQUOTED",
-                                  "CANCELLED"
+                                  "CANCELLED",
+                                  "ISSUED"
                                 ]
                               },
                               "actorId": {
@@ -30028,7 +30033,8 @@
                               "type": "string",
                               "enum": [
                                 "DRAFT",
-                                "CANCELLED"
+                                "CANCELLED",
+                                "ISSUED"
                               ]
                             },
                             "source": {
@@ -30904,7 +30910,8 @@
                               "type": "string",
                               "enum": [
                                 "DRAFT",
-                                "CANCELLED"
+                                "CANCELLED",
+                                "ISSUED"
                               ]
                             },
                             "source": {
@@ -31780,7 +31787,8 @@
                               "type": "string",
                               "enum": [
                                 "DRAFT",
-                                "CANCELLED"
+                                "CANCELLED",
+                                "ISSUED"
                               ]
                             },
                             "source": {
@@ -32612,6 +32620,3001 @@
         ],
         "tags": [
           "invoice-drafts"
+        ]
+      }
+    },
+    "/invoices/admin/documents": {
+      "get": {
+        "operationId": "InvoiceDocumentController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "maxItems": 100,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "number": {
+                                "type": "string"
+                              },
+                              "orderId": {
+                                "type": "string"
+                              },
+                              "customerId": {
+                                "type": "string"
+                              },
+                              "buyerLabel": {
+                                "type": "string"
+                              },
+                              "issuedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "total": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "number",
+                              "orderId",
+                              "customerId",
+                              "buyerLabel",
+                              "issuedAt",
+                              "total"
+                            ]
+                          }
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "offset": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "count",
+                        "offset",
+                        "limit"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST",
+                        "VALIDATION_ERROR"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_SESSION_REPLAYED",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_DOCUMENT_NOT_FOUND",
+                        "INVOICE_DRAFT_NOT_FOUND"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "STALE_VERSION",
+                        "IDEMPOTENCY_CONFLICT",
+                        "INVOICE_ISSUE_CONFLICT",
+                        "INVOICE_SOURCE_CHANGED",
+                        "INVOICE_REQUOTE_REQUIRED",
+                        "INVOICE_POLICY_REQUIRED",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_ISSUE_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "invoice-documents"
+        ]
+      }
+    },
+    "/invoices/admin/documents/{id}": {
+      "get": {
+        "operationId": "InvoiceDocumentController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "document": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "number": {
+                              "type": "string"
+                            },
+                            "orderId": {
+                              "type": "string"
+                            },
+                            "customerId": {
+                              "type": "string"
+                            },
+                            "buyerLabel": {
+                              "type": "string"
+                            },
+                            "issuedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "draftId": {
+                              "type": "string"
+                            },
+                            "draftVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "orderVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "series": {
+                              "type": "string",
+                              "enum": [
+                                "SALE"
+                              ]
+                            },
+                            "period": {
+                              "type": "integer",
+                              "minimum": 2000,
+                              "maximum": 9999
+                            },
+                            "sequence": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 999999999
+                            },
+                            "policyVersion": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "seller": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "address": {
+                                  "type": "string"
+                                },
+                                "contact": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "address",
+                                "contact"
+                              ]
+                            },
+                            "taxPolicy": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "treatment": {
+                                  "type": "string",
+                                  "enum": [
+                                    "EXCLUSIVE",
+                                    "INCLUSIVE",
+                                    "EXEMPT"
+                                  ]
+                                },
+                                "rateBps": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                },
+                                "exemptionReason": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "shippingTaxable": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "treatment",
+                                "rateBps",
+                                "exemptionReason",
+                                "shippingTaxable"
+                              ]
+                            },
+                            "address": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "provinceCode": {
+                                  "type": "string"
+                                },
+                                "city": {
+                                  "type": "string"
+                                },
+                                "address": {
+                                  "type": "string"
+                                },
+                                "postalCode": {
+                                  "type": "string"
+                                },
+                                "recipient": {
+                                  "type": "string"
+                                },
+                                "mobile": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "provinceCode",
+                                "city",
+                                "address",
+                                "postalCode",
+                                "recipient",
+                                "mobile"
+                              ]
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "shipping": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "amount": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "policyRevision": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "title",
+                                "amount",
+                                "policyRevision"
+                              ]
+                            },
+                            "pricePolicyRevision": {
+                              "type": "string"
+                            },
+                            "quote": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "subtotal": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "discount": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "netAmount": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "tax": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "total": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "shipping": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "lines": {
+                                  "type": "array",
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "subtotal": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "discount": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "netAmount": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "tax": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "total": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "subtotal",
+                                      "discount",
+                                      "netAmount",
+                                      "tax",
+                                      "total"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "subtotal",
+                                "discount",
+                                "netAmount",
+                                "tax",
+                                "total",
+                                "shipping",
+                                "lines"
+                              ]
+                            },
+                            "lines": {
+                              "type": "array",
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "orderItemId": {
+                                    "type": "string"
+                                  },
+                                  "variantId": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 1000
+                                  },
+                                  "unitPrice": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "discount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "netAmount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "tax": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "total": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "orderItemId",
+                                  "variantId",
+                                  "sku",
+                                  "title",
+                                  "quantity",
+                                  "unitPrice",
+                                  "discount",
+                                  "netAmount",
+                                  "tax",
+                                  "total"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "number",
+                            "orderId",
+                            "customerId",
+                            "buyerLabel",
+                            "issuedAt",
+                            "draftId",
+                            "draftVersion",
+                            "orderVersion",
+                            "series",
+                            "period",
+                            "sequence",
+                            "policyVersion",
+                            "seller",
+                            "taxPolicy",
+                            "address",
+                            "note",
+                            "shipping",
+                            "pricePolicyRevision",
+                            "quote",
+                            "lines"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "document"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST",
+                        "VALIDATION_ERROR"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_SESSION_REPLAYED",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_DOCUMENT_NOT_FOUND",
+                        "INVOICE_DRAFT_NOT_FOUND"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "STALE_VERSION",
+                        "IDEMPOTENCY_CONFLICT",
+                        "INVOICE_ISSUE_CONFLICT",
+                        "INVOICE_SOURCE_CHANGED",
+                        "INVOICE_REQUOTE_REQUIRED",
+                        "INVOICE_POLICY_REQUIRED",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_ISSUE_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "invoice-documents"
+        ]
+      }
+    },
+    "/invoices/admin/drafts/{id}/document": {
+      "get": {
+        "operationId": "InvoiceDocumentController_fromDraft",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "document": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "number": {
+                              "type": "string"
+                            },
+                            "orderId": {
+                              "type": "string"
+                            },
+                            "customerId": {
+                              "type": "string"
+                            },
+                            "buyerLabel": {
+                              "type": "string"
+                            },
+                            "issuedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "draftId": {
+                              "type": "string"
+                            },
+                            "draftVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "orderVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "series": {
+                              "type": "string",
+                              "enum": [
+                                "SALE"
+                              ]
+                            },
+                            "period": {
+                              "type": "integer",
+                              "minimum": 2000,
+                              "maximum": 9999
+                            },
+                            "sequence": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 999999999
+                            },
+                            "policyVersion": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "seller": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "address": {
+                                  "type": "string"
+                                },
+                                "contact": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "address",
+                                "contact"
+                              ]
+                            },
+                            "taxPolicy": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "treatment": {
+                                  "type": "string",
+                                  "enum": [
+                                    "EXCLUSIVE",
+                                    "INCLUSIVE",
+                                    "EXEMPT"
+                                  ]
+                                },
+                                "rateBps": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                },
+                                "exemptionReason": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "shippingTaxable": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "treatment",
+                                "rateBps",
+                                "exemptionReason",
+                                "shippingTaxable"
+                              ]
+                            },
+                            "address": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "provinceCode": {
+                                  "type": "string"
+                                },
+                                "city": {
+                                  "type": "string"
+                                },
+                                "address": {
+                                  "type": "string"
+                                },
+                                "postalCode": {
+                                  "type": "string"
+                                },
+                                "recipient": {
+                                  "type": "string"
+                                },
+                                "mobile": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "provinceCode",
+                                "city",
+                                "address",
+                                "postalCode",
+                                "recipient",
+                                "mobile"
+                              ]
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "shipping": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "amount": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "policyRevision": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "title",
+                                "amount",
+                                "policyRevision"
+                              ]
+                            },
+                            "pricePolicyRevision": {
+                              "type": "string"
+                            },
+                            "quote": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "subtotal": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "discount": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "netAmount": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "tax": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "total": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "shipping": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "lines": {
+                                  "type": "array",
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "subtotal": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "discount": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "netAmount": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "tax": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "total": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "subtotal",
+                                      "discount",
+                                      "netAmount",
+                                      "tax",
+                                      "total"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "subtotal",
+                                "discount",
+                                "netAmount",
+                                "tax",
+                                "total",
+                                "shipping",
+                                "lines"
+                              ]
+                            },
+                            "lines": {
+                              "type": "array",
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "orderItemId": {
+                                    "type": "string"
+                                  },
+                                  "variantId": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 1000
+                                  },
+                                  "unitPrice": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "discount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "netAmount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "tax": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "total": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "orderItemId",
+                                  "variantId",
+                                  "sku",
+                                  "title",
+                                  "quantity",
+                                  "unitPrice",
+                                  "discount",
+                                  "netAmount",
+                                  "tax",
+                                  "total"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "number",
+                            "orderId",
+                            "customerId",
+                            "buyerLabel",
+                            "issuedAt",
+                            "draftId",
+                            "draftVersion",
+                            "orderVersion",
+                            "series",
+                            "period",
+                            "sequence",
+                            "policyVersion",
+                            "seller",
+                            "taxPolicy",
+                            "address",
+                            "note",
+                            "shipping",
+                            "pricePolicyRevision",
+                            "quote",
+                            "lines"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "document"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST",
+                        "VALIDATION_ERROR"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_SESSION_REPLAYED",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_DOCUMENT_NOT_FOUND",
+                        "INVOICE_DRAFT_NOT_FOUND"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "STALE_VERSION",
+                        "IDEMPOTENCY_CONFLICT",
+                        "INVOICE_ISSUE_CONFLICT",
+                        "INVOICE_SOURCE_CHANGED",
+                        "INVOICE_REQUOTE_REQUIRED",
+                        "INVOICE_POLICY_REQUIRED",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_ISSUE_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "invoice-documents"
+        ]
+      }
+    },
+    "/invoices/admin/drafts/{id}/issue": {
+      "post": {
+        "operationId": "InvoiceDocumentController_issue",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceIssueDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "document": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "number": {
+                              "type": "string"
+                            },
+                            "orderId": {
+                              "type": "string"
+                            },
+                            "customerId": {
+                              "type": "string"
+                            },
+                            "buyerLabel": {
+                              "type": "string"
+                            },
+                            "issuedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "draftId": {
+                              "type": "string"
+                            },
+                            "draftVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "orderVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "series": {
+                              "type": "string",
+                              "enum": [
+                                "SALE"
+                              ]
+                            },
+                            "period": {
+                              "type": "integer",
+                              "minimum": 2000,
+                              "maximum": 9999
+                            },
+                            "sequence": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 999999999
+                            },
+                            "policyVersion": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "seller": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "address": {
+                                  "type": "string"
+                                },
+                                "contact": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "address",
+                                "contact"
+                              ]
+                            },
+                            "taxPolicy": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "treatment": {
+                                  "type": "string",
+                                  "enum": [
+                                    "EXCLUSIVE",
+                                    "INCLUSIVE",
+                                    "EXEMPT"
+                                  ]
+                                },
+                                "rateBps": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                },
+                                "exemptionReason": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "shippingTaxable": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "treatment",
+                                "rateBps",
+                                "exemptionReason",
+                                "shippingTaxable"
+                              ]
+                            },
+                            "address": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "provinceCode": {
+                                  "type": "string"
+                                },
+                                "city": {
+                                  "type": "string"
+                                },
+                                "address": {
+                                  "type": "string"
+                                },
+                                "postalCode": {
+                                  "type": "string"
+                                },
+                                "recipient": {
+                                  "type": "string"
+                                },
+                                "mobile": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "provinceCode",
+                                "city",
+                                "address",
+                                "postalCode",
+                                "recipient",
+                                "mobile"
+                              ]
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "shipping": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "amount": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "policyRevision": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "title",
+                                "amount",
+                                "policyRevision"
+                              ]
+                            },
+                            "pricePolicyRevision": {
+                              "type": "string"
+                            },
+                            "quote": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "subtotal": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "discount": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "netAmount": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "tax": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "total": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "shipping": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                },
+                                "lines": {
+                                  "type": "array",
+                                  "minItems": 1,
+                                  "maxItems": 50,
+                                  "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "subtotal": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "discount": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "netAmount": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "tax": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      },
+                                      "total": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "amount": {
+                                            "type": "string",
+                                            "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                          },
+                                          "currency": {
+                                            "type": "string",
+                                            "enum": [
+                                              "IRR"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "amount",
+                                          "currency"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "subtotal",
+                                      "discount",
+                                      "netAmount",
+                                      "tax",
+                                      "total"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "subtotal",
+                                "discount",
+                                "netAmount",
+                                "tax",
+                                "total",
+                                "shipping",
+                                "lines"
+                              ]
+                            },
+                            "lines": {
+                              "type": "array",
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "orderItemId": {
+                                    "type": "string"
+                                  },
+                                  "variantId": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 1000
+                                  },
+                                  "unitPrice": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "discount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "netAmount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "tax": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  },
+                                  "total": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^(0|[1-9][0-9]{0,18})$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "orderItemId",
+                                  "variantId",
+                                  "sku",
+                                  "title",
+                                  "quantity",
+                                  "unitPrice",
+                                  "discount",
+                                  "netAmount",
+                                  "tax",
+                                  "total"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "number",
+                            "orderId",
+                            "customerId",
+                            "buyerLabel",
+                            "issuedAt",
+                            "draftId",
+                            "draftVersion",
+                            "orderVersion",
+                            "series",
+                            "period",
+                            "sequence",
+                            "policyVersion",
+                            "seller",
+                            "taxPolicy",
+                            "address",
+                            "note",
+                            "shipping",
+                            "pricePolicyRevision",
+                            "quote",
+                            "lines"
+                          ]
+                        },
+                        "committedVersion": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "replayed": {
+                          "type": "boolean",
+                          "description": "Returns the original immutable issued document on replay."
+                        }
+                      },
+                      "required": [
+                        "document",
+                        "committedVersion",
+                        "replayed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST",
+                        "VALIDATION_ERROR"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_SESSION_REPLAYED",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_DOCUMENT_NOT_FOUND",
+                        "INVOICE_DRAFT_NOT_FOUND"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "STALE_VERSION",
+                        "IDEMPOTENCY_CONFLICT",
+                        "INVOICE_ISSUE_CONFLICT",
+                        "INVOICE_SOURCE_CHANGED",
+                        "INVOICE_REQUOTE_REQUIRED",
+                        "INVOICE_POLICY_REQUIRED",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_ISSUE_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "invoice-documents"
         ]
       }
     },
@@ -40897,6 +43900,25 @@
         "required": [
           "expectedProductVersion",
           "expectedVersion"
+        ]
+      },
+      "InvoiceIssueDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483646
+          },
+          "expectedOrderVersion": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483646
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "expectedOrderVersion"
         ]
       }
     }
