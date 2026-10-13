@@ -9,6 +9,7 @@ const auth = vi.hoisted(() => ({ user: { userId: 'staff-a', permissions: ['invoi
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => auth }));
 vi.mock('@/lib/invoices/invoice-documents-api', () => ({ listInvoiceDocuments: vi.fn(), readInvoiceDocument: vi.fn() }));
 vi.mock('@/lib/invoices/invoice-print', () => ({ prepareInvoicePrint: vi.fn(async () => undefined) }));
+vi.mock('./InvoicePublication', () => ({ InvoicePublication: () => null }));
 const money = (amount: string) => ({ amount, currency: 'IRR' as const });
 const document = {
   id: 'doc-a', number: 'IRY-2026-000001', orderId: 'order-a', issuedAt: '2026-10-13T10:00:00Z', policyVersion: 3,

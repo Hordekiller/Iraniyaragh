@@ -342,6 +342,24 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     const pdf = await page.pdf({ format: 'A4', preferCSSPageSize: true, printBackground: true });
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     await page.emulateMedia({ media: 'screen' });
+    await expect(page.getByText('دسترسی مشتری: خصوصی — نسخهٔ 0', { exact: true })).toBeVisible();
+    await page.getByRole('textbox', { name: 'دلیل تغییر دسترسی فاکتور' }).fill('انتشار برای صاحب فاکتور در آزمون ایزوله');
+    await page.getByRole('checkbox', { name: 'تغییر دسترسی این فاکتور برای صاحب آن را تأیید می‌کنم' }).check();
+    const publish = page.waitForResponse(response => /\/api\/v1\/invoices\/admin\/documents\/[^/]+\/publication$/.test(new URL(response.url()).pathname) && response.request().method() === 'PUT');
+    await tap(page.getByRole('button', { name: 'انتشار فاکتور در پنل مشتری' }));
+    expect((await publish).status()).toBe(200);
+    await expect(page.getByText('دسترسی مشتری: منتشرشده — نسخهٔ 1', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('دسترسی مشتری: منتشرشده — نسخهٔ 1', { exact: true })).toBeVisible();
+    await page.getByRole('textbox', { name: 'دلیل تغییر دسترسی فاکتور' }).fill('لغو دسترسی بدون تغییر سند مالی در آزمون ایزوله');
+    await page.getByRole('checkbox', { name: 'تغییر دسترسی این فاکتور برای صاحب آن را تأیید می‌کنم' }).check();
+    const revoke = page.waitForResponse(response => /\/api\/v1\/invoices\/admin\/documents\/[^/]+\/publication$/.test(new URL(response.url()).pathname) && response.request().method() === 'PUT');
+    await tap(page.getByRole('button', { name: 'لغو دسترسی مشتری به فاکتور' }));
+    expect((await revoke).status()).toBe(200);
+    await expect(page.getByText('دسترسی مشتری: خصوصی — نسخهٔ 2', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('دسترسی مشتری: خصوصی — نسخهٔ 2', { exact: true })).toBeVisible();
+    await expect(page.getByText(seller, { exact: true })).toBeVisible();
 
     // Restore inactive settings via their real command. Changing policy must
     // leave the issued snapshot intact and not affect later test projects.
