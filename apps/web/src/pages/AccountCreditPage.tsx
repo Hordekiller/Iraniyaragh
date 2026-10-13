@@ -1,3 +1,4 @@
+import { CreditReturns } from '../components/account/CreditReturns'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { CreditStatement } from '@iranyaragh/contracts'
@@ -7,7 +8,7 @@ import { AccountNavigation, SessionRestoring } from '../components/account/Accou
 import { formatTimestamp } from '../lib/format'
 
 const rial = (value: string) => `${new Intl.NumberFormat('fa-IR').format(BigInt(value))} ریال`
-const financialStatus = { UNPAID: 'پرداخت‌نشده', PARTIALLY_PAID: 'پرداخت جزئی', PAID: 'تسویه‌شده', OVERDUE: 'سررسید گذشته' }
+const financialStatus = { CREDITED: 'بسته‌شده با برگشت', UNPAID: 'پرداخت‌نشده', PARTIALLY_PAID: 'پرداخت جزئی', PAID: 'تسویه‌شده', OVERDUE: 'سررسید گذشته' }
 export function AccountCreditPage() {
   const { state, restored, open, identityVersion } = useAuth()
   if (state.phase !== 'authenticated' && (!restored || state.restoring)) return <SessionRestoring />
@@ -47,6 +48,7 @@ function CreditPanel() {
             <th scope="row" className="p-3">{document.orderId ? <Link className="underline" to={ROUTES.order(encodeURIComponent(document.orderId))}>فروش نسیه</Link> : 'ماندهٔ اول دوره'}</th><td className="p-3 whitespace-nowrap">{rial(document.originalAmount.amount)}</td><td className="p-3 whitespace-nowrap">{rial(document.effectivePrincipal.amount)}</td><td className="p-3 whitespace-nowrap">{rial(document.outstanding.amount)}</td><td className="p-3 whitespace-nowrap">{formatTimestamp(document.dueAt)}</td><td className="p-3 whitespace-nowrap">{financialStatus[document.status]}</td>
           </tr>)}</tbody></table>
       </div>}
+      {statement.documents.filter(document => document.kind === 'SALE' && document.orderId).map(document => <CreditReturns key={document.id} orderId={document.orderId!} />)}
       <nav aria-label="صفحه‌بندی صورتحساب" className="mt-4 flex gap-3"><button type="button" disabled={offset === 0 || loading} onClick={() => { setLoading(true); setError(false); setOffset(value => Math.max(0, value - 25)) }} className="rounded-lg border px-4 py-2 disabled:opacity-40">صفحهٔ قبل</button><button type="button" disabled={offset + 25 >= statement.total || loading} onClick={() => { setLoading(true); setError(false); setOffset(value => value + 25) }} className="rounded-lg border px-4 py-2 disabled:opacity-40">صفحهٔ بعد</button></nav>
     </>}
   </div>

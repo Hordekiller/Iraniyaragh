@@ -13,7 +13,7 @@ export type TransitionMap<Status extends string> = {
 export const ORDER_TRANSITIONS: TransitionMap<OrderStatus> = {
   DRAFT: new Set<OrderStatus>(['PENDING_PAYMENT', 'CANCELLED']),
   PENDING_PAYMENT: new Set<OrderStatus>(['PAID', 'CREDIT_APPROVED', 'CANCELLED']),
-  CREDIT_APPROVED: new Set<OrderStatus>([]),
+  CREDIT_APPROVED: new Set<OrderStatus>(['CANCELLED', 'RETURNED']),
   PAID: new Set<OrderStatus>([]),
   CANCELLED: new Set<OrderStatus>([]),
   RETURNED: new Set<OrderStatus>([]),
@@ -31,7 +31,7 @@ export const PAYMENT_TRANSITIONS: TransitionMap<PaymentStatus> = {
 export const FULFILLMENT_TRANSITIONS: TransitionMap<FulfillmentStatus> = {
   PENDING: new Set<FulfillmentStatus>(['PROCESSING', 'CANCELLED']),
   PROCESSING: new Set<FulfillmentStatus>(['READY_TO_SHIP', 'CANCELLED']),
-  READY_TO_SHIP: new Set<FulfillmentStatus>(['SHIPPED']),
+  READY_TO_SHIP: new Set<FulfillmentStatus>(['SHIPPED', 'CANCELLED']),
   SHIPPED: new Set<FulfillmentStatus>(['DELIVERED']),
   DELIVERED: new Set<FulfillmentStatus>(['RETURNED']),
   CANCELLED: new Set<FulfillmentStatus>([]),

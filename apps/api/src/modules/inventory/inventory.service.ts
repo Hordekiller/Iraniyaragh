@@ -78,6 +78,8 @@ export type ChangeStockCommand = StockKey &
     expectedVersion?: number;
   };
 
+type TransactionStockCommand = Omit<ChangeStockCommand, 'type'> & { type: InventoryChangeType | 'RETURN_IN' };
+
 export type ReserveStockCommand = StockKey &
   ActorContext & {
     orderId?: string | null;
@@ -247,17 +249,28 @@ export class InventoryService {
     command: ChangeStockCommand,
   ): Promise<InventoryMovementDto> {
     this.assertTracked(command);
+    if (!INVENTORY_CHANGE_TYPE_SET.has(command.type)) throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'This endpoint only accepts receipts and manual adjustments.' });
+    this.validateStockCommand(command);
+    const movement = await this.withSerializableRetry(() => this.prisma.$transaction(
+      tx => this.changeOnHandIn(tx, command), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ));
+    return this.toMovementDto(movement);
+  }
+
+  private validateStockCommand(command: TransactionStockCommand) {
+    this.assertTracked(command);
     if (!Number.isInteger(command.delta) || command.delta === 0) {
       throw new BadRequestException(
         "Inventory delta must be a non-zero integer.",
       );
     }
-    if (!INVENTORY_CHANGE_TYPE_SET.has(command.type)) {
+    if (command.type !== 'RETURN_IN' && !INVENTORY_CHANGE_TYPE_SET.has(command.type)) {
       throw new BadRequestException({
         code: "INVALID_REQUEST",
         message: "This endpoint only accepts receipts and manual adjustments.",
       });
     }
+    if (command.type === 'RETURN_IN' && command.referenceType !== 'credit-return') throw new BadRequestException('Returned stock requires a credit-return reference.');
     const isOutboundAdjustment =
       command.type === InventoryMovementType.ADJUSTMENT_OUT;
     if (
@@ -273,100 +286,98 @@ export class InventoryService {
       throw new BadRequestException("Manual corrections require a reason.");
     }
 
-    const movement = await this.withSerializableRetry(() =>
-      this.prisma.$transaction(
-        async (tx) => {
-          await this.acquireBalanceLock(tx, command);
+  }
 
-          if (command.idempotencyKey) {
-            const existing = await tx.inventoryMovement.findUnique({
-              where: { idempotencyKey: command.idempotencyKey },
-            });
-            if (existing) {
-              if (this.movementMatches(existing, command)) return existing;
-              throw new ConflictException(
-                `Idempotency conflict: key '${command.idempotencyKey}' was already used with a different payload.`,
-              );
-            }
-          }
+  /** Shared stock port: participate in the caller's financial transaction. */
+  async changeOnHandIn(tx: Prisma.TransactionClient, command: TransactionStockCommand) {
+    this.validateStockCommand(command);
 
-          await this.assertStockIdentity(tx, command);
+    await this.acquireBalanceLock(tx, command);
 
-          const key = this.balanceKey(command);
-          const current = await tx.inventoryBalance.findUnique({ where: key });
-          const version = current?.version ?? 0;
-          this.assertVersion(command.expectedVersion, version);
+    if (command.idempotencyKey) {
+      const existing = await tx.inventoryMovement.findUnique({
+        where: { idempotencyKey: command.idempotencyKey },
+      });
+      if (existing) {
+        if (this.movementMatches(existing, command)) return existing;
+        throw new ConflictException(
+          `Idempotency conflict: key '${command.idempotencyKey}' was already used with a different payload.`,
+        );
+      }
+    }
 
-          const beforeOnHand = current?.onHand ?? 0;
-          const reserved = current?.reserved ?? 0;
-          const afterOnHand = beforeOnHand + command.delta;
-          const available = afterOnHand - reserved;
+    await this.assertStockIdentity(tx, command);
 
-          if (afterOnHand < 0 || available < 0) {
-            throw new ConflictException({
-              code: "INSUFFICIENT_STOCK",
-              message: "Insufficient stock for this operation.",
-            });
-          }
+    const key = this.balanceKey(command);
+    const current = await tx.inventoryBalance.findUnique({ where: key });
+    const version = current?.version ?? 0;
+    this.assertVersion(command.expectedVersion, version);
 
-          await tx.inventoryBalance.upsert({
-            where: key,
-            create: {
-              warehouseId: command.warehouseId,
-              locationId: command.locationId,
-              variantId: command.variantId,
-              onHand: afterOnHand,
-              reserved,
-              available,
-              version: 1,
-            },
-            update: {
-              onHand: afterOnHand,
-              available,
-              version: { increment: 1 },
-            },
-          });
+    const beforeOnHand = current?.onHand ?? 0;
+    const reserved = current?.reserved ?? 0;
+    const afterOnHand = beforeOnHand + command.delta;
+    const available = afterOnHand - reserved;
 
-          const movement = await tx.inventoryMovement.create({
-            data: {
-              warehouseId: command.warehouseId,
-              locationId: command.locationId,
-              variantId: command.variantId,
-              type: command.type,
-              quantity: command.delta,
-              beforeOnHand,
-              afterOnHand,
-              reason: command.reason,
-              referenceType: command.referenceType,
-              referenceId: command.referenceId,
-              idempotencyKey: command.idempotencyKey,
-            },
-          });
+    if (afterOnHand < 0 || available < 0) {
+      throw new ConflictException({
+        code: "INSUFFICIENT_STOCK",
+        message: "Insufficient stock for this operation.",
+      });
+    }
 
-          await this.auditLog.record(
-            {
-              action: "inventory.balance.changed",
-              entityType: "inventory-movement",
-              entityId: movement.id,
-              before: { onHand: beforeOnHand, reserved },
-              after: { onHand: afterOnHand, available },
-              metadata: {
-                type: command.type,
-                warehouseId: command.warehouseId,
-                locationId: command.locationId,
-              },
-              actorId: command.actorId,
-              requestId: command.requestId,
-            },
-            tx,
-          );
+    await tx.inventoryBalance.upsert({
+      where: key,
+      create: {
+        warehouseId: command.warehouseId,
+        locationId: command.locationId,
+        variantId: command.variantId,
+        onHand: afterOnHand,
+        reserved,
+        available,
+        version: 1,
+      },
+      update: {
+        onHand: afterOnHand,
+        available,
+        version: { increment: 1 },
+      },
+    });
 
-          return movement;
+    const movement = await tx.inventoryMovement.create({
+      data: {
+        warehouseId: command.warehouseId,
+        locationId: command.locationId,
+        variantId: command.variantId,
+        type: command.type,
+        quantity: command.delta,
+        beforeOnHand,
+        afterOnHand,
+        reason: command.reason,
+        referenceType: command.referenceType,
+        referenceId: command.referenceId,
+        idempotencyKey: command.idempotencyKey,
+      },
+    });
+
+    await this.auditLog.record(
+      {
+        action: "inventory.balance.changed",
+        entityType: "inventory-movement",
+        entityId: movement.id,
+        before: { onHand: beforeOnHand, reserved },
+        after: { onHand: afterOnHand, available },
+        metadata: {
+          type: command.type,
+          warehouseId: command.warehouseId,
+          locationId: command.locationId,
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      ),
+        actorId: command.actorId,
+        requestId: command.requestId,
+      },
+      tx,
     );
-    return this.toMovementDto(movement);
+
+    return movement;
   }
 
   async reserve(command: ReserveStockCommand) {
@@ -1633,7 +1644,7 @@ export class InventoryService {
       referenceType: string | null;
       referenceId: string | null;
     },
-    command: ChangeStockCommand,
+    command: TransactionStockCommand,
   ): boolean {
     return (
       movement.warehouseId === command.warehouseId &&

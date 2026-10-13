@@ -18,9 +18,11 @@ describe('order transition machine', () => {
     }
   });
 
-  it('keeps approved credit separate from payment and ordinary cancellation', () => {
+  it('keeps approved credit separate from payment and permits evidenced compensating terminals', () => {
     expect(canTransition('PENDING_PAYMENT', 'CREDIT_APPROVED', ORDER_TRANSITIONS)).toBe(true);
-    for (const status of ['PAID', 'PENDING_PAYMENT', 'CANCELLED'] as const) expect(canTransition('CREDIT_APPROVED', status, ORDER_TRANSITIONS)).toBe(false);
+    expect(canTransition('CREDIT_APPROVED', 'CANCELLED', ORDER_TRANSITIONS)).toBe(true);
+    expect(canTransition('CREDIT_APPROVED', 'RETURNED', ORDER_TRANSITIONS)).toBe(true);
+    for (const status of ['PAID', 'PENDING_PAYMENT'] as const) expect(canTransition('CREDIT_APPROVED', status, ORDER_TRANSITIONS)).toBe(false);
   });
 
   it('allows cancellation before payment', () => {

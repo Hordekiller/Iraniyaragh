@@ -295,4 +295,29 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await page.reload();
     await expect(page.locator('.MuiChip-root').filter({ hasText: /^آماده ارسال$/ })).toBeVisible();
   });
+  await test.step('cancel the prepared credit sale with real stock/debt compensation and reload persistence', async () => {
+    await expect(page.getByRole('heading', { name: 'برگشت و لغو فروش نسیه' })).toBeVisible();
+    await page.getByRole('textbox', { name: 'شماره سند مرجع واقعی' }).fill(`E2E-CREDIT-CANCEL-${suffix}`);
+    await page.getByRole('textbox', { name: 'دلیل عملیات' }).fill('لغو مستند سفارش آزمون پیش از ارسال');
+    await page.getByRole('checkbox', { name: 'صحت سند و انجام واقعی عملیات مربوط را تأیید می‌کنم' }).check();
+    await tap(page.getByRole('button', { name: 'لغو پیش از ارسال و بازگرداندن کالا به محل اصلی' }));
+    await expect(page.getByRole('table', { name: 'اسناد برگشت فروش نسیه' })).toContainText(formatRial(salePrice * 2));
+    await expect(page.getByText('بدون تلاش پرداخت', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'شروع پردازش' })).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('table', { name: 'اسناد برگشت فروش نسیه' })).toContainText('لغو');
+    await expect(page.getByRole('button', { name: 'لغو پیش از ارسال و بازگرداندن کالا به محل اصلی' })).toHaveCount(0);
+    await navigate(page, 'موجودی و گردش', /\/inventory/);
+    await page.getByRole('textbox', { name: 'شناسه SKU', exact: true }).fill(variantId);
+    await tap(page.getByRole('button', { name: 'اعمال فیلتر', exact: true }));
+    const row = page.getByRole('table', { name: 'ماندهٔ موجودی' }).getByRole('row', { name: new RegExp(variantId) });
+    const cells = row.getByRole('cell');
+    await expect(row).toContainText(rial.format(10));
+    // Assert the exact on-hand/reserved/available columns, rather than accepting
+    // an unrelated occurrence of ten in the SKU/location/row title.
+    await expect(cells.nth(3)).toHaveText(rial.format(10));
+    await expect(cells.nth(4)).toHaveText(rial.format(0));
+    await expect(cells.nth(5)).toHaveText(rial.format(10));
+  });
+
 });

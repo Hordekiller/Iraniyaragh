@@ -28,7 +28,7 @@ describe.sequential('Credit immutable evidence, ownership and PostgreSQL concurr
     if (!connected) return;
     // The suite runs sequentially in a disposable database. This preserves the
     // production UPDATE/DELETE guards while removing this suite's financial data.
-    await prisma.$executeRawUnsafe('TRUNCATE "CreditLedgerEntry", "CreditReceipt", "ReceivableDocument", "CreditCommandRecord", "CreditAccount"');
+    await prisma.$executeRawUnsafe('TRUNCATE "CreditRefundPayout", "CreditSaleReturnLine", "CreditSaleReturn", "CreditLedgerEntry", "CreditReceipt", "ReceivableDocument", "CreditCommandRecord", "CreditAccount"');
     await prisma.auditLog.deleteMany({ where: { requestId: `credit-it-${run}` } });
     await prisma.customer.deleteMany({ where: { id: { in: customers } } });
     await prisma.user.deleteMany({ where: { id: { in: users } } });
