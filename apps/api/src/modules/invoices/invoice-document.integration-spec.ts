@@ -10,19 +10,23 @@ import { EMPTY_AXIS_SIGNATURE, canonicalizeSku } from '../catalog/variant-identi
 import { InvoicePolicyService } from './invoice-policy.service';
 import { InvoiceDraftService } from './invoice-draft.service';
 import { InvoiceDocumentService } from './invoice-document.service';
+import { InvoicePublicationService } from './invoice-publication.service';
+import { CustomersService } from '../customers/customers.service';
 
 describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', () => {
   const prisma = new PrismaService(); const audit = new AuditLogService(prisma); const orders = new StaffOrderService(prisma, audit);
   const policies = new InvoicePolicyService(prisma, audit); const shipping = new ConfiguredShippingQuoteAdapter(prisma);
   const drafts = new InvoiceDraftService(prisma, audit, orders, shipping); const service = new InvoiceDocumentService(prisma, audit, drafts, policies);
+  const access = new InvoicePublicationService(prisma, audit);
+  const customers = new CustomersService(prisma, audit);
   const run = randomUUID().replaceAll('-',''); const requestId = `invoice-issue-${run}`; let sequence = 0;
-  let actorId = ''; let customerId = ''; let variantId = ''; let productId = ''; let warehouseId = ''; let locationId = ''; let connected = false;
+  let actorId = ''; let customerUserId = ''; let foreignUserId = ''; let customerId = ''; let variantId = ''; let productId = ''; let warehouseId = ''; let locationId = ''; let connected = false;
   const key = () => `issue-${run}-${sequence++}`;
   const address = { provinceCode: 'THR', city: 'Isolated city', address: 'Isolated invoice address', postalCode: '1234567890', recipient: 'Isolated recipient', mobile: '+989120000000' };
   const code = (name: string) => expect.objectContaining({ response: expect.objectContaining({ code: name }) });
   async function clearInvoices() {
     assertIsolatedTestDatabase({ databaseUrl: process.env.DATABASE_URL, nodeEnvironment: process.env.NODE_ENV });
-    await prisma.$executeRawUnsafe('TRUNCATE "InvoiceIssueCommand", "InvoiceDocumentEvent", "InvoiceDocumentLine", "InvoiceDocument", "InvoiceSeriesCounter", "InvoiceDraftCommand", "InvoiceDraftRevision", "InvoiceDraftLine", "InvoiceDraft", "InvoicePolicyCommand", "InvoicePolicyRevision"');
+    await prisma.$executeRawUnsafe('TRUNCATE "InvoicePublicationCommand", "InvoicePublicationEvent", "InvoicePublication", "InvoiceIssueCommand", "InvoiceDocumentEvent", "InvoiceDocumentLine", "InvoiceDocument", "InvoiceSeriesCounter", "InvoiceDraftCommand", "InvoiceDraftRevision", "InvoiceDraftLine", "InvoiceDraft", "InvoicePolicyCommand", "InvoicePolicyRevision"');
   }
   async function policy(taxTreatment: 'INCLUSIVE'|'EXCLUSIVE' = 'INCLUSIVE', taxRateBps = 0) {
     const previous = await policies.current();
@@ -44,7 +48,9 @@ describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', ()
     assertIsolatedTestDatabase({ databaseUrl: process.env.DATABASE_URL, nodeEnvironment: process.env.NODE_ENV });
     await prisma.$connect();connected=true;await clearInvoices();
     actorId=(await prisma.user.create({ data: { email: `${run}@example.test`,status:'ACTIVE' } })).id;
-    customerId=(await prisma.customer.create({ data: { mobile: `+989${(BigInt(`0x${run}`)%1000000000n).toString().padStart(9,'0')}`,firstName:'Isolated',lastName:'Buyer' } })).id;
+    customerUserId=(await prisma.user.create({ data: { email: `buyer-${run}@example.test`,status:'ACTIVE' } })).id;
+    foreignUserId=(await prisma.user.create({ data: { email: `foreign-${run}@example.test`,status:'ACTIVE' } })).id;
+    customerId=(await prisma.customer.create({ data: { userId: customerUserId, mobile: `+989${(BigInt(`0x${run}`)%1000000000n).toString().padStart(9,'0')}`,firstName:'Isolated',lastName:'Buyer' } })).id;
     productId=(await prisma.product.create({ data: { name:'Isolated issue product',slug:`invoice-issue-${run}`,status:'ACTIVE' } })).id;
     const sku=`ISS-${run}`;variantId=(await prisma.productVariant.create({ data: { productId,sku,skuKey:canonicalizeSku(sku),combinationSignature:EMPTY_AXIS_SIGNATURE,salePrice:1000n,costPrice:500n,status:'ACTIVE',isActive:true } })).id;
     warehouseId=(await prisma.warehouse.create({ data: { code:`ISS-${run}`,name:'Isolated issue warehouse' } })).id;
@@ -59,7 +65,7 @@ describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', ()
     await prisma.orderItem.deleteMany({where:{orderId:{in:ids}}});await prisma.order.deleteMany({where:{id:{in:ids}}});
     await prisma.inventoryBalance.deleteMany({where:{variantId}});await prisma.productVariant.delete({where:{id:variantId}});await prisma.product.delete({where:{id:productId}});
     await prisma.warehouseLocation.delete({where:{id:locationId}});await prisma.warehouse.delete({where:{id:warehouseId}});await prisma.customer.delete({where:{id:customerId}});
-    await prisma.auditLog.deleteMany({where:{actorId}});await prisma.user.delete({where:{id:actorId}});await prisma.$disconnect();
+    await prisma.customerCommandRecord.deleteMany({where:{actorId}});await prisma.auditLog.deleteMany({where:{actorId}});await prisma.user.deleteMany({where:{id:{in:[actorId,customerUserId,foreignUserId]}}});await prisma.$disconnect();
   });
   it('requires an explicit approved policy and leaves no document or number after refusal', async()=>{
     const data=await fixture();const before=await financialEvidence();await expect(issue(data)).rejects.toMatchObject(code('INVOICE_POLICY_REQUIRED'));
@@ -125,5 +131,68 @@ describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', ()
     const original=await prisma.invoiceDocumentLine.findFirstOrThrow({where:{documentId}});const {id: originalId,...line}=original;expect(originalId).toBeTruthy();
     await expect(prisma.invoiceDocumentLine.create({data:{...line,ordinal:49}})).rejects.toBeDefined();
     expect(await service.read(documentId)).toEqual(issued.document);
+  });
+  it('publication joins the authenticated owner and strips staff/internal evidence from customer output',async()=>{
+    const data=await fixture();
+    const edited=await drafts.edit(actorId,requestId,data.draft.id,{expectedVersion:0,address,lines:[{variantId,quantity:2,discount:'0'}],globalDiscount:'0',shippingMethodCode:'PICKUP',note:'Private staff invoice note'},key());
+    data.body.expectedVersion=edited.draft.version;
+    const issued=await issue(data);const id=issued.document.id;const before=await financialEvidence();
+    expect((await access.read(id)).publication).toMatchObject({version:0,isPublished:false});
+    await expect(access.customerRead(customerUserId,id)).rejects.toMatchObject(code('INVOICE_DOCUMENT_NOT_FOUND'));
+    const changed=await access.change(actorId,requestId,id,{expectedVersion:0,isPublished:true,reason:'Private operator publication evidence'},key());
+    expect(changed.publication).toMatchObject({version:1,isPublished:true});
+    const customer=await access.customerRead(customerUserId,id);expect(customer.number).toBe(issued.document.number);expect(customer.quote.total).toEqual(issued.document.quote.total);
+    for(const field of ['note','customerId','draftId','draftVersion','policyVersion','orderVersion','pricePolicyRevision'])expect(customer).not.toHaveProperty(field);
+    expect(customer.lines[0]).not.toHaveProperty('orderItemId');expect(customer.lines[0]).not.toHaveProperty('variantId');expect(customer.quote).not.toHaveProperty('lines');
+    expect(stringify(customer)).not.toContain('Private');
+    await expect(access.customerRead(foreignUserId,id)).rejects.toMatchObject(code('INVOICE_DOCUMENT_NOT_FOUND'));
+    expect((await access.customerList(foreignUserId)).count).toBe(0);expect((await access.customerList(customerUserId)).items.some(row=>row.id===id)).toBe(true);
+    expect(await financialEvidence()).toBe(before);expect(await service.read(id)).toEqual(issued.document);
+  });
+  it('revoke blocks subsequent customer reads and restart replay cannot resurrect visibility',async()=>{
+    const data=await fixture();const {document}=await issue(data);const initialKey=key();const body={expectedVersion:0,isPublished:true,reason:'Initial private reason'};
+    await access.change(actorId,requestId,document.id,body,initialKey);
+    await access.change(actorId,requestId,document.id,{expectedVersion:1,isPublished:false,reason:'Withdraw customer access'},key());
+    const restarted=new InvoicePublicationService(prisma,audit);const replay=await restarted.change(actorId,requestId,document.id,body,initialKey);
+    expect(replay).toMatchObject({publication:{version:1,isPublished:true},replayed:true});
+    expect((await access.read(document.id)).publication).toMatchObject({version:2,isPublished:false});
+    await expect(restarted.customerRead(customerUserId,document.id)).rejects.toMatchObject(code('INVOICE_DOCUMENT_NOT_FOUND'));
+    expect((await restarted.customerList(customerUserId)).items.some(row=>row.id===document.id)).toBe(false);
+    await expect(restarted.change(actorId,requestId,document.id,{...body,reason:'Changed'},initialKey)).rejects.toMatchObject(code('IDEMPOTENCY_CONFLICT'));
+  });
+  it('duplicate and concurrent visibility commands preserve exactly one contiguous transition',async()=>{
+    const {document}=await issue(await fixture());const body={expectedVersion:0,isPublished:true,reason:'Approved publication'};const sharedKey=key();
+    const duplicate=await Promise.all([access.change(actorId,requestId,document.id,body,sharedKey),access.change(actorId,requestId,document.id,body,sharedKey)]);
+    expect(duplicate.filter(row=>row.replayed)).toHaveLength(1);expect(await prisma.invoicePublicationEvent.count({where:{documentId:document.id}})).toBe(1);
+    const results=await Promise.allSettled([access.change(actorId,requestId,document.id,{expectedVersion:1,isPublished:false,reason:'Revocation A'},key()),access.change(actorId,requestId,document.id,{expectedVersion:1,isPublished:false,reason:'Revocation B'},key())]);
+    expect(results.filter(row=>row.status==='fulfilled')).toHaveLength(1);expect(await prisma.invoicePublicationEvent.count({where:{documentId:document.id}})).toBe(2);
+    await expect(access.change(actorId,requestId,document.id,{expectedVersion:2,isPublished:false,reason:'No-op'},key())).rejects.toMatchObject(code('INVOICE_PUBLICATION_CONFLICT'));
+  });
+  it('inactive customers lose access without destroying history and cannot be newly published',async()=>{
+    const {document}=await issue(await fixture());await access.change(actorId,requestId,document.id,{expectedVersion:0,isPublished:true,reason:'Approved'},key());
+    const customer = await prisma.customer.findUniqueOrThrow({where:{id:customerId}});
+    await customers.replaceAddresses(customerId,{expectedVersion:customer.version,addresses:[],status:'INACTIVE'},{actorId,requestId,idempotencyKey:key()});
+    try {
+      await expect(access.customerRead(customerUserId,document.id)).rejects.toMatchObject(code('INVOICE_DOCUMENT_NOT_FOUND'));expect((await access.customerList(customerUserId)).count).toBe(0);
+      await access.change(actorId,requestId,document.id,{expectedVersion:1,isPublished:false,reason:'Customer suspended'},key());
+      await expect(access.change(actorId,requestId,document.id,{expectedVersion:2,isPublished:true,reason:'Not eligible'},key())).rejects.toMatchObject(code('INVOICE_PUBLICATION_CONFLICT'));
+    } finally { const customer = await prisma.customer.findUniqueOrThrow({where:{id:customerId}});await customers.replaceAddresses(customerId,{expectedVersion:customer.version,addresses:[],status:'ACTIVE'},{actorId,requestId,idempotencyKey:key()}); }
+    expect(await service.read(document.id)).toEqual(document);
+  });
+  it('audit failure rolls back publication, event and replay record without a false success',async()=>{
+    const {document}=await issue(await fixture());const fail=vi.spyOn(audit,'record').mockRejectedValueOnce(new Error('private destination evidence'));
+    await expect(access.change(actorId,requestId,document.id,{expectedVersion:0,isPublished:true,reason:'Private reason'},key())).rejects.toMatchObject(code('INVOICE_PUBLICATION_UNAVAILABLE'));fail.mockRestore();
+    expect((await access.read(document.id)).publication).toMatchObject({version:0,isPublished:false});expect(await prisma.invoicePublicationEvent.count({where:{documentId:document.id}})).toBe(0);
+    expect(await prisma.invoicePublicationCommand.count({where:{documentId:document.id}})).toBe(0);
+    expect(stringify(await prisma.auditLog.findMany({where:{action:{startsWith:'invoice.access.'}}}))).not.toContain('Private');
+  });
+  it('SQL forbids erasing evidence or changing visibility without its contiguous command/event',async()=>{
+    const {document}=await issue(await fixture());await access.change(actorId,requestId,document.id,{expectedVersion:0,isPublished:true,reason:'Approved'},key());
+    for(const query of [prisma.$executeRaw`DELETE FROM "InvoicePublication" WHERE "documentId"=${document.id}`,
+      prisma.$executeRaw`UPDATE "InvoicePublication" SET "version"=2,"isPublished"=false WHERE "documentId"=${document.id}`,
+      prisma.$executeRaw`UPDATE "InvoicePublicationEvent" SET "reason"='Rewrite' WHERE "documentId"=${document.id}`,
+      prisma.$executeRaw`DELETE FROM "InvoicePublicationCommand" WHERE "documentId"=${document.id}`])await expect(query).rejects.toBeDefined();
+    expect((await access.read(document.id)).publication).toMatchObject({version:1,isPublished:true});
+    expect((await access.read(document.id,0,1)).history).toHaveLength(1);
   });
 });
