@@ -158,6 +158,7 @@ export class CreditService {
       const account = await this.account(tx, customerId, input.expectedVersion);
       const receipt = await tx.creditReceipt.findFirst({ where: { id: receiptId, accountId: account.id }, include: { entries: { where: { kind: 'RECEIPT' }, include: { reversal: { select: { id: true } } } } } });
       if (!receipt) throw missing();
+      if (await tx.creditSaleReturn.count({ where: { documentId: { in: receipt.entries.map(entry => entry.documentId) }, refundDue: { gt: 0n } } })) throw conflict('CREDIT_RETURN_CONFLICT', 'Reconcile the customer refund liability before reversing this receipt.');
       if (receipt.entries.length === 0 || receipt.entries.some(entry => entry.reversal)) throw conflict('CREDIT_RECEIPT_REVERSED', 'The receipt is already reversed or has no allocation.');
       if (effectiveAt < receipt.effectiveAt) throw invalid('Reversal cannot precede its receipt.');
       await this.checkDebtBound(tx, account.id, receipt.amount);
@@ -178,6 +179,7 @@ export class CreditService {
     const amount = input.kind === 'CREDIT_NOTE' ? -unsigned : unsigned;
     return this.executeCommand(customerId, `adjust:${documentId}`, { ...input, reason, evidenceReference }, context, async tx => {
       const account = await this.account(tx, customerId, input.expectedVersion);
+      if (await tx.creditSaleReturn.count({ where: { documentId } })) throw conflict('CREDIT_RETURN_CONFLICT', 'Use return/refund compensation rather than adjusting a returned sale.');
       const balance = (await this.balances(tx, account.id, [documentId]))[0];
       if (!balance) throw missing();
       if (effectiveAt < balance.issuedAt) throw invalid('Correction cannot precede the debt document.');
@@ -203,13 +205,18 @@ export class CreditService {
       tx.receivableDocument.count({ where }),
     ]);
     const balances = await this.balances(tx, account.id, rows.map(row => row.id));
+    const returns = rows.length ? await tx.creditSaleReturn.groupBy({ by: ['documentId'], where: { documentId: { in: rows.map(row => row.id) } }, _sum: { refundDue: true, amount: true } }) : [];
     const now = Date.now();
     return { account: summary, documents: rows.map(row => {
       const balance = balances.find(item => item.id === row.id);
       if (!balance) throw conflict('CREDIT_RECONCILIATION_REQUIRED', 'Document ledger evidence is missing.');
-      const outstanding = BigInt(balance.outstanding); const principal = BigInt(balance.principal);
+      const outstanding = BigInt(balance.outstanding);
+      const returned = returns.find(item => item.documentId === row.id);
+      // Refund liabilities are separate from receivable movements. Report net
+      // sale principal from both immutable kinds of compensation evidence.
+      const principal = BigInt(balance.principal) - (returned?._sum.refundDue ?? 0n);
       return { id: row.id, kind: row.kind, orderId: row.orderId, originalAmount: money(row.amount), effectivePrincipal: money(principal), outstanding: money(outstanding),
-        status: outstanding === 0n ? 'PAID' : row.dueAt.getTime() < now ? 'OVERDUE' : outstanding < principal ? 'PARTIALLY_PAID' : 'UNPAID',
+        status: outstanding === 0n && returned?._sum.amount === row.amount ? 'CREDITED' : outstanding === 0n ? 'PAID' : row.dueAt.getTime() < now ? 'OVERDUE' : outstanding < principal ? 'PARTIALLY_PAID' : 'UNPAID',
         issuedAt: row.issuedAt.toISOString(), dueAt: row.dueAt.toISOString(), termsDays: row.termsDays };
     }), total, ...query };
   }

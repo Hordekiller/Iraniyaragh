@@ -23204,6 +23204,1275 @@
         ]
       }
     },
+    "/credit/admin/customers/{customerId}/orders/{orderId}/returns": {
+      "get": {
+        "operationId": "CreditReturnController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "orderId": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "CANCEL",
+                              "RETURN"
+                            ]
+                          },
+                          "amount": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "IRR"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "currency"
+                            ]
+                          },
+                          "debtCredit": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "IRR"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "currency"
+                            ]
+                          },
+                          "refundDue": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "IRR"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "currency"
+                            ]
+                          },
+                          "refunded": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "IRR"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "currency"
+                            ]
+                          },
+                          "refundRemaining": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "IRR"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "currency"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "lines": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "orderItemId": {
+                                  "type": "string"
+                                },
+                                "quantity": {
+                                  "type": "integer"
+                                },
+                                "unitPrice": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "IRR"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "orderItemId",
+                                "quantity",
+                                "unitPrice"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "orderId",
+                          "kind",
+                          "amount",
+                          "debtCredit",
+                          "refundDue",
+                          "refunded",
+                          "refundRemaining",
+                          "createdAt",
+                          "lines"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "credit"
+        ]
+      },
+      "post": {
+        "operationId": "CreditReturnController_receive",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "expectedOrderVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "evidenceReference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "lines": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "orderItemId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1000000
+                        },
+                        "warehouseId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "locationId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        }
+                      },
+                      "required": [
+                        "orderItemId",
+                        "quantity",
+                        "warehouseId",
+                        "locationId"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "expectedOrderVersion",
+                  "evidenceReference",
+                  "reason",
+                  "lines"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "openingRecorded",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "order": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "CREDIT_APPROVED",
+                            "CANCELLED",
+                            "RETURNED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "version"
+                      ]
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "type": "string"
+                    },
+                    "entryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "returnId": {
+                      "type": "string"
+                    },
+                    "payoutId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record physically received sellable goods against original sale lines; refunds remain liabilities",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/credit/admin/customers/{customerId}/orders/{orderId}/cancel": {
+      "post": {
+        "operationId": "CreditReturnController_cancel",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "expectedOrderVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "evidenceReference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "expectedOrderVersion",
+                  "evidenceReference",
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "openingRecorded",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "order": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "CREDIT_APPROVED",
+                            "CANCELLED",
+                            "RETURNED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "version"
+                      ]
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "type": "string"
+                    },
+                    "entryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "returnId": {
+                      "type": "string"
+                    },
+                    "payoutId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Cancel a pre-dispatch credit sale with atomic stock/debt compensation; no fake payout",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/credit/admin/customers/{customerId}/orders/{orderId}/returns/{returnId}/payouts": {
+      "post": {
+        "operationId": "CreditReturnController_payout",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,18})$",
+                    "description": "Canonical integer IRR, at most signed BIGINT. Never Toman or floating-point."
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "CASH",
+                      "BANK_TRANSFER"
+                    ]
+                  },
+                  "evidenceReference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "effectiveAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "amount",
+                  "method",
+                  "evidenceReference",
+                  "reason",
+                  "effectiveAt"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "customerId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "SUSPENDED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        },
+                        "creditLimit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "termsDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 365
+                        },
+                        "outstanding": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "availableCredit": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "overdue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "currency"
+                          ]
+                        },
+                        "openingRecorded": {
+                          "type": "boolean"
+                        },
+                        "overLimit": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "customerId",
+                        "status",
+                        "version",
+                        "creditLimit",
+                        "termsDays",
+                        "outstanding",
+                        "availableCredit",
+                        "overdue",
+                        "openingRecorded",
+                        "overLimit",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "order": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "CREDIT_APPROVED",
+                            "CANCELLED",
+                            "RETURNED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "version"
+                      ]
+                    },
+                    "documentId": {
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "type": "string"
+                    },
+                    "entryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "returnId": {
+                      "type": "string"
+                    },
+                    "payoutId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record an actual evidenced manual refund payout without a gateway Payment",
+        "tags": [
+          "credit"
+        ]
+      }
+    },
+    "/customers/me/credit/orders/{orderId}/returns": {
+      "get": {
+        "operationId": "CustomerCreditReturnController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "orderId": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "CANCEL",
+                                  "RETURN"
+                                ]
+                              },
+                              "amount": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ]
+                              },
+                              "debtCredit": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ]
+                              },
+                              "refundDue": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ]
+                              },
+                              "refunded": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ]
+                              },
+                              "refundRemaining": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "lines": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "orderItemId": {
+                                      "type": "string"
+                                    },
+                                    "quantity": {
+                                      "type": "integer"
+                                    },
+                                    "unitPrice": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string",
+                                          "pattern": "^-?(0|[1-9][0-9]{0,18})$"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "enum": [
+                                            "IRR"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "orderItemId",
+                                    "quantity",
+                                    "unitPrice"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "orderId",
+                              "kind",
+                              "amount",
+                              "debtCredit",
+                              "refundDue",
+                              "refunded",
+                              "refundRemaining",
+                              "createdAt",
+                              "lines"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "items"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "credit"
+        ]
+      }
+    },
     "/credit/admin/customers/{customerId}/orders/{orderId}/approve": {
       "post": {
         "operationId": "CreditSaleController_approve",
@@ -23417,7 +24686,9 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "CREDIT_APPROVED"
+                            "CREDIT_APPROVED",
+                            "CANCELLED",
+                            "RETURNED"
                           ]
                         },
                         "version": {
@@ -23443,6 +24714,12 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "returnId": {
+                      "type": "string"
+                    },
+                    "payoutId": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -23731,7 +25008,8 @@
                               "UNPAID",
                               "PARTIALLY_PAID",
                               "PAID",
-                              "OVERDUE"
+                              "OVERDUE",
+                              "CREDITED"
                             ]
                           },
                           "issuedAt": {
@@ -24159,7 +25437,9 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "CREDIT_APPROVED"
+                            "CREDIT_APPROVED",
+                            "CANCELLED",
+                            "RETURNED"
                           ]
                         },
                         "version": {
@@ -24185,6 +25465,12 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "returnId": {
+                      "type": "string"
+                    },
+                    "payoutId": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -24427,7 +25713,9 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "CREDIT_APPROVED"
+                            "CREDIT_APPROVED",
+                            "CANCELLED",
+                            "RETURNED"
                           ]
                         },
                         "version": {
@@ -24453,6 +25741,12 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "returnId": {
+                      "type": "string"
+                    },
+                    "payoutId": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -24724,7 +26018,9 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "CREDIT_APPROVED"
+                            "CREDIT_APPROVED",
+                            "CANCELLED",
+                            "RETURNED"
                           ]
                         },
                         "version": {
@@ -24750,6 +26046,12 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "returnId": {
+                      "type": "string"
+                    },
+                    "payoutId": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -24995,7 +26297,9 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "CREDIT_APPROVED"
+                            "CREDIT_APPROVED",
+                            "CANCELLED",
+                            "RETURNED"
                           ]
                         },
                         "version": {
@@ -25021,6 +26325,12 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "returnId": {
+                      "type": "string"
+                    },
+                    "payoutId": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -25280,7 +26590,9 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "CREDIT_APPROVED"
+                            "CREDIT_APPROVED",
+                            "CANCELLED",
+                            "RETURNED"
                           ]
                         },
                         "version": {
@@ -25306,6 +26618,12 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "returnId": {
+                      "type": "string"
+                    },
+                    "payoutId": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -25592,7 +26910,8 @@
                                   "UNPAID",
                                   "PARTIALLY_PAID",
                                   "PAID",
-                                  "OVERDUE"
+                                  "OVERDUE",
+                                  "CREDITED"
                                 ]
                               },
                               "issuedAt": {

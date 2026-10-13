@@ -12,6 +12,8 @@ export function creditError(error: unknown, command = true): string {
       CREDIT_ADJUSTMENT_CONFLICT: 'بستانکاری نمی‌تواند بیشتر از بدهی پرداخت‌نشده باشد.',
       CREDIT_RECEIPT_REVERSED: 'این دریافت قبلاً برگشت خورده است.',
       CREDIT_EVIDENCE_CONFLICT: 'این سند دریافت قبلاً ثبت شده است.',
+      CREDIT_RETURN_CONFLICT: 'سند برگشت، مقدار کالا، بدهی یا مبلغ قابل‌برگشت با وضعیت فعلی سازگار نیست؛ اسناد را بازخوانی و بررسی کنید.',
+      ORDER_VERSION_CONFLICT: 'سفارش تغییر کرده؛ آن را بازخوانی و بررسی کنید.',
       CREDIT_SALE_CONFLICT: 'فقط سفارش حضوری با رزرو معتبر و بدون شروع ارسال قابل تأیید نسیه است.',
       CREDIT_PAYMENT_CONFLICT: 'برای این سفارش تلاش پرداخت ثبت شده؛ امکان تبدیل به نسیه وجود ندارد.',
       CREDIT_ACCOUNT_INACTIVE: 'اعتبار یا حساب مشتری فعال نیست.',
@@ -35,4 +37,4 @@ export function parseCreditIrr(value: string, zero = false): string | null {
 export const creditRial = (amount: string) => `${new Intl.NumberFormat('fa-IR').format(BigInt(amount))} ریال`;
 export const creditDate = (value: string) => new Intl.DateTimeFormat('fa-IR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
 export const creditKindLabels = { SALE: 'فروش نسیه', OPENING_BALANCE: 'ماندهٔ اول دوره', RECEIPT: 'دریافت وجه', RECEIPT_REVERSAL: 'برگشت دریافت', DEBIT_ADJUSTMENT: 'اصلاح بدهکار', CREDIT_NOTE: 'اصلاح بستانکار' };
-export const receivableLabels = { UNPAID: 'پرداخت‌نشده', PARTIALLY_PAID: 'پرداخت جزئی', PAID: 'تسویه‌شده', OVERDUE: 'سررسید گذشته' };
+export const receivableLabels = { CREDITED: 'بسته‌شده با برگشت', UNPAID: 'پرداخت‌نشده', PARTIALLY_PAID: 'پرداخت جزئی', PAID: 'تسویه‌شده', OVERDUE: 'سررسید گذشته' };

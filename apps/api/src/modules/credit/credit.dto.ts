@@ -46,3 +46,21 @@ export class CreditSaleApprovalDto {
   @IsInt() @Min(0) @Max(2_147_483_647) expectedVersion!: number;
   @IsInt() @Min(0) @Max(2_147_483_647) expectedOrderVersion!: number;
 }
+
+export class CreditCancelDto extends CreditSaleApprovalDto {
+  @IsString() @MinLength(1) @MaxLength(128) evidenceReference!: string;
+  @IsString() @MinLength(1) @MaxLength(500) reason!: string;
+}
+export class CreditReturnLineDto {
+  @IsString() @MinLength(1) @MaxLength(128) orderItemId!: string;
+  @IsInt() @Min(1) @Max(1_000_000) quantity!: number;
+  @IsString() @MinLength(1) @MaxLength(128) warehouseId!: string;
+  @IsString() @MinLength(1) @MaxLength(128) locationId!: string;
+}
+export class CreditReturnDto extends CreditCancelDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => CreditReturnLineDto) lines!: CreditReturnLineDto[];
+}
+export class CreditRefundPayoutDto extends CreditReversalDto {
+  @IsString() @Matches(/^[1-9][0-9]{0,18}$/u) amount!: string;
+  @IsIn(['CASH', 'BANK_TRANSFER']) method!: 'CASH' | 'BANK_TRANSFER';
+}
