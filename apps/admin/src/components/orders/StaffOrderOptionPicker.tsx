@@ -17,6 +17,7 @@ export type StaffOrderOptionPickerProps = {
   disabled?: boolean;
   required?: boolean;
   size?: 'small' | 'medium';
+  searchOptions?: typeof searchStaffOrderOptions;
 };
 
 /**
@@ -35,6 +36,7 @@ export function StaffOrderOptionPicker({
   disabled,
   required,
   size,
+  searchOptions = searchStaffOrderOptions,
 }: StaffOrderOptionPickerProps) {
   const [search, setSearch] = useState('');
   const [options, setOptions] = useState<StaffOrderOption[]>([]);
@@ -49,7 +51,7 @@ export function StaffOrderOptionPicker({
     setOptions([]);
     const timer = setTimeout(() => {
       setLoading(true);
-      searchStaffOrderOptions({ kind, search, signal: controller.signal })
+      searchOptions({ kind, search, signal: controller.signal })
         .then((data) => setOptions(data.items))
         .catch((error) => {
           if (error instanceof ApiAbortError) return;
@@ -64,10 +66,11 @@ export function StaffOrderOptionPicker({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [kind, search]);
+  }, [kind, search, searchOptions]);
 
   return (
     <Autocomplete
+      disabled={disabled}
       options={options}
       value={value}
       loading={loading}

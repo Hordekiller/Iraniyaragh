@@ -71,6 +71,6 @@ import { ShippingSettingsService } from './shipping-settings.service';
       useExisting: ConfiguredShippingQuoteAdapter,
     },
   ],
-  exports: [GuestCartService],
+  exports: [GuestCartService, StaffOrderService, ConfiguredShippingQuoteAdapter],
 })
 export class OrdersModule {}

@@ -1,5 +1,6 @@
 'use client';
 
+import { InvoiceFromOrder } from '@/components/invoices/InvoiceFromOrder';
 import { CreditSaleApproval } from '@/components/credit/CreditSaleApproval';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -278,6 +279,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
       </Stack>
 
       <Stack spacing={3}>
+        <InvoiceFromOrder orderId={order.id} version={order.version} />
         {order.creditSaleEligible ? <CreditSaleApproval key={order.id} customerId={order.customer.id} orderId={order.id}
           orderVersion={order.version} orderTotal={order.totals.total.amount} onApproved={async () => {
             const [updated, updatedPicks] = await Promise.all([ordersApi.getOrder(orderId), ordersApi.getPicks(orderId)]);

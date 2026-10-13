@@ -245,6 +245,8 @@ model User {
   creditCommands              CreditCommandRecord[]
   invoicePolicies             InvoicePolicyRevision[]
   invoicePolicyCommands       InvoicePolicyCommand[]
+  invoiceDraftRevisions       InvoiceDraftRevision[]
+  invoiceDraftCommands        InvoiceDraftCommand[]
   sessions                    Session[]
   otpCodes                    OtpCode[]
   loginAttempts               LoginAttempt[]
@@ -595,6 +597,7 @@ model ProductVariant {
   movements            InventoryMovement[]
   reservations         StockReservation[]
   orderItems           OrderItem[]
+  invoiceDraftLines    InvoiceDraftLine[]
   transferItems        StockTransferItem[]
   purchaseItems        PurchaseOrderItem[]
   stocktakeItems       StocktakeItem[]
@@ -1065,6 +1068,7 @@ model Customer {
   deactivatedAt              DateTime?
   version                    Int                         @default(0)
   creditAccount              CreditAccount?
+  invoiceDrafts              InvoiceDraft[]
   orders                     Order[]
   addresses                  CustomerAddress[]
   notes                      CustomerNote[]
@@ -1218,6 +1222,7 @@ model Order {
   checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
   commandIdempotencyRecords  OrderCommandIdempotencyRecord[]
   receivableDocument         ReceivableDocument?
+  invoiceDrafts              InvoiceDraft[]
   staffCommandRecords        StaffOrderCommandRecord[]
   version                    Int                             @default(0)
   staffNote                  String?                         @db.VarChar(500)
@@ -1225,6 +1230,7 @@ model Order {
   updatedAt                  DateTime                        @updatedAt
 
   @@index([customerId, createdAt])
+  @@unique([id, customerId])
   @@index([status, createdAt])
   @@index([createdAt])
 }
@@ -1793,6 +1799,7 @@ model InvoicePolicyRevision {
   createdAt        DateTime @default(now())
   actor            User @relation(fields: [actorId], references: [id], onDelete: Restrict)
   commands         InvoicePolicyCommand[]
+  drafts           InvoiceDraft[]
 }
 
 model InvoicePolicyCommand {
@@ -1806,4 +1813,98 @@ model InvoicePolicyCommand {
   revision     InvoicePolicyRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict)
 
   @@unique([actorId, keyHash])
+}
+
+enum InvoiceDraftState {
+  DRAFT
+  CANCELLED
+}
+
+enum InvoiceDraftSource {
+  CATALOG
+  ORDER
+}
+
+model InvoiceDraft {
+  id                    String @id @default(cuid())
+  version               Int @default(0)
+  state                 InvoiceDraftState @default(DRAFT)
+  source                InvoiceDraftSource
+  customerId            String
+  buyerLabel            String @db.VarChar(250)
+  sourceOrderId         String?
+  sourceOrderVersion    Int?
+  sourceOrderHash       String? @db.Char(64)
+  addressSnapshot       Json
+  note                  String? @db.VarChar(500)
+  globalDiscount        BigInt @default(0)
+  shippingCode          String @db.VarChar(64)
+  shippingTitle         String @db.VarChar(120)
+  shippingAmount        BigInt
+  shippingPolicyRevision String @db.VarChar(100)
+  pricePolicyRevision   String @db.VarChar(100)
+  quoteExpiresAt        DateTime?
+  policyRevisionId      String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  customer              Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  sourceOrder           Order? @relation(fields: [sourceOrderId, customerId], references: [id, customerId], onDelete: Restrict, onUpdate: NoAction)
+  policyRevision        InvoicePolicyRevision? @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
+  lines                 InvoiceDraftLine[]
+  revisions             InvoiceDraftRevision[]
+  commands              InvoiceDraftCommand[]
+
+  @@index([createdAt, id])
+  @@index([customerId, createdAt])
+  @@index([sourceOrderId])
+}
+
+model InvoiceDraftLine {
+  id          String @id @default(cuid())
+  draftId     String
+  variantId   String
+  ordinal     Int
+  sku         String @db.VarChar(64)
+  title       String @db.VarChar(250)
+  quantity    Int
+  unitPrice   BigInt
+  discount    BigInt @default(0)
+  draft       InvoiceDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@unique([draftId, ordinal])
+  @@unique([draftId, variantId])
+}
+
+model InvoiceDraftRevision {
+  id         String @id @default(cuid())
+  draftId    String
+  version    Int
+  action     String @db.VarChar(16)
+  snapshot   Json
+  reason     String? @db.VarChar(500)
+  actorId    String
+  requestId  String @db.VarChar(100)
+  createdAt  DateTime @default(now())
+  draft      InvoiceDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  actor      User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  commands   InvoiceDraftCommand[]
+
+  @@unique([draftId, version])
+}
+
+model InvoiceDraftCommand {
+  id               String @id @default(cuid())
+  actorId          String
+  scope            String @db.VarChar(100)
+  keyHash          String @db.Char(64)
+  payloadHash      String @db.Char(64)
+  draftId          String
+  committedVersion Int
+  createdAt        DateTime @default(now())
+  draft            InvoiceDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  actor            User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  committedRevision InvoiceDraftRevision @relation(fields: [draftId, committedVersion], references: [draftId, version], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([actorId, scope, keyHash])
 }
