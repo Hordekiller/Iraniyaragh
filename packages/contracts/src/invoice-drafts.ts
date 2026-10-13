@@ -1,0 +1,20 @@
+import type { ApiSuccess, CheckoutAddress, InvoiceQuote, Money } from './index';
+export type InvoiceDraftState = 'DRAFT' | 'CANCELLED';
+export type InvoiceDraftLineInput = { variantId: string; quantity: number; discount: string };
+export type InvoiceDraftCreate = { customerId: string; address: CheckoutAddress; lines: InvoiceDraftLineInput[]; globalDiscount: string; shippingMethodCode: string; note: string | null };
+export type InvoiceDraftEdit = Omit<InvoiceDraftCreate, 'customerId'> & { expectedVersion: number };
+export type InvoiceDraftFromOrder = { expectedOrderVersion: number; note: string | null };
+export type InvoiceDraft = {
+  id: string; version: number; state: InvoiceDraftState; source: 'CATALOG' | 'ORDER';
+  customerId: string; buyerLabel: string; sourceOrderId: string | null; sourceOrderVersion: number | null;
+  sourceTermsMatch: boolean | null; address: CheckoutAddress; note: string | null;
+  lines: { variantId: string; sku: string; title: string; quantity: number; unitPrice: Money; discount: Money; subtotal: Money }[];
+  globalDiscount: Money; shipping: { code: string; title: string; amount: Money; policyRevision: string };
+  pricePolicyRevision: string; quoteExpiresAt: string | null; policyVersion: number | null;
+  quote: InvoiceQuote | null; quotationStatus: 'CURRENT' | 'POLICY_REQUIRED' | 'POLICY_CHANGED' | 'PRICE_EXPIRED' | 'SOURCE_CHANGED';
+  createdAt: string; updatedAt: string;
+};
+export type InvoiceDraftResult = ApiSuccess<{ draft: InvoiceDraft; committedVersion: number; replayed: boolean }>;
+export type InvoiceDraftResponse = ApiSuccess<{ draft: InvoiceDraft }>;
+export type InvoiceDraftListResponse = ApiSuccess<{ items: Pick<InvoiceDraft, 'id' | 'version' | 'state' | 'source' | 'customerId' | 'buyerLabel' | 'sourceOrderId' | 'createdAt' | 'updatedAt'>[]; count: number; offset: number; limit: number }>;
+export type InvoiceDraftHistoryResponse = ApiSuccess<{ items: { version: number; action: 'CREATED' | 'EDITED' | 'REQUOTED' | 'CANCELLED'; actorId: string; createdAt: string }[]; count: number; offset: number; limit: number }>;

@@ -243,6 +243,53 @@ test('staff records a server-priced pending walk-in order then explicitly approv
   expect(orderHref).toMatch(/^\/orders\/[^/]+$/);
   });
 
+  await test.step('create and edit independent invoices without rewriting the source order', async () => {
+    await page.goto('/invoices');
+    await expect(page.getByRole('button', { name: 'ایجاد پیش‌فاکتور' })).toBeEnabled();
+    for (const [label, query] of [['مشتری', canonicalMobile], ['کالای 1', sku]]) {
+      const lookup = page.waitForResponse(response => response.url().includes('/invoices/admin/drafts/options') && new URL(response.url()).searchParams.get('search') === query);
+      await page.getByRole('combobox', { name: new RegExp(label) }).fill(query);
+      expect((await lookup).status()).toBe(200);
+      const options = page.getByRole('listbox').getByRole('option');
+      await expect(options).toHaveCount(1); await tap(options.first());
+    }
+    for (const [label, value] of [['کد استان', 'THR'], ['شهر', 'تهران'], ['نشانی صورتحساب', 'نشانی صورتحساب آزمون'], ['کد پستی', '1234567890'], ['گیرنده', 'نگار سفارش'], ['تلفن گیرنده', mobile]])
+      await page.getByRole('textbox', { name: new RegExp(`^${label}`) }).fill(value);
+    await page.getByRole('combobox', { name: /روش تحویل/ }).dispatchEvent('mousedown');
+    await tap(page.getByRole('option', { name: 'تحویل حضوری' }));
+    const create = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/invoices/admin/drafts' && response.request().method() === 'POST');
+    await tap(page.getByRole('button', { name: 'ایجاد پیش‌فاکتور' }));
+    expect((await create).status()).toBe(201);
+    await expect(page).toHaveURL(/\/invoices\/drafts\/[^/]+$/);
+    await expect(page.getByRole('textbox', { name: /تعداد 1/ })).toHaveValue('1');
+    await page.getByRole('textbox', { name: /تعداد 1/ }).fill('3');
+    await page.getByRole('textbox', { name: 'توضیحات فاکتور' }).fill('پیش‌فاکتور مستقل آزمون');
+    await tap(page.getByRole('button', { name: 'ثبت ویرایش پیش‌فاکتور' }));
+    await expect(page.getByText('نسخهٔ 1 روی سرور ثبت شد.', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('textbox', { name: /تعداد 1/ })).toHaveValue('3');
+    await expect(page.getByRole('textbox', { name: 'توضیحات فاکتور' })).toHaveValue('پیش‌فاکتور مستقل آزمون');
+    await page.goto(orderHref);
+    await tap(page.getByRole('button', { name: 'ساخت پیش‌فاکتور از سفارش' }));
+    await expect(page).toHaveURL(/\/invoices\/drafts\/[^/]+$/);
+    await expect(page.getByRole('textbox', { name: /تعداد 1/ })).toHaveValue('2');
+    await page.getByRole('textbox', { name: /تعداد 1/ }).fill('1');
+    await page.getByRole('textbox', { name: 'توضیحات فاکتور' }).fill('ویرایش صورتحساب بدون تغییر سفارش');
+    await tap(page.getByRole('button', { name: 'ثبت ویرایش پیش‌فاکتور' }));
+    await expect(page.getByText('نسخهٔ 1 روی سرور ثبت شد.', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('textbox', { name: /تعداد 1/ })).toHaveValue('1');
+    await page.getByRole('textbox', { name: 'دلیل لغو پیش‌نویس' }).fill('لغو پیش‌نویس آزمون');
+    await tap(page.getByRole('button', { name: 'لغو پیش‌نویس' }));
+    await expect(page.getByText('وضعیت: لغوشده — نسخهٔ 2', { exact: true })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /تعداد 1/ })).toBeDisabled();
+    await page.goto(orderHref);
+    await expect(page.getByText('بدون تلاش پرداخت', { exact: true })).toBeVisible();
+    await expect(page.locator('.MuiChip-root').filter({ hasText: /^در انتظار پرداخت$/ })).toBeVisible();
+    const items = page.getByRole('table', { name: /اقلام سفارش/ });
+    await expect(items.getByRole('row', { name: new RegExp(sku) })).toContainText(rial.format(2));
+  });
+
   await test.step('the stock is held, not silently spent', async () => {
 
   // The reservation is real: the ledger no longer shows all ten units free.

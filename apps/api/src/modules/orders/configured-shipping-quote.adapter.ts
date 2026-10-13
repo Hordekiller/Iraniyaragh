@@ -5,6 +5,7 @@ import type {
 } from '@iranyaragh/contracts';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { STAFF_PICKUP_POLICY } from './staff-pickup-policy';
 import { buildCartView, cartInclude } from './cart-view';
 import {
   checkoutAddressHash,
@@ -21,6 +22,15 @@ const SHIPPING_QUOTE_TTL_MS = 15 * 60 * 1000;
 @Injectable()
 export class ConfiguredShippingQuoteAdapter implements ShippingQuotePort {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+
+  /** Cart-independent quotation only. Reuses current approved fixed tariffs; creates no cart/checkout quote. */
+  async quoteForDraft(tx: Prisma.TransactionClient, code: string, inputAddress: CheckoutAddress) {
+    normalizeCheckoutAddress(inputAddress);
+    if (code === STAFF_PICKUP_POLICY.code) return { code, title: STAFF_PICKUP_POLICY.title, amount: STAFF_PICKUP_POLICY.amount, policyRevision: STAFF_PICKUP_POLICY.revision };
+    const method = await tx.shippingMethod.findUnique({ where: { code } });
+    if (!method?.isActive) throw new ConflictException({ code: 'SHIPPING_UNAVAILABLE', message: 'An active approved shipping tariff is required.' });
+    return { code: method.code, title: method.title, amount: method.amount, policyRevision: method.policyRevision };
+  }
 
   async previewForUser(
     userId: string,
