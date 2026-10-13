@@ -25656,6 +25656,645 @@
         ]
       }
     },
+    "/settings/admin/invoice-policy": {
+      "get": {
+        "operationId": "InvoicePolicyController_current",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "policy": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "sellerName": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200,
+                              "description": "Bounded plain text without markup/control characters."
+                            },
+                            "sellerAddress": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000,
+                              "description": "Bounded plain text without markup/control characters."
+                            },
+                            "sellerContact": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200,
+                              "description": "Bounded plain text without markup/control characters."
+                            },
+                            "taxTreatment": {
+                              "type": "string",
+                              "enum": [
+                                "EXCLUSIVE",
+                                "INCLUSIVE",
+                                "EXEMPT"
+                              ]
+                            },
+                            "taxRateBps": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000,
+                              "description": "Integer basis points; 100 basis points = 1 percent. Operator-approved, no inferred default."
+                            },
+                            "exemptionReason": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500,
+                              "description": "Required only for EXEMPT; exempt rate must be zero.",
+                              "nullable": true
+                            },
+                            "discountCapBps": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000,
+                              "description": "Integer basis points; 100 basis points = 1 percent. Operator-approved, no inferred default."
+                            },
+                            "shippingTaxable": {
+                              "type": "boolean"
+                            },
+                            "isActive": {
+                              "type": "boolean"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "sellerName",
+                            "sellerAddress",
+                            "sellerContact",
+                            "taxTreatment",
+                            "taxRateBps",
+                            "exemptionReason",
+                            "discountCapBps",
+                            "shippingTaxable",
+                            "isActive",
+                            "id",
+                            "version",
+                            "createdAt"
+                          ],
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "policy"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_POLICY_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read the current store invoice policy or null; no default seller or tax policy",
+        "tags": [
+          "invoice-policy"
+        ]
+      },
+      "put": {
+        "operationId": "InvoicePolicyController_update",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "sellerName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Bounded plain text without markup/control characters."
+                  },
+                  "sellerAddress": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000,
+                    "description": "Bounded plain text without markup/control characters."
+                  },
+                  "sellerContact": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Bounded plain text without markup/control characters."
+                  },
+                  "taxTreatment": {
+                    "type": "string",
+                    "enum": [
+                      "EXCLUSIVE",
+                      "INCLUSIVE",
+                      "EXEMPT"
+                    ]
+                  },
+                  "taxRateBps": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000,
+                    "description": "Integer basis points; 100 basis points = 1 percent. Operator-approved, no inferred default."
+                  },
+                  "exemptionReason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "Required only for EXEMPT; exempt rate must be zero.",
+                    "nullable": true
+                  },
+                  "discountCapBps": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000,
+                    "description": "Integer basis points; 100 basis points = 1 percent. Operator-approved, no inferred default."
+                  },
+                  "shippingTaxable": {
+                    "type": "boolean"
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 2147483646,
+                    "description": "Null only before the first policy; use latest version otherwise."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "Bounded plain text without markup/control characters."
+                  }
+                },
+                "required": [
+                  "sellerName",
+                  "sellerAddress",
+                  "sellerContact",
+                  "taxTreatment",
+                  "taxRateBps",
+                  "exemptionReason",
+                  "discountCapBps",
+                  "shippingTaxable",
+                  "isActive",
+                  "expectedVersion",
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "policy": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "sellerName": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200,
+                              "description": "Bounded plain text without markup/control characters."
+                            },
+                            "sellerAddress": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000,
+                              "description": "Bounded plain text without markup/control characters."
+                            },
+                            "sellerContact": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200,
+                              "description": "Bounded plain text without markup/control characters."
+                            },
+                            "taxTreatment": {
+                              "type": "string",
+                              "enum": [
+                                "EXCLUSIVE",
+                                "INCLUSIVE",
+                                "EXEMPT"
+                              ]
+                            },
+                            "taxRateBps": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000,
+                              "description": "Integer basis points; 100 basis points = 1 percent. Operator-approved, no inferred default."
+                            },
+                            "exemptionReason": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500,
+                              "description": "Required only for EXEMPT; exempt rate must be zero.",
+                              "nullable": true
+                            },
+                            "discountCapBps": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 10000,
+                              "description": "Integer basis points; 100 basis points = 1 percent. Operator-approved, no inferred default."
+                            },
+                            "shippingTaxable": {
+                              "type": "boolean"
+                            },
+                            "isActive": {
+                              "type": "boolean"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "sellerName",
+                            "sellerAddress",
+                            "sellerContact",
+                            "taxTreatment",
+                            "taxRateBps",
+                            "exemptionReason",
+                            "discountCapBps",
+                            "shippingTaxable",
+                            "isActive",
+                            "id",
+                            "version",
+                            "createdAt"
+                          ],
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "policy"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_ERROR"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_REAUTHENTICATION_REQUIRED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "STALE_VERSION",
+                        "IDEMPOTENCY_CONFLICT",
+                        "CONFLICT"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVOICE_POLICY_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Append an approved immutable store invoice policy revision; never alters historical orders/payments",
+        "tags": [
+          "invoice-policy"
+        ]
+      }
+    },
     "/notifications/admin/sms-settings": {
       "get": {
         "operationId": "NotificationsAdminController_getSettings",

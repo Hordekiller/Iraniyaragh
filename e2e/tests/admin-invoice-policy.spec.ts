@@ -1,0 +1,36 @@
+import { expect, test } from '@playwright/test';
+import { signInDiAsAdmin, tap } from './helpers';
+
+test('operator versions store invoice settings through the real protected API and reloads persisted values', async ({ page }) => {
+  await signInDiAsAdmin(page);
+  await page.goto('/settings/invoices');
+  await expect(page.getByRole('heading', { name: 'تنظیمات فاکتور فروشگاهی' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' })).toBeEnabled();
+  const suffix = `${test.info().project.name}-${Date.now()}`;
+  await page.getByRole('textbox', { name: /نام فروشنده \/ فروشگاه/ }).fill(`فروشندهٔ آزمون ایزوله ${suffix}`);
+  await page.getByRole('textbox', { name: /نشانی عمومی فروشنده/ }).fill('نشانی عمومی آزمون ایزوله');
+  await page.getByRole('textbox', { name: /اطلاعات تماس عمومی فروشنده/ }).fill('invoice.example.test');
+  await page.getByRole('combobox', { name: /مبنای مالیات مصوب/ }).dispatchEvent('mousedown');
+  await tap(page.getByRole('option', { name: 'مالیات افزوده به مبلغ پس از تخفیف' }));
+  await page.getByRole('textbox', { name: /نرخ مالیات \(واحد پایه\)/ }).fill('۱۰۰۰');
+  await page.getByRole('textbox', { name: /سقف تخفیف \(واحد پایه\)/ }).fill('۲۰۰۰');
+  await page.getByRole('combobox', { name: /مالیات هزینهٔ ارسال/ }).dispatchEvent('mousedown');
+  await tap(page.getByRole('option', { name: 'بدون مالیات ارسال' }));
+  await expect(page.getByRole('switch', { name: 'فعال برای صدور فاکتور پس از تأیید سیاست' })).not.toBeChecked();
+  await page.getByRole('textbox', { name: /دلیل ثبت نسخهٔ جدید/ }).fill('تصویب تنظیمات در آزمون مرورگر ایزوله');
+  const save = page.waitForResponse(response => response.url().endsWith('/api/v1/settings/admin/invoice-policy') && response.request().method() === 'PUT');
+  await tap(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' }));
+  expect((await save).status()).toBe(200);
+  await expect(page.getByText(/نسخهٔ \d+ در سرور ثبت شد/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('textbox', { name: /نام فروشنده \/ فروشگاه/ })).toHaveValue(`فروشندهٔ آزمون ایزوله ${suffix}`);
+  await expect(page.getByRole('textbox', { name: /نرخ مالیات \(واحد پایه\)/ })).toHaveValue('1000');
+  await expect(page.getByRole('textbox', { name: /سقف تخفیف \(واحد پایه\)/ })).toHaveValue('2000');
+  await expect(page.getByRole('region', { name: 'تنظیمات فعلی سرور' })).toContainText('غیرفعال');
+  await page.getByRole('textbox', { name: /نرخ مالیات \(واحد پایه\)/ }).fill('1200');
+  await page.getByRole('textbox', { name: /دلیل ثبت نسخهٔ جدید/ }).fill('اصلاح سیاست در آزمون مرورگر ایزوله');
+  await tap(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' }));
+  await expect(page.getByText(/نسخهٔ \d+ در سرور ثبت شد/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('textbox', { name: /نرخ مالیات \(واحد پایه\)/ })).toHaveValue('1200');
+});

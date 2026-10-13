@@ -32,7 +32,7 @@ describe.sequential(
   "Admin SMS template configuration (isolated database)",
   () => {
     const prisma = new PrismaService();
-    const actorId = `sms-template-test-${randomUUID()}`;
+    const actorId = `sms-template-test-201-${randomUUID()}`;
     const settings = (change: Record<string, unknown> = {}) =>
       new SmsTemplateSettingsService(
         prisma,
@@ -258,13 +258,21 @@ describe.sequential(
         "request-safe",
         request,
       );
-      const evidence = JSON.stringify(
-        await prisma.auditLog.findMany({ where: { actorId } }),
-      );
+      const rows = await prisma.auditLog.findMany({ where: { actorId } });
+      const evidence = JSON.stringify(rows);
       expect(evidence).toContain("otpTemplateId");
       expect(evidence).not.toContain(privateKey);
       expect(evidence).not.toContain(request.idempotencyKey);
-      expect(evidence).not.toContain("201");
+      // Numeric template values must not appear in the audit payload. An actor
+      // identifier/UUID/date containing those digits is legitimate, not leakage.
+      expect(rows).toHaveLength(1);
+      expect(rows[0].before).toBeNull();
+      expect(rows[0].after).toBeNull();
+      expect(rows[0].metadata).toEqual({
+        version: 1,
+        configuredFields: ["otpTemplateId", "orderPaidTemplateId", "shipmentDispatchedTemplateId", "shipmentDeliveredTemplateId"],
+      });
+      expect(rows[0].actorId).toContain("201");
     });
 
     it("controlled operator sends resolve the saved OTP template rather than a stale environment ID", async () => {
