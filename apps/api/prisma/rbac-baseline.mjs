@@ -49,6 +49,8 @@ export const CANONICAL_PERMISSIONS = [
   ["payments.read", "Read payments", "payments"],
   ["payments.reconcile", "Recheck unconfirmed payments", "payments"],
   ["payments.refund", "Refund payments", "payments"],
+  ["invoices.read", "Read invoices and independent drafts", "invoices"],
+  ["invoices.manage", "Manage independent invoice drafts", "invoices"],
   ["credit.approve", "Approve staff credit sales", "credit"],
   ["credit.read", "Read customer receivables", "credit"],
   ["credit.manage", "Manage credit account policies", "credit"],

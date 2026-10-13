@@ -24,6 +24,7 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { maskIdentifier, maskText } from '../../common/masking';
 import { normalizeCheckoutAddress } from './checkout-address';
 import { adminListSelect, adminOrderSummary } from './order-read.service';
+import { STAFF_PICKUP_POLICY } from './staff-pickup-policy';
 
 const STAFF_ORDER_SCOPE = 'order.staff.create:/api/v1/orders/admin';
 const RESERVATION_TTL_MS = 15 * 60 * 1000;
@@ -31,7 +32,6 @@ const MAX_LINES = 50;
 const OPTIONS_LIMIT = 20;
 const MAX_LINE_QUANTITY = 1000;
 const PRICE_POLICY_REVISION = 'catalog-sale-price-v1';
-const SHIPPING_POLICY_REVISION = 'staff-pickup-v1';
 
 class StaffOrderContentionError extends Error {}
 
@@ -135,7 +135,7 @@ export class StaffOrderService {
               });
             }
 
-            const lines = await this.priceLines(tx, payload.lines);
+            const lines = await this.quoteLinesIn(tx, payload.lines);
             const subtotal = lines.reduce(
               (total, line) => total + line.lineTotal,
               0n,
@@ -151,7 +151,7 @@ export class StaffOrderService {
             // Counter and phone orders are handed over at the counter, so
             // shipping is free and recorded against an explicit pickup policy
             // revision rather than a configured courier quote.
-            const shipping = 0n;
+            const shipping = STAFF_PICKUP_POLICY.amount;
             const reservationExpiresAt = new Date(
               now.getTime() + RESERVATION_TTL_MS,
             );
@@ -167,9 +167,9 @@ export class StaffOrderService {
                 grandTotal,
                 addressSnapshot: payload.address as unknown as Prisma.InputJsonObject,
                 staffNote: payload.note ?? null,
-                shippingMethod: 'PICKUP',
-                shippingMethodTitle: 'تحویل حضوری',
-                shippingPolicyRevision: SHIPPING_POLICY_REVISION,
+                shippingMethod: STAFF_PICKUP_POLICY.code,
+                shippingMethodTitle: STAFF_PICKUP_POLICY.title,
+                shippingPolicyRevision: STAFF_PICKUP_POLICY.revision,
                 pricePolicyRevision: PRICE_POLICY_REVISION,
                 reservationExpiresAt,
                 items: {
@@ -483,7 +483,8 @@ export class StaffOrderService {
     };
   }
 
-  private async priceLines(
+  /** Internal trusted caller must validate bounded unique SKU quantities first. */
+  async quoteLinesIn(
     tx: Prisma.TransactionClient,
     requested: StaffOrderLineInput[],
   ): Promise<ResolvedLine[]> {

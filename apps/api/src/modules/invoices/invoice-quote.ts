@@ -3,7 +3,7 @@ import { invoiceInvalid, invoicePolicyFields } from './invoice-policy.validation
 
 const maximum = 9223372036854775807n;
 const denominator = 10000n;
-function amount(value: string): bigint {
+export function invoiceAmount(value: string): bigint {
   if (typeof value !== 'string' || !/^(0|[1-9][0-9]{0,18})$/u.test(value)) throw invoiceInvalid('Canonical integer IRR is required.');
   return bounded(BigInt(value));
 }
@@ -29,14 +29,14 @@ export function quoteInvoice(policyInput: InvoicePolicyFields, input: {
     if (typeof line.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/u.test(line.id) || ids.has(line.id) ||
       !Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 1000000) throw invoiceInvalid('Unique line IDs and bounded positive quantities are required.');
     ids.add(line.id);
-    const subtotal = bounded(amount(line.unitPrice) * BigInt(line.quantity));
-    const discount = amount(line.discount);
+    const subtotal = bounded(invoiceAmount(line.unitPrice) * BigInt(line.quantity));
+    const discount = invoiceAmount(line.discount);
     if (discount > subtotal) throw invoiceInvalid('A line discount cannot exceed its subtotal.');
     return { id: line.id, subtotal, discount, remaining: subtotal - discount };
   });
   const subtotal = sum(prepared.map(line => line.subtotal));
   const remaining = sum(prepared.map(line => line.remaining));
-  const globalDiscount = amount(input.globalDiscount);
+  const globalDiscount = invoiceAmount(input.globalDiscount);
   const totalDiscount = sum([...prepared.map(line => line.discount), globalDiscount]);
   if (globalDiscount > remaining || totalDiscount * denominator > subtotal * BigInt(policy.discountCapBps)) throw invoiceInvalid('Discount exceeds the remaining amount or configured cap.');
   const allocations = prepared.map((line, index) => ({ index, value: remaining ? globalDiscount * line.remaining / remaining : 0n,
@@ -63,7 +63,7 @@ export function quoteInvoice(policyInput: InvoicePolicyFields, input: {
     const parts = taxComponents(line.subtotal - discount, true);
     return { id: line.id, subtotal: money(line.subtotal), discount: money(discount), netAmount: money(parts.base), tax: money(parts.tax), total: money(parts.total) };
   });
-  const shipping = amount(input.shipping);
+  const shipping = invoiceAmount(input.shipping);
   const shippingParts = taxComponents(shipping, policy.shippingTaxable);
   return { lines, subtotal: money(subtotal), discount: money(totalDiscount), shipping: money(shipping),
     netAmount: money(sum([...lines.map(line => BigInt(line.netAmount.amount)), shippingParts.base])),
