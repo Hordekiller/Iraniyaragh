@@ -1,5 +1,5 @@
 import type { ApiSuccess, CheckoutAddress, InvoiceQuote, Money } from './index';
-export type InvoiceDraftState = 'DRAFT' | 'CANCELLED';
+export type InvoiceDraftState = 'DRAFT' | 'CANCELLED' | 'ISSUED';
 export type InvoiceDraftLineInput = { variantId: string; quantity: number; discount: string };
 export type InvoiceDraftCreate = { customerId: string; address: CheckoutAddress; lines: InvoiceDraftLineInput[]; globalDiscount: string; shippingMethodCode: string; note: string | null };
 export type InvoiceDraftEdit = Omit<InvoiceDraftCreate, 'customerId'> & { expectedVersion: number };
@@ -17,4 +17,4 @@ export type InvoiceDraft = {
 export type InvoiceDraftResult = ApiSuccess<{ draft: InvoiceDraft; committedVersion: number; replayed: boolean }>;
 export type InvoiceDraftResponse = ApiSuccess<{ draft: InvoiceDraft }>;
 export type InvoiceDraftListResponse = ApiSuccess<{ items: Pick<InvoiceDraft, 'id' | 'version' | 'state' | 'source' | 'customerId' | 'buyerLabel' | 'sourceOrderId' | 'createdAt' | 'updatedAt'>[]; count: number; offset: number; limit: number }>;
-export type InvoiceDraftHistoryResponse = ApiSuccess<{ items: { version: number; action: 'CREATED' | 'EDITED' | 'REQUOTED' | 'CANCELLED'; actorId: string; createdAt: string }[]; count: number; offset: number; limit: number }>;
+export type InvoiceDraftHistoryResponse = ApiSuccess<{ items: { version: number; action: 'CREATED' | 'EDITED' | 'REQUOTED' | 'CANCELLED' | 'ISSUED'; actorId: string; createdAt: string }[]; count: number; offset: number; limit: number }>;

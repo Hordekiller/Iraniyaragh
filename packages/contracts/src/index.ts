@@ -32,3 +32,5 @@ export * from './media';
 export * from './credit';
 export * from './invoice-policy';
 export * from './invoice-drafts';
+
+export * from './invoice-documents';
