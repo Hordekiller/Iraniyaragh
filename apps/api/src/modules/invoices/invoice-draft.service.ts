@@ -83,6 +83,8 @@ export class InvoiceDraftService {
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
     } catch (error) { return this.safeFailure(error); }
   }
+  /** Internal same-transaction projection for authoritative issuance. */
+  async inspectIn(tx: Prisma.TransactionClient, id: string): Promise<InvoiceDraft> { return this.view(tx, await this.load(tx, id)); }
   async read(id: string): Promise<InvoiceDraft> {
     invoiceDraftId(id);
     try { return await this.prisma.$transaction(async tx => this.view(tx, await this.load(tx, id)), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }); }
@@ -132,7 +134,7 @@ export class InvoiceDraftService {
       const order = await tx.order.findUnique({ where: { id: orderId }, include: orderInclude });
       if (!order) throw new NotFoundException({ code: 'ORDER_NOT_FOUND', message: 'Order does not exist.' });
       if (order.version !== input.expectedOrderVersion) throw conflict('STALE_VERSION', 'Review the current source order.');
-      if (order.customer.status !== 'ACTIVE' || ['CANCELLED', 'REFUNDED'].includes(order.status)) throw conflict('INVOICE_SOURCE_UNAVAILABLE', 'The source order/customer is not eligible.');
+      if (order.customer.status !== 'ACTIVE' || ['CANCELLED', 'REFUNDED', 'RETURNED'].includes(order.status)) throw conflict('INVOICE_SOURCE_UNAVAILABLE', 'The source order/customer is not eligible.');
       if (order.items.length < 1 || order.items.length > 50 || new Set(order.items.map(line => line.variantId)).size !== order.items.length ||
         order.items.some(line => line.quantity < 1 || line.quantity > 1000 || line.total !== line.unitPrice * BigInt(line.quantity)) ||
         order.items.reduce((sum, line) => sum + line.total, 0n) !== order.subtotal || order.subtotal - order.discount + order.shipping !== order.grandTotal)
@@ -195,7 +197,7 @@ export class InvoiceDraftService {
       let sourceOrderVersion = current.sourceOrderVersion;
       if (current.sourceOrderId) {
         const source = await tx.order.findUnique({ where: { id: current.sourceOrderId }, include: orderInclude });
-        if (!source || sourceHash(source) !== current.sourceOrderHash || ['CANCELLED', 'REFUNDED'].includes(source.status))
+        if (!source || sourceHash(source) !== current.sourceOrderHash || ['CANCELLED', 'REFUNDED', 'RETURNED'].includes(source.status))
           throw conflict('INVOICE_SOURCE_CHANGED', 'Source order terms changed; review a new draft from the authoritative order.');
         sourceOrderVersion = source.version;
       }
@@ -262,7 +264,7 @@ export class InvoiceDraftService {
   private async view(tx: Prisma.TransactionClient, row: Row): Promise<InvoiceDraft> {
     const policy = await this.activePolicy(tx); const quote = quotation(row);
     const source = row.sourceOrderId ? await tx.order.findUnique({ where: { id: row.sourceOrderId }, include: orderInclude }) : null;
-    const sourceCurrent = source !== null && source.version === row.sourceOrderVersion && sourceHash(source) === row.sourceOrderHash && !['CANCELLED', 'REFUNDED'].includes(source.status);
+    const sourceCurrent = source !== null && source.version === row.sourceOrderVersion && sourceHash(source) === row.sourceOrderHash && !['CANCELLED', 'REFUNDED', 'RETURNED'].includes(source.status);
     const sourceTermsMatch = row.source === 'ORDER' ? sourceCurrent && quote !== null && quote.total.amount === source!.grandTotal.toString() &&
       row.globalDiscount === source!.discount && row.shippingAmount === source!.shipping && row.shippingCode === source!.shippingMethod &&
       row.lines.length === source!.items.length && row.lines.every((line, index) => {

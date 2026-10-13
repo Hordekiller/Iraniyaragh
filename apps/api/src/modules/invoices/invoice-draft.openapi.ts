@@ -10,7 +10,7 @@ const date: SchemaObject = { type: 'string', format: 'date-time' };
 const money = object({ amount: { type: 'string', pattern: '^(0|[1-9][0-9]{0,18})$' }, currency: { type: 'string', enum: ['IRR'] } });
 const components = { subtotal: money, discount: money, netAmount: money, tax: money, total: money };
 const quote = object({ ...components, shipping: money, lines: { type: 'array', items: object({ id: text, ...components }) } });
-const summary = { id: text, version: integer, state: { type: 'string', enum: ['DRAFT', 'CANCELLED'] } as SchemaObject,
+const summary = { id: text, version: integer, state: { type: 'string', enum: ['DRAFT', 'CANCELLED', 'ISSUED'] } as SchemaObject,
   source: { type: 'string', enum: ['CATALOG', 'ORDER'] } as SchemaObject, customerId: text, buyerLabel: text, sourceOrderId: nullableText, createdAt: date, updatedAt: date };
 const address = object({ provinceCode: text, city: text, address: text, postalCode: text, recipient: text, mobile: text });
 const draft = object({ ...summary, sourceOrderVersion: { ...integer, nullable: true }, sourceTermsMatch: { type: 'boolean', nullable: true }, address, note: nullableText,
@@ -20,7 +20,7 @@ const draft = object({ ...summary, sourceOrderVersion: { ...integer, nullable: t
   quotationStatus: { type: 'string', enum: ['CURRENT', 'POLICY_REQUIRED', 'POLICY_CHANGED', 'PRICE_EXPIRED', 'SOURCE_CHANGED'] } });
 const page = (items: SchemaObject) => object({ items: { type: 'array', items }, count: integer, offset: integer, limit: { type: 'integer', minimum: 1, maximum: 100 } });
 const schemas = { read: object({ draft }), command: object({ draft, committedVersion: integer, replayed: { type: 'boolean', description: 'Replay returns the current workspace and the originally committed version.' } }),
-  list: page(object(summary)), history: page(object({ version: integer, action: { type: 'string', enum: ['CREATED', 'EDITED', 'REQUOTED', 'CANCELLED'] }, actorId: text, createdAt: date })),
+  list: page(object(summary)), history: page(object({ version: integer, action: { type: 'string', enum: ['CREATED', 'EDITED', 'REQUOTED', 'CANCELLED', 'ISSUED'] }, actorId: text, createdAt: date })),
   options: object({ items: { type: 'array', items: { type: 'object', properties: { id: text, label: text, detail: nullableText }, required: ['id', 'label', 'detail'], additionalProperties: false } }, count: integer }) };
 export function InvoiceDraftResponses(kind: keyof typeof schemas, created = false) {
   return applyDecorators((created ? ApiCreatedResponse : ApiOkResponse)({ schema: object({ data: schemas[kind] }) }),

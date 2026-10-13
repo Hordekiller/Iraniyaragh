@@ -221,6 +221,9 @@ enum StocktakeScopeType {
 }
 
 model User {
+  issuedInvoiceDocuments      InvoiceDocument[]
+  invoiceDocumentEvents       InvoiceDocumentEvent[]
+  invoiceIssueCommands        InvoiceIssueCommand[]
   creditReturns               CreditSaleReturn[]
   creditRefundPayouts         CreditRefundPayout[]
   id                          String                       @id @default(cuid())
@@ -1062,6 +1065,7 @@ model StocktakeCommandRecord {
 }
 
 model Customer {
+  invoiceDocuments           InvoiceDocument[]
   id                         String                      @id @default(cuid())
   userId                     String?                     @unique
   mobile                     String                      @unique
@@ -1200,6 +1204,7 @@ model GuestCartMutation {
 }
 
 model Order {
+  invoiceDocument            InvoiceDocument?
   creditReturns              CreditSaleReturn[]
   id                         String                          @id @default(cuid())
   number                     String                          @unique
@@ -1240,22 +1245,23 @@ model Order {
 }
 
 model OrderItem {
-  creditReturnLines CreditSaleReturnLine[]
-  id                String                 @id @default(cuid())
-  orderId           String
-  variantId         String
-  sku               String
-  title             String
-  productTitle      String
-  variantTitle      String?
-  ordinal           Int
-  quantity          Int
-  unitPrice         BigInt
-  total             BigInt
-  order             Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant           ProductVariant         @relation(fields: [variantId], references: [id])
-  fulfillmentPick   FulfillmentPick?
-  shipmentLine      ShipmentLine?
+  invoiceDocumentLines InvoiceDocumentLine[]
+  id                   String                 @id @default(cuid())
+  orderId              String
+  variantId            String
+  sku                  String
+  title                String
+  productTitle         String
+  variantTitle         String?
+  ordinal              Int
+  quantity             Int
+  unitPrice            BigInt
+  total                BigInt
+  order                Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant              ProductVariant         @relation(fields: [variantId], references: [id])
+  fulfillmentPick      FulfillmentPick?
+  shipmentLine         ShipmentLine?
+  creditReturnLines    CreditSaleReturnLine[]
 
   @@unique([orderId, ordinal])
   @@index([orderId])
@@ -1847,24 +1853,25 @@ enum InvoiceTaxTreatment {
 }
 
 model InvoicePolicyRevision {
-  id              String                 @id @default(cuid())
-  version         Int                    @unique
-  sellerName      String                 @db.VarChar(200)
-  sellerAddress   String                 @db.VarChar(1000)
-  sellerContact   String                 @db.VarChar(200)
-  taxTreatment    InvoiceTaxTreatment
-  taxRateBps      Int
-  exemptionReason String?                @db.VarChar(500)
-  discountCapBps  Int
-  shippingTaxable Boolean
-  isActive        Boolean
-  reason          String                 @db.VarChar(500)
-  actorId         String
-  requestId       String                 @db.VarChar(100)
-  createdAt       DateTime               @default(now())
-  actor           User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
-  commands        InvoicePolicyCommand[]
-  drafts          InvoiceDraft[]
+  invoiceDocuments InvoiceDocument[]
+  id               String                 @id @default(cuid())
+  version          Int                    @unique
+  sellerName       String                 @db.VarChar(200)
+  sellerAddress    String                 @db.VarChar(1000)
+  sellerContact    String                 @db.VarChar(200)
+  taxTreatment     InvoiceTaxTreatment
+  taxRateBps       Int
+  exemptionReason  String?                @db.VarChar(500)
+  discountCapBps   Int
+  shippingTaxable  Boolean
+  isActive         Boolean
+  reason           String                 @db.VarChar(500)
+  actorId          String
+  requestId        String                 @db.VarChar(100)
+  createdAt        DateTime               @default(now())
+  actor            User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  commands         InvoicePolicyCommand[]
+  drafts           InvoiceDraft[]
 }
 
 model InvoicePolicyCommand {
@@ -1883,6 +1890,7 @@ model InvoicePolicyCommand {
 enum InvoiceDraftState {
   DRAFT
   CANCELLED
+  ISSUED
 }
 
 enum InvoiceDraftSource {
@@ -1891,6 +1899,7 @@ enum InvoiceDraftSource {
 }
 
 model InvoiceDraft {
+  document               InvoiceDocument?
   id                     String                 @id @default(cuid())
   version                Int                    @default(0)
   state                  InvoiceDraftState      @default(DRAFT)
@@ -1972,4 +1981,99 @@ model InvoiceDraftCommand {
   committedRevision InvoiceDraftRevision @relation(fields: [draftId, committedVersion], references: [draftId, version], onDelete: Restrict, onUpdate: NoAction)
 
   @@unique([actorId, scope, keyHash])
+}
+
+model InvoiceSeriesCounter {
+  series     String            @db.VarChar(16)
+  period     Int
+  lastNumber Int
+  documents  InvoiceDocument[]
+
+  @@id([series, period])
+}
+
+model InvoiceDocument {
+  id               String                 @id @default(cuid())
+  draftId          String                 @unique
+  draftVersion     Int
+  orderId          String                 @unique
+  orderVersion     Int
+  customerId       String
+  policyRevisionId String
+  series           String                 @db.VarChar(16)
+  period           Int
+  sequence         Int
+  number           String                 @unique @db.VarChar(40)
+  subtotal         BigInt
+  discount         BigInt
+  shipping         BigInt
+  netAmount        BigInt
+  tax              BigInt
+  grandTotal       BigInt
+  snapshot         Json
+  payloadHash      String                 @db.Char(64)
+  issuedById       String
+  issuedAt         DateTime               @default(now())
+  draft            InvoiceDraft           @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  order            Order                  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer         Customer               @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  policyRevision   InvoicePolicyRevision  @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
+  counter          InvoiceSeriesCounter   @relation(fields: [series, period], references: [series, period], onDelete: Restrict)
+  issuedBy         User                   @relation(fields: [issuedById], references: [id], onDelete: Restrict)
+  lines            InvoiceDocumentLine[]
+  events           InvoiceDocumentEvent[]
+  commands         InvoiceIssueCommand[]
+
+  @@unique([series, period, sequence])
+  @@index([customerId, issuedAt, id])
+  @@index([issuedAt, id])
+}
+
+model InvoiceDocumentLine {
+  id          String          @id @default(cuid())
+  documentId  String
+  orderItemId String
+  ordinal     Int
+  variantId   String
+  sku         String          @db.VarChar(128)
+  title       String          @db.VarChar(500)
+  quantity    Int
+  unitPrice   BigInt
+  discount    BigInt
+  netAmount   BigInt
+  tax         BigInt
+  total       BigInt
+  document    InvoiceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  orderItem   OrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+
+  @@unique([documentId, ordinal])
+  @@unique([documentId, orderItemId])
+}
+
+model InvoiceDocumentEvent {
+  id         String          @id @default(cuid())
+  documentId String
+  action     String          @db.VarChar(20)
+  actorId    String
+  requestId  String          @db.VarChar(100)
+  createdAt  DateTime        @default(now())
+  document   InvoiceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  actor      User            @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([documentId, action])
+}
+
+model InvoiceIssueCommand {
+  id               String          @id @default(cuid())
+  actorId          String
+  draftId          String
+  keyHash          String          @db.Char(64)
+  payloadHash      String          @db.Char(64)
+  documentId       String
+  committedVersion Int
+  createdAt        DateTime        @default(now())
+  actor            User            @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  document         InvoiceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, draftId, keyHash])
 }

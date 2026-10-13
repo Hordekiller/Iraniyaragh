@@ -10,6 +10,7 @@ import { ApiAbortError, ApiClientError } from '@/lib/api/client';
 import { randomUuid } from '@/lib/crypto/random-uuid';
 import { executeInvoiceDraft, invoiceDraftHistory, listInvoiceDrafts, readInvoiceDraft, searchInvoiceOptions, type DraftCommand } from '@/lib/invoices/invoice-drafts-api';
 import { StaffOrderOptionPicker } from '@/components/orders/StaffOrderOptionPicker';
+import { InvoiceIssue } from './InvoiceIssue';
 import { PageHeader } from '@/components/ui/PageHeader';
 const errorMessage = (cause: unknown) => {
   if (cause instanceof ApiClientError) {
@@ -44,6 +45,7 @@ function DraftWorkspace({ id, manage }: { id?: string; manage: boolean }) {
   const [shipping, setShipping] = useState<StaffOrderOption[]>([]);
   const [loading, setLoading] = useState(true); const [error, setError] = useState<unknown>(); const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false); const [needsReview, setNeedsReview] = useState(false); const [serverChanged, setServerChanged] = useState(false);
+  const [issuing, setIssuing] = useState(false);
   const [saved, setSaved] = useState<number>(); const [cancelReason, setCancelReason] = useState('');
   const initialized = useRef(false); const [readReady, setReadReady] = useState(false);
   const alive = useRef(false); const requests = useRef(new Set<AbortController>()); const flight = useRef(false);
@@ -86,7 +88,7 @@ function DraftWorkspace({ id, manage }: { id?: string; manage: boolean }) {
     } finally { requests.current.delete(controller); }
   }
   async function run(command: DraftCommand) {
-    if (flight.current || pending.current || !manage || loading) return;
+    if (flight.current || pending.current || !manage || loading || issuing) return;
     const request = { command, key: `invoice-draft-${randomUuid()}` }; pending.current = request; flight.current = true; setBusy(true); setError(undefined); setSaved(undefined);
     try { await execute(request); } finally { flight.current = false; if (alive.current) setBusy(false); }
   }
@@ -106,7 +108,7 @@ function DraftWorkspace({ id, manage }: { id?: string; manage: boolean }) {
     const body = { address: fields.address, lines: lines.map(item => ({ ...item, discount: item.discount! })), globalDiscount, shippingMethodCode: fields.shippingMethodCode, note: fields.note.trim() || null };
     await run(draft ? { kind: 'edit', id: draft.id, body: { ...body, expectedVersion: draft.version } } : { kind: 'create', body: { ...body, customerId: fields.customer.id } });
   }
-  const locked = busy || loading || !readReady || uncertain || !manage || draft?.state === 'CANCELLED';
+  const locked = busy || loading || !readReady || uncertain || !manage || issuing || (draft !== undefined && draft.state !== 'DRAFT');
   const addressLabels = { provinceCode: 'کد استان', city: 'شهر', address: 'نشانی صورتحساب', postalCode: 'کد پستی', recipient: 'گیرنده', mobile: 'تلفن گیرنده' };
   return <Stack spacing={3}>
     <PageHeader title={id ? 'پیش‌فاکتور فروشگاهی' : 'پیش‌فاکتورها'} description="پیش‌نویس مستقل؛ ثبت و ویرایش آن پرداخت، سفارش و موجودی را تغییر نمی‌دهد." />
@@ -119,7 +121,7 @@ function DraftWorkspace({ id, manage }: { id?: string; manage: boolean }) {
     {(needsReview || serverChanged) && !uncertain && <Alert severity="warning">نسخهٔ تازهٔ سرور را بررسی کنید؛ متن فرم فعلی هنوز جایگزین نشده است.
       <Button disabled={busy || loading} onClick={() => void load(true).catch(() => undefined)}>پذیرش نسخهٔ سرور برای ویرایش</Button></Alert>}
     {draft && <Paper sx={{ p: 2 }}><Stack spacing={1}>
-      <Typography>وضعیت: {draft.state === 'DRAFT' ? 'پیش‌نویس' : 'لغوشده'} — نسخهٔ {draft.version}</Typography>
+      <Typography>وضعیت: {draft.state === 'DRAFT' ? 'پیش‌نویس' : draft.state === 'ISSUED' ? 'صادرشده' : 'لغوشده'} — نسخهٔ {draft.version}</Typography>
       <Typography>{quoteLabels[draft.quotationStatus]}</Typography>
       {draft.sourceOrderId && <Typography>سفارش مبنا: <Link href={`/orders/${encodeURIComponent(draft.sourceOrderId)}`}>{draft.sourceOrderId}</Link> — تطابق مالی: {draft.sourceTermsMatch ? 'بله' : 'خیر؛ نیازمند بررسی پیش از صدور'}</Typography>}
       {draft.quote ? <Box aria-label="مبالغ ثبت‌شدهٔ سرور"><Typography>جمع اقلام: {draft.quote.subtotal.amount} ریال</Typography><Typography>تخفیف: {draft.quote.discount.amount} ریال</Typography>
@@ -128,6 +130,7 @@ function DraftWorkspace({ id, manage }: { id?: string; manage: boolean }) {
       {draft.quoteExpiresAt && <Typography>انقضای قیمت‌گذاری: {new Date(draft.quoteExpiresAt).toLocaleString('fa-IR')}</Typography>}
       {manage && draft.state === 'DRAFT' && <Button disabled={locked || serverChanged} onClick={() => void run({ kind: 'requote', id: draft.id, body: { expectedVersion: draft.version } })}>تأیید بازقیمت‌گذاری با قیمت و سیاست فعلی</Button>}
     </Stack></Paper>}
+    {draft && <InvoiceIssue draft={draft} locked={busy || loading || !readReady || uncertain} onLockChange={setIssuing} onIssued={() => load(true)} />}
     {(manage || draft) && <Paper component="form" onSubmit={submit} sx={{ p: 3 }}><Stack spacing={2}>
       <Typography variant="h6">{draft ? 'ویرایش پیش‌نویس' : 'پیش‌فاکتور جدید'}</Typography>
       <StaffOrderOptionPicker searchOptions={searchInvoiceOptions} kind="customer" label="مشتری" value={fields.customer} onChange={value => patch('customer', value)} disabled={locked || Boolean(draft)} required />
@@ -152,7 +155,7 @@ function DraftWorkspace({ id, manage }: { id?: string; manage: boolean }) {
     {draft?.state === 'DRAFT' && manage && <Paper sx={{ p: 2 }}><TextField label="دلیل لغو پیش‌نویس" value={cancelReason} disabled={locked} onChange={event => setCancelReason(event.target.value)} />
       <Button color="error" disabled={locked || !cancelReason.trim() || serverChanged} onClick={() => void run({ kind: 'cancel', id: draft.id, body: { expectedVersion: draft.version, reason: cancelReason } })}>لغو پیش‌نویس</Button></Paper>}
     {!id && <Paper sx={{ p: 2 }}><Typography variant="h6">پیش‌فاکتورهای ثبت‌شده</Typography>{!loading && list?.count === 0 && <Typography>هنوز پیش‌فاکتوری ثبت نشده است.</Typography>}
-      {list?.items.map(item => <Box key={item.id} sx={{ py: 1 }}><Link href={`/invoices/drafts/${encodeURIComponent(item.id)}`}>{item.buyerLabel} — نسخهٔ {item.version} — {item.state === 'DRAFT' ? 'پیش‌نویس' : 'لغوشده'}</Link></Box>)}
+      {list?.items.map(item => <Box key={item.id} sx={{ py: 1 }}><Link href={`/invoices/drafts/${encodeURIComponent(item.id)}`}>{item.buyerLabel} — نسخهٔ {item.version} — {item.state === 'DRAFT' ? 'پیش‌نویس' : item.state === 'ISSUED' ? 'صادرشده' : 'لغوشده'}</Link></Box>)}
       <Button disabled={offset === 0 || loading} onClick={() => setOffset(value => Math.max(0, value - 25))}>صفحهٔ قبل</Button>
       <Button disabled={loading || !list || offset + 25 >= list.count} onClick={() => setOffset(value => value + 25)}>صفحهٔ بعد</Button></Paper>}
   </Stack>;
