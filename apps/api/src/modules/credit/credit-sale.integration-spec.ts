@@ -14,14 +14,16 @@ import { hasFulfillmentFinancialProof } from '../orders/fulfillment-financial-pr
 import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { CreditService } from './credit.service';
 import { CreditSaleService } from './credit-sale.service';
+import { CreditReturnService } from './credit-return.service';
 
 // Real commands and PostgreSQL. No external payments/SMS or live sales database.
 describe.sequential('Staff credit sale, stock, fulfillment and financial concurrency', () => {
   const prisma = new PrismaService(); const audit = new AuditLogService(prisma);
   const credit = new CreditService(prisma, audit); const inventory = new InventoryService(prisma, audit);
+  const returns = new CreditReturnService(prisma, credit, inventory, audit);
   const sales = new CreditSaleService(credit, inventory, audit); const staffOrders = new StaffOrderService(prisma, audit);
   const run = randomUUID().replaceAll('-', ''); const requestId = `credit-sale-it-${run}`;
-  const customers: string[] = []; let actorId = ''; let variantId = ''; let warehouseId = ''; let locationId = ''; let productId = ''; let connected = false; let sequence = 0;
+  const customers: string[] = []; const extraVariants: string[] = []; const extraProducts: string[] = []; let actorId = ''; let variantId = ''; let warehouseId = ''; let locationId = ''; let productId = ''; let connected = false; let sequence = 0;
   const context = (key = `credit-sale-${run}-${sequence++}`) => ({ actorId, requestId: `${requestId}-${sequence++}`, idempotencyKey: key });
   const code = (value: string) => expect.objectContaining({ response: expect.objectContaining({ code: value }) });
   const statement = (customerId: string) => credit.statement(customerId, { offset: 0, limit: 25 });
@@ -39,14 +41,14 @@ describe.sequential('Staff credit sale, stock, fulfillment and financial concurr
   afterAll(async () => {
     if (!connected) return;
     // Never disable financial UPDATE/DELETE guards. Cleanup only the guarded disposable database.
-    await prisma.$executeRawUnsafe('TRUNCATE "CreditLedgerEntry", "CreditReceipt", "ReceivableDocument", "CreditCommandRecord", "CreditAccount"');
+    await prisma.$executeRawUnsafe('TRUNCATE "CreditRefundPayout", "CreditSaleReturnLine", "CreditSaleReturn", "CreditLedgerEntry", "CreditReceipt", "ReceivableDocument", "CreditCommandRecord", "CreditAccount"');
     const orders = (await prisma.order.findMany({ where: { customerId: { in: customers } }, select: { id: true } })).map(row => row.id);
     await prisma.shipmentLine.deleteMany({ where: { shipment: { orderId: { in: orders } } } });
     await prisma.shipment.deleteMany({ where: { orderId: { in: orders } } });
     await prisma.fulfillmentPick.deleteMany({ where: { orderItem: { orderId: { in: orders } } } });
     await prisma.fulfillmentTransition.deleteMany({ where: { fulfillment: { orderId: { in: orders } } } });
     await prisma.fulfillment.deleteMany({ where: { orderId: { in: orders } } });
-    await prisma.inventoryMovement.deleteMany({ where: { variantId } });
+    await prisma.inventoryMovement.deleteMany({ where: { variantId: { in: [variantId,...extraVariants] } } });
     await prisma.stockReservation.deleteMany({ where: { orderId: { in: orders } } });
     await prisma.payment.deleteMany({ where: { orderId: { in: orders } } });
     await prisma.orderCommandIdempotencyRecord.deleteMany({ where: { orderId: { in: orders } } });
@@ -55,7 +57,9 @@ describe.sequential('Staff credit sale, stock, fulfillment and financial concurr
     await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: orders } } });
     await prisma.order.deleteMany({ where: { id: { in: orders } } });
     await prisma.customer.deleteMany({ where: { id: { in: customers } } });
-    await prisma.inventoryBalance.deleteMany({ where: { variantId } });
+    await prisma.inventoryBalance.deleteMany({ where: { variantId: { in: [variantId,...extraVariants] } } });
+    await prisma.productVariant.deleteMany({ where: { id: { in: extraVariants } } });
+    await prisma.product.deleteMany({ where: { id: { in: extraProducts } } });
     await prisma.productVariant.delete({ where: { id: variantId } }); await prisma.product.delete({ where: { id: productId } });
     await prisma.warehouseLocation.delete({ where: { id: locationId } }); await prisma.warehouse.delete({ where: { id: warehouseId } });
     await prisma.auditLog.deleteMany({ where: { requestId: { startsWith: requestId } } }); await prisma.user.delete({ where: { id: actorId } });
@@ -202,4 +206,177 @@ describe.sequential('Staff credit sale, stock, fulfillment and financial concurr
       expect(await hasFulfillmentFinancialProof(tx, 'missing-order', 'PENDING_PAYMENT', [{ id: 'existing-settlement' }])).toBe(false);
     });
   });
+  const cancelInput = (data: Awaited<ReturnType<typeof fixture>>, accountVersion: number) => ({ expectedVersion: accountVersion, expectedOrderVersion: data.order.version + 1, evidenceReference: `isolated-cancel-${run}-${sequence++}`, reason: 'Isolated actual pre-dispatch cancellation' });
+  async function delivered(data: Awaited<ReturnType<typeof fixture>>) {
+    const approved = await approve(data);
+    const commands = new FulfillmentCommandService(prisma, audit);
+    await commands.execute(data.order.id, 'start', context());
+    const item = await prisma.orderItem.findFirstOrThrow({ where: { orderId: data.order.id } });
+    for (const line of await prisma.orderItem.findMany({ where: { orderId: data.order.id } })) await new FulfillmentPickService(prisma, audit).record(data.order.id, line.id, line.quantity, context());
+    await commands.execute(data.order.id, 'ready', context());
+    await new ShipmentDispatchService(prisma, audit).dispatch(data.order.id, { carrier: 'Isolated return carrier', trackingCode: `RETURN-${run}-${sequence++}` }, context());
+    await new ShipmentDeliveryService(prisma, audit).confirm(data.order.id, { proofReference: `ISOLATED-RETURN-${run}` }, context());
+    return { approved, item };
+  }
+  const returnInput = (data: Awaited<ReturnType<typeof fixture>>, itemId: string, quantity: number, accountVersion: number, orderVersion = data.order.version + 1) => ({ expectedVersion: accountVersion, expectedOrderVersion: orderVersion, evidenceReference: `isolated-return-${run}-${sequence++}`, reason: 'Physically received sellable isolated test goods', lines: [{ orderItemId: itemId, quantity, warehouseId, locationId }] });
+  it('cancels credit atomically before dispatch, restores original stock and preserves the original debt/payment evidence', async () => {
+    const data = await fixture(); const approval = await approve(data);
+    const before = await prisma.inventoryBalance.findUniqueOrThrow({ where: { warehouseId_locationId_variantId: { warehouseId, locationId, variantId } } });
+    const input = cancelInput(data, approval.account.version); const ctx = context();
+    const result = await returns.cancel(data.customerId, data.order.id, input, ctx);
+    expect(result.order).toMatchObject({ status: 'CANCELLED', version: data.order.version + 2 });
+    expect(result.account.outstanding.amount).toBe('0');
+    expect((await statement(data.customerId)).documents[0]).toMatchObject({ status: 'CREDITED', effectivePrincipal: { amount: '0' } });
+    expect(await returns.cancel(data.customerId, data.order.id, input, ctx)).toEqual(result);
+    expect((await prisma.inventoryBalance.findUniqueOrThrow({ where: { id: before.id } })).onHand).toBe(before.onHand + 2);
+    expect(await prisma.creditSaleReturn.count({ where: { orderId: data.order.id } })).toBe(1);
+    expect(await prisma.inventoryMovement.count({ where: { referenceId: result.returnId } })).toBe(1);
+    expect(await prisma.receivableDocument.findUniqueOrThrow({ where: { orderId: data.order.id } })).toMatchObject({ amount: 2000n });
+    expect(await prisma.payment.count({ where: { orderId: data.order.id } })).toBe(0);
+    await expect(prisma.payment.create({ data: { orderId: data.order.id, provider: 'ISOLATED_TEST', idempotencyFingerprint: 'a'.repeat(64), idempotencyKey: `cancelled-pay-${run}-${sequence++}`, amount: 2000n } })).rejects.toBeDefined();
+    await expect(new FulfillmentCommandService(prisma, audit).execute(data.order.id, 'start', context())).rejects.toEqual(code('FULFILLMENT_STATE_CONFLICT'));
+  });
+  it('records partially collected cancellation as debt compensation plus a real refund liability, then an evidenced partial payout', async () => {
+    const data = await fixture(); const approval = await approve(data);
+    const receipt = await credit.receipt(data.customerId, { expectedVersion: approval.account.version, amount: '500', method: 'CASH', effectiveAt: new Date().toISOString(), evidenceReference: `isolated-refund-receipt-${run}-${sequence++}`, allocations: [{ documentId: approval.documentId!, amount: '500' }] }, context());
+    const result = await returns.cancel(data.customerId, data.order.id, cancelInput(data, receipt.account.version), context());
+    const row = (await returns.list(data.customerId, data.order.id)).items[0];
+    expect(row).toMatchObject({ amount: { amount: '2000' }, debtCredit: { amount: '1500' }, refundDue: { amount: '500' }, refunded: { amount: '0' }, refundRemaining: { amount: '500' } });
+    expect((await statement(data.customerId)).documents[0]).toMatchObject({ status: 'CREDITED', effectivePrincipal: { amount: '0' } });
+    const input = { expectedVersion: result.account.version, amount: '200', method: 'CASH' as const, effectiveAt: new Date().toISOString(), evidenceReference: `isolated-paid-out-${run}-${sequence++}`, reason: 'Isolated actual payout evidence' };
+    const ctx = context(); const payout = await returns.payout(data.customerId, data.order.id, result.returnId!, input, ctx);
+    expect(await returns.payout(data.customerId, data.order.id, result.returnId!, input, ctx)).toEqual(payout);
+    expect(payout.account.outstanding.amount).toBe('0');
+    expect((await returns.list(data.customerId, data.order.id)).items[0].refundRemaining.amount).toBe('300');
+    await expect(returns.payout(data.customerId, data.order.id, result.returnId!, { ...input, expectedVersion: payout.account.version, amount: '301' }, context())).rejects.toEqual(code('CREDIT_RETURN_CONFLICT'));
+    await expect(credit.reverseReceipt(data.customerId, receipt.receiptId!, { expectedVersion: payout.account.version, effectiveAt: new Date().toISOString(), evidenceReference: 'isolated-reverse-with-refund', reason: 'Must reconcile refund' }, context())).rejects.toEqual(code('CREDIT_RETURN_CONFLICT'));
+    expect(await prisma.payment.count({ where: { orderId: data.order.id } })).toBe(0);
+    const auditRows = await prisma.auditLog.findMany({ where: { requestId: ctx.requestId } });
+    expect(JSON.stringify(auditRows)).not.toContain(input.evidenceReference); expect(JSON.stringify(auditRows)).not.toContain(input.reason);
+  });
+  it('uses immutable sale prices for partial/final actual returns and keeps commercial/payment states separate', async () => {
+    const data = await fixture(); const { approved, item } = await delivered(data);
+    await prisma.productVariant.update({ where: { id: variantId }, data: { salePrice: 3000n } });
+    try {
+      const first = await returns.receive(data.customerId, data.order.id, returnInput(data, item.id, 1, approved.account.version), context());
+      expect(first.order!.status).toBe('CREDIT_APPROVED'); expect(first.account.outstanding.amount).toBe('1000');
+      const second = await returns.receive(data.customerId, data.order.id, returnInput(data, item.id, 1, first.account.version, first.order!.version), context());
+      expect(second.order!.status).toBe('RETURNED'); expect(second.account.outstanding.amount).toBe('0');
+      expect((await prisma.fulfillment.findUniqueOrThrow({ where: { orderId: data.order.id } })).status).toBe('RETURNED');
+      const rows = (await returns.list(data.customerId, data.order.id)).items;
+      expect(rows).toHaveLength(2); expect(rows.map(row => row.amount.amount)).toEqual(['1000','1000']);
+      expect(JSON.stringify(rows)).not.toContain('evidenceReference'); expect(JSON.stringify(rows)).not.toContain('actorId');
+    } finally { await prisma.productVariant.update({ where: { id: variantId }, data: { salePrice: 1000n } }); }
+  });
+  it('rejects foreign ownership, stale versions, excessive/duplicate lines, invalid destinations and pre-delivery returns without effects', async () => {
+    const data = await fixture(); const approval = await approve(data); const other = await fixture();
+    const item = await prisma.orderItem.findFirstOrThrow({ where: { orderId: data.order.id } });
+    await expect(returns.cancel(other.customerId, data.order.id, cancelInput(data, other.policy.account.version), context())).rejects.toEqual(code('CREDIT_NOT_FOUND'));
+    await expect(returns.cancel(data.customerId, data.order.id, cancelInput(data, 99), context())).rejects.toEqual(code('CREDIT_VERSION_CONFLICT'));
+    await expect(returns.receive(data.customerId, data.order.id, returnInput(data, item.id, 1, approval.account.version), context())).rejects.toEqual(code('CREDIT_RETURN_CONFLICT'));
+    const shipped = await fixture(); const { approved, item: deliveredItem } = await delivered(shipped);
+    const input = returnInput(shipped, deliveredItem.id, 3, approved.account.version);
+    await expect(returns.receive(shipped.customerId, shipped.order.id, input, context())).rejects.toEqual(code('CREDIT_RETURN_CONFLICT'));
+    await expect(returns.receive(shipped.customerId, shipped.order.id, { ...input, lines: [input.lines[0], input.lines[0]] }, context())).rejects.toEqual(code('CREDIT_RETURN_CONFLICT'));
+    await expect(returns.receive(shipped.customerId, shipped.order.id, { ...input, lines: [{ ...input.lines[0], quantity: 1, locationId: 'isolated-missing-location' }] }, context())).rejects.toBeDefined();
+    expect(await prisma.creditSaleReturn.count({ where: { orderId: { in: [data.order.id, shipped.order.id] } } })).toBe(0);
+  });
+  it('serializes same-key cancellation across restart and competing fresh keys without duplicating stock/debt', async () => {
+    const data = await fixture(); const approval = await approve(data); const input = cancelInput(data, approval.account.version); const ctx = context();
+    const results = await Promise.all([returns.cancel(data.customerId, data.order.id, input, ctx), returns.cancel(data.customerId, data.order.id, input, ctx)]);
+    expect(results[0]).toEqual(results[1]);
+    expect(await new CreditReturnService(prisma, credit, inventory, audit).cancel(data.customerId, data.order.id, input, ctx)).toEqual(results[0]);
+    await expect(returns.cancel(data.customerId, data.order.id, { ...input, reason: 'Changed payload' }, ctx)).rejects.toEqual(code('IDEMPOTENCY_CONFLICT'));
+    await expect(returns.cancel(data.customerId, data.order.id, input, context())).rejects.toEqual(code('ORDER_VERSION_CONFLICT'));
+    const other = await fixture(); const approved = await approve(other); const competing = cancelInput(other, approved.account.version);
+    const outcomes = await Promise.allSettled([returns.cancel(other.customerId, other.order.id, competing, context()), returns.cancel(other.customerId, other.order.id, competing, context())]);
+    expect(outcomes.filter(row => row.status === 'fulfilled')).toHaveLength(1);
+    expect(await prisma.creditSaleReturn.count({ where: { orderId: other.order.id } })).toBe(1);
+  });
+  it('rolls back stock, debt and order when audit fails and guards immutable compensation at SQL level', async () => {
+    const data = await fixture(); const approval = await approve(data); const input = cancelInput(data, approval.account.version);
+    const original = audit.record.bind(audit); const spy = vi.spyOn(audit, 'record').mockImplementation(async (...args) => {
+      if (args[0].action === 'credit.sale.compensated') throw new Error('isolated audit failure');
+      return original(...args);
+    });
+    try { await expect(returns.cancel(data.customerId, data.order.id, input, context())).rejects.toEqual(code('CREDIT_COMMAND_FAILED')); }
+    finally { spy.mockRestore(); }
+    expect(await prisma.creditSaleReturn.count({ where: { orderId: data.order.id } })).toBe(0);
+    expect((await statement(data.customerId)).account!.outstanding.amount).toBe('2000');
+    const result = await returns.cancel(data.customerId, data.order.id, input, context());
+    const line = await prisma.creditSaleReturnLine.findFirstOrThrow({ where: { returnId: result.returnId } });
+    await expect(prisma.creditSaleReturn.update({ where: { id: result.returnId }, data: { amount: 1n } })).rejects.toBeDefined();
+    await expect(prisma.creditSaleReturnLine.delete({ where: { id: line.id } })).rejects.toBeDefined();
+    await expect(prisma.inventoryMovement.update({ where: { id: line.movementId }, data: { quantity: 99 } })).rejects.toBeDefined();
+    await expect(prisma.order.update({ where: { id: data.order.id }, data: { status: 'CREDIT_APPROVED' } })).rejects.toBeDefined();
+  });
+
+  it('serializes a concurrent receipt against cancellation and never double-compensates collected money', async () => {
+    const data = await fixture(); const approval = await approve(data); const input = cancelInput(data, approval.account.version);
+    const outcomes = await Promise.allSettled([
+      returns.cancel(data.customerId, data.order.id, input, context()),
+      credit.receipt(data.customerId, { expectedVersion: approval.account.version, amount: '500', method: 'CASH', effectiveAt: new Date().toISOString(), evidenceReference: `isolated-racing-receipt-${run}-${sequence++}`, allocations: [{ documentId: approval.documentId!, amount: '500' }] }, context()),
+    ]);
+    expect(outcomes.filter(row => row.status === 'fulfilled')).toHaveLength(1);
+    const state = await statement(data.customerId);
+    expect(['0','1500']).toContain(state.account!.outstanding.amount);
+    expect(await prisma.creditSaleReturn.count({ where: { orderId: data.order.id } })).toBe(state.account!.outstanding.amount === '0' ? 1 : 0);
+  });
+  it('prevents foreign customer read/payout and duplicate evidence or concurrent overpayment of a refund', async () => {
+    const data = await fixture(); const approval = await approve(data); const other = await fixture();
+    const ownUser = (await prisma.user.create({ data: { email: `return-owner-${run}@example.test`, status: 'ACTIVE' } })).id;
+    const foreignUser = (await prisma.user.create({ data: { email: `return-foreign-${run}@example.test`, status: 'ACTIVE' } })).id;
+    try {
+      await prisma.customer.update({ where: { id: data.customerId }, data: { userId: ownUser } });
+      await prisma.customer.update({ where: { id: other.customerId }, data: { userId: foreignUser } });
+      const receipt = await credit.receipt(data.customerId, { expectedVersion: approval.account.version, amount: '2000', method: 'CASH', effectiveAt: new Date().toISOString(), evidenceReference: `isolated-all-paid-${run}-${sequence++}`, allocations: [{ documentId: approval.documentId!, amount: '2000' }] }, context());
+      const result = await returns.cancel(data.customerId, data.order.id, cancelInput(data, receipt.account.version), context());
+      expect((await returns.customerList(ownUser, data.order.id)).items[0].refundRemaining.amount).toBe('2000');
+      await expect(returns.customerList(foreignUser, data.order.id)).rejects.toEqual(code('CREDIT_NOT_FOUND'));
+      const input = { expectedVersion: result.account.version, amount: '1500', method: 'BANK_TRANSFER' as const, effectiveAt: new Date().toISOString(), evidenceReference: `isolated-concurrent-payout-${run}-${sequence++}`, reason: 'Actual isolated payout' };
+      await expect(returns.payout(other.customerId, data.order.id, result.returnId!, { ...input, expectedVersion: other.policy.account.version }, context())).rejects.toEqual(code('CREDIT_NOT_FOUND'));
+      const outcomes = await Promise.allSettled([returns.payout(data.customerId,data.order.id,result.returnId!,input,context()),returns.payout(data.customerId,data.order.id,result.returnId!,{...input,evidenceReference:`isolated-other-payout-${run}`},context())]);
+      expect(outcomes.filter(row => row.status === 'fulfilled')).toHaveLength(1);
+      const current = (await statement(data.customerId)).account!;
+      const acceptedEvidence = await prisma.creditRefundPayout.findFirstOrThrow({ where: { returnId: result.returnId }, select: { evidenceReference: true } });
+      await expect(returns.payout(data.customerId,data.order.id,result.returnId!,{...input,expectedVersion:current.version,amount:'1',evidenceReference:acceptedEvidence.evidenceReference},context())).rejects.toEqual(code('CREDIT_EVIDENCE_CONFLICT'));
+      expect((await returns.list(data.customerId,data.order.id)).items[0].refundRemaining.amount).toBe('500');
+    } finally {
+      await prisma.customer.update({ where: { id: data.customerId }, data: { userId: null } }); await prisma.customer.update({ where: { id: other.customerId }, data: { userId: null } });
+      await prisma.user.deleteMany({ where: { id: { in: [ownUser,foreignUser] } } });
+    }
+  });
+  it('rejects unrelated credit notes, inactive return warehouse and a second fresh-key return of the same quantity', async () => {
+    const data = await fixture(); const approval = await approve(data);
+    const adjustment = await credit.adjust(data.customerId, approval.documentId!, { expectedVersion: approval.account.version, amount: '100', kind: 'CREDIT_NOTE', effectiveAt: new Date().toISOString(), evidenceReference: `isolated-prior-note-${run}`, reason: 'Prior reconciliation adjustment' }, context());
+    await expect(returns.cancel(data.customerId,data.order.id,cancelInput(data,adjustment.account.version),context())).rejects.toEqual(code('CREDIT_RETURN_CONFLICT'));
+    const actual = await fixture(); const { approved,item } = await delivered(actual); const input = returnInput(actual,item.id,2,approved.account.version);
+    await prisma.warehouse.update({ where: { id: warehouseId }, data: { isActive: false } });
+    try { await expect(returns.receive(actual.customerId,actual.order.id,input,context())).rejects.toEqual(code('CREDIT_RETURN_CONFLICT')); }
+    finally { await prisma.warehouse.update({ where: { id: warehouseId }, data: { isActive: true } }); }
+    const result = await returns.receive(actual.customerId,actual.order.id,input,context());
+    await expect(returns.receive(actual.customerId,actual.order.id,{...input,expectedVersion:result.account.version,expectedOrderVersion:result.order!.version},context())).rejects.toEqual(code('CREDIT_RETURN_CONFLICT'));
+    expect(await prisma.creditSaleReturn.count({ where: { orderId: actual.order.id } })).toBe(1);
+  });
+
+  it('receives a legitimate zero-priced promotional item without money fabrication and requires all quantities for terminal return', async () => {
+    const data = await fixture();
+    const product = await prisma.product.create({ data: { name: 'Isolated free promotion', slug: `isolated-free-${run}`, status: 'ACTIVE' } }); extraProducts.push(product.id);
+    const sku = `FREE-${run}`;
+    const free = await prisma.productVariant.create({ data: { productId: product.id, sku, skuKey: canonicalizeSku(sku), combinationSignature: EMPTY_AXIS_SIGNATURE, salePrice: 0n, costPrice: 0n, status: 'ACTIVE', isActive: true } }); extraVariants.push(free.id);
+    await prisma.inventoryBalance.create({ data: { variantId: free.id, warehouseId, locationId, onHand: 10, reserved: 0, available: 10 } });
+    const real = await staffOrders.create({ ...context(), payload: { customerId: data.customerId, lines: [{ variantId, quantity: 2 }, { variantId: free.id, quantity: 1 }], address: { provinceCode: 'THR',city: 'Isolated city',address: 'Isolated address',postalCode: '1234567890',recipient: 'Isolated test',mobile: '+989120000000' } } });
+    const combined = { ...data, order: real.data.order, input: { expectedVersion: data.policy.account.version, expectedOrderVersion: real.data.order.version } };
+    const { approved } = await delivered(combined);
+    const freeItem = await prisma.orderItem.findFirstOrThrow({ where: { orderId: combined.order.id, variantId: free.id } });
+    const paidItem = await prisma.orderItem.findFirstOrThrow({ where: { orderId: combined.order.id, variantId } });
+    const pricedReturn = await returns.receive(data.customerId,combined.order.id,returnInput(combined,paidItem.id,2,approved.account.version),context());
+    expect(pricedReturn.order!.status).toBe('CREDIT_APPROVED'); expect(pricedReturn.account.outstanding.amount).toBe('0');
+    const freeReturn = await returns.receive(data.customerId,combined.order.id,returnInput(combined,freeItem.id,1,pricedReturn.account.version,pricedReturn.order!.version),context());
+    expect(freeReturn.order!.status).toBe('RETURNED');
+    const row = await prisma.creditSaleReturn.findUniqueOrThrow({ where: { id: freeReturn.returnId } });
+    expect(row).toMatchObject({ amount: 0n, debtCredit: 0n, refundDue: 0n, entryId: null });
+    expect(await prisma.payment.count({ where: { orderId: combined.order.id } })).toBe(0);
+  });
+
 });

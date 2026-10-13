@@ -14,3 +14,8 @@ export const adjustCreditDocument = (id: string, documentId: string, input: Cred
 export const reverseCreditReceipt = (id: string, receiptId: string, input: CreditReversalRequest, key: string) => command(id, `/receipts/${encodeURIComponent(receiptId)}/reverse`, input, key);
 
 export const approveCreditSale = (id: string, orderId: string, input: CreditSaleApprovalRequest, key: string) => command(id, `/orders/${encodeURIComponent(orderId)}/approve`, input, key);
+
+export const getCreditReturns = (id: string, orderId: string, signal?: AbortSignal) => apiFetch<import('@iranyaragh/contracts').CreditSaleReturns>(`${base(id)}/orders/${encodeURIComponent(orderId)}/returns`, { token: getAccessToken(), signal, responseShape: 'raw' });
+export const cancelCreditSale = (id: string, orderId: string, input: import('@iranyaragh/contracts').CreditCancelRequest, key: string) => command(id, `/orders/${encodeURIComponent(orderId)}/cancel`, input, key);
+export const receiveCreditReturn = (id: string, orderId: string, input: import('@iranyaragh/contracts').CreditReturnRequest, key: string) => command(id, `/orders/${encodeURIComponent(orderId)}/returns`, input, key);
+export const recordCreditRefundPayout = (id: string, orderId: string, returnId: string, input: import('@iranyaragh/contracts').CreditRefundPayoutRequest, key: string) => command(id, `/orders/${encodeURIComponent(orderId)}/returns/${encodeURIComponent(returnId)}/payouts`, input, key);

@@ -1,3 +1,6 @@
+import { CreditReturnController, CustomerCreditReturnController } from './credit-return.controller';
+import { CreditReturnService } from './credit-return.service';
+import { CreditCancelDto, CreditReturnDto, CreditRefundPayoutDto } from './credit.dto';
 import { Module, ValidationPipe, VersioningType } from '@nestjs/common';
 import { APP_GUARD, NestFactory, type INestApplication } from '@nestjs/core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +18,10 @@ import { PrismaService } from '../../database/prisma.service';
 import { RedactedLogger } from '../../common/redacted-logger';
 import { CreditService, creditAmount, MAX_CREDIT_IRR } from './credit.service';
 
+Reflect.defineMetadata('design:paramtypes', [CreditReturnService], CreditReturnController);
+Reflect.defineMetadata('design:paramtypes', [CreditReturnService], CustomerCreditReturnController);
+for (const [method, types] of Object.entries({ list: [String,String,Object], cancel: [String,String,CreditCancelDto,String,Object], receive: [String,String,CreditReturnDto,String,Object], payout: [String,String,String,CreditRefundPayoutDto,String,Object] })) Reflect.defineMetadata('design:paramtypes', types, CreditReturnController.prototype, method);
+Reflect.defineMetadata('design:paramtypes', [Object,String,Object], CustomerCreditReturnController.prototype, 'list');
 Reflect.defineMetadata('design:paramtypes', [CreditSaleService], CreditSaleController);
 Reflect.defineMetadata('design:paramtypes', [String, String, CreditSaleApprovalDto, String, Object], CreditSaleController.prototype, 'approve');
 Reflect.defineMetadata('design:paramtypes', [CreditService], CreditController);
@@ -25,14 +32,15 @@ for (const [method, types] of Object.entries({ statement: [String, CreditPageDto
   adjust: [Object, String, String, String, CreditAdjustmentDto],
 })) Reflect.defineMetadata('design:paramtypes', types, CreditController.prototype, method);
 Reflect.defineMetadata('design:paramtypes', [Object, CreditPageDto], CustomerCreditController.prototype, 'statement');
-const service = Object.fromEntries(['statement', 'ledger', 'policy', 'opening', 'receipt', 'reverseReceipt', 'adjust', 'customerStatement', 'approve'].map(method => [method, vi.fn().mockResolvedValue({ account: null, documents: [], total: 0, offset: 0, limit: 25 })]));
-const staff: AuthPrincipalContext = { userId: 'credit-staff', sessionId: 'isolated-session', tokenId: 'isolated-token', authenticationLevel: 'STAFF_MFA', authenticatedAt: new Date(), accessExpiresAt: new Date(Date.now() + 600_000), permissions: new Set(['credit.read', 'credit.manage', 'credit.opening', 'credit.receive', 'credit.adjust', 'credit.approve', 'orders.manage']) };
+const service = Object.fromEntries(['statement', 'ledger', 'policy', 'opening', 'receipt', 'reverseReceipt', 'adjust', 'customerStatement', 'approve', 'list', 'cancel', 'receive', 'payout', 'customerList'].map(method => [method, vi.fn().mockResolvedValue({ account: null, documents: [], total: 0, offset: 0, limit: 25 })]));
+const staff: AuthPrincipalContext = { userId: 'credit-staff', sessionId: 'isolated-session', tokenId: 'isolated-token', authenticationLevel: 'STAFF_MFA', authenticatedAt: new Date(), accessExpiresAt: new Date(Date.now() + 600_000), permissions: new Set(['credit.read', 'credit.manage', 'credit.opening', 'credit.receive', 'credit.adjust', 'credit.approve', 'orders.manage', 'inventory.adjust']) };
 let current = staff;
 const principals = { resolveBearerToken: vi.fn(async (authorization?: string) => {
   if (authorization !== 'Bearer isolated-test-token') throw new AuthSessionException('AUTH_SESSION_INVALID');
   return current;
 }) };
-@Module({ imports: [ApiFoundationModule], controllers: [CreditSaleController, CreditController, CustomerCreditController], providers: [
+@Module({ imports: [ApiFoundationModule], controllers: [CreditReturnController, CustomerCreditReturnController, CreditSaleController, CreditController, CustomerCreditController], providers: [
+  { provide: CreditReturnService, useValue: service },
   { provide: CreditService, useValue: service },
   { provide: CreditSaleService, useValue: service },
   { provide: APP_GUARD, useValue: new AuthGuard(principals as unknown as AuthPrincipalService, { record: vi.fn() } as unknown as AuditLogService) },
@@ -42,7 +50,12 @@ const policy = { expectedVersion: null, status: 'ACTIVE', creditLimit: '1000', t
 const opening = { expectedVersion: 0, amount: '1000', issuedAt: at, dueAt: at, sourceReference: 'isolated-ledger-proof' };
 const receipt = { expectedVersion: 1, amount: '100', method: 'CASH', effectiveAt: at, evidenceReference: 'isolated-receipt-proof', allocations: [{ documentId: 'own-document', amount: '100' }] };
 const correction = { expectedVersion: 2, effectiveAt: at, evidenceReference: 'isolated-correction-proof', reason: 'Isolated correction' };
+const cancellation = { expectedVersion: 0, expectedOrderVersion: 0, evidenceReference: 'isolated-return-proof', reason: 'Isolated compensation' };
 const routes = [
+  ['list', 'GET', '/own-customer/orders/own-order/returns', 'credit.read', undefined],
+  ['cancel', 'POST', '/own-customer/orders/own-order/cancel', 'credit.adjust', cancellation],
+  ['receive', 'POST', '/own-customer/orders/own-order/returns', 'credit.adjust', { ...cancellation, lines: [{ orderItemId: 'own-item', quantity: 1, warehouseId: 'warehouse', locationId: 'shelf' }] }],
+  ['payout', 'POST', '/own-customer/orders/own-order/returns/own-return/payouts', 'credit.adjust', { expectedVersion: 0, amount: '100', method: 'CASH', effectiveAt: at, evidenceReference: 'isolated-payout-proof', reason: 'Actual test evidence' }],
   ['approve', 'POST', '/own-customer/orders/own-order/approve', 'credit.approve', { expectedVersion: 0, expectedOrderVersion: 0 }],
   ['statement', 'GET', '/own-customer', 'credit.read', undefined],
   ['ledger', 'GET', '/own-customer/ledger', 'credit.read', undefined],
@@ -87,6 +100,21 @@ describe('Credit server permission, fresh MFA and strict HTTP contract', () => {
     expect(response.status).toBe(method === 'POST' ? 201 : 200);
     expect(service[name]).toHaveBeenCalledOnce();
     expect(response.headers.get('cache-control')).toContain('no-store');
+  });
+  it('enforces stock/order and payout permissions and rejects injected financial terms or actors', async () => {
+    current = { ...staff, permissions: new Set(['credit.adjust']) };
+    expect((await request('POST','/own-customer/orders/own-order/cancel',cancellation)).status).toBe(403);
+    const payout = { expectedVersion: 0, amount: '100', method: 'CASH', effectiveAt: at, evidenceReference: 'isolated-payout-proof', reason: 'Actual test evidence' };
+    expect((await request('POST','/own-customer/orders/own-order/returns/own-return/payouts',payout)).status).toBe(403);
+    current = staff;
+    for (const field of [{ amount: '0' },{ status: 'PAID' },{ actorId: 'forged' },{ refundDue: '0' }]) expect((await request('POST','/own-customer/orders/own-order/cancel',{ ...cancellation,...field })).status).toBe(400);
+    expect(service.cancel).not.toHaveBeenCalled(); expect(service.payout).not.toHaveBeenCalled();
+  });
+  it('customer return projections use only the authenticated principal, not body/query ownership', async () => {
+    current = { ...staff, userId: 'customer-A', authenticationLevel: 'CUSTOMER_OTP', permissions: new Set() };
+    expect((await request('GET','/orders/own-order/returns',undefined,true,true)).status).toBe(200);
+    expect(service.customerList).toHaveBeenCalledWith('customer-A','own-order');
+    expect((await request('GET','/orders/own-order/returns?customerId=customer-B',undefined,true,true)).status).toBe(400);
   });
   it('requires order-management permission as well as credit approval and rejects injected amounts', async () => {
     current = { ...staff, permissions: new Set(['credit.approve']) };

@@ -221,6 +221,8 @@ enum StocktakeScopeType {
 }
 
 model User {
+  creditReturns               CreditSaleReturn[]
+  creditRefundPayouts         CreditRefundPayout[]
   id                          String                       @id @default(cuid())
   mobile                      String?                      @unique @db.VarChar(13)
   email                       String?                      @unique @db.VarChar(320)
@@ -767,6 +769,7 @@ model InventoryBalance {
 }
 
 model InventoryMovement {
+  creditReturnLine    CreditSaleReturnLine?
   id                  String                @id @default(cuid())
   warehouseId         String
   locationId          String
@@ -1197,6 +1200,7 @@ model GuestCartMutation {
 }
 
 model Order {
+  creditReturns              CreditSaleReturn[]
   id                         String                          @id @default(cuid())
   number                     String                          @unique
   customerId                 String
@@ -1229,28 +1233,29 @@ model Order {
   createdAt                  DateTime                        @default(now())
   updatedAt                  DateTime                        @updatedAt
 
-  @@index([customerId, createdAt])
   @@unique([id, customerId])
+  @@index([customerId, createdAt])
   @@index([status, createdAt])
   @@index([createdAt])
 }
 
 model OrderItem {
-  id              String           @id @default(cuid())
-  orderId         String
-  variantId       String
-  sku             String
-  title           String
-  productTitle    String
-  variantTitle    String?
-  ordinal         Int
-  quantity        Int
-  unitPrice       BigInt
-  total           BigInt
-  order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant         ProductVariant   @relation(fields: [variantId], references: [id])
-  fulfillmentPick FulfillmentPick?
-  shipmentLine    ShipmentLine?
+  creditReturnLines CreditSaleReturnLine[]
+  id                String                 @id @default(cuid())
+  orderId           String
+  variantId         String
+  sku               String
+  title             String
+  productTitle      String
+  variantTitle      String?
+  ordinal           Int
+  quantity          Int
+  unitPrice         BigInt
+  total             BigInt
+  order             Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant           ProductVariant         @relation(fields: [variantId], references: [id])
+  fulfillmentPick   FulfillmentPick?
+  shipmentLine      ShipmentLine?
 
   @@unique([orderId, ordinal])
   @@index([orderId])
@@ -1650,7 +1655,6 @@ model SmsTemplateCommandRecord {
   @@unique([actorId, keyHash])
 }
 
-
 enum CreditAccountStatus {
   ACTIVE
   SUSPENDED
@@ -1677,15 +1681,15 @@ enum CreditReceiptMethod {
 
 /// Policy only. Outstanding amounts are derived exclusively from the ledger.
 model CreditAccount {
-  id          String              @id @default(cuid())
-  customerId  String              @unique
-  status      CreditAccountStatus @default(SUSPENDED)
-  creditLimit BigInt              @default(0)
-  termsDays   Int                 @default(0)
-  version     Int                 @default(0)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  customer    Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  id          String               @id @default(cuid())
+  customerId  String               @unique
+  status      CreditAccountStatus  @default(SUSPENDED)
+  creditLimit BigInt               @default(0)
+  termsDays   Int                  @default(0)
+  version     Int                  @default(0)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  customer    Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
   documents   ReceivableDocument[]
   receipts    CreditReceipt[]
   entries     CreditLedgerEntry[]
@@ -1693,22 +1697,23 @@ model CreditAccount {
 
 /// Immutable evidenced debt, either historical opening or an approved staff sale.
 model ReceivableDocument {
-  id                String                 @id @default(cuid())
-  accountId         String
-  orderId           String?                @unique
-  order             Order?                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  kind              ReceivableDocumentKind
-  amount            BigInt
-  issuedAt          DateTime
-  dueAt             DateTime
-  termsDays         Int
-  sourceReference   String                 @db.VarChar(128)
-  actorId           String
-  requestId         String                 @db.VarChar(100)
-  createdAt         DateTime               @default(now())
-  account           CreditAccount          @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  actor             User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
-  entries           CreditLedgerEntry[]
+  creditReturns   CreditSaleReturn[]
+  id              String                 @id @default(cuid())
+  accountId       String
+  orderId         String?                @unique
+  order           Order?                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  kind            ReceivableDocumentKind
+  amount          BigInt
+  issuedAt        DateTime
+  dueAt           DateTime
+  termsDays       Int
+  sourceReference String                 @db.VarChar(128)
+  actorId         String
+  requestId       String                 @db.VarChar(100)
+  createdAt       DateTime               @default(now())
+  account         CreditAccount          @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  actor           User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  entries         CreditLedgerEntry[]
 
   @@unique([id, accountId])
   @@index([accountId, dueAt])
@@ -1736,26 +1741,27 @@ model CreditReceipt {
 
 /// One receipt entry per document is the immutable allocation; reversal points to it.
 model CreditLedgerEntry {
-  id              String          @id @default(cuid())
-  accountId       String
-  documentId      String
-  receiptId       String?
-  reversalOfId    String?         @unique
-  kind            CreditEntryKind
-  amount          BigInt
-  evidenceReference String?       @db.VarChar(128)
-  reason          String?         @db.VarChar(500)
-  evidenceHash    String?         @unique @db.Char(64)
-  effectiveAt     DateTime
-  actorId         String
-  requestId       String          @db.VarChar(100)
-  createdAt       DateTime        @default(now())
-  account         CreditAccount   @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  document        ReceivableDocument @relation(fields: [documentId, accountId], references: [id, accountId], onDelete: Restrict, onUpdate: NoAction)
-  receipt         CreditReceipt?  @relation(fields: [receiptId, accountId], references: [id, accountId], onDelete: Restrict, onUpdate: NoAction)
-  actor           User            @relation(fields: [actorId], references: [id], onDelete: Restrict)
-  reversalOf      CreditLedgerEntry? @relation("CreditReversal", fields: [reversalOfId], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  reversal        CreditLedgerEntry? @relation("CreditReversal")
+  creditReturn      CreditSaleReturn?
+  id                String             @id @default(cuid())
+  accountId         String
+  documentId        String
+  receiptId         String?
+  reversalOfId      String?            @unique
+  kind              CreditEntryKind
+  amount            BigInt
+  evidenceReference String?            @db.VarChar(128)
+  reason            String?            @db.VarChar(500)
+  evidenceHash      String?            @unique @db.Char(64)
+  effectiveAt       DateTime
+  actorId           String
+  requestId         String             @db.VarChar(100)
+  createdAt         DateTime           @default(now())
+  account           CreditAccount      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  document          ReceivableDocument @relation(fields: [documentId, accountId], references: [id, accountId], onDelete: Restrict, onUpdate: NoAction)
+  receipt           CreditReceipt?     @relation(fields: [receiptId, accountId], references: [id, accountId], onDelete: Restrict, onUpdate: NoAction)
+  actor             User               @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  reversalOf        CreditLedgerEntry? @relation("CreditReversal", fields: [reversalOfId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reversal          CreditLedgerEntry? @relation("CreditReversal")
 
   @@unique([receiptId, documentId, kind])
   @@index([accountId, createdAt, id])
@@ -1775,6 +1781,65 @@ model CreditCommandRecord {
   @@unique([actorId, scope, keyHash])
 }
 
+/// Immutable physical/financial compensation; refundDue is an obligation, not a payout.
+model CreditSaleReturn {
+  id                String                 @id @default(cuid())
+  orderId           String
+  documentId        String
+  kind              String                 @db.VarChar(10)
+  amount            BigInt
+  debtCredit        BigInt
+  refundDue         BigInt
+  entryId           String?                @unique
+  evidenceReference String                 @db.VarChar(128)
+  evidenceHash      String                 @unique @db.Char(64)
+  reason            String                 @db.VarChar(500)
+  actorId           String
+  requestId         String                 @db.VarChar(100)
+  createdAt         DateTime               @default(now())
+  order             Order                  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  document          ReceivableDocument     @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  entry             CreditLedgerEntry?     @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  actor             User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  lines             CreditSaleReturnLine[]
+  payouts           CreditRefundPayout[]
+
+  @@index([orderId, createdAt])
+}
+
+model CreditSaleReturnLine {
+  id          String            @id @default(cuid())
+  returnId    String
+  orderItemId String
+  quantity    Int
+  unitPrice   BigInt
+  movementId  String            @unique
+  document    CreditSaleReturn  @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  orderItem   OrderItem         @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  movement    InventoryMovement @relation(fields: [movementId], references: [id], onDelete: Restrict)
+
+  @@index([orderItemId])
+}
+
+/// Actual manual payout evidence; never a gateway Payment or provider-success assertion.
+model CreditRefundPayout {
+  id                String              @id @default(cuid())
+  returnId          String
+  amount            BigInt
+  method            CreditReceiptMethod
+  evidenceReference String              @db.VarChar(128)
+  evidenceHash      String              @unique @db.Char(64)
+  reason            String              @db.VarChar(500)
+  effectiveAt       DateTime
+  actorId           String
+  requestId         String              @db.VarChar(100)
+  createdAt         DateTime            @default(now())
+  document          CreditSaleReturn    @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  actor             User                @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([returnId])
+}
+
 enum InvoiceTaxTreatment {
   EXCLUSIVE
   INCLUSIVE
@@ -1782,35 +1847,35 @@ enum InvoiceTaxTreatment {
 }
 
 model InvoicePolicyRevision {
-  id               String @id @default(cuid())
-  version          Int @unique
-  sellerName       String @db.VarChar(200)
-  sellerAddress    String @db.VarChar(1000)
-  sellerContact    String @db.VarChar(200)
-  taxTreatment     InvoiceTaxTreatment
-  taxRateBps       Int
-  exemptionReason  String? @db.VarChar(500)
-  discountCapBps   Int
-  shippingTaxable  Boolean
-  isActive         Boolean
-  reason           String @db.VarChar(500)
-  actorId          String
-  requestId        String @db.VarChar(100)
-  createdAt        DateTime @default(now())
-  actor            User @relation(fields: [actorId], references: [id], onDelete: Restrict)
-  commands         InvoicePolicyCommand[]
-  drafts           InvoiceDraft[]
+  id              String                 @id @default(cuid())
+  version         Int                    @unique
+  sellerName      String                 @db.VarChar(200)
+  sellerAddress   String                 @db.VarChar(1000)
+  sellerContact   String                 @db.VarChar(200)
+  taxTreatment    InvoiceTaxTreatment
+  taxRateBps      Int
+  exemptionReason String?                @db.VarChar(500)
+  discountCapBps  Int
+  shippingTaxable Boolean
+  isActive        Boolean
+  reason          String                 @db.VarChar(500)
+  actorId         String
+  requestId       String                 @db.VarChar(100)
+  createdAt       DateTime               @default(now())
+  actor           User                   @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  commands        InvoicePolicyCommand[]
+  drafts          InvoiceDraft[]
 }
 
 model InvoicePolicyCommand {
-  id           String @id @default(cuid())
-  actorId      String
-  keyHash      String @db.Char(64)
-  payloadHash  String @db.Char(64)
-  revisionId   String
-  createdAt    DateTime @default(now())
-  actor        User @relation(fields: [actorId], references: [id], onDelete: Restrict)
-  revision     InvoicePolicyRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  id          String                @id @default(cuid())
+  actorId     String
+  keyHash     String                @db.Char(64)
+  payloadHash String                @db.Char(64)
+  revisionId  String
+  createdAt   DateTime              @default(now())
+  actor       User                  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  revision    InvoicePolicyRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict)
 
   @@unique([actorId, keyHash])
 }
@@ -1826,33 +1891,33 @@ enum InvoiceDraftSource {
 }
 
 model InvoiceDraft {
-  id                    String @id @default(cuid())
-  version               Int @default(0)
-  state                 InvoiceDraftState @default(DRAFT)
-  source                InvoiceDraftSource
-  customerId            String
-  buyerLabel            String @db.VarChar(250)
-  sourceOrderId         String?
-  sourceOrderVersion    Int?
-  sourceOrderHash       String? @db.Char(64)
-  addressSnapshot       Json
-  note                  String? @db.VarChar(500)
-  globalDiscount        BigInt @default(0)
-  shippingCode          String @db.VarChar(64)
-  shippingTitle         String @db.VarChar(120)
-  shippingAmount        BigInt
-  shippingPolicyRevision String @db.VarChar(100)
-  pricePolicyRevision   String @db.VarChar(100)
-  quoteExpiresAt        DateTime?
-  policyRevisionId      String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  customer              Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  sourceOrder           Order? @relation(fields: [sourceOrderId, customerId], references: [id, customerId], onDelete: Restrict, onUpdate: NoAction)
-  policyRevision        InvoicePolicyRevision? @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
-  lines                 InvoiceDraftLine[]
-  revisions             InvoiceDraftRevision[]
-  commands              InvoiceDraftCommand[]
+  id                     String                 @id @default(cuid())
+  version                Int                    @default(0)
+  state                  InvoiceDraftState      @default(DRAFT)
+  source                 InvoiceDraftSource
+  customerId             String
+  buyerLabel             String                 @db.VarChar(250)
+  sourceOrderId          String?
+  sourceOrderVersion     Int?
+  sourceOrderHash        String?                @db.Char(64)
+  addressSnapshot        Json
+  note                   String?                @db.VarChar(500)
+  globalDiscount         BigInt                 @default(0)
+  shippingCode           String                 @db.VarChar(64)
+  shippingTitle          String                 @db.VarChar(120)
+  shippingAmount         BigInt
+  shippingPolicyRevision String                 @db.VarChar(100)
+  pricePolicyRevision    String                 @db.VarChar(100)
+  quoteExpiresAt         DateTime?
+  policyRevisionId       String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  customer               Customer               @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  sourceOrder            Order?                 @relation(fields: [sourceOrderId, customerId], references: [id, customerId], onDelete: Restrict, onUpdate: NoAction)
+  policyRevision         InvoicePolicyRevision? @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
+  lines                  InvoiceDraftLine[]
+  revisions              InvoiceDraftRevision[]
+  commands               InvoiceDraftCommand[]
 
   @@index([createdAt, id])
   @@index([customerId, createdAt])
@@ -1860,50 +1925,50 @@ model InvoiceDraft {
 }
 
 model InvoiceDraftLine {
-  id          String @id @default(cuid())
-  draftId     String
-  variantId   String
-  ordinal     Int
-  sku         String @db.VarChar(64)
-  title       String @db.VarChar(250)
-  quantity    Int
-  unitPrice   BigInt
-  discount    BigInt @default(0)
-  draft       InvoiceDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
-  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  id        String         @id @default(cuid())
+  draftId   String
+  variantId String
+  ordinal   Int
+  sku       String         @db.VarChar(64)
+  title     String         @db.VarChar(250)
+  quantity  Int
+  unitPrice BigInt
+  discount  BigInt         @default(0)
+  draft     InvoiceDraft   @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
 
   @@unique([draftId, ordinal])
   @@unique([draftId, variantId])
 }
 
 model InvoiceDraftRevision {
-  id         String @id @default(cuid())
-  draftId    String
-  version    Int
-  action     String @db.VarChar(16)
-  snapshot   Json
-  reason     String? @db.VarChar(500)
-  actorId    String
-  requestId  String @db.VarChar(100)
-  createdAt  DateTime @default(now())
-  draft      InvoiceDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
-  actor      User @relation(fields: [actorId], references: [id], onDelete: Restrict)
-  commands   InvoiceDraftCommand[]
+  id        String                @id @default(cuid())
+  draftId   String
+  version   Int
+  action    String                @db.VarChar(16)
+  snapshot  Json
+  reason    String?               @db.VarChar(500)
+  actorId   String
+  requestId String                @db.VarChar(100)
+  createdAt DateTime              @default(now())
+  draft     InvoiceDraft          @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  actor     User                  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  commands  InvoiceDraftCommand[]
 
   @@unique([draftId, version])
 }
 
 model InvoiceDraftCommand {
-  id               String @id @default(cuid())
-  actorId          String
-  scope            String @db.VarChar(100)
-  keyHash          String @db.Char(64)
-  payloadHash      String @db.Char(64)
-  draftId          String
-  committedVersion Int
-  createdAt        DateTime @default(now())
-  draft            InvoiceDraft @relation(fields: [draftId], references: [id], onDelete: Restrict)
-  actor            User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  id                String               @id @default(cuid())
+  actorId           String
+  scope             String               @db.VarChar(100)
+  keyHash           String               @db.Char(64)
+  payloadHash       String               @db.Char(64)
+  draftId           String
+  committedVersion  Int
+  createdAt         DateTime             @default(now())
+  draft             InvoiceDraft         @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  actor             User                 @relation(fields: [actorId], references: [id], onDelete: Restrict)
   committedRevision InvoiceDraftRevision @relation(fields: [draftId, committedVersion], references: [draftId, version], onDelete: Restrict, onUpdate: NoAction)
 
   @@unique([actorId, scope, keyHash])
