@@ -11,6 +11,7 @@ import {
 } from '../../lib/site-config'
 import { gregorianToJalali, toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
+import { StoreBrandLogo } from '../brand/StoreBrandLogo'
 
 function currentJalaliYear(): number {
   const now = new Date()
@@ -25,7 +26,7 @@ export function SiteFooter() {
       <div className="max-w-[1280px] mx-auto px-4 lg:px-6">
         <div className="py-8 lg:py-10 grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <div className="font-black text-[17px] text-slate-900">{SITE_NAME}</div>
+            <Link to={ROUTES.home} aria-label="بازگشت به صفحهٔ اصلی فروشگاه"><StoreBrandLogo variant="wordmark" /></Link>
             <p className="mt-2 text-[13px] leading-7 text-slate-600">{SITE_TAGLINE}</p>
             <p className="mt-3 text-[13px] leading-7 text-slate-500">
               کالاها، قیمت‌ها و وضعیت موجودی را در کاتالوگ مشاهده کنید. مبلغ نهایی سفارش در مرحلهٔ تکمیل خرید از سرور محاسبه می‌شود.

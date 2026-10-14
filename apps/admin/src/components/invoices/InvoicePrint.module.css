@@ -1,0 +1,31 @@
+.sheet { min-width: 0; }
+.brand { width: 17rem; max-width: 100%; height: auto; object-fit: contain; background: white; }
+
+@page { size: A4; margin: 14mm; }
+.money { white-space: nowrap; unicode-bidi: isolate; }
+.pageFooter { display: none; }
+@media print {
+  :global(body:has([data-invoice-print])) { background: white; color: #111; margin: 0; }
+  :global(body:has([data-invoice-print]) *) { visibility: hidden; }
+  :global(body:has([data-invoice-print]) :is(div, main):has([data-invoice-print])) {
+    position: static !important; transform: none !important; margin: 0 !important;
+    padding: 0 !important; width: 100% !important; max-width: none !important; min-height: 0 !important;
+  }
+  .sheet, .sheet * { visibility: visible !important; color: #111 !important; box-shadow: none !important; }
+  .sheet { display: block !important; position: absolute; inset: 0 0 auto; width: 100%; margin: 0; direction: rtl; }
+  .sheet :global(.MuiPaper-root) { background: white !important; padding: 1.5mm; margin-top: 4mm !important; overflow: visible !important; border: 1px solid #aaa; }
+  .sheet table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .sheet thead { display: table-header-group; }
+  .sheet tr { break-inside: avoid; }
+  .sheet th, .sheet td { box-sizing: border-box; padding: 2mm 0.75mm; border: 1px solid #aaa; font-size: 8pt; overflow-wrap: anywhere; }
+  .sheet th:nth-child(1) { width: 11%; }
+  .sheet th:nth-child(2) { width: 17%; }
+  .sheet th:nth-child(3) { width: 5%; }
+  .sheet th:nth-child(n+4) { width: 16.75%; }
+  .money { font-size: 7pt; }
+  .sheet .screenOnly { display: none !important; }
+  .sheet .pageFooter { display: block; position: fixed; inset: auto 0 -9mm; font-size: 8pt; text-align: center; }
+  .sheet p { font-size: 10pt; line-height: 1.8; }
+  .sheet a { color: #111; text-decoration: none; }
+  .brand { width: 70mm; }
+}

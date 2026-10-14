@@ -5,7 +5,8 @@ import { useCart } from '../../state/cart-context'
 import { toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
 import { AccountMenu } from '../auth/AccountMenu'
-import { HAS_SITE_PHONE, SITE_NAME, SITE_PHONE, SITE_TAGLINE } from '../../lib/site-config'
+import { HAS_SITE_PHONE, SITE_PHONE } from '../../lib/site-config'
+import { StoreBrandLogo } from '../brand/StoreBrandLogo'
 
 type SiteHeaderProps = {
   searchQuery: string
@@ -37,16 +38,9 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
       <div className="max-w-[1280px] mx-auto px-4 lg:px-6">
         <div className="flex items-center gap-2 sm:gap-4 lg:gap-8 h-[64px] lg:h-[76px]">
           {/* Logo */}
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-xl bg-[#FF4D00] flex items-center justify-center text-white font-black text-xl leading-none rotate-3">
-              <span className="-rotate-3">آ</span>
-            </div>
-            <div className="min-w-0">
-              <div className="font-black text-[17px] lg:text-[19px] leading-none text-[#0F172A] tracking-tight">{SITE_NAME}</div>
-              <div className="hidden sm:block text-[11px] text-slate-600 font-medium tracking-widest">{SITE_TAGLINE}</div>
-            </div>
-            <span className="hidden lg:inline-flex mr-4 px-2.5 py-1 rounded-full bg-[#FF4D00]/10 text-[#C2410C] text-[11px] font-bold">فروشگاه تخصصی</span>
-          </div>
+          <Link to={ROUTES.home} aria-label="ایران یراق؛ صفحهٔ اصلی" className="flex shrink-0 items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]">
+            <StoreBrandLogo />
+          </Link>
 
           {/* Nav - Desktop */}
           <nav className="hidden lg:flex items-center gap-7 mr-6 text-[14px] font-medium text-slate-700">
