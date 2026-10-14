@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   OperationalReportsPage,
   reportDayRange,
+  initialReportState,
 } from './OperationalReportsPage';
 import { ApiClientError } from '@/lib/api/client';
 const mocks = vi.hoisted(() => ({
@@ -334,5 +335,100 @@ describe('Operational Admin reports contract and states', () => {
       ['2026-01-01', '2028-01-01'],
     ])
       expect(() => reportDayRange(from, to)).toThrow();
+  });
+});
+
+describe('Report URL restoration', () => {
+  const now = '2026-10-14T06:00:00.000Z';
+  it('restores bounded applied filters, tab, paging and the exact debtor instant', () => {
+    const state = initialReportState(
+      {
+        from: '2026-01-01',
+        to: '2026-01-31',
+        grain: 'month',
+        customerId: 'customer-a',
+        productId: 'product-a',
+        status: 'CREDIT_APPROVED',
+        view: 'debtors',
+        offset: '25',
+        asOf: '2026-01-31T12:00:00.000Z',
+      },
+      now,
+    );
+    expect(state).toMatchObject({
+      view: 'debtors',
+      offset: 25,
+      asOf: '2026-01-31T12:00:00.000Z',
+      query: {
+        from: '2026-01-01T00:00:00.000Z',
+        toExclusive: '2026-02-01T00:00:00.000Z',
+        grain: 'month',
+        customerId: 'customer-a',
+        status: 'CREDIT_APPROVED',
+      },
+    });
+  });
+  it.each([
+    { from: ['2026-01-01', '2026-01-02'] },
+    { to: '2026-02-30' },
+    { grain: 'quarter' },
+    { customerId: 'unsafe?id' },
+    { status: 'FAKE_PAID' },
+    { view: 'secret' },
+    { offset: '1000001' },
+    { asOf: '2026-12-01T00:00:00.000Z' },
+    { asOf: '2026-02-30T00:00:00.000Z' },
+    { token: 'unapproved' },
+  ])(
+    'rejects invalid URL filters instead of showing an unfiltered report: %j',
+    (raw) => {
+      expect(() => initialReportState(raw, now)).toThrow();
+    },
+  );
+  it('invalid URL and missing compound permission never read another report as a fallback', () => {
+    const view = render(
+      <OperationalReportsPage
+        initialFilters={{ token: 'unapproved' }}
+        now={now}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('فیلتر');
+    expect(mocks.summary).not.toHaveBeenCalled();
+    mocks.auth.user.permissions = ['reports.read'];
+    view.rerender(
+      <OperationalReportsPage initialFilters={{ view: 'debtors' }} now={now} />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('دفترکل');
+    expect(mocks.debtors).not.toHaveBeenCalled();
+  });
+  it('persists applied dates and current tab, then restores them on reload', async () => {
+    const view = render(<OperationalReportsPage now={now} />);
+    await screen.findByRole('table', { name: 'روند زمانی گزارش' });
+    fireEvent.change(screen.getByLabelText('از تاریخ میلادی (UTC)'), {
+      target: { value: '2026-01-01' },
+    });
+    fireEvent.change(screen.getByLabelText('تا پایان تاریخ میلادی (UTC)'), {
+      target: { value: '2026-01-31' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'اعمال فیلتر گزارش' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'سفارش و پرداخت' }));
+    const initialFilters = Object.fromEntries(
+      new URLSearchParams(window.location.search),
+    );
+    expect(initialFilters).toMatchObject({
+      from: '2026-01-01',
+      to: '2026-01-31',
+      view: 'orders',
+    });
+    view.unmount();
+    mocks.orders.mockClear();
+    render(
+      <OperationalReportsPage initialFilters={initialFilters} now={now} />,
+    );
+    await waitFor(() => expect(mocks.orders).toHaveBeenCalled());
+    expect(mocks.orders.mock.calls[0][0]).toMatchObject({
+      from: '2026-01-01T00:00:00.000Z',
+      toExclusive: '2026-02-01T00:00:00.000Z',
+    });
   });
 });

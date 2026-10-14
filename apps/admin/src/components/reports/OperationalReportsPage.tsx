@@ -48,8 +48,8 @@ const metricLabels: Record<ReportMetric, string> = {
   recordedCreditRefundPayouts: 'پرداخت‌های ثبت‌شدهٔ برگشت نسیه',
   issuedInvoiceValue: 'ارزش فاکتورهای صادرشده',
 };
-function initialDates() {
-  const today = new Date().toISOString().slice(0, 10);
+function initialDates(now: string) {
+  const today = now.slice(0, 10);
   const from = new Date(Date.parse(`${today}T00:00:00Z`) - 29 * 86400000)
     .toISOString()
     .slice(0, 10);
@@ -74,15 +74,149 @@ export function reportDayRange(from: string, to: string) {
     toExclusive: new Date(last.getTime() + 86400000).toISOString(),
   };
 }
-export function OperationalReportsPage() {
+type SearchFilters = Record<string, string | string[] | undefined>;
+export function initialReportState(raw: SearchFilters, now: string) {
+  if (
+    Object.keys(raw).some(
+      (key) =>
+        ![
+          'from',
+          'to',
+          'grain',
+          'customerId',
+          'productId',
+          'status',
+          'view',
+          'offset',
+          'asOf',
+        ].includes(key),
+    ) ||
+    Object.values(raw).some(
+      (value) => value !== undefined && typeof value !== 'string',
+    )
+  )
+    throw new Error('invalid filters');
+  const defaults = initialDates(now);
+  const dates = {
+    from: (raw.from as string | undefined) ?? defaults.from,
+    to: (raw.to as string | undefined) ?? defaults.to,
+  };
+  const range = reportDayRange(dates.from, dates.to);
+  const grain = (raw.grain ?? 'day') as 'day' | 'week' | 'month';
+  const view = (raw.view ?? 'summary') as string;
+  const status = (raw.status ?? '') as string;
+  const customerId = (raw.customerId ?? '') as string,
+    productId = (raw.productId ?? '') as string;
+  if (
+    !['day', 'week', 'month'].includes(grain) ||
+    !['summary', 'orders', 'debtors'].includes(view) ||
+    ![
+      '',
+      'DRAFT',
+      'PENDING_PAYMENT',
+      'PAID',
+      'CREDIT_APPROVED',
+      'CANCELLED',
+      'RETURNED',
+    ].includes(status) ||
+    [customerId, productId].some(
+      (id) => id !== '' && !/^[A-Za-z0-9_-]{1,64}$/u.test(id),
+    )
+  )
+    throw new Error('invalid filters');
+  const offsetText = (raw.offset ?? '0') as string;
+  if (
+    !/^(0|[1-9][0-9]{0,6})$/u.test(offsetText) ||
+    Number(offsetText) > 1000000
+  )
+    throw new Error('invalid offset');
+  const asOf = (raw.asOf ??
+    new Date(
+      Math.min(Date.parse(range.toExclusive), Date.parse(now)),
+    ).toISOString()) as string;
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(asOf) ||
+    !Number.isFinite(Date.parse(asOf)) ||
+    new Date(asOf).toISOString() !== asOf ||
+    Date.parse(asOf) > Date.parse(now)
+  )
+    throw new Error('invalid as-of');
+  const query: OperationalReportQuery = {
+    ...range,
+    grain,
+    customerId: customerId || undefined,
+    productId: productId || undefined,
+    status: status ? (status as OperationalReportQuery['status']) : undefined,
+  };
+  return {
+    dates,
+    grain,
+    view,
+    status,
+    customerId,
+    productId,
+    offset: Number(offsetText),
+    asOf,
+    query,
+  };
+}
+function persistReportFilters(
+  query: OperationalReportQuery,
+  view: string,
+  offset: number,
+  asOf: string,
+) {
+  const params = new URLSearchParams({
+    from: query.from.slice(0, 10),
+    to: new Date(Date.parse(query.toExclusive) - 86400000)
+      .toISOString()
+      .slice(0, 10),
+    grain: query.grain ?? 'day',
+    view,
+    offset: String(offset),
+    asOf,
+  });
+  for (const key of ['customerId', 'productId', 'status'] as const)
+    if (query[key]) params.set(key, query[key]!);
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${window.location.pathname}?${params.toString()}`,
+  );
+}
+export function OperationalReportsPage({
+  initialFilters = {},
+  now = new Date().toISOString(),
+}: {
+  initialFilters?: SearchFilters;
+  now?: string;
+}) {
   const { user, isRestoring } = useAuth();
   if (isRestoring)
     return <Typography role="status">در حال بررسی نشست…</Typography>;
   if (!user?.permissions.includes('reports.read'))
     return <Alert severity="error">دسترسی مشاهدهٔ گزارش لازم است.</Alert>;
+  let initial: ReturnType<typeof initialReportState>;
+  try {
+    initial = initialReportState(initialFilters, now);
+  } catch {
+    return (
+      <Alert severity="error">
+        فیلتر نشانی گزارش معتبر نیست.{' '}
+        <Link href="/reports">پاک‌کردن فیلترها</Link>
+      </Alert>
+    );
+  }
+  if (initial.view === 'debtors' && !user.permissions.includes('credit.read'))
+    return (
+      <Alert severity="error">
+        دسترسی دفترکل نسیه برای این گزارش لازم است.
+      </Alert>
+    );
   return (
     <Reports
-      key={`${user.userId}:${[...user.permissions].sort().join(',')}`}
+      key={`${user.userId}:${[...user.permissions].sort().join(',')}:${JSON.stringify(initialFilters)}`}
+      initial={initial}
       credit={user.permissions.includes('credit.read')}
       customers={user.permissions.includes('customers.read')}
       catalog={user.permissions.includes('catalog.read')}
@@ -90,31 +224,30 @@ export function OperationalReportsPage() {
   );
 }
 function Reports({
+  initial,
   credit,
   customers,
   catalog,
 }: {
+  initial: ReturnType<typeof initialReportState>;
   credit: boolean;
   customers: boolean;
   catalog: boolean;
 }) {
-  const [dates, setDates] = useState(initialDates),
-    [grain, setGrain] = useState<'day' | 'week' | 'month'>('day'),
-    [customerId, setCustomerId] = useState(''),
-    [productId, setProductId] = useState(''),
-    [status, setStatus] = useState('');
-  const [view, setView] = useState('summary'),
-    [query, setQuery] = useState<OperationalReportQuery>(() => ({
-      ...reportDayRange(dates.from, dates.to),
-      grain: 'day',
-    })),
+  const [dates, setDates] = useState(initial.dates),
+    [grain, setGrain] = useState(initial.grain),
+    [customerId, setCustomerId] = useState(initial.customerId),
+    [productId, setProductId] = useState(initial.productId),
+    [status, setStatus] = useState(initial.status);
+  const [view, setView] = useState(initial.view),
+    [query, setQuery] = useState(initial.query),
     [attempt, setAttempt] = useState(0),
-    [offset, setOffset] = useState(0),
+    [offset, setOffset] = useState(initial.offset),
     [invalid, setInvalid] = useState(false),
-    [asOf, setAsOf] = useState(() => new Date().toISOString());
+    [asOf, setAsOf] = useState(initial.asOf);
   function submit() {
     try {
-      setQuery({
+      const nextQuery: OperationalReportQuery = {
         ...reportDayRange(dates.from, dates.to),
         grain,
         customerId: customerId || undefined,
@@ -122,15 +255,16 @@ function Reports({
         status: status
           ? (status as OperationalReportQuery['status'])
           : undefined,
-      });
-      setAsOf(
-        new Date(
-          Math.min(
-            Date.parse(reportDayRange(dates.from, dates.to).toExclusive),
-            Date.now(),
-          ),
-        ).toISOString(),
-      );
+      };
+      setQuery(nextQuery);
+      const nextAsOf = new Date(
+        Math.min(
+          Date.parse(reportDayRange(dates.from, dates.to).toExclusive),
+          Date.now(),
+        ),
+      ).toISOString();
+      setAsOf(nextAsOf);
+      persistReportFilters(nextQuery, view, 0, nextAsOf);
       setOffset(0);
       setAttempt((value) => value + 1);
       setInvalid(false);
@@ -260,6 +394,7 @@ function Reports({
         onChange={(_, next: string) => {
           setView(next);
           setOffset(0);
+          persistReportFilters(query, next, 0, asOf);
         }}
         variant="scrollable"
         aria-label="نوع گزارش"
@@ -279,7 +414,10 @@ function Reports({
         query={query}
         asOf={asOf}
         offset={offset}
-        page={setOffset}
+        page={(next) => {
+          setOffset(next);
+          persistReportFilters(query, view, next, asOf);
+        }}
         retry={() => setAttempt((value) => value + 1)}
       />
     </Stack>

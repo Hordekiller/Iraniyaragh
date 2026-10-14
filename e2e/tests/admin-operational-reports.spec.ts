@@ -80,4 +80,8 @@ test('staff reads real operational evidence, order pages and immutable debtor ag
   await expect(
     page.getByRole('button', { name: 'بازخوانی گزارش', exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole('tab', { name: 'بدهکاران و سررسید', exact: true }),
+  ).toHaveAttribute('aria-selected', 'true');
+  expect(new URL(page.url()).searchParams.get('view')).toBe('debtors');
 });
