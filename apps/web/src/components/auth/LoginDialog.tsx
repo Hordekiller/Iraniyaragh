@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, KeyRound, Loader2, Smartphone, X } from 'lucide-
 import { normalizeIranianMobile } from '../../lib/auth/normalize'
 import { useAuth } from '../../state/auth-context'
 import { MOBILE_PLACEHOLDER } from '../../lib/site-config'
+import { StoreBrandLogo } from '../brand/StoreBrandLogo'
 
 type LoginDialogProps = {
   open: boolean
@@ -208,7 +209,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                 <X size={17} />
               </button>
               <span className="text-[11px] font-bold text-slate-400">ورود به ایران یراق</span>
-              <span className="w-9" />
+              <StoreBrandLogo variant="mark" />
             </div>
 
             <div className="px-6 pb-7 pt-3">

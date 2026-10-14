@@ -6,6 +6,7 @@ import { AuthProvider } from '@/lib/auth/AuthProvider';
 import { AdminPreferencesProvider } from '@/lib/preferences/AdminPreferencesProvider';
 import { ADMIN_PREFS_COOKIE, parsePreferencesCookie } from '@/lib/preferences/preferences';
 import './globals.css';
+import { brandAsset } from '@/lib/brand';
 
 export const metadata: Metadata = {
   title: {
@@ -14,6 +15,8 @@ export const metadata: Metadata = {
   },
   description: 'مدیریت یکپارچه فروش، انبار و عملیات ایران یراق',
   robots: { index: false, follow: false },
+  icons: { icon: [{ url: brandAsset('favicon-32.png'), sizes: '32x32', type: 'image/png' }],
+    apple: [{ url: brandAsset('apple-touch-icon.png'), sizes: '180x180', type: 'image/png' }] },
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

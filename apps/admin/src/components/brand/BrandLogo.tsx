@@ -1,3 +1,5 @@
+import Image from 'next/image';
+import { brandAsset } from '@/lib/brand';
 import styles from './BrandLogo.module.css';
 
 type BrandLogoProps = {
@@ -5,7 +7,7 @@ type BrandLogoProps = {
   inverse?: boolean;
 };
 
-export function BrandLogo({ compact = false, inverse = false }: BrandLogoProps) {
+export function BrandLogo({ compact = false, inverse = false }: Readonly<BrandLogoProps>) {
   const className = [
     styles.brand,
     compact ? styles.compact : '',
@@ -16,11 +18,9 @@ export function BrandLogo({ compact = false, inverse = false }: BrandLogoProps) 
 
   return (
     <div className={className} aria-label="ایران یراق، مرکز عملیات">
-      <span className={styles.mark} aria-hidden="true">
-        آی
-      </span>
+      {compact ? <Image className={styles.mark} src={brandAsset('mark-128.webp')} alt="" width={44} height={44} unoptimized /> :
+        <Image className={styles.wordmark} src={brandAsset('wordmark-864.webp')} alt="ایران یراق" width={216} height={72} unoptimized />}
       <span className={styles.copy}>
-        <strong>ایران یراق</strong>
         <span>مرکز عملیات</span>
       </span>
     </div>
