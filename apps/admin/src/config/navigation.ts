@@ -82,7 +82,6 @@ export const navigation: NavigationGroup[] = [
         href: '/reports',
         icon: ChartNoAxesCombined,
         permission: 'reports.read',
-        status: 'planned',
       },
     ],
   },
