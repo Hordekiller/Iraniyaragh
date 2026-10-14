@@ -221,6 +221,8 @@ export class InvoicePublicationService {
       isPublished: raw.isPublished,
       reason: raw.reason.trim().normalize('NFC'),
     };
+    if (input.reason.length > 500)
+      throw invoiceInvalid('The normalized publication reason exceeds its stored bound.');
     const keyHash = digest(normalizeIdempotencyKey(key)),
       payloadHash = digest(input);
     try {

@@ -364,6 +364,14 @@ describe('Invoice publication privacy and fail-closed command behavior', () => {
       expect(current.prisma.$transaction).not.toHaveBeenCalled();
     },
   );
+  it('rejects a reason that exceeds the stored bound after canonical normalization', async () => {
+    const reason = '\u0344'.repeat(500);
+    expect(reason.length).toBe(500);
+    expect(reason.normalize('NFC').length).toBe(1000);
+    await expect(current.service.change('operator', 'request-a', 'doc-a',
+      { ...input, reason }, 'test-key')).rejects.toMatchObject({ response: { code: 'VALIDATION_ERROR' } });
+    expect(current.prisma.$transaction).not.toHaveBeenCalled();
+  });
   it.each([
     { customerId: 'foreign' },
     { offset: '-1' },
