@@ -51,7 +51,7 @@ export function reportId(value: unknown): string | undefined {
 export function reportPage(raw: Record<string, unknown>) {
   const parse = (value: unknown, fallback: number) => {
     if (value === undefined) return fallback;
-    if (typeof value !== 'string' || !/^(0|[1-9][0-9]{0,6})$/u.test(value))
+    if (typeof value !== 'string' || !/^(0|[1-9]\d{0,6})$/u.test(value))
       throw invalidReport();
     return Number(value);
   };
@@ -61,16 +61,15 @@ export function reportPage(raw: Record<string, unknown>) {
   return { offset, limit };
 }
 export function reportRange(raw: Record<string, unknown>, paged = false) {
-  const allowed = [
+  const allowed = new Set([
     'from',
     'toExclusive',
     'customerId',
     'productId',
     'status',
     ...(paged ? ['offset', 'limit'] : ['grain']),
-  ];
-  if (Object.keys(raw).some((key) => !allowed.includes(key)))
-    throw invalidReport();
+  ]);
+  if (Object.keys(raw).some((key) => !allowed.has(key))) throw invalidReport();
   const from = reportInstant(raw.from),
     toExclusive = reportInstant(raw.toExclusive);
   if (

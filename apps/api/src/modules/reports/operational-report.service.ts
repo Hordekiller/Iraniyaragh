@@ -42,10 +42,16 @@ const metrics: ReportMetric[] = [
   'issuedInvoiceValue',
 ];
 function orderScope(query: OperationalReportQuery) {
-  return Prisma.sql`SELECT o.id,o.number,o."customerId",o.status,o."createdAt",o."grandTotal" FROM "Order" o WHERE true
- ${query.customerId ? Prisma.sql`AND o."customerId"=${query.customerId}` : Prisma.empty}
- ${query.status ? Prisma.sql`AND o."status"::text=${query.status}` : Prisma.empty}
- ${query.productId ? Prisma.sql`AND EXISTS(SELECT 1 FROM "OrderItem" i JOIN "ProductVariant" v ON v.id=i."variantId" WHERE i."orderId"=o.id AND v."productId"=${query.productId})` : Prisma.empty}`;
+  const customer = query.customerId
+    ? Prisma.sql`AND o."customerId"=${query.customerId}`
+    : Prisma.empty;
+  const status = query.status
+    ? Prisma.sql`AND o."status"::text=${query.status}`
+    : Prisma.empty;
+  const product = query.productId
+    ? Prisma.sql`AND EXISTS(SELECT 1 FROM "OrderItem" i JOIN "ProductVariant" v ON v.id=i."variantId" WHERE i."orderId"=o.id AND v."productId"=${query.productId})`
+    : Prisma.empty;
+  return Prisma.sql`SELECT o.id,o.number,o."customerId",o.status,o."createdAt",o."grandTotal" FROM "Order" o WHERE true ${customer} ${status} ${product}`;
 }
 function settlementCte() {
   return Prisma.sql`SELECT p.id,p."orderId",p.amount,p."gatewayEnvironment",MIN(t."createdAt") AS at FROM "Payment" p JOIN scope o ON o.id=p."orderId" JOIN "PaymentTransition" t ON t."paymentId"=p.id AND t."to"::text='PAID' WHERE p."referenceId" IS NOT NULL GROUP BY p.id`;

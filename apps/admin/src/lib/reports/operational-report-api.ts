@@ -30,8 +30,8 @@ export async function readReportOrders(
   offset: number,
   signal: AbortSignal,
 ) {
-  const { grain: unused, ...filters } = query;
-  void unused;
+  const { from, toExclusive, customerId, productId, status } = query;
+  const filters = { from, toExclusive, customerId, productId, status };
   return (
     await apiFetch<ReportOrdersResponse['data']>(
       `${root}/orders?${params({ ...filters, offset, limit: 25 })}`,

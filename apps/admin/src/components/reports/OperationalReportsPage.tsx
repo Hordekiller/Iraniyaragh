@@ -125,10 +125,7 @@ export function initialReportState(raw: SearchFilters, now: string) {
   )
     throw new Error('invalid filters');
   const offsetText = (raw.offset ?? '0') as string;
-  if (
-    !/^(0|[1-9][0-9]{0,6})$/u.test(offsetText) ||
-    Number(offsetText) > 1000000
-  )
+  if (!/^(0|[1-9]\d{0,6})$/u.test(offsetText) || Number(offsetText) > 1000000)
     throw new Error('invalid offset');
   const asOf = (raw.asOf ??
     new Date(
@@ -187,10 +184,10 @@ function persistReportFilters(
 export function OperationalReportsPage({
   initialFilters = {},
   now = new Date().toISOString(),
-}: {
+}: Readonly<{
   initialFilters?: SearchFilters;
   now?: string;
-}) {
+}>) {
   const { user, isRestoring } = useAuth();
   if (isRestoring)
     return <Typography role="status">در حال بررسی نشست…</Typography>;
@@ -215,7 +212,7 @@ export function OperationalReportsPage({
     );
   return (
     <Reports
-      key={`${user.userId}:${[...user.permissions].sort().join(',')}:${JSON.stringify(initialFilters)}`}
+      key={`${user.userId}:${[...user.permissions].sort((left, right) => left.localeCompare(right)).join(',')}:${JSON.stringify(initialFilters)}`}
       initial={initial}
       credit={user.permissions.includes('credit.read')}
       customers={user.permissions.includes('customers.read')}
@@ -228,12 +225,12 @@ function Reports({
   credit,
   customers,
   catalog,
-}: {
+}: Readonly<{
   initial: ReturnType<typeof initialReportState>;
   credit: boolean;
   customers: boolean;
   catalog: boolean;
-}) {
+}>) {
   const [dates, setDates] = useState(initial.dates),
     [grain, setGrain] = useState(initial.grain),
     [customerId, setCustomerId] = useState(initial.customerId),
@@ -428,12 +425,12 @@ function ReportSelector({
   allowed,
   value,
   onChange,
-}: {
+}: Readonly<{
   kind: 'customer' | 'product';
   allowed: boolean;
   value: string;
   onChange: (value: string) => void;
-}) {
+}>) {
   const [search, setSearch] = useState(''),
     [activeSearch, setActiveSearch] = useState(''),
     [attempt, setAttempt] = useState(0);
@@ -446,7 +443,7 @@ function ReportSelector({
           disabled={!allowed}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          inputProps={{ maxLength: 64 }}
+          slotProps={{ htmlInput: { maxLength: 64 } }}
         />
         <Button
           type="button"
@@ -480,12 +477,12 @@ function OptionResult({
   search,
   value,
   onChange,
-}: {
+}: Readonly<{
   kind: 'customer' | 'product';
   search: string;
   value: string;
   onChange: (value: string) => void;
-}) {
+}>) {
   const [options, setOptions] = useState<{ id: string; label: string }[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(false);
@@ -555,14 +552,14 @@ function ReportResult({
   offset,
   page,
   retry,
-}: {
+}: Readonly<{
   view: string;
   query: OperationalReportQuery;
   asOf: string;
   offset: number;
   page: (value: number) => void;
   retry: () => void;
-}) {
+}>) {
   const [summary, setSummary] = useState<OperationalReportSummary>(),
     [orders, setOrders] = useState<ReportOrdersResponse['data']>(),
     [debtors, setDebtors] = useState<DebtorsReportResponse['data']>(),
@@ -709,17 +706,19 @@ function ReportResult({
                         </Link>
                       </TableCell>
                       <TableCell>{formatCount(row.documents)}</TableCell>
-                      {[
-                        row.outstanding,
-                        row.notDue,
-                        row.overdueUpTo30Days,
-                        row.overdue31To60Days,
-                        row.overdue61To90Days,
-                        row.overdueOver90Days,
-                        row.refundObligation,
-                      ].map((value, index) => (
-                        <TableCell key={index}>
-                          {formatIrr(value.amount)}
+                      {(
+                        [
+                          'outstanding',
+                          'notDue',
+                          'overdueUpTo30Days',
+                          'overdue31To60Days',
+                          'overdue61To90Days',
+                          'overdueOver90Days',
+                          'refundObligation',
+                        ] as const
+                      ).map((field) => (
+                        <TableCell key={field}>
+                          {formatIrr(row[field].amount)}
                         </TableCell>
                       ))}
                     </TableRow>
