@@ -114,7 +114,14 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
     onSubmit: (values) => onSubmit(toPatch(values)),
   });
 
-  const unchanged = isUnchanged(form.values, snapshot.settings);
+  // Environment projections can change without a new editable-settings version
+  // (for example after saving the separate template configuration). Render the
+  // latest authoritative values directly; never reset a writable operator draft.
+  const values = readOnly ? initial : form.values;
+  const fieldProps = <K extends keyof FormValues>(key: K) => ({
+    ...form.getFieldProps(key), value: values[key],
+  });
+  const unchanged = isUnchanged(values, snapshot.settings);
 
   return (
     <Card>
@@ -139,7 +146,7 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
             >
               <FormField disabled={busy || readOnly} label="سرویس پیامک">
                 <FormControlRow
-                  checked={form.values.enabled}
+                  checked={values.enabled}
                   onChange={(checked) => form.handleChange('enabled', checked)}
                   label="ارسال پیامک OTP فعال باشد"
                   disabled={busy || readOnly}
@@ -147,7 +154,7 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
               </FormField>
               <FormField disabled={busy || readOnly} label="درگاه اعلان وضعیت">
                 <FormControlRow
-                  checked={form.values.deliveryStatusEnabled}
+                  checked={values.deliveryStatusEnabled}
                   onChange={(checked) => form.handleChange('deliveryStatusEnabled', checked)}
                   label="دریافت وضعیت تحویل پیام‌ها"
                   disabled={busy || readOnly}
@@ -157,13 +164,13 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
               <TextField
-                {...form.getFieldProps('templateId')}
+                {...fieldProps('templateId')}
                 label="شناسهٔ قالب تأیید (templateId)"
                 disabled={busy || readOnly}
                 slotProps={{ htmlInput: { inputMode: 'numeric', 'aria-required': true } }}
               />
               <TextField
-                {...form.getFieldProps('timeoutMs')}
+                {...fieldProps('timeoutMs')}
                 label="مهلت درخواست (میلی‌ثانیه)"
                 disabled={busy || readOnly}
                 slotProps={{ htmlInput: { inputMode: 'numeric' } }}
@@ -172,7 +179,7 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
 
             <FormField disabled={busy || readOnly} label="خط فرستنده (برای تشخیص)" helperText="درخواست تأیید، فیلد خط فرستنده نمی‌پذیرد؛ این مقدار فقط برای گزارش است.">
               <TextField
-                {...form.getFieldProps('senderLine')}
+                {...fieldProps('senderLine')}
                 placeholder="مثال: +989120000000"
                 disabled={busy || readOnly}
               />
@@ -180,7 +187,7 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
 
             <FormField disabled={busy || readOnly} label="پیام «قطع سرویس» (خروجی اضطراری)">
               <TextField
-                {...form.getFieldProps('maintenanceMessage')}
+                {...fieldProps('maintenanceMessage')}
                 multiline
                 minRows={2}
                 placeholder="در صورت فعال بودن حالت قطع سرویس نمایش داده می‌شود"
@@ -196,13 +203,13 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
               }}
             >
               <TextField
-                {...form.getFieldProps('failureWindowMinutes')}
+                {...fieldProps('failureWindowMinutes')}
                 label="دورهٔ خطا (دقیقه)"
                 disabled={busy || readOnly}
                 slotProps={{ htmlInput: { inputMode: 'numeric' } }}
               />
               <TextField
-                {...form.getFieldProps('failureCount')}
+                {...fieldProps('failureCount')}
                 label="آستانهٔ شمارش خطا"
                 disabled={busy || readOnly}
                 slotProps={{ htmlInput: { inputMode: 'numeric' } }}
@@ -210,7 +217,7 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <FormField disabled={busy || readOnly} label="حالت قطع سرویس">
                   <FormControlRow
-                    checked={form.values.outageMode}
+                    checked={values.outageMode}
                     onChange={(checked) => form.handleChange('outageMode', checked)}
                     label="fail-closed (توقف ارسال برابر با قطع سرویس)"
                     disabled={busy || readOnly}
@@ -219,7 +226,7 @@ export function SmsSettingsForm({ snapshot, busy, onSubmit }: SmsSettingsFormPro
               </Box>
             </Box>
 
-            {form.values.outageMode ? (
+            {values.outageMode ? (
               <Alert severity="warning">
                 حالت قطع سرویس فعال است؛ تا غیرفعال‌شدن آن، ارسال پیامک انجام نمی‌شود.
               </Alert>
