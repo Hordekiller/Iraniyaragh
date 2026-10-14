@@ -332,6 +332,8 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await expect(page.getByText(seller, { exact: true })).toBeVisible();
 
     // Print the real immutable document; branding cannot change prices, stock or payment state.
+    const publicationReason = page.getByRole('textbox', { name: 'دلیل تغییر دسترسی فاکتور' });
+    await expect(publicationReason).toBeVisible();
     const printedSheet = page.getByRole('article', { name: /^سند فاکتور IRY-/ });
     await expect.poll(() => printedSheet.locator('img').evaluate(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)).toBe(true);
     await page.evaluate(async () => { await document.fonts.load('400 12px "Iraniyaragh Sans"', 'ایران یراق'); });
@@ -339,6 +341,7 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await expect(printedSheet).toBeVisible();
     await expect(printedSheet.getByRole('table')).toContainText(sku);
     await expect(adminSidebar(page)).not.toBeVisible();
+    await expect(publicationReason).not.toBeVisible();
     const pdf = await page.pdf({ format: 'A4', preferCSSPageSize: true, printBackground: true });
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     await page.emulateMedia({ media: 'screen' });
