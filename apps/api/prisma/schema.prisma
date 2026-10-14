@@ -250,6 +250,8 @@ model User {
   creditCommands              CreditCommandRecord[]
   invoicePolicies             InvoicePolicyRevision[]
   invoicePolicyCommands       InvoicePolicyCommand[]
+  inventoryCostPolicies       InventoryCostPolicyRevision[]
+  inventoryCostPolicyCommands InventoryCostPolicyCommand[]
   invoiceDraftRevisions       InvoiceDraftRevision[]
   invoiceDraftCommands        InvoiceDraftCommand[]
   sessions                    Session[]
@@ -1858,6 +1860,36 @@ enum InvoiceTaxTreatment {
   EXCLUSIVE
   INCLUSIVE
   EXEMPT
+}
+
+enum InventoryCostMethod {
+  FIFO
+  MOVING_WEIGHTED_AVERAGE
+}
+
+model InventoryCostPolicyRevision {
+  id        String                       @id @default(cuid())
+  version   Int                          @unique
+  method    InventoryCostMethod?
+  reason    String                       @db.VarChar(500)
+  actorId   String
+  requestId String                       @db.VarChar(100)
+  createdAt DateTime                     @default(now())
+  actor     User                         @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  commands  InventoryCostPolicyCommand[]
+}
+
+model InventoryCostPolicyCommand {
+  id          String                      @id @default(cuid())
+  actorId     String
+  keyHash     String                      @db.Char(64)
+  payloadHash String                      @db.Char(64)
+  revisionId  String
+  createdAt   DateTime                    @default(now())
+  actor       User                        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  revision    InventoryCostPolicyRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
 }
 
 model InvoicePolicyRevision {
