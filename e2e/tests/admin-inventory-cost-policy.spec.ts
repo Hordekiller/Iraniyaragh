@@ -1,0 +1,31 @@
+import { expect, test } from '@playwright/test';
+import { signInDiAsAdmin, tap } from './helpers';
+
+test('operator selects a persisted inventory cost method without activating valuation', async ({ page }) => {
+  await signInDiAsAdmin(page);
+  await page.goto('/settings/inventory-cost');
+  await expect(page.getByRole('heading', { name: 'روش هزینهٔ انبار' })).toBeVisible();
+  const saveButton = page.getByRole('button', { name: 'ثبت روش بدون فعال‌سازی' });
+  await expect(saveButton).toBeEnabled();
+  await expect(page.getByRole('switch')).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'روش هزینهٔ مصوب' }).dispatchEvent('mousedown');
+  await tap(page.getByRole('option', { name: 'FIFO؛ مصرف از خریدهای قدیمی‌تر' }));
+  await page.getByRole('textbox', { name: 'دلیل انتخاب یا تغییر روش' }).fill('انتخاب روش در پایگاه ایزولهٔ آزمون؛ بدون فعال‌سازی');
+  const change = page.waitForResponse(response => response.url().endsWith('/api/v1/settings/admin/inventory-cost-policy') && response.request().method() === 'PUT');
+  await tap(saveButton);
+  const response = await change; expect(response.status()).toBe(200);
+  const body = await response.json();
+  expect(body.data).toMatchObject({ policy: { method: 'FIFO' }, valuationEnabled: false, activationGate: 'COST_LEDGER_ACCEPTANCE_REQUIRED', missingCostTreatment: 'REQUIRE_EVIDENCE' });
+  await expect(page.getByText(/نسخهٔ \d+ ثبت شد؛ ارزش‌گذاری همچنان غیرفعال است/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'روش ذخیره‌شدهٔ سرور' })).toContainText('FIFO');
+  await expect(page.getByRole('region', { name: 'روش ذخیره‌شدهٔ سرور' })).toContainText('ارزش‌گذاری مالی: غیرفعال');
+  await page.getByRole('combobox', { name: 'روش هزینهٔ مصوب' }).dispatchEvent('mousedown');
+  await tap(page.getByRole('option', { name: 'میانگین موزون متحرک' }));
+  await page.getByRole('textbox', { name: 'دلیل انتخاب یا تغییر روش' }).fill('بازبینی روش در آزمون ایزوله');
+  await tap(saveButton);
+  await expect(page.getByText(/نسخهٔ \d+ ثبت شد؛ ارزش‌گذاری همچنان غیرفعال است/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'روش ذخیره‌شدهٔ سرور' })).toContainText('میانگین موزون متحرک');
+  await expect(page.getByRole('region', { name: 'روش ذخیره‌شدهٔ سرور' })).toContainText('غیرفعال');
+});
