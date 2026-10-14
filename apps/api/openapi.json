@@ -44953,6 +44953,1808 @@
           "reports"
         ]
       }
+    },
+    "/reports/admin/operations": {
+      "get": {
+        "operationId": "OperationalReportController_summary",
+        "parameters": [
+          {
+            "name": "grain",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toExclusive",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "report"
+                      ],
+                      "properties": {
+                        "report": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "generatedAt",
+                            "timezone",
+                            "filters",
+                            "productFilterScope",
+                            "totals",
+                            "timeline",
+                            "orderStatuses",
+                            "paymentAttemptStatuses",
+                            "topItems",
+                            "unavailable"
+                          ],
+                          "properties": {
+                            "generatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "timezone": {
+                              "type": "string",
+                              "enum": [
+                                "Asia/Tehran"
+                              ]
+                            },
+                            "filters": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "from",
+                                "toExclusive",
+                                "grain"
+                              ],
+                              "properties": {
+                                "from": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "toExclusive": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "grain": {
+                                  "type": "string",
+                                  "enum": [
+                                    "day",
+                                    "week",
+                                    "month"
+                                  ]
+                                },
+                                "customerId": {
+                                  "type": "string"
+                                },
+                                "productId": {
+                                  "type": "string"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "CREDIT_APPROVED",
+                                    "DRAFT",
+                                    "PENDING_PAYMENT",
+                                    "PAID",
+                                    "CANCELLED",
+                                    "RETURNED"
+                                  ]
+                                }
+                              }
+                            },
+                            "productFilterScope": {
+                              "type": "string",
+                              "enum": [
+                                "ORDERS_CONTAINING_PRODUCT"
+                              ]
+                            },
+                            "totals": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "createdOrderValue",
+                                "providerSettlements",
+                                "recordedGatewayRefunds",
+                                "netRecordedCreditReceipts",
+                                "recordedCreditRefundPayouts",
+                                "issuedInvoiceValue"
+                              ],
+                              "properties": {
+                                "createdOrderValue": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "count",
+                                    "amount"
+                                  ],
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "amount": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ],
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string",
+                                          "pattern": "^-?(0|[1-9][0-9]*)$"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "enum": [
+                                            "IRR"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "providerSettlements": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "count",
+                                    "amount"
+                                  ],
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "amount": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ],
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string",
+                                          "pattern": "^-?(0|[1-9][0-9]*)$"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "enum": [
+                                            "IRR"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "recordedGatewayRefunds": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "count",
+                                    "amount"
+                                  ],
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "amount": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ],
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string",
+                                          "pattern": "^-?(0|[1-9][0-9]*)$"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "enum": [
+                                            "IRR"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "netRecordedCreditReceipts": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "count",
+                                    "amount"
+                                  ],
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "amount": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ],
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string",
+                                          "pattern": "^-?(0|[1-9][0-9]*)$"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "enum": [
+                                            "IRR"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "recordedCreditRefundPayouts": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "count",
+                                    "amount"
+                                  ],
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "amount": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ],
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string",
+                                          "pattern": "^-?(0|[1-9][0-9]*)$"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "enum": [
+                                            "IRR"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "issuedInvoiceValue": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "count",
+                                    "amount"
+                                  ],
+                                  "properties": {
+                                    "count": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "amount": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ],
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string",
+                                          "pattern": "^-?(0|[1-9][0-9]*)$"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "enum": [
+                                            "IRR"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "timeline": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "period",
+                                  "metric",
+                                  "environment",
+                                  "count",
+                                  "amount"
+                                ],
+                                "properties": {
+                                  "period": {
+                                    "type": "string",
+                                    "format": "date"
+                                  },
+                                  "metric": {
+                                    "type": "string",
+                                    "enum": [
+                                      "createdOrderValue",
+                                      "providerSettlements",
+                                      "recordedGatewayRefunds",
+                                      "netRecordedCreditReceipts",
+                                      "recordedCreditRefundPayouts",
+                                      "issuedInvoiceValue"
+                                    ]
+                                  },
+                                  "environment": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "amount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^-?(0|[1-9][0-9]*)$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "maxItems": 5000
+                            },
+                            "orderStatuses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "status",
+                                  "count",
+                                  "amount"
+                                ],
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "CREDIT_APPROVED",
+                                      "DRAFT",
+                                      "PENDING_PAYMENT",
+                                      "PAID",
+                                      "CANCELLED",
+                                      "RETURNED"
+                                    ]
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "amount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^-?(0|[1-9][0-9]*)$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "maxItems": 6
+                            },
+                            "paymentAttemptStatuses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "status",
+                                  "count",
+                                  "amount"
+                                ],
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "PENDING",
+                                      "PAID",
+                                      "FAILED",
+                                      "CANCELLED",
+                                      "REFUNDED",
+                                      "PARTIALLY_REFUNDED"
+                                    ]
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "amount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^-?(0|[1-9][0-9]*)$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "maxItems": 6
+                            },
+                            "topItems": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "sku",
+                                  "title",
+                                  "quantity",
+                                  "grossValue"
+                                ],
+                                "properties": {
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "grossValue": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^-?(0|[1-9][0-9]*)$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "maxItems": 30
+                            },
+                            "unavailable": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "CORRECTIVE_INVOICE_DOCUMENTS",
+                                  "AUTHORITATIVE_INVENTORY_VALUATION",
+                                  "PDF_AND_QUEUED_EXPORTS"
+                                ]
+                              },
+                              "maxItems": 3
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_SESSION_REPLAYED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "REPORT_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read operational evidence; order value, settlements, refunds, credit and invoices remain separate",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/admin/operations/options": {
+      "get": {
+        "operationId": "OperationalReportController_options",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "customer",
+                "product"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "label"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "maxItems": 25
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_SESSION_REPLAYED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "REPORT_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/admin/operations/orders": {
+      "get": {
+        "operationId": "OperationalReportController_orders",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "toExclusive",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "generatedAt",
+                        "items",
+                        "count",
+                        "offset",
+                        "limit"
+                      ],
+                      "properties": {
+                        "generatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "number",
+                              "customerId",
+                              "status",
+                              "createdAt",
+                              "total",
+                              "paymentAttempts",
+                              "providerSettled",
+                              "gatewayRefunded",
+                              "issuedInvoiceNumber"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "number": {
+                                "type": "string"
+                              },
+                              "customerId": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "CREDIT_APPROVED",
+                                  "DRAFT",
+                                  "PENDING_PAYMENT",
+                                  "PAID",
+                                  "CANCELLED",
+                                  "RETURNED"
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "total": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "paymentAttempts": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "providerSettled": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "gatewayRefunded": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "issuedInvoiceNumber": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            }
+                          },
+                          "maxItems": 100
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "offset": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_SESSION_REPLAYED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "REPORT_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/reports/admin/operations/debtors": {
+      "get": {
+        "operationId": "OperationalReportController_debtors",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 1000000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "generatedAt",
+                        "asOf",
+                        "items",
+                        "count",
+                        "offset",
+                        "limit"
+                      ],
+                      "properties": {
+                        "generatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "asOf": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "customerId",
+                              "accountId",
+                              "accountStatus",
+                              "documents",
+                              "outstanding",
+                              "notDue",
+                              "overdueUpTo30Days",
+                              "overdue31To60Days",
+                              "overdue61To90Days",
+                              "overdueOver90Days",
+                              "refundObligation"
+                            ],
+                            "properties": {
+                              "customerId": {
+                                "type": "string"
+                              },
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "accountStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "ACTIVE",
+                                  "SUSPENDED"
+                                ]
+                              },
+                              "documents": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "outstanding": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "notDue": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "overdueUpTo30Days": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "overdue31To60Days": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "overdue61To90Days": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "overdueOver90Days": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "refundObligation": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?(0|[1-9][0-9]*)$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "maxItems": 100
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "offset": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1000000
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_REQUEST"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "AUTH_SESSION_INVALID",
+                        "AUTH_SESSION_REPLAYED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        401
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "REPORT_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        500
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read evidenced debtor aging; additionally requires current credit.read",
+        "tags": [
+          "reports"
+        ]
+      }
     }
   },
   "info": {

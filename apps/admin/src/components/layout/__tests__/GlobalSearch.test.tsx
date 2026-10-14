@@ -62,11 +62,8 @@ describe('GlobalSearch', () => {
 
     expect(screen.getByRole('button', { name: /پرداخت‌ها/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /مشتریان/ })).toBeEnabled();
-    // Reports still has no shipped page, so it must stay unselectable.
-    expect(screen.getByRole('button', { name: /گزارش‌های عملیاتی/ })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
+    // The protected operational reports page is now registered in navigation.
+    expect(screen.getByRole('button', { name: /گزارش‌های عملیاتی/ })).toBeEnabled();
   });
 
   it('filters results and jumps to the selected page', () => {

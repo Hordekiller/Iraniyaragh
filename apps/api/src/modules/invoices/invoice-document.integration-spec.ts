@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
+import { OperationalReportService } from '../reports/operational-report.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 import { AuditLogService } from '../audit/audit-log.service';
 import { StaffOrderService } from '../orders/staff-order.service';
@@ -73,6 +74,7 @@ describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', ()
     const events=await prisma.invoiceDocumentEvent.findMany({where:{documentId:result.document.id}});expect(events).toHaveLength(1);expect(events[0].action).toBe('ISSUED');
     const logs=stringify(await prisma.auditLog.findMany({where:{action:'invoice.document.issued',entityId:result.document.id}}));
     expect(logs).not.toContain(address.address);expect(logs).not.toContain(address.mobile);expect(logs).not.toContain('Isolated seller address');
+    const report=await new OperationalReportService(prisma).summary({customerId,from:new Date(Date.now()-60000).toISOString(),toExclusive:new Date(Date.now()+60000).toISOString()});expect(report.totals.issuedInvoiceValue).toMatchObject({count:1,amount:{amount:'2000'}});expect(report.totals.providerSettlements.amount.amount).toBe('0');
   });
   it('same-key concurrent submit and service restart replay preserve the original number/document',async()=>{
     const data=await fixture();const commandKey=key();const results=await Promise.all([issue(data,commandKey),issue(data,commandKey)]);
