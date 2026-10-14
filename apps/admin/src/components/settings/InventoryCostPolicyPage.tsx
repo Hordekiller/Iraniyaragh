@@ -9,7 +9,11 @@ import { ApiAbortError, ApiClientError } from '@/lib/api/client';
 import { randomUuid } from '@/lib/crypto/random-uuid';
 import { PageHeader } from '@/components/ui/PageHeader';
 
-const methodLabel = (method: InventoryCostMethod | null) => method === 'FIFO' ? 'FIFO؛ مصرف از خریدهای قدیمی‌تر' : method === 'MOVING_WEIGHTED_AVERAGE' ? 'میانگین موزون متحرک' : 'هنوز انتخاب نشده';
+function methodLabel(method: InventoryCostMethod | null) {
+  if (method === 'FIFO') return 'FIFO؛ مصرف از خریدهای قدیمی‌تر';
+  if (method === 'MOVING_WEIGHTED_AVERAGE') return 'میانگین موزون متحرک';
+  return 'هنوز انتخاب نشده';
+}
 function failure(error: unknown) {
   if (error instanceof ApiClientError) {
     if (error.code === 'STALE_VERSION') return 'تنظیمات تغییر کرده است؛ نسخهٔ سرور را بازخوانی و بررسی کنید.';
