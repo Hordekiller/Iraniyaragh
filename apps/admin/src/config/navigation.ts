@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   Truck,
   Users,
+  Warehouse,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -114,6 +115,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'سرویس پیامک', href: '/settings/sms', icon: Send, permission: 'settings.manage' },
       { label: 'تعرفهٔ ارسال', href: '/settings/shipping', icon: Truck, permission: 'settings.manage' },
       { label: 'تنظیمات فاکتور', href: '/settings/invoices', icon: ReceiptText, permission: 'settings.manage' },
+      { label: 'روش هزینهٔ انبار', href: '/settings/inventory-cost', icon: Warehouse, permission: 'settings.manage' },
       { label: 'نشست‌ها و دستگاه‌ها', href: '/settings/sessions', icon: MonitorSmartphone },
       { label: 'تنظیمات', href: '/settings', icon: Settings2, permission: 'settings.manage' },
     ],
