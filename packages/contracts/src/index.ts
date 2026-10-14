@@ -34,3 +34,5 @@ export * from './invoice-policy';
 export * from './invoice-drafts';
 
 export * from './invoice-documents';
+
+export * from './operational-reports';

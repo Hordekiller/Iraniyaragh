@@ -4,8 +4,10 @@ Status: implementation; Issue #358 / invoice epic #413. Base main 9198bf1.
 
 Reports remain read-only. No order/payment/receivable/inventory rules are rewritten.
 STAFF_MFA and reports.read guard every route; debtor detail additionally requires
-credit.read, stock quantity detail inventory.read. No client-supplied money or PII
-is returned. Filters are strict bounded UTC instants, opaque customer/product ids,
+credit.read. Customer/product selectors additionally require customers.read or
+catalog.read and return bounded name-only labels. Stock costing is a separate
+dependency. No client-supplied money or contact details are returned. Filters are
+strict bounded UTC instants, opaque customer/product ids,
 current order status and day/week/month grouping in Asia/Tehran. Product filtering
 selects orders containing that product; it does not allocate an entire payment to
 one product. Every response documents that scope.

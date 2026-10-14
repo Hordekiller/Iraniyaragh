@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
+import { OperationalReportService } from '../reports/operational-report.service';
+import { AdminPaymentRefundService } from './admin-payment-refund.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
 import {
   EMPTY_AXIS_SIGNATURE,
@@ -222,6 +224,8 @@ describe.sequential('PaymentVerificationService database integration', () => {
   it('replays a duplicated success callback and never double-consumes stock', async () => {
     const order = await createOrderWithReservation('dupe', 2);
     await createPayment(order.id, 'S-dupe', 'dupe');
+    const variant=await prisma.productVariant.findUniqueOrThrow({where:{id:variantAId}});
+    await prisma.orderItem.create({data:{orderId:order.id,variantId:variantAId,sku:variant.sku,title:'Stored isolated settlement item',productTitle:'Isolated settlement product',ordinal:0,quantity:2,unitPrice:50n,total:100n}});
 
     const first = await verification.verify({
       authority: 'S-dupe',
@@ -245,6 +249,10 @@ describe.sequential('PaymentVerificationService database integration', () => {
     await expect(prisma.stockReservation.count({ where: { orderId: order.id, status: 'CONSUMED' } })).resolves.toBe(1);
     await expect(prisma.inventoryMovement.count({ where: { referenceId: order.id, type: 'SALE' } })).resolves.toBe(1);
     await expect(balanceOf()).resolves.toMatchObject({ onHand: 0, reserved: 0 });
+    const report=await readFinancialReport();
+    expect(report.totals.providerSettlements).toMatchObject({count:1,amount:{amount:'150'}});
+    expect(report.timeline.find(row=>row.metric==='providerSettlements')?.environment).toBe('sandbox');
+    expect(report.topItems).toMatchObject([{quantity:2,grossValue:{amount:'100'}}]);
   });
 
   it('coalesces concurrent duplicate callbacks into a single settlement', async () => {
@@ -343,6 +351,7 @@ describe.sequential('PaymentVerificationService database integration', () => {
     await expect(prisma.paymentTransition.count({ where: { paymentId: payment.id } })).resolves.toBe(0);
     await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id } })).resolves.toBe(0);
     await expect(balanceOf()).resolves.toMatchObject({ onHand: 3, reserved: 3 });
+    const report=await readFinancialReport();expect(report.totals.providerSettlements.amount.amount).toBe('0');expect(report.topItems).toEqual([]);
   });
 
   it('still refuses a foreign provider while the gateway is disabled', async () => {
@@ -548,6 +557,19 @@ describe.sequential('PaymentVerificationService database integration', () => {
     await expect(balanceOf()).resolves.toMatchObject({ onHand: 2, reserved: 0, available: 2 });
   });
 
+  async function readFinancialReport() {
+    return new OperationalReportService(prisma).summary({customerId,from:new Date(Date.now()-60000).toISOString(),toExclusive:new Date(Date.now()+60000).toISOString()});
+  }
+  it('reports one original settlement and one authoritative recorded refund without financial double counting',async()=>{
+    const order=await createOrderWithReservation('report-refund',2);const payment=await createPayment(order.id,'S-report-refund','report-refund');
+    await verification.verify({authority:'S-report-refund',status:'OK',requestId:`${requestIdPrefix}-report-paid`});
+    const refunds=new AdminPaymentRefundService(prisma,audit);
+    const input={paymentId:payment.id,actorId:staffUser,requestId:`${requestIdPrefix}-report-refund`,idempotencyKey:`report-refund-${runId}`,amountMinorUnits:'10',gatewayReferenceId:`isolated-report-refund-${runId}`,reason:'Isolated gateway evidence only'};
+    await refunds.record(input);await refunds.record(input);
+    const report=await readFinancialReport();expect(report.totals.providerSettlements).toMatchObject({count:1,amount:{amount:'150'}});expect(report.totals.recordedGatewayRefunds).toMatchObject({count:1,amount:{amount:'10'}});
+    const rows=await new OperationalReportService(prisma).orders({customerId,from:new Date(Date.now()-60000).toISOString(),toExclusive:new Date(Date.now()+60000).toISOString()});expect(rows.items[0]).toMatchObject({status:'PAID',providerSettled:{amount:'150'},gatewayRefunded:{amount:'10'}});
+  });
+
   async function createOrderWithReservation(suffix: string, quantity: number) {
     const orderId = `${runId}-order-${suffix}`;
     const number = `PAYVERIFY-${runId}-${suffix}`;
@@ -625,6 +647,8 @@ describe.sequential('PaymentVerificationService database integration', () => {
   }
 
   async function resetState() {
+    assertIsolatedTestDatabase({databaseUrl:process.env.DATABASE_URL,nodeEnvironment:process.env.NODE_ENV});
+    await prisma.$executeRawUnsafe('TRUNCATE "Refund"');
     const orderIds = (
       await prisma.order.findMany({
         where: { customerId: { in: [customerId, otherCustomerId] } },

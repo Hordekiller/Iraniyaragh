@@ -1451,6 +1451,8 @@ model Payment {
 
   @@index([orderId, status])
   @@index([status])
+  @@index([createdAt])
+
 }
 
 /// Append-only record of a refund that staff performed in the gateway panel.
@@ -1478,6 +1480,8 @@ model Refund {
 
   @@index([paymentId, createdAt])
   @@index([actorId, createdAt])
+  @@index([createdAt])
+
 }
 
 model OrderTransition {
@@ -1772,6 +1776,8 @@ model CreditLedgerEntry {
   @@unique([receiptId, documentId, kind])
   @@index([accountId, createdAt, id])
   @@index([documentId])
+  @@index([effectiveAt])
+
 }
 
 model CreditCommandRecord {
@@ -1844,6 +1850,8 @@ model CreditRefundPayout {
   actor             User                @relation(fields: [actorId], references: [id], onDelete: Restrict)
 
   @@index([returnId])
+  @@index([effectiveAt])
+
 }
 
 enum InvoiceTaxTreatment {
@@ -2027,6 +2035,8 @@ model InvoiceDocument {
   @@unique([series, period, sequence])
   @@index([customerId, issuedAt, id])
   @@index([issuedAt, id])
+  @@index([issuedAt])
+
 }
 
 model InvoiceDocumentLine {
