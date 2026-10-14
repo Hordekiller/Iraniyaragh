@@ -12,8 +12,8 @@
     padding: 0 !important; width: 100% !important; max-width: none !important; min-height: 0 !important;
   }
   .sheet, .sheet * { visibility: visible !important; color: #111 !important; box-shadow: none !important; }
-  .sheet { position: absolute; inset: 0 0 auto; width: 100%; margin: 0; direction: rtl; }
-  .sheet :global(.MuiPaper-root) { background: white !important; padding: 1.5mm; margin-top: 4mm; overflow: visible !important; border: 1px solid #aaa; }
+  .sheet { display: block !important; position: absolute; inset: 0 0 auto; width: 100%; margin: 0; direction: rtl; }
+  .sheet :global(.MuiPaper-root) { background: white !important; padding: 1.5mm; margin-top: 4mm !important; overflow: visible !important; border: 1px solid #aaa; }
   .sheet table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   .sheet thead { display: table-header-group; }
   .sheet tr { break-inside: avoid; }
