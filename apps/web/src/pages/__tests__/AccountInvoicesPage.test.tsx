@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AccountInvoicesPage } from '../AccountInvoicesPage'
 import { AuthApiError } from '../../lib/auth/errors'
+import { SITE_NAME } from '../../lib/site-config'
 const auth = vi.hoisted(() => ({
   request: vi.fn(),
   open: vi.fn(),
@@ -125,7 +126,8 @@ describe('Customer invoice ownership UI and session lifetime', () => {
       screen.getByRole('table', { name: 'اقلام فاکتور' }),
     ).toHaveTextContent('۹٬۰۰۷٬۱۹۹٬۲۵۴٬۷۴۰٬۹۹۳')
     expect(screen.getByText('<img onerror="unsafe()">')).toBeVisible()
-    expect(view.container.querySelector('img')).toBeNull()
+    expect(screen.getByRole('img', { name: SITE_NAME })).toBeVisible()
+    expect(view.container.querySelector('img:not([src="/brand/wordmark-432.webp"])')).toBeNull()
     expect(auth.request).toHaveBeenCalledWith(
       '/api/v1/customers/me/invoices/doc-a',
     )

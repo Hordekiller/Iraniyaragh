@@ -12,6 +12,7 @@ import {
 } from '../components/account/AccountNavigation'
 import { formatTimestamp } from '../lib/format'
 import { ROUTES } from '../lib/routes'
+import { StoreBrandLogo } from '../components/brand/StoreBrandLogo'
 const rial = (amount: string) =>
   `${new Intl.NumberFormat('fa-IR').format(BigInt(amount))} ریال`
 const button =
@@ -188,6 +189,9 @@ function InvoiceContent({
             aria-label="مشخصات فاکتور"
             className="rounded-2xl border border-slate-200 bg-white p-5"
           >
+            <div className="mb-4">
+              <StoreBrandLogo variant="wordmark" />
+            </div>
             <h2 className="font-black">{invoice.seller.name}</h2>
             <p>{invoice.seller.address}</p>
             <p>{invoice.seller.contact}</p>
