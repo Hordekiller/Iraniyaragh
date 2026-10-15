@@ -2,6 +2,7 @@ import { LoginAttemptOutcome } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
+import { assertIntegrationRedisAvailable } from '../../test/redis-availability.guard';
 import type { RedisClient } from '../redis/redis.client';
 import { provideRedisClient } from '../redis/redis.provider';
 import { type AuthRuntimeConfig } from './auth.config';
@@ -94,6 +95,7 @@ describe.sequential('CustomerOtpService 429-oververify database + live-Redis int
     connected = true;
 
     client = await connectRedis();
+    assertIntegrationRedisAvailable(client !== null);
     limits = new RateLimitService(client as unknown as RedisClient, hashes);
     otp = new CustomerOtpService(
       prisma,
