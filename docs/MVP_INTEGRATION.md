@@ -1,5 +1,12 @@
 # نقشهٔ یکپارچه‌سازی MVP موجود ایرانی‌یراق
 
+> **Current reconciliation — 2026-10-15:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source/deployment/test/acceptance facts and the execution queue;
+> [V1_ISSUE_REGISTER.json](V1_ISSUE_REGISTER.json) records all 149 issue mappings.
+> The dated status, staffing and queue statements below are preserved history
+> where they conflict with that checkpoint. Accepted domain/release criteria remain
+> requirements; historical source absence or deployment claims are not current facts.
+
 بازبینی: ۱۴۰۵/۰۷/۰۸ (2026-09-30). خواستهٔ فعلی مالک پروژه: فعلاً فقط
 قابلیت‌ها و UI موجود را به یک نسخهٔ واحد و صادقانه وصل کنیم؛ استقرار VPS و
 توسعهٔ قابلیت‌های جدید مرحلهٔ بعد است. این سند راهنما و فهرست کمبودهاست؛
