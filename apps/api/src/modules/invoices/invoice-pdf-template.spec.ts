@@ -119,8 +119,11 @@ describe("Private invoice PDF fixed template boundary", () => {
   );
   it.each([
     '<script>alert("private")</script>',
+    '<SCRIPT>alert("private")</SCRIPT>',
     '<img src="https://external.invalid/" onerror="alert(1)">',
+    '<ImG SrC="https://external.invalid/" OnErRoR="alert(1)">',
     '</style><iframe src="file:///etc/passwd"></iframe>',
+    '</STYLE><IFRAME SRC="file:///etc/passwd"></IFRAME>',
     '<a href="javascript:alert(1)">link</a>',
   ])(
     "prints hostile text literally without executable markup: %s",
@@ -130,7 +133,7 @@ describe("Private invoice PDF fixed template boundary", () => {
       input.buyerLabel = payload;
       const { html } = buildInvoicePdfHtml(input, assets);
       expect(html).not.toContain(payload);
-      expect(html).not.toMatch(/<script|<iframe|<a\s|<[^>]*\sonerror=/u);
+      expect(html).not.toMatch(/<script|<iframe|<a\s|<[^>]*\sonerror=/iu);
       expect(html).toContain("&lt;");
     },
   );
