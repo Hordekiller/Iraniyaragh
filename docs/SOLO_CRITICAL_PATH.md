@@ -1,5 +1,12 @@
 # Historical V1 Critical Path
 
+> **Current reconciliation — 2026-10-15:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source/deployment/test/acceptance facts and the execution queue;
+> [V1_ISSUE_REGISTER.json](V1_ISSUE_REGISTER.json) records all 149 issue mappings.
+> The dated status, staffing and queue statements below are preserved history
+> where they conflict with that checkpoint. Accepted domain/release criteria remain
+> requirements; historical source absence or deployment claims are not current facts.
+
 > Superseded for active scheduling on 2026-09-30 by the user's instruction to
 > integrate the capabilities already merged into a truthful MVP first, with VPS
 > deployment later. See `MVP_INTEGRATION.md`. Process/ownership rules below are
