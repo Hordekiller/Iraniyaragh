@@ -6,6 +6,10 @@ import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
 const rial = new Intl.NumberFormat('fa-IR');
 const SAMPLE_IMAGE = resolve(__dirname, '../../apps/web/public/images/hero1.jpg');
 
+// Bound a stuck interaction so its call log/trace is written before the CI job
+// deadline. The complete real journey keeps its existing seven-minute budget.
+test.use({ actionTimeout: 30_000, navigationTimeout: 30_000 });
+
 /** Renders an amount exactly the way the admin `formatRial` helper does. */
 const formatRial = (amount: number): string => `${rial.format(BigInt(amount))} ریال`;
 
@@ -332,6 +336,8 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await expect(page.getByText(seller, { exact: true })).toBeVisible();
 
     // Print the real immutable document; branding cannot change prices, stock or payment state.
+    const publicationReason = page.getByRole('textbox', { name: 'دلیل تغییر دسترسی فاکتور' });
+    await expect(publicationReason).toBeVisible();
     const printedSheet = page.getByRole('article', { name: /^سند فاکتور IRY-/ });
     await expect.poll(() => printedSheet.locator('img').evaluate(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)).toBe(true);
     await page.evaluate(async () => { await document.fonts.load('400 12px "Iraniyaragh Sans"', 'ایران یراق'); });
@@ -339,9 +345,30 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await expect(printedSheet).toBeVisible();
     await expect(printedSheet.getByRole('table')).toContainText(sku);
     await expect(adminSidebar(page)).not.toBeVisible();
+    await expect(publicationReason).not.toBeVisible();
     const pdf = await page.pdf({ format: 'A4', preferCSSPageSize: true, printBackground: true });
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     await page.emulateMedia({ media: 'screen' });
+    await expect(page.getByText('دسترسی مشتری: خصوصی — نسخهٔ 0', { exact: true })).toBeVisible();
+    await page.getByRole('textbox', { name: 'دلیل تغییر دسترسی فاکتور' }).fill('انتشار برای صاحب فاکتور در آزمون ایزوله');
+    await page.getByRole('checkbox', { name: 'تغییر دسترسی این فاکتور برای صاحب آن را تأیید می‌کنم' }).check();
+    const publish = page.waitForResponse(response => /\/api\/v1\/invoices\/admin\/documents\/[^/]+\/publication$/.test(new URL(response.url()).pathname) && response.request().method() === 'PUT');
+    await tap(page.getByRole('button', { name: 'انتشار فاکتور در پنل مشتری' }));
+    expect((await publish).status()).toBe(200);
+    await expect(page.getByText('دسترسی مشتری: منتشرشده — نسخهٔ 1', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('دسترسی مشتری: منتشرشده — نسخهٔ 1', { exact: true })).toBeVisible();
+    const publishedLayout = await page.evaluate(() => ({ content: document.documentElement.scrollWidth, viewport: document.documentElement.clientWidth }));
+    expect(publishedLayout.content).toBeLessThanOrEqual(publishedLayout.viewport);
+    await page.getByRole('textbox', { name: 'دلیل تغییر دسترسی فاکتور' }).fill('لغو دسترسی بدون تغییر سند مالی در آزمون ایزوله');
+    await page.getByRole('checkbox', { name: 'تغییر دسترسی این فاکتور برای صاحب آن را تأیید می‌کنم' }).check();
+    const revoke = page.waitForResponse(response => /\/api\/v1\/invoices\/admin\/documents\/[^/]+\/publication$/.test(new URL(response.url()).pathname) && response.request().method() === 'PUT');
+    await tap(page.getByRole('button', { name: 'لغو دسترسی مشتری به فاکتور' }));
+    expect((await revoke).status()).toBe(200);
+    await expect(page.getByText('دسترسی مشتری: خصوصی — نسخهٔ 2', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('دسترسی مشتری: خصوصی — نسخهٔ 2', { exact: true })).toBeVisible();
+    await expect(page.getByText(seller, { exact: true })).toBeVisible();
 
     // Restore inactive settings via their real command. Changing policy must
     // leave the issued snapshot intact and not affect later test projects.

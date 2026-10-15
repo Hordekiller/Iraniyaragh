@@ -11,6 +11,7 @@ import { formatRial } from '@/lib/orders/orders-labels';
 import { listInvoiceDocuments, readInvoiceDocument } from '@/lib/invoices/invoice-documents-api';
 import { invoiceDocumentError } from './InvoiceIssue';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { InvoicePublication } from './InvoicePublication';
 import { brandAsset } from '@/lib/brand';
 import { prepareInvoicePrint } from '@/lib/invoices/invoice-print';
 import printStyles from './InvoicePrint.module.css';
@@ -66,6 +67,7 @@ function Documents({id}:{id?:string}) {
       <Alert severity="info">این سند از اطلاعات ثبت‌شدهٔ زمان صدور نمایش داده می‌شود. برای وضعیت پرداخت و وصول، جزئیات سفارش و دفترکل را بررسی کنید.</Alert>
       <Typography className={printStyles.pageFooter}>{document.number} — فاکتور فروشگاهی ایران یراق — واحد مبالغ: ریال</Typography>
       </Stack>
+      <InvoicePublication id={document.id}/>
     </>}
     {!id&&list&&<Paper sx={{p:2}}>{list.count===0?<Typography>هنوز فاکتوری صادر نشده است.</Typography>:list.items.map(item=><Box key={item.id} sx={{py:1}}><Link href={`/invoices/documents/${encodeURIComponent(item.id)}`}>{item.number} — {item.buyerLabel} — {formatRial(item.total)}</Link></Box>)}
       <Button disabled={loading||offset===0} onClick={()=>setOffset(value=>Math.max(0,value-25))}>صفحهٔ قبل</Button><Button disabled={loading||offset+25>=list.count} onClick={()=>setOffset(value=>value+25)}>صفحهٔ بعد</Button></Paper>}

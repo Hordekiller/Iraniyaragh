@@ -7,5 +7,7 @@ import { InvoiceDraftService } from './invoice-draft.service';
 import { InvoiceDraftController } from './invoice-draft.controller';
 import { InvoiceDocumentController } from './invoice-document.controller';
 import { InvoiceDocumentService } from './invoice-document.service';
-@Module({ imports: [AuditModule, OrdersModule], controllers: [InvoicePolicyController, InvoiceDraftController, InvoiceDocumentController], providers: [InvoicePolicyService, InvoiceDraftService, InvoiceDocumentService], exports: [InvoicePolicyService] })
+import { InvoicePublicationController, CustomerInvoiceController } from './invoice-publication.controller';
+import { InvoicePublicationService } from './invoice-publication.service';
+@Module({ imports: [AuditModule, OrdersModule], controllers: [InvoicePolicyController, InvoiceDraftController, InvoiceDocumentController, InvoicePublicationController, CustomerInvoiceController], providers: [InvoicePolicyService, InvoiceDraftService, InvoiceDocumentService, InvoicePublicationService], exports: [InvoicePolicyService] })
 export class InvoicesModule {}

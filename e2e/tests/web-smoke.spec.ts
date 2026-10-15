@@ -13,15 +13,17 @@ test.describe('web: storefront shell', () => {
     // response or replacing any application/API path.
     await page.route(logo, () => {});
     const network = createExternalRequestsTracker(page);
-    await page.goto('/');
+    // Lazy loading may start before navigation finishes. Observe first so an
+    // already-started seal request cannot be missed on slower CI navigation.
     const imageRequest = page.waitForRequest(logo);
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await page.getByRole('img', { name: 'نماد اعتماد الکترونیکی ایران یراق' }).scrollIntoViewIfNeeded();
     expect((await imageRequest).resourceType()).toBe('image');
     await expect(page.getByRole('banner')).toBeVisible();
     await expect(page.getByRole('link', { name: 'نماد اعتماد الکترونیکی ایران یراق؛ باز شدن در پنجرهٔ جدید' })).toBeVisible();
     // Preserve the tracker across full document replacement, like the real
     // admin-to-homepage-to-product description journey.
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('banner')).toBeVisible();
     await page.getByRole('img', { name: 'نماد اعتماد الکترونیکی ایران یراق' }).scrollIntoViewIfNeeded();
     await network.assertNone();

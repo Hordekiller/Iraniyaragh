@@ -221,6 +221,8 @@ enum StocktakeScopeType {
 }
 
 model User {
+  invoicePublicationEvents    InvoicePublicationEvent[]
+  invoicePublicationCommands  InvoicePublicationCommand[]
   issuedInvoiceDocuments      InvoiceDocument[]
   invoiceDocumentEvents       InvoiceDocumentEvent[]
   invoiceIssueCommands        InvoiceIssueCommand[]
@@ -2033,36 +2035,39 @@ model InvoiceSeriesCounter {
 }
 
 model InvoiceDocument {
-  id               String                 @id @default(cuid())
-  draftId          String                 @unique
-  draftVersion     Int
-  orderId          String                 @unique
-  orderVersion     Int
-  customerId       String
-  policyRevisionId String
-  series           String                 @db.VarChar(16)
-  period           Int
-  sequence         Int
-  number           String                 @unique @db.VarChar(40)
-  subtotal         BigInt
-  discount         BigInt
-  shipping         BigInt
-  netAmount        BigInt
-  tax              BigInt
-  grandTotal       BigInt
-  snapshot         Json
-  payloadHash      String                 @db.Char(64)
-  issuedById       String
-  issuedAt         DateTime               @default(now())
-  draft            InvoiceDraft           @relation(fields: [draftId], references: [id], onDelete: Restrict)
-  order            Order                  @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  customer         Customer               @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  policyRevision   InvoicePolicyRevision  @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
-  counter          InvoiceSeriesCounter   @relation(fields: [series, period], references: [series, period], onDelete: Restrict)
-  issuedBy         User                   @relation(fields: [issuedById], references: [id], onDelete: Restrict)
-  lines            InvoiceDocumentLine[]
-  events           InvoiceDocumentEvent[]
-  commands         InvoiceIssueCommand[]
+  publication         InvoicePublication?
+  publicationEvents   InvoicePublicationEvent[]
+  publicationCommands InvoicePublicationCommand[]
+  id                  String                      @id @default(cuid())
+  draftId             String                      @unique
+  draftVersion        Int
+  orderId             String                      @unique
+  orderVersion        Int
+  customerId          String
+  policyRevisionId    String
+  series              String                      @db.VarChar(16)
+  period              Int
+  sequence            Int
+  number              String                      @unique @db.VarChar(40)
+  subtotal            BigInt
+  discount            BigInt
+  shipping            BigInt
+  netAmount           BigInt
+  tax                 BigInt
+  grandTotal          BigInt
+  snapshot            Json
+  payloadHash         String                      @db.Char(64)
+  issuedById          String
+  issuedAt            DateTime                    @default(now())
+  draft               InvoiceDraft                @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  order               Order                       @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer            Customer                    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  policyRevision      InvoicePolicyRevision       @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
+  counter             InvoiceSeriesCounter        @relation(fields: [series, period], references: [series, period], onDelete: Restrict)
+  issuedBy            User                        @relation(fields: [issuedById], references: [id], onDelete: Restrict)
+  lines               InvoiceDocumentLine[]
+  events              InvoiceDocumentEvent[]
+  commands            InvoiceIssueCommand[]
 
   @@unique([series, period, sequence])
   @@index([customerId, issuedAt, id])
@@ -2118,4 +2123,44 @@ model InvoiceIssueCommand {
   document         InvoiceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
 
   @@unique([actorId, draftId, keyHash])
+}
+
+/// Independent customer visibility; original issued financial evidence is sealed.
+model InvoicePublication {
+  documentId  String          @id
+  version     Int
+  isPublished Boolean
+  updatedAt   DateTime        @default(now())
+  document    InvoiceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+}
+
+model InvoicePublicationEvent {
+  id          String                      @id @default(cuid())
+  documentId  String
+  version     Int
+  isPublished Boolean
+  reason      String                      @db.VarChar(500)
+  actorId     String
+  requestId   String                      @db.VarChar(100)
+  createdAt   DateTime                    @default(now())
+  document    InvoiceDocument             @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  actor       User                        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  commands    InvoicePublicationCommand[]
+
+  @@unique([documentId, version])
+}
+
+model InvoicePublicationCommand {
+  id          String                  @id @default(cuid())
+  documentId  String
+  actorId     String
+  keyHash     String                  @db.Char(64)
+  payloadHash String                  @db.Char(64)
+  eventId     String                  @unique
+  createdAt   DateTime                @default(now())
+  document    InvoiceDocument         @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  actor       User                    @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  event       InvoicePublicationEvent @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, documentId, keyHash])
 }
