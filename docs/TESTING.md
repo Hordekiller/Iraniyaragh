@@ -151,25 +151,29 @@ concurrency evidence.
 ## Production dependency audit
 
 `.github/workflows/production-audit.yml` runs `node .github/scripts/audit-prod.mjs`
-on every PR, protected-branch push and weekly schedule. Docs-only PRs
-(`.md`, `docs/**`) are skipped via `paths-ignore`. The script runs
+on every PR, protected-branch push, manual dispatch and weekly schedule. The script runs
 `pnpm audit --prod --audit-level=moderate --json`, classifies the result and exits
-with a status code the workflow wrapper interprets:
+with a status code propagated directly by the workflow:
 
-- **Clean (moderate+ = 0):** exit 0. Passes immediately.
+- **Clean (moderate+ = 0):** exit 0 only with a successful process and valid JSON
+  containing all five nonnegative safe-integer vulnerability counts, without an
+  error envelope. Empty/malformed/incomplete output cannot pass.
 - **Real vulnerabilities (moderate+ ≥ 1):** exit 1. Fails on the first attempt with
   a clear list of affected levels; no retry.
-- **Transient network/registry error (non-JSON or operational error code):**
+- **Unavailable/incomplete audit (including network or process failure):**
   retries up to 3 times with a 15-second backoff between attempts.
-  - **Recovers:** exit 0 (passes).
+  - **Recovers with a valid completed audit:** exit 0 (passes).
   - **Exhaustion (registry still unreachable after 3 attempts):** exit 2. The
-    workflow wrapper emits `::warning::` annotations and does not block CI, but
-    leaves a clear "manual review required" note. This prevents intermittent
-    registry outages from stalling PRs while keeping enforcement for real findings.
+    workflow fails and merge remains blocked. Resolve the failure and rerun;
+    an unavailable registry is not evidence of an accepted dependency tree.
 
 The decision logic is a pure function (`classifyResult(stdout, stderr, exitCode)`)
-and was validated against fixture payloads (clean, vulnerability-found,
-persistent-network-failure, transient-recovery).
+and runner/retry boundaries are covered by
+`node --test .github/scripts/audit-prod.test.mjs`, required in CI quality. The
+tests cover invalid reports/counts, zero-exit findings, bounded recovery/exhaustion,
+60-second process timeout, 8 MiB combined-output limit, spawn failure and diagnostic
+redaction. Test process/registry simulations verify failure handling, not the
+security status of real dependencies. Run the real audit separately for that evidence.
 
 ## Adding tests
 
