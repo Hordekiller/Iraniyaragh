@@ -1,15 +1,16 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { createApplicationRequestTracker, signInDiAsAdmin } from './helpers';
+import { signInDiAsAdmin } from './helpers';
 
 async function openInventory(page: Page) {
-  const requests = createApplicationRequestTracker(page);
-  try {
-    await page.goto('/inventory');
-    await expect(page.getByRole('heading', { name: 'موجودی و گردش' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'نوسازی', exact: true })).toBeVisible();
-    await requests.wait();
-  } finally { requests.stop(); }
+  const [balances, movements] = await Promise.all([
+    page.waitForResponse(response => response.status() === 200 && response.url().includes('/api/v1/inventory/balances?')),
+    page.waitForResponse(response => response.status() === 200 && response.url().includes('/api/v1/inventory/movements?')),
+    page.goto('/inventory'),
+  ]);
+  await Promise.all([balances.finished(), movements.finished()]);
+  await expect(page.getByRole('heading', { name: 'موجودی و گردش' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'نوسازی', exact: true })).toBeVisible();
 }
 
 test('admin: another tab cannot revoke a recovered request before its protected replay', async ({ page, context }) => {
