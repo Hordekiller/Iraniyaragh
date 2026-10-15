@@ -1,6 +1,7 @@
 # ADR 0030 — Private, bounded Persian store invoice PDFs
 
-Status: design before implementation; #419, after immutable issuance #417 and
+Status: fixed-template slice implemented; jobs/artifacts/runtime remain proposed;
+#419, after immutable issuance #417 and
 customer publication #418. This is a store document, not fiscal/Moadian acceptance.
 
 ## Source and renderer evaluation
@@ -32,12 +33,18 @@ For the present staging volume, private bounded PostgreSQL bytea artifacts avoid
 introducing a second bucket, public-media policy or signed link. Each immutable
 artifact has an opaque id, document/input hash, renderer/template/font revisions,
 PDF SHA-256, byte count and creation evidence. Maximum artifact size is 2 MiB;
-SQL verifies length/hash/document linkage, rejects update/delete and reconciles
-READY job evidence. Existing database backups include the bytes; a release must
+The proposed SQL must verify length/hash/document linkage, reject update/delete
+and reconcile READY job evidence. Database backups must include the bytes; a release must
 restore and verify artifact hashes before relying on a backup with PDF data.
 Original issued snapshots/number and financial history are never overwritten.
 Capacity and measured artifact growth must be reviewed before wider rollout; no
 unbounded on-demand render, automatic public URL or hidden artifact retention job.
+Before enabling requests, a transactionally enforced global storage reservation
+and pending-job cap are required, including concurrent API instances/restarts.
+Per-file bounds alone do not cap accumulated storage or retained backup growth.
+Capacity exhaustion must reject new work explicitly; no destructive financial
+artifact cleanup or unbounded queued work. Exact deployment budgets and backup
+headroom remain runtime acceptance, not an invented current operator setting.
 
 ## Jobs and runtime
 
@@ -86,3 +93,26 @@ bytes. Financial correction remains its own linked document under #421.
 
 This ADR or a synthetic PDF is not completion of #419. Missing live/template/
 worker/ownership evidence keeps the relevant acceptance open.
+
+## Implemented fixed-template boundary
+
+`invoice-pdf-template.ts` accepts only the customer-safe immutable issued
+projection, prints stored integer IRR strings without repricing, escapes all text,
+and pins the existing approved print wordmark and OFL Vazirmatn bytes by SHA-256.
+No client HTML/CSS/URL is interpolated into executable markup; static CSP denies
+scripts, remote images/fonts, navigation bases and form submission. Private staff
+notes, audit/provider fields and internal identifiers are never serialized.
+Input is bounded to 128 KiB/100 rows, HTML to 1 MiB; malformed data/assets produce
+one sanitized error without reflecting customer content. Each line uses an item
+row plus four readable amount columns so long IRR values do not cross cells.
+The generated HTML fingerprint covers the actual template/assets/date rendering.
+
+Unit and real Chromium template tests cover exact amounts above 2^53, local
+asset integrity, malicious markup, loaded Persian glyph font, no external
+requests, multipage A4 and output-size bounds. The browser test writes only a
+labelled synthetic PDF; no production export or live DB fixture is used.
+
+This slice adds no production dependency, endpoint, schema, worker or button.
+It does not claim a durable render queue, private download, final worker image,
+512 MiB sandbox/resource acceptance or staging PDF acceptance. Those remain
+required before exposing generated PDF functionality.
