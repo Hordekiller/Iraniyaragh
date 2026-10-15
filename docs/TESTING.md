@@ -148,6 +148,20 @@ The next inventory gaps are protected HTTP authorization, transfer semantics and
 batched expiry-worker behavior, each of which needs its own database and
 concurrency evidence.
 
+## API production artifact boundary
+
+`pnpm --filter @iranyaragh/api build` uses `tsconfig.build.json`, cleans the
+generated output and then runs `scripts/verify-runtime-artifacts.mjs`. The build
+preserves `dist/src/main.js` and `dist/src/media-worker.js`, the entry paths used by
+the official API image, while excluding compiled unit/integration tests, test
+helpers and Vitest configuration. A stale generated test file must fail the
+artifact check and disappear on the next clean build. Missing entry files fail too.
+
+This check examines emitted `dist` contents; it is not a claim that every supporting
+operator/Prisma script is removed from the image. `pnpm typecheck`, unit tests and
+the PostgreSQL integration job still validate test sources separately; build
+exclusion never skips their execution or replaces their required CI gates.
+
 ## Production dependency audit
 
 `.github/workflows/production-audit.yml` runs `node .github/scripts/audit-prod.mjs`
