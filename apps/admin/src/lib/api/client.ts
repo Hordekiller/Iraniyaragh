@@ -86,7 +86,10 @@ type RequestOptions = {
 };
 
 let sessionRecovery: (() => Promise<string>) | null = null;
-let recoveryInFlight: Promise<string> | null = null;
+type RecoverySerializer = <T>(operation: () => Promise<T>) => Promise<T>;
+let serializeRecovery: RecoverySerializer = operation => operation();
+type RecoveryBatch = { token: Promise<string>; replays: Set<Promise<unknown>>; completed: Promise<void> };
+let recoveryBatch: RecoveryBatch | null = null;
 let authenticationFailure: ((error: ApiClientError, revision: number) => void) | null = null;
 
 export function registerAuthenticationFailure(handler: (error: ApiClientError, revision: number) => void): () => void {
@@ -105,21 +108,56 @@ export function notifyFreshAuthentication(): void {
   for (const listener of freshAuthenticationListeners) listener();
 }
 
-export function registerSessionRecovery(recover: () => Promise<string>): () => void {
+export function registerSessionRecovery(recover: () => Promise<string>, serialize: RecoverySerializer = operation => operation()): () => void {
   sessionRecovery = recover;
-  return () => { if (sessionRecovery === recover) sessionRecovery = null; };
+  serializeRecovery = serialize;
+  return () => { if (sessionRecovery === recover) { sessionRecovery = null; serializeRecovery = operation => operation(); } };
 }
 
-/** Concurrent 401s share one cookie rotation; duplicate refreshes revoke the family. */
+/** Hold the cross-tab rotation lock through every coalesced protected replay. */
+function getRecoveryBatch(): RecoveryBatch {
+  if (recoveryBatch) return recoveryBatch;
+  const recover = sessionRecovery;
+  const serialize = serializeRecovery;
+  let accept!: (token: string) => void;
+  let reject!: (error: unknown) => void;
+  const batch: RecoveryBatch = {
+    token: new Promise<string>((resolve, fail) => { accept = resolve; reject = fail; }),
+    replays: new Set(),
+    completed: Promise.resolve(),
+  };
+  recoveryBatch = batch;
+  const clear = () => { if (recoveryBatch === batch) recoveryBatch = null; };
+  // Defer acquisition until the caller has synchronously registered its replay.
+  batch.completed = Promise.resolve().then(() => serialize(async () => {
+    try {
+      if (!recover) throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
+      accept(await recover());
+      while (batch.replays.size > 0) await Promise.allSettled([...batch.replays]);
+    } finally {
+      // Stop accepting work before releasing the lock, including bootstrap
+      // batches without a replay. A later caller needs its own protected lease.
+      clear();
+    }
+  })).catch(reject).finally(clear);
+  return batch;
+}
+
+/** Concurrent 401s share one cookie rotation; tokens remain memory-only. */
 export function recoverApiSession(): Promise<string> {
-  if (recoveryInFlight) return recoveryInFlight;
-  if (!sessionRecovery) return Promise.reject(new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 }));
-  recoveryInFlight = sessionRecovery().finally(() => { recoveryInFlight = null; });
-  return recoveryInFlight;
+  return getRecoveryBatch().token;
+}
+
+function replayWithRecoveredSession<T>(operation: (token: string) => Promise<T>): Promise<T> {
+  const batch = getRecoveryBatch();
+  const replay = batch.token.then(operation);
+  batch.replays.add(replay);
+  void replay.then(() => batch.replays.delete(replay), () => batch.replays.delete(replay));
+  return replay;
 }
 
 export async function settleSessionRecovery(): Promise<void> {
-  await recoveryInFlight?.catch(() => undefined);
+  await recoveryBatch?.completed;
 }
 
 function resolveUrl(path: string): string {
@@ -208,11 +246,12 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     };
     if (response.status === 401 && failure.code === 'AUTH_SESSION_INVALID' && options.token && options.recoverSession !== false && sessionRecovery) {
       if (getSessionRevision() !== sessionRevision) throw new ApiAbortError();
-      const currentToken = getAccessToken();
-      const freshToken = currentToken && currentToken !== options.token ? currentToken : await recoverApiSession();
-      if (options.signal?.aborted || getSessionRevision() !== sessionRevision) throw new ApiAbortError();
-      // Keep the body and idempotency key unchanged, and retry at most once.
-      return apiFetch<T>(path, { ...options, token: freshToken, recoverSession: false });
+      return replayWithRecoveredSession(freshToken => {
+        if (options.signal?.aborted || getSessionRevision() !== sessionRevision) throw new ApiAbortError();
+        // Another tab may have revoked even a locally newer token. Recover
+        // under the shared lock and retain it through the single exact replay.
+        return apiFetch<T>(path, { ...options, token: freshToken, recoverSession: false });
+      });
     }
     const error = new ApiClientError(failure, response.headers);
     // Only the current app identity may be invalidated. An old request or a

@@ -21,6 +21,24 @@ This naming rule is a safety boundary, not a substitute for separate credentials
 infrastructure. Never point the integration runner at a database containing valuable
 data, even if its name happens to end in `_test`.
 
+## Admin cross-tab recovery regression
+
+`e2e/tests/admin-cross-tab-recovery.spec.ts` signs in with the real staff
+password/TOTP API against the isolated test database and opens two tabs sharing
+the real cookie jar. A normal refresh makes their memory-only bearers stale.
+The test pauses only the first tab's outgoing protected replay, starts the
+second tab's recovery and then resumes the actual HTTP request. No route is
+fulfilled with a mock, no session row is edited, and no financial/inventory
+command is issued. Both desktop and mobile must receive a successful protected
+response and retain their authenticated view. This proves the rotation/replay
+race; it does not by itself prove the cause of every live idle-session report.
+
+Admin client units additionally verify that recovery keeps the shared lock
+through every coalesced response body, releases it after abort/network failure,
+preserves exact mutation payloads/idempotency keys, cancels work from another
+identity, and never loops when the refreshed bearer is rejected. The existing
+server inactivity, revocation, fresh-MFA and permission rules remain authoritative.
+
 ## Local PostgreSQL setup
 
 Start the repository PostgreSQL service, then create dedicated test and shadow
