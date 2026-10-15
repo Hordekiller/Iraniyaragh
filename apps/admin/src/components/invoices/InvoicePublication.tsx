@@ -174,8 +174,8 @@ function Publication({ id, manage }: { id: string; manage: boolean }) {
   const locked =
     loading || busy || uncertain || needsReview || error !== undefined;
   return (
-    <Paper sx={{ p: 2 }}>
-      <Stack spacing={2}>
+    <Paper sx={{ p: 2, minWidth: 0, overflowWrap: 'anywhere' }}>
+      <Stack spacing={2} sx={{ minWidth: 0 }}>
         <Typography variant="h6">دسترسی مشتری به فاکتور</Typography>
         <Alert severity="info">
           انتشار یا لغو دسترسی، وضعیت مالی، پرداخت و موجودی را تغییر نمی‌دهد.
@@ -207,7 +207,9 @@ function Publication({ id, manage }: { id: string; manage: boolean }) {
             {data.publication.isPublished && (
               <Typography>
                 مسیر مشاهده پس از ورود مشتری:{' '}
-                <code>{`/account/invoices/${encodeURIComponent(id)}`}</code>
+                <Typography component="code" dir="ltr" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
+                  {`/account/invoices/${encodeURIComponent(id)}`}
+                </Typography>
               </Typography>
             )}
             {manage && (
