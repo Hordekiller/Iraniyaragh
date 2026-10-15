@@ -97,9 +97,7 @@ provider-neutral adapter, and path-style addressing is still required. On
 staging the console is disabled and no port is published; the dev compose
 enables the console so the bucket can be inspected in a browser.
 
-## TLS
-
-### Release version evidence
+## Release version evidence
 
 After an official deploy or rollback, check image references/digests and the
 application runtime version separately. `deploy.sh` writes the private deployment
@@ -131,7 +129,7 @@ The offline regression command is
 Compose file with an isolated copy of the public example environment for upgrade
 and rollback; it starts no containers and reads no private staging configuration.
 
-## TLS configuration
+## TLS
 
 Nginx terminates TLS in the `web` container, and ports 80 and 443 are both
 published: 443 serves everything, 80 exists so the certificate can be renewed
