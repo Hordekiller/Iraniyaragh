@@ -35,6 +35,7 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
   const auth = useAuth()
   const { id = '' } = useParams<{ id: string }>()
   const [reload, setReload] = useState(0)
+  const [observedAt, setObservedAt] = useState(() => Date.now())
   const [busyOrderId, setBusyOrderId] = useState<string | null>(null)
   const [paymentError, setPaymentError] = useState<{
     orderId: string
@@ -61,7 +62,10 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
     api
       .getOrder(id)
       .then((value) => {
-        if (active) setResult({ key: requestKey, order: value, error: null })
+        if (active) {
+          setObservedAt(Date.now())
+          setResult({ key: requestKey, order: value, error: null })
+        }
       })
       .catch((cause) => {
         if (active) setResult({ key: requestKey, order: null, error: cause })
@@ -76,6 +80,24 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
   const busy = busyOrderId === id
   const uncertain = uncertainOrderId === id
   const currentPaymentError = paymentError?.orderId === id ? paymentError.cause : null
+  const deadline = order ? Date.parse(order.reservationExpiresAt) : Number.NaN
+  const deadlineInvalid = !Number.isFinite(deadline)
+  const deadlineReached = deadlineInvalid || deadline <= observedAt
+  const orderStatus = order?.status
+
+  useEffect(() => {
+    if (orderStatus !== 'PENDING_PAYMENT' || deadlineReached) return
+    const observeClock = () => setObservedAt(Date.now())
+    // One deadline timer, without polling the API. Clamp long timers to the browser limit.
+    const timer = window.setTimeout(observeClock, Math.min(Math.max(deadline - Date.now(), 0), 2_147_483_647))
+    window.addEventListener('focus', observeClock)
+    document.addEventListener('visibilitychange', observeClock)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('focus', observeClock)
+      document.removeEventListener('visibilitychange', observeClock)
+    }
+  }, [deadline, deadlineReached, observedAt, orderStatus])
 
   async function handlePayment() {
     if (
@@ -86,6 +108,12 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
       inFlight.current ||
       uncertain
     ) return
+    // A suspended tab may not have run its deadline timer before this click.
+    const clickedAt = Date.now()
+    if (deadlineInvalid || deadline <= clickedAt) {
+      setObservedAt(clickedAt)
+      return
+    }
     inFlight.current = true
     setBusyOrderId(id)
     setPaymentError(null)
@@ -94,6 +122,12 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
         paymentKey.current = { orderId: id, key: newPaymentIdempotencyKey() }
       const payment = await api.initiatePayment(order.id, paymentKey.current.key)
       if (!active.current) return
+      const receivedAt = Date.now()
+      if (deadline <= receivedAt) {
+        setObservedAt(receivedAt)
+        setUncertainOrderId(id)
+        return
+      }
       const redirectUrl = paymentRedirectUrl(
         payment,
         order.totals.total.amount,
@@ -168,6 +202,7 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
   const latest = order.payment.latestStatus
   const verifiedPaid = order.status === 'PAID' && latest === 'PAID'
   const failed = latest === 'FAILED' || latest === 'CANCELLED'
+  const cancelledWithoutPendingPayment = order.status === 'CANCELLED' && (latest === null || failed)
   if (verifiedPaid)
     return (
       <ResultCard
@@ -189,8 +224,10 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
       <ResultCard
         tone="error"
         icon={<ShieldAlert size={31} />}
-        title="وضعیت پرداخت نیازمند بررسی است"
-        description="وضعیت سفارش و پرداخت با هم تأیید نشده‌اند. پرداخت تازه‌ای آغاز نکنید و جزئیات سفارش را بررسی کنید."
+        title={cancelledWithoutPendingPayment ? 'سفارش لغو شده است' : 'وضعیت پرداخت نیازمند بررسی است'}
+        description={cancelledWithoutPendingPayment
+          ? 'این سفارش امکان پرداخت تازه ندارد. وضعیت تلاش‌های قبلی پرداخت را در جزئیات سفارش بررسی کنید.'
+          : 'وضعیت سفارش و پرداخت با هم تأیید نشده‌اند. پرداخت تازه‌ای آغاز نکنید و جزئیات سفارش را بررسی کنید.'}
         action={
           <Link to={ROUTES.order(order.id)} className={primaryButton}>
             مشاهده جزئیات سفارش
@@ -198,6 +235,29 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
         }
       />
     )
+
+  if (deadlineReached) {
+    const pendingAttempt = uncertain || busy || latest === 'PENDING'
+    return (
+      <ResultCard
+        tone="pending"
+        icon={<Clock3 size={31} />}
+        title={deadlineInvalid ? 'مهلت پرداخت قابل بررسی نیست' : 'مهلت پرداخت این سفارش به پایان رسیده است'}
+        description={pendingAttempt
+          ? 'نتیجهٔ تلاش قبلی پرداخت باید از سرور بررسی شود. پایان مهلت به معنی ناموفق بودن پرداخت یا بازگشت وجه نیست؛ پرداخت تازه‌ای آغاز نکنید.'
+          : 'برای این سفارش پرداخت تازه‌ای آغاز نکنید. وضعیت ثبت‌شده در سرور را دوباره بررسی کنید و برای پیگیری سفارش جزئیات آن را ببینید.'}
+        details={`سفارش ${order.number} · ${formatToman(order.totals.total.amount)}`}
+        action={
+          <div className="flex flex-col gap-3">
+            <button type="button" onClick={() => setReload((value) => value + 1)} className={primaryButton}>
+              <RefreshCw size={16} /> بررسی دوباره وضعیت
+            </button>
+            <Link to={ROUTES.order(order.id)} className={primaryButton}>جزئیات سفارش</Link>
+          </div>
+        }
+      />
+    )
+  }
 
   return (
     <ResultCard
