@@ -1,0 +1,160 @@
+{
+  "checkpointUTC": "2026-10-16",
+  "sourceBaseline": "30c3edee7002021429978b3478150d63385d75f7",
+  "scope": "Declared invoice/report issue dependencies and current execution/release gates; not an acceptance claim.",
+  "issueDependencies": [
+    {
+      "issue": 417,
+      "requires": [
+        416
+      ]
+    },
+    {
+      "issue": 418,
+      "requires": [
+        417
+      ]
+    },
+    {
+      "issue": 419,
+      "requires": [
+        417
+      ]
+    },
+    {
+      "issue": 420,
+      "requires": [
+        416,
+        417,
+        418,
+        419
+      ]
+    },
+    {
+      "issue": 421,
+      "requires": [
+        414,
+        417
+      ],
+      "conditionalFinancialDependencies": [
+        336,
+        338,
+        348
+      ]
+    },
+    {
+      "issue": 423,
+      "requires": [
+        414,
+        358
+      ],
+      "pdfRequires": [
+        419
+      ]
+    }
+  ],
+  "releaseGates": [
+    {
+      "gate": "reviewed_security_and_provenance",
+      "candidatePRs": [
+        440,
+        441,
+        442,
+        446,
+        448
+      ],
+      "state": "unmerged; independent review required"
+    },
+    {
+      "gate": "stocktake_reconciliation",
+      "issues": [
+        347,
+        352
+      ],
+      "candidatePRs": [
+        444
+      ],
+      "state": "candidate tests green; live operator acceptance open"
+    },
+    {
+      "gate": "admin_session_recovery",
+      "issues": [
+        400
+      ],
+      "candidatePRs": [
+        445,
+        447
+      ],
+      "state": "candidate tests green; live/operator acceptance still open"
+    },
+    {
+      "gate": "invoice_private_pdf",
+      "issues": [
+        419,
+        420
+      ],
+      "candidatePRs": [
+        439
+      ],
+      "state": "template candidate only; jobs/worker/private download/UI implementation remains"
+    },
+    {
+      "gate": "invoice_corrections",
+      "issues": [
+        421
+      ],
+      "state": "implementation remains"
+    },
+    {
+      "gate": "report_exports",
+      "issues": [
+        358,
+        423
+      ],
+      "state": "implementation remains; PDF depends on 419"
+    },
+    {
+      "gate": "general_returns",
+      "issues": [
+        348
+      ],
+      "state": "credit-only return scope does not complete general paid-order returns"
+    },
+    {
+      "gate": "role_administration",
+      "issues": [
+        359
+      ],
+      "state": "proposed ADR/API review then implementation required"
+    },
+    {
+      "gate": "content_and_public_rendering",
+      "issues": [
+        125,
+        126,
+        127,
+        129
+      ],
+      "state": "accepted V1 content/SSR/technical SEO implementation remains; AI retrieval 128 stays future"
+    },
+    {
+      "gate": "provider_and_operations_acceptance",
+      "issues": [
+        403,
+        393,
+        123,
+        130,
+        136
+      ],
+      "state": "operator/provider/operational evidence remains; payment disabled; no fabricated paid/SMS outcome"
+    },
+    {
+      "gate": "valuation_policy",
+      "issues": [
+        422
+      ],
+      "state": "configuration intentionally inactive per owner; no fabricated costs or activation"
+    }
+  ],
+  "releaseRule": "Every relevant final exact-head required check and independent review, fresh restored backup, immutable image publication/digests, official authorized deployment and actual runtime/customer/operator acceptance. Green PR checks alone do not satisfy release gates."
+}
