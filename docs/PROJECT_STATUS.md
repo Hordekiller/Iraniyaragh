@@ -1393,6 +1393,17 @@ for current issue disposition and the separate limited-sales go/no-go gate.
 
 ## Status update protocol
 
+### 2026-10-16 candidate checkpoint — reservation expiry (#81)
+
+The isolated expiry-batching branch is based on main
+`30c3edee7002021429978b3478150d63385d75f7`. It groups reservation release work
+by balance, retains individual audit evidence and verifies PostgreSQL races and
+rollback. Measured query counts and operational limits are recorded in
+[`OPERATIONS.md`](./OPERATIONS.md#reservation-expiry-batching--81--450).
+This is a source candidate, not evidence of merge or VPS deployment. Order-aware
+automatic expiry and expired-payment recovery remain open in #450; batching
+alone does not resolve the stale-checkout production path.
+
 ```text
 Date / main SHA / sprint or release gate:
 Merged outcomes:

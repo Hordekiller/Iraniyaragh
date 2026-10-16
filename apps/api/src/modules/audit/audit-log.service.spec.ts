@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from './audit-log.service';
 import { AuditLogListQueryDto } from './audit.dto';
@@ -32,6 +33,20 @@ function setup() {
 }
 
 describe('AuditLogService', () => {
+  it('preserves the single-record representation and individual facts in a transactional batch', async () => {
+    const { prisma, service } = setup();
+    const transaction = { auditLog: { createMany: vi.fn().mockResolvedValue({ count: 2 }) } };
+    const minimal = { action: 'inventory.reservation.expired', entityType: 'stock-reservation', entityId: 'reservation-test-1' };
+    const detailed = { ...minimal, entityId: 'reservation-test-2', before: { reserved: 1 }, after: { reserved: 0 }, actorId: 'actor-test', requestId: 'request-test' };
+    await service.record(minimal);
+    await service.record(detailed);
+    await service.recordMany([minimal, detailed], transaction as unknown as Prisma.TransactionClient);
+    expect(transaction.auditLog.createMany).toHaveBeenCalledWith({ data: prisma.auditLog.create.mock.calls.map(([input]) => input.data) });
+    expect(transaction.auditLog.createMany).toHaveBeenCalledOnce();
+    await service.recordMany([], transaction as unknown as Prisma.TransactionClient);
+    expect(transaction.auditLog.createMany).toHaveBeenCalledOnce();
+  });
+
   it('filters by action, entity, actor and created range and serializes the actor label', async () => {
     const { prisma, service } = setup();
     const query = Object.assign(new AuditLogListQueryDto(), {
