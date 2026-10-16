@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { InventoryMovementType, Prisma } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { InventoryService } from './inventory.service';
 
 function createFakeClient(overrides: Record<string, unknown> = {}) {
@@ -678,6 +679,26 @@ describe('InventoryService guards and queries', () => {
       where: { id: { in: ['r1'] }, status: 'ACTIVE', expiresAt: { lte: expect.any(Date) } }, data: { status: 'EXPIRED' },
     });
     expect(ctx.audit.recordMany).toHaveBeenCalledWith([expect.objectContaining({ entityId: 'r1' })], ctx.tx);
+  });
+
+  it('acquires expiry balance locks in explicit code-unit order regardless of candidate order', async () => {
+    ctx.prisma.stockReservation.findMany.mockResolvedValue(
+      ['v2', 'v1', 'V1', 'v10'].map((variantId) => ({
+        id: `reservation-${variantId}`, warehouseId: 'wh', locationId: 'loc', variantId,
+      })),
+    );
+    ctx.tx.stockReservation.findMany.mockResolvedValue([]);
+
+    await expect(ctx.service.expireReservations({ actorId: 'actor', requestId: 'request' })).resolves.toBe(0);
+
+    const expectedOrder = ['V1', 'v1', 'v10', 'v2'];
+    expect(ctx.tx.$executeRaw).toHaveBeenCalledTimes(expectedOrder.length);
+    for (const [index, variantId] of expectedOrder.entries()) {
+      const [high, low] = advisoryLockIdKey('balance', 'wh', 'loc', variantId);
+      expect(ctx.tx.$executeRaw).toHaveBeenNthCalledWith(index + 1, expect.any(Array), high, low);
+    }
+    expect(ctx.tx.inventoryBalance.update).not.toHaveBeenCalled();
+    expect(ctx.audit.recordMany).not.toHaveBeenCalled();
   });
 
   it.each(['40001', '40P01'])('retries the whole expiry transaction after a raw lock abort (%s)', async (code) => {

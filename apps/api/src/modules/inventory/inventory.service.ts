@@ -666,7 +666,12 @@ export class InventoryService {
           for (const candidate of reservations) {
             keys.set(this.expiryBalanceKey(candidate), candidate);
           }
-          for (const key of [...keys.keys()].sort()) {
+          const orderedKeys = [...keys.keys()].sort((left, right) => {
+            // Lock order must not depend on the worker's locale or ICU version.
+            if (left === right) return 0;
+            return left < right ? -1 : 1;
+          });
+          for (const key of orderedKeys) {
             await this.acquireBalanceLock(tx, keys.get(key)!);
           }
           const current = await tx.stockReservation.findMany({
