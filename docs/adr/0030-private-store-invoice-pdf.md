@@ -1,6 +1,7 @@
 # ADR 0030 — Private, bounded Persian store invoice PDFs
 
-Status: fixed-template slice implemented; jobs/artifacts/runtime remain proposed;
+Status: fixed-template and private persistence slices implemented on candidate
+branches; jobs/worker/download/runtime remain proposed;
 #419, after immutable issuance #417 and
 customer publication #418. This is a store document, not fiscal/Moadian acceptance.
 
@@ -33,8 +34,8 @@ For the present staging volume, private bounded PostgreSQL bytea artifacts avoid
 introducing a second bucket, public-media policy or signed link. Each immutable
 artifact has an opaque id, document/input hash, renderer/template/font revisions,
 PDF SHA-256, byte count and creation evidence. Maximum artifact size is 2 MiB;
-The proposed SQL must verify length/hash/document linkage, reject update/delete
-and reconcile READY job evidence. Database backups must include the bytes; a release must
+The persistence candidate SQL verifies length/hash/document linkage and rejects
+update/delete. READY job reconciliation remains unimplemented. Database backups must include the bytes; a release must
 restore and verify artifact hashes before relying on a backup with PDF data.
 Original issued snapshots/number and financial history are never overwritten.
 Capacity and measured artifact growth must be reviewed before wider rollout; no
@@ -112,7 +113,50 @@ asset integrity, malicious markup, loaded Persian glyph font, no external
 requests, multipage A4 and output-size bounds. The browser test writes only a
 labelled synthetic PDF; no production export or live DB fixture is used.
 
-This slice adds no production dependency, endpoint, schema, worker or button.
+The fixed-template slice adds no production dependency, endpoint, schema, worker or button.
 It does not claim a durable render queue, private download, final worker image,
 512 MiB sandbox/resource acceptance or staging PDF acceptance. Those remain
 required before exposing generated PDF functionality.
+
+## Private persistence foundation (candidate; not deployed)
+
+The dependent persistence slice adds `InvoicePdfArtifact` and
+`InvoicePdfStorageCapacity` in a forward-only transactional migration. It seeds
+neither a capacity budget nor activation. An operator-approved byte budget and
+artifact-count budget must exist before any insert; absence/disabled/exhausted
+capacity fails explicitly. These are private database storage limits, not an
+approved retention or production capacity policy.
+
+SQL validates the issued document's immutable `payloadHash`, lowercase SHA-256
+identities, exact byte count/hash, PDF signature and 2 MiB limit. Signature/hash
+checks are storage integrity checks, not a PDF parser or renderer acceptance.
+The immutable artifact cannot be updated/deleted through ordinary DML. Its unique
+document/input/renderer/template/font identity preserves the original output on
+retry. The internal store returns metadata only, never bytes or a public URL.
+There is no registered route, customer download or render request in this slice.
+
+Every insert locks the singleton capacity row before checking both budgets, then
+charges only an actual successful insert. Concurrent different inputs cannot
+overbook the final byte/slot; `ON CONFLICT DO NOTHING` does not consume capacity.
+Counter edits are limited to the nested artifact-insert trigger; versioned budget
+changes cannot undercut retained evidence. Database-owner privileges can always
+alter schema/triggers: these invariants do not replace server authorization.
+The internal store commits redacted audit evidence in the same serializable
+transaction. A failed audit rolls back bytes and counters; an unclassified driver
+error returns sanitized uncertainty, never a READY result. Reconciliation of the
+same immutable input returns the original artifact even when new storage is
+disabled/full. This is internal DB idempotency, not the future authorized job
+request/idempotency contract.
+
+Real isolated PostgreSQL acceptance extends genuine order → draft → issuance
+fixtures. Tests cover concurrent service/independent SQL writers, exact size
+bounds, SQL bypass attempts, restart replay, immutable evidence, capacity and
+audit rollback, without changing stock, payments or invoice amounts. Synthetic
+PDF-signature bytes exercise storage constraints only, not rendering acceptance.
+
+Still required before activation: globally bounded queued-job reservations,
+fenced leases/attempts and restart recovery, trusted rendering input binding,
+dedicated sandboxed worker/image/resource proof, current-authority request and
+download contracts, customer revocation checks, Admin/customer UI, operator
+capacity approval, restored-backup artifact hash verification and exact-SHA
+runtime acceptance. Issue #419 remains open.
