@@ -521,14 +521,44 @@ describe.sequential('PaymentVerificationService database integration', () => {
     await expect(balanceOf()).resolves.toMatchObject({ onHand: 2, reserved: 0, available: 2 });
   });
 
-  it('settles money after the reservation-expiry worker closed the order without double-consume', async () => {
+  it('preserves an attempted order during expiry and later verifies it with exactly one stock consume', async () => {
+    const order = await createOrderWithReservation('held-expiry', 2);
+    await createPayment(order.id, 'S-held-expiry', 'held-expiry');
+    await makeOverdue(order.id);
+    expect(await commands.expirePendingPaymentOrders({ actorId: staffUser, requestId: `${requestIdPrefix}-held-expiry` }))
+      .toEqual({ data: { expired: 0 } });
+    await expect(balanceOf()).resolves.toMatchObject({ onHand: 2, reserved: 2, available: 0 });
+
+    const result = await verification.verify({ authority: 'S-held-expiry', status: 'OK', requestId: `${requestIdPrefix}-held-verify` });
+    expect(result.data.verification).toMatchObject({ status: 'PAID', outcome: 'VERIFIED', orderStatus: 'PAID', consumedReservations: 1 });
+    const replay = await verification.verify({ authority: 'S-held-expiry', status: 'OK', requestId: `${requestIdPrefix}-held-verify-replay` });
+    expect(replay.data.verification).toMatchObject({ status: 'PAID', outcome: 'REPLAY', orderStatus: 'PAID' });
+    expect(provider.verify).toHaveBeenCalledOnce();
+    await expect(balanceOf()).resolves.toMatchObject({ onHand: 0, reserved: 0, available: 0 });
+    expect(await prisma.stockReservation.count({ where: { orderId: order.id, status: 'CONSUMED' } })).toBe(1);
+    expect(await prisma.stockReservation.count({ where: { orderId: order.id, status: 'RELEASED' } })).toBe(0);
+    expect(await prisma.inventoryMovement.count({ where: { referenceId: order.id, type: 'SALE' } })).toBe(1);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: 'ORDER_EXPIRED' } })).toBe(0);
+    const payment = await prisma.payment.findFirstOrThrow({ where: { orderId: order.id } });
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: payment.id, topic: 'PAYMENT_VERIFIED' } })).toBe(1);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: payment.id, topic: 'PAYMENT_VERIFIED_AFTER_CANCELLED' } })).toBe(0);
+  });
+
+  it('preserves an attempted order during expiry and compensates a later explicit staff cancellation without double-consume', async () => {
     const order = await createOrderWithReservation('race-expire', 2);
     await createPayment(order.id, 'S-race-expire', 'race-expire');
     await makeOverdue(order.id);
-    await commands.expirePendingPaymentOrders(
+    const expiry = await commands.expirePendingPaymentOrders(
       { actorId: staffUser, requestId: `${requestIdPrefix}-expiry` },
       { now: new Date() },
     );
+    expect(expiry).toEqual({ data: { expired: 0 } });
+    await expect(prisma.order.findUniqueOrThrow({ where: { id: order.id } })).resolves.toMatchObject({ status: 'PENDING_PAYMENT' });
+    await expect(prisma.stockReservation.count({ where: { orderId: order.id, status: 'ACTIVE' } })).resolves.toBe(1);
+    await commands.cancelAsStaff(staffUser, order.id, {
+      idempotencyKey: `expiry-staff-cancel-${runId}`,
+      requestId: `${requestIdPrefix}-expiry-staff-cancel`,
+    });
     await expect(prisma.order.findUniqueOrThrow({ where: { id: order.id } })).resolves.toMatchObject({ status: 'CANCELLED' });
 
     const result = await verification.verify({
