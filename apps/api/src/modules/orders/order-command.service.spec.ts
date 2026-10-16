@@ -19,6 +19,8 @@ const pendingOrder = {
   number: 'ORD-001',
   customerId: 'customer-1',
   status: 'PENDING_PAYMENT',
+  reservationExpiresAt: new Date('2026-09-21T00:00:00.000Z'),
+  payments: [] as Array<{ id: string }>,
 };
 
 function setup(overrides: {
@@ -351,6 +353,43 @@ describe('OrderCommandService', () => {
     const outbox = ctx.tx.outboxEvent as Record<string, ReturnType<typeof vi.fn>>;
     expect(outbox.create).not.toHaveBeenCalled();
     expect(ctx.inventory.releaseReservationsForOrder).not.toHaveBeenCalled();
+  });
+
+  it('excludes attempted payments before selecting the bounded expiry page', async () => {
+    await ctx.service.expirePendingPaymentOrders(
+      { actorId: 'staff-1', requestId: 'expiry-selection' },
+      { now: pendingOrder.reservationExpiresAt, batchSize: 3 },
+    );
+    expect(ctx.prisma.order.findMany).toHaveBeenCalledWith({
+      where: { status: 'PENDING_PAYMENT', reservationExpiresAt: { lte: pendingOrder.reservationExpiresAt }, payments: { none: {} } },
+      orderBy: [{ reservationExpiresAt: 'asc' }, { id: 'asc' }], select: { id: true }, take: 3,
+    });
+  });
+
+  it.each([
+    { name: 'extended deadline', order: { ...pendingOrder, reservationExpiresAt: new Date('2026-09-23T00:00:00.000Z') } },
+    { name: 'new payment attempt', order: { ...pendingOrder, payments: [{ id: 'attempt-created-after-selection' }] } },
+    { name: 'missing order', order: null },
+  ])('does not mutate a candidate with $name at the locked recheck', async ({ order }) => {
+    ctx = setup({ order, candidates: [{ id: pendingOrder.id }] });
+    await expect(ctx.service.expirePendingPaymentOrders(
+      { actorId: 'staff-1', requestId: 'expiry-recheck' },
+      { now: new Date('2026-09-22T00:00:00.000Z') },
+    )).resolves.toEqual({ data: { expired: 0 } });
+    expect(ctx.tx.orderTransition.create).not.toHaveBeenCalled();
+    expect(ctx.inventory.releaseReservationsForOrder).not.toHaveBeenCalled();
+    expect(ctx.tx.outboxEvent.create).not.toHaveBeenCalled();
+    expect(ctx.audit.record).not.toHaveBeenCalled();
+  });
+
+  it('counts an eligible order at the exact deadline even if no active reservation remains', async () => {
+    ctx = setup({ candidates: [{ id: pendingOrder.id }], reservationsToRelease: 0 });
+    await expect(ctx.service.expirePendingPaymentOrders(
+      { actorId: 'staff-1', requestId: 'expiry-boundary' },
+      { now: pendingOrder.reservationExpiresAt },
+    )).resolves.toEqual({ data: { expired: 1 } });
+    expect(ctx.tx.orderTransition.create).toHaveBeenCalledOnce();
+    expect(ctx.audit.record).toHaveBeenCalledWith(expect.objectContaining({ after: { status: 'CANCELLED', releasedReservations: 0 } }), ctx.tx);
   });
 
   it('requires a tracked actor and request context', async () => {

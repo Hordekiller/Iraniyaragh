@@ -133,6 +133,8 @@ export class OrderCommandService {
       where: {
         status: "PENDING_PAYMENT",
         reservationExpiresAt: { lte: now },
+        // Attempted payments require reconciliation, not deadline inference.
+        payments: { none: {} },
       },
       orderBy: [{ reservationExpiresAt: "asc" }, { id: "asc" }],
       select: { id: true },
@@ -142,8 +144,8 @@ export class OrderCommandService {
     let expired = 0;
     for (const candidate of candidates) {
       try {
-        const released = await this.expireOrder(candidate.id, context, now);
-        if (released > 0) expired += 1;
+        const transitioned = await this.expireOrder(candidate.id, context, now);
+        if (transitioned) expired += 1;
       } catch (error) {
         // A concurrent cancel or another expiry already moved the order out of
         // PENDING_PAYMENT. The worker writes no claim, so the race is benign;
@@ -321,7 +323,7 @@ export class OrderCommandService {
     orderId: string,
     context: OrderCommandContext,
     now: Date,
-  ): Promise<number> {
+  ): Promise<boolean> {
     return withSerializableRetry({
       isContention: (error) => error instanceof OrderCommandContentionError,
       conflictMessage:
@@ -338,9 +340,15 @@ export class OrderCommandService {
                 number: true,
                 customerId: true,
                 status: true,
+                reservationExpiresAt: true,
+                payments: { select: { id: true }, take: 1 },
               },
             });
-            if (order?.status !== "PENDING_PAYMENT") return 0;
+            if (
+              order?.status !== "PENDING_PAYMENT" ||
+              order.reservationExpiresAt > now ||
+              order.payments.length > 0
+            ) return false;
 
             const requestId = requestIdForOrder(context.requestId, order.id);
             const transition = await recordTransition(
@@ -397,7 +405,7 @@ export class OrderCommandService {
               tx,
             );
 
-            return releasedReservations;
+            return true;
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         ),

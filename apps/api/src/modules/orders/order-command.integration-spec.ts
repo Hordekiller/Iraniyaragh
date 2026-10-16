@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
+import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { AuditLogService } from '../audit/audit-log.service';
 import { InventoryService } from '../inventory/inventory.service';
 import {
@@ -352,6 +353,164 @@ describe.sequential('OrderCommandService database integration', () => {
     await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: { in: ['ORDER_CANCELLED', 'ORDER_EXPIRED'] } } })).resolves.toBe(1);
   });
 
+  it.each([
+    { status: 'PENDING', authority: null },
+    { status: 'PENDING', authority: 'ISOLATED-EXPIRY-TEST' },
+    { status: 'PAID', authority: null },
+    { status: 'FAILED', authority: null },
+    { status: 'CANCELLED', authority: null },
+    { status: 'REFUNDED', authority: null },
+    { status: 'PARTIALLY_REFUNDED', authority: null },
+  ] as const)('preserves an attempted order with payment $status / authority $authority', async ({ status, authority }) => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await makeOverdue(order.id);
+    // Synthetic isolated database states test fail-closed behavior; no provider acceptance is claimed.
+    const payment = await prisma.payment.create({ data: {
+      orderId: order.id, provider: 'zarinpal', amount: 150n, status, authority,
+      idempotencyKey: `expiry-protected-${runId}-${status}`, idempotencyFingerprint: sha256('expiry-protected'),
+    } });
+    const balanceBefore = await prisma.inventoryBalance.findFirstOrThrow({ where: { variantId: variantAId, locationId: locationAId } });
+    const result = await commands.expirePendingPaymentOrders({ actorId: staffUser, requestId: `${requestIdPrefix}-payment-held` });
+    expect(result).toEqual({ data: { expired: 0 } });
+    await assertPreserved(order.id, balanceBefore);
+    expect(await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).toEqual(payment);
+  });
+
+  it.each(['gateway_unconfirmed', 'gateway_unavailable'])('does not treat legacy FAILED/%s as authority to release stock', async (reason) => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await makeOverdue(order.id);
+    const payment = await prisma.payment.create({ data: {
+      orderId: order.id, provider: 'zarinpal', amount: 150n, status: 'FAILED',
+      idempotencyKey: `expiry-legacy-${runId}`, idempotencyFingerprint: sha256('expiry-legacy'),
+      transitions: { create: { from: 'PENDING', to: 'FAILED', reason, actorId: staffUser, requestId: `${requestIdPrefix}-legacy-payment` } },
+    } });
+    const balanceBefore = await prisma.inventoryBalance.findFirstOrThrow({ where: { variantId: variantAId, locationId: locationAId } });
+    expect(await commands.expirePendingPaymentOrders({ actorId: staffUser, requestId: `${requestIdPrefix}-legacy-held` }))
+      .toEqual({ data: { expired: 0 } });
+    await assertPreserved(order.id, balanceBefore);
+    expect(await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).toEqual(payment);
+    expect(await prisma.paymentTransition.count({ where: { paymentId: payment.id, reason } })).toBe(1);
+  });
+
+  it('rechecks a deadline changed after real candidate selection', async () => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await makeOverdue(order.id);
+    const extendedDeadline = new Date(Date.now() + 60_000);
+    const balanceBefore = await prisma.inventoryBalance.findFirstOrThrow({ where: { variantId: variantAId, locationId: locationAId } });
+    const interleaved = afterCandidateSelection(async () => {
+      await prisma.order.update({ where: { id: order.id }, data: { reservationExpiresAt: extendedDeadline } });
+    });
+    expect(await interleaved.expirePendingPaymentOrders({ actorId: staffUser, requestId: `${requestIdPrefix}-deadline-race` }))
+      .toEqual({ data: { expired: 0 } });
+    await assertPreserved(order.id, balanceBefore);
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).reservationExpiresAt).toEqual(extendedDeadline);
+  });
+
+  it('rechecks an attempt registered under the order lock after candidate selection', async () => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await makeOverdue(order.id);
+    const balanceBefore = await prisma.inventoryBalance.findFirstOrThrow({ where: { variantId: variantAId, locationId: locationAId } });
+    const interleaved = afterCandidateSelection(async () => {
+      await prisma.$transaction(async (tx) => {
+        const [high, low] = advisoryLockIdKey('order', order.id);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${high}::int, ${low}::int)`;
+        await tx.payment.create({ data: {
+          orderId: order.id, provider: 'zarinpal', amount: 150n,
+          idempotencyKey: `expiry-registration-${runId}`, idempotencyFingerprint: sha256('expiry-registration'),
+        } });
+      });
+    });
+    expect(await interleaved.expirePendingPaymentOrders({ actorId: staffUser, requestId: `${requestIdPrefix}-registration-race` }))
+      .toEqual({ data: { expired: 0 } });
+    await assertPreserved(order.id, balanceBefore);
+    expect(await prisma.payment.count({ where: { orderId: order.id, status: 'PENDING', authority: null } })).toBe(1);
+  });
+
+  it('does not let an older attempted order starve a bounded page of eligible abandoned orders', async () => {
+    const blocked = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    const eligible = await createPendingOrderWithLines(otherCustomerId, [
+      { variantId: variantBId, locationId: locationBId, quantity: 1 },
+    ]);
+    await prisma.order.update({ where: { id: blocked.id }, data: { reservationExpiresAt: new Date(Date.now() - 120_000) } });
+    await makeOverdue(eligible.id);
+    await prisma.payment.create({ data: {
+      orderId: blocked.id, provider: 'zarinpal', amount: 150n,
+      idempotencyKey: `expiry-starvation-${runId}`, idempotencyFingerprint: sha256('expiry-starvation'),
+    } });
+    expect(await commands.expirePendingPaymentOrders(
+      { actorId: staffUser, requestId: `${requestIdPrefix}-bounded-page` }, { batchSize: 1 },
+    )).toEqual({ data: { expired: 1 } });
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: blocked.id } })).status).toBe('PENDING_PAYMENT');
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: eligible.id } })).status).toBe('CANCELLED');
+    expect(await prisma.stockReservation.count({ where: { orderId: blocked.id, status: 'ACTIVE' } })).toBe(1);
+    expect(await prisma.stockReservation.count({ where: { orderId: eligible.id, status: 'RELEASED' } })).toBe(1);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: blocked.id } })).toBe(0);
+  });
+
+  it('commits one expiry at the exact boundary across two simultaneous sweepers', async () => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    const deadline = new Date();
+    await prisma.order.update({ where: { id: order.id }, data: { reservationExpiresAt: deadline } });
+    const context = { actorId: staffUser, requestId: `${requestIdPrefix}-two-sweepers` };
+    const results = await Promise.all([
+      commands.expirePendingPaymentOrders(context, { now: deadline }),
+      commands.expirePendingPaymentOrders({ ...context, requestId: `${requestIdPrefix}-two-sweepers-replay` }, { now: deadline }),
+    ]);
+    expect(results.reduce((sum, result) => sum + result.data.expired, 0)).toBe(1);
+    expect(await prisma.orderTransition.count({ where: { orderId: order.id, to: 'CANCELLED' } })).toBe(1);
+    expect(await prisma.auditLog.count({ where: { entityId: order.id, action: 'order.expired' } })).toBe(1);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: 'ORDER_EXPIRED' } })).toBe(1);
+    expect(await prisma.stockReservation.count({ where: { orderId: order.id, status: 'RELEASED' } })).toBe(1);
+  });
+
+  it('counts a committed order expiry when its reservations were already released', async () => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await makeOverdue(order.id);
+    await prisma.$transaction((tx) => inventory.releaseReservationsForOrder(tx, order.id, {
+      actorId: staffUser, requestId: `${requestIdPrefix}-earlier-reservation-release`,
+    }));
+    expect(await commands.expirePendingPaymentOrders({ actorId: staffUser, requestId: `${requestIdPrefix}-count-order` }))
+      .toEqual({ data: { expired: 1 } });
+    expect(await prisma.auditLog.findFirstOrThrow({ where: { entityId: order.id, action: 'order.expired' } }))
+      .toMatchObject({ after: { status: 'CANCELLED', releasedReservations: 0 } });
+    expect(await commands.expirePendingPaymentOrders({ actorId: staffUser, requestId: `${requestIdPrefix}-count-order-replay` }))
+      .toEqual({ data: { expired: 0 } });
+  });
+
+  it('rolls back order, reservation, balance and outbox writes if the expiry audit fails', async () => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 1 },
+    ]);
+    await makeOverdue(order.id);
+    const balanceBefore = await prisma.inventoryBalance.findFirstOrThrow({ where: { variantId: variantAId, locationId: locationAId } });
+    const record = audit.record.bind(audit);
+    const failure = vi.spyOn(audit, 'record').mockImplementation(async (event, tx) => {
+      if (event.action === 'order.expired') throw new Error('Isolated expiry audit failure');
+      return record(event, tx);
+    });
+    try {
+      await expect(commands.expirePendingPaymentOrders({ actorId: staffUser, requestId: `${requestIdPrefix}-audit-failure` }))
+        .rejects.toThrow('Isolated expiry audit failure');
+      await assertPreserved(order.id, balanceBefore);
+    } finally {
+      failure.mockRestore();
+    }
+  });
+
   it('moves a paid and consumed order through operator processing exactly once under concurrent retries', async () => {
     const order = await createPendingOrderWithLines(customerId, [
       { variantId: variantAId, locationId: locationAId, quantity: 1 },
@@ -522,6 +681,29 @@ describe.sequential('OrderCommandService database integration', () => {
     await expect(prisma.outboxEvent.count({ where: { topic: 'SHIPMENT_DELIVERED', aggregateId: order.id } })).resolves.toBe(1);
   });
 
+  function afterCandidateSelection(intervene: () => Promise<void>) {
+    // All reads and writes remain real PostgreSQL operations. Only their interleaving is controlled.
+    const client = prisma.$extends({ query: { order: {
+      async findMany({ args, query }) {
+        const candidates = await query(args);
+        expect(candidates).toHaveLength(1);
+        await intervene();
+        return candidates;
+      },
+    } } });
+    return new OrderCommandService(client as unknown as PrismaService, audit, inventory);
+  }
+
+  async function assertPreserved(orderId: string, balanceBefore: { id: string; onHand: number; reserved: number; available: number; version: number }) {
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status).toBe('PENDING_PAYMENT');
+    expect(await prisma.stockReservation.count({ where: { orderId, status: 'ACTIVE' } })).toBe(1);
+    expect(await prisma.inventoryBalance.findUniqueOrThrow({ where: { id: balanceBefore.id } })).toEqual(balanceBefore);
+    expect(await prisma.orderTransition.count({ where: { orderId } })).toBe(0);
+    expect(await prisma.auditLog.count({ where: { entityId: orderId, action: 'order.expired' } })).toBe(0);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: orderId } })).toBe(0);
+    expect(await prisma.inventoryMovement.count({ where: { referenceType: 'order', referenceId: orderId } })).toBe(0);
+  }
+
   async function makeOverdue(orderId: string) {
     await prisma.order.update({
       where: { id: orderId },
@@ -634,6 +816,9 @@ describe.sequential('OrderCommandService database integration', () => {
     });
     await prisma.orderCommandIdempotencyRecord.deleteMany({
       where: { order: { customerId: { in: [customerId, otherCustomerId] } } },
+    });
+    await prisma.paymentTransition.deleteMany({
+      where: { payment: { order: { customerId: { in: [customerId, otherCustomerId] } } } },
     });
     await prisma.payment.deleteMany({
       where: { order: { customerId: { in: [customerId, otherCustomerId] } } },
