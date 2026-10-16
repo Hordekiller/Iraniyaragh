@@ -10,15 +10,15 @@ it does not declare the full audit or V1 implementation finished.
 | Baseline | Observed fact | Limitation |
 | --- | --- | --- |
 | SOURCE_BASELINE | Fetched `origin/main`: `30c3edee7002021429978b3478150d63385d75f7` | Latest merged source, not proof of independent acceptance of every feature |
-| DEPLOYED_BASELINE | VPS API/Admin/Web/media-worker images select that exact SHA; migrate exited 0 | Authenticated live customer/operator journeys were not repeated during this read-only audit |
+| DEPLOYED_BASELINE | VPS API/Admin/Web/media-worker images select that exact SHA; migrate exited 0 | One separately authorized real product sale/return and paid-message handset receipt accepted; broader journeys remain open |
 | RELEASE_REQUIREMENTS | Current owner directive; V1_MASTER_PLAN outcome/exit gates; accepted ADRs; issue acceptance; later approved staff credit/store invoice scope | Old sprint ownership, scheduling and fixture instructions are historical |
 
 Read-only VPS evidence: clean detached checkout at that SHA; 61 applied migration
 names and checksums match source, no missing migration; read-only Prisma comparison
 reports no schema drift; 98 tables. API/Admin/Web/Postgres/Redis/object-store/ClamAV
 healthy, media-worker running, migration successful. HTTPS `/`, `/admin/login` and
-`/api/v1/health/ready` return 200; `nginx -t` passes. These probes do not accept
-authenticated mutations or prove a completed sale.
+`/api/v1/health/ready` return 200; `nginx -t` passes. Those initial probes did not prove a completed sale. The subsequent controlled
+sale is recorded separately below; it does not accept every customer/Admin path.
 
 | Image | Verified running/published digest |
 | --- | --- |
@@ -30,25 +30,28 @@ authenticated mutations or prove a completed sale.
 Operational limits rechecked on 2026-10-16, not changed: 38 GiB disk / 18 GiB used /
 20 GiB available; 3915 MiB RAM / approximately 1149 MiB available, no swap. The
 media-worker has no healthcheck by design; it is running, not independently
-accepted as healthy by a nonexistent probe. No production export, seed, schema
-write, container patch, image build or deployment was performed by this audit.
-Previous release backup/restore evidence remains historical; a future release
-requires its own fresh verified backup and authorized rollout.
+accepted as healthy by a nonexistent probe. The initial read-only audit performed no deployment or business mutation. A later
+operator-authorized same-SHA configuration rollout and controlled product sale
+are recorded below. No development seed, source/container patch, VPS image build
+or destructive data operation was used. Future releases still require their own
+fresh verified backup and authorized rollout. These resource figures belong to
+the read-only checkpoint, not a new post-sale capacity measurement.
 
 Private configuration was inspected only as safe projections: SMS mode `smsir`,
 key present, all four distinct template slots configured, environment-managed
-secret/template source, 5000 ms timeout. Payment mode remains **disabled**.
-Configured does not mean provider/handset acceptance. Do not record secret values,
+secret/template source, 5000 ms timeout. Payment mode is now **live**, after the
+separately authorized controlled product-sale rollout below. Configured alone
+still does not mean every provider/handset journey is accepted. Do not record secret values,
 OTP, destinations, signed URLs, customer rows or raw environment in this register.
 
 Three real runtime/build gaps were identified:
 
-1. Actual selected images are current, but API runtime `IMAGE_TAG` still contains
-   the previous release SHA (`e0edb4e9385bed754b90312524f0bd1f9d9d9016`). The official
-   deploy updates the private rollback/version record after container creation;
-   env-file precedence leaves stale runtime provenance. PR #440 binds runtime
-   IMAGE_TAG/APP_VERSION to the selected image without moving the backup/migration
-   or rollback-record boundary. This is a metadata defect, not evidence of old code.
+1. The initial read-only inspection found current images but a stale runtime
+   `IMAGE_TAG`. The later authorized rollout set the private selected SHA before
+   deployment; running API `IMAGE_TAG` now matches main. This operational recovery
+   does not integrate PR #440, which permanently binds IMAGE_TAG/APP_VERSION to
+   the selected image without moving the backup/migration/rollback boundary.
+   APP_VERSION parity was not separately established by that recovery.
 2. ClamAV reports engine 1.5.4, signature version 28137 dated 2026-09-28. Healthy
    process status does not accept current signatures. This was rechecked on
    2026-10-16; current CDN reachability was not re-probed. #393 remains open.
@@ -58,19 +61,53 @@ Three real runtime/build gaps were identified:
    preserves the API/media-worker entry paths, clears stale output and verifies
    emitted artifacts. The live image has not been replaced.
 
+## Controlled live product-sale checkpoint — 2026-10-16
+
+The operator authorized live gateway activation without a customer allowlist and
+approved a global free store-pickup method. The existing secret stayed private.
+The official deployment script repulled the four exact-main-SHA images, took a
+fresh backup, checked migrations and restarted services; no new source release
+or schema migration was deployed. API/Admin/Web health, HTTPS and nginx checks
+passed. The checkout remained clean at the source baseline above.
+
+Before relying on the backup, PostgreSQL was restored into an owned scratch
+database: 61 migrations / 98 tables. All 300 object-backup byte hashes matched;
+this does **not** claim a fresh object-bucket restore. The scratch database was
+removed and no live history was deleted.
+
+A clearly labelled 100,000 IRR (10,000 toman) product used real catalog/media and
+ledger commands, a dedicated test stock location and normal lifecycle publishing.
+The operator completed one real live purchase. Both Payment and Order are PAID,
+with provider authority/reference persisted (values withheld); the operator
+confirmed return to the site and successful payment. The sole matching
+CUSTOMER_ORDER_PAID effect completed with authoritative SMS.ir acceptance,
+attemptCount=1. A read-only provider report matched the stored message ID,
+destination, template and order, with deliveryState=1; the operator confirmed
+handset receipt. No send replay or fabricated paid/provider record was used.
+Safe checkpoints: [payment #6](https://github.com/Hordekiller/Iraniyaragh/issues/6#issuecomment-6214026750)
+and [paid SMS #403](https://github.com/Hordekiller/Iraniyaragh/issues/403#issuecomment-6214025982).
+
+An earlier expired, zero-payment test order still held its stock reservation. It
+was cancelled only through the tracked domain command, retaining its history.
+#450 tracks the missing automatic order-expiry runtime and stale-payment UX;
+reopened #81 tracks measured expiry batching. The original generic browser error
+had no captured request/response/requestId and has no asserted root cause.
+Payment, refund/reconciliation races, dispatch/delivery and full session acceptance
+remain separate. This controlled sale is not V1-wide approval or PR review.
+
 ## 2. Repository and issue inventory
 
 Initial complete GitHub enumeration: **149 issues** (47 open, 102 closed),
 **290 PRs** (5 open, 241 merged, 44 closed); all issue requirement bodies read.
 All 359 issue comments and timeline references were retrieved for reconciliation;
 retrieval is not a claim that every historical acceptance assertion is verified.
-There are now **299 PRs** (14 open, 241 merged, 44 closed). Ten focused PRs
-#439–#448 cover ongoing PDF work, findings, regression coverage and this register;
-none has been merged or deployed in this audit. The
-[branch register](V1_BRANCH_REGISTER.json) enumerates 35 actual remote branches
+There are now **302 PRs** (17 open, 241 merged, 44 closed). Thirteen focused PRs
+#439–#449 and #451–#452 cover ongoing PDF work, findings, regression coverage and
+this register; none of those source candidates has been merged or deployed. The
+[branch register](V1_BRANCH_REGISTER.json) enumerates 38 actual remote branches
 from `git ls-remote --heads`, not the symbolic `origin` HEAD alias, and current
 PR heads/review/mergeability. #386 is conflicting; the three older dependency
-PRs are behind main; the ten focused PRs remain review-gated.
+PRs are behind main; the thirteen focused PRs remain review-gated.
 The machine-readable [issue register](V1_ISSUE_REGISTER.json) separates disposition,
 source anchors, related PRs and remaining evidence; no closed state is treated as
 proof of successful live acceptance.
@@ -83,13 +120,15 @@ Verified issue changes in this audit:
 - #422 reopened: deployed cost-method configuration explicitly leaves valuation
   inactive. The owner requested this. No cost ledger/history or activation is claimed.
 - #215/#216/#308 formatting repaired (wrapped/literal-newline bodies); requirements preserved.
+- #81 reopened after real PostgreSQL measurements disproved the old closure
+  assumption; new #450 tracks the separately untracked runtime/UX expiry gap.
 - No new issue closure. #24 is a documented duplicate of #23; #357 is explicitly
   superseded by #349. Preserve these links rather than recreating implementations.
 - #114 stays closed under its documented handoff to #403. Operator attests actual
   customer OTP receipt/login; #403 retains transactional, failure/replay and complete
   session lifecycle acceptance. Do not erase that evidence or claim all SMS accepted.
 
-After these reopenings there are **50 open / 99 closed** issues. Re-fetch counts
+After these reopenings and #450, there are **150 issues: 52 open / 98 closed**. Re-fetch counts
 before final release; they are a checkpoint, not an automatic synchronization job.
 
 Historical review reconciliation found 119 merged PRs with another author's
@@ -123,7 +162,7 @@ implicit green status is assigned to unperformed acceptance.
 | --- | --- | --- | --- |
 | Staff password/MFA, refresh/CSRF, current RBAC #47/#49/#74/#400 | `modules/auth`; Admin `lib/api/client.ts`, `auth` and fresh-MFA dialog | Auth session/principal/staff integration, guard HTTP, `admin-fresh-auth`, `admin-sessions`; candidates #445/#447 | Present; cross-tab rotation/replay race reproduced locally and fixed in unmerged #447. Seven genuine-token idle/MFA boundary cases in #445. Live operator single-tab symptom remains unaccepted; no TTL guessing |
 | Customer OTP #48/#403 | `customer-otp.service.ts`; Web `AuthProvider`/`LoginDialog` | Challenge/session/rate-limit DB tests, OTP HTTP/browser tests | Present; operator confirms handset/login; remaining real lifecycle/failure evidence open |
-| SMS adapter/settings/outbox #114/#115/#314/#403 | `modules/notifications`, `modules/outbox`; `/settings/sms` | Template settings/operator claim/outbox integration and redaction tests | Configured; three transactional handset/replay paths not accepted; order-paid blocked by authoritative payment |
+| SMS adapter/settings/outbox #114/#115/#314/#403 | `modules/notifications`, `modules/outbox`; `/settings/sms` | Template settings/operator claim/outbox integration and redaction tests | Configured; OTP operator-attested and one controlled order-paid send/provider report/handset accepted. Dispatch/delivery, uncertainty/replay and complete session evidence remain open |
 | Runtime roles/permission administration #359 | Schema and current effective-permission reader exist; no `/access` write module/page | Role/permission/grant schema; ADR-0014 still Proposed | Not implemented. Review bounded RBAC contract/last-admin/privilege-escalation controls before writes |
 | Audit log #354 | `modules/audit`; Admin `/audit` | Audit HTTP/integration/redaction tests | Present; operational audit/privacy UAT remains a release gate |
 | Products/variants/IRR/brands/categories/attributes #388/#178 | `modules/catalog`, catalog shared contracts; Admin catalog/brands/categories/attributes | Catalog authoring/idempotency/identifier integration; `admin-279-journey` | Present; full exact live operator create/reload/publish journey remains separate |
@@ -133,6 +172,7 @@ implicit green status is assigned to unperformed acceptance.
 | Video authoring #388 | Public media type/player is not a complete authoring/processing pipeline | Current image worker contract does not establish READY video | Unsupported authoring remains open; no fabricated READY video |
 | Warehouses/balances/ledger/reservations/transfers #4/#261 | `modules/inventory`; Admin warehouse/inventory/reservations/transfers | Immutable movements and locked balances; PostgreSQL and two-warehouse ledger E2E | Present; operator stock reconciliation acceptance remains |
 | Suppliers/PO/receiving #329/#339/#343/#345 | `modules/suppliers`, `modules/purchasing`; Admin suppliers/PO | Immutable receipt-to-movement links; purchasing concurrency; real partial/final receipt E2E | Present; no supplier payment or fabricated cost history added |
+| Reservation expiry #81/#450 | Existing inventory/order commands; automatic order runtime absent | #451 adds measured batching and real PG concurrency/rollback coverage | Source candidate only; trusted order/payment-aware scheduling and expired-payment UX remain open |
 | Stocktake #347/#352 | `modules/stocktake`; Admin stocktake list/detail/history | Stocktake migration/constraints and integration; `admin-stocktake` | Present. Candidate #444 adds exact two-location upward/downward browser reconciliation and passes CI; not merged/deployed. Live physical count/approval unverified |
 | Inventory costing/valuation #422 | Versioned `inventory-cost-policy.service.ts`; Admin settings | Cost-policy migration and concurrency tests | Configuration present and intentionally inactive; cost ledger/attribution/valuation missing. Do not activate or infer opening costs |
 | Catalog discovery/home/mobile #258/#401 | Web Home/Product/Category/Search, HeroSlider, MobileBottomNav; public catalog | Web component/a11y and desktop/mobile tests | Present; controlled live responsive/navigation UAT still required |
@@ -140,8 +180,8 @@ implicit green status is assigned to unperformed acceptance.
 | Checkout/address/shipping/order #237/#267/#389 | Checkout/customer-self/shipping APIs; Web Checkout, AccountAddresses, Orders/Detail | Order/address snapshots, shipping policy; checkout/customer ownership integration | Present; owner addresses and one truthful provider handoff still need final live acceptance |
 | Customer profile/security #389 | `/customers/me`, Web AccountProfile/Addresses/Security | Owned self mutations/default-address invariant and API/browser tests | Present; email verification/marketing/privacy export/closure missing contracts remain explicit scope dependencies |
 | Staff order/customer records #349/#350 | Customers/staff-order APIs; Admin customer/order screens | Customer lifecycle and server-priced order integration, real staff-order E2E | Present; no public credit checkout or caller-supplied total |
-| Payment verification/reconciliation/refund #6 | `modules/payments`, Web Payment/Return; Admin payment evidence | Initiation/verification/refund/reconciliation PostgreSQL tests | Provider disabled; real controlled payment/callback/refund/reconciliation acceptance OPEN. Never infer PAID from redirect |
-| Fulfillment/dispatch/delivery/tracking #308/#310/#312/#356 | Orders fulfillment/pick/shipment controllers; Admin shipments and customer tracking | Pick proof and shipment events; order/shipment integration | Present; real authoritative paid path and transactional SMS depend on controlled domain acceptance |
+| Payment verification/reconciliation/refund #6 | `modules/payments`, Web Payment/Return; Admin payment evidence | Initiation/verification/refund/reconciliation PostgreSQL tests | Live; one controlled product sale has authoritative Order/Payment PAID and operator-confirmed return. Refund/reconciliation and full race acceptance remain OPEN; redirect alone is not evidence |
+| Fulfillment/dispatch/delivery/tracking #308/#310/#312/#356 | Orders fulfillment/pick/shipment controllers; Admin shipments and customer tracking | Pick proof and shipment events; order/shipment integration | Present; the controlled payment path is accepted, but real pick/dispatch/delivery and corresponding handset acceptance remain open |
 | Staff credit/receipts/aging #336/#338 | `modules/credit`, Admin customer credit; Web own credit | Immutable ledger/allocations/opening/approval migrations; credit/sale integration and E2E | Present; financial operator acceptance still tracked; public checkout remains gateway-only |
 | Credit cancellation/returns/refund obligation #431 | `credit-return.service.ts`, Admin credit returns/owned Web projection | Compensation/zero-price/immutable refund evidence; rollback/concurrency | Present for accepted sellable credit return scope; controlled financial acceptance pending |
 | General customer returns/after-sales #348 | Credit-only return path cannot satisfy general paid-order returns | General RMA/inspection/disposition/refund lifecycle not implemented | Partial; implement normal order ownership/approval/stock/refund linkage; quarantine policy must be explicit |
@@ -149,7 +189,7 @@ implicit green status is assigned to unperformed acceptance.
 | Numbered immutable issuance #417 | `invoice-document.service.ts`; Admin issue/history | Unique numbering and immutable SQL guards, issuance concurrency | Present; no direct payment/stock edits; operator issuance acceptance still open |
 | Customer publication/revocation #418 | `invoice-publication.service.ts`; Admin publish/revoke, Web AccountInvoices | Ownership/current-session/no-store/version/replay and document integration | Present at exact baseline; live two-customer publish/read/revoke acceptance not performed |
 | Persian A4 browser print #420 | Existing Admin/Web issued document views and local brand/font | Print layout/component tests, preview artifact | Present; browser print is not private downloadable PDF service |
-| Private PDF artifact service #419 | #439 adds pure escaped, bounded, asset-pinned template only | 24 template units + one real sandboxed Chromium PDF/browser test | Template PR not deployed; queue/job/private storage/authorized download/worker still missing |
+| Private PDF artifact service #419 | #439 template; #449 private internal PostgreSQL artifact persistence candidate | 24 template units/real PDF; #449 targeted PG 28 and full PG 423 pass, no schema drift | Neither candidate deployed; durable job claims, worker, authorized download and UI remain missing. Private capacity starts inactive |
 | Corrections/cancellation/credit documents #421 | Original immutable invoice persists; no corrective document lifecycle | Existing credit entries do not replace invoice correction references/deltas | Not implemented; preserve originals, serialize linked corrections, separate visibility/refund/stock effects |
 | Operational reports #358 | `operational-report.service.ts`, shared operational-reports contract; Admin `/reports` | Real day/week/month order/settlement/refund/top-SKU/debtor queries; HTTP/PG/UI/browser | Present subset; valuation/corrective document/private export scopes remain open |
 | Private CSV/Excel/PDF exports #423 | No bounded owned snapshot job/download surface | Existing ExcelJS catalog import is not a report export service | Not implemented; immutable filter/snapshot, formula prevention, current permission/expiry/resource limits required |
@@ -192,10 +232,14 @@ linked from [#418 evidence](https://github.com/Hordekiller/Iraniyaragh/issues/41
 | Production API artifact boundary | `2688d3b3bafc2a66b7f0a561a97cec24b9480d11`, #446 | Actual old build rejects; clean production output excludes integration/config/helper artifacts and preserves two runtime entries; injected stale output rejects then clean rebuild removes it; fresh isolated readiness passes. CI PG 411, browser 134 pass / 5 existing skips | All nine checks pass; no live image replaced |
 | Cross-tab protected replay | `6c86c85ae3d52d15a407cdc22de4752197b9e37a`, #447 | Real before-fix protected replay receives 401 instead of 200. Existing cookie lock now retained through coalesced replay bodies; exact one replay/body/key/generation checks preserved. CI units API 1716/Admin 953/Web 420; PG 411; browser 136 pass / 5 existing skips, zero final failures/flaky | All nine checks pass; independent review and authorized deployment/operator acceptance pending; #400 stays open |
 | Required live-Redis integration | `36628c9536aa85c26f9dcb7d66d9263312cd2747`, #448 | Root Turbo forwards REDIS_URL/CI. Configured unavailable Redis previously exited 0 with nine skips; now both security suites fail with a sanitized diagnostic. Fresh root PG/live-Redis gate 411/411, no skips; CI units API 1719/Admin 947/Web 420; browser 134 pass / 5 existing skips | All nine checks pass; independent review pending. Test infrastructure only; no provider/rate-limit/application/schema change |
+| Private PDF persistence | `c26044ca050608ebcd1a6174ced2b724cb3a8442`, #449 | Local 3107 units / PG 423, fresh 62-migration shadow comparison no drift, build/OpenAPI pass; six GitHub contexts pass | Main-target CodeQL evidence and independent review still required. Private bytea store only; no worker/jobs/download/UI/deploy |
+| Grouped reservation expiry | `0ec9c83ce8d9768b32ba940c5ef136ca2e918195`, #451 | Local 3086 units / PG 423, build/lint/types/OpenAPI pass. N=100 shared balance 704→10 SQL statements; 100 distinct balances 704→208, preserving individual audit/version facts | GitHub gates running at capture; #81/#450 remain open. No scheduler or deployment |
+| Shipment test synchronization | #452, branch `test/shipments-await-detail` | 19 targeted Admin tests, typecheck/lint pass; waits for actual loaded detail and tests a deferred response | Test-only; GitHub gates pending. No production behavior change |
+
 
 The listed heads are independent branches based on the same main, **not** one
 integrated release tree. Their individual green runs do not accept their eventual
-combined merge. PR #443 passed all nine checks at `b829301f43ccceb27c5223bad4b3cae4b9e4a277`;
+combined merge. PR #443 passed all nine checks at `dc0673c320113d3be95e54338248f3c3e715be99`;
 this documentation refresh requires checks on its new exact head.
 
 Triage limitations are explicit:
@@ -218,6 +262,15 @@ Triage limitations are explicit:
   #448 also prevents silently losing nine Redis cases through Turbo environment
   filtering. No staging/production/shared database was reset for these tests.
 
+- #451 local initial full unit run had one Admin timeline assertion failure while
+  the dialog still loaded. An unchanged targeted run passed 19/19 and an unchanged
+  full rerun passed 3086 units. #452 corrects the test to wait for response content,
+  explicitly tests the deferred loading transition and preserves all assertions.
+  No application behavior, retries or timeouts were changed.
+- #449 local overlapped build/integration run had one stocktake transaction timeout;
+  unchanged targeted and final sequential full runs passed. The exact transient
+  cause is not proven and the first failure is not erased.
+
 ## 5. Historical implementation recovery
 
 Branches were inspected before choosing new work. Commit presence outside main is
@@ -225,7 +278,8 @@ not proof of a missing feature: squash merges leave historical branch commits
 outside the main ancestry. Compare the actual changed behavior and current files.
 
 - `feat/invoice-pdf-private-artifacts` contains only an ADR commit, no hidden PDF
-  service. Reuse the ADR/template #439; implement jobs/worker/download coherently.
+  service. Reuse the ADR/template #439 and current persistence candidate #449; implement
+  jobs/worker/download coherently.
 - `feat/178-slice-g1-g2-configurable-settings-rbac` contains an old settings store,
   **not** role administration. It embeds an assumed VAT/default approval policy;
   do not restore it over accepted empty-by-default invoice policy or applied migrations.
@@ -268,7 +322,8 @@ flowchart LR
 | S0 #12/#51/#136 | Review/merge #441, #442, #440, #446 and #448 with strict latest-main checks; reconcile CI/testing-doc overlap. Security patches stay narrow, no #77 major upgrade train | Real full/prod audits, fail-closed negative tests, exact runtime provenance and production artifacts; revert code via new reviewed commit, keep protections enforced |
 | S1 #347/#352/#351 | Review/merge tested #444 exact two-location upward/downward browser chain; then operator acceptance. Reuse real receipt/count/approve APIs; no production inventory writes | Both admin viewports, exact movement counts/before/after/balance/reserved/available and persisted links; test-only rollback has no schema effect |
 | S2 #400 | Review/merge #445 boundaries and #447 demonstrated cross-tab fix; perform live operator idle acceptance and retain sanitized failure evidence for any remaining single-tab symptom | No speculative TTL extension; preserve fresh MFA/revocation and one exact replay. Current individual CI green does not prove deployed/operator completion |
-| S3 #419/#420 | Reviewed template #439 → versioned private job contract/schema → bounded isolated renderer image → private artifact ownership/download → Admin/Web integration | Current permission/visibility on every read, hash/revision/expiry, actual Persian PDF extraction/visual checks, timeout/restart/SSRF tests. Additive migration; disable jobs before code rollback, never delete invoices |
+| S2a #81/#450 | Review measured batching #451; implement payment-aware order expiry and trusted system audit context in the existing maintenance worker, then stale-payment recovery | Existing locks, due-time recheck, no release of uncertain gateway attempts, bounded work/restart/replay, per-reservation evidence; disable runner on poison state, no direct balance repair |
+| S3 #419/#420 | Reviewed template #439 and private persistence #449 → versioned job claims/fencing → bounded isolated renderer image → private artifact ownership/download → Admin/Web integration | Current permission/visibility on every read, hash/revision/expiry, actual Persian PDF extraction/visual checks, timeout/restart/SSRF tests. Additive migration; disable jobs before code rollback, never delete invoices |
 | S4 #421 | Append-only correction/cancel documents with unique linked issuance, immutable original and effective signed delta; monetary effects only through accepted order/credit/return domains | Concurrent corrections/replays, caps, original still accessible, no fake refund/PAID/stock. Additive schema; preserve history on rollback |
 | S5 #358/#423 | Bounded private CSV/Excel snapshot jobs from accepted report definitions, then PDF adapter after S3; same snapshot totals and permission filters | Formula/PII injection, >2^53 IRR, expiry/revocation, pagination/restart/resources/reconciliation. Disable new jobs rather than destroy financial snapshots |
 | S6 #348 | General owned paid-order returns/inspection/disposition with existing inventory/refund commands. Credit-only scope #431 remains separate | Real PostgreSQL quantity/money caps/rollback/replay, customer A/B, staff approval, no saleable restock for quarantine without accepted disposition policy |
@@ -296,8 +351,9 @@ Current PRs report REVIEW_REQUIRED. Self-review cannot satisfy an independent
 approval. Historical solo exceptions do not bypass these live controls.
 
 Concrete release blockers remain: missing source work in the matrix; exact final
-PR CI/review; real SMS transactional/session acceptance #403; payment disabled and
-no controlled authoritative payment/reconciliation acceptance; live admin/customer
+PR CI/review; remaining SMS dispatch/delivery/session acceptance #403; full
+payment refund/reconciliation/race acceptance beyond the controlled paid sale;
+automatic order-expiry/runtime and stale-checkout recovery #81/#450; live admin/customer
 UAT including idle-session repro; Clam signatures #393; current monitoring/alert/
 rollback/load evidence; inactive cost valuation/opening-policy evidence; Sonar
 organization-admin confirmation #213. Do not call all of these one generic
@@ -305,4 +361,5 @@ organization-admin confirmation #213. Do not call all of these one generic
 
 The source/CI/runtime observations above justify continued implementation and
 controlled acceptance preparation. They do **not** justify a V1 completion claim,
-live payment activation, bulk issue closure or a new production deployment.
+blanket financial/provider acceptance, bulk issue closure or an additional
+production source deployment without its official reviewed release gates.
