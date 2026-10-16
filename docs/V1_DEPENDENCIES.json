@@ -51,6 +51,13 @@
       "pdfRequires": [
         419
       ]
+    },
+    {
+      "issue": 450,
+      "requires": [
+        81
+      ],
+      "safetyRequirement": "Order lock, current deadline and authoritative payment-uncertainty reconciliation; no inventory-only expiry activation."
     }
   ],
   "releaseGates": [
@@ -94,9 +101,10 @@
         420
       ],
       "candidatePRs": [
-        439
+        439,
+        449
       ],
-      "state": "template candidate only; jobs/worker/private download/UI implementation remains"
+      "state": "template and private internal persistence candidates; durable jobs/worker/current-authority download/UI remain"
     },
     {
       "gate": "invoice_corrections",
@@ -146,7 +154,7 @@
         130,
         136
       ],
-      "state": "operator/provider/operational evidence remains; payment disabled; no fabricated paid/SMS outcome"
+      "state": "live gateway and one controlled product payment/order-paid handset accepted; remaining transactional/session/refund/reconciliation and operational evidence still open"
     },
     {
       "gate": "valuation_policy",
@@ -154,6 +162,17 @@
         422
       ],
       "state": "configuration intentionally inactive per owner; no fabricated costs or activation"
+    },
+    {
+      "gate": "reservation_expiry_runtime",
+      "issues": [
+        81,
+        450
+      ],
+      "candidatePRs": [
+        451
+      ],
+      "state": "batching candidate measured/tested; order/payment-aware scheduler and expired-payment UX implementation remains"
     }
   ],
   "releaseRule": "Every relevant final exact-head required check and independent review, fresh restored backup, immutable image publication/digests, official authorized deployment and actual runtime/customer/operator acceptance. Green PR checks alone do not satisfy release gates."

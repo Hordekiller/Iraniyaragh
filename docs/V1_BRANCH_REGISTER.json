@@ -2,7 +2,7 @@
   "checkpointUTC": "2026-10-16",
   "sourceBaseline": "30c3edee7002021429978b3478150d63385d75f7",
   "method": "Live git ls-remote --heads origin, fetched objects and current GitHub PR metadata. The origin symbolic HEAD alias is not an extra branch. Commit distance is not missing-feature proof after squash merges.",
-  "remoteBranchCount": 35,
+  "remoteBranchCount": 38,
   "remoteBranches": [
     {
       "branch": "archive/feat-admin-catalog-slice-263fd8d",
@@ -15,10 +15,10 @@
     },
     {
       "branch": "audit/v1-reconciliation",
-      "head": "b829301f43ccceb27c5223bad4b3cae4b9e4a277",
+      "head": "dc0673c320113d3be95e54338248f3c3e715be99",
       "behindMain": 0,
-      "commitsOutsideMainAncestry": 1,
-      "mergeBaseDiffFiles": 15,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 17,
       "openPRs": [
         443
       ],
@@ -40,7 +40,7 @@
       "commitsOutsideMainAncestry": 0,
       "mergeBaseDiffFiles": 0,
       "openPRs": [],
-      "interpretation": "No commits outside main ancestry."
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
     },
     {
       "branch": "dependabot/github_actions/main/github-actions-4dcca6a1ef",
@@ -184,6 +184,17 @@
       "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
     },
     {
+      "branch": "feat/invoice-pdf-persistence",
+      "head": "c26044ca050608ebcd1a6174ced2b724cb3a8442",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 4,
+      "mergeBaseDiffFiles": 10,
+      "openPRs": [
+        449
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
       "branch": "feat/invoice-pdf-template",
       "head": "4992028cfffe1de3f9196fb952516415e26874c6",
       "behindMain": 0,
@@ -242,6 +253,17 @@
       "mergeBaseDiffFiles": 6,
       "openPRs": [
         448
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "fix/inventory-batch-reservation-expiry",
+      "head": "0ec9c83ce8d9768b32ba940c5ef136ca2e918195",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 7,
+      "openPRs": [
+        451
       ],
       "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
     },
@@ -305,7 +327,7 @@
       "commitsOutsideMainAncestry": 0,
       "mergeBaseDiffFiles": 0,
       "openPRs": [],
-      "interpretation": "No commits outside main ancestry."
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
     },
     {
       "branch": "preserve/178-g1-g2-settings-wip-2026-09-13",
@@ -323,6 +345,17 @@
       "commitsOutsideMainAncestry": 1,
       "mergeBaseDiffFiles": 2,
       "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "test/shipments-await-detail",
+      "head": "36e5be06f02fa35a5e8e795c88f68a51dbdeb394",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 1,
+      "openPRs": [
+        452
+      ],
       "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
     },
     {
@@ -351,11 +384,40 @@
   "openPullRequests": [
     {
       "baseRefName": "main",
+      "headRefName": "test/shipments-await-detail",
+      "headRefOid": "36e5be06f02fa35a5e8e795c88f68a51dbdeb394",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "number": 452,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "test(admin): await loaded shipment detail before assertions"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "fix/inventory-batch-reservation-expiry",
+      "headRefOid": "0ec9c83ce8d9768b32ba940c5ef136ca2e918195",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "number": 451,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "perf(inventory): batch reservation expiry with atomic audit evidence"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "feat/invoice-pdf-persistence",
+      "headRefOid": "c26044ca050608ebcd1a6174ced2b724cb3a8442",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "number": 449,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "feat(invoices): persist bounded private PDF artifacts"
+    },
+    {
+      "baseRefName": "main",
       "headRefName": "fix/integration-redis-required",
       "headRefOid": "36628c9536aa85c26f9dcb7d66d9263312cd2747",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 448,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "fix(ci): fail closed when required integration Redis is unavailable"
@@ -366,7 +428,6 @@
       "headRefOid": "6c86c85ae3d52d15a407cdc22de4752197b9e37a",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 447,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "fix(admin-auth): retain refresh lock through protected request replays"
@@ -377,7 +438,6 @@
       "headRefOid": "2688d3b3bafc2a66b7f0a561a97cec24b9480d11",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 446,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "fix(build): exclude integration tests from API runtime artifacts"
@@ -388,7 +448,6 @@
       "headRefOid": "9d8f13e084878d400f30b24577fa910ce5f3989e",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 445,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "test(auth): pin staff idle refresh and fresh-MFA boundaries"
@@ -399,7 +458,6 @@
       "headRefOid": "93c1d278ee685bea6b0bfc44ba9c78d6e791d019",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 444,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "test(stocktake): reconcile two-location upward and downward counts"
@@ -407,10 +465,9 @@
     {
       "baseRefName": "main",
       "headRefName": "audit/v1-reconciliation",
-      "headRefOid": "b829301f43ccceb27c5223bad4b3cae4b9e4a277",
+      "headRefOid": "dc0673c320113d3be95e54338248f3c3e715be99",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 443,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "docs(v1): reconcile repository runtime and issue requirements"
@@ -421,7 +478,6 @@
       "headRefOid": "0916b7afff6286325f7cf0e436b3936cec4012a7",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 442,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "fix(security): fail closed when production dependency audit is unavailable"
@@ -432,7 +488,6 @@
       "headRefOid": "1422dc24d3bb06f971703645d17f74f9e94e6825",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 441,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "fix(deps): patch vulnerable fast-uri and brace-expansion chains"
@@ -443,7 +498,6 @@
       "headRefOid": "70c29a3ba8c1e312957f1bcf6e585c6d2ffb2637",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 440,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "fix(ops): bind runtime provenance to the selected release image"
@@ -454,7 +508,6 @@
       "headRefOid": "4992028cfffe1de3f9196fb952516415e26874c6",
       "isDraft": false,
       "mergeStateStatus": "BLOCKED",
-      "mergeable": "MERGEABLE",
       "number": 439,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "feat(invoices): add bounded branded Persian PDF template"
@@ -465,7 +518,6 @@
       "headRefOid": "1b0882629d8a35deb7b7c741fb080aed81cf7c1f",
       "isDraft": false,
       "mergeStateStatus": "BEHIND",
-      "mergeable": "MERGEABLE",
       "number": 426,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "chore(actions): bump the github-actions group across 1 directory with 4 updates"
@@ -476,7 +528,6 @@
       "headRefOid": "23e21379ada5e87ca9543fee1004be2843cd0934",
       "isDraft": false,
       "mergeStateStatus": "BEHIND",
-      "mergeable": "MERGEABLE",
       "number": 425,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "chore(deps): bump the production-dependencies group across 1 directory with 21 updates"
@@ -487,7 +538,6 @@
       "headRefOid": "a87b1153392e189dece18521eef194a21ac3ef34",
       "isDraft": false,
       "mergeStateStatus": "BEHIND",
-      "mergeable": "MERGEABLE",
       "number": 396,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "chore(deps): bump the development-dependencies group across 1 directory with 19 updates"
@@ -498,7 +548,6 @@
       "headRefOid": "a83c0672559c232463a6e96749f5b2e8e94c653a",
       "isDraft": false,
       "mergeStateStatus": "DIRTY",
-      "mergeable": "CONFLICTING",
       "number": 386,
       "reviewDecision": "REVIEW_REQUIRED",
       "title": "Record #382, #384 and #385 on main in PROJECT_STATUS"
@@ -511,6 +560,6 @@
     "otherWorktreesWithTrackedChangesPreserved": 3
   },
   "safety": "No pruning, checkout, reset or edits in other worktrees; original untracked logo assets preserved. Review decisions/mergeability are observations at the checkpoint, not future merge authorization.",
-  "capturedAtUTC": "2026-10-16T05:15:44.459766+00:00",
-  "selfHeadNote": "PR #443 and its audit branch head are the pre-refresh checkpoint; fetch the current PR head and its own checks before merge. This document cannot embed its own future commit hash."
+  "capturedAtUTC": "2026-10-16T11:04:44.478723+00:00",
+  "selfHeadNote": "Remote heads were captured before this documentation checkpoint commit; self-head deliberately records that observed remote SHA, not a recursive claim about this commit."
 }

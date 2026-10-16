@@ -1,7 +1,7 @@
 {
   "checkpoint": "2026-10-16",
   "sourceBaseline": "30c3edee7002021429978b3478150d63385d75f7",
-  "requirementsReviewed": 149,
+  "requirementsReviewed": 150,
   "allCriteriaIndependentlyAccepted": false,
   "auditComplete": false,
   "classificationDefinitions": {
@@ -14,7 +14,7 @@
     "future": "Future release scope",
     "decision": "Requires a product or policy decision"
   },
-  "method": "All original issue bodies read; safe metadata and actual timeline PR references retained. Source anchors prove related implementation presence, not every assertion. Criterion review and independent acceptance are deliberately separate; no bulk closure is authorized by this file. See V1_RECONCILIATION.md for runtime/CI evidence and executable gaps. Checkpoint 2026-10-16: exact-head historical review evidence and selected criterion mappings added. Independent ADR review for #13 does not alone accept its historical pre-migration sequencing criterion or downstream financial operation. Full issue-by-issue criterion acceptance is still incomplete.",
+  "method": "All original issue bodies read; safe metadata and actual timeline PR references retained. Source anchors prove related implementation presence, not every assertion. Criterion review and independent acceptance are deliberately separate; no bulk closure is authorized by this file. See V1_RECONCILIATION.md for runtime/CI evidence and executable gaps. Checkpoint 2026-10-16: exact-head historical review evidence and selected criterion mappings added. Independent ADR review for #13 does not alone accept its historical pre-migration sequencing criterion or downstream financial operation. Full issue-by-issue criterion acceptance is still incomplete. Later 2026-10-16 checkpoint: new #450 requirements read, #81 reopened from direct query measurements, and controlled live product-sale/order-paid handset evidence recorded without broad issue acceptance.",
   "issues": [
     {
       "issue": 1,
@@ -101,7 +101,8 @@
         28,
         174
       ],
-      "sourceEvidenceGroup": "payment_fulfillment"
+      "sourceEvidenceGroup": "payment_fulfillment",
+      "acceptanceCheckpoint": "2026-10-16: separately authorized exact-main configuration deployment activates live gateway; one 100000 IRR real product sale has authoritative Order/Payment PAID and operator-confirmed return. Not full reconciliation/refund/fulfillment acceptance. See issuecomment-6214026750."
     },
     {
       "issue": 7,
@@ -689,8 +690,8 @@
       "issue": 81,
       "title": "perf(inventory): batch reservation expiry before production worker rollout",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/81",
-      "githubState": "CLOSED",
-      "classification": "implemented_missing_acceptance",
+      "githubState": "OPEN",
+      "classification": "partial",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         69,
@@ -699,9 +700,14 @@
         173,
         174,
         221,
-        232
+        232,
+        451
       ],
-      "sourceEvidenceGroup": "inventory"
+      "sourceEvidenceGroup": "inventory",
+      "candidatePRs": [
+        451
+      ],
+      "nextAction": "Review and integrate measured batching candidate #451; complete operational runner/reconciliation in #450. No automatic expiry deployment is claimed."
     },
     {
       "issue": 82,
@@ -2057,12 +2063,12 @@
       "title": "SMS.ir release gate: real customer OTP and transactional handset acceptance",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/403",
       "githubState": "OPEN",
-      "classification": "blocked",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         438
       ],
-      "nextAction": "Private SMS config and real OTP receipt/login operator-attested. Transactional handset, replay/unknown/failure and complete session evidence remain; order-paid depends on authoritative payment.",
+      "nextAction": "Real OTP login is operator-attested; one real order-paid SMS now has authoritative effect/provider acceptance and operator-confirmed handset receipt. Dispatch/delivery handset, failure/replay and full session lifecycle acceptance remain. See issuecomment-6214025982.",
       "sourceEvidenceGroup": "sms"
     },
     {
@@ -2168,14 +2174,16 @@
         434,
         435,
         437,
-        439
+        439,
+        449
       ],
-      "nextAction": "PR #439 contains bounded fixed template and actual sandboxed Persian PDF test, not private job/renderer worker/storage/download service.",
+      "nextAction": "Review template #439 and internal private PostgreSQL artifact persistence #449; implement durable render jobs/worker, current-authority download and Admin/Web integration.",
       "sourceEvidenceGroup": "invoices",
       "candidatePRs": [
-        439
+        439,
+        449
       ],
-      "remainingWork": "Template candidate #439 passes real Persian A4 PDF rendering, but durable private jobs/artifacts, isolated worker image/resource/restart/SSRF controls, current-authority download and UI integration are still not implemented/accepted."
+      "remainingWork": "Private-store candidate #449 is not merged/deployed and has no worker, job claims, HTTP/download authorization, UI or operator capacity activation. Main remains at 61 migrations; candidate adds forward migration only."
     },
     {
       "issue": 420,
@@ -2258,6 +2266,19 @@
       ],
       "nextAction": "Sellable credit cancellation/return/refund obligation source deployed #432. Financial operator acceptance and broader general returns remain separate.",
       "sourceEvidenceGroup": "credit_returns"
+    },
+    {
+      "issue": 450,
+      "title": "fix(commerce): execute reservation expiry safely and recover stale payment journeys",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/450",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 revenue and stock integrity",
+      "relatedPRs": [
+        451
+      ],
+      "sourceEvidenceGroup": "commerce",
+      "nextAction": "Implement authoritative order/payment-aware bounded expiry, trusted system audit context, safe scheduling and expired-checkout recovery; preserve unresolved gateway attempts. Inventory batching alone does not activate this path."
     }
   ],
   "defaultAcceptanceState": "Criterion-level independent acceptance review pending. Source anchors/merged PRs/closed issue states are not a full acceptance claim.",
@@ -3398,6 +3419,21 @@
     "439": {
       "state": "OPEN",
       "head": "ab7512ac2d9caa8b4334be98dff10920b661aa4c",
+      "merge": null
+    },
+    "452": {
+      "state": "OPEN",
+      "head": "36e5be06f02fa35a5e8e795c88f68a51dbdeb394",
+      "merge": null
+    },
+    "451": {
+      "state": "OPEN",
+      "head": "0ec9c83ce8d9768b32ba940c5ef136ca2e918195",
+      "merge": null
+    },
+    "449": {
+      "state": "OPEN",
+      "head": "c26044ca050608ebcd1a6174ced2b724cb3a8442",
       "merge": null
     }
   },
