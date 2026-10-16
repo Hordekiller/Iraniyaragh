@@ -1,5 +1,5 @@
 {
-  "checkpoint": "2026-10-15",
+  "checkpoint": "2026-10-16",
   "sourceBaseline": "30c3edee7002021429978b3478150d63385d75f7",
   "requirementsReviewed": 149,
   "allCriteriaIndependentlyAccepted": false,
@@ -14,7 +14,7 @@
     "future": "Future release scope",
     "decision": "Requires a product or policy decision"
   },
-  "method": "All original issue bodies read; safe metadata and actual timeline PR references retained. Source anchors prove related implementation presence, not every assertion. Criterion review and independent acceptance are deliberately separate; no bulk closure is authorized by this file. See V1_RECONCILIATION.md for runtime/CI evidence and executable gaps.",
+  "method": "All original issue bodies read; safe metadata and actual timeline PR references retained. Source anchors prove related implementation presence, not every assertion. Criterion review and independent acceptance are deliberately separate; no bulk closure is authorized by this file. See V1_RECONCILIATION.md for runtime/CI evidence and executable gaps. Checkpoint 2026-10-16: exact-head historical review evidence and selected criterion mappings added. Independent ADR review for #13 does not alone accept its historical pre-migration sequencing criterion or downstream financial operation. Full issue-by-issue criterion acceptance is still incomplete.",
   "issues": [
     {
       "issue": 1,
@@ -170,7 +170,10 @@
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [],
       "nextAction": "Protection now enforced/read back; documentation and independent policy review pending. Do not bypass active review requirements.",
-      "sourceEvidenceGroup": "governance"
+      "sourceEvidenceGroup": "governance",
+      "candidatePRs": [
+        443
+      ]
     },
     {
       "issue": 13,
@@ -191,7 +194,55 @@
         112,
         113
       ],
-      "sourceEvidenceGroup": "foundation"
+      "sourceEvidenceGroup": "foundation",
+      "acceptanceScope": "ADR decision artifact independently reviewed; the issue-wide historical pre-migration sequencing criterion is not yet accepted. No downstream tax/payment/invoice operational acceptance inferred.",
+      "criterionEvidence": [
+        {
+          "criterion": "Accepted canonical unit, exact Toman display, rounding and discount allocation rules",
+          "source": "docs/adr/0003-money-and-time.md",
+          "result": "documented and independently reviewed"
+        },
+        {
+          "criterion": "Explicit schema and public contract impact",
+          "source": [
+            "docs/adr/0003-money-and-time.md",
+            "packages/contracts/src/index.ts"
+          ],
+          "result": "ten money-column impact and integer IRR string representation specified"
+        },
+        {
+          "criterion": "At least five worked calculation examples",
+          "source": "docs/adr/0003-money-and-time.md",
+          "result": "six worked examples present"
+        },
+        {
+          "criterion": "Explicit tax/invoice scope boundary",
+          "source": "docs/adr/0003-money-and-time.md",
+          "result": "tax/fiscal/invoice implementation explicitly outside this decision"
+        }
+      ],
+      "independentReview": {
+        "pr": 44,
+        "author": "Hordekiller",
+        "reviewer": "Maddyrampant",
+        "reviewedHead": "ecc1b71d0b8aa02071bf2a7921c98db9f2c87f8e",
+        "merge": "86812f3600c68183c156a31fd275b35c2b290547",
+        "url": "https://github.com/Hordekiller/Iraniyaragh/pull/44#pullrequestreview-5074013273",
+        "scope": "ADR decision only"
+      },
+      "historicalSequenceEvidence": {
+        "decisionPR44MergedAt": "2026-09-02T02:34:03Z",
+        "latestIssueClosureAt": "2026-09-02T02:34:04Z",
+        "stateMigrationPR38MergedAt": "2026-08-31T11:13:31Z",
+        "moneyMigrationPR40MergedAt": "2026-08-31T11:40:33Z",
+        "assessment": "Recorded migrations precede the only closure in the available issue event timeline; no earlier closure/reopening is recorded. Historical body changes or an explicit authorized exception are not established here. Do not infer complete issue-wide compliance or an unauthorized production change from dates alone.",
+        "recordedCloseReopenEvents": [
+          {
+            "event": "closed",
+            "at": "2026-09-02T02:34:04Z"
+          }
+        ]
+      }
     },
     {
       "issue": 14,
@@ -466,7 +517,12 @@
         52,
         112
       ],
-      "sourceEvidenceGroup": "foundation"
+      "sourceEvidenceGroup": "foundation",
+      "candidatePRs": [
+        441,
+        442,
+        448
+      ]
     },
     {
       "issue": 54,
@@ -987,7 +1043,14 @@
         179,
         194
       ],
-      "sourceEvidenceGroup": "catalog"
+      "sourceEvidenceGroup": "catalog",
+      "independentDecisionReview": {
+        "pr": 177,
+        "reviewedHead": "eda503a44e6fb22706b8ed870feaac2116431c0d",
+        "merge": "a0347329236d22358359149451b4c289e965ce4a",
+        "url": "https://github.com/Hordekiller/Iraniyaragh/pull/177#pullrequestreview-5185694789",
+        "limitation": "Accepted policy review; downstream catalog/import/runtime acceptance is separate. No blanket closure evidence inferred."
+      }
     },
     {
       "issue": 178,
@@ -1698,7 +1761,10 @@
         411
       ],
       "nextAction": "Stocktake source and PostgreSQL tests deployed via #411; exact two-location up/down browser criterion and live physical operator acceptance remain #352.",
-      "sourceEvidenceGroup": "inventory"
+      "sourceEvidenceGroup": "inventory",
+      "candidatePRs": [
+        444
+      ]
     },
     {
       "issue": 348,
@@ -1766,7 +1832,10 @@
         411
       ],
       "nextAction": "Baseline browser journey has one location/downward variance. Original two-location upward+downward reconciliation criterion remains, despite PostgreSQL multi-line coverage.",
-      "sourceEvidenceGroup": "inventory"
+      "sourceEvidenceGroup": "inventory",
+      "candidatePRs": [
+        444
+      ]
     },
     {
       "issue": 353,
@@ -1919,7 +1988,16 @@
         394
       ],
       "nextAction": "Live engine healthy but signatures version 28137 dated 2026-09-28; current automatic update/freshness remains unaccepted.",
-      "sourceEvidenceGroup": "inventory"
+      "sourceEvidenceGroup": "inventory",
+      "runtimeCheckpoint": {
+        "dateUTC": "2026-10-16",
+        "imageSha": "30c3edee7002021429978b3478150d63385d75f7",
+        "engine": "1.5.4",
+        "signatureVersion": 28137,
+        "signatureDate": "2026-09-28",
+        "cdnReachabilityToday": "not re-probed",
+        "status": "OPEN; approved update route, updater supervision, freshness alerting and subsequent scheduled scan acceptance remain"
+      }
     },
     {
       "issue": 400,
@@ -1933,7 +2011,31 @@
         438
       ],
       "nextAction": "Existing fresh-MFA/refresh/no-store/cross-tab fixes deployed. Genuine-token tests distinguish access/fresh/idle boundaries; current live operator 5–10-minute symptom not reproduced. Do not change TTL speculatively.",
-      "sourceEvidenceGroup": "auth"
+      "sourceEvidenceGroup": "auth",
+      "candidatePRs": [
+        445,
+        447
+      ],
+      "criterionEvidence": [
+        {
+          "criterion": "Recover protected requests without false logout across tab rotations",
+          "source": [
+            "apps/admin/src/lib/api/client.ts",
+            "apps/admin/src/lib/auth/AuthProvider.tsx"
+          ],
+          "candidatePR": 447,
+          "result": "before-fix real HTTP replay 401; final candidate CI 136 browser passes / zero failures / five pre-existing viewport skips; not merged/deployed"
+        },
+        {
+          "criterion": "Authoritative idle/revocation/fresh-MFA boundaries remain enforced",
+          "candidatePR": 445,
+          "result": "seven added PostgreSQL/HTTP tests; candidate database gate 418/418 pass; not merged/deployed"
+        },
+        {
+          "criterion": "Live operator single-tab 5–10 minute idle report accepted",
+          "result": "not yet reproduced/accepted; do not infer every symptom has the cross-tab cause"
+        }
+      ]
     },
     {
       "issue": 401,
@@ -2069,7 +2171,11 @@
         439
       ],
       "nextAction": "PR #439 contains bounded fixed template and actual sandboxed Persian PDF test, not private job/renderer worker/storage/download service.",
-      "sourceEvidenceGroup": "invoices"
+      "sourceEvidenceGroup": "invoices",
+      "candidatePRs": [
+        439
+      ],
+      "remainingWork": "Template candidate #439 passes real Persian A4 PDF rendering, but durable private jobs/artifacts, isolated worker image/resource/restart/SSRF controls, current-authority download and UI integration are still not implemented/accepted."
     },
     {
       "issue": 420,
@@ -3294,5 +3400,10 @@
       "head": "ab7512ac2d9caa8b4334be98dff10920b661aa4c",
       "merge": null
     }
+  },
+  "historicalReviewEvidence": {
+    "reviewedAtUTC": "2026-10-15",
+    "mergedPRsWithIndependentApprovalOnFinalHead": 119,
+    "limitation": "Review metadata is not independent acceptance of every functional, runtime or external-provider criterion."
   }
 }

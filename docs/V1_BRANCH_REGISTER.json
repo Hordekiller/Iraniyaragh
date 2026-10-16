@@ -1,0 +1,516 @@
+{
+  "checkpointUTC": "2026-10-16",
+  "sourceBaseline": "30c3edee7002021429978b3478150d63385d75f7",
+  "method": "Live git ls-remote --heads origin, fetched objects and current GitHub PR metadata. The origin symbolic HEAD alias is not an extra branch. Commit distance is not missing-feature proof after squash merges.",
+  "remoteBranchCount": 35,
+  "remoteBranches": [
+    {
+      "branch": "archive/feat-admin-catalog-slice-263fd8d",
+      "head": "263fd8d5cdcc74ba106814a6c201c09d2c7f7922",
+      "behindMain": 178,
+      "commitsOutsideMainAncestry": 14,
+      "mergeBaseDiffFiles": 135,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "audit/v1-reconciliation",
+      "head": "b829301f43ccceb27c5223bad4b3cae4b9e4a277",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 15,
+      "openPRs": [
+        443
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "chore/enamad-verification-15156313",
+      "head": "e1f3fd6bd5997d66a94add476545b2a95043faa1",
+      "behindMain": 13,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 1,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "chore/repository-workflow",
+      "head": "64d4428ca1a09a951925b55f92b4cbb160c7e75d",
+      "behindMain": 129,
+      "commitsOutsideMainAncestry": 0,
+      "mergeBaseDiffFiles": 0,
+      "openPRs": [],
+      "interpretation": "No commits outside main ancestry."
+    },
+    {
+      "branch": "dependabot/github_actions/main/github-actions-4dcca6a1ef",
+      "head": "1b0882629d8a35deb7b7c741fb080aed81cf7c1f",
+      "behindMain": 12,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [
+        426
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/main/development-dependencies-74e356812c",
+      "head": "a87b1153392e189dece18521eef194a21ac3ef34",
+      "behindMain": 3,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 6,
+      "openPRs": [
+        396
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/main/production-dependencies-bca5495114",
+      "head": "23e21379ada5e87ca9543fee1004be2843cd0934",
+      "behindMain": 12,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [
+        425
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "docs/post-wave-0.2a-facts-sync",
+      "head": "4e4801331a245309c3f129964ac5ce36d8b5cf8e",
+      "behindMain": 142,
+      "commitsOutsideMainAncestry": 13,
+      "mergeBaseDiffFiles": 2,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "docs/sms-track-status-sync",
+      "head": "ce7493afd76ef0d9cde0a39614a88e5d8092242d",
+      "behindMain": 180,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 2,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/129-dynamic-discovery",
+      "head": "094a3dff5def8c66dfb0b37c7a0dd87ddfd1b55c",
+      "behindMain": 178,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 1,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/279-contract-hardening",
+      "head": "3567bb7615f1425246401c083a53d58ccd0abdd4",
+      "behindMain": 80,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 8,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/279-description-authoring",
+      "head": "13168680298902e6b1a7ba78cc98e7094ca83674",
+      "behindMain": 80,
+      "commitsOutsideMainAncestry": 3,
+      "mergeBaseDiffFiles": 20,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/279-media-picker",
+      "head": "dfa4d1f4c4312af86447d5f7ab556122103d1178",
+      "behindMain": 80,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 14,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/279-rich-text-editor",
+      "head": "f5861d870fa524446e38e5a2f1955047d11b3a6c",
+      "behindMain": 80,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 10,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/279-storefront-render",
+      "head": "339a873ba51e9b0f1a2962bb4ee2565d40e8f3bb",
+      "behindMain": 80,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 7,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/50-permission-nav",
+      "head": "44ee4f004fe7872c40907124482e5f209bcb7942",
+      "behindMain": 173,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/admin-catalog-slice",
+      "head": "72afef1a81e8f877684abe67562ab9fc7f924249",
+      "behindMain": 23,
+      "commitsOutsideMainAncestry": 10,
+      "mergeBaseDiffFiles": 52,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/enamad-trust-seal",
+      "head": "c4c106304e06245c606573a10b7234ddc1ff092f",
+      "behindMain": 13,
+      "commitsOutsideMainAncestry": 4,
+      "mergeBaseDiffFiles": 8,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/inventory-api-candidate",
+      "head": "a9b32b5ca00cf913155a2474640e8f256cb5e8bf",
+      "behindMain": 129,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 9,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/invoice-pdf-template",
+      "head": "4992028cfffe1de3f9196fb952516415e26874c6",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 3,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [
+        439
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "feat/stocktake-v1",
+      "head": "3d8661e45b7d564c32006faa8d78db74efba9773",
+      "behindMain": 44,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 25,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "fix/139-cross-tab-refresh",
+      "head": "63664e9c5b68a6d8e63b7e9b041dd3a6d10fb02e",
+      "behindMain": 178,
+      "commitsOutsideMainAncestry": 7,
+      "mergeBaseDiffFiles": 30,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "fix/admin-cross-tab-refresh-replay",
+      "head": "6c86c85ae3d52d15a407cdc22de4752197b9e37a",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 6,
+      "openPRs": [
+        447
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "fix/api-production-artifact-boundary",
+      "head": "2688d3b3bafc2a66b7f0a561a97cec24b9480d11",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 5,
+      "openPRs": [
+        446
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "fix/integration-redis-required",
+      "head": "36628c9536aa85c26f9dcb7d66d9263312cd2747",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 6,
+      "openPRs": [
+        448
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "fix/nginx-admin-canonical-route",
+      "head": "a83c0672559c232463a6e96749f5b2e8e94c653a",
+      "behindMain": 25,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 9,
+      "openPRs": [
+        386
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "fix/release-runtime-provenance",
+      "head": "70c29a3ba8c1e312957f1bcf6e585c6d2ffb2637",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [
+        440
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "fix/security-audit-fail-closed",
+      "head": "0916b7afff6286325f7cf0e436b3936cec4012a7",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 6,
+      "openPRs": [
+        442
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "fix/security-transitive-patches",
+      "head": "1422dc24d3bb06f971703645d17f74f9e94e6825",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 2,
+      "openPRs": [
+        441
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "lane-b/storefront-completion",
+      "head": "9be35395d79f446a5ce480f37bcbc90a5b7b688f",
+      "behindMain": 94,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 182,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "main",
+      "head": "30c3edee7002021429978b3478150d63385d75f7",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 0,
+      "mergeBaseDiffFiles": 0,
+      "openPRs": [],
+      "interpretation": "No commits outside main ancestry."
+    },
+    {
+      "branch": "preserve/178-g1-g2-settings-wip-2026-09-13",
+      "head": "2533a8e393277a2b9dca2264693e389e950a686f",
+      "behindMain": 142,
+      "commitsOutsideMainAncestry": 4,
+      "mergeBaseDiffFiles": 29,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "test/e2e-staff-operator-provisioning",
+      "head": "8891934c133d0c623a0001d25969084b5ff67aca",
+      "behindMain": 38,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 2,
+      "openPRs": [],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "test/staff-idle-auth-boundaries",
+      "head": "9d8f13e084878d400f30b24577fa910ce5f3989e",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 1,
+      "openPRs": [
+        445
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    },
+    {
+      "branch": "test/stocktake-two-location-reconciliation",
+      "head": "93c1d278ee685bea6b0bfc44ba9c78d6e791d019",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 1,
+      "openPRs": [
+        444
+      ],
+      "interpretation": "Requires semantic comparison: squash-merged commits may remain outside main ancestry."
+    }
+  ],
+  "openPullRequests": [
+    {
+      "baseRefName": "main",
+      "headRefName": "fix/integration-redis-required",
+      "headRefOid": "36628c9536aa85c26f9dcb7d66d9263312cd2747",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 448,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "fix(ci): fail closed when required integration Redis is unavailable"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "fix/admin-cross-tab-refresh-replay",
+      "headRefOid": "6c86c85ae3d52d15a407cdc22de4752197b9e37a",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 447,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "fix(admin-auth): retain refresh lock through protected request replays"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "fix/api-production-artifact-boundary",
+      "headRefOid": "2688d3b3bafc2a66b7f0a561a97cec24b9480d11",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 446,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "fix(build): exclude integration tests from API runtime artifacts"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "test/staff-idle-auth-boundaries",
+      "headRefOid": "9d8f13e084878d400f30b24577fa910ce5f3989e",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 445,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "test(auth): pin staff idle refresh and fresh-MFA boundaries"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "test/stocktake-two-location-reconciliation",
+      "headRefOid": "93c1d278ee685bea6b0bfc44ba9c78d6e791d019",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 444,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "test(stocktake): reconcile two-location upward and downward counts"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "audit/v1-reconciliation",
+      "headRefOid": "b829301f43ccceb27c5223bad4b3cae4b9e4a277",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 443,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "docs(v1): reconcile repository runtime and issue requirements"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "fix/security-audit-fail-closed",
+      "headRefOid": "0916b7afff6286325f7cf0e436b3936cec4012a7",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 442,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "fix(security): fail closed when production dependency audit is unavailable"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "fix/security-transitive-patches",
+      "headRefOid": "1422dc24d3bb06f971703645d17f74f9e94e6825",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 441,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "fix(deps): patch vulnerable fast-uri and brace-expansion chains"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "fix/release-runtime-provenance",
+      "headRefOid": "70c29a3ba8c1e312957f1bcf6e585c6d2ffb2637",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 440,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "fix(ops): bind runtime provenance to the selected release image"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "feat/invoice-pdf-template",
+      "headRefOid": "4992028cfffe1de3f9196fb952516415e26874c6",
+      "isDraft": false,
+      "mergeStateStatus": "BLOCKED",
+      "mergeable": "MERGEABLE",
+      "number": 439,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "feat(invoices): add bounded branded Persian PDF template"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "dependabot/github_actions/main/github-actions-4dcca6a1ef",
+      "headRefOid": "1b0882629d8a35deb7b7c741fb080aed81cf7c1f",
+      "isDraft": false,
+      "mergeStateStatus": "BEHIND",
+      "mergeable": "MERGEABLE",
+      "number": 426,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "chore(actions): bump the github-actions group across 1 directory with 4 updates"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "dependabot/npm_and_yarn/main/production-dependencies-bca5495114",
+      "headRefOid": "23e21379ada5e87ca9543fee1004be2843cd0934",
+      "isDraft": false,
+      "mergeStateStatus": "BEHIND",
+      "mergeable": "MERGEABLE",
+      "number": 425,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "chore(deps): bump the production-dependencies group across 1 directory with 21 updates"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "dependabot/npm_and_yarn/main/development-dependencies-74e356812c",
+      "headRefOid": "a87b1153392e189dece18521eef194a21ac3ef34",
+      "isDraft": false,
+      "mergeStateStatus": "BEHIND",
+      "mergeable": "MERGEABLE",
+      "number": 396,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "chore(deps): bump the development-dependencies group across 1 directory with 19 updates"
+    },
+    {
+      "baseRefName": "main",
+      "headRefName": "fix/nginx-admin-canonical-route",
+      "headRefOid": "a83c0672559c232463a6e96749f5b2e8e94c653a",
+      "isDraft": false,
+      "mergeStateStatus": "DIRTY",
+      "mergeable": "CONFLICTING",
+      "number": 386,
+      "reviewDecision": "REVIEW_REQUIRED",
+      "title": "Record #382, #384 and #385 on main in PROJECT_STATUS"
+    }
+  ],
+  "localWorktreeSummary": {
+    "registered": 80,
+    "missingDirectoriesRetained": 8,
+    "otherDirtyWorktreesPreserved": 5,
+    "otherWorktreesWithTrackedChangesPreserved": 3
+  },
+  "safety": "No pruning, checkout, reset or edits in other worktrees; original untracked logo assets preserved. Review decisions/mergeability are observations at the checkpoint, not future merge authorization.",
+  "capturedAtUTC": "2026-10-16T05:15:44.459766+00:00",
+  "selfHeadNote": "PR #443 and its audit branch head are the pre-refresh checkpoint; fetch the current PR head and its own checks before merge. This document cannot embed its own future commit hash."
+}
