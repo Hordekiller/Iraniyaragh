@@ -18,7 +18,8 @@ import {
 import { PrismaService } from "../../database/prisma.service";
 import { retryDelayMs, sleep } from "../../common/retry";
 import { advisoryLockIdKey } from "../../common/advisory-lock";
-import { AuditLogService } from "../audit/audit-log.service";
+import { isPrismaTransactionConflict } from "../../common/serializable-retry";
+import { AuditLogService, type AuditEventInput } from "../audit/audit-log.service";
 import {
   INVENTORY_CHANGE_TYPES,
   MAX_TRANSFER_ITEMS,
@@ -659,15 +660,46 @@ export class InventoryService {
     return this.withSerializableRetry(() =>
       this.prisma.$transaction(
         async (tx) => {
-          let expired = 0;
+          // Use the same balance locks as consume/release, in deterministic order.
+          // Candidates are advisory only: another finalizer may win before locking.
+          const keys = new Map<string, StockKey>();
           for (const candidate of reservations) {
-            expired += await this.expireSingleReservation(
-              tx,
-              candidate.id,
-              context,
-            );
+            keys.set(this.expiryBalanceKey(candidate), candidate);
           }
-          return expired;
+          for (const key of [...keys.keys()].sort()) {
+            await this.acquireBalanceLock(tx, keys.get(key)!);
+          }
+          const current = await tx.stockReservation.findMany({
+            where: { id: { in: reservations.map((row) => row.id) }, status: "ACTIVE", expiresAt: { lte: now } },
+            orderBy: [{ expiresAt: "asc" }, { id: "asc" }],
+          });
+          if (!current.length) return 0;
+          const candidates = new Map(reservations.map((row) => [row.id, row]));
+          for (const row of current) {
+            if (this.expiryBalanceKey(row) !== this.expiryBalanceKey(candidates.get(row.id)!)) {
+              throw new ConflictException({ code: "RESERVATION_STATE_CONFLICT", message: "Reservation balance changed." });
+            }
+          }
+          const balances = await tx.inventoryBalance.findMany({
+            where: { OR: [...keys.values()].map(({ warehouseId, locationId, variantId }) => ({ warehouseId, locationId, variantId })) },
+          });
+          const { groups, audits } = this.planReservationExpiry(current, balances, context);
+          for (const { balance, quantity, count } of groups.values()) {
+            if (!count) continue;
+            await tx.inventoryBalance.update({
+              where: { id: balance.id },
+              data: { reserved: { decrement: quantity }, available: { increment: quantity }, version: { increment: count } },
+            });
+          }
+          const updated = await tx.stockReservation.updateMany({
+            where: { id: { in: current.map((row) => row.id) }, status: "ACTIVE", expiresAt: { lte: now } },
+            data: { status: "EXPIRED" },
+          });
+          if (updated.count !== current.length) {
+            throw new ConflictException({ code: "RESERVATION_STATE_CONFLICT", message: "Reservation state changed." });
+          }
+          await this.auditLog.recordMany(audits, tx);
+          return current.length;
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       ),
@@ -1357,22 +1389,32 @@ export class InventoryService {
     return { ...reservation, balanceId: balance.id };
   }
 
-  private async expireSingleReservation(
-    tx: Prisma.TransactionClient,
-    reservationId: string,
-    context: ActorContext,
-  ): Promise<number> {
-    const reservation = await tx.stockReservation.findUnique({
-      where: { id: reservationId },
-    });
-    if (reservation?.status !== "ACTIVE") return 0;
-    return this.rebalanceReservationRelease(
-      tx,
-      reservation,
-      "EXPIRED",
-      "inventory.reservation.expired",
-      context,
-    );
+  private expiryBalanceKey(key: StockKey): string {
+    return JSON.stringify([key.warehouseId, key.locationId, key.variantId]);
+  }
+
+  private planReservationExpiry(
+    reservations: StockReservationRow[], balances: ActiveBalance[], context: ActorContext,
+  ) {
+    const groups = new Map(balances.map((balance) => [this.expiryBalanceKey(balance), {
+      balance, quantity: 0, count: 0,
+    }]));
+    const audits: AuditEventInput[] = [];
+    for (const row of reservations) {
+      const group = groups.get(this.expiryBalanceKey(row));
+      if (!group || group.balance.reserved - group.quantity < row.quantity) {
+        throw new ConflictException({ code: "RESERVATION_STATE_CONFLICT", message: "Reservation balance is inconsistent." });
+      }
+      const before = { reserved: group.balance.reserved - group.quantity, available: group.balance.available + group.quantity };
+      group.quantity += row.quantity;
+      group.count += 1;
+      audits.push({
+        action: "inventory.reservation.expired", entityType: "stock-reservation", entityId: row.id,
+        before, after: { reserved: before.reserved - row.quantity, available: before.available + row.quantity },
+        actorId: context.actorId, requestId: context.requestId,
+      });
+    }
+    return { groups, audits };
   }
 
   private async releaseSingleReservation(
@@ -2167,10 +2209,10 @@ export class InventoryService {
         return await operation();
       } catch (error) {
         const isSerializationAbort =
-          typeof error === "object" &&
+          isPrismaTransactionConflict(error) || (typeof error === "object" &&
           error !== null &&
           "code" in error &&
-          (error as { code?: unknown }).code === "P2034";
+          (error as { code?: unknown }).code === "P2034");
         if (isSerializationAbort && attempt < SERIALIZABLE_RETRIES - 1) {
           await sleep(retryDelayMs(attempt + 1));
           continue;

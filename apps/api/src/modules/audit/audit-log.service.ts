@@ -24,19 +24,29 @@ export class AuditLogService {
   async record(input: AuditEventInput, tx?: Prisma.TransactionClient) {
     const client = tx ?? this.prisma;
     await client.auditLog.create({
-      data: {
-        actorId: input.actorId ?? null,
-        action: input.action,
-        entityType: input.entityType,
-        entityId: input.entityId ?? null,
-        before: input.before ?? Prisma.JsonNull,
-        after: input.after ?? Prisma.JsonNull,
-        metadata: input.metadata ?? Prisma.JsonNull,
-        requestId: input.requestId ?? null,
-        ipHash: input.ipHash ?? null,
-        userAgent: input.userAgent ?? null,
-      },
+      data: this.recordData(input),
     });
+  }
+
+  /** Preserve individual audit facts while joining a bounded domain transaction. */
+  async recordMany(inputs: AuditEventInput[], tx: Prisma.TransactionClient) {
+    if (!inputs.length) return;
+    await tx.auditLog.createMany({ data: inputs.map((input) => this.recordData(input)) });
+  }
+
+  private recordData(input: AuditEventInput): Prisma.AuditLogCreateManyInput {
+    return {
+      actorId: input.actorId ?? null,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId ?? null,
+      before: input.before ?? Prisma.JsonNull,
+      after: input.after ?? Prisma.JsonNull,
+      metadata: input.metadata ?? Prisma.JsonNull,
+      requestId: input.requestId ?? null,
+      ipHash: input.ipHash ?? null,
+      userAgent: input.userAgent ?? null,
+    };
   }
 
   async list(query: AuditLogListQueryDto): Promise<AuditLogListResponse> {
