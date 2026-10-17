@@ -377,3 +377,49 @@ Start cost-efficiently on Iranian VPS/cloud, but keep the application provider-p
 - Independent backups
 - S3-compatible storage
 - No provider-specific business logic
+
+## Reservation expiry batching — #81 / #450
+
+The 2026-10-16 candidate changes `InventoryService.expireReservations`; it does
+**not** activate an expiry worker. Deployment and operational acceptance remain
+separate. #450 tracks the order/payment-aware scheduler and expired-payment UX.
+Never schedule inventory-only expiry as a substitute for the authoritative order
+command: an unresolved gateway attempt must be reconciled before releasing stock.
+
+One invocation selects at most 100 candidates, ordered by expiry and ID. Inside
+one serializable transaction it acquires the existing balance advisory locks in
+sorted key order, rereads active/due candidates, groups balance changes, performs
+one terminal update and inserts one audit fact per reservation in a batch. Each
+balance version advances by the number of finalized reservations, preserving the
+previous version semantics and per-reservation before/after audit snapshots.
+On-hand stock and physical movement history are unchanged by expiry.
+
+Actual Prisma query events against isolated PostgreSQL, including three
+transaction-control statements, measured:
+
+| Reservations | Distinct balances | Before | Candidate |
+| --- | --- | --- | --- |
+| 1 | 1 | 11 | 10 |
+| 10 | 1 | 74 | 10 |
+| 100 | 1 | 704 | 10 |
+| 10 | 10 | 74 | 28 |
+| 100 | 100 | 704 | 208 |
+
+For an uncontended full batch, the former count is `4 + 7N`; the candidate is
+`8 + 2G`, where `G` is the number of distinct balance keys. Keeping one lock and
+one update per balance preserves coordination with existing stock commands.
+These are statement counts, not latency promises. Concurrent retries add work.
+`inventory-expiry.integration-spec.ts` verifies the query ceiling, quantities,
+individual audits, duplicate execution, two workers, a competing consumption
+command, page boundaries and transaction rollback after inconsistency/audit failure.
+
+Serialization/deadlock aborts retry the entire transaction at most three times,
+using the existing bounded backoff. Genuine inconsistencies and audit failures
+propagate; no partial batch is committed or reported as successful. A future
+runner must record attempted/finalized counts, duration, retry/exhaustion and
+inconsistency failures without customer data. It must alert on a poison batch;
+silently skipping it or retrying indefinitely is not an accepted recovery policy.
+Do not repair balances with direct SQL or reset order/payment state. Investigate
+the request ID and use approved domain commands for reconciliation. On failure,
+disable the future scheduler and retain reservations/evidence for investigation.
+No scheduler flag or runtime activation is introduced by this candidate.

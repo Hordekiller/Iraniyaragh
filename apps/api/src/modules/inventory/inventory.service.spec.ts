@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { InventoryMovementType } from '@prisma/client';
+import { InventoryMovementType, Prisma } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { InventoryService } from './inventory.service';
 
 function createFakeClient(overrides: Record<string, unknown> = {}) {
@@ -55,6 +56,7 @@ function createFakeClient(overrides: Record<string, unknown> = {}) {
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     stockTransfer: {
       findUnique: vi.fn().mockResolvedValue(undefined),
@@ -116,7 +118,7 @@ function buildService() {
       fn(tx as never),
     ),
   } as never;
-  const audit = { record: vi.fn() } as never;
+  const audit = { record: vi.fn(), recordMany: vi.fn() } as never;
   const service = new InventoryService(prisma, audit);
   return { client, tx, audit, service, prisma: prisma as unknown as Record<string, unknown> };
 }
@@ -650,8 +652,8 @@ describe('InventoryService guards and queries', () => {
         expiresAt: new Date('2020-01-01T00:00:00.000Z'),
       },
     ]);
-    ctx.tx.stockReservation.findUnique.mockResolvedValue({ id: 'r1', status: 'ACTIVE', quantity: 2, warehouseId: 'wh', locationId: 'loc', variantId: 'variant' });
-    ctx.tx.inventoryBalance.findUnique.mockResolvedValue({ id: 'b1', version: 1, reserved: 0 });
+    ctx.tx.stockReservation.findMany.mockResolvedValue([{ id: 'r1', status: 'ACTIVE', quantity: 2, warehouseId: 'wh', locationId: 'loc', variantId: 'variant' }]);
+    ctx.tx.inventoryBalance.findMany.mockResolvedValue([{ id: 'b1', version: 1, reserved: 0, warehouseId: 'wh', locationId: 'loc', variantId: 'variant' }]);
 
     await expect(
       ctx.service.expireReservations({ actorId: 'actor', requestId: 'request' }),
@@ -662,16 +664,53 @@ describe('InventoryService guards and queries', () => {
     const first = { id: 'r1', warehouseId: 'wh', locationId: 'loc', variantId: 'v1', quantity: 2, status: 'ACTIVE' };
     const second = { id: 'r2', warehouseId: 'wh', locationId: 'loc', variantId: 'v2', quantity: 3, status: 'ACTIVE' };
     ctx.prisma.stockReservation.findMany.mockResolvedValue([first, second]);
-    ctx.tx.stockReservation.findUnique.mockImplementation(async ({ where }: { where: { id: string } }) => where.id === 'r1' ? first : null);
-    ctx.tx.inventoryBalance.findUnique
-      .mockResolvedValueOnce({ id: 'b1', reserved: 2, available: 0, version: 1 })
-      .mockResolvedValueOnce({ id: 'b2', reserved: 3, available: 1, version: 4 });
+    ctx.tx.stockReservation.findMany.mockResolvedValue([first]);
+    ctx.tx.stockReservation.updateMany.mockResolvedValue({ count: 1 });
+    ctx.tx.inventoryBalance.findMany.mockResolvedValue([
+      { id: 'b1', warehouseId: 'wh', locationId: 'loc', variantId: 'v1', reserved: 2, available: 0, version: 1 },
+      { id: 'b2', warehouseId: 'wh', locationId: 'loc', variantId: 'v2', reserved: 3, available: 1, version: 4 },
+    ]);
 
     await expect(ctx.service.expireReservations({ actorId: 'actor', requestId: 'request' }, { batchSize: 2 }))
       .resolves.toBe(1);
     expect(ctx.prisma.$transaction).toHaveBeenCalledOnce();
     expect(ctx.tx.inventoryBalance.update).toHaveBeenCalledOnce();
-    expect(ctx.tx.stockReservation.update).toHaveBeenCalledWith({ where: { id: 'r1' }, data: { status: 'EXPIRED' } });
+    expect(ctx.tx.stockReservation.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['r1'] }, status: 'ACTIVE', expiresAt: { lte: expect.any(Date) } }, data: { status: 'EXPIRED' },
+    });
+    expect(ctx.audit.recordMany).toHaveBeenCalledWith([expect.objectContaining({ entityId: 'r1' })], ctx.tx);
+  });
+
+  it('acquires expiry balance locks in explicit code-unit order regardless of candidate order', async () => {
+    ctx.prisma.stockReservation.findMany.mockResolvedValue(
+      ['v2', 'v1', 'V1', 'v10'].map((variantId) => ({
+        id: `reservation-${variantId}`, warehouseId: 'wh', locationId: 'loc', variantId,
+      })),
+    );
+    ctx.tx.stockReservation.findMany.mockResolvedValue([]);
+
+    await expect(ctx.service.expireReservations({ actorId: 'actor', requestId: 'request' })).resolves.toBe(0);
+
+    const expectedOrder = ['V1', 'v1', 'v10', 'v2'];
+    expect(ctx.tx.$executeRaw).toHaveBeenCalledTimes(expectedOrder.length);
+    for (const [index, variantId] of expectedOrder.entries()) {
+      const [high, low] = advisoryLockIdKey('balance', 'wh', 'loc', variantId);
+      expect(ctx.tx.$executeRaw).toHaveBeenNthCalledWith(index + 1, expect.any(Array), high, low);
+    }
+    expect(ctx.tx.inventoryBalance.update).not.toHaveBeenCalled();
+    expect(ctx.audit.recordMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['40001', '40P01'])('retries the whole expiry transaction after a raw lock abort (%s)', async (code) => {
+    ctx.prisma.stockReservation.findMany.mockResolvedValue([{ id: 'r1', warehouseId: 'wh', locationId: 'loc', variantId: 'v1' }]);
+    ctx.tx.stockReservation.findMany.mockResolvedValue([]);
+    ctx.tx.$executeRaw.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError('Transaction aborted', {
+      code: 'P2010', clientVersion: 'test', meta: { code },
+    }));
+    await expect(ctx.service.expireReservations({ actorId: 'actor', requestId: 'request' })).resolves.toBe(0);
+    expect(ctx.prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(ctx.tx.inventoryBalance.update).not.toHaveBeenCalled();
+    expect(ctx.audit.recordMany).not.toHaveBeenCalled();
   });
 });
 
