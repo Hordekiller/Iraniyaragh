@@ -18,6 +18,7 @@ import {
 import { PrismaService } from "../../database/prisma.service";
 import { retryDelayMs, sleep } from "../../common/retry";
 import { advisoryLockIdKey } from "../../common/advisory-lock";
+import { orderExpirySystemContext, type OrderExpirySystemContext } from "../../common/order-expiry-system-context";
 import { AuditLogService } from "../audit/audit-log.service";
 import {
   INVENTORY_CHANGE_TYPES,
@@ -680,6 +681,23 @@ export class InventoryService {
     context: ActorContext,
   ): Promise<number> {
     this.assertTracked(context);
+    return this.releaseOrderReservations(tx, orderId, context);
+  }
+
+  /** Internal order-expiry command only; caller holds the order lock and transaction. */
+  async releaseReservationsForOrderFromExpiry(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    requestId: string,
+  ): Promise<number> {
+    return this.releaseOrderReservations(tx, orderId, orderExpirySystemContext(requestId));
+  }
+
+  private async releaseOrderReservations(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    context: ActorContext | OrderExpirySystemContext,
+  ): Promise<number> {
     const reservations = await tx.stockReservation.findMany({
       where: { orderId, status: "ACTIVE" },
       orderBy: [{ id: "asc" }],
@@ -1378,7 +1396,7 @@ export class InventoryService {
   private async releaseSingleReservation(
     tx: Prisma.TransactionClient,
     reservation: StockReservationRow,
-    context: ActorContext,
+    context: ActorContext | OrderExpirySystemContext,
   ): Promise<number> {
     return this.rebalanceReservationRelease(
       tx,
@@ -1471,7 +1489,7 @@ export class InventoryService {
     },
     toStatus: "EXPIRED" | "RELEASED",
     action: string,
-    context: ActorContext,
+    context: ActorContext | OrderExpirySystemContext,
   ): Promise<number> {
     await this.acquireBalanceLock(tx, reservation);
     const current = await tx.stockReservation.findUnique({
@@ -1518,6 +1536,7 @@ export class InventoryService {
         },
         actorId: context.actorId,
         requestId: context.requestId,
+        ...(context.actorId === null ? { metadata: { systemActor: context.systemActor, orderId: current.orderId } } : {}),
       },
       tx,
     );

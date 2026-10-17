@@ -13,6 +13,7 @@ import type {
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { advisoryLockIdKey } from "../../common/advisory-lock";
+import { orderExpirySystemContext, type OrderExpirySystemContext } from "../../common/order-expiry-system-context";
 import {
   ORDER_STATE_CONFLICT_ERROR,
   recordTransition,
@@ -121,6 +122,21 @@ export class OrderCommandService {
     options: { now?: Date; batchSize?: number } = {},
   ): Promise<OrderExpiryRunResponse> {
     this.assertTracked(context);
+    return this.expireBatch(context, options);
+  }
+
+  /** Internal worker entry point; no HTTP route or caller-selected principal. */
+  async expireAbandonedOrdersAsSystem(
+    requestId: string,
+    options: { now?: Date; batchSize?: number } = {},
+  ): Promise<OrderExpiryRunResponse> {
+    return this.expireBatch(orderExpirySystemContext(requestId), options);
+  }
+
+  private async expireBatch(
+    context: OrderCommandContext | OrderExpirySystemContext,
+    options: { now?: Date; batchSize?: number },
+  ): Promise<OrderExpiryRunResponse> {
     const now = options.now ?? new Date();
     const batchSize = clampInt(
       options.batchSize,
@@ -321,7 +337,7 @@ export class OrderCommandService {
 
   private async expireOrder(
     orderId: string,
-    context: OrderCommandContext,
+    context: OrderCommandContext | OrderExpirySystemContext,
     now: Date,
   ): Promise<boolean> {
     return withSerializableRetry({
@@ -364,12 +380,9 @@ export class OrderCommandService {
               },
             );
 
-            const releasedReservations =
-              await this.inventory.releaseReservationsForOrder(
-                tx,
-                order.id,
-                context,
-              );
+            const releasedReservations = context.actorId === null
+              ? await this.inventory.releaseReservationsForOrderFromExpiry(tx, order.id, requestId)
+              : await this.inventory.releaseReservationsForOrder(tx, order.id, context);
 
             const expiredAt = now.toISOString();
             await tx.outboxEvent.create({
@@ -398,6 +411,7 @@ export class OrderCommandService {
                 metadata: {
                   reason: RELEASE_REASON.expiry,
                   transitionId: transition.id,
+                  ...(context.actorId === null ? { systemActor: context.systemActor } : {}),
                 },
                 actorId: context.actorId,
                 requestId,
