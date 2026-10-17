@@ -69,6 +69,7 @@ function setup(overrides: {
   } as never;
   const audit = { record: vi.fn().mockResolvedValue({ id: 'audit-1' }) } as never;
   const inventory = {
+    releaseReservationsForOrderFromExpiry: vi.fn().mockResolvedValue(overrides.reservationsToRelease ?? 2),
     releaseReservationsForOrder: vi
       .fn()
       .mockResolvedValue(overrides.reservationsToRelease ?? 2),
@@ -92,6 +93,50 @@ describe('OrderCommandService', () => {
 
   beforeEach(() => {
     ctx = setup();
+  });
+
+  it('uses the fixed system identity and correlated inventory path for expiry only', async () => {
+    ctx = setup({ candidates: [{ id: pendingOrder.id }] });
+    expect(await ctx.service.expireAbandonedOrdersAsSystem('worker:expiry-1', { now: pendingOrder.reservationExpiresAt }))
+      .toEqual({ data: { expired: 1 } });
+    expect(ctx.tx.$executeRaw).toHaveBeenCalled();
+    expect(ctx.inventory.releaseReservationsForOrderFromExpiry).toHaveBeenCalledWith(ctx.tx, pendingOrder.id, `worker:expiry-1:${pendingOrder.id}`);
+    expect(ctx.inventory.releaseReservationsForOrder).not.toHaveBeenCalled();
+    expect(ctx.tx.orderTransition.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      actorId: null, requestId: `worker:expiry-1:${pendingOrder.id}`, reason: 'RESERVATION_EXPIRED',
+    }) }));
+    expect(ctx.audit.record).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'order.expired', actorId: null, requestId: `worker:expiry-1:${pendingOrder.id}`,
+      metadata: expect.objectContaining({ systemActor: 'order-reservation-expiry', transitionId: 'transition-1' }),
+    }), ctx.tx);
+  });
+
+  it('does not accept a caller-supplied system flag through tracked human commands', async () => {
+    await expect(ctx.service.expirePendingPaymentOrders({ actorId: null, requestId: 'forged-system', systemActor: 'order-reservation-expiry' } as never))
+      .rejects.toThrow('tracked actor');
+    await expect(ctx.service.cancelAsStaff('', pendingOrder.id, { requestId: 'forged-system', idempotencyKey: 'test-key' }))
+      .rejects.toThrow('tracked actor');
+    expect(ctx.prisma.order.findMany).not.toHaveBeenCalled();
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid worker correlation before touching the database', async () => {
+    await expect(ctx.service.expireAbandonedOrdersAsSystem(' ')).rejects.toThrow('bounded correlation ID');
+    expect(ctx.prisma.order.findMany).not.toHaveBeenCalled();
+    expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { ...pendingOrder, payments: [{ id: 'pending-attempt' }] },
+    { ...pendingOrder, status: 'PAID' },
+    { ...pendingOrder, reservationExpiresAt: new Date('2099-01-01T00:00:00Z') },
+  ])('keeps current deadline and payment guards on the system path (%#)', async order => {
+    ctx = setup({ order, candidates: [{ id: order.id }] });
+    expect(await ctx.service.expireAbandonedOrdersAsSystem('worker:guard', { now: pendingOrder.reservationExpiresAt }))
+      .toEqual({ data: { expired: 0 } });
+    expect(ctx.inventory.releaseReservationsForOrderFromExpiry).not.toHaveBeenCalled();
+    expect(ctx.audit.record).not.toHaveBeenCalled();
+    expect(ctx.tx.outboxEvent.create).not.toHaveBeenCalled();
   });
 
   it('cancels an owned pending-payment order and compensates its reservations', async () => {

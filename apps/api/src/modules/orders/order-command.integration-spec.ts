@@ -289,6 +289,90 @@ describe.sequential('OrderCommandService database integration', () => {
     await expect(prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: 'ORDER_CANCELLED' } })).resolves.toBe(0);
   });
 
+  it('attributes system expiry and both reservation releases without creating or impersonating a User', async () => {
+    const order = await createPendingOrderWithLines(customerId, [
+      { variantId: variantAId, locationId: locationAId, quantity: 2 },
+      { variantId: variantBId, locationId: locationBId, quantity: 1 },
+    ]);
+    await makeOverdue(order.id);
+    const usersBefore = await prisma.user.count();
+    const requestId = `${requestIdPrefix}-system`;
+    expect(await commands.expireAbandonedOrdersAsSystem(requestId)).toEqual({ data: { expired: 1 } });
+    const correlated = `${requestId}:${order.id}`;
+    const transition = await prisma.orderTransition.findFirstOrThrow({ where: { orderId: order.id, to: 'CANCELLED' } });
+    expect(transition).toMatchObject({ actorId: null, requestId: correlated, reason: 'RESERVATION_EXPIRED' });
+    const events = await prisma.auditLog.findMany({ where: { requestId: correlated } });
+    expect(events).toHaveLength(3);
+    for (const event of events) {
+      expect(event.actorId).toBeNull();
+      expect(event.metadata).toMatchObject({ systemActor: 'order-reservation-expiry' });
+    }
+    expect(events.find(event => event.action === 'order.expired')?.metadata).toMatchObject({ transitionId: transition.id });
+    for (const event of events.filter(event => event.action === 'inventory.reservation.released')) {
+      expect(event.metadata).toMatchObject({ orderId: order.id });
+    }
+    const balances = await prisma.inventoryBalance.findMany({ where: { warehouseId, variantId: { in: [variantAId, variantBId] } } });
+    expect(balances).toHaveLength(2);
+    for (const balance of balances) {
+      expect(balance.onHand).toBe(balance.variantId === variantAId ? 2 : 1);
+      expect(balance.reserved).toBe(0);
+      expect(balance.available).toBe(balance.onHand);
+    }
+    expect(await prisma.stockReservation.count({ where: { orderId: order.id, status: 'RELEASED' } })).toBe(2);
+    expect(await prisma.inventoryMovement.count({ where: { referenceType: 'order', referenceId: order.id } })).toBe(0);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: 'ORDER_EXPIRED' } })).toBe(1);
+    const restarted = new OrderCommandService(prisma, audit, inventory);
+    expect(await restarted.expireAbandonedOrdersAsSystem(`${requestId}-restarted`)).toEqual({ data: { expired: 0 } });
+    expect(await prisma.auditLog.count({ where: { requestId: correlated } })).toBe(3);
+    expect(await prisma.orderTransition.count({ where: { orderId: order.id, to: 'CANCELLED' } })).toBe(1);
+    expect(await prisma.user.count()).toBe(usersBefore);
+  });
+
+  it('coalesces two system expiry callers into one audited transition and release', async () => {
+    const order = await createPendingOrderWithLines(customerId, [{ variantId: variantAId, locationId: locationAId, quantity: 1 }]);
+    await makeOverdue(order.id);
+    const results = await Promise.all([
+      commands.expireAbandonedOrdersAsSystem(`${requestIdPrefix}-system-race-a`),
+      commands.expireAbandonedOrdersAsSystem(`${requestIdPrefix}-system-race-b`),
+    ]);
+    expect(results.reduce((sum, result) => sum + result.data.expired, 0)).toBe(1);
+    expect(await prisma.orderTransition.count({ where: { orderId: order.id, to: 'CANCELLED', actorId: null } })).toBe(1);
+    expect(await prisma.auditLog.count({ where: { entityId: order.id, action: 'order.expired', actorId: null } })).toBe(1);
+    expect(await prisma.stockReservation.count({ where: { orderId: order.id, status: 'RELEASED' } })).toBe(1);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: 'ORDER_EXPIRED' } })).toBe(1);
+    const balance = await prisma.inventoryBalance.findFirstOrThrow({ where: { warehouseId, variantId: variantAId } });
+    expect(balance).toMatchObject({ onHand: 1, reserved: 0, available: 1 });
+  });
+
+  it('preserves attempted payments and their stock on the system entry point', async () => {
+    const order = await createPendingOrderWithLines(customerId, [{ variantId: variantAId, locationId: locationAId, quantity: 1 }]);
+    await makeOverdue(order.id);
+    await prisma.payment.create({ data: {
+      orderId: order.id, amount: 150n, status: 'PENDING', provider: 'zarinpal', gatewayEnvironment: 'sandbox',
+      idempotencyKey: `${runId}-system-held`, idempotencyFingerprint: sha256(`${runId}-system-held`),
+    } });
+    const balanceBefore = await prisma.inventoryBalance.findFirstOrThrow({ where: { warehouseId, variantId: variantAId } });
+    expect(await commands.expireAbandonedOrdersAsSystem(`${requestIdPrefix}-system-held`)).toEqual({ data: { expired: 0 } });
+    await assertPreserved(order.id, balanceBefore);
+    expect(await prisma.payment.findFirstOrThrow({ where: { orderId: order.id } })).toMatchObject({ status: 'PENDING', authority: null });
+  });
+
+  it.each(['order.expired', 'inventory.reservation.released'])('rolls back system expiry when %s audit fails', async action => {
+    const order = await createPendingOrderWithLines(customerId, [{ variantId: variantAId, locationId: locationAId, quantity: 1 }]);
+    await makeOverdue(order.id);
+    const balanceBefore = await prisma.inventoryBalance.findFirstOrThrow({ where: { warehouseId, variantId: variantAId } });
+    const record = audit.record.bind(audit);
+    const failure = vi.spyOn(audit, 'record').mockImplementation(async (event, tx) => {
+      if (event.action === action) throw new Error('Isolated system expiry audit failure');
+      return record(event, tx);
+    });
+    try {
+      await expect(commands.expireAbandonedOrdersAsSystem(`${requestIdPrefix}-system-rollback`)).rejects.toThrow('Isolated system expiry audit failure');
+      await assertPreserved(order.id, balanceBefore);
+      expect(await prisma.auditLog.count({ where: { requestId: { startsWith: `${requestIdPrefix}-system-rollback` } } })).toBe(0);
+    } finally { failure.mockRestore(); }
+  });
+
   it('expires overdue pending orders once and idempotently returns zero on a later run', async () => {
     const order = await createPendingOrderWithLines(customerId, [
       { variantId: variantAId, locationId: locationAId, quantity: 1 },
