@@ -21,6 +21,17 @@ This naming rule is a safety boundary, not a substitute for separate credentials
 infrastructure. Never point the integration runner at a database containing valuable
 data, even if its name happens to end in `_test`.
 
+The complete integration gate also requires reachable Redis. Set `REDIS_URL`
+explicitly; the root Turbo task forwards it together with `CI`, `DATABASE_URL`
+and `NODE_ENV`. A configured endpoint or CI run must fail if Redis is unavailable,
+rather than report the OTP over-verification and rate-limit tests as skipped.
+Only an unconfigured non-CI local probe retains the optional skip behavior;
+those skips are not complete integration acceptance. Use a fresh disposable test
+database for the complete gate, separate from browser journeys and previous runs:
+checkout/outbox tests assert global absence of unexpected side effects and must
+not inherit earlier orders/events. Never reset a shared or valuable database to
+prepare this gate.
+
 ## Local PostgreSQL setup
 
 Start the repository PostgreSQL service, then create dedicated test and shadow
@@ -40,6 +51,7 @@ Export only test endpoints in the shell running database checks:
 
 ```bash
 export NODE_ENV=test
+export REDIS_URL='redis://127.0.0.1:6379'
 export ALLOW_DATABASE_SEED=true
 export DATABASE_URL='postgresql://app:app@127.0.0.1:5432/iraniyaragh_test?schema=public'
 export PSQL_DATABASE_URL='postgresql://app:app@127.0.0.1:5432/iraniyaragh_test'
