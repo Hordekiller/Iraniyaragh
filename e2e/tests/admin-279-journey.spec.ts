@@ -186,6 +186,10 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
   let attributeCode = '';
   let attributeName = '';
   let variantSku = '';
+  let rootName = '';
+  let childName = '';
+  let rootSlug = '';
+  let childSlug = '';
 
   test.beforeEach(async ({ page }) => {
     await signInDiAsAdmin(page);
@@ -196,19 +200,21 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     productName = `قفل اهرمی E2E ${stamp}`;
     productSlug = `279-e2e-lock-${stamp}`;
 
-    const rootName = `دستهٔ E2E ${stamp}`;
-    const childName = `زیرمجموعهٔ E2E ${stamp}`;
+    rootName = `دستهٔ E2E ${stamp}`;
+    childName = `زیرمجموعهٔ E2E ${stamp}`;
+    rootSlug = `e2e-parent-${stamp}`;
+    childSlug = `e2e-child-${stamp}`;
     await page.goto('/catalog/categories');
     await expect(page.getByRole('button', { name: 'دسته‌بندی جدید', exact: true })).toBeVisible();
     await tap(page.getByRole('button', { name: 'دسته‌بندی جدید', exact: true }));
     await page.locator('#category-name').fill(rootName);
-    await page.locator('#category-slug').fill(`e2e-parent-${stamp}`);
+    await page.locator('#category-slug').fill(rootSlug);
     await tap(page.getByRole('button', { name: 'ساخت دسته‌بندی', exact: true }));
     await expect(page.getByRole('button', { name: `افزودن زیرمجموعه ${rootName}` })).toBeVisible();
     await tap(page.getByRole('button', { name: `افزودن زیرمجموعه ${rootName}` }));
     await expect(page.getByRole('combobox', { name: 'دستهٔ والد' })).toContainText(rootName);
     await page.locator('#category-name').fill(childName);
-    await page.locator('#category-slug').fill(`e2e-child-${stamp}`);
+    await page.locator('#category-slug').fill(childSlug);
     await tap(page.getByRole('button', { name: 'ساخت دسته‌بندی', exact: true }));
     await expect(page.getByText(`${rootName} / ${childName}`, { exact: true })).toBeVisible();
     await page.reload();
@@ -408,8 +414,23 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
 
     await page.goto(realStorefront);
     await expect(page.getByRole('link', { name: new RegExp(productName) }).first()).toBeVisible({ timeout: 20_000 });
+    const homepageCategories = page.getByRole('region', { name: 'دسته‌بندی کالاها' });
+    await expect(homepageCategories.getByRole('link', { name: childName, exact: true })).toHaveCount(0);
+    await tap(homepageCategories.getByRole('link', { name: rootName, exact: true }));
+    await expect(page).toHaveURL(`${realStorefront}/category/${rootSlug}`);
+    const subcategories = page.getByRole('region', { name: `زیردسته‌های ${rootName}` });
+    await expect(subcategories.getByRole('link')).toHaveCount(1);
+    // A parent projection includes the real product assigned to its child.
+    await expect(page.getByRole('link', { name: new RegExp(productName) }).first()).toBeVisible();
+    await tap(subcategories.getByRole('link', { name: childName, exact: true }));
+    await expect(page).toHaveURL(`${realStorefront}/category/${childSlug}`);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: childName, exact: true })).toBeVisible();
+    const breadcrumb = page.getByRole('navigation', { name: 'مسیر دسته‌بندی' });
+    await expect(breadcrumb.getByRole('link', { name: rootName, exact: true })).toHaveAttribute('href', `/category/${rootSlug}`);
+    await tap(page.getByRole('link', { name: new RegExp(productName) }).first());
 
-    await page.goto(target);
+    await expect(page).toHaveURL(target);
     await expect(page).toHaveURL(new RegExp(`/product/[^/]+$`));
 
     const rich = page.locator('[data-rich-text="true"]');

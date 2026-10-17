@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { CategoryGrid } from '../components/catalog/CategoryGrid'
 import { HeroSlider } from '../components/content/HeroSlider'
 import { NewsletterStatus } from '../components/content/NewsletterStatus'
 import { ProductGrid } from '../components/product/ProductGrid'
@@ -63,6 +63,8 @@ export function HomePage() {
     setAttempt(current => current + 1)
   }
 
+  const rootCategories = catalog?.categories.filter(category => category.parentId === null) ?? []
+
   return (
     <div>
       {fixtureCatalogEnabled && (
@@ -90,17 +92,10 @@ export function HomePage() {
         <>
           <section id={SECTION_IDS.categories} className="max-w-[1280px] mx-auto px-4 lg:px-6 mt-8 lg:mt-10" aria-labelledby="home-categories-title">
             <h2 id="home-categories-title" className="text-xl lg:text-2xl font-black text-slate-900">دسته‌بندی کالاها</h2>
-            {catalog.categories.length === 0 ? (
+            {rootCategories.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">هنوز دسته‌بندی منتشرشده‌ای وجود ندارد.</p>
             ) : (
-              <div className="mt-5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
-                {catalog.categories.map(category => (
-                  <Link key={category.id} to={ROUTES.category(category.slug)} className="group flex min-h-28 items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white p-4 hover:border-[#FF4D00]/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00]">
-                    <span className="font-bold text-slate-900">{category.name}</span>
-                    <ArrowLeft size={18} aria-hidden="true" className="shrink-0 text-[#C2410C]" />
-                  </Link>
-                ))}
-              </div>
+              <CategoryGrid categories={rootCategories} />
             )}
           </section>
 
