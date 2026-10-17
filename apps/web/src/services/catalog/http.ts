@@ -44,6 +44,7 @@ export class CatalogHttpClient implements CatalogApi {
       .then((response) =>
         response.data.items.map((category) => ({
           id: category.id,
+          parentId: category.parentId,
           name: category.name,
           slug: category.slug,
           productCount: category.productCount,

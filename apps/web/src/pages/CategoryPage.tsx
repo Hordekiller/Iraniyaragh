@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { CategoryGrid } from '../components/catalog/CategoryGrid'
 import { ProductGrid } from '../components/product/ProductGrid'
 import { useCatalogApi } from '../state/catalog-context'
 import { toPersianDigits } from '../lib/format'
@@ -10,14 +11,14 @@ export function CategoryPage() {
   const api = useCatalogApi()
   const { slug = '' } = useParams<{ slug: string }>()
   const [items, setItems] = useState<CatalogProduct[] | null>(null)
-  const [category, setCategory] = useState<CatalogCategory | null>(null)
+  const [categories, setCategories] = useState<CatalogCategory[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const [resolvedSlug, setResolvedSlug] = useState(slug)
   if (resolvedSlug !== slug) {
     setResolvedSlug(slug)
     setItems(null)
-    setCategory(null)
+    setCategories([])
     setError(null)
   }
 
@@ -27,7 +28,7 @@ export function CategoryPage() {
     Promise.all([api.listCategories(), api.listProducts({ categorySlug: slug })])
       .then(([categories, result]) => {
         if (cancelled) return
-        setCategory(categories.find(c => c.slug === slug) ?? null)
+        setCategories(categories)
         setItems(result.items)
       })
       .catch(() => {
@@ -40,15 +41,42 @@ export function CategoryPage() {
     }
   }, [api, slug])
 
+  const category = categories.find(item => item.slug === slug) ?? null
+  const children = category ? categories.filter(item => item.parentId === category.id) : []
+  const byId = new Map(categories.map(item => [item.id, item]))
+  const ancestors: CatalogCategory[] = []
+  const visited = new Set(category ? [category.id] : [])
+  let parentId = category?.parentId
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId)
+    const parent = byId.get(parentId)
+    if (!parent) break
+    ancestors.unshift(parent)
+    parentId = parent.parentId
+  }
+
   return (
     <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
       <nav aria-label="مسیر دسته‌بندی" className="text-xs text-slate-400 mb-3">
         <Link to={ROUTES.home} className="hover:text-[#FF4D00]">خانه</Link>
-        <span className="mx-1">/</span>
-        <span className="text-slate-600 font-bold">{category?.name ?? 'دسته‌بندی'}</span>
+        {ancestors.map(ancestor => (
+          <span key={ancestor.id}>
+            <span className="mx-1" aria-hidden="true">/</span>
+            <Link to={ROUTES.category(ancestor.slug)} className="hover:text-[#FF4D00]">{ancestor.name}</Link>
+          </span>
+        ))}
+        <span className="mx-1" aria-hidden="true">/</span>
+        <span aria-current="page" className="text-slate-600 font-bold">{category?.name ?? 'دسته‌بندی'}</span>
       </nav>
 
       <h1 className="font-black text-slate-900 text-lg lg:text-xl">{category?.name ?? 'دسته‌بندی'}</h1>
+
+      {children.length > 0 && (
+        <section className="mt-6" aria-labelledby="category-children-title">
+          <h2 id="category-children-title" className="text-base font-bold text-slate-900">زیردسته‌های {category?.name}</h2>
+          <CategoryGrid categories={children} />
+        </section>
+      )}
 
       {items === null && !error && (
         <div className="mt-8 text-slate-500" aria-live="polite">در حال بارگذاری...</div>

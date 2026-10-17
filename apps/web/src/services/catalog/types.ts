@@ -60,6 +60,7 @@ export type CatalogQuery = {
 /** Categories exposed to the storefront browsing UI. */
 export type CatalogCategory = {
   id: string
+  parentId: string | null
   name: string
   slug: string
   productCount: number

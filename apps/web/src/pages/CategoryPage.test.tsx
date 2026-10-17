@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { CatalogProvider } from '../state/CatalogProvider'
@@ -7,6 +7,7 @@ import { CategoryPage } from './CategoryPage'
 
 const CATEGORY: CatalogCategory = {
   id: 'cat-power',
+  parentId: null,
   name: 'ابزار برقی',
   slug: 'power-tools',
   productCount: 320,
@@ -96,6 +97,53 @@ describe('CategoryPage', () => {
     }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('دریافت دسته‌بندی با خطا مواجه شد.')
+  })
+
+  it('drills through four levels one at a time and navigates back through ancestors', async () => {
+    const child = { ...CATEGORY, id: 'child', parentId: CATEGORY.id, name: 'ابزار سوراخ‌کاری', slug: 'drilling' }
+    const grandchild = { ...CATEGORY, id: 'grandchild', parentId: child.id, name: 'دریل', slug: 'drills' }
+    const leaf = { ...CATEGORY, id: 'leaf', parentId: grandchild.id, name: 'دریل چکشی', slug: 'hammer-drills' }
+    const sibling = { ...CATEGORY, id: 'sibling', parentId: CATEGORY.id, name: 'ابزار برش', slug: 'cutting' }
+    const otherRoot = { ...CATEGORY, id: 'other-root', name: 'ایمنی', slug: 'safety' }
+    const api = stubCatalog({
+      listCategories: vi.fn(async () => [leaf, sibling, grandchild, otherRoot, child, CATEGORY]),
+      listProducts: vi.fn(async () => ({ items: [], meta: { page: 1, perPage: 24, total: 0, pages: 0 } })),
+    })
+    renderCategory(CATEGORY.slug, api)
+
+    const children = await screen.findByRole('region', { name: 'زیردسته‌های ابزار برقی' })
+    expect(within(children).getAllByRole('link')).toHaveLength(2)
+    expect(within(children).queryByRole('link', { name: grandchild.name })).not.toBeInTheDocument()
+    expect(within(children).queryByRole('link', { name: leaf.name })).not.toBeInTheDocument()
+    expect(within(children).queryByRole('link', { name: otherRoot.name })).not.toBeInTheDocument()
+    fireEvent.click(within(children).getByRole('link', { name: child.name }))
+
+    const grandchildren = await screen.findByRole('region', { name: `زیردسته‌های ${child.name}` })
+    expect(within(grandchildren).getAllByRole('link')).toHaveLength(1)
+    fireEvent.click(within(grandchildren).getByRole('link', { name: grandchild.name }))
+    const leaves = await screen.findByRole('region', { name: `زیردسته‌های ${grandchild.name}` })
+    fireEvent.click(within(leaves).getByRole('link', { name: leaf.name }))
+
+    await screen.findByRole('heading', { name: leaf.name })
+    expect(screen.queryByRole('region')).not.toBeInTheDocument()
+    const breadcrumb = screen.getByRole('navigation', { name: 'مسیر دسته‌بندی' })
+    expect(within(breadcrumb).getAllByRole('link').map(link => link.textContent)).toEqual(['خانه', CATEGORY.name, child.name, grandchild.name])
+    expect(within(breadcrumb).getByText(leaf.name)).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(within(breadcrumb).getByRole('link', { name: CATEGORY.name }))
+    expect(await screen.findByRole('region', { name: 'زیردسته‌های ابزار برقی' })).toBeInTheDocument()
+    expect(api.listProducts).toHaveBeenLastCalledWith({ categorySlug: CATEGORY.slug })
+  })
+
+  it('restores ancestor links on a direct nested category visit', async () => {
+    const child = { ...CATEGORY, id: 'child', parentId: CATEGORY.id, name: 'دریل', slug: 'drills' }
+    const leaf = { ...CATEGORY, id: 'leaf', parentId: child.id, name: 'دریل شارژی', slug: 'cordless' }
+    renderCategory(leaf.slug, stubCatalog({ listCategories: vi.fn(async () => [leaf, CATEGORY, child]) }))
+
+    await screen.findByRole('heading', { name: leaf.name })
+    const breadcrumb = screen.getByRole('navigation', { name: 'مسیر دسته‌بندی' })
+    expect(within(breadcrumb).getByRole('link', { name: CATEGORY.name })).toHaveAttribute('href', '/category/power-tools')
+    expect(within(breadcrumb).getByRole('link', { name: child.name })).toHaveAttribute('href', '/category/drills')
+    expect(screen.getByRole('link', { name: /دریل چکشی رونیکس/ })).toBeInTheDocument()
   })
 
   it('re-fetches when the slug route parameter changes', async () => {

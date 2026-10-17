@@ -22,10 +22,23 @@ describe('CatalogHttpClient', () => {
     expect(nativeLikeFetch).toHaveBeenCalledTimes(1)
   })
 
+  it('preserves parent IDs from the public contract for category drill-down', async () => {
+    const fetcher = vi.fn(async () => response({ data: { items: [
+      { id: 'root', parentId: null, name: 'کابینت', slug: 'cabinet', productCount: 0 },
+      { id: 'child', parentId: 'root', name: 'لولا', slug: 'hinges', productCount: 0 },
+      { id: 'leaf', parentId: 'child', name: 'لولا آرام‌بند', slug: 'soft-close', productCount: 0 },
+    ] } }))
+
+    await expect(new CatalogHttpClient({ fetch: fetcher }).listCategories()).resolves.toMatchObject([
+      { id: 'root', parentId: null }, { id: 'child', parentId: 'root' }, { id: 'leaf', parentId: 'child' },
+    ])
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
   it('maps live public list data and resolves category filters', async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url.endsWith('/categories')) return response({ data: { items: [{ id: 'cat-1', name: 'ابزار', slug: 'tools', productCount: 2 }] } })
+      if (url.endsWith('/categories')) return response({ data: { items: [{ id: 'cat-1', parentId: null, name: 'ابزار', slug: 'tools', productCount: 2 }] } })
       if (url.includes('/products?')) return response({ data: { items: [{ id: 'p-1', name: 'دریل', slug: 'drill', status: 'PUBLISHED', brandId: null, categoryId: 'cat-1', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', primaryMedia: image, startingPrice: { amount: '1250000', currency: 'IRR' } }], meta: { page: 1, perPage: 100, total: 1, pages: 1 } } })
       throw new Error(`unexpected request: ${url}`)
     })
@@ -96,7 +109,7 @@ describe('CatalogHttpClient', () => {
   it('retries categories after a transient transport failure', async () => {
     const fetcher = vi.fn()
       .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce(response({ data: { items: [{ id: 'cat-1', name: 'ابزار', slug: 'tools', productCount: 1 }] } }))
+      .mockResolvedValueOnce(response({ data: { items: [{ id: 'cat-1', parentId: null, name: 'ابزار', slug: 'tools', productCount: 1 }] } }))
     const client = new CatalogHttpClient({ fetch: fetcher })
 
     await expect(client.listCategories()).rejects.toMatchObject({ code: 'UPSTREAM_UNAVAILABLE' })
