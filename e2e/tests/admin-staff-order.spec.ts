@@ -298,6 +298,7 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     // All settings and documents belong to the disposable E2E database. No
     // tax assumption or financial seed is introduced on the live server.
     await page.goto('/settings/invoices');
+    await expect(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' })).toBeEnabled();
     const seller = `فروشندهٔ صدور ایزوله ${suffix}`;
     await page.getByRole('textbox', { name: /نام فروشنده \/ فروشگاه/ }).fill(seller);
     await page.getByRole('textbox', { name: /نشانی عمومی فروشنده/ }).fill('نشانی عمومی فروشندهٔ آزمون');
@@ -373,12 +374,25 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     // Restore inactive settings via their real command. Changing policy must
     // leave the issued snapshot intact and not affect later test projects.
     await page.goto('/settings/invoices');
-    await page.getByRole('switch', { name: 'فعال برای صدور فاکتور پس از تأیید سیاست' }).uncheck();
+    // uncheck() can return immediately on the initial unchecked loading form.
+    // Wait for the persisted policy before changing its activation state.
+    await expect(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' })).toBeEnabled();
+    const activePolicy = page.getByRole('switch', { name: 'فعال برای صدور فاکتور پس از تأیید سیاست' });
+    await expect(activePolicy).toBeChecked();
+    await activePolicy.uncheck();
+    await expect(activePolicy).not.toBeChecked();
     await page.getByRole('textbox', { name: /نام فروشنده \/ فروشگاه/ }).fill(`فروشندهٔ بعد از صدور ${suffix}`);
     await page.getByRole('textbox', { name: /دلیل ثبت نسخهٔ جدید/ }).fill('پایان آزمون صدور؛ غیرفعال‌سازی سیاست ایزوله');
     const deactivate = page.waitForResponse(response => response.url().endsWith('/api/v1/settings/admin/invoice-policy') && response.request().method() === 'PUT');
     await tap(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' }));
-    expect((await deactivate).status()).toBe(200);
+    const deactivated = await deactivate;
+    expect(deactivated.status()).toBe(200);
+    expect((await deactivated.json()).data.policy.isActive).toBe(false);
+    await expect(page.getByText(/نسخهٔ \d+ در سرور ثبت شد/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' })).toBeEnabled();
+    await expect(activePolicy).not.toBeChecked();
+    await expect(page.getByRole('region', { name: 'تنظیمات فعلی سرور' })).toContainText('غیرفعال');
     await page.goto(documentHref!);
     await expect(page.getByText(seller, { exact: true })).toBeVisible();
     await page.goto(orderHref);
