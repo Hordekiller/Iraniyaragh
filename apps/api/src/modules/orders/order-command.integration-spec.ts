@@ -296,6 +296,7 @@ describe.sequential('OrderCommandService database integration', () => {
     ]);
     await makeOverdue(order.id);
     const usersBefore = await prisma.user.count();
+    const untouchedBalance = await balanceAt(variantAId, locationBId);
     const requestId = `${requestIdPrefix}-system`;
     expect(await commands.expireAbandonedOrdersAsSystem(requestId)).toEqual({ data: { expired: 1 } });
     const correlated = `${requestId}:${order.id}`;
@@ -311,13 +312,17 @@ describe.sequential('OrderCommandService database integration', () => {
     for (const event of events.filter(event => event.action === 'inventory.reservation.released')) {
       expect(event.metadata).toMatchObject({ orderId: order.id });
     }
-    const balances = await prisma.inventoryBalance.findMany({ where: { warehouseId, variantId: { in: [variantAId, variantBId] } } });
+    const balances = await Promise.all([
+      balanceAt(variantAId, locationAId),
+      balanceAt(variantBId, locationBId),
+    ]);
     expect(balances).toHaveLength(2);
     for (const balance of balances) {
       expect(balance.onHand).toBe(balance.variantId === variantAId ? 2 : 1);
       expect(balance.reserved).toBe(0);
       expect(balance.available).toBe(balance.onHand);
     }
+    expect(await balanceAt(variantAId, locationBId)).toEqual(untouchedBalance);
     expect(await prisma.stockReservation.count({ where: { orderId: order.id, status: 'RELEASED' } })).toBe(2);
     expect(await prisma.inventoryMovement.count({ where: { referenceType: 'order', referenceId: order.id } })).toBe(0);
     expect(await prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: 'ORDER_EXPIRED' } })).toBe(1);
@@ -340,7 +345,7 @@ describe.sequential('OrderCommandService database integration', () => {
     expect(await prisma.auditLog.count({ where: { entityId: order.id, action: 'order.expired', actorId: null } })).toBe(1);
     expect(await prisma.stockReservation.count({ where: { orderId: order.id, status: 'RELEASED' } })).toBe(1);
     expect(await prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: 'ORDER_EXPIRED' } })).toBe(1);
-    const balance = await prisma.inventoryBalance.findFirstOrThrow({ where: { warehouseId, variantId: variantAId } });
+    const balance = await balanceAt(variantAId, locationAId);
     expect(balance).toMatchObject({ onHand: 1, reserved: 0, available: 1 });
   });
 
@@ -351,7 +356,8 @@ describe.sequential('OrderCommandService database integration', () => {
       orderId: order.id, amount: 150n, status: 'PENDING', provider: 'zarinpal', gatewayEnvironment: 'sandbox',
       idempotencyKey: `${runId}-system-held`, idempotencyFingerprint: sha256(`${runId}-system-held`),
     } });
-    const balanceBefore = await prisma.inventoryBalance.findFirstOrThrow({ where: { warehouseId, variantId: variantAId } });
+    const balanceBefore = await balanceAt(variantAId, locationAId);
+    expect(balanceBefore).toMatchObject({ onHand: 1, reserved: 1, available: 0 });
     expect(await commands.expireAbandonedOrdersAsSystem(`${requestIdPrefix}-system-held`)).toEqual({ data: { expired: 0 } });
     await assertPreserved(order.id, balanceBefore);
     expect(await prisma.payment.findFirstOrThrow({ where: { orderId: order.id } })).toMatchObject({ status: 'PENDING', authority: null });
@@ -360,7 +366,8 @@ describe.sequential('OrderCommandService database integration', () => {
   it.each(['order.expired', 'inventory.reservation.released'])('rolls back system expiry when %s audit fails', async action => {
     const order = await createPendingOrderWithLines(customerId, [{ variantId: variantAId, locationId: locationAId, quantity: 1 }]);
     await makeOverdue(order.id);
-    const balanceBefore = await prisma.inventoryBalance.findFirstOrThrow({ where: { warehouseId, variantId: variantAId } });
+    const balanceBefore = await balanceAt(variantAId, locationAId);
+    expect(balanceBefore).toMatchObject({ onHand: 1, reserved: 1, available: 0 });
     const record = audit.record.bind(audit);
     const failure = vi.spyOn(audit, 'record').mockImplementation(async (event, tx) => {
       if (event.action === action) throw new Error('Isolated system expiry audit failure');
@@ -776,6 +783,12 @@ describe.sequential('OrderCommandService database integration', () => {
       },
     } } });
     return new OrderCommandService(client as unknown as PrismaService, audit, inventory);
+  }
+
+  function balanceAt(variantId: string, locationId: string) {
+    return prisma.inventoryBalance.findUniqueOrThrow({
+      where: { warehouseId_locationId_variantId: { warehouseId, locationId, variantId } },
+    });
   }
 
   async function assertPreserved(orderId: string, balanceBefore: { id: string; onHand: number; reserved: number; available: number; version: number }) {
