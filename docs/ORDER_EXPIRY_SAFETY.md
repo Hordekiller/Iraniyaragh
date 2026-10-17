@@ -45,8 +45,15 @@ Coverage must retain the late-settlement/no-double-consume assertions after an
 explicit authorized cancellation, and separately prove that automatic expiry
 preserves a pending attempt until authoritative verification.
 
-#450 stays OPEN for trusted system identity, bounded durable maintenance wiring,
+#450 stays OPEN for reviewed system identity, bounded durable maintenance wiring,
 reconciliation of attempted orders and live stock-release/restart acceptance.
 #81/#451 cover inventory batching; #453 covers the Web deadline/recovery guard.
 No API/schema, provider configuration or VPS deployment change is part of this
 source slice. Green tests alone do not activate it.
+
+The follow-up internal identity candidate is defined in
+[ADR-0032](adr/0032-order-expiry-system-attribution.md). It records the fixed
+`order-reservation-expiry` system identity in transactional order and inventory
+audit metadata without creating a User or relaxing human command checks. It is
+not scheduled or deployed; review, test results and runtime acceptance remain
+separate gates.

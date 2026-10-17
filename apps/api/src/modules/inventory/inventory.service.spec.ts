@@ -305,6 +305,15 @@ describe('InventoryService guards and queries', () => {
     expect(ctx.prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('does not accept a system identity through the manual reservation release path', async () => {
+    await expect(ctx.service.releaseReservationsForOrder(ctx.tx as never, 'order-1', {
+      actorId: null, requestId: 'job-1', systemActor: 'order-reservation-expiry',
+    } as never)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(ctx.service.releaseReservationsForOrderFromExpiry(ctx.tx as never, 'order-1', ' '))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(ctx.tx.stockReservation.findMany).not.toHaveBeenCalled();
+  });
+
   it('writes a movement and an audit row on a successful adjustment', async () => {
     ctx.tx.inventoryBalance.findUnique.mockResolvedValue(null);
     ctx.tx.inventoryMovement.create.mockResolvedValue({
