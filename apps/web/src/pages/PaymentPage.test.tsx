@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthApiError } from '../lib/auth/errors'
 import { AuthProvider } from '../state/AuthProvider'
 import { OrderProvider } from '../state/OrderProvider'
@@ -49,7 +49,13 @@ function renderPage(order = ORDER, overrides = {}, returnMode = false) {
 }
 
 describe('PaymentPage', () => {
-  beforeEach(() => gateway.redirect.mockReset())
+  const currentTime = new Date('2026-09-19T10:01:00.000Z')
+  beforeEach(() => {
+    gateway.redirect.mockReset()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(currentTime)
+  })
+  afterEach(() => vi.useRealTimers())
 
   it('clears the previous customer order when the principal changes without an anonymous render', async () => {
     const auth = testAuthContext()
@@ -230,6 +236,125 @@ describe('PaymentPage', () => {
       await screen.findByRole('heading', { name: 'وضعیت پرداخت نیازمند بررسی است' }),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
+    expect(initiatePayment).not.toHaveBeenCalled()
+  })
+
+  it('blocks a new payment at the exact reservation deadline without cancelling the order', async () => {
+    vi.setSystemTime(new Date(ORDER.reservationExpiresAt))
+    const initiatePayment = vi.fn()
+    const cancelOrder = vi.fn()
+    renderPage(ORDER, { initiatePayment, cancelOrder })
+    expect(await screen.findByRole('heading', { name: 'مهلت پرداخت این سفارش به پایان رسیده است' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'جزئیات سفارش' })).toHaveAttribute('href', '/orders/order-1')
+    expect(initiatePayment).not.toHaveBeenCalled()
+    expect(cancelOrder).not.toHaveBeenCalled()
+    expect(gateway.redirect).not.toHaveBeenCalled()
+  })
+
+  it('removes the payment action when the deadline passes while the page is idle', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] })
+    vi.setSystemTime(currentTime)
+    const api = commerceStub({ getOrder: vi.fn().mockResolvedValue(ORDER), initiatePayment: vi.fn() })
+    await act(async () => { render(sessionPage(testAuthContext(), api)) })
+    expect(screen.getByRole('button', { name: /پرداخت با زرین‌پال/ })).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(Date.parse(ORDER.reservationExpiresAt) - currentTime.getTime()) })
+    expect(screen.getByRole('heading', { name: 'مهلت پرداخت این سفارش به پایان رسیده است' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
+    expect(api.getOrder).toHaveBeenCalledOnce()
+    expect(api.initiatePayment).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('rechecks the deadline on click even when the suspended tab has not run its timer', async () => {
+    const initiatePayment = vi.fn()
+    renderPage(ORDER, { initiatePayment })
+    const button = await screen.findByRole('button', { name: /پرداخت با زرین‌پال/ })
+    vi.setSystemTime(new Date(ORDER.reservationExpiresAt))
+    fireEvent.click(button)
+    expect(screen.getByRole('heading', { name: 'مهلت پرداخت این سفارش به پایان رسیده است' })).toBeInTheDocument()
+    expect(initiatePayment).not.toHaveBeenCalled()
+    expect(gateway.redirect).not.toHaveBeenCalled()
+  })
+
+  it('refreshes the deadline state when a suspended page regains focus', async () => {
+    const initiatePayment = vi.fn()
+    renderPage(ORDER, { initiatePayment })
+    await screen.findByRole('button', { name: /پرداخت با زرین‌پال/ })
+    vi.setSystemTime(new Date(ORDER.reservationExpiresAt))
+    fireEvent.focus(window)
+    expect(screen.getByRole('heading', { name: 'مهلت پرداخت این سفارش به پایان رسیده است' })).toBeInTheDocument()
+    expect(initiatePayment).not.toHaveBeenCalled()
+  })
+
+  it('fails closed for a malformed deadline without claiming payment failure', async () => {
+    const initiatePayment = vi.fn()
+    renderPage({ ...ORDER, reservationExpiresAt: 'invalid-date' }, { initiatePayment })
+    expect(await screen.findByRole('heading', { name: 'مهلت پرداخت قابل بررسی نیست' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('پرداخت تأیید نشد')).not.toBeInTheDocument()
+    expect(initiatePayment).not.toHaveBeenCalled()
+  })
+
+  it('preserves an existing pending attempt across an expired deadline and reload', async () => {
+    vi.setSystemTime(new Date(ORDER.reservationExpiresAt))
+    const initiatePayment = vi.fn()
+    const cancelOrder = vi.fn()
+    const getOrder = vi.fn().mockResolvedValue({ ...ORDER, payment: { latestStatus: 'PENDING', attemptCount: 1 } })
+    renderPage(ORDER, { getOrder, initiatePayment, cancelOrder }, true)
+    await screen.findByRole('heading', { name: 'مهلت پرداخت این سفارش به پایان رسیده است' })
+    expect(screen.getByText(/پایان مهلت به معنی ناموفق بودن پرداخت یا بازگشت وجه نیست/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /بررسی دوباره وضعیت/ }))
+    await screen.findByRole('heading', { name: 'مهلت پرداخت این سفارش به پایان رسیده است' })
+    expect(getOrder).toHaveBeenCalledTimes(2)
+    expect(initiatePayment).not.toHaveBeenCalled()
+    expect(cancelOrder).not.toHaveBeenCalled()
+  })
+
+  it('does not redirect or retry an initiation whose response arrives after expiry', async () => {
+    let finish!: (value: Awaited<ReturnType<CommerceApi['initiatePayment']>>) => void
+    const initiatePayment = vi.fn(() => new Promise<Awaited<ReturnType<CommerceApi['initiatePayment']>>>((resolve) => { finish = resolve }))
+    renderPage(ORDER, { initiatePayment })
+    fireEvent.click(await screen.findByRole('button', { name: /پرداخت با زرین‌پال/ }))
+    vi.setSystemTime(new Date(ORDER.reservationExpiresAt))
+    await act(async () => { finish({ paymentId: 'late-test-payment', status: 'PENDING', provider: 'zarinpal', amount: ORDER.totals.total, authority: 'test-authority', redirectUrl: 'https://payment.zarinpal.com/pg/StartPay/test-authority' }) })
+    expect(screen.getByText(/پایان مهلت به معنی ناموفق بودن پرداخت یا بازگشت وجه نیست/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
+    expect(initiatePayment).toHaveBeenCalledOnce()
+    expect(gateway.redirect).not.toHaveBeenCalled()
+  })
+
+  it('retains a locally unconfirmed attempt through expiry and an explicit order refresh', async () => {
+    const initiatePayment = vi.fn().mockRejectedValue(new AuthApiError({ code: 'PAYMENT_RESULT_UNCONFIRMED', statusCode: 503, message: 'unknown result' }))
+    const getOrder = vi.fn().mockResolvedValue(ORDER)
+    renderPage(ORDER, { getOrder, initiatePayment })
+    fireEvent.click(await screen.findByRole('button', { name: /پرداخت با زرین‌پال/ }))
+    await screen.findByRole('alert')
+    vi.setSystemTime(new Date(ORDER.reservationExpiresAt))
+    fireEvent.focus(window)
+    expect(screen.getByText(/پایان مهلت به معنی ناموفق بودن پرداخت یا بازگشت وجه نیست/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /بررسی دوباره وضعیت/ }))
+    await screen.findByRole('heading', { name: 'مهلت پرداخت این سفارش به پایان رسیده است' })
+    expect(screen.getByText(/پایان مهلت به معنی ناموفق بودن پرداخت یا بازگشت وجه نیست/)).toBeInTheDocument()
+    expect(getOrder).toHaveBeenCalledTimes(2)
+    expect(initiatePayment).toHaveBeenCalledOnce()
+    expect(gateway.redirect).not.toHaveBeenCalled()
+  })
+
+  it('keeps a server-verified paid order successful after its historical deadline', async () => {
+    vi.setSystemTime(new Date(ORDER.reservationExpiresAt))
+    renderPage({ ...ORDER, status: 'PAID', payment: { latestStatus: 'PAID', attemptCount: 1 } }, {}, true)
+    expect(await screen.findByRole('heading', { name: 'پرداخت توسط سرور تأیید شد' })).toBeInTheDocument()
+    expect(screen.queryByText('مهلت پرداخت این سفارش به پایان رسیده است')).not.toBeInTheDocument()
+  })
+
+  it('shows a cancelled unpaid order without inviting a new payment or inventing a refund', async () => {
+    const initiatePayment = vi.fn()
+    renderPage({ ...ORDER, status: 'CANCELLED' }, { initiatePayment })
+    expect(await screen.findByRole('heading', { name: 'سفارش لغو شده است' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /پرداخت با زرین‌پال/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'پرداخت توسط سرور تأیید شد' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'مشاهده جزئیات سفارش' })).toHaveAttribute('href', '/orders/order-1')
     expect(initiatePayment).not.toHaveBeenCalled()
   })
 })
