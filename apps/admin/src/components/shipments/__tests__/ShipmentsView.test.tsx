@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedbackProvider } from '@/components/ui/FeedbackProvider';
 import { SHIPMENTS_READ } from '@/lib/shipments/shipments-permissions';
@@ -132,7 +132,7 @@ describe('ShipmentsView', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(mocks.getShipment).toHaveBeenCalledWith('shipment-77', expect.any(AbortSignal));
-    expect(within(dialog).getByText('نشانی: خیابان ***، پلاک **')).toBeInTheDocument();
+    expect(await within(dialog).findByText('نشانی: خیابان ***، پلاک **')).toBeInTheDocument();
     expect(within(dialog).getByText('کد پستی: *****671')).toBeInTheDocument();
     expect(within(dialog).getByText('س*** ا***')).toBeInTheDocument();
     expect(within(dialog).getByText('DEMO-SCR-12V-S1')).toBeInTheDocument();
@@ -140,13 +140,18 @@ describe('ShipmentsView', () => {
   });
 
   it('renders the persisted event timeline with the delivery proof', async () => {
+    let resolveDetail!: (value: typeof detail) => void;
+    mocks.getShipment.mockReturnValue(new Promise<typeof detail>((resolve) => { resolveDetail = resolve; }));
     renderView();
     await screen.findByRole('link', { name: 'IR-2026-1042' });
 
     fireEvent.click(screen.getByRole('button', { name: 'جزئیات' }));
     const dialog = await screen.findByRole('dialog');
 
-    expect(within(dialog).getByText('ثبت ارسال')).toBeInTheDocument();
+    expect(within(dialog).getByText('در حال بارگذاری جزئیات…')).toBeInTheDocument();
+    expect(within(dialog).queryByText('ثبت ارسال')).not.toBeInTheDocument();
+    await act(async () => { resolveDetail(detail); });
+    expect(await within(dialog).findByText('ثبت ارسال')).toBeInTheDocument();
     expect(within(dialog).getByText('تأیید تحویل با مدرک')).toBeInTheDocument();
     expect(within(dialog).getByText('آماده ارسال ← ارسال‌شده')).toBeInTheDocument();
     expect(within(dialog).getByText('ارسال‌شده ← تحویل‌شده')).toBeInTheDocument();
@@ -163,7 +168,7 @@ describe('ShipmentsView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'جزئیات' }));
     const dialog = await screen.findByRole('dialog');
 
-    expect(within(dialog).getByText('رویدادی برای این ارسال ثبت نشده است.')).toBeInTheDocument();
+    expect(await within(dialog).findByText('رویدادی برای این ارسال ثبت نشده است.')).toBeInTheDocument();
   });
 
   it('never renders a raw PII value in the detail dialog', async () => {
@@ -171,7 +176,8 @@ describe('ShipmentsView', () => {
     await screen.findByRole('link', { name: 'IR-2026-1042' });
 
     fireEvent.click(screen.getByRole('button', { name: 'جزئیات' }));
-    await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText('نشانی: خیابان ***، پلاک **')).toBeInTheDocument();
 
     expect(screen.queryByText('09121234567')).not.toBeInTheDocument();
   });
