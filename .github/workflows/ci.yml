@@ -27,6 +27,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @iranyaragh/api prisma:generate
+      - name: Verify exact-SHA deployment environment precedence
+        run: node --test scripts/deploy/runtime-provenance.test.mjs
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
