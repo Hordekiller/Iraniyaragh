@@ -2,22 +2,19 @@
 
 Pre-release commerce and warehouse platform for Iranian hardware/fittings retail.
 
-> Status: pre-release commerce integration. Auth, live Catalog/Media discovery,
-> protected Inventory HTTP, an authenticated server Cart API, Checkout, Order
-> application, Zarinpal Payment with audited manual refund, Fulfillment pick /
-> dispatch / tracking, the Admin inventory operations, and the merged Supplier,
-> Purchase Order, Purchase Receiving, Audit-log and Shipments read surfaces are
-> implemented. Customers Admin is also merged. Staff-created Orders, Stocktake,
-> Returns, customer credit accounts (#336), reports/roles, SEO/content routes,
-> real SMS.ir and Zarinpal acceptance, production operations and full UAT are
-> still open. The current user priority is to integrate what already exists,
-> with VPS deployment later. See [`docs/MVP_INTEGRATION.md`](docs/MVP_INTEGRATION.md)
-> for the exact scope/gaps and [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)
-> for merged evidence; historical issue #363 is not the current instruction.
+> Current evidence (2026-10-15): source and running staging images select
+> `30c3edee7002021429978b3478150d63385d75f7`; 61 migration checksums and the live
+> schema match. Staff orders, stocktake, staff credit, operational reports and
+> store-invoice policy/drafts/immutable issuance/customer publication are present.
+> Full V1 is **not ready**: private PDFs, corrections/exports, general returns,
+> runtime role administration, content/SSR/SEO and operational/provider acceptance
+> still have gaps. SMS login is operator-confirmed; payment remains disabled.
+> [V1 reconciliation](docs/V1_RECONCILIATION.md) separates source, tests, runtime
+> and acceptance and owns the current dependency-aware implementation queue.
 
 ## Workspace
 
-- `apps/web` — customer storefront (existing visual prototype preserved here).
+- `apps/web` — customer React/Vite storefront (accepted Next.js public migration remains open).
 - `apps/admin` — custom Persian RTL Next.js/MUI operations application, selectively
   based on the locally licensed Vuexy technical starter with self-hosted assets.
 - `apps/api` — NestJS modular-monolith business API.

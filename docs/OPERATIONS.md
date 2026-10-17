@@ -1,5 +1,9 @@
 # Operations, Reliability & Delivery
 
+Current read-only runtime/version/migration/health evidence and unresolved release
+gates: [V1 reconciliation](V1_RECONCILIATION.md). This runbook is not proof that
+a fresh backup/restore, alert or provider acceptance has been performed.
+
 ## Environments
 
 Maintain independent:

@@ -1,5 +1,12 @@
 # Reporting and invoice management — source audit and implementation plan
 
+> **Current reconciliation — 2026-10-15:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source/deployment/test/acceptance facts and the execution queue;
+> [V1_ISSUE_REGISTER.json](V1_ISSUE_REGISTER.json) records all 149 issue mappings.
+> The dated status, staffing and queue statements below are preserved history
+> where they conflict with that checkpoint. Accepted domain/release criteria remain
+> requirements; historical source absence or deployment claims are not current facts.
+
 Audit date: 2026-10-12. Audited origin/main: **5bb3a52fc1864d23b2f4ddac42ee58c6fbbb6c60**.
 Status: **design proposal and verified source inventory; no invoice/report runtime implemented by this document**.
 
