@@ -1,152 +1,112 @@
 #!/usr/bin/env node
 /*
- * Production dependency audit with surgical retry.
- *
- * Real vulnerabilities (moderate+) fail immediately and loudly. Only
- * transient network/registry failures are retried (up to MAX_ATTEMPTS).
- * After retries are exhausted the job fails with an explicit
- * "manual review needed" message -- it never silently passes.
- *
- * Separating classifyResult() from the process runner keeps the decision
- * logic pure and unit-testable against fixture JSON.
+ * A valid production audit is required to pass. Moderate+ findings fail
+ * immediately; incomplete/failed audits get bounded retries and then block CI.
+ * Registry/process output is untrusted and is never copied into diagnostics.
  */
-
 import { spawn } from "node:child_process";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 15000;
+const AUDIT_TIMEOUT_MS = 60000;
+const MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
+const LEVELS = ["critical", "high", "moderate", "low", "info"];
+const incomplete = () => ({
+  kind: "operational-error",
+  detail: "Production dependency audit did not produce a valid completed report.",
+});
 
-export function classifyResult(stdout, stderr, exitCode) {
-  const raw = stdout.trim();
-
-  if (exitCode === 0) {
-    return { kind: "clean", detail: raw };
+export function classifyResult(stdout, _stderr, exitCode) {
+  let parsed;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    return incomplete();
   }
-
-  const parsed = tryParseAuditJson(raw);
-
-  if (!parsed) {
-    return {
-      kind: "operational-error",
-      detail: summarize(stderr, raw),
-    };
+  const counts = parsed?.metadata?.vulnerabilities;
+  if (!counts || !LEVELS.every((level) => Number.isSafeInteger(counts[level]) && counts[level] >= 0)) {
+    return incomplete();
   }
-
-  const moderatePlus =
-    (parsed.metadata?.vulnerabilities?.moderate ?? 0) +
-    (parsed.metadata?.vulnerabilities?.high ?? 0) +
-    (parsed.metadata?.vulnerabilities?.critical ?? 0);
-
-  if (moderatePlus > 0) {
+  if (counts.moderate > 0 || counts.high > 0 || counts.critical > 0) {
     return {
       kind: "vulnerabilities",
-      detail: summarizeVulnerabilities(parsed),
+      detail: `Vulnerabilities found => ${LEVELS.filter((level) => counts[level] > 0).map((level) => `${level}: ${counts[level]}`).join(", ")}`,
     };
   }
-
-  if (parsed.error?.code || parsed.error?.summary) {
-    return {
-      kind: "operational-error",
-      detail: summarize(stderr, JSON.stringify(parsed.error)),
-    };
-  }
-
-  return {
-    kind: "operational-error",
-    detail: summarize(stderr, raw),
-  };
+  if (exitCode !== 0 || parsed.error != null) return incomplete();
+  return { kind: "clean", detail: "No vulnerabilities at or above moderate level." };
 }
 
-function tryParseAuditJson(output) {
-  if (!output) return null;
-  try {
-    const start = output.indexOf("{");
-    if (start === -1) return null;
-    return JSON.parse(output.slice(start));
-  } catch {
-    return null;
-  }
-}
-
-function summarizeVulnerabilities(parsed) {
-  const v = parsed.metadata?.vulnerabilities ?? {};
-  const parts = [];
-  for (const level of ["critical", "high", "moderate", "low", "info"]) {
-    if (v[level]) parts.push(`${level}: ${v[level]}`);
-  }
-  return `Vulnerabilities found => ${parts.join(", ") || "unknown"}`;
-}
-
-function summarize(stderr, stdout) {
-  const err = stderr.trim();
-  if (err) return err.split("\n").slice(0, 8).join("\n");
-  return stdout.split("\n").slice(0, 8).join("\n");
-}
-
-function runAudit() {
-  return new Promise((resolve) => {
-    const child = spawn(
+export function runAudit({ spawnProcess = spawn, schedule = setTimeout, cancel = clearTimeout } = {}) {
+  return new Promise((done) => {
+    const child = spawnProcess(
       "pnpm",
       ["audit", "--prod", "--audit-level=moderate", "--json"],
       { stdio: ["ignore", "pipe", "pipe"] },
     );
     let stdout = "";
-    let stderr = "";
+    let outputBytes = 0;
+    let interrupted = false;
+    let settled = false;
+    const timer = schedule(() => {
+      interrupted = true;
+      child.kill("SIGKILL");
+    }, AUDIT_TIMEOUT_MS);
+    const finish = (exitCode) => {
+      if (settled) return;
+      settled = true;
+      cancel(timer);
+      done({ stdout: interrupted ? "" : stdout, stderr: "", exitCode: interrupted ? null : exitCode });
+    };
     child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (d) => (stdout += d));
-    child.stderr.on("data", (d) => (stderr += d));
-    child.on("close", (code) => resolve({ stdout, stderr, exitCode: code }));
-    child.on("error", (err) =>
-      resolve({
-        stdout,
-        stderr: stderr + "\n" + err.message,
-        exitCode: 1,
-      }),
-    );
+    const consume = (data, retain) => {
+      outputBytes += Buffer.byteLength(data);
+      if (outputBytes > MAX_OUTPUT_BYTES) {
+        if (!interrupted) {
+          interrupted = true;
+          stdout = "";
+          child.kill("SIGKILL");
+        }
+        return;
+      }
+      if (retain && !interrupted) stdout += data;
+    };
+    child.stdout.on("data", (data) => consume(data, true));
+    child.stderr.on("data", (data) => consume(data, false));
+    child.on("close", finish);
+    child.on("error", () => finish(null));
   });
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
-export async function main() {
-  let last;
-
+export async function main({ audit = runAudit, wait = sleep, logger = console } = {}) {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const { stdout, stderr, exitCode } = await runAudit();
-    const result = classifyResult(stdout, stderr, exitCode);
-    last = result;
-
+    let result;
+    try {
+      const { stdout, stderr, exitCode } = await audit();
+      result = classifyResult(stdout, stderr, exitCode);
+    } catch {
+      result = incomplete();
+    }
     if (result.kind === "clean") {
-      console.log("pnpm audit: no vulnerabilities at or above moderate level.");
+      logger.log("pnpm audit: no vulnerabilities at or above moderate level.");
       return 0;
     }
-
     if (result.kind === "vulnerabilities") {
-      console.error(`::error::${result.detail}`);
-      console.error("::error::Audit failed due to known production vulnerabilities; fix them before merging.");
+      logger.error(`::error::${result.detail}`);
+      logger.error("::error::Fix known production vulnerabilities before merging.");
       return 1;
     }
-
-    console.log(result.detail);
-    console.warn(
-      `::warning::pnpm audit attempt ${attempt}/${MAX_ATTEMPTS} hit a transient/registry error; retrying...`,
-    );
-
-    if (attempt < MAX_ATTEMPTS) {
-      await sleep(RETRY_DELAY_MS);
-    }
+    logger.warn(`::warning::Production audit attempt ${attempt}/${MAX_ATTEMPTS} was unavailable or incomplete.`);
+    if (attempt < MAX_ATTEMPTS) await wait(RETRY_DELAY_MS);
   }
-
-  console.error(`::error::${last?.detail ?? "unknown error"}`);
-  console.error(
-    "::warning::Registry remained unreachable after " +
-      `${MAX_ATTEMPTS} attempts. Network-only failure — no vulnerability data available. ` +
-      "Manual review of production dependencies is required before merge.",
-  );
+  logger.error("::error::Production audit unavailable after bounded retries. Security status is unknown; merge remains blocked. Rerun after resolving the audit failure.");
   return 2;
 }
 
-if (process.argv[1]?.endsWith("audit-prod.mjs")) {
-  process.exit(await main());
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exitCode = await main();
 }

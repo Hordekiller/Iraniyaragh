@@ -27,6 +27,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @iranyaragh/api prisma:generate
+      - name: Verify dependency audit failure handling
+        run: node --test .github/scripts/audit-prod.test.mjs
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
