@@ -375,6 +375,17 @@ the loser follows this replay path, so the resulting family is revoked. UI clien
 MUST coordinate a single refresh in flight across tabs and recover at the login
 screen without a loop.
 
+Admin recovery retains that mutex through verification of the rotated principal
+and completion of all protected requests sharing the recovery batch, including
+response-body consumption. Releasing it after `/refresh` or `/me` alone lets a
+second tab legitimately rotate again and revoke the first tab's bearer before
+its protected replay reaches the server. A locally newer in-memory bearer is
+not proof of a live session in another tab. Each protected request still has at
+most one replay, with its original body and idempotency key, and late work from
+a different login generation is cancelled. Logout waits for the complete batch;
+network, cancellation and lock-acquisition failures release the lease without
+claiming the protected operation succeeded. No token is broadcast or persisted.
+
 Session limits:
 
 | Session      | Access token | Inactivity | Absolute |
