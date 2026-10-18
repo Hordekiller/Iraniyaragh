@@ -92,8 +92,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       // authoritative invalid-session outcome instead of attempting a refresh
       // that only returns a misleading CSRF error and leaves stale navigation.
       if (!readCsrfToken(document)) throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
-      // Cookies are shared across tabs. Serialize rotations across the origin too.
-      return await serializeCookieMutation(rotate);
+      // The API recovery batch owns the cookie lock through protected replays.
+      return await rotate();
     } catch (error) {
       if (generation.current === attemptGeneration && error instanceof ApiClientError && ['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED', 'FORBIDDEN'].includes(error.code)) {
         setAccessToken(null);
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   useEffect(() => {
     let active = true;
-    const unregister = registerSessionRecovery(recoverSession);
+    const unregister = registerSessionRecovery(recoverSession, serializeCookieMutation);
     const unregisterFailure = registerAuthenticationFailure((error, revision) => {
       if (loggingOut.current || !userRef.current || revision !== getSessionRevision()) return;
       if (error.code === 'AUTH_REAUTHENTICATION_REQUIRED') {

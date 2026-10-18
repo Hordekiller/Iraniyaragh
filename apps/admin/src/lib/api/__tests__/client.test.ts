@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, ApiAbortError, ApiClientError, ApiNetworkError, getApiBaseUrl, readCsrfToken, registerSessionRecovery } from '../client';
+import { apiFetch, ApiAbortError, ApiClientError, ApiNetworkError, getApiBaseUrl, readCsrfToken, registerSessionRecovery, settleSessionRecovery } from '../client';
 import { setAccessToken } from '@/lib/auth/token-store';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
@@ -238,20 +238,153 @@ describe('apiFetch', () => {
     } finally { unregister(); }
   });
 
-  it('uses the already rotated token for a late 401 without rotating cookies again', async () => {
+  it('recovers a late 401 under the cookie lock even if the locally newer bearer was revoked by another tab', async () => {
     setAccessToken('old');
-    const recovery = vi.fn(async () => 'unnecessary');
+    const recovery = vi.fn(async () => { setAccessToken('verified-fresh', true); return 'verified-fresh'; });
     const unregister = registerSessionRecovery(recovery);
     vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
       if ((init.headers as Record<string, string>).Authorization === 'Bearer old') {
-        setAccessToken('already-fresh', true);
+        setAccessToken('locally-newer-but-revoked', true);
         return jsonResponse({ code: 'AUTH_SESSION_INVALID', statusCode: 401 }, false, 401);
       }
+      expect(init.headers).toMatchObject({ Authorization: 'Bearer verified-fresh' });
       return jsonResponse({ data: { ok: true } });
     }));
     try {
       await expect(apiFetch('/catalog/admin/products', { token: 'old' })).resolves.toEqual({ data: { ok: true } });
-      expect(recovery).not.toHaveBeenCalled();
+      expect(recovery).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledTimes(2);
     } finally { unregister(); }
+  });
+
+  it.each(['success', 'network failure', 'abort'] as const)('holds the rotation lock until all replay bodies settle: %s', async outcome => {
+    setAccessToken('old');
+    let lockHeld = false;
+    let releaseBody!: () => void;
+    const bodyGate = new Promise<void>(resolve => { releaseBody = resolve; });
+    let bodyStarted!: () => void;
+    const bodyReady = new Promise<void>(resolve => { bodyStarted = resolve; });
+    const recovery = vi.fn(async () => { expect(lockHeld).toBe(true); setAccessToken('fresh', true); return 'fresh'; });
+    const unregister = registerSessionRecovery(recovery, async operation => {
+      lockHeld = true;
+      try { return await operation(); } finally { lockHeld = false; }
+    });
+    const controller = new AbortController();
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      if ((init.headers as Record<string, string>).Authorization === 'Bearer old') {
+        return jsonResponse({ code: 'AUTH_SESSION_INVALID', statusCode: 401 }, false, 401);
+      }
+      expect(lockHeld).toBe(true);
+      return { ok: true, status: 200, text: async () => {
+        bodyStarted();
+        await bodyGate;
+        expect(lockHeld).toBe(true);
+        if (outcome === 'abort') controller.abort();
+        if (outcome !== 'success') throw new TypeError('interrupted body');
+        return '{"data":{"ok":true}}';
+      } } as Response;
+    }));
+    const request = apiFetch('/protected', { token: 'old', signal: controller.signal });
+    const result = outcome === 'success'
+      ? expect(request).resolves.toEqual({ data: { ok: true } })
+      : expect(request).rejects.toBeInstanceOf(outcome === 'abort' ? ApiAbortError : ApiNetworkError);
+    try {
+      await bodyReady;
+      let settled = false;
+      const settledRecovery = settleSessionRecovery().then(() => { settled = true; });
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      expect(lockHeld).toBe(true);
+      releaseBody();
+      await result;
+      await settledRecovery;
+      expect(lockHeld).toBe(false);
+      expect(recovery).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally { releaseBody(); unregister(); }
+  });
+
+  it('releases a failed acquisition and allows a later explicit recovery attempt', async () => {
+    setAccessToken('old');
+    const unavailable = new DOMException('lock timeout', 'AbortError');
+    let denyLock = true;
+    const recovery = vi.fn(async () => { setAccessToken('fresh', true); return 'fresh'; });
+    const unregister = registerSessionRecovery(recovery, async operation => {
+      if (denyLock) throw unavailable;
+      return operation();
+    });
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) =>
+      (init.headers as Record<string, string>).Authorization === 'Bearer old'
+        ? jsonResponse({ code: 'AUTH_SESSION_INVALID', statusCode: 401 }, false, 401)
+        : jsonResponse({ data: {} })));
+    try {
+      await expect(apiFetch('/protected', { token: 'old' })).rejects.toBe(unavailable);
+      await settleSessionRecovery();
+      expect(recovery).not.toHaveBeenCalled();
+      denyLock = false;
+      await expect(apiFetch('/protected', { token: 'old' })).resolves.toEqual({ data: {} });
+      expect(recovery).toHaveBeenCalledTimes(1);
+    } finally { unregister(); }
+  });
+
+  it('keeps a shared recovery locked after the first replay finishes while its sibling is still reading', async () => {
+    setAccessToken('old');
+    let lockHeld = false;
+    let finishSlow!: () => void;
+    const slowBody = new Promise<void>(resolve => { finishSlow = resolve; });
+    let startedSlow!: () => void;
+    const slowStarted = new Promise<void>(resolve => { startedSlow = resolve; });
+    const recovery = vi.fn(async () => { setAccessToken('fresh', true); return 'fresh'; });
+    const unregister = registerSessionRecovery(recovery, async operation => {
+      lockHeld = true;
+      try { return await operation(); } finally { lockHeld = false; }
+    });
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      if ((init.headers as Record<string, string>).Authorization === 'Bearer old') {
+        return jsonResponse({ code: 'AUTH_SESSION_INVALID', statusCode: 401 }, false, 401);
+      }
+      return { ok: true, status: 200, text: async () => {
+        if (url.endsWith('/slow')) { startedSlow(); await slowBody; }
+        expect(lockHeld).toBe(true);
+        return '{"data":{}}';
+      } } as Response;
+    }));
+    try {
+      const fast = apiFetch('/fast', { token: 'old' });
+      const slow = apiFetch('/slow', { token: 'old' });
+      await slowStarted;
+      await fast;
+      expect(lockHeld).toBe(true);
+      expect(recovery).toHaveBeenCalledTimes(1);
+      finishSlow();
+      await slow;
+      await settleSessionRecovery();
+      expect(lockHeld).toBe(false);
+      expect(fetch).toHaveBeenCalledTimes(4);
+    } finally { finishSlow(); unregister(); }
+  });
+
+  it('does not replay a queued mutation after its identity changes during recovery', async () => {
+    setAccessToken('old');
+    let releaseRotation!: () => void;
+    const rotation = new Promise<void>(resolve => { releaseRotation = resolve; });
+    let rotationStarted!: () => void;
+    const rotating = new Promise<void>(resolve => { rotationStarted = resolve; });
+    const unregister = registerSessionRecovery(async () => {
+      rotationStarted();
+      await rotation;
+      return 'fresh';
+    });
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ code: 'AUTH_SESSION_INVALID', statusCode: 401 }, false, 401)));
+    const request = apiFetch('/mutation', { method: 'POST', token: 'old', body: { quantity: 1 } });
+    const rejected = expect(request).rejects.toBeInstanceOf(ApiAbortError);
+    try {
+      await rotating;
+      setAccessToken(null);
+      releaseRotation();
+      await rejected;
+      await settleSessionRecovery();
+      expect(fetch).toHaveBeenCalledTimes(1);
+    } finally { releaseRotation(); unregister(); }
   });
 });
