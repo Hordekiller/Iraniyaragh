@@ -7,7 +7,7 @@
     "test": { "dependsOn": ["^test"] },
     "test:integration": {
       "cache": false,
-      "env": ["DATABASE_URL", "NODE_ENV"]
+      "env": ["DATABASE_URL", "NODE_ENV", "REDIS_URL", "CI"]
     },
     "typecheck": { "dependsOn": ["^typecheck"] }
   }

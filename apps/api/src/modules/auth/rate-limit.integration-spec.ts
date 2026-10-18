@@ -1,5 +1,6 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { assertIntegrationRedisAvailable } from '../../test/redis-availability.guard';
 import type { RedisClient } from '../redis/redis.client';
 import { provideRedisClient } from '../redis/redis.provider';
 import { type AuthRuntimeConfig } from './auth.config';
@@ -77,6 +78,7 @@ describe('RateLimitService live Redis integration', () => {
 
   beforeAll(async () => {
     client = await connectRedis();
+    assertIntegrationRedisAvailable(client !== null);
     hashes = new AuthHashService(runtimeConfig);
     service = new RateLimitService(client as unknown as RedisClient, hashes);
     available = client !== null;
