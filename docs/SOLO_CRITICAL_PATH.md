@@ -1,5 +1,22 @@
 # Historical V1 Critical Path
 
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## Current scheduling authority — 2026-10-18
+
+This historical path no longer assigns implementation order. Main/VPS is e207094;
+#445/#447/#452/#456 are delivered. The active train, dependency graph, accepted V1
+gaps and provider/operator gates are in V1_RECONCILIATION.md. Do not restart an
+old feature queue, revive #390, or treat historical unmerged branch code as delivered.
+Current safety rules remain AGENTS.md, SECURITY.md and FOUNDATION.md.
+
+## Historical sequence
+
 > Superseded for active scheduling on 2026-09-30 by the user's instruction to
 > integrate the capabilities already merged into a truthful MVP first, with VPS
 > deployment later. See `MVP_INTEGRATION.md`. Process/ownership rules below are

@@ -1,5 +1,29 @@
 # V1.0 Master Plan — ایران‌یاراغ
 
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## Current implementation and release boundary — 2026-10-18
+
+Source/deployment baseline and release evidence are in the central reconciliation.
+Stocktake, staff credit, reports and store-invoice issuance/publication are present;
+old unchecked implementation rows below do not mean those modules are absent.
+#114 is historical SMS integration work; remaining real acceptance is tracked in
+#403. One real controlled payment/order-paid message is accepted, not all financial
+or transactional paths. #400 still requires authenticated idle acceptance.
+
+Use the dependency-aware queue in V1_RECONCILIATION.md, not historical contributor
+allocations. Private PDF/corrections/exports, general returns, runtime RBAC, content
+and accepted SSR/discovery still require engineering. Keep financial valuation
+inactive as requested. The V1 outcome/exit criteria below remain required; old
+status/owner/date assertions are retained as historical planning evidence.
+
+## Historical planning checkpoint and accepted V1 requirements
+
 Last updated: 2026-09-27
 
 `SOLO_CRITICAL_PATH.md` is the active V1 delivery sequence. The owners, duration

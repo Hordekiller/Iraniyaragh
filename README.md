@@ -2,30 +2,30 @@
 
 Pre-release commerce and warehouse platform for Iranian hardware/fittings retail.
 
-> Status: pre-release commerce integration. Auth, live Catalog/Media discovery,
-> protected Inventory HTTP, an authenticated server Cart API, Checkout, Order
-> application, Zarinpal Payment with audited manual refund, Fulfillment pick /
-> dispatch / tracking, the Admin inventory operations, and the merged Supplier,
-> Purchase Order, Purchase Receiving, Audit-log and Shipments read surfaces are
-> implemented. Customers Admin is also merged. Staff-created Orders, Stocktake,
-> Returns, customer credit accounts (#336), reports/roles, SEO/content routes,
-> real SMS.ir and Zarinpal acceptance, production operations and full UAT are
-> still open. The current user priority is to integrate what already exists,
-> with VPS deployment later. See [`docs/MVP_INTEGRATION.md`](docs/MVP_INTEGRATION.md)
-> for the exact scope/gaps and [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)
-> for merged evidence; historical issue #363 is not the current instruction.
+> Current evidence (2026-10-18): source and verified VPS select
+> `e2070948587b438dc5da55d8560ab870e23bf32d`; 61 migrations completed, none unfinished.
+> Staff orders, stocktake, staff credit, operational reports and store-invoice
+> policy/drafts/immutable issuance/customer publication are present. Admin cross-tab
+> refresh recovery is deployed; real operator idle acceptance remains open (#400).
+> SMS login and one real product payment/return-to-site/order-paid SMS are
+> operator-confirmed. Payment is live; refunds and broader provider acceptance
+> remain separate. **V1 is not ready:** automatic order expiry, private PDF service,
+> corrections/exports, general returns, role administration, content/SSR/SEO and
+> operational acceptance have remaining work.
+> [V1 reconciliation](docs/V1_RECONCILIATION.md) owns the evidence matrix and queue;
+> [issue register](docs/V1_ISSUE_REGISTER.json) covers all 150 issues.
 
 ## Workspace
 
-- `apps/web` — customer storefront (existing visual prototype preserved here).
+- `apps/web` — customer React/Vite storefront (accepted Next.js public migration remains open).
 - `apps/admin` — custom Persian RTL Next.js/MUI operations application, selectively
   based on the locally licensed Vuexy technical starter with self-hosted assets.
 - `apps/api` — NestJS modular-monolith business API.
 - `packages/contracts` — shared API/domain contracts.
-- `infrastructure/docker` — local PostgreSQL, Redis and MinIO.
+- `infrastructure/docker` — PostgreSQL, Redis and object storage (local MinIO; deployed RustFS).
 - `e2e` — Playwright smoke suite covering the storefront (`web`) and the admin
-  panel shells on desktop + mobile viewports, with a strict zero-external-asset
-  network gate for both apps.
+  panel journeys on desktop + mobile viewports, with self-hosted runtime assets
+  and the explicitly approved Enamad trust-seal request exception.
 - `docs` — architecture and delivery roadmap.
 
 ## Core architecture

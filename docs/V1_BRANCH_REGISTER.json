@@ -1,0 +1,1384 @@
+{
+  "checkpointUTC": "2026-10-18",
+  "sourceBaseline": "e2070948587b438dc5da55d8560ab870e23bf32d",
+  "method": "Actual remote refs from git ls-remote --heads, local git ancestry/diff counts against fetched e207094, and GitHub GraphQL open PR heads/base/check/review snapshots. A completed check belongs only to its recorded head, not the rebased combined release.",
+  "remoteBranchCount": 38,
+  "remoteBranches": [
+    {
+      "branch": "archive/feat-admin-catalog-slice-263fd8d",
+      "head": "263fd8d5cdcc74ba106814a6c201c09d2c7f7922",
+      "behindMain": 182,
+      "commitsOutsideMainAncestry": 14,
+      "mergeBaseDiffFiles": 135,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "audit/v1-reconciliation",
+      "head": "16332daf9534ba57b1b9a8c4fe151bd4f6e08b0a",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 3,
+      "mergeBaseDiffFiles": 17,
+      "openPRs": [
+        443
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "chore/enamad-verification-15156313",
+      "head": "e1f3fd6bd5997d66a94add476545b2a95043faa1",
+      "behindMain": 17,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 1,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "chore/repository-workflow",
+      "head": "64d4428ca1a09a951925b55f92b4cbb160c7e75d",
+      "behindMain": 133,
+      "commitsOutsideMainAncestry": 0,
+      "mergeBaseDiffFiles": 0,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "dependabot/github_actions/main/github-actions-4dcca6a1ef",
+      "head": "1b0882629d8a35deb7b7c741fb080aed81cf7c1f",
+      "behindMain": 16,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [
+        426
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/main/development-dependencies-74e356812c",
+      "head": "a87b1153392e189dece18521eef194a21ac3ef34",
+      "behindMain": 7,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 6,
+      "openPRs": [
+        396
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/main/production-dependencies-bca5495114",
+      "head": "23e21379ada5e87ca9543fee1004be2843cd0934",
+      "behindMain": 16,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [
+        425
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "docs/post-wave-0.2a-facts-sync",
+      "head": "4e4801331a245309c3f129964ac5ce36d8b5cf8e",
+      "behindMain": 146,
+      "commitsOutsideMainAncestry": 13,
+      "mergeBaseDiffFiles": 2,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "docs/sms-track-status-sync",
+      "head": "ce7493afd76ef0d9cde0a39614a88e5d8092242d",
+      "behindMain": 184,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 2,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/129-dynamic-discovery",
+      "head": "094a3dff5def8c66dfb0b37c7a0dd87ddfd1b55c",
+      "behindMain": 182,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 1,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/279-contract-hardening",
+      "head": "3567bb7615f1425246401c083a53d58ccd0abdd4",
+      "behindMain": 84,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 8,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/279-description-authoring",
+      "head": "13168680298902e6b1a7ba78cc98e7094ca83674",
+      "behindMain": 84,
+      "commitsOutsideMainAncestry": 3,
+      "mergeBaseDiffFiles": 20,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/279-media-picker",
+      "head": "dfa4d1f4c4312af86447d5f7ab556122103d1178",
+      "behindMain": 84,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 14,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/279-rich-text-editor",
+      "head": "f5861d870fa524446e38e5a2f1955047d11b3a6c",
+      "behindMain": 84,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 10,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/279-storefront-render",
+      "head": "339a873ba51e9b0f1a2962bb4ee2565d40e8f3bb",
+      "behindMain": 84,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 7,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/50-permission-nav",
+      "head": "44ee4f004fe7872c40907124482e5f209bcb7942",
+      "behindMain": 177,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/admin-catalog-slice",
+      "head": "72afef1a81e8f877684abe67562ab9fc7f924249",
+      "behindMain": 27,
+      "commitsOutsideMainAncestry": 10,
+      "mergeBaseDiffFiles": 52,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/enamad-trust-seal",
+      "head": "c4c106304e06245c606573a10b7234ddc1ff092f",
+      "behindMain": 17,
+      "commitsOutsideMainAncestry": 4,
+      "mergeBaseDiffFiles": 8,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/inventory-api-candidate",
+      "head": "a9b32b5ca00cf913155a2474640e8f256cb5e8bf",
+      "behindMain": 133,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 9,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/invoice-pdf-persistence",
+      "head": "c26044ca050608ebcd1a6174ced2b724cb3a8442",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 4,
+      "mergeBaseDiffFiles": 10,
+      "openPRs": [
+        449
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/invoice-pdf-template",
+      "head": "4992028cfffe1de3f9196fb952516415e26874c6",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 3,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [
+        439
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/order-expiry-system-context",
+      "head": "31b99d4c92f1dcff1065aad95e2f22fe8913f50b",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 4,
+      "mergeBaseDiffFiles": 11,
+      "openPRs": [
+        455
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "feat/stocktake-v1",
+      "head": "3d8661e45b7d564c32006faa8d78db74efba9773",
+      "behindMain": 48,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 25,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/139-cross-tab-refresh",
+      "head": "63664e9c5b68a6d8e63b7e9b041dd3a6d10fb02e",
+      "behindMain": 182,
+      "commitsOutsideMainAncestry": 7,
+      "mergeBaseDiffFiles": 30,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/api-production-artifact-boundary",
+      "head": "2688d3b3bafc2a66b7f0a561a97cec24b9480d11",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 5,
+      "openPRs": [
+        446
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/integration-redis-required",
+      "head": "1f55bd737cc6719b7262336c3bee00ebd8b5bba7",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 6,
+      "openPRs": [
+        448
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/inventory-batch-reservation-expiry",
+      "head": "ef8a0b8adb8cf12fb74a6a78ae92ba09bd3e643c",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 7,
+      "openPRs": [
+        451
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/nginx-admin-canonical-route",
+      "head": "a83c0672559c232463a6e96749f5b2e8e94c653a",
+      "behindMain": 29,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 9,
+      "openPRs": [
+        386
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/order-expiry-payment-evidence",
+      "head": "b5ccbaf8a6233be6135418b521074d3f5170b849",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 6,
+      "openPRs": [
+        454
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/payment-reservation-expiry-ui",
+      "head": "f71afba71b4b696168cf5b56c7ec1e189f8b182f",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 3,
+      "openPRs": [
+        453
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/release-runtime-provenance",
+      "head": "70c29a3ba8c1e312957f1bcf6e585c6d2ffb2637",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 4,
+      "openPRs": [
+        440
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/security-audit-fail-closed",
+      "head": "0916b7afff6286325f7cf0e436b3936cec4012a7",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 6,
+      "openPRs": [
+        442
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "fix/security-transitive-patches",
+      "head": "1422dc24d3bb06f971703645d17f74f9e94e6825",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 2,
+      "openPRs": [
+        441
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "lane-b/storefront-completion",
+      "head": "9be35395d79f446a5ce480f37bcbc90a5b7b688f",
+      "behindMain": 98,
+      "commitsOutsideMainAncestry": 2,
+      "mergeBaseDiffFiles": 182,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "main",
+      "head": "e2070948587b438dc5da55d8560ab870e23bf32d",
+      "behindMain": 0,
+      "commitsOutsideMainAncestry": 0,
+      "mergeBaseDiffFiles": 0,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "preserve/178-g1-g2-settings-wip-2026-09-13",
+      "head": "2533a8e393277a2b9dca2264693e389e950a686f",
+      "behindMain": 146,
+      "commitsOutsideMainAncestry": 4,
+      "mergeBaseDiffFiles": 29,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "test/e2e-staff-operator-provisioning",
+      "head": "8891934c133d0c623a0001d25969084b5ff67aca",
+      "behindMain": 42,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 2,
+      "openPRs": [],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    },
+    {
+      "branch": "test/stocktake-two-location-reconciliation",
+      "head": "93c1d278ee685bea6b0bfc44ba9c78d6e791d019",
+      "behindMain": 4,
+      "commitsOutsideMainAncestry": 1,
+      "mergeBaseDiffFiles": 1,
+      "openPRs": [
+        444
+      ],
+      "interpretation": "Observed remote head before this documentation push; ancestry/diff counts require semantic comparison after squash merges."
+    }
+  ],
+  "openPullRequests": [
+    {
+      "number": 386,
+      "title": "Record #382, #384 and #385 on main in PROJECT_STATUS",
+      "headRefName": "fix/nginx-admin-canonical-route",
+      "headRefOid": "a83c0672559c232463a6e96749f5b2e8e94c653a",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 396,
+      "title": "chore(deps): bump the development-dependencies group across 1 directory with 19 updates",
+      "headRefName": "dependabot/npm_and_yarn/main/development-dependencies-74e356812c",
+      "headRefOid": "a87b1153392e189dece18521eef194a21ac3ef34",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "FAILURE"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "FAILURE"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "FAILURE"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "FAILURE"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "FAILURE"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SKIPPED"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "NEUTRAL"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 425,
+      "title": "chore(deps): bump the production-dependencies group across 1 directory with 21 updates",
+      "headRefName": "dependabot/npm_and_yarn/main/production-dependencies-bca5495114",
+      "headRefOid": "23e21379ada5e87ca9543fee1004be2843cd0934",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "FAILURE"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "FAILURE"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "FAILURE"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SKIPPED"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "NEUTRAL"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 426,
+      "title": "chore(actions): bump the github-actions group across 1 directory with 4 updates",
+      "headRefName": "dependabot/github_actions/main/github-actions-4dcca6a1ef",
+      "headRefOid": "1b0882629d8a35deb7b7c741fb080aed81cf7c1f",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "FAILURE"
+            },
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "contract",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production",
+              "status": "COMPLETED",
+              "conclusion": "SKIPPED"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "NEUTRAL"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 439,
+      "title": "feat(invoices): add bounded branded Persian PDF template",
+      "headRefName": "feat/invoice-pdf-template",
+      "headRefOid": "4992028cfffe1de3f9196fb952516415e26874c6",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 440,
+      "title": "fix(ops): bind runtime provenance to the selected release image",
+      "headRefName": "fix/release-runtime-provenance",
+      "headRefOid": "70c29a3ba8c1e312957f1bcf6e585c6d2ffb2637",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 441,
+      "title": "fix(deps): patch vulnerable fast-uri and brace-expansion chains",
+      "headRefName": "fix/security-transitive-patches",
+      "headRefOid": "1422dc24d3bb06f971703645d17f74f9e94e6825",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 442,
+      "title": "fix(security): fail closed when production dependency audit is unavailable",
+      "headRefName": "fix/security-audit-fail-closed",
+      "headRefOid": "0916b7afff6286325f7cf0e436b3936cec4012a7",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 443,
+      "title": "docs(v1): reconcile repository runtime and issue requirements",
+      "headRefName": "audit/v1-reconciliation",
+      "headRefOid": "16332daf9534ba57b1b9a8c4fe151bd4f6e08b0a",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 444,
+      "title": "test(stocktake): reconcile two-location upward and downward counts",
+      "headRefName": "test/stocktake-two-location-reconciliation",
+      "headRefOid": "93c1d278ee685bea6b0bfc44ba9c78d6e791d019",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 446,
+      "title": "fix(build): exclude integration tests from API runtime artifacts",
+      "headRefName": "fix/api-production-artifact-boundary",
+      "headRefOid": "2688d3b3bafc2a66b7f0a561a97cec24b9480d11",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 448,
+      "title": "fix(ci): fail closed when required integration Redis is unavailable",
+      "headRefName": "fix/integration-redis-required",
+      "headRefOid": "1f55bd737cc6719b7262336c3bee00ebd8b5bba7",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "BLOCKED",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      },
+      "checksRefreshedAtUTC": "2026-10-18T06:33:30.449373+00:00"
+    },
+    {
+      "number": 449,
+      "title": "feat(invoices): persist bounded private PDF artifacts",
+      "headRefName": "feat/invoice-pdf-persistence",
+      "headRefOid": "c26044ca050608ebcd1a6174ced2b724cb3a8442",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 451,
+      "title": "perf(inventory): batch reservation expiry with atomic audit evidence",
+      "headRefName": "fix/inventory-batch-reservation-expiry",
+      "headRefOid": "ef8a0b8adb8cf12fb74a6a78ae92ba09bd3e643c",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 453,
+      "title": "fix(web): prevent payment initiation after reservation expiry",
+      "headRefName": "fix/payment-reservation-expiry-ui",
+      "headRefOid": "f71afba71b4b696168cf5b56c7ec1e189f8b182f",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 454,
+      "title": "fix(orders): guard expiry with current deadline and payment attempts",
+      "headRefName": "fix/order-expiry-payment-evidence",
+      "headRefOid": "b5ccbaf8a6233be6135418b521074d3f5170b849",
+      "baseRefName": "main",
+      "reviewDecision": null,
+      "mergeable": "UNKNOWN",
+      "mergeStateStatus": "UNKNOWN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (actions)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "Analyze (javascript-typescript)",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "CodeQL",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "number": 455,
+      "title": "feat(orders): attribute internal expiry without staff impersonation",
+      "headRefName": "feat/order-expiry-system-context",
+      "headRefOid": "31b99d4c92f1dcff1065aad95e2f22fe8913f50b",
+      "baseRefName": "fix/order-expiry-payment-evidence",
+      "reviewDecision": null,
+      "mergeable": "MERGEABLE",
+      "mergeStateStatus": "CLEAN",
+      "statusCheckRollup": {
+        "contexts": {
+          "nodes": [
+            {
+              "name": "quality",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "dependency-review",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "production-audit",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "sonar",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "database",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            },
+            {
+              "name": "e2e",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "localWorktreeSummary": {
+    "registered": 80,
+    "missingDirectoriesRetained": 8,
+    "otherDirtyWorktreesPreserved": 5,
+    "otherWorktreesWithTrackedChangesPreserved": 3,
+    "observedAtUTC": "2026-10-15 (historical worktree inventory, not recounted by this checkpoint)"
+  },
+  "safety": "No pruning, checkout, reset or edits in other worktrees; original untracked logo assets preserved. Review decisions/mergeability are observations at the checkpoint, not future merge authorization.",
+  "capturedAtUTC": "2026-10-18T04:00:46.369168+00:00",
+  "selfHeadNote": "Remote heads captured before this documentation refresh/push, including audit branch 16332daf9534ba57b1b9a8c4fe151bd4f6e08b0a. This snapshot cannot recursively contain its own future commit. Final PR head/check state belongs to GitHub."
+}

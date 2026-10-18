@@ -1,5 +1,33 @@
 # Execution Status and Handoff
 
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## Current execution queue — 2026-10-18
+
+Current reviewed/deployed baseline: `e207094`. #445/#447/#452/#456 are merged;
+#400 remains open for operator acceptance. Refresh existing documentation PR #443
+and conditionally resolve governance #12 only when those documents reach main.
+
+Next integration train: #448 → #441 → #442 → #446 → #440. Rebase onto latest main,
+resolve semantic conflicts, and rerun combined validation after every 2–3 merges.
+An old green branch run is not combined-source proof. Then expiry #454 → #455
+(retarget/rebase after #454) → #451 → #453 → durable worker → live #450 acceptance.
+Do not create unrelated PRs ahead of this queue. Existing stocktake/PDF candidates
+remain separate and must be freshly checked before integration.
+
+Current policy requires nine strict exact-head checks and recorded engineering
+review; the owner removed mandatory account approval/last-push approval on Oct 17.
+No required check, security invariant or deployment gate was removed. See
+[workflow](REPOSITORY_WORKFLOW.md). Start fresh CI for one completed slice, then
+pause for the owner's next instruction; never label an in-progress run passed.
+
+## Historical execution board
+
 Last reviewed: 2026-09-27
 
 The active one-developer queue is `SOLO_CRITICAL_PATH.md`. The dated parallel-lane

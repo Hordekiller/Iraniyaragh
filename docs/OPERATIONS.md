@@ -1,5 +1,32 @@
 # Operations, Reliability & Delivery
 
+Current read-only runtime/version/migration/health evidence and unresolved release
+gates: [V1 reconciliation](V1_RECONCILIATION.md). This runbook is not proof that
+a fresh backup/restore, alert or provider acceptance has been performed.
+
+## Verified release checkpoint — 2026-10-18
+
+Source/selected/running SHA: `e2070948587b438dc5da55d8560ab870e23bf32d`. Official image publication
+[39084793958](https://github.com/Hordekiller/Iraniyaragh/actions/runs/39084793958)
+and authorized deployment succeeded. API/Admin/Web are healthy; media-worker uses
+that API image and is running (no invented worker healthcheck). Nginx configuration,
+TLS, homepage, Admin and readiness passed. 61 completed migrations / zero unfinished.
+Exact index digests and acceptance limits are in V1_RECONCILIATION.md.
+
+The release backup was restored into an isolated scratch PostgreSQL database
+(98 tables, 61 migrations), then that scratch database was removed. Media backup
+checksums matched 311 objects / 14,652,179 bytes; checksum validation is not a fresh
+bucket restore. This past restore does not waive fresh backup/restore gates for
+future releases. Existing backups/history were preserved; no VPS build/source copy.
+
+Private SMS mode is smsir and payment mode live; configuration fingerprint excluding
+IMAGE_TAG was unchanged by this source rollout. Do not dump environment, cookies,
+provider bodies, credentials or customer rows when collecting diagnostics. This
+checkpoint adds no provider sends or financial mutations. Clam process health does
+not establish signature freshness (#393). APP_VERSION binding and production test
+artifact exclusion remain separate unmerged #440/#446 work. Monitoring/alert and
+rollback acceptance must be verified rather than inferred from green readiness.
+
 ## Environments
 
 Maintain independent:

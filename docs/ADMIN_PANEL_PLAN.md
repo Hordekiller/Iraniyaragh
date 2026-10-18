@@ -1,5 +1,29 @@
 # Production Admin Panel Program
 
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## Current implementation delta — 2026-10-18
+
+Deployed Admin includes catalog/attributes/category hierarchy/Jodit/image media,
+warehouse/ledger/transfers, suppliers/partial receiving/stocktake, customers/staff
+orders, fulfillment, credit/receipts/sellable credit returns, operational reports,
+invoice policy/drafts/immutable issuance/publication and SMS template settings.
+The cross-tab protected-request recovery (#447) is deployed; #400 is still open
+for actual authenticated idle/mutation acceptance. Do not extend security TTLs
+without evidence. API permissions remain authoritative.
+
+Remaining engineering includes runtime role administration, general paid-order
+returns, invoice private PDFs/corrections/exports, and article editorial management.
+Product Jodit and browser invoice printing do not establish those modules. The
+older baseline below retains accepted UI/security criteria, not a current absence list.
+
+## Historical program baseline and accepted UI requirements
+
 Status: active design baseline; implementation remains partial
 
 Owners: product/UX lead `@Maddyrampant`; runtime/security/integration lead

@@ -1,5 +1,23 @@
 # Zero-to-Production Execution Backlog
 
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## Current backlog interpretation — 2026-10-18
+
+Use V1_RECONCILIATION.md and V1_DEPENDENCIES.json for executable ordering and
+V1_ISSUE_REGISTER.json for all 150 issue dispositions. Stocktake, credit, reports
+and invoice issuance are present; unmerged candidates and live acceptance remain
+separate. The owner-authorized current protection policy is documented in
+REPOSITORY_WORKFLOW.md. Historical staffing, gate percentages and source-status
+rows below are not present completion measurements or active assignments.
+
+## Historical work breakdown and accepted exit evidence
+
 Status: capability/exit-evidence backlog; gate assessment reconciled 2026-09-27.
 `SOLO_CRITICAL_PATH.md` controls the active one-developer order. Developer A/B
 columns below are historical ownership assumptions, not current parallel lanes.
@@ -19,7 +37,7 @@ link dependencies. A range reaches 100% only when its exit evidence is accepted;
 source. This backlog may activate and split its work, but may not silently omit a
 capability or weaken its acceptance matrix.
 
-The percentages describe delivery gates, not effort or a claim that software can
+The historical percentages describe planned delivery gates, not current completion or a claim that software can
 be permanently finished. They define the path to a production-operable `1.0` for
 the agreed scope in `PRODUCT_SPEC.md`.
 

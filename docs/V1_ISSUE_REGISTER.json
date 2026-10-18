@@ -1,0 +1,3511 @@
+{
+  "checkpoint": "2026-10-18",
+  "sourceBaseline": "e2070948587b438dc5da55d8560ab870e23bf32d",
+  "requirementsReviewed": 150,
+  "allCriteriaIndependentlyAccepted": false,
+  "auditComplete": false,
+  "classificationDefinitions": {
+    "implemented_missing_acceptance": "Implemented but missing tests or acceptance evidence",
+    "partial": "Partially implemented",
+    "not_implemented": "Not implemented",
+    "blocked": "Blocked by dependencies",
+    "superseded": "Obsolete or superseded",
+    "duplicate": "Duplicate of another issue",
+    "future": "Future release scope",
+    "decision": "Requires a product or policy decision",
+    "accepted": "Original bounded issue acceptance independently reconciled against source and successful tests; not blanket live business/V1 acceptance."
+  },
+  "method": "All 150 issue bodies inventoried and reviewed; existing source groups and historical PR/timeline references retained. Current main/VPS and exact-SHA CI verified separately. #351 original test-only criteria reconciled and issue closed; #12 current operator-authorized protection policy recorded, documentation merge still pending. Closed state and source presence alone do not prove acceptance. Historical review evidence remains dated; criterion-level audit of every historical issue is still incomplete.",
+  "issues": [
+    {
+      "issue": 1,
+      "title": "Team onboarding: independent review and final ownership agreement",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/1",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        28,
+        44,
+        173,
+        222,
+        223,
+        429
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 2,
+      "title": "Epic 0.1: foundation, contracts and identity baseline",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/2",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        135,
+        170,
+        173,
+        222
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 3,
+      "title": "Epic 0.2: catalog, pricing, media and public discovery",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/3",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        103,
+        161,
+        177,
+        211
+      ],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 4,
+      "title": "Epic 0.3: warehouse ledger, reservations and transfers",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/4",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        102,
+        109
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 5,
+      "title": "Epic 0.4: cart, checkout, orders and admin operations",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/5",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        239,
+        241,
+        242
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 6,
+      "title": "Epic 0.5: verified payment, shipping and notifications",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/6",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        28,
+        174
+      ],
+      "sourceEvidenceGroup": "payment_fulfillment",
+      "acceptanceCheckpoint": "2026-10-16: separately authorized exact-main configuration deployment activates live gateway; one 100000 IRR real product sale has authoritative Order/Payment PAID and operator-confirmed return. Not full reconciliation/refund/fulfillment acceptance. See issuecomment-6214026750."
+    },
+    {
+      "issue": 7,
+      "title": "Epic 0.6: purchasing, stocktake, returns and reporting",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/7",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        328,
+        335,
+        337,
+        340
+      ],
+      "sourceEvidenceGroup": "purchasing"
+    },
+    {
+      "issue": 8,
+      "title": "Epic 1.0: experience completion, hardening and launch",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/8",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        11,
+        33,
+        40,
+        42
+      ],
+      "sourceEvidenceGroup": "operations"
+    },
+    {
+      "issue": 9,
+      "title": "Decision: Iraniyaragh-owned admin UX and self-hosted Vuexy adaptation",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/9",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        11,
+        42,
+        44,
+        57
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 10,
+      "title": "Admin foundation: custom RTL shell using the local Vuexy starter baseline",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/10",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        11,
+        43
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 12,
+      "title": "Enable enforced main branch protection when private-repo plan supports it",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/12",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "nextAction": "Current protection read back: nine strict app-bound checks, admins/conversations/linear history enforced, no force/delete. Owner changed required approvals 1→0 and last-push approval true→false on Oct 17. Keep open until current workflow/status docs #443 merge; no second-account dependency remains.",
+      "sourceEvidenceGroup": "governance",
+      "candidatePRs": [
+        443
+      ]
+    },
+    {
+      "issue": 13,
+      "title": "Decision: canonical IRR money, rounding, tax and invoice convention",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/13",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        28,
+        33,
+        38,
+        40,
+        42,
+        44,
+        57,
+        95,
+        112,
+        113
+      ],
+      "sourceEvidenceGroup": "foundation",
+      "acceptanceScope": "ADR decision artifact independently reviewed; the issue-wide historical pre-migration sequencing criterion is not yet accepted. No downstream tax/payment/invoice operational acceptance inferred.",
+      "criterionEvidence": [
+        {
+          "criterion": "Accepted canonical unit, exact Toman display, rounding and discount allocation rules",
+          "source": "docs/adr/0003-money-and-time.md",
+          "result": "documented and independently reviewed"
+        },
+        {
+          "criterion": "Explicit schema and public contract impact",
+          "source": [
+            "docs/adr/0003-money-and-time.md",
+            "packages/contracts/src/index.ts"
+          ],
+          "result": "ten money-column impact and integer IRR string representation specified"
+        },
+        {
+          "criterion": "At least five worked calculation examples",
+          "source": "docs/adr/0003-money-and-time.md",
+          "result": "six worked examples present"
+        },
+        {
+          "criterion": "Explicit tax/invoice scope boundary",
+          "source": "docs/adr/0003-money-and-time.md",
+          "result": "tax/fiscal/invoice implementation explicitly outside this decision"
+        }
+      ],
+      "independentReview": {
+        "pr": 44,
+        "author": "Hordekiller",
+        "reviewer": "Maddyrampant",
+        "reviewedHead": "ecc1b71d0b8aa02071bf2a7921c98db9f2c87f8e",
+        "merge": "86812f3600c68183c156a31fd275b35c2b290547",
+        "url": "https://github.com/Hordekiller/Iraniyaragh/pull/44#pullrequestreview-5074013273",
+        "scope": "ADR decision only"
+      },
+      "historicalSequenceEvidence": {
+        "decisionPR44MergedAt": "2026-09-02T02:34:03Z",
+        "latestIssueClosureAt": "2026-09-02T02:34:04Z",
+        "stateMigrationPR38MergedAt": "2026-08-31T11:13:31Z",
+        "moneyMigrationPR40MergedAt": "2026-08-31T11:40:33Z",
+        "assessment": "Recorded migrations precede the only closure in the available issue event timeline; no earlier closure/reopening is recorded. Historical body changes or an explicit authorized exception are not established here. Do not infer complete issue-wide compliance or an unauthorized production change from dates alone.",
+        "recordedCloseReopenEvents": [
+          {
+            "event": "closed",
+            "at": "2026-09-02T02:34:04Z"
+          }
+        ]
+      }
+    },
+    {
+      "issue": 14,
+      "title": "Decision: identity/profile boundary and separate order lifecycle states",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/14",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        28,
+        30,
+        33,
+        38,
+        39
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 15,
+      "title": "Foundation: typed environment validation and CORS allowlist",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/15",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        22
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 16,
+      "title": "Foundation: baseline Prisma migration and deterministic seed",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/16",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        22,
+        28,
+        30,
+        33,
+        38,
+        40,
+        45
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 17,
+      "title": "Foundation: PostgreSQL integration harness and CI test/migration stage",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/17",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        22,
+        28,
+        32,
+        34,
+        394
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 18,
+      "title": "Foundation: split liveness and database readiness endpoints",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/18",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        34,
+        394
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 19,
+      "title": "Web foundation: decompose storefront prototype with visual parity",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/19",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        26
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 20,
+      "title": "E2E foundation: Playwright smoke for web and admin shells",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/20",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        26,
+        28,
+        29,
+        30
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 21,
+      "title": "Foundation: request IDs, structured errors/logs and OpenAPI drift",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/21",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        28,
+        34,
+        43
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 23,
+      "title": "infra: docker compose cannot start PostgreSQL 18 on clean clone",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/23",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        25,
+        144
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 24,
+      "title": "infra: docker compose cannot start PostgreSQL 18 on clean clone",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/24",
+      "githubState": "CLOSED",
+      "classification": "duplicate",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "canonicalIssue": 23,
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 27,
+      "title": "Identity: add secure Auth and RBAC persistence models",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/27",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        28,
+        30
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 35,
+      "title": "CI: upgrade JavaScript actions off the deprecated Node 20 runtime",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/35",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        36
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 46,
+      "title": "Auth: accept runtime security policy and HTTP contract",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/46",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        53
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 47,
+      "title": "Auth API: session rotation, permission guards and safe audit core",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/47",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        55,
+        58,
+        60,
+        64,
+        83
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 48,
+      "title": "Auth API: customer OTP request/verify with abuse controls",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/48",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        92,
+        113
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 49,
+      "title": "Auth API: staff password, first-admin bootstrap and privileged TOTP",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/49",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        58,
+        92,
+        102,
+        103,
+        104,
+        108,
+        109,
+        110,
+        112,
+        113
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 50,
+      "title": "Auth UX/E2E: customer OTP and admin session/permission states",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/50",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        53,
+        61,
+        65,
+        87,
+        88,
+        89,
+        92,
+        102,
+        104,
+        105,
+        110,
+        112,
+        113,
+        117,
+        139,
+        142,
+        149,
+        150,
+        152,
+        156,
+        158,
+        159,
+        160,
+        167
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 51,
+      "title": "Security: pin Actions and add dependency/supply-chain gates",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/51",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        52,
+        112
+      ],
+      "sourceEvidenceGroup": "foundation",
+      "candidatePRs": [
+        441,
+        442,
+        448
+      ]
+    },
+    {
+      "issue": 54,
+      "title": "Security: upgrade vulnerable admin runtime dependency chain",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/54",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        55,
+        56
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 66,
+      "title": "Audit remediation: coordinated plan (code + capability gaps)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/66",
+      "githubState": "CLOSED",
+      "classification": "superseded",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        61,
+        67,
+        68,
+        69,
+        72,
+        80,
+        88,
+        106,
+        107
+      ],
+      "canonicalIssue": 363,
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 70,
+      "title": "Admin program: production-grade operations UX and completion gates",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/70",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        72
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 73,
+      "title": "Auth API: live bearer principal and permission guard (#47)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/73",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        64,
+        83,
+        85,
+        113
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 74,
+      "title": "Auth API: refresh/CSRF and own-session HTTP surface (#47)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/74",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        64,
+        92,
+        96,
+        101,
+        102,
+        104,
+        109,
+        113,
+        150
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 75,
+      "title": "CI: pin PostgreSQL service image by immutable digest",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/75",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        80
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 76,
+      "title": "CI: establish API/web coverage baseline and ratcheting thresholds",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/76",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        113
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 77,
+      "title": "Decision: controlled major dependency upgrade train",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/77",
+      "githubState": "OPEN",
+      "classification": "future",
+      "releaseScope": "V1.1+ / post-V1",
+      "relatedPRs": [
+        63,
+        71,
+        106,
+        107,
+        113,
+        194,
+        208,
+        209,
+        316
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 78,
+      "title": "Team working agreement: owner capacity and release authority",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/78",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        92,
+        112,
+        113,
+        117,
+        135,
+        167,
+        172,
+        174,
+        194
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 79,
+      "title": "Decision: production OTP SMS provider, sandbox and outage policy",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/79",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        112,
+        113,
+        116,
+        117,
+        142
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 81,
+      "title": "perf(inventory): batch reservation expiry before production worker rollout",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/81",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        69,
+        113,
+        171,
+        173,
+        174,
+        221,
+        232,
+        451
+      ],
+      "sourceEvidenceGroup": "inventory",
+      "candidatePRs": [
+        451
+      ],
+      "nextAction": "Review and integrate measured batching candidate #451; complete operational runner/reconciliation in #450. No automatic expiry deployment is claimed."
+    },
+    {
+      "issue": 82,
+      "title": "a11y(web): complete storefront keyboard, naming and navigation baseline",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/82",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        98
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 91,
+      "title": "Sprint 1 — Auth runtime: coordination plan",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/91",
+      "githubState": "CLOSED",
+      "classification": "superseded",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        92,
+        112,
+        113,
+        117,
+        118,
+        133,
+        134,
+        135,
+        139,
+        142,
+        149,
+        150,
+        167
+      ],
+      "canonicalIssue": 363,
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 111,
+      "title": "Catalog hardening: mutation idempotency and public cache/projection policy",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/111",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        113,
+        157,
+        167,
+        168,
+        170,
+        173,
+        174
+      ],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 114,
+      "title": "SMS.ir production acceptance: real OTP and transactional templates",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/114",
+      "githubState": "CLOSED",
+      "classification": "superseded",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        116,
+        117,
+        118,
+        119,
+        120,
+        132,
+        139,
+        148,
+        153,
+        154,
+        155,
+        167,
+        194,
+        221,
+        315,
+        316,
+        328,
+        395,
+        399
+      ],
+      "nextAction": "Provider/settings implementation delivered; explicit operator closure transfers unfinished acceptance to #403; operator attests OTP receipt/login, not all transactional paths.",
+      "canonicalIssue": 403,
+      "sourceEvidenceGroup": "sms"
+    },
+    {
+      "issue": 115,
+      "title": "Admin: secure SMS provider settings and diagnostics panel",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/115",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        116,
+        117,
+        118,
+        139,
+        153,
+        154,
+        158,
+        194
+      ],
+      "sourceEvidenceGroup": "sms"
+    },
+    {
+      "issue": 122,
+      "title": "Epic: SEO, GEO, AI-answer and dynamic discovery foundation",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/122",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        131
+      ],
+      "sourceEvidenceGroup": "content_seo"
+    },
+    {
+      "issue": 123,
+      "title": "Discovery CI, production audit and performance budgets",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/123",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        134
+      ],
+      "sourceEvidenceGroup": "content_seo"
+    },
+    {
+      "issue": 124,
+      "title": "Decision: public rendering, canonical URL and indexability architecture",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/124",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        194
+      ],
+      "nextAction": "Accepted ADR-0012 requires route-by-route Next App Router public rendering; current Vite source does not satisfy #126.",
+      "sourceEvidenceGroup": "content_seo"
+    },
+    {
+      "issue": 125,
+      "title": "Content editor, article workflow and governed tag taxonomies",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/125",
+      "githubState": "OPEN",
+      "classification": "not_implemented",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "nextAction": "Only product rich-text sanitizer/editor exists; no article model/controller/Admin workflow. Do not count product Jodit as a CMS.",
+      "sourceEvidenceGroup": "content_seo"
+    },
+    {
+      "issue": 126,
+      "title": "Server-rendered public templates and metadata parity",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/126",
+      "githubState": "OPEN",
+      "classification": "not_implemented",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        131,
+        137,
+        167,
+        175
+      ],
+      "nextAction": "Current Web is a Vite SPA; accepted SSR migration, initial HTML and metadata parity remain unimplemented.",
+      "sourceEvidenceGroup": "content_seo"
+    },
+    {
+      "issue": 127,
+      "title": "Commerce structured data and Merchant feed parity",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/127",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "sourceEvidenceGroup": "content_seo"
+    },
+    {
+      "issue": 128,
+      "title": "On-site AI retrieval, evaluation and safety foundation",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/128",
+      "githubState": "OPEN",
+      "classification": "future",
+      "releaseScope": "V1.1+ / post-V1",
+      "relatedPRs": [],
+      "sourceEvidenceGroup": "content_seo"
+    },
+    {
+      "issue": 129,
+      "title": "Dynamic sitemap, robots and IndexNow pipeline",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/129",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        131,
+        137,
+        167
+      ],
+      "sourceEvidenceGroup": "content_seo"
+    },
+    {
+      "issue": 130,
+      "title": "Crawler governance and AI-answer/GEO readiness",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/130",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "sourceEvidenceGroup": "content_seo"
+    },
+    {
+      "issue": 136,
+      "title": "Epic: production logging, telemetry and safe operational diagnostics",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/136",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        132,
+        133,
+        137,
+        144,
+        167
+      ],
+      "nextAction": "Request IDs/structured logs/readiness/outbox exist; current alert/load/recovery acceptance and runtime provenance fix #440 remain.",
+      "sourceEvidenceGroup": "operations"
+    },
+    {
+      "issue": 140,
+      "title": "Epic: dynamic storefront pages, content lifecycle and responsive purchase UX",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/140",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        142
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 141,
+      "title": "V1.1.0: multi-SMS and multi-payment provider orchestration",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/141",
+      "githubState": "OPEN",
+      "classification": "future",
+      "releaseScope": "V1.1+ / post-V1",
+      "relatedPRs": [
+        142,
+        294
+      ],
+      "nextAction": "Explicit V1.1 multi-provider scope; do not expand V1 or modify payment mode.",
+      "sourceEvidenceGroup": "sms"
+    },
+    {
+      "issue": 162,
+      "title": "Product media M1: persistence, secure upload and processing foundation",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/162",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        161,
+        170,
+        190,
+        194,
+        211,
+        220,
+        223
+      ],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 163,
+      "title": "Product media M2: responsive admin gallery authoring workflow",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/163",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 164,
+      "title": "Product media M3-M4: public projection and responsive product gallery/player",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/164",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 165,
+      "title": "Product media M5: publish-to-discovery integration and operations evidence",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/165",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        240
+      ],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 166,
+      "title": "UI integration train: rebase, split and promote Admin/Web slices safely",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/166",
+      "githubState": "CLOSED",
+      "classification": "superseded",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        169,
+        171,
+        194,
+        206,
+        214,
+        221,
+        254,
+        316
+      ],
+      "canonicalIssue": 252,
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 176,
+      "title": "Decision: product attributes, variants, SKU identity and catalog import policy",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/176",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        174,
+        177,
+        179,
+        194
+      ],
+      "sourceEvidenceGroup": "catalog",
+      "independentDecisionReview": {
+        "pr": 177,
+        "reviewedHead": "eda503a44e6fb22706b8ed870feaac2116431c0d",
+        "merge": "a0347329236d22358359149451b4c289e965ce4a",
+        "url": "https://github.com/Hordekiller/Iraniyaragh/pull/177#pullrequestreview-5185694789",
+        "limitation": "Accepted policy review; downstream catalog/import/runtime acceptance is separate. No blanket closure evidence inferred."
+      }
+    },
+    {
+      "issue": 178,
+      "title": "G2/G3 platform waves: catalog attributes, variants/SKU and Excel import contracts+services",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/178",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        174,
+        179,
+        180,
+        181,
+        214
+      ],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 186,
+      "title": "Admin logout never revokes the server session (missing double-submit CSRF proof)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/186",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        190,
+        194,
+        221
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 187,
+      "title": "Admin docs/navigation reconciliation backlog (coordinated after #174/#185)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/187",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        191,
+        192,
+        194,
+        221,
+        223,
+        224,
+        225
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 188,
+      "title": "Auth contract parity gaps (audit 2026-09-13) — API lane",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/188",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        194,
+        195,
+        221
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 189,
+      "title": "Catalog contract parity gaps (audit 2026-09-13) — API lane",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/189",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        194,
+        199,
+        200,
+        221
+      ],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 193,
+      "title": "chore(ci): pin the E2E Redis image and align its major version with the test job",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/193",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        190,
+        204,
+        205
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 213,
+      "title": "Blocker: SonarCloud organization suspension",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/213",
+      "githubState": "OPEN",
+      "classification": "blocked",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        194,
+        212,
+        218,
+        254,
+        316
+      ],
+      "nextAction": "Current trusted Sonar scans pass; organization administrator has not confirmed historical suspension banner resolution.",
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 215,
+      "title": "G4 contract: Inventory HTTP, reservations and transfers",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/215",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        194,
+        217,
+        219,
+        221,
+        222,
+        223,
+        224,
+        225
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 216,
+      "title": "Unblock #207: storefront route-level coverage and Sonar gate",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/216",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        207,
+        218,
+        221
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 226,
+      "title": "feat(product-media): M5 integration — real draft → upload → process → publish → public discovery",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/226",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 230,
+      "title": "feat: public variant availability summary for storefront",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/230",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 236,
+      "title": "Cart runtime: server-owned cart API and persistence",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/236",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        239,
+        241,
+        242,
+        243,
+        244
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 237,
+      "title": "Checkout runtime: inventory reservation and order snapshot",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/237",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        246,
+        247,
+        249,
+        292
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 238,
+      "title": "Order application API and admin read operations",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/238",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        247,
+        249
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 248,
+      "title": "Flaky: inventory integration concurrency test intermittently fails on retry-budget exhaustion",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/248",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        251,
+        291
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 250,
+      "title": "Authenticated Cart correctness: side-effect-free reads and concurrency-safe idempotency",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/250",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        249,
+        251
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 252,
+      "title": "Admin UI completion: apply licensed Vuexy design to every delivered capability",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/252",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        254
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 253,
+      "title": "Admin Vuexy foundation: local theme, shell, auth surface and RTL accessibility",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/253",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        254
+      ],
+      "sourceEvidenceGroup": "foundation"
+    },
+    {
+      "issue": 255,
+      "title": "CI: preserve blocking dependency review after repository privacy change",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/255",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        256
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 257,
+      "title": "Admin Orders: remove runtime fixtures and bind queue/detail to live API",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/257",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        259,
+        292
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 258,
+      "title": "Storefront UI completion: production-ready customer journeys with real APIs",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/258",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        268,
+        270,
+        333,
+        365
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 260,
+      "title": "Inventory contracts: typed Admin read projections for balances and movements",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/260",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        262
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 261,
+      "title": "Admin Inventory: Vuexy warehouse, balance, movement and transfer operations",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/261",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        316,
+        318,
+        328
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 263,
+      "title": "Inventory commands: publish safe Admin mutation contracts and retry semantics",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/263",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        266
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 264,
+      "title": "Admin dashboard: real operational summary contract and accessible charts",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/264",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        265,
+        281
+      ],
+      "sourceEvidenceGroup": "admin_operations"
+    },
+    {
+      "issue": 267,
+      "title": "Storefront commerce: live cart, checkout and customer orders",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/267",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        268
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 269,
+      "title": "Guest Cart runtime: opaque token, 24h idle TTL and explicit login merge",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/269",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        270,
+        271
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 272,
+      "title": "Web commerce: anonymous Guest Cart and low-friction OTP handoff",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/272",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        273
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 274,
+      "title": "Admin auth transition: prevent blank screen after sign-in or guard redirect",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/274",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        254
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 275,
+      "title": "Web Checkout test: wait for server preview before duplicate-submit assertion",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/275",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        276
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 277,
+      "title": "Web hero: preserve WCAG contrast during entrance animation",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/277",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        276
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 278,
+      "title": "Admin auth: make real staff MFA the primary login",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/278",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        254
+      ],
+      "sourceEvidenceGroup": "auth"
+    },
+    {
+      "issue": 279,
+      "title": "Admin content editor: self-hosted Jodit with native Media Manager integration",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/279",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        284,
+        285,
+        286,
+        287,
+        288,
+        290,
+        316,
+        368
+      ],
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 304,
+      "title": "Reconcile ADR-0006 initial fulfillment transition with persisted schema",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/304",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        305,
+        306,
+        307
+      ],
+      "sourceEvidenceGroup": "payment_fulfillment"
+    },
+    {
+      "issue": 308,
+      "title": "Fulfillment: item-level pick proof before ready-to-ship",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/308",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        309
+      ],
+      "sourceEvidenceGroup": "payment_fulfillment"
+    },
+    {
+      "issue": 310,
+      "title": "Shipping: manual one-package dispatch and customer tracking",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/310",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        311,
+        362
+      ],
+      "sourceEvidenceGroup": "payment_fulfillment"
+    },
+    {
+      "issue": 312,
+      "title": "Shipping: audited manual delivery confirmation",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/312",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        313,
+        362
+      ],
+      "sourceEvidenceGroup": "payment_fulfillment"
+    },
+    {
+      "issue": 314,
+      "title": "V1: deliver paid and shipment SMS from durable outbox effects",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/314",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        315,
+        316
+      ],
+      "sourceEvidenceGroup": "sms"
+    },
+    {
+      "issue": 317,
+      "title": "Admin Inventory M1: live warehouse and location operations",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/317",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        318
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 319,
+      "title": "Admin Inventory M2: live balances, movements and audited stock changes",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/319",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        320
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 321,
+      "title": "Admin Inventory M3: guarded manual reservations and lifecycle",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/321",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        322
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 326,
+      "title": "Admin Inventory M4: live transfer list, detail and guarded state-machine UI",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/326",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        327
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 329,
+      "title": "Warehouse+ G7-01: permissioned Supplier lifecycle and Admin operator flow",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/329",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        335,
+        337,
+        340
+      ],
+      "sourceEvidenceGroup": "purchasing"
+    },
+    {
+      "issue": 330,
+      "title": "Inventory reconciliation E2E: two-warehouse balances versus immutable movements",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/330",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        331
+      ],
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 332,
+      "title": "Storefront: remove fake Newsletter success and local contact collection",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/332",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        333
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 334,
+      "title": "Warehouse+ G7-01a: Supplier API, contracts and permissioned lifecycle",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/334",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        335
+      ],
+      "sourceEvidenceGroup": "purchasing"
+    },
+    {
+      "issue": 336,
+      "title": "Customer credit accounts / accounts receivable (V1.0.0, staff-recorded credit sales)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/336",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        337,
+        412,
+        427,
+        428,
+        432
+      ],
+      "nextAction": "Staff-only ledger/opening/receipts/credit approval source deployed via #427/#428/#432. No public credit checkout. Financial operator acceptance remains in #338/#431/#424.",
+      "sourceEvidenceGroup": "credit_returns"
+    },
+    {
+      "issue": 338,
+      "title": "Credit V1: ADR for receivables ledger, staff sale and fulfillment safety",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/338",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        412,
+        427,
+        428,
+        432
+      ],
+      "sourceEvidenceGroup": "credit_returns",
+      "nextAction": "ADR-0023 and credit/sale/receipt/fulfillment/credit-return source exist. The ADR expressly does not close #336/#338 from foundation alone; reconcile every original financial criterion and real operator sale/statement/receipt/return acceptance before closure."
+    },
+    {
+      "issue": 339,
+      "title": "Warehouse+ G7-02a: permissioned Purchase Order draft/approve/cancel API",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/339",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        340
+      ],
+      "sourceEvidenceGroup": "purchasing"
+    },
+    {
+      "issue": 341,
+      "title": "Warehouse+ G7-02b: Admin Purchase Order operator flow",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/341",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        342
+      ],
+      "sourceEvidenceGroup": "purchasing"
+    },
+    {
+      "issue": 343,
+      "title": "Warehouse+ G7-03a: partial Purchase Order Receiving API and ledger reconciliation",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/343",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        344,
+        346,
+        368
+      ],
+      "sourceEvidenceGroup": "purchasing"
+    },
+    {
+      "issue": 345,
+      "title": "Warehouse+ G7-03b: Admin partial purchase receipt workflow",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/345",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        346,
+        364
+      ],
+      "sourceEvidenceGroup": "purchasing"
+    },
+    {
+      "issue": 347,
+      "title": "Warehouse+ G7-04: Stocktake count, review and variance reconciliation",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/347",
+      "githubState": "OPEN",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        367,
+        368,
+        411
+      ],
+      "nextAction": "Stocktake source and PostgreSQL tests deployed via #411; exact two-location up/down browser criterion and live physical operator acceptance remain #352.",
+      "sourceEvidenceGroup": "inventory",
+      "candidatePRs": [
+        444
+      ]
+    },
+    {
+      "issue": 348,
+      "title": "Warehouse+ G7-05: Customer returns and after-sales resolution",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/348",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        411,
+        412
+      ],
+      "nextAction": "Only accepted sellable credit-return compensation is implemented. General paid-order customer RMA/inspection/quarantine/refund workflow is not complete.",
+      "sourceEvidenceGroup": "credit_returns"
+    },
+    {
+      "issue": 349,
+      "title": "Customers V1-1: Admin customer records API and UI (prerequisite for #336)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/349",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        365,
+        366
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 350,
+      "title": "Orders V1-2: Staff-created order in Admin (prerequisite for #336)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/350",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        368,
+        372
+      ],
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 351,
+      "title": "Test: reconcile the inventory ledger including the merged purchase-receipt path",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/351",
+      "githubState": "CLOSED",
+      "classification": "accepted",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        365,
+        367,
+        368
+      ],
+      "nextAction": "Closed against original test-only criteria; preserve source/CI evidence. Physical warehouse UAT, #347/#352 and expiry #81/#450 remain independent.",
+      "sourceEvidenceGroup": "inventory",
+      "acceptanceCheckpoint": "2026-10-18",
+      "criterionEvidence": [
+        {
+          "criterion": "Real UI purchase receiving and immutable ledger reconciliation on both browser viewports",
+          "source": [
+            "e2e/tests/admin-inventory-ledger-purchase-receipt.spec.ts"
+          ],
+          "result": "Main e207094 CI 39084793973 desktop 49.4s/mobile 1.2m PASS; full browser 136 pass / 5 existing viewport skips / 0 final failure or flake."
+        },
+        {
+          "criterion": "Receipt line to movement foreign-key evidence",
+          "source": [
+            "apps/api/src/modules/purchasing/purchasing.integration-spec.ts"
+          ],
+          "result": "Real PostgreSQL assertions verify PurchaseReceiptLine referenceType/referenceId; complements UI receipt/movement links and signed quantity reconciliation."
+        },
+        {
+          "criterion": "Test-only PR and owner sequencing",
+          "result": "#368 changed the spec and documentation only; original nine gates pass. Hordekiller merged b4cd95000551a018974e1e8f73d92087b7b9c830 on 2026-09-30. No independent GitHub approval is asserted."
+        }
+      ]
+    },
+    {
+      "issue": 352,
+      "title": "Test: stocktake count session coverage for slice #347 (API, Admin, E2E)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/352",
+      "githubState": "OPEN",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        411
+      ],
+      "nextAction": "Baseline browser journey has one location/downward variance. Original two-location upward+downward reconciliation criterion remains, despite PostgreSQL multi-line coverage.",
+      "sourceEvidenceGroup": "inventory",
+      "candidatePRs": [
+        444
+      ]
+    },
+    {
+      "issue": 353,
+      "title": "Admin V1: Admin slice plan from full audit — tracking",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/353",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        360
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 354,
+      "title": "Admin A2: Audit log viewer (API + /audit page)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/354",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        361
+      ],
+      "sourceEvidenceGroup": "admin_operations"
+    },
+    {
+      "issue": 355,
+      "title": "Admin A1: remove showcase demo routes + disabled ProfileMenu placeholders",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/355",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        360
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 356,
+      "title": "Admin A3: Shipments list & detail (API + /shipments page)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/356",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        362
+      ],
+      "sourceEvidenceGroup": "admin_operations"
+    },
+    {
+      "issue": 357,
+      "title": "Admin A4: Customer records (API + /customers page)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/357",
+      "githubState": "CLOSED",
+      "classification": "duplicate",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "canonicalIssue": 349,
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 358,
+      "title": "Admin A5: Operational reports (/reports page)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/358",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        412,
+        427,
+        432,
+        433,
+        434,
+        435,
+        436
+      ],
+      "nextAction": "Operational day/week/month reporting deployed #435; full expanded scope still depends on #421/#422/#423. Reopened, old no-reports statement retained as history.",
+      "sourceEvidenceGroup": "reports"
+    },
+    {
+      "issue": 359,
+      "title": "Admin A6: Roles & permissions (/access page)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/359",
+      "githubState": "OPEN",
+      "classification": "not_implemented",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        360
+      ],
+      "nextAction": "Role/grant schema and effective-permission reader exist, but no runtime access API/Admin page. ADR-0014 remains Proposed; last-admin/self-escalation/concurrency controls require review.",
+      "sourceEvidenceGroup": "admin_operations"
+    },
+    {
+      "issue": 363,
+      "title": "V1 FINAL EXECUTION: two-lane tracker (Hordekiller backend+Admin+deploy / Maddyrampant Web)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/363",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        364,
+        366
+      ],
+      "sourceEvidenceGroup": "governance"
+    },
+    {
+      "issue": 388,
+      "title": "[Feature]: Complete Admin product creation workflow end to end",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/388",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        391,
+        392,
+        394
+      ],
+      "nextAction": "Draft/variants/IRR/attributes/Jodit/image source is present. #456 root-category drill-down deployed: 13 roots / 75 supplied descendants, 88 total. Full live authoring acceptance, unsupported video and scanner signature freshness #393 remain open.",
+      "sourceEvidenceGroup": "catalog"
+    },
+    {
+      "issue": 389,
+      "title": "[Feature]: Complete the customer account panel end to end",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/389",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        391,
+        392,
+        394,
+        399,
+        402,
+        406,
+        407,
+        408
+      ],
+      "nextAction": "Customer-self profile/addresses/orders/credit/invoices exist. Complete live account/security/privacy/backend-dependent acceptance remains open.",
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 393,
+      "title": "ops: restore verified automatic ClamAV signature updates on staging (CDN 403)",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/393",
+      "githubState": "OPEN",
+      "classification": "blocked",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        392,
+        394
+      ],
+      "nextAction": "Live engine healthy but signatures version 28137 dated 2026-09-28; current automatic update/freshness remains unaccepted.",
+      "sourceEvidenceGroup": "inventory",
+      "runtimeCheckpoint": {
+        "dateUTC": "2026-10-16",
+        "imageSha": "30c3edee7002021429978b3478150d63385d75f7",
+        "engine": "1.5.4",
+        "signatureVersion": 28137,
+        "signatureDate": "2026-09-28",
+        "cdnReachabilityToday": "not re-probed",
+        "status": "OPEN; approved update route, updater supervision, freshness alerting and subsequent scheduled scan acceptance remain"
+      }
+    },
+    {
+      "issue": 400,
+      "title": "fix(admin-auth): prevent false session expiry during Admin mutations",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/400",
+      "githubState": "OPEN",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        405,
+        438,
+        445,
+        447
+      ],
+      "nextAction": "#445 boundary coverage and #447 protected replay fix merged/deployed in e207094. Real authenticated operator idle/reload/mutation acceptance remains open; do not assert every single-tab symptom has the cross-tab cause or extend TTLs speculatively.",
+      "sourceEvidenceGroup": "auth",
+      "candidatePRs": [],
+      "criterionEvidence": [
+        {
+          "criterion": "Cross-tab protected replay recovery",
+          "source": [
+            "apps/admin/src/lib/api/client.ts",
+            "e2e/tests/admin-cross-tab-recovery.spec.ts"
+          ],
+          "result": "#447 merged e207094; before-fix real protected replay 401 reproduced, exact-head/merged CI desktop/mobile regression PASS. Live public smoke is not authenticated operator acceptance."
+        },
+        {
+          "criterion": "Authoritative idle/revocation/fresh-MFA boundary",
+          "result": "#445 merged 8dfbcf5 and included in e207094; seven genuine-token HTTP/PG cases; full main PG 418 + 10 separate security cases PASS."
+        },
+        {
+          "criterion": "Live operator idle and mutation after inactivity",
+          "result": "Pending, therefore issue remains OPEN."
+        }
+      ],
+      "deliveredPRs": [
+        445,
+        447
+      ]
+    },
+    {
+      "issue": 401,
+      "title": "feat(web): reconcile customer account UI, mobile order tracking navigation, and homepage hero slider",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/401",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        402,
+        406,
+        407
+      ],
+      "nextAction": "Hero slider/mobile order nav/account integration now exist; original source-current-state paragraphs are dated. Full fixture-disabled live journey still pending.",
+      "sourceEvidenceGroup": "commerce"
+    },
+    {
+      "issue": 403,
+      "title": "SMS.ir release gate: real customer OTP and transactional handset acceptance",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/403",
+      "githubState": "OPEN",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        438
+      ],
+      "nextAction": "Real OTP login is operator-attested; one real order-paid SMS now has authoritative effect/provider acceptance and operator-confirmed handset receipt. Dispatch/delivery handset, failure/replay and full session lifecycle acceptance remain. See issuecomment-6214025982.",
+      "sourceEvidenceGroup": "sms"
+    },
+    {
+      "issue": 413,
+      "title": "Epic: Professional Invoice Management and reporting integration",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/413",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        412,
+        427,
+        428,
+        429,
+        430,
+        432,
+        433,
+        434,
+        435,
+        436,
+        437,
+        439
+      ],
+      "sourceEvidenceGroup": "invoices"
+    },
+    {
+      "issue": 414,
+      "title": "Invoice I0: accept financial lifecycle, policies and API contracts",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/414",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        412
+      ],
+      "nextAction": "Store invoice scope, exact policy/draft/issuance/publication/report ADRs landed. Whole corrective/PDF/export/valuation contracts and independent final acceptance are not all complete.",
+      "sourceEvidenceGroup": "invoices"
+    },
+    {
+      "issue": 415,
+      "title": "Invoice I1a: versioned financial policy and exact IRR quotation",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/415",
+      "githubState": "OPEN",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        429
+      ],
+      "nextAction": "Policy API/Admin and exact IRR quotations deployed via #429; approved operator policy and integrated invoice acceptance remain, no invented tax.",
+      "sourceEvidenceGroup": "invoices"
+    },
+    {
+      "issue": 416,
+      "title": "Invoice I1b: editable proforma drafts with real customers and backend quotes",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/416",
+      "githubState": "OPEN",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        430
+      ],
+      "nextAction": "Independent proforma source deployed via #430; reconcile full quote/edit/version/restart/conversion criteria and operator acceptance.",
+      "sourceEvidenceGroup": "invoices"
+    },
+    {
+      "issue": 417,
+      "title": "Invoice I2: atomic numbering and immutable final issuance",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/417",
+      "githubState": "OPEN",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        430,
+        433,
+        434
+      ],
+      "nextAction": "Unique immutable issuance deployed via #433; preserve original financial snapshots, complete original criterion and operator acceptance.",
+      "sourceEvidenceGroup": "invoices"
+    },
+    {
+      "issue": 418,
+      "title": "Invoice I3: customer publication, revocation and ownership",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/418",
+      "githubState": "OPEN",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        433,
+        434
+      ],
+      "nextAction": "Customer publication/revocation deployed via #434; current permission/ownership tests exist, real two-customer publish/read/revoke acceptance still pending.",
+      "sourceEvidenceGroup": "invoices"
+    },
+    {
+      "issue": 419,
+      "title": "Invoice I4: self-hosted Persian A4 PDF and private document artifacts",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/419",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        433,
+        434,
+        435,
+        437,
+        439,
+        449
+      ],
+      "nextAction": "Review template #439 and internal private PostgreSQL artifact persistence #449; implement durable render jobs/worker, current-authority download and Admin/Web integration.",
+      "sourceEvidenceGroup": "invoices",
+      "candidatePRs": [
+        439,
+        449
+      ],
+      "remainingWork": "Private-store candidate #449 is not merged/deployed and has no worker, job claims, HTTP/download authorization, UI or operator capacity activation. Main remains at 61 migrations; candidate adds forward migration only."
+    },
+    {
+      "issue": 420,
+      "title": "Invoice I5: complete Admin and customer invoice journeys",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/420",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [],
+      "nextAction": "Existing Admin draft/issue/history/publish and customer list/detail/print integrated. Actual private PDF download and complete browser/live chain depend on #419.",
+      "sourceEvidenceGroup": "invoices"
+    },
+    {
+      "issue": 421,
+      "title": "Invoice I6: auditable corrections, cancellation and credit documents",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/421",
+      "githubState": "OPEN",
+      "classification": "not_implemented",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        430,
+        433,
+        434,
+        435
+      ],
+      "nextAction": "No append-only corrective invoice lifecycle/signed delta implementation. Credit debt entries cannot replace a corrective invoice.",
+      "sourceEvidenceGroup": "invoices"
+    },
+    {
+      "issue": 422,
+      "title": "Reports R1: approved inventory cost basis and valuation evidence",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/422",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        434,
+        435,
+        436
+      ],
+      "nextAction": "Only configurable cost method deployed #436; valuationEnabled=false by owner request. Cost ledger/approved attribution/opening evidence absent; never activate or invent history.",
+      "sourceEvidenceGroup": "inventory"
+    },
+    {
+      "issue": 423,
+      "title": "Reports R2: secure snapshot-based CSV Excel and PDF exports",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/423",
+      "githubState": "OPEN",
+      "classification": "not_implemented",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        434,
+        435
+      ],
+      "nextAction": "No bounded owned private snapshot export pipeline. Installed ExcelJS import is not a report export capability.",
+      "sourceEvidenceGroup": "reports"
+    },
+    {
+      "issue": 424,
+      "title": "Invoice/reporting release gate: integrated acceptance and safe rollout",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/424",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        412
+      ],
+      "nextAction": "Composite release gate: incomplete #419/#420/#421/#422/#423 and remaining real provider/operator acceptance cannot be greened by deployment.",
+      "sourceEvidenceGroup": "invoices"
+    },
+    {
+      "issue": 431,
+      "title": "Credit V1: sale cancellation, physical returns and evidenced refund acceptance",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/431",
+      "githubState": "OPEN",
+      "classification": "implemented_missing_acceptance",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        432
+      ],
+      "nextAction": "Sellable credit cancellation/return/refund obligation source deployed #432. Financial operator acceptance and broader general returns remain separate.",
+      "sourceEvidenceGroup": "credit_returns"
+    },
+    {
+      "issue": 450,
+      "title": "fix(commerce): execute reservation expiry safely and recover stale payment journeys",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/450",
+      "githubState": "OPEN",
+      "classification": "partial",
+      "releaseScope": "V1 revenue and stock integrity",
+      "relatedPRs": [
+        451,
+        453,
+        454,
+        455
+      ],
+      "sourceEvidenceGroup": "commerce",
+      "nextAction": "Rebase/integrate safety #454 then retarget #455 onto main, then #451/#453 with combined checks. All four are unmerged candidates. Implement durable scheduled bounded worker/restart/fencing and prove reservation release/storefront recovery. Any payment attempt prevents automatic expiry pending explicit reconciliation. No fake Staff actor or direct stock repair.",
+      "candidatePRs": [
+        454,
+        455,
+        451,
+        453
+      ]
+    }
+  ],
+  "defaultAcceptanceState": "Criterion-level independent acceptance review pending. Source anchors/merged PRs/closed issue states are not a full acceptance claim.",
+  "defaultNextAction": "Review original criteria against source, tests and linked PRs; preserve historical closure and separate real runtime acceptance. No bulk issue closure.",
+  "sourceEvidenceGroups": {
+    "governance": [
+      "docs/REPOSITORY_WORKFLOW.md",
+      "docs/ADMIN_PANEL_PLAN.md",
+      ".github/workflows/ci.yml"
+    ],
+    "foundation": [
+      "docs/FOUNDATION.md",
+      "apps/api/prisma/schema.prisma",
+      "apps/api/src/config/environment.ts",
+      ".github/workflows/ci.yml"
+    ],
+    "catalog": [
+      "apps/api/src/modules/catalog/catalog.service.ts",
+      "apps/api/src/modules/media/media.service.ts",
+      "apps/api/src/modules/catalog/product-description.integration-spec.ts",
+      "apps/api/src/modules/catalog/catalog-authoring.integration-spec.ts",
+      "apps/admin/src/components/editor/RichTextEditor.tsx",
+      "e2e/tests/admin-279-journey.spec.ts"
+    ],
+    "inventory": [
+      "apps/api/src/modules/inventory/inventory.service.ts",
+      "apps/api/src/modules/stocktake/stocktake.service.ts",
+      "apps/api/src/modules/inventory/inventory-cost-policy.service.ts",
+      "apps/api/src/modules/stocktake/stocktake.integration-spec.ts",
+      "e2e/tests/admin-stocktake.spec.ts",
+      "e2e/tests/admin-inventory-ledger-purchase-receipt.spec.ts"
+    ],
+    "commerce": [
+      "apps/api/src/modules/orders/checkout.controller.ts",
+      "apps/api/src/modules/customers/customer-self.controller.ts",
+      "apps/api/src/modules/customers/customer-self.integration-spec.ts",
+      "apps/web/src/pages/CheckoutPage.tsx",
+      "apps/web/src/components/content/HeroSlider.tsx",
+      "e2e/tests/admin-staff-order.spec.ts"
+    ],
+    "payment_fulfillment": [
+      "apps/api/src/modules/payments/payment-verification.service.ts",
+      "apps/api/src/modules/orders/fulfillment-pick.controller.ts",
+      "apps/api/src/modules/payments/payment-verification.integration-spec.ts",
+      "apps/web/src/pages/PaymentReturnPage.tsx"
+    ],
+    "purchasing": [
+      "apps/api/src/modules/purchasing/purchasing.service.ts",
+      "apps/api/src/modules/suppliers/suppliers.service.ts",
+      "apps/api/src/modules/purchasing/purchasing.integration-spec.ts",
+      "e2e/tests/admin-purchase-orders.spec.ts"
+    ],
+    "operations": [
+      "infrastructure/docker/compose.staging.yml",
+      "infrastructure/docker/RUNBOOK.md",
+      "scripts/deploy/deploy.sh",
+      "docs/OPERATIONS.md"
+    ],
+    "auth": [
+      "apps/api/src/modules/auth/auth.guard.ts",
+      "apps/api/src/modules/auth/auth-session.service.ts",
+      "apps/api/src/modules/auth/auth-session.integration-spec.ts",
+      "apps/admin/src/lib/api/client.ts",
+      "e2e/tests/admin-fresh-auth.spec.ts"
+    ],
+    "sms": [
+      "apps/api/src/modules/notifications/sms-ir.provider.ts",
+      "apps/api/src/modules/notifications/customer-sms-delivery.service.ts",
+      "apps/api/src/modules/notifications/sms-ir.provider.spec.ts",
+      "apps/api/src/modules/outbox/outbox-consumer.integration-spec.ts",
+      "e2e/tests/admin-sms-templates.spec.ts"
+    ],
+    "content_seo": [
+      "docs/adr/0012-public-web-rendering-and-url-policy.md",
+      "apps/web/package.json",
+      "apps/api/src/modules/content/content-sanitizer.ts",
+      ".github/workflows/discovery-audit.yml"
+    ],
+    "admin_operations": [
+      "apps/api/src/modules/audit/audit.controller.ts",
+      "apps/api/src/modules/orders/shipment-read.controller.ts",
+      "apps/api/src/modules/reports/dashboard.service.ts",
+      "apps/api/src/modules/auth/auth-permission.service.ts",
+      "apps/admin/src/config/navigation.ts"
+    ],
+    "credit_returns": [
+      "apps/api/src/modules/credit/credit.service.ts",
+      "apps/api/src/modules/credit/credit-return.service.ts",
+      "apps/api/src/modules/credit/credit-sale.integration-spec.ts",
+      "e2e/tests/admin-credit.spec.ts"
+    ],
+    "reports": [
+      "apps/api/src/modules/reports/operational-report.service.ts",
+      "apps/api/src/modules/reports/operational-report.integration-spec.ts",
+      "packages/contracts/src/operational-reports.ts",
+      "e2e/tests/admin-operational-reports.spec.ts"
+    ],
+    "invoices": [
+      "apps/api/src/modules/invoices/invoice-document.service.ts",
+      "apps/api/src/modules/invoices/invoice-publication.service.ts",
+      "apps/api/src/modules/invoices/invoice-draft.integration-spec.ts",
+      "apps/api/src/modules/invoices/invoice-document.integration-spec.ts",
+      "apps/web/src/pages/AccountInvoicesPage.tsx",
+      "docs/adr/0027-immutable-store-invoice-issuance.md"
+    ]
+  },
+  "relatedPullRequests": {
+    "28": {
+      "state": "CLOSED",
+      "head": "e84536418060757a1e9f509e8b259e8ef637e28f",
+      "merge": null
+    },
+    "44": {
+      "state": "MERGED",
+      "head": "ecc1b71d0b8aa02071bf2a7921c98db9f2c87f8e",
+      "merge": "86812f3600c68183c156a31fd275b35c2b290547"
+    },
+    "173": {
+      "state": "MERGED",
+      "head": "a7bac95673daf3a7960e5200967abcc1ae70641c",
+      "merge": "778380af5cc003caa785ad605b71c8a4c175d505"
+    },
+    "222": {
+      "state": "MERGED",
+      "head": "3b05f21f4c75573b486e47759ec2b9cbe2ae6ee2",
+      "merge": "c9ca7e187b31832e83fededc666c1746fd8c08a8"
+    },
+    "223": {
+      "state": "MERGED",
+      "head": "cf059d402215c39a667090dfdf581ce32c433431",
+      "merge": "82f2e7c813a0bbf53b9445eae42d0be90b7c2f7f"
+    },
+    "429": {
+      "state": "MERGED",
+      "head": "259297cd2fd38c170eb6b601951a18811510a6d4",
+      "merge": "cb4a636b31663abd2ecd51367ff34408d6363acc"
+    },
+    "135": {
+      "state": "MERGED",
+      "head": "d4f1a55ecb73636c546ddbf7390cd1b5bc322930",
+      "merge": "1d2292fa41fb410c63174445ed033e0a20feee4e"
+    },
+    "170": {
+      "state": "MERGED",
+      "head": "caeddfe19a7a290031a6321b9df0d75a56708dc0",
+      "merge": "8196f8582f993a10536486faebc7b062a63237ef"
+    },
+    "103": {
+      "state": "MERGED",
+      "head": "8fbc485882322a271114093362c3fdbc62a983c0",
+      "merge": "65ade3395d6fa31b2dfa036e9f180a9d6900ad45"
+    },
+    "161": {
+      "state": "MERGED",
+      "head": "2c4dc83a69caf6770b89935809020534ac4453fd",
+      "merge": "4ac252064f658f0a408e810c72643e7202259e09"
+    },
+    "177": {
+      "state": "MERGED",
+      "head": "eda503a44e6fb22706b8ed870feaac2116431c0d",
+      "merge": "a0347329236d22358359149451b4c289e965ce4a"
+    },
+    "211": {
+      "state": "MERGED",
+      "head": "26c311e12bd78c88d661a9e50bd4d6df9ca02345",
+      "merge": "c8790b664f706d1f24005c8a5c0261ce18084c1a"
+    },
+    "102": {
+      "state": "MERGED",
+      "head": "1dc4901e9e0c129d4deb57539028657972f8fb5c",
+      "merge": "eab900e6bf3ccc5208453e019edd2992c16b8620"
+    },
+    "109": {
+      "state": "MERGED",
+      "head": "b1f369bbce174e222c85573595d0590fed5a1b98",
+      "merge": "9097614d872c7095dbd05697469c676d8b59ef6a"
+    },
+    "239": {
+      "state": "MERGED",
+      "head": "d83c62214bce21433a48c477ae4d69bcbedf79a8",
+      "merge": "97854ecc6419d907a3bb9882df3109b7f9dd5916"
+    },
+    "241": {
+      "state": "MERGED",
+      "head": "f6e3a71541cd06bb4f3f7fa859e946f497c88ea7",
+      "merge": "9f3ccf7250a8c12a27cc47f322a46e08f279031c"
+    },
+    "242": {
+      "state": "MERGED",
+      "head": "c273ebd6266187008b6790441376f2deeadbfd43",
+      "merge": "597bde01f6c41f3b9836f417f855a31cfb792e86"
+    },
+    "174": {
+      "state": "CLOSED",
+      "head": "4e4801331a245309c3f129964ac5ce36d8b5cf8e",
+      "merge": null
+    },
+    "328": {
+      "state": "MERGED",
+      "head": "2112b1794bb73318a28861fd5d3f9206db96b6c9",
+      "merge": "57490c57437aef7e57f532a2565481e23abd89af"
+    },
+    "335": {
+      "state": "MERGED",
+      "head": "09f844a663c351b19e02f00134c8919ee40f7b5f",
+      "merge": "7c1cd1e2deabf4c4c977fe8c96c9630ae2c2b927"
+    },
+    "337": {
+      "state": "MERGED",
+      "head": "7439356790d6767de8db581864a534c982605a56",
+      "merge": "4052d26da8b424dd9ee415628856627c602b5a2a"
+    },
+    "340": {
+      "state": "MERGED",
+      "head": "93297a006ab837a961285208faa43eecb5785ee0",
+      "merge": "1aac0fee7436f926ab2af78ec87613992349777b"
+    },
+    "11": {
+      "state": "MERGED",
+      "head": "49a23b716ed40f4e1017ff21c1c7d5a6a46b34a5",
+      "merge": "88400901332ea868c9459fec7e04c637a5a837db"
+    },
+    "33": {
+      "state": "MERGED",
+      "head": "d75e5cdf14a3f689d824767562a9854feaedd647",
+      "merge": "03c489846c85d3827309b917075ddc072032f84e"
+    },
+    "40": {
+      "state": "MERGED",
+      "head": "b47ffad303400960121bb766985062dd41139a5c",
+      "merge": "ea5a266ba7d4272026dc9b2abccbe8d2973ed634"
+    },
+    "42": {
+      "state": "MERGED",
+      "head": "9327d391e91053945257f7b4d4e0dba53be37f69",
+      "merge": "dda5ad385fb32c6047fb0c6280247637aaadb876"
+    },
+    "57": {
+      "state": "CLOSED",
+      "head": "c0b606f1e8efbc1a216b160e584857f0b744dd78",
+      "merge": null
+    },
+    "43": {
+      "state": "MERGED",
+      "head": "d29ba8a74917b1d3b7e18d1e022c47c3d3850d5f",
+      "merge": "063de16b50fd11f36185a527da2574a8346d027d"
+    },
+    "38": {
+      "state": "MERGED",
+      "head": "3aa2e746a8723c7d1a65df4477f7ee17f9b23254",
+      "merge": "8fca742bfd4498884687afa0bc898f880df3b793"
+    },
+    "95": {
+      "state": "MERGED",
+      "head": "74ee2ec6d11c9258760ed3158f6754faedd459ee",
+      "merge": "b5b48d38c65141cc042514c2fb6b50b5091b678c"
+    },
+    "112": {
+      "state": "MERGED",
+      "head": "f7fca966db4b89bbe776aa09070eb629e3973565",
+      "merge": "c0a635697eeffbff811d98c81b300828e212f24e"
+    },
+    "113": {
+      "state": "CLOSED",
+      "head": "6cc48e18d5d0cc4af5c1643e652c4d1cf9bbc3d8",
+      "merge": null
+    },
+    "30": {
+      "state": "MERGED",
+      "head": "ff7246d7257de93861c21aa617b0f233d3b6e7b1",
+      "merge": "cc6c8157e12eb00aca5c87c4f560aa3ebfe68785"
+    },
+    "39": {
+      "state": "MERGED",
+      "head": "d2ebc6fdca0b1902521e0fae1abbcc9010c899c8",
+      "merge": "d4a74857a4270f8204bc52a7ad41c8d384907c02"
+    },
+    "22": {
+      "state": "MERGED",
+      "head": "9d85d0968af0a1896bde3f0dfccec330b18e658f",
+      "merge": "cff87589d3226c2657a5bc5f5c37960efd0affb0"
+    },
+    "45": {
+      "state": "MERGED",
+      "head": "be2c352695107ff9aef1fca905939bc88011965a",
+      "merge": "7891c3ab4bb53d80f25834c301c3fa1c668690cb"
+    },
+    "32": {
+      "state": "MERGED",
+      "head": "705d6dc20ebcfb3d7ed2ef94e9a50bcd010c82a6",
+      "merge": "a607568d8fecd887641fc9f6aa2103b61ef56c2f"
+    },
+    "34": {
+      "state": "MERGED",
+      "head": "32332b2b434fc80f2fb2b5a5250b81f277737529",
+      "merge": "76b8b05f767d338576890c84b25f489ce1561d55"
+    },
+    "394": {
+      "state": "MERGED",
+      "head": "11834f8808321806a4e4c2b7e581e720097cc3c8",
+      "merge": "0b5ea1762833f75e84ab60d7e6cd110cae584a27"
+    },
+    "26": {
+      "state": "MERGED",
+      "head": "0772f37d1a7a015ce51be3c11265b35288f2d99c",
+      "merge": "9e2b2d1e27286fcb156a403fd424bd3b5514f06b"
+    },
+    "29": {
+      "state": "MERGED",
+      "head": "8737ce20de8b1dcca43459e110e4bf0dc9115841",
+      "merge": "d8a1bd003847740e9bb41492a769ba086f8778b9"
+    },
+    "25": {
+      "state": "MERGED",
+      "head": "fa648e7107ec0c3c6719bb654aa2ab43270d7297",
+      "merge": "e5fee9ee1a1985c433cf5463f1615638cfad77cc"
+    },
+    "144": {
+      "state": "MERGED",
+      "head": "c52f008b14cda5708ab64803fe4bd0b3f7cbae4b",
+      "merge": "8963c09d5f7d3f80dc77b58e85e1bc2ee7e0b3a5"
+    },
+    "36": {
+      "state": "MERGED",
+      "head": "15176040afb885af4598f79255f7733028b17757",
+      "merge": "47ed3c0977a22189c1058b0b4507409f7ade9cdb"
+    },
+    "53": {
+      "state": "MERGED",
+      "head": "335a5130934833173d32abb1276c2a7ffcbc50c7",
+      "merge": "f00be57e2430959e9e5542ce4ff51602638dd88e"
+    },
+    "55": {
+      "state": "MERGED",
+      "head": "3e3fd025ea579c4de8d50b8c4f05afcc37cc5235",
+      "merge": "b464b4859b8e039ba879290e3796ef195ae8a415"
+    },
+    "58": {
+      "state": "MERGED",
+      "head": "e7b04e7a3c8f2563f2c3114cc7e80ba49e5b09fe",
+      "merge": "2f6bee48b77f36a6af03f6c8e91610d59b87efc0"
+    },
+    "60": {
+      "state": "CLOSED",
+      "head": "38bba2e9ec9dce5b9ebccd7dd6d6759454dedca8",
+      "merge": null
+    },
+    "64": {
+      "state": "CLOSED",
+      "head": "0197b623a2ca1292df78a4ee6f82682c1f2c9199",
+      "merge": null
+    },
+    "83": {
+      "state": "MERGED",
+      "head": "a150c3e78ab53eb206dd827e2f7d7892cecdddcf",
+      "merge": "2a1582af0bd963536981f3119475cc7c2ba0e928"
+    },
+    "92": {
+      "state": "MERGED",
+      "head": "3e6f84eaa89e3525d5e389a0dd56a540eb6bd36b",
+      "merge": "a2f55466f969abfa6aba654b19b96c3abbc9bca4"
+    },
+    "104": {
+      "state": "MERGED",
+      "head": "78ff26867605881751c137422bb11c07fc1d4f5b",
+      "merge": "2ad0dcadb26158517e097ccdef5809694de486bf"
+    },
+    "108": {
+      "state": "MERGED",
+      "head": "e732de0d5cc9423b86aa3accef12ecca9050a056",
+      "merge": "e8b7e75236b3090de56dd5629af868a92d14dd24"
+    },
+    "110": {
+      "state": "CLOSED",
+      "head": "aa0144ff13a0a5917f8f7110a99dcc70f7753823",
+      "merge": null
+    },
+    "61": {
+      "state": "MERGED",
+      "head": "2e8d5ec1810bfe63f36ff9fcffbeb36f4ed924d0",
+      "merge": "fd133b3c2b9826ac5b158132b6394ea3fa6160a4"
+    },
+    "65": {
+      "state": "CLOSED",
+      "head": "b14247a313951d2024c8a7f0904415554f46a449",
+      "merge": null
+    },
+    "87": {
+      "state": "MERGED",
+      "head": "457aeb58463aaa762381703e633ace8d9f625ea2",
+      "merge": "bdf3b3de260c06bd80121ba227aa7901bbf1fbbf"
+    },
+    "88": {
+      "state": "MERGED",
+      "head": "30fbad9bb1ff99b68ed8cc3679950c38288046de",
+      "merge": "185c20b514aeca60b1b8c3526fca64c0c0e0cf34"
+    },
+    "89": {
+      "state": "MERGED",
+      "head": "e465da85f6946953b85f1906ed752503a35cfa2c",
+      "merge": "956e5925504940b0ee4837fe1891c89e2b3d674f"
+    },
+    "105": {
+      "state": "MERGED",
+      "head": "94c25037818ad8e3e0645ad925b2c0080ac4cf16",
+      "merge": "cf8e73130395b0603ed981af75d49661a121dd14"
+    },
+    "117": {
+      "state": "MERGED",
+      "head": "31f71755e1c7013df309a7eb227cc43080809256",
+      "merge": "d5063b9e4c4d85bb42645d1ca06cf7646c4256d9"
+    },
+    "139": {
+      "state": "MERGED",
+      "head": "a30db69a5c81756e6a1a587b6936c7f26f13e4ee",
+      "merge": "9db6b4462d05e1a990dfeaa1bd0ec66af00285a5"
+    },
+    "142": {
+      "state": "MERGED",
+      "head": "433ba5315657dacbe2e289cb54fecd2464dd460f",
+      "merge": "753b9338eb7c074efbb3c35099cc505e6cf7d3a5"
+    },
+    "149": {
+      "state": "CLOSED",
+      "head": "44ee4f004fe7872c40907124482e5f209bcb7942",
+      "merge": null
+    },
+    "150": {
+      "state": "MERGED",
+      "head": "58ab6d15fd84b6ca2684f2c5a0d84da07f2a7753",
+      "merge": "d4db129f4d7bd48e68b075c6bbabe82852d90123"
+    },
+    "152": {
+      "state": "MERGED",
+      "head": "e5e0f5b1dafb3550d10661628cc544930f66032f",
+      "merge": "3fce0f0cd50883a5cfb9da4a912416c2cf5ab310"
+    },
+    "156": {
+      "state": "MERGED",
+      "head": "416ea6479e8de899ede1107cef417ba7d17634ee",
+      "merge": "4a02ecdbbd05abba76e75eb1b99e39805b774b3f"
+    },
+    "158": {
+      "state": "MERGED",
+      "head": "f5ae54f3e9b205474d5a312e5c79a76a75c13d36",
+      "merge": "5d4a3d0ba59ca7934e1014c5b1292325cca148ff"
+    },
+    "159": {
+      "state": "MERGED",
+      "head": "c523a79659d5b846ee46f21f83a8d5ec15dc93a6",
+      "merge": "4e0036928749080360acd36008ee0361ae3d526b"
+    },
+    "160": {
+      "state": "MERGED",
+      "head": "4f2e333f5b2dd60f123e76ea74acc0d8f3381c03",
+      "merge": "aa0dffc15ae6f7eaebc81b6c98b2c1e37382a9ee"
+    },
+    "167": {
+      "state": "MERGED",
+      "head": "3a518881a145a3eb17ba48889958b7b7ac7114ac",
+      "merge": "99873bd6c59a5557744836647d47ac85250ef2cd"
+    },
+    "52": {
+      "state": "MERGED",
+      "head": "0a1f7c3311ecd77b0696bf95c53d07c8c9eaa6c5",
+      "merge": "437629b5b2aa9bdd02d02eac45c7313de79a8ba5"
+    },
+    "56": {
+      "state": "MERGED",
+      "head": "04a2e4127c37bbab3dc9e819a7235a6d1652c613",
+      "merge": "4759230eb2d0ab94a367320fa4675dcb7afd40b3"
+    },
+    "67": {
+      "state": "MERGED",
+      "head": "a261a22aa8c8b9409f6e2fbea8c391f12cde995d",
+      "merge": "928e58bfb4349ac354675eba1b51f549476020b4"
+    },
+    "68": {
+      "state": "MERGED",
+      "head": "5424acc61c15d561f64671a92ffb9f175e4dfb39",
+      "merge": "e38d8a4755802b9e24972dd2449e46c07941f75c"
+    },
+    "69": {
+      "state": "MERGED",
+      "head": "c2f7915fa26ef0f8a5f3008081770518202958fb",
+      "merge": "98de3ddfaa837d3bc35bd845301593a298b44eb8"
+    },
+    "72": {
+      "state": "MERGED",
+      "head": "9b0b5e371503380845d8530ff5d8b9f77c31d2f3",
+      "merge": "a68b00fd79e4d4c997a5d2de0c54b0a6f85a94b8"
+    },
+    "80": {
+      "state": "MERGED",
+      "head": "25529ded1b4a23241300848dcce5076d2e1aeb6b",
+      "merge": "a0e3ff429cbce915d87dadcaabdd404c53a7d2c7"
+    },
+    "106": {
+      "state": "CLOSED",
+      "head": "284cc4b38c2c6247131051f482da2643ce79b390",
+      "merge": null
+    },
+    "107": {
+      "state": "CLOSED",
+      "head": "2686ff7c8d8915071a0873aa8bd1013ac21b429b",
+      "merge": null
+    },
+    "85": {
+      "state": "MERGED",
+      "head": "f58a14298c6c501afbb79179996c7fd76815db33",
+      "merge": "b1fe929908524f8bd0c9194c33db4a5f2c8af069"
+    },
+    "96": {
+      "state": "MERGED",
+      "head": "eb6652d882e50836b582f79f1bd3fe9a37874ff9",
+      "merge": "8bd163996a3a388247f3c2d64b7f098bd7251a51"
+    },
+    "101": {
+      "state": "MERGED",
+      "head": "99bd2eb36ad4c0a62f4b4d54b8b7b85311879c35",
+      "merge": "32e84e7fd71bb91223b20f9addb881e556e8e8f2"
+    },
+    "63": {
+      "state": "CLOSED",
+      "head": "73493ebf986787257894102dcaffb82c94192dbf",
+      "merge": null
+    },
+    "71": {
+      "state": "CLOSED",
+      "head": "d4ca0a45814013753f56fb23692b40ae46ffa928",
+      "merge": null
+    },
+    "194": {
+      "state": "MERGED",
+      "head": "4e0e686252a4b44e83e568858ca4aedc8e444c9e",
+      "merge": "e888b7becb36dbc7f27973d62dae3605870c8a34"
+    },
+    "208": {
+      "state": "CLOSED",
+      "head": "2e3f0649f708eba7e7477e518009dffb28867015",
+      "merge": null
+    },
+    "209": {
+      "state": "CLOSED",
+      "head": "119a500d793f2f3ac82295d07de7489a05e07e1e",
+      "merge": null
+    },
+    "316": {
+      "state": "MERGED",
+      "head": "abd83369c3ce41061a7dcd3ba4546a9062d366e5",
+      "merge": "7b279b359d88c97b75f96caf405b2db5c2f51765"
+    },
+    "172": {
+      "state": "MERGED",
+      "head": "18226086c7e2adf911b836994be1b71a6be97b8a",
+      "merge": "5716ba1a81c42f348465bc1abbf96f336736ab67"
+    },
+    "116": {
+      "state": "MERGED",
+      "head": "9d7a40cbb6755aadae3e2c193783669b9504dae0",
+      "merge": "9b4ba32ce8a1b6dbdec8c75e99f98f38243997ef"
+    },
+    "171": {
+      "state": "MERGED",
+      "head": "eda80ddac69503fa818148a41ec17319f424041d",
+      "merge": "322fd997fbe637b3ce886583262f81150e905b43"
+    },
+    "221": {
+      "state": "MERGED",
+      "head": "7a9057a117faea6b25ec44ca510e8665769b053a",
+      "merge": "c3042a547a7224bbeb572534199ac240a6e97d5b"
+    },
+    "232": {
+      "state": "MERGED",
+      "head": "9cbac763e2d62379ca0a5b585a9d60f66a5ab755",
+      "merge": "40399b41899c01104e86b938aba0f62d68a7f2da"
+    },
+    "98": {
+      "state": "MERGED",
+      "head": "01965d7a1a8915763fd3a4aaa0c0e550741784dc",
+      "merge": "c36b3b61eee0c0fa84c3f5da50a942988f056961"
+    },
+    "118": {
+      "state": "MERGED",
+      "head": "047ab11143e7c50f46a3190a98af93614d6c119a",
+      "merge": "f573c38bb48f417447ae5bfb65e07a5e37fc01c7"
+    },
+    "133": {
+      "state": "CLOSED",
+      "head": "7c2a299670dbdd1234d6ad655e8616f91bbca3e2",
+      "merge": null
+    },
+    "134": {
+      "state": "MERGED",
+      "head": "9c2b91bac159ad9c6cb6038297cab2c2483d4eec",
+      "merge": "10c7e9d829bd2abd5007b70fdd5a0a0e3890c1ce"
+    },
+    "157": {
+      "state": "MERGED",
+      "head": "ccb238e0ba2dd6ca26f4bf6a3c1dd24506976dde",
+      "merge": "a691896c80fcc64bda2c41953d34b9ee79506a76"
+    },
+    "168": {
+      "state": "MERGED",
+      "head": "9b287acb3c296a705e389d1a7962b8b142122096",
+      "merge": "5ed287f692b333b7c8e8870dae31d9b423365909"
+    },
+    "119": {
+      "state": "MERGED",
+      "head": "26fd62ab1c6229030525909575eaeda47cf9b421",
+      "merge": "4b37082123a46517f5464293eb31f2720b2e46df"
+    },
+    "120": {
+      "state": "MERGED",
+      "head": "2c40f0c2cae69aed804569005b84e5682a1c7e8a",
+      "merge": "86d81b135f9fa7d77c3de5035120c4ab06956cf9"
+    },
+    "132": {
+      "state": "CLOSED",
+      "head": "ce7493afd76ef0d9cde0a39614a88e5d8092242d",
+      "merge": null
+    },
+    "148": {
+      "state": "MERGED",
+      "head": "d9b722206055c55eae707b4a055231d6e75542a9",
+      "merge": "05c1bd41d86031277e7b0b68defffedc8d0d501a"
+    },
+    "153": {
+      "state": "MERGED",
+      "head": "051918a7d559dcc3d0cc3e4ac80c4a2dbf4e9b1b",
+      "merge": "b4c1cd1d31ead14eecb90fe24df5c533158c01dd"
+    },
+    "154": {
+      "state": "MERGED",
+      "head": "3e426c68fc891b180f76a798fa062b989c4bacf7",
+      "merge": "86914a4c00341e50272a850a81d1e0a60402bb93"
+    },
+    "155": {
+      "state": "MERGED",
+      "head": "89feba15ffda6f33f7e4dc03c2965f585bd52c2b",
+      "merge": "1de660e953ed22a0260986a7e5d963653bbd9e2f"
+    },
+    "315": {
+      "state": "MERGED",
+      "head": "36661494e17b5e6bbfb251a58b7a6fb20e5a5c41",
+      "merge": "91b7f4973b5bca19d072203c56688a267d68e1f9"
+    },
+    "395": {
+      "state": "MERGED",
+      "head": "2b31f4f1cf32d44d0cdbdc03b717af295fe2256e",
+      "merge": "32a6323be72a86f96c165e83e5d36707fed83dca"
+    },
+    "399": {
+      "state": "MERGED",
+      "head": "04b74372a134ff747a67fef480e6b7a9997230b4",
+      "merge": "8843b2f1df7dc89f7803363c9faf21f3c7691884"
+    },
+    "131": {
+      "state": "MERGED",
+      "head": "9152587c0c61da409d9cfa9636186867d360849f",
+      "merge": "a9cc78616fc9e8968e5932cd590138d65ba56852"
+    },
+    "137": {
+      "state": "MERGED",
+      "head": "97fa863c850efb12e14c98ed71f4158196c3e199",
+      "merge": "e68e5219428d365bb2465dcca06f4020c7c752d9"
+    },
+    "175": {
+      "state": "MERGED",
+      "head": "e7e4fed8e7276ee8a3e325271699f630d9f0b176",
+      "merge": "56840bc9b69efef2476cadf21447608d274f4710"
+    },
+    "294": {
+      "state": "MERGED",
+      "head": "bf1e81361a42ce162d727ef88ab329ac18d48634",
+      "merge": "44dff652fcf8ff3cb83a856476a9323d98de2117"
+    },
+    "190": {
+      "state": "MERGED",
+      "head": "0510a808e051225baa78635b386e77a20abd27af",
+      "merge": "a7cfbac7d408e131316b86b42802c64dd4de011a"
+    },
+    "220": {
+      "state": "MERGED",
+      "head": "63712573056593d817785e61f6cf7a3cca4e211e",
+      "merge": "da99bc359825e23e49e5fda43d56629606214998"
+    },
+    "240": {
+      "state": "MERGED",
+      "head": "709aaa2ffd97e24eea9a40ae629611e32b5f64b8",
+      "merge": "ce04cce9a2ec574aeaffc9ab863f92e3a811462d"
+    },
+    "169": {
+      "state": "MERGED",
+      "head": "8e48f3c340d22ac2b405395535a2aa314d1095be",
+      "merge": "ee2bb16be198fc9c094395b450b253bfcabf8443"
+    },
+    "206": {
+      "state": "MERGED",
+      "head": "d92e8ae056911ae504816e3c08bc57e0bec58f11",
+      "merge": "863bcd8ca58d748c18c4ec20557ed93fa8eef6ac"
+    },
+    "214": {
+      "state": "MERGED",
+      "head": "9b12ebdf2e7f2fdfc84a6dd78041eb021235e23c",
+      "merge": "009180895425117b2918499359d16b35ae6623b3"
+    },
+    "254": {
+      "state": "MERGED",
+      "head": "240bd27d178b5a1d2bcd99b0afd53b974374013e",
+      "merge": "a09544a8963c4891f969512899bbadf49066e0f0"
+    },
+    "179": {
+      "state": "MERGED",
+      "head": "c347cd47d73cf23c8c75cfb16af3978fd38fa25b",
+      "merge": "0726aa3026801d59dd0b4f2e45ac4239d745e5cd"
+    },
+    "180": {
+      "state": "MERGED",
+      "head": "0eebf0bcbc0639b93e7d0a4789aa15ce9deabd21",
+      "merge": "b9e6150fea2acea711b645ea363ea454e719fb21"
+    },
+    "181": {
+      "state": "MERGED",
+      "head": "04810a9407fc379de0a449f21e8dd675bc36b58c",
+      "merge": "5db5135e22596136309b850bb2390739efdbd5fd"
+    },
+    "191": {
+      "state": "MERGED",
+      "head": "a0ed8aeaf59c592f3f58b17e4b2b35d986ab3f0b",
+      "merge": "3fafceb640972bea600c8dd23e936e4ff6eea152"
+    },
+    "192": {
+      "state": "MERGED",
+      "head": "db0b6dcffd7bb22393767eac5094f161de59707f",
+      "merge": "64d4428ca1a09a951925b55f92b4cbb160c7e75d"
+    },
+    "224": {
+      "state": "MERGED",
+      "head": "3b78e91a16418b4271e28ead133ce6f66ee3a3e3",
+      "merge": "23ee97b42d09ba7039ca5f457985dc7175888334"
+    },
+    "225": {
+      "state": "CLOSED",
+      "head": "3fca17f81365643200596699da0ac7392e296ec6",
+      "merge": null
+    },
+    "195": {
+      "state": "MERGED",
+      "head": "4cccd1d92eea4fba178fa01daab6c4653ddf37e0",
+      "merge": "b075af7a226641b957c8eaa70f66f0cdec00c9bb"
+    },
+    "199": {
+      "state": "MERGED",
+      "head": "ad9dcad009bc4104291472594eba94270a036c7e",
+      "merge": "d45c5b4a542f77734984914e8dddeb23b8bf503c"
+    },
+    "200": {
+      "state": "MERGED",
+      "head": "4c53db9738d81d1a66f802fbd8e34bf21bd122d8",
+      "merge": "6c9e54610b67256e4b1b0c0a4caa8b0cac174931"
+    },
+    "204": {
+      "state": "MERGED",
+      "head": "7c946f5f3b8ec2bbe7473f6b0b72e0aa114c8980",
+      "merge": "b6b19aff193529b5ca682b03088cf77742679610"
+    },
+    "205": {
+      "state": "MERGED",
+      "head": "68d61586e8edb1fba11214b1a020b53f1da6a612",
+      "merge": "8fa18e05e704074c6076b87f11961716dced24ad"
+    },
+    "212": {
+      "state": "MERGED",
+      "head": "dc160b1780242f5d25487b1b1095596d72be3d6a",
+      "merge": "44d2262bd9bc1a567cfa0f1f70aea56006f9fa3d"
+    },
+    "218": {
+      "state": "MERGED",
+      "head": "fed60bec9ed9062c93ae311fd72b7a4363834627",
+      "merge": "e67b26edaa3c749679eae3c252f8511f5f6b2a71"
+    },
+    "217": {
+      "state": "MERGED",
+      "head": "479d5db34d27b38a5a1c46c0a2882a752d5abaa1",
+      "merge": "5e34936719a92641f3b0d690e2a8124cc724642b"
+    },
+    "219": {
+      "state": "MERGED",
+      "head": "45cc9785b4443152b64a60a4c1635c63583b208c",
+      "merge": "f7eb9a7f58d75a9e926264d7c850508dbd91ff2b"
+    },
+    "207": {
+      "state": "MERGED",
+      "head": "36a9deb5e7cfe456bd2da83316a29c93b1a4383c",
+      "merge": "1e11274daf08f98c6f1332b24e87bf36fe58291e"
+    },
+    "243": {
+      "state": "MERGED",
+      "head": "9ec2d1202b7a054e00ec22390a5390429b8a8543",
+      "merge": "3c6198968673161a0c30313b890e1ff05c022983"
+    },
+    "244": {
+      "state": "MERGED",
+      "head": "303ba0e8727b39fc4eae0dfacadc5d67c29d1c68",
+      "merge": "c3bb20b4f70d09dabf1323e61c523fd71f304624"
+    },
+    "246": {
+      "state": "MERGED",
+      "head": "e7eedcc663ed0d4b179b104ae6df3ffc74f815f0",
+      "merge": "b53de29f5f9d99b86f7e0371ba98e16109bb75a7"
+    },
+    "247": {
+      "state": "MERGED",
+      "head": "8f9813566668b34d3f693f37c1f9323cb70d42cb",
+      "merge": "b220e01e06fdf7edf031bb0b5fdf9160226d055f"
+    },
+    "249": {
+      "state": "MERGED",
+      "head": "5ff01b8c78b12e3a96edd5fe87078fbc35a5e2e3",
+      "merge": "ab876b123b43f7471b2102134346e7bfb6d5d65d"
+    },
+    "292": {
+      "state": "MERGED",
+      "head": "5c1a12643d00479a081f5c0f38e46cb5ca728287",
+      "merge": "d32761a6d79a875a5776099785df70650ddbe118"
+    },
+    "251": {
+      "state": "MERGED",
+      "head": "b7b9873f6b01c73521694d6a526c057ebbab707c",
+      "merge": "06d7a1263b807dffd5ba8c2ddeccfa70b324ca61"
+    },
+    "291": {
+      "state": "MERGED",
+      "head": "4a95975b30097c87bac580df4420786e31614e79",
+      "merge": "2700bfdd66c311964184a7cddd52bd53d68603f6"
+    },
+    "256": {
+      "state": "CLOSED",
+      "head": "3670cf77b2d67401fb065edd02b7135090224bf0",
+      "merge": null
+    },
+    "259": {
+      "state": "MERGED",
+      "head": "e3186fd2b3af10ff3a21f8668353625c0fbcb051",
+      "merge": "3fd00e8cabbc109f9b8b905129d0c15014bcf222"
+    },
+    "268": {
+      "state": "MERGED",
+      "head": "fd55c3b3c6a4e66bc2f339b73b1a72d377998a61",
+      "merge": "03df9c16c61c8271050bfa64082697fa8fbdf533"
+    },
+    "270": {
+      "state": "MERGED",
+      "head": "70593248592950f2fc9e6486f46c8d398f17d9e6",
+      "merge": "ec6b2a3e100c1ddabe7167c764bee922a4110ba8"
+    },
+    "333": {
+      "state": "MERGED",
+      "head": "cce207281f01206a977412f4163daba3fe06dfd2",
+      "merge": "2944d97b78c0feb3743a0e38ecd5c0c27a16f6da"
+    },
+    "365": {
+      "state": "MERGED",
+      "head": "1bc4921a7c666bcf27b50dd20be6e36d5259dba4",
+      "merge": "d8cd57351ddfdad84cf89dbead7f2f8534023dc5"
+    },
+    "262": {
+      "state": "MERGED",
+      "head": "f62307803f0ccd9a82e23b2273d1d24a7e85af66",
+      "merge": "7ed312747ff3b7b126624ce95d1ec893921cf7e7"
+    },
+    "318": {
+      "state": "MERGED",
+      "head": "7dca1a951b06f0f22b2b25a14be2f9db4dcea984",
+      "merge": "4e56267b548d22b3ffe9e652d96430a44f06fb5c"
+    },
+    "266": {
+      "state": "MERGED",
+      "head": "10f2a402da2fc512d3c65e97cf46ab8ff4a423d8",
+      "merge": "b78a0f857a70bdb12109770eebb31b7a1cbc56c4"
+    },
+    "265": {
+      "state": "MERGED",
+      "head": "0d54c8095034c9f7cb6fc980d4b7721f1851ba8b",
+      "merge": "b9e2b60b7eb619253eb6477ff4a67faec961b4bd"
+    },
+    "281": {
+      "state": "MERGED",
+      "head": "77e50e2be474f717287cb7f7f6435959288aa48e",
+      "merge": "d7f3e724ca27f72b92b74989011dd3166897a692"
+    },
+    "271": {
+      "state": "MERGED",
+      "head": "a48706bab0758235514c32f657e29756e123e276",
+      "merge": "a6f1d7f98e8037fad65a8178891871ddf7de0f9a"
+    },
+    "273": {
+      "state": "MERGED",
+      "head": "e0de988e6bc3515dabd36c6c8fe6c97b313fde29",
+      "merge": "4a89e3b28a7ef1161c08ff5039a5d658f2a2530e"
+    },
+    "276": {
+      "state": "MERGED",
+      "head": "879c665ac19eb4454969f316cbb345edc597f3c9",
+      "merge": "6ba57e92b7ffeb2d3081ec1ff6537e4611623fbd"
+    },
+    "284": {
+      "state": "MERGED",
+      "head": "6ae5c85d4c8c5f548eb46616363a991730af6f48",
+      "merge": "eef2a8afbf109d55a131c8dd3cefdb67b28c6f88"
+    },
+    "285": {
+      "state": "CLOSED",
+      "head": "339a873ba51e9b0f1a2962bb4ee2565d40e8f3bb",
+      "merge": null
+    },
+    "286": {
+      "state": "CLOSED",
+      "head": "3567bb7615f1425246401c083a53d58ccd0abdd4",
+      "merge": null
+    },
+    "287": {
+      "state": "CLOSED",
+      "head": "f5861d870fa524446e38e5a2f1955047d11b3a6c",
+      "merge": null
+    },
+    "288": {
+      "state": "CLOSED",
+      "head": "dfa4d1f4c4312af86447d5f7ab556122103d1178",
+      "merge": null
+    },
+    "290": {
+      "state": "MERGED",
+      "head": "42ff5a6725a3f655e5f9799c5c7b8a2964615f35",
+      "merge": "aca0ddff53ba815447aa887757ac102681ea1b12"
+    },
+    "368": {
+      "state": "MERGED",
+      "head": "f60ce5ac54018822cd176b858f8f5917e1d83e36",
+      "merge": "b4cd95000551a018974e1e8f73d92087b7b9c830"
+    },
+    "305": {
+      "state": "MERGED",
+      "head": "6761ae541fb4978a6a5a935b86e2b4ef2df90ac3",
+      "merge": "efd8416b12bc6b095c3febffbdec3c4dfc8f1ed3"
+    },
+    "306": {
+      "state": "MERGED",
+      "head": "cbba9b9de0d81f6228fb5dc37f62a5e511213a0f",
+      "merge": "b0d657a692c87996d35869f0c1eaf162643784b3"
+    },
+    "307": {
+      "state": "MERGED",
+      "head": "73e1010be513790f295bee04341356687e80ed7c",
+      "merge": "566b8b0d8e23e29a238ee32b7664b6e0203f0e0b"
+    },
+    "309": {
+      "state": "MERGED",
+      "head": "65d1ceed8c7d5f495124b6ee4e57f3f3abd99ba0",
+      "merge": "60afd6d4d06c33385a497accf9dca1e80e04cdc0"
+    },
+    "311": {
+      "state": "MERGED",
+      "head": "611d72221852eac4d3735033cc2c8b2b0fab66c6",
+      "merge": "2e36c7bdfed3cbb6e2f0ccadcd7d63edd6919a79"
+    },
+    "362": {
+      "state": "MERGED",
+      "head": "d45a52d18b85e27b301b510ca899ef0c12c59c91",
+      "merge": "29f43b1f75bacd1f8776661448f882e7abf201d5"
+    },
+    "313": {
+      "state": "MERGED",
+      "head": "780fcb545a0d13d2e11c18884b640422cab2bcef",
+      "merge": "070f9415b4c2f45f78f1fb8f72e463509bc34766"
+    },
+    "320": {
+      "state": "MERGED",
+      "head": "73b5a8534c44a4fc024151ec21c09610be0b70de",
+      "merge": "39003ee8efa54c7429b5d9ef695ce3c20b5dd8f2"
+    },
+    "322": {
+      "state": "MERGED",
+      "head": "3042f6c5f4ceaefb0f8b78494ea25513648f4899",
+      "merge": "2d86c6e84385f5963a5795147e001c252b7498a5"
+    },
+    "327": {
+      "state": "MERGED",
+      "head": "3d7032a33f21d7de15bdb7e8a429e95c837116d1",
+      "merge": "2883d25702d4b9115a01e19f15f2169ecefb8333"
+    },
+    "331": {
+      "state": "MERGED",
+      "head": "9e99a7b783894c741a662cb70d8d5111a823c9af",
+      "merge": "3a4d9a50b3249efb7b3782c67f6a3054423187c3"
+    },
+    "412": {
+      "state": "MERGED",
+      "head": "737e19eee534b7961808c5a75c223f70f9fff8cf",
+      "merge": "2a2115f92f3695d969906946e753074b8ca67a07"
+    },
+    "427": {
+      "state": "MERGED",
+      "head": "bc63889e59db4f747d045a35229b814e30695914",
+      "merge": "e9c58e97c55462d42f4aaafa8665d59695973ae4"
+    },
+    "428": {
+      "state": "MERGED",
+      "head": "b1a016754ed90ac5bda22526e9c720e71afdbdda",
+      "merge": "385f127503826ab65befb5d2f3a660c79509dd80"
+    },
+    "432": {
+      "state": "MERGED",
+      "head": "55b79340372372ec9b9536fd1680ad7c6cc3a942",
+      "merge": "ec325a622156af87f49db30a406e41a4dbaaab55"
+    },
+    "342": {
+      "state": "MERGED",
+      "head": "1495747ca7897bd986e0e39fe20fba11fb1baf0b",
+      "merge": "30a5be527f2cc1d28ce5fdc55d1e60ad1d921ec6"
+    },
+    "344": {
+      "state": "MERGED",
+      "head": "c5941cb5a43d7df310e61369fa02557d79cd945a",
+      "merge": "3a60f8c68c2e57c2cb4a3a6b900ce878d21ed591"
+    },
+    "346": {
+      "state": "MERGED",
+      "head": "6b03eb734b6edbbf4a327399b963873561150814",
+      "merge": "e4398bdf0421f216d6fd0b002fd3591ec05dac2b"
+    },
+    "364": {
+      "state": "MERGED",
+      "head": "bd33b6931702877f9f64ae3674bc8efe6f54b70f",
+      "merge": "9e1e24ee7906a8251746efe51b08ee57bbd8db3f"
+    },
+    "367": {
+      "state": "CLOSED",
+      "head": "8891934c133d0c623a0001d25969084b5ff67aca",
+      "merge": null
+    },
+    "411": {
+      "state": "MERGED",
+      "head": "96c579544e729376eb0aa46e308746f331305509",
+      "merge": "5bb3a52fc1864d23b2f4ddac42ee58c6fbbb6c60"
+    },
+    "366": {
+      "state": "MERGED",
+      "head": "11bb6eb98a581eafbbfceba1e8d48f3e0170e998",
+      "merge": "313598fa901b4c0f20d8e5ac95c7b3b598efa64b"
+    },
+    "372": {
+      "state": "MERGED",
+      "head": "ddef0be24943fe0108a7eaf1f173025c694752e9",
+      "merge": "2a92eabb7c80edb91df4dc46b3555c6caa7b34b4"
+    },
+    "360": {
+      "state": "MERGED",
+      "head": "f962c5b0ee5f350de8ae37512ced76005c2e1d0c",
+      "merge": "cf3763e6e8476b5c55288cf9762733575920720b"
+    },
+    "361": {
+      "state": "MERGED",
+      "head": "05fafff3a4d102c9eb23cc11fe06e3ebe6955d74",
+      "merge": "fcd2dfd236563daf853a8709d385657f9fe8a5a8"
+    },
+    "433": {
+      "state": "MERGED",
+      "head": "b9fdac67d79747efbd75ccaab19c7ff63865c3dc",
+      "merge": "9198bf1f898f908c26ba1cf58aa8a5cdc2b3c4e1"
+    },
+    "434": {
+      "state": "MERGED",
+      "head": "8303100980dae7aad577047f9ed6a541467d88d6",
+      "merge": "30c3edee7002021429978b3478150d63385d75f7"
+    },
+    "435": {
+      "state": "MERGED",
+      "head": "ac800209f3edc7329c524f061c4d69e90ef68d7b",
+      "merge": "a875b3d5fd2d6903cf0a7c502e701b10ea58b43f"
+    },
+    "436": {
+      "state": "MERGED",
+      "head": "271b0637956378f0e92ea2b8e9dd373f1b1de8aa",
+      "merge": "e0edb4e9385bed754b90312524f0bd1f9d9d9016"
+    },
+    "391": {
+      "state": "MERGED",
+      "head": "4e41ff28529bb828bebe8e8022e6d3063419fe95",
+      "merge": "b7ec1fa3159b2e9648a496b98cb5c84352277f41"
+    },
+    "392": {
+      "state": "MERGED",
+      "head": "f6061f24976b58821f8a3e968c3d545ca293e506",
+      "merge": "4247e0f644e3de3a6679a8e0513646732898df9a"
+    },
+    "402": {
+      "state": "MERGED",
+      "head": "30f76f553b8681ee11e8f57b4f950f830ab67bd0",
+      "merge": "f8858be18dea224162c4d52286d6ded05f47d7d8"
+    },
+    "406": {
+      "state": "MERGED",
+      "head": "5fe150e3ab11ee0696923808520f427e1be75d8b",
+      "merge": "35cefdb249b88fcc4c3b379d944ba2caf23e814c"
+    },
+    "407": {
+      "state": "MERGED",
+      "head": "49148e305d10aebc8bd5d141e0be37333f2c9421",
+      "merge": "4f71f5a02041262002d5d506b241e9c7308ba624"
+    },
+    "408": {
+      "state": "MERGED",
+      "head": "56a205bdc0669a93fba7dbfbdf02f3a14eb9c88a",
+      "merge": "17076eda2ea51100218dede0931b82cedcb19b6b"
+    },
+    "405": {
+      "state": "MERGED",
+      "head": "e6dcb05d2e8dfa439e33e4eb58612a0bfb5bd85b",
+      "merge": "9e993a7592c283a2e39f402474bcff98c756938b"
+    },
+    "438": {
+      "state": "MERGED",
+      "head": "8f73a703b5b958a8dff2bc6a52fcd28aecf43bd6",
+      "merge": "7a0debe943507a0f893bcd7f90116adece740cb9"
+    },
+    "430": {
+      "state": "MERGED",
+      "head": "b54c70a7e6ddb1b95d6279b792cf66c6add8001e",
+      "merge": "0f072d4b8e54298e77a14654d7ddcec5092de54b"
+    },
+    "437": {
+      "state": "MERGED",
+      "head": "68d5e5084f27214eaba67e20a0ad0dfc4479e29b",
+      "merge": "21e8a28ef20accbee9c67a5fb8230103dd142905"
+    },
+    "439": {
+      "state": "OPEN",
+      "head": "4992028cfffe1de3f9196fb952516415e26874c6",
+      "merge": null
+    },
+    "452": {
+      "state": "MERGED",
+      "head": "36e5be06f02fa35a5e8e795c88f68a51dbdeb394",
+      "merge": "e5d6de20375604ee072c3bcbda802cdc0e025ff3"
+    },
+    "451": {
+      "state": "OPEN",
+      "head": "ef8a0b8adb8cf12fb74a6a78ae92ba09bd3e643c",
+      "merge": null
+    },
+    "449": {
+      "state": "OPEN",
+      "head": "c26044ca050608ebcd1a6174ced2b724cb3a8442",
+      "merge": null
+    },
+    "456": {
+      "state": "MERGED",
+      "head": "f49b9e40517b1c074bc1139850dace4af26494f1",
+      "merge": "f4506661b453d20934290509ea9d66bc23965d22"
+    },
+    "455": {
+      "state": "OPEN",
+      "head": "31b99d4c92f1dcff1065aad95e2f22fe8913f50b"
+    },
+    "454": {
+      "state": "OPEN",
+      "head": "b5ccbaf8a6233be6135418b521074d3f5170b849"
+    },
+    "453": {
+      "state": "OPEN",
+      "head": "f71afba71b4b696168cf5b56c7ec1e189f8b182f"
+    },
+    "447": {
+      "state": "MERGED",
+      "head": "b4d51d7ba4ec26d733d13488201ceb617152e2e8",
+      "merge": "e2070948587b438dc5da55d8560ab870e23bf32d"
+    },
+    "445": {
+      "state": "MERGED",
+      "head": "972f2d6f9a347d02349817a70c66cff2a1533362",
+      "merge": "8dfbcf570c7ab42812c292452000673c935d49ea"
+    }
+  },
+  "historicalReviewEvidence": {
+    "reviewedAtUTC": "2026-10-15",
+    "mergedPRsWithIndependentApprovalOnFinalHead": 119,
+    "limitation": "Review metadata is not independent acceptance of every functional, runtime or external-provider criterion."
+  },
+  "deployedBaseline": "e2070948587b438dc5da55d8560ab870e23bf32d",
+  "issueCounts": {
+    "total": 150,
+    "open": 51,
+    "closed": 99
+  }
+}
