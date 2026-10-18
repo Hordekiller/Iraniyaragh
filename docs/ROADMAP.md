@@ -1,11 +1,31 @@
 # Delivery Roadmap
 
-> **Current reconciliation — 2026-10-15:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source/deployment/test/acceptance facts and the execution queue;
-> [V1_ISSUE_REGISTER.json](V1_ISSUE_REGISTER.json) records all 149 issue mappings.
-> The dated status, staffing and queue statements below are preserved history
-> where they conflict with that checkpoint. Accepted domain/release criteria remain
-> requirements; historical source absence or deployment claims are not current facts.
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## Current release path — 2026-10-18
+
+1. Integrate the current hardening train with exact-head checks and combined main
+   validation: #448, #441, #442, #446, #440. #445/#447/#452/#456 are already deployed.
+2. Integrate expiry safety/batching #454/#455/#451/#453, then implement its durable
+   scheduler and prove stock release/restart/payment-uncertainty behavior (#450).
+3. Resolve Clam signature operations (#393); collect actual Admin/customer/SMS and
+   catalog acceptance (#400/#403/#388/#389). Source tests do not replace operators.
+4. Complete stocktake coverage (#444), general returns (#348), access administration
+   (#359), invoice PDF/corrections/exports (#419/#421/#423), and accepted V1 content,
+   public rendering and discovery (#125/#126/#127/#129).
+5. Reconcile full UAT, alert/recovery/rollback evidence and exact-SHA runtime parity.
+
+Valuation policy is configurable but intentionally inactive (#422). No invented
+opening costs or tax policy. V1.1+ AI retrieval (#128), multi-provider (#141) and
+broad major dependency upgrades (#77) stay separate. No completion percentage is
+inferred from issues closed, open PRs, or old phase weights.
+
+## Historical roadmap context and accepted outcome requirements
 
 Last reviewed: 2026-09-28
 

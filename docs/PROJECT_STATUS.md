@@ -1,11 +1,38 @@
 # Project Status
 
-> **Current reconciliation — 2026-10-15:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source/deployment/test/acceptance facts and the execution queue;
-> [V1_ISSUE_REGISTER.json](V1_ISSUE_REGISTER.json) records all 149 issue mappings.
-> The dated status, staffing and queue statements below are preserved history
-> where they conflict with that checkpoint. Accepted domain/release criteria remain
-> requirements; historical source absence or deployment claims are not current facts.
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## Current delivered state — 2026-10-18
+
+Main and verified API/Admin/Web/media-worker run `e2070948587b438dc5da55d8560ab870e23bf32d`.
+Official exact-SHA publication, restored PostgreSQL backup, migration completion,
+container digests, nginx and HTTPS were verified. Main CI: 3093 application units,
+418 PostgreSQL cases, 10 separate database security cases and 136 browser passes;
+5 existing opposite-viewport browser skips are not passes. No final browser failures.
+
+- Deployed: #452 shipment-test synchronization, #456 root-category drill-down,
+  #445 genuine-token auth-boundary tests, #447 cross-tab protected-request recovery.
+- Source/runtime present: catalog/Jodit/images, suppliers/receiving/stocktake,
+  server-priced checkout, staff credit/receipts/credit returns, operational reports,
+  store-invoice policies/drafts/numbered immutable issuance/customer publication.
+- #351 is closed against its original automated ledger/receipt test criteria and
+  current desktop/mobile CI; this does not accept physical warehouse operations.
+- Still open: #400 real authenticated idle/mutation acceptance; #450 durable
+  payment-aware expiry; #393 signature freshness; broader #388/#389/#403 acceptance.
+- Missing engineering: private PDF jobs/download (#419), corrections (#421), exports
+  (#423), general returns (#348), role administration (#359), articles (#125),
+  accepted public rendering/discovery (#126/#127/#129). Cost valuation (#422) stays
+  inactive by owner decision; configured policy is not a cost ledger.
+
+See the central matrix for precise API/UI/database/test references and open PRs.
+The paragraphs below preserve the earlier integration checkpoint, not current absence.
+
+## Historical status — through 2026-09-30
 
 Last reviewed: 2026-09-30
 

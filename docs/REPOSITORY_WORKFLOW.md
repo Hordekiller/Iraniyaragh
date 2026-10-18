@@ -1,103 +1,83 @@
 # Canonical PR, Review and Merge Workflow
 
-Protection/review controls reconciled: 2026-10-15
-Applies to: all contributors and agents
+Protection read back: **2026-10-18**. Applies to contributors and agents.
+Current source/runtime and release gates: [V1 reconciliation](V1_RECONCILIATION.md).
 
-## Repository protection and merge policy
+## Current main protection
 
-Verified 2026-10-15: main protection is enforced and was read back from GitHub.
-The earlier unprotected checkpoint below is superseded; no historical solo-review
-exception bypasses the active rules. See [V1 reconciliation](V1_RECONCILIATION.md).
+The owner explicitly changed account-approval policy on 2026-10-17. Only these
+settings changed: required approving reviews **1 → 0**; last-push approval
+**enabled → disabled**. The prior independent-account merge blocker is superseded.
+This does not establish an independent approval of an author's work.
 
-- Strict up-to-date checks: `quality`, `database`, `e2e`, `sonar`,
-  `dependency-review`, `production-audit`, `Analyze (actions)`,
-  `Analyze (javascript-typescript)` (GitHub Actions app 15368), and `CodeQL`
-  (GitHub Advanced Security app 57789).
-- One approving review, last-push approval separation, stale approval dismissal,
-  resolved conversations and administrator enforcement. Linear history required;
-  force pushes and branch deletion disabled.
-- These checks must pass on the exact head; a skipped/neutral/unavailable result
-  is not a successful required gate. Resolve conflicts and blockers before squash merge.
-- A self-review documents engineering findings but cannot approve the author's PR.
-  Current REVIEW_REQUIRED is an external review dependency, not permission to
-  lower protection or merge with administrator bypass.
-- #213 remains open for organization-admin confirmation. A real green Sonar scan
-  establishes scan/quality evidence, not the state of an account suspension banner.
+These controls remain active and were read back:
 
-### Review handoff
+- Strict up-to-date required checks: `quality`, `database`, `e2e`, `sonar`,
+  `dependency-review`, `production-audit`, `Analyze (actions)` and
+  `Analyze (javascript-typescript)` bound to GitHub Actions app 15368;
+  `CodeQL` bound to GitHub Advanced Security app 57789.
+- Administrator enforcement, stale-review dismissal, resolved conversations and
+  linear history required. Force pushes to main and branch deletion disabled.
+- Every required context must succeed on the final exact PR head. Missing,
+  skipped, neutral, pending or failing checks do not authorize a merge.
+- Record engineering review of the complete final diff. Use independent review
+  when available; do not call self-review independent or fabricate approval.
+  Resolve actual review blockers and semantic conflicts before normal squash merge.
+- No administrator/check bypass or weakening of security tests. A future policy
+  change needs its own explicit operator decision; routine work follows this policy.
 
-The delivery owner implements one product PR at a time. Independent review is required by current protection; the reviewer does not implement a parallel
-product slice. For each sensitive PR:
-
-1. The implementer makes the final push and waits for every required check.
-2. A qualified independent reviewer examines the exact head and records approval
-   or actionable findings. If none is available, continue independent implementation
-   work and keep the PR unmerged; active protection must remain enforced.
-3. Freeze the branch after final approval; if changes are needed, rerun CI and
-   review on the new head.
-4. Do not use empty commits or repeated rebases to repair attribution.
-
-Historical record: the owner authorized documented solo delivery on 2026-09-25.
-That record was not independent approval and does not override the protection
-verified on 2026-10-15. Never bypass a required check, review or release approval.
-
-## PR state machine
+## Delivery and review sequence
 
 ```text
-DRAFT → IMPLEMENTATION → LOCAL VERIFICATION → PUSH → CI
-  → REVIEW (independent approval on final head)
-  → (changes? fix/push/CI/review latest SHA) → FREEZE → MERGE
+IMPLEMENT → LOCAL VERIFICATION → PUSH → EXACT-HEAD CI → ENGINEERING REVIEW
+  → (findings? FIX / PUSH / NEW CI / REVIEW) → FREEZE → NORMAL SQUASH MERGE
 ```
 
-Review evidence is valid only for the final reviewable SHA. Any new reviewable
-push (including a rebase) requires fresh checks and updated review evidence.
-After final review, make no code push. If a change is unavoidable, reopen the
-review cycle explicitly.
+Record owner, implementer, integration owner and reviewer/review method honestly.
+Auth, RBAC, migrations, money, inventory and payment changes require explicit
+review of authorization, privacy, invariants, concurrency, idempotency and recovery.
+A new push/rebase requires fresh CI and updated review evidence. Do not use empty
+commits to repair attribution or treat older green runs as evidence for a new tree.
 
-## Roles and dependencies
+Dependent PRs declare `Depends on #N`. Merge the dependency first, retarget/rebase
+once against the new main, resolve semantic conflicts and revalidate. After every
+2–3 merges in the current train run combined latest-main validation before continuing.
+Do not accumulate unrelated new PRs ahead of existing release blockers. The owner's
+current cadence is one completed slice, start fresh tests/CI, then pause for review.
 
-Every PR declares OWNER, IMPLEMENTER, REVIEWER and INTEGRATION OWNER. Auth,
-RBAC, migrations, money, inventory, checkout, orders, payment and financial
-changes require qualified independent review and the active GitHub approval
-controls; self-review is supporting evidence only.
+## Release boundary
 
-Dependent PRs must state `Depends on #N` in the body. Review early if useful but
-label it preliminary. Merge the dependency first, update the dependent branch
-once, resolve semantic conflicts, run all checks, freeze and request final review
-on that exact SHA. Do not repeatedly rebase while dependencies are moving.
+Merge is not deployment proof. Use official Publish Images for the exact merge
+SHA, resolve all four image tags to digests, restore-verify a fresh backup before
+relying on it, and use the authorized official deployment path. A migration failure
+must abort. No latest tag, VPS build, source copy or running-container patch.
+Record runtime image/digest/migration/health evidence and actual Admin/customer/
+provider acceptance separately. Do not reset or seed live sales data.
 
-## SonarCloud truthfulness
+## Sonar and security evidence
 
-The Sonar workflow must expose `SONAR_TOKEN` at job scope so its condition can
-read it. Trusted pushes/internal PRs must fail when the secret is absent; fork PRs
-may skip because GitHub withholds secrets, but that skip must be visible and must
-not be a successful required context. A scan is successful only when the scanner
-uploads the exact commit/PR and reports Quality Gate status. Distinguish scanner,
-account/org suspension and Quality Gate failures. Never change application code,
-coverage thresholds or valid PostgreSQL to hide an infrastructure problem.
+Trusted internal scans require the secret at job scope and the exact-head quality
+gate; forks may visibly lack secrets, but a skip is not a successful required gate.
+Never lower coverage or alter application behavior to hide infrastructure failure.
+#213 remains open until an organization administrator confirms the historic
+suspension banner/account state. Green scans alone do not prove that state.
+Production audit passing does not imply that all default-branch advisory alerts
+are resolved; the scoped #441/#442 candidates remain distinct until integrated.
 
-#212 (Sonar token at job scope) is merged and trusted internal PR scans now upload
-the exact head and enforce the Quality Gate. #213 remains open until an organization
-admin confirms the suspension banner is cleared. The protection verified on
-2026-10-15 already requires `sonar` and the other eight contexts; do not remove
-those checks based on the earlier unprotected checkpoint.
+## Final merge checklist
 
-## Final review checklist
+- Latest main, final head, base and dependency state recorded.
+- Full diff reviewed; migration/contract/OpenAPI drift checked where applicable.
+- Required exact-head checks all successful; no unresolved review blocker.
+- No secret, customer data, fixture or fabricated provider evidence in artifacts.
+- Protection readback accepts the head; merge with the current squash convention.
+- After merge: combined CI and official exact-SHA publication/deployment as authorized.
 
-- latest head and merge base recorded;
-- dependency and changed-file ownership confirmed;
-- required checks completed on that head (not an older run);
-- migration/OpenAPI drift checked where applicable;
-- authorization, idempotency, failure and concurrency evidence attached for
-  critical mutations;
-- reviewer is eligible and independent, current approval is recorded, and active
-  GitHub protection accepts the final head;
-- no unresolved conversations or changes requested;
-- no push after final approval.
+## Historical policy
 
-## Historical merge-train checkpoint — 2026-09-25
-
-Recently merged: Inventory through #222/#231/#232, Product Media M4/M5 #240 and
-Cart contracts/runtime #235/#239/#241–#244. No PR was open at the reviewed
-baseline. A branch is called READY only when the final SHA has completed the
-applicable review path and every required context is green.
+The owner authorized solo delivery on 2026-09-25. Protection subsequently required
+one independent account approval and last-push separation at the Oct 15 checkpoint.
+The explicit Oct 17 owner decision supersedes those two settings; other safeguards
+remain enforced. Older review requirements in dated plans are historical, not a
+reason to demand another account under today's policy. #12 tracks documentation
+synchronization; its final documentation criterion completes only when #443 merges.

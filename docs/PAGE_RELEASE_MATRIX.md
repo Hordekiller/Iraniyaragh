@@ -1,11 +1,27 @@
 # Page, Content and Release Matrix
 
-> **Current reconciliation — 2026-10-15:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source/deployment/test/acceptance facts and the execution queue;
-> [V1_ISSUE_REGISTER.json](V1_ISSUE_REGISTER.json) records all 149 issue mappings.
-> The dated status, staffing and queue statements below are preserved history
-> where they conflict with that checkpoint. Accepted domain/release criteria remain
-> requirements; historical source absence or deployment claims are not current facts.
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## Current route and acceptance overlay — 2026-10-18
+
+| Surface | Source/deployed status | Remaining boundary |
+| --- | --- | --- |
+| Homepage/catalog/category navigation | Present; #456 root-only display/drill-down verified, 13 roots / 88 nodes | Supplied names total 75 descendants, not an invented 76th; full responsive UAT remains |
+| Account profile/addresses/security/cart/orders | Real customer-self contracts and UI present | Full authenticated reload/ownership/checkout acceptance (#389/#401) |
+| Account credit / invoices | Owned API projections and Web pages present | Financial acceptance and live publication/revocation (#336/#418); no public credit checkout |
+| Admin stocktake/receiving/credit/reports/invoices | Present in verified running release | #444 additional stocktake coverage unmerged; PDF/corrections/exports missing |
+| Payment return | Authoritative verification and one controlled sale accepted | Refund/reconciliation/uncertainty acceptance still required |
+| Articles and public SSR/discovery | Accepted scope, incomplete implementation | #125/#126/#127/#129; product editor is not editorial CMS |
+
+A route being present is not business acceptance. The historical inventory below
+retains scope; its outdated absence/provider/deployment columns are superseded.
+
+## Historical page inventory and required journeys
 
 Status: authoritative page inventory and release boundary; truth checkpoint
 reconciled 2026-09-27. `SOLO_CRITICAL_PATH.md` controls execution order.

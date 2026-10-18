@@ -1,11 +1,35 @@
 # Reporting and invoice management — source audit and implementation plan
 
-> **Current reconciliation — 2026-10-15:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source/deployment/test/acceptance facts and the execution queue;
-> [V1_ISSUE_REGISTER.json](V1_ISSUE_REGISTER.json) records all 149 issue mappings.
-> The dated status, staffing and queue statements below are preserved history
-> where they conflict with that checkpoint. Accepted domain/release criteria remain
-> requirements; historical source absence or deployment claims are not current facts.
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## Current implementation delta — 2026-10-18
+
+The October 12 pinned source audit below is historical. Current main/VPS includes
+staff credit, operational reports and store invoices; its original “no module”
+findings must not be read as current implementation status.
+
+| Scope | Current source evidence | Remaining acceptance/work |
+| --- | --- | --- |
+| Seller/tax policy and exact IRR quotation | `apps/api/src/modules/invoices`; invoice policy/draft tests; #429/#430 | Approved Admin configuration and complete operator proforma journey (#415/#416) |
+| Numbered immutable issuance | `invoice-document.service.ts`, SQL guards and concurrency tests; #433 | Operator financial acceptance (#417); never edit issued originals |
+| Customer visibility/revocation | `invoice-publication.service.ts`, Web AccountInvoices; #434 | Real two-customer publish/read/revoke acceptance (#418) |
+| Operational reports | `apps/api/src/modules/reports/operational-report.service.ts`; #432 | Corrections, approved valuation and private exports are not complete (#358) |
+| Persian browser printing | Existing Admin/Web invoice views, local fonts/brand | Not an authorized private PDF artifact service |
+| Private PDF | Unmerged #439 template / #449 internal persistence | Durable jobs, fencing, worker, current-authority downloads and UI (#419/#420) |
+| Corrections / report exports | No complete runtime lifecycle | #421 / #423 remain implementation work |
+| Stock financial valuation | Versioned configurable policy | Inactive per owner; missing cost history cannot be fabricated (#422) |
+
+Invoice editing never changes balances directly. Order, payment, inventory and
+invoice states stay separate; immutable references connect their evidence. Store
+invoices do not claim official tax/Moadian compliance. See current traceability
+and release evidence in V1_RECONCILIATION.md; retain the design rationale below.
+
+## Historical source audit — 2026-10-12
 
 Audit date: 2026-10-12. Audited origin/main: **5bb3a52fc1864d23b2f4ddac42ee58c6fbbb6c60**.
 Status: **design proposal and verified source inventory; no invoice/report runtime implemented by this document**.

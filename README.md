@@ -2,15 +2,18 @@
 
 Pre-release commerce and warehouse platform for Iranian hardware/fittings retail.
 
-> Current evidence (2026-10-15): source and running staging images select
-> `30c3edee7002021429978b3478150d63385d75f7`; 61 migration checksums and the live
-> schema match. Staff orders, stocktake, staff credit, operational reports and
-> store-invoice policy/drafts/immutable issuance/customer publication are present.
-> Full V1 is **not ready**: private PDFs, corrections/exports, general returns,
-> runtime role administration, content/SSR/SEO and operational/provider acceptance
-> still have gaps. SMS login is operator-confirmed; payment remains disabled.
-> [V1 reconciliation](docs/V1_RECONCILIATION.md) separates source, tests, runtime
-> and acceptance and owns the current dependency-aware implementation queue.
+> Current evidence (2026-10-18): source and verified VPS select
+> `e2070948587b438dc5da55d8560ab870e23bf32d`; 61 migrations completed, none unfinished.
+> Staff orders, stocktake, staff credit, operational reports and store-invoice
+> policy/drafts/immutable issuance/customer publication are present. Admin cross-tab
+> refresh recovery is deployed; real operator idle acceptance remains open (#400).
+> SMS login and one real product payment/return-to-site/order-paid SMS are
+> operator-confirmed. Payment is live; refunds and broader provider acceptance
+> remain separate. **V1 is not ready:** automatic order expiry, private PDF service,
+> corrections/exports, general returns, role administration, content/SSR/SEO and
+> operational acceptance have remaining work.
+> [V1 reconciliation](docs/V1_RECONCILIATION.md) owns the evidence matrix and queue;
+> [issue register](docs/V1_ISSUE_REGISTER.json) covers all 150 issues.
 
 ## Workspace
 
@@ -19,10 +22,10 @@ Pre-release commerce and warehouse platform for Iranian hardware/fittings retail
   based on the locally licensed Vuexy technical starter with self-hosted assets.
 - `apps/api` — NestJS modular-monolith business API.
 - `packages/contracts` — shared API/domain contracts.
-- `infrastructure/docker` — local PostgreSQL, Redis and MinIO.
+- `infrastructure/docker` — PostgreSQL, Redis and object storage (local MinIO; deployed RustFS).
 - `e2e` — Playwright smoke suite covering the storefront (`web`) and the admin
-  panel shells on desktop + mobile viewports, with a strict zero-external-asset
-  network gate for both apps.
+  panel journeys on desktop + mobile viewports, with self-hosted runtime assets
+  and the explicitly approved Enamad trust-seal request exception.
 - `docs` — architecture and delivery roadmap.
 
 ## Core architecture

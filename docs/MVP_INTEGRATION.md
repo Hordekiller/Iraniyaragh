@@ -1,11 +1,25 @@
 # نقشهٔ یکپارچه‌سازی MVP موجود ایرانی‌یراق
 
-> **Current reconciliation — 2026-10-15:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source/deployment/test/acceptance facts and the execution queue;
-> [V1_ISSUE_REGISTER.json](V1_ISSUE_REGISTER.json) records all 149 issue mappings.
-> The dated status, staffing and queue statements below are preserved history
-> where they conflict with that checkpoint. Accepted domain/release criteria remain
-> requirements; historical source absence or deployment claims are not current facts.
+> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> owns current source, deployment, tests, acceptance and execution order.
+> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> historical closure is not independent acceptance of every original criterion.
+> Dated checkpoints below are history; accepted domain and release criteria remain.
+
+## وضعیت جاری — 2026-10-18
+
+نسخهٔ main و VPS هر دو `e207094` هستند. انبارگردانی، نسیهٔ کارکنان، گزارش‌های
+پایه و صدور/انتشار فاکتور فروشگاهی موجودند؛ ادعای نبود آن‌ها در بازبینی قدیمی
+زیر، وضعیت امروز نیست. یک خرید واقعی و پیامک پرداخت به تأیید مالک رسیده است؛
+این تأیید جای پذیرش همهٔ جریان‌های مالی، مشتری و انبار را نمی‌گیرد.
+
+صف ادغام، مدرک تست‌ها و کمبودهای واقعی در V1_RECONCILIATION.md است. خروجی PDF
+خصوصی، اصلاحیه، خروجی گزارش، مرجوعی عمومی، مدیریت نقش و بخش‌های محتوا/SSR هنوز
+کار مهندسی دارند. مشکل نشست ادمین اصلاح و مستقر شده ولی پذیرش بیکاری و تغییر
+توسط کاربر در #400 باز است. بخش زیر سابقهٔ بازبینی شهریور است.
+
+## بازبینی تاریخی — 2026-09-30
 
 بازبینی: ۱۴۰۵/۰۷/۰۸ (2026-09-30). خواستهٔ فعلی مالک پروژه: فعلاً فقط
 قابلیت‌ها و UI موجود را به یک نسخهٔ واحد و صادقانه وصل کنیم؛ استقرار VPS و

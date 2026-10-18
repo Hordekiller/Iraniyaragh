@@ -1,6 +1,6 @@
 {
-  "checkpoint": "2026-10-16",
-  "sourceBaseline": "30c3edee7002021429978b3478150d63385d75f7",
+  "checkpoint": "2026-10-18",
+  "sourceBaseline": "e2070948587b438dc5da55d8560ab870e23bf32d",
   "requirementsReviewed": 150,
   "allCriteriaIndependentlyAccepted": false,
   "auditComplete": false,
@@ -12,9 +12,10 @@
     "superseded": "Obsolete or superseded",
     "duplicate": "Duplicate of another issue",
     "future": "Future release scope",
-    "decision": "Requires a product or policy decision"
+    "decision": "Requires a product or policy decision",
+    "accepted": "Original bounded issue acceptance independently reconciled against source and successful tests; not blanket live business/V1 acceptance."
   },
-  "method": "All original issue bodies read; safe metadata and actual timeline PR references retained. Source anchors prove related implementation presence, not every assertion. Criterion review and independent acceptance are deliberately separate; no bulk closure is authorized by this file. See V1_RECONCILIATION.md for runtime/CI evidence and executable gaps. Checkpoint 2026-10-16: exact-head historical review evidence and selected criterion mappings added. Independent ADR review for #13 does not alone accept its historical pre-migration sequencing criterion or downstream financial operation. Full issue-by-issue criterion acceptance is still incomplete. Later 2026-10-16 checkpoint: new #450 requirements read, #81 reopened from direct query measurements, and controlled live product-sale/order-paid handset evidence recorded without broad issue acceptance.",
+  "method": "All 150 issue bodies inventoried and reviewed; existing source groups and historical PR/timeline references retained. Current main/VPS and exact-SHA CI verified separately. #351 original test-only criteria reconciled and issue closed; #12 current operator-authorized protection policy recorded, documentation merge still pending. Closed state and source presence alone do not prove acceptance. Historical review evidence remains dated; criterion-level audit of every historical issue is still incomplete.",
   "issues": [
     {
       "issue": 1,
@@ -167,10 +168,10 @@
       "title": "Enable enforced main branch protection when private-repo plan supports it",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/12",
       "githubState": "OPEN",
-      "classification": "blocked",
+      "classification": "partial",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [],
-      "nextAction": "Protection now enforced/read back; documentation and independent policy review pending. Do not bypass active review requirements.",
+      "nextAction": "Current protection read back: nine strict app-bound checks, admins/conversations/linear history enforced, no force/delete. Owner changed required approvals 1→0 and last-push approval true→false on Oct 17. Keep open until current workflow/status docs #443 merge; no second-account dependency remains.",
       "sourceEvidenceGroup": "governance",
       "candidatePRs": [
         443
@@ -1701,7 +1702,8 @@
         428,
         432
       ],
-      "sourceEvidenceGroup": "credit_returns"
+      "sourceEvidenceGroup": "credit_returns",
+      "nextAction": "ADR-0023 and credit/sale/receipt/fulfillment/credit-return source exist. The ADR expressly does not close #336/#338 from foundation alone; reconcile every original financial criterion and real operator sale/statement/receipt/return acceptance before closure."
     },
     {
       "issue": 339,
@@ -1816,16 +1818,37 @@
       "issue": 351,
       "title": "Test: reconcile the inventory ledger including the merged purchase-receipt path",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/351",
-      "githubState": "OPEN",
-      "classification": "implemented_missing_acceptance",
+      "githubState": "CLOSED",
+      "classification": "accepted",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         365,
         367,
         368
       ],
-      "nextAction": "Real purchase-receipt ledger spec merged #368; current full CI executes it. Reconcile original assertions and independent owner acceptance before closure.",
-      "sourceEvidenceGroup": "inventory"
+      "nextAction": "Closed against original test-only criteria; preserve source/CI evidence. Physical warehouse UAT, #347/#352 and expiry #81/#450 remain independent.",
+      "sourceEvidenceGroup": "inventory",
+      "acceptanceCheckpoint": "2026-10-18",
+      "criterionEvidence": [
+        {
+          "criterion": "Real UI purchase receiving and immutable ledger reconciliation on both browser viewports",
+          "source": [
+            "e2e/tests/admin-inventory-ledger-purchase-receipt.spec.ts"
+          ],
+          "result": "Main e207094 CI 39084793973 desktop 49.4s/mobile 1.2m PASS; full browser 136 pass / 5 existing viewport skips / 0 final failure or flake."
+        },
+        {
+          "criterion": "Receipt line to movement foreign-key evidence",
+          "source": [
+            "apps/api/src/modules/purchasing/purchasing.integration-spec.ts"
+          ],
+          "result": "Real PostgreSQL assertions verify PurchaseReceiptLine referenceType/referenceId; complements UI receipt/movement links and signed quantity reconciliation."
+        },
+        {
+          "criterion": "Test-only PR and owner sequencing",
+          "result": "#368 changed the spec and documentation only; original nine gates pass. Hordekiller merged b4cd95000551a018974e1e8f73d92087b7b9c830 on 2026-09-30. No independent GitHub approval is asserted."
+        }
+      ]
     },
     {
       "issue": 352,
@@ -1959,7 +1982,7 @@
         392,
         394
       ],
-      "nextAction": "Draft/variant/attributes/brands/categories/Jodit/image journey exists. Live acceptance, unsupported video authoring and scanner freshness are not complete.",
+      "nextAction": "Draft/variants/IRR/attributes/Jodit/image source is present. #456 root-category drill-down deployed: 13 roots / 75 supplied descendants, 88 total. Full live authoring acceptance, unsupported video and scanner signature freshness #393 remain open.",
       "sourceEvidenceGroup": "catalog"
     },
     {
@@ -2014,33 +2037,34 @@
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         405,
-        438
-      ],
-      "nextAction": "Existing fresh-MFA/refresh/no-store/cross-tab fixes deployed. Genuine-token tests distinguish access/fresh/idle boundaries; current live operator 5–10-minute symptom not reproduced. Do not change TTL speculatively.",
-      "sourceEvidenceGroup": "auth",
-      "candidatePRs": [
+        438,
         445,
         447
       ],
+      "nextAction": "#445 boundary coverage and #447 protected replay fix merged/deployed in e207094. Real authenticated operator idle/reload/mutation acceptance remains open; do not assert every single-tab symptom has the cross-tab cause or extend TTLs speculatively.",
+      "sourceEvidenceGroup": "auth",
+      "candidatePRs": [],
       "criterionEvidence": [
         {
-          "criterion": "Recover protected requests without false logout across tab rotations",
+          "criterion": "Cross-tab protected replay recovery",
           "source": [
             "apps/admin/src/lib/api/client.ts",
-            "apps/admin/src/lib/auth/AuthProvider.tsx"
+            "e2e/tests/admin-cross-tab-recovery.spec.ts"
           ],
-          "candidatePR": 447,
-          "result": "before-fix real HTTP replay 401; final candidate CI 136 browser passes / zero failures / five pre-existing viewport skips; not merged/deployed"
+          "result": "#447 merged e207094; before-fix real protected replay 401 reproduced, exact-head/merged CI desktop/mobile regression PASS. Live public smoke is not authenticated operator acceptance."
         },
         {
-          "criterion": "Authoritative idle/revocation/fresh-MFA boundaries remain enforced",
-          "candidatePR": 445,
-          "result": "seven added PostgreSQL/HTTP tests; candidate database gate 418/418 pass; not merged/deployed"
+          "criterion": "Authoritative idle/revocation/fresh-MFA boundary",
+          "result": "#445 merged 8dfbcf5 and included in e207094; seven genuine-token HTTP/PG cases; full main PG 418 + 10 separate security cases PASS."
         },
         {
-          "criterion": "Live operator single-tab 5–10 minute idle report accepted",
-          "result": "not yet reproduced/accepted; do not infer every symptom has the cross-tab cause"
+          "criterion": "Live operator idle and mutation after inactivity",
+          "result": "Pending, therefore issue remains OPEN."
         }
+      ],
+      "deliveredPRs": [
+        445,
+        447
       ]
     },
     {
@@ -2117,7 +2141,7 @@
       "relatedPRs": [
         429
       ],
-      "nextAction": "Append-only seller/tax/discount policy and exact BigInt quotes deployed #429. Operator configuration/live acceptance must not be inferred from source.",
+      "nextAction": "Policy API/Admin and exact IRR quotations deployed via #429; approved operator policy and integrated invoice acceptance remain, no invented tax.",
       "sourceEvidenceGroup": "invoices"
     },
     {
@@ -2130,7 +2154,7 @@
       "relatedPRs": [
         430
       ],
-      "nextAction": "Independent draft/quote/Admin flow deployed #430. Full independent acceptance remains separate from merged source.",
+      "nextAction": "Independent proforma source deployed via #430; reconcile full quote/edit/version/restart/conversion criteria and operator acceptance.",
       "sourceEvidenceGroup": "invoices"
     },
     {
@@ -2145,7 +2169,7 @@
         433,
         434
       ],
-      "nextAction": "Atomic immutable numbered issuance deployed #433; fresh-session/operator financial acceptance still required.",
+      "nextAction": "Unique immutable issuance deployed via #433; preserve original financial snapshots, complete original criterion and operator acceptance.",
       "sourceEvidenceGroup": "invoices"
     },
     {
@@ -2159,7 +2183,7 @@
         433,
         434
       ],
-      "nextAction": "Versioned publish/revoke/current-owner safe reads deployed #434; live two-customer publication/revocation acceptance still missing.",
+      "nextAction": "Customer publication/revocation deployed via #434; current permission/ownership tests exist, real two-customer publish/read/revoke acceptance still pending.",
       "sourceEvidenceGroup": "invoices"
     },
     {
@@ -2275,10 +2299,19 @@
       "classification": "partial",
       "releaseScope": "V1 revenue and stock integrity",
       "relatedPRs": [
-        451
+        451,
+        453,
+        454,
+        455
       ],
       "sourceEvidenceGroup": "commerce",
-      "nextAction": "Implement authoritative order/payment-aware bounded expiry, trusted system audit context, safe scheduling and expired-checkout recovery; preserve unresolved gateway attempts. Inventory batching alone does not activate this path."
+      "nextAction": "Rebase/integrate safety #454 then retarget #455 onto main, then #451/#453 with combined checks. All four are unmerged candidates. Implement durable scheduled bounded worker/restart/fencing and prove reservation release/storefront recovery. Any payment attempt prevents automatic expiry pending explicit reconciliation. No fake Staff actor or direct stock repair.",
+      "candidatePRs": [
+        454,
+        455,
+        451,
+        453
+      ]
     }
   ],
   "defaultAcceptanceState": "Criterion-level independent acceptance review pending. Source anchors/merged PRs/closed issue states are not a full acceptance claim.",
@@ -3418,28 +3451,61 @@
     },
     "439": {
       "state": "OPEN",
-      "head": "ab7512ac2d9caa8b4334be98dff10920b661aa4c",
+      "head": "4992028cfffe1de3f9196fb952516415e26874c6",
       "merge": null
     },
     "452": {
-      "state": "OPEN",
+      "state": "MERGED",
       "head": "36e5be06f02fa35a5e8e795c88f68a51dbdeb394",
-      "merge": null
+      "merge": "e5d6de20375604ee072c3bcbda802cdc0e025ff3"
     },
     "451": {
       "state": "OPEN",
-      "head": "0ec9c83ce8d9768b32ba940c5ef136ca2e918195",
+      "head": "ef8a0b8adb8cf12fb74a6a78ae92ba09bd3e643c",
       "merge": null
     },
     "449": {
       "state": "OPEN",
       "head": "c26044ca050608ebcd1a6174ced2b724cb3a8442",
       "merge": null
+    },
+    "456": {
+      "state": "MERGED",
+      "head": "f49b9e40517b1c074bc1139850dace4af26494f1",
+      "merge": "f4506661b453d20934290509ea9d66bc23965d22"
+    },
+    "455": {
+      "state": "OPEN",
+      "head": "31b99d4c92f1dcff1065aad95e2f22fe8913f50b"
+    },
+    "454": {
+      "state": "OPEN",
+      "head": "b5ccbaf8a6233be6135418b521074d3f5170b849"
+    },
+    "453": {
+      "state": "OPEN",
+      "head": "f71afba71b4b696168cf5b56c7ec1e189f8b182f"
+    },
+    "447": {
+      "state": "MERGED",
+      "head": "b4d51d7ba4ec26d733d13488201ceb617152e2e8",
+      "merge": "e2070948587b438dc5da55d8560ab870e23bf32d"
+    },
+    "445": {
+      "state": "MERGED",
+      "head": "972f2d6f9a347d02349817a70c66cff2a1533362",
+      "merge": "8dfbcf570c7ab42812c292452000673c935d49ea"
     }
   },
   "historicalReviewEvidence": {
     "reviewedAtUTC": "2026-10-15",
     "mergedPRsWithIndependentApprovalOnFinalHead": 119,
     "limitation": "Review metadata is not independent acceptance of every functional, runtime or external-provider criterion."
+  },
+  "deployedBaseline": "e2070948587b438dc5da55d8560ab870e23bf32d",
+  "issueCounts": {
+    "total": 150,
+    "open": 51,
+    "closed": 99
   }
 }

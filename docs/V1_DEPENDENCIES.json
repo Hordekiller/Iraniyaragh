@@ -1,6 +1,6 @@
 {
-  "checkpointUTC": "2026-10-16",
-  "sourceBaseline": "30c3edee7002021429978b3478150d63385d75f7",
+  "checkpointUTC": "2026-10-18",
+  "sourceBaseline": "e2070948587b438dc5da55d8560ab870e23bf32d",
   "scope": "Declared invoice/report issue dependencies and current execution/release gates; not an acceptance claim.",
   "issueDependencies": [
     {
@@ -64,13 +64,13 @@
     {
       "gate": "reviewed_security_and_provenance",
       "candidatePRs": [
-        440,
+        448,
         441,
         442,
         446,
-        448
+        440
       ],
-      "state": "unmerged; independent review required"
+      "state": "Unmerged. Rebase/latest-main exact-head checks and engineering review under current operator policy; combined validation after 2–3 merges."
     },
     {
       "gate": "stocktake_reconciliation",
@@ -88,11 +88,12 @@
       "issues": [
         400
       ],
-      "candidatePRs": [
+      "candidatePRs": [],
+      "state": "Merged and deployed e207094; genuine-token boundaries and two-tab HTTP regression green. Actual authenticated operator idle/mutation acceptance remains open #400.",
+      "deliveredPRs": [
         445,
         447
-      ],
-      "state": "candidate tests green; live/operator acceptance still open"
+      ]
     },
     {
       "gate": "invoice_private_pdf",
@@ -170,10 +171,13 @@
         450
       ],
       "candidatePRs": [
-        451
+        454,
+        455,
+        451,
+        453
       ],
-      "state": "batching candidate measured/tested; order/payment-aware scheduler and expired-payment UX implementation remains"
+      "state": "All four candidates unmerged; #455 stacked on #454. Durable scheduler/restart/fencing and live stock release/recovery remain. Any payment attempt blocks automatic expiry pending explicit reconciliation."
     }
   ],
-  "releaseRule": "Every relevant final exact-head required check and independent review, fresh restored backup, immutable image publication/digests, official authorized deployment and actual runtime/customer/operator acceptance. Green PR checks alone do not satisfy release gates."
+  "releaseRule": "All nine required checks on the final exact head, recorded engineering review and current protection (owner-authorized zero mandatory approving accounts/no last-push approval; strict checks and other protections preserved). Then fresh restore-verified backup, exact-SHA image publication/digests, official authorized deployment and actual runtime/operator/provider acceptance. Neither merged code nor green CI is full acceptance."
 }
