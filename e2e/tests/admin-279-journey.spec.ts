@@ -483,5 +483,15 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
 
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await tracker.assertOnlyTrustedOrigins();
+
+    // This journey configured the homepage to feature its product category;
+    // restore the isolated E2E database state so later admin tests start clean.
+    await page.goto('/settings/homepage');
+    await expect(page.getByRole('heading', { name: 'چیدمان کاروسل صفحهٔ اصلی' })).toBeVisible();
+    const clearHomepage = page.waitForResponse(response => response.url().endsWith('/api/v1/catalog/homepage-collections/admin') && response.request().method() === 'PUT');
+    await tap(page.getByRole('button', { name: 'حذف' }));
+    await tap(page.getByRole('button', { name: 'ذخیرهٔ چیدمان' }));
+    expect((await clearHomepage).status()).toBe(200);
+    await expect(page.getByText(/هنوز کاروسلی انتخاب نشده/)).toBeVisible();
   });
 });
