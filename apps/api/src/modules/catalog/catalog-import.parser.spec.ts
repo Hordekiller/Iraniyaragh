@@ -48,6 +48,21 @@ describe('catalog workbook parser', () => {
     expect(empty.variants[0].barcode).toBeUndefined();
   });
 
+  it('accepts an unknown purchase cost while requiring and preserving the sale-price column', async () => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await workbookBuffer());
+    workbook.getWorksheet('Variants')!.getCell('E2').value = null;
+    const parsed = await parseCatalogWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()));
+    expect(parsed.variants[0]).toMatchObject({ salePrice: '200' });
+    expect(parsed.variants[0]?.costPrice).toBeUndefined();
+
+    const exported = await exportCatalogWorkbook({ ...parsed, totalRows: parsed.totalRows });
+    const roundTrip = new ExcelJS.Workbook();
+    await roundTrip.xlsx.load(exported);
+    expect(roundTrip.getWorksheet('Variants')!.getCell('F2').value).toBe('200');
+    expect(roundTrip.getWorksheet('Variants')!.getCell('E2').value).toBeNull();
+  });
+
   it('sanitizes product descriptions and drops image markup', async () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(await workbookBuffer());

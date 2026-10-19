@@ -70,8 +70,7 @@ function validateDraft(draft: ProductDraft): { fields: FieldErrors; variants: Va
     const item: Partial<Record<keyof VariantDraft, string>> = {};
     if (!variant.sku.trim()) item.sku = 'کد SKU الزامی است.';
     else if (variant.sku.trim().length > 100) item.sku = 'حداکثر ۱۰۰ کاراکتر.';
-    if (!variant.costPrice.trim()) item.costPrice = 'قیمت خرید الزامی است.';
-    else if (!AMOUNT_PATTERN.test(variant.costPrice.trim())) item.costPrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
+    if (variant.costPrice.trim() && !AMOUNT_PATTERN.test(variant.costPrice.trim())) item.costPrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
     if (!variant.salePrice.trim()) item.salePrice = 'قیمت فروش الزامی است.';
     else if (!AMOUNT_PATTERN.test(variant.salePrice.trim())) item.salePrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
     if (variant.weightGrams.trim() && !/^\d{1,10}$/u.test(variant.weightGrams.trim())) item.weightGrams = 'وزن فقط عددی (گرم) است.';
@@ -176,7 +175,7 @@ export function ProductCreateForm() {
             sku: variant.sku.trim(),
             ...(variant.barcode.trim() ? { barcode: variant.barcode.trim() } : {}),
             ...(variant.title.trim() ? { title: variant.title.trim() } : {}),
-            costPrice: { amount: variant.costPrice.trim(), currency: 'IRR' },
+            costPrice: variant.costPrice.trim() ? { amount: variant.costPrice.trim(), currency: 'IRR' } : null,
             salePrice: { amount: variant.salePrice.trim(), currency: 'IRR' },
             ...(variant.weightGrams.trim() ? { weightGrams: Number.parseInt(variant.weightGrams.trim(), 10) } : {}),
             isActive: variant.isActive,
@@ -372,7 +371,7 @@ export function ProductCreateForm() {
                         </FormField>
                       </Stack>
                       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                        <FormField label="قیمت خرید (ریال)" required htmlFor={`variant-${index}-cost`} error={Boolean(variantErrors[index]?.costPrice)} errorText={variantErrors[index]?.costPrice}>
+                        <FormField label="قیمت خرید (ریال)" htmlFor={`variant-${index}-cost`} helperText="اگر مبلغ خرید مشخص نیست، خالی بگذارید؛ هزینهٔ نامشخص صفر محسوب نمی‌شود." error={Boolean(variantErrors[index]?.costPrice)} errorText={variantErrors[index]?.costPrice}>
                           <TextField id={`variant-${index}-cost`} size="small" dir="ltr" inputMode="numeric" value={variant.costPrice} onChange={(event) => setVariantField(index, 'costPrice', event.target.value.replace(/[^\d]/g, ''))} />
                         </FormField>
                         <FormField label="قیمت فروش (ریال)" required htmlFor={`variant-${index}-sale`} error={Boolean(variantErrors[index]?.salePrice)} errorText={variantErrors[index]?.salePrice}>

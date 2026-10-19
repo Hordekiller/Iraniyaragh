@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { validate } from 'class-validator';
 import { describe, expect, it } from 'vitest';
-import { AttributeDefinitionCreateDto, AttributeOptionCreateDto, MoneyDto, ProductCreateDto, ProductDescriptionDto } from './catalog.dto';
+import { AttributeDefinitionCreateDto, AttributeOptionCreateDto, MoneyDto, ProductCreateDto, ProductDescriptionDto, ProductVariantDto, VariantPriceUpdateDto } from './catalog.dto';
 
 describe('MoneyDto', () => {
   it('accepts canonical integer Rial and rejects currencies that cannot be persisted', async () => {
@@ -51,6 +51,18 @@ describe('ProductDescriptionDto', () => {
 });
 
 describe('ProductCreateDto', () => {
+  it('accepts an explicitly unknown purchase cost while requiring a valid integer-IRR sale price', async () => {
+    const unknownCost = Object.assign(new ProductVariantDto(), {
+      sku: 'SKU-UNKNOWN-COST',
+      costPrice: null,
+      salePrice: Object.assign(new MoneyDto(), { amount: '125000', currency: 'IRR' }),
+    });
+    await expect(validate(unknownCost)).resolves.toHaveLength(0);
+
+    const missingSale = Object.assign(new ProductVariantDto(), { sku: 'SKU-NO-SALE', costPrice: null });
+    expect((await validate(missingSale)).length).toBeGreaterThan(0);
+  });
+
   it('accepts a description up to the 100,000 character limit and rejects beyond', async () => {
     const base = { name: 'Product', slug: 'product' };
     const ok = Object.assign(new ProductCreateDto(), { ...base, description: 'x'.repeat(100_000) });
@@ -66,5 +78,16 @@ describe('ProductCreateDto', () => {
     await expect(validate(draft)).resolves.toHaveLength(0);
     expect((await validate(published)).length).toBeGreaterThan(0);
     expect((await validate(archived)).length).toBeGreaterThan(0);
+  });
+});
+
+describe('VariantPriceUpdateDto', () => {
+  it('accepts null as unknown cost and still validates sale price and version', async () => {
+    const dto = Object.assign(new VariantPriceUpdateDto(), {
+      costPrice: null,
+      salePrice: Object.assign(new MoneyDto(), { amount: '125000', currency: 'IRR' }),
+      expectedVersion: 1,
+    });
+    await expect(validate(dto)).resolves.toHaveLength(0);
   });
 });

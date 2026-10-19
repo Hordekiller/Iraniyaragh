@@ -136,13 +136,14 @@ describe('VariantGenerateDialog', () => {
     );
     expect(await screen.findByText(/۱ ترکیب آمادهٔ ایجاد است/)).toBeInTheDocument();
 
+    fireEvent.change(screen.getByLabelText('قیمت خرید (ریال)'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'ایجاد ۱ تنوع' }));
     await waitFor(() =>
       expect(mocks.generateVariants).toHaveBeenCalledWith(
         'p1',
         {
           optionSelection: { color: ['red'], size: ['M'] },
-          costPrice: { amount: '1500', currency: 'IRR' },
+          costPrice: null,
           salePrice: { amount: '3000', currency: 'IRR' },
         },
         'catalog-variant-generate-key-1',
@@ -159,7 +160,7 @@ describe('VariantGenerateDialog', () => {
       variants: [
         {
           ...product.variants[0]!,
-          costPrice: { amount: '', currency: 'IRR' as const },
+          costPrice: null,
           salePrice: { amount: '', currency: 'IRR' as const },
         },
       ],
@@ -170,7 +171,7 @@ describe('VariantGenerateDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'پیش‌نمایش ترکیب‌ها' }));
     fireEvent.click(await screen.findByRole('button', { name: 'ایجاد ۱ تنوع' }));
 
-    expect(screen.getAllByText('فقط ارقام (بدون جداکننده) مجاز است.')).toHaveLength(2);
+    expect(screen.getAllByText('فقط ارقام (بدون جداکننده) مجاز است.')).toHaveLength(1);
     expect(mocks.generateVariants).not.toHaveBeenCalled();
   });
 

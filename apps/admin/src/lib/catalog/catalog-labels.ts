@@ -66,7 +66,8 @@ export function formatAmountNumber(value: string): string {
 
 const faNumber = new Intl.NumberFormat('fa-IR');
 
-export function formatRial(money: Money): string {
+export function formatRial(money: Money | null | undefined): string {
+  if (money === null || money === undefined) return 'ثبت نشده';
   const amount = Number.parseInt(money.amount, 10);
   if (Number.isNaN(amount)) return `${money.amount} ریال`;
   return `${faNumber.format(amount)} ریال`;

@@ -106,7 +106,8 @@ export type ProductVariantPayload = {
   sku: string;
   barcode?: string;
   title?: string;
-  costPrice: Money;
+  /** Unknown purchase cost is represented as null; it is never treated as zero. */
+  costPrice?: Money | null;
   salePrice: Money;
   weightGrams?: number;
   status?: VariantStatus;
@@ -308,7 +309,7 @@ export type VariantPriceSource = 'ADMIN' | 'IMPORT' | 'SYSTEM';
 export type VariantPriceRecord = {
   id: string;
   variantId: string;
-  costPrice: Money;
+  costPrice: Money | null;
   salePrice: Money;
   effectiveAt: string;
   source: VariantPriceSource;
@@ -319,7 +320,8 @@ export type VariantPriceRecord = {
 };
 
 export type VariantPriceUpdateRequest = {
-  costPrice: Money;
+  /** Omitted preserves the current value; null explicitly records unknown cost. */
+  costPrice?: Money | null;
   salePrice: Money;
   reason?: string;
   effectiveAt?: string;
@@ -353,7 +355,7 @@ export type VariantGeneratePreviewResponse = ApiSuccess<{
 }>;
 
 export type VariantGenerateRequest = VariantGeneratePreviewRequest & {
-  costPrice: Money;
+  costPrice?: Money | null;
   salePrice: Money;
   titlePattern?: string;
 };

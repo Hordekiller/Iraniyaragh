@@ -70,8 +70,20 @@ describe('CatalogService P2 variant mutations', () => {
     const { service, tx, audit } = setup();
     const result = await service.updateVariantPrice('actor-1', 'variant-1', { costPrice: { amount: '110', currency: 'IRR' }, salePrice: { amount: '220', currency: 'IRR' }, reason: 'Increase', expectedVersion: 3 });
     expect(tx.variantPriceRecord.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ variantId: 'variant-1', source: 'ADMIN', actorUserId: 'actor-1', reason: 'Increase' }) }));
-    expect(result.data.record.costPrice.amount).toBe('110');
+    expect(result.data.record.costPrice?.amount).toBe('110');
     expect(audit.record).toHaveBeenCalledTimes(1);
+  });
+
+  it('records an explicitly unknown cost as null without changing the sale price', async () => {
+    const { service, tx } = setup();
+    tx.productVariant.findUniqueOrThrow.mockResolvedValue({ ...variant, costPrice: null, salePrice: 220n, version: 4 });
+    tx.variantPriceRecord.create.mockResolvedValue({ id: 'price-unknown', variantId: variant.id, costPrice: null, salePrice: 220n, effectiveAt: new Date('2026-01-02T00:00:00Z'), source: 'ADMIN', actorUserId: 'actor-1', reason: null, requestId: 'req-1', createdAt: new Date('2026-01-02T00:00:00Z') });
+
+    const result = await service.updateVariantPrice('actor-1', 'variant-1', { costPrice: null, salePrice: { amount: '220', currency: 'IRR' }, expectedVersion: 3 });
+
+    expect(tx.productVariant.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ costPrice: null, salePrice: 220n }) }));
+    expect(tx.variantPriceRecord.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ costPrice: null, salePrice: 220n }) }));
+    expect(result.data.record.costPrice).toBeNull();
   });
 
   it('maps a stale price mutation to STALE_VERSION', async () => {

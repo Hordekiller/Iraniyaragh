@@ -163,18 +163,18 @@ describe('ProductCreateForm', () => {
     expect(mocks.replace).not.toHaveBeenCalled();
   }, 15_000);
 
-  it('requires at least one complete SKU variant before product creation', async () => {
+  it('requires a SKU and sale price but permits an unknown purchase cost', async () => {
     mocks.listBrands.mockResolvedValue([]);
     mocks.listCategories.mockResolvedValue([]);
+    mocks.createProduct.mockResolvedValue({ product: { id: 'no-cost-product', name: 'قفل دستگیره‌ای' } });
     renderForm();
     await screen.findByText('مشخصات پایه');
     fireEvent.change(screen.getByLabelText(/نام کالا/), { target: { value: 'قفل دستگیره‌ای' } });
     fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'lock-handle' } });
     fireEvent.change(document.getElementById('variant-0-sku')!, { target: { value: 'LOCK-001' } });
+    fireEvent.change(document.getElementById('variant-0-sale')!, { target: { value: '240000' } });
     fireEvent.click(screen.getByRole('button', { name: 'ثبت کالا' }));
-    expect(await screen.findByText('قیمت خرید الزامی است.')).toBeInTheDocument();
-    expect(screen.getByText('قیمت فروش الزامی است.')).toBeInTheDocument();
-    expect(mocks.createProduct).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.createProduct).toHaveBeenCalledWith(expect.objectContaining({ variants: [expect.objectContaining({ sku: 'LOCK-001', costPrice: null, salePrice: { amount: '240000', currency: 'IRR' } })] }), expect.any(String)));
   });
 
   it('selects a newly created brand even if the following reference refresh fails', async () => {

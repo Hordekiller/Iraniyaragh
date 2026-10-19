@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsNotIn, IsObject, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsDefined, IsEnum, IsIn, IsInt, IsNotIn, IsObject, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const AMOUNT = /^\d{1,15}$/u;
@@ -37,8 +37,9 @@ export class ProductVariantDto {
   @IsString() @MaxLength(100) sku!: string;
   @IsOptional() @IsString() @MaxLength(100) barcode?: string;
   @IsOptional() @IsString() @MaxLength(150) title?: string;
-  @ValidateNested() @Type(() => MoneyDto) costPrice!: MoneyDto;
-  @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
+  @ApiPropertyOptional({ type: MoneyDto, nullable: true, description: 'Null or omitted means purchase cost is unknown; it is not zero.' })
+  @IsOptional() @ValidateNested() @Type(() => MoneyDto) costPrice?: MoneyDto | null;
+  @IsDefined() @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
   @IsOptional() @IsInt() @Min(0) weightGrams?: number;
   @IsOptional() @IsBoolean() isActive?: boolean;
 }
@@ -74,8 +75,9 @@ export class VariantGeneratePreviewDto {
 }
 
 export class VariantGenerateDto extends VariantGeneratePreviewDto {
-  @ValidateNested() @Type(() => MoneyDto) costPrice!: MoneyDto;
-  @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
+  @ApiPropertyOptional({ type: MoneyDto, nullable: true, description: 'Null or omitted means purchase cost is unknown; it is not zero.' })
+  @IsOptional() @ValidateNested() @Type(() => MoneyDto) costPrice?: MoneyDto | null;
+  @IsDefined() @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
   @IsOptional() @IsString() @MaxLength(150) titlePattern?: string;
 }
 
@@ -152,8 +154,9 @@ export class ProductVariantStatusDto {
 }
 
 export class VariantPriceUpdateDto {
-  @ValidateNested() @Type(() => MoneyDto) costPrice!: MoneyDto;
-  @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
+  @ApiPropertyOptional({ type: MoneyDto, nullable: true, description: 'Null marks purchase cost as unknown; omission preserves the current value.' })
+  @IsOptional() @ValidateNested() @Type(() => MoneyDto) costPrice?: MoneyDto | null;
+  @IsDefined() @ValidateNested() @Type(() => MoneyDto) salePrice!: MoneyDto;
   @IsOptional() @IsString() @MaxLength(500) reason?: string;
   @IsOptional() @IsDateString() effectiveAt?: string;
   @IsInt() @Min(0) expectedVersion!: number;

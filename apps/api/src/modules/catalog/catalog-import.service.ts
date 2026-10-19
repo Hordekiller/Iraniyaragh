@@ -133,7 +133,8 @@ export class CatalogImportService {
       const sameValues = existing
         && JSON.stringify(existing.attributeValues.map(valueKey).sort((left, right) => left.localeCompare(right)))
           === JSON.stringify(values.map(valueKey).sort((left, right) => left.localeCompare(right)));
-      const priceSame = existing && existing.costPrice.toString() === String(BigInt(row.costPrice)) && existing.salePrice.toString() === String(BigInt(row.salePrice));
+      const costPrice = row.costPrice === undefined ? existing?.costPrice ?? null : BigInt(row.costPrice);
+      const priceSame = existing && existing.costPrice === costPrice && existing.salePrice.toString() === String(BigInt(row.salePrice));
       const fieldsSame = existing
         && (row.barcode === undefined || existing.barcode === row.barcode)
         && (row.title === undefined || existing.title === row.title)
@@ -145,7 +146,7 @@ export class CatalogImportService {
           // Blank optional cells mean "not supplied", never "clear stored value".
           barcode: row.barcode,
           title: row.title,
-          costPrice: BigInt(row.costPrice),
+          costPrice,
           salePrice: BigInt(row.salePrice),
           weightGrams: row.weightGrams === undefined ? undefined : Number(row.weightGrams),
           status: row.status as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED' | undefined,
@@ -159,7 +160,7 @@ export class CatalogImportService {
           skuKey: canonicalizeSku(row.sku),
           barcode: row.barcode ?? null,
           title: row.title ?? null,
-          costPrice: BigInt(row.costPrice),
+          costPrice,
           salePrice: BigInt(row.salePrice),
           weightGrams: row.weightGrams ? Number(row.weightGrams) : null,
           status: (row.status ?? 'ACTIVE') as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED',

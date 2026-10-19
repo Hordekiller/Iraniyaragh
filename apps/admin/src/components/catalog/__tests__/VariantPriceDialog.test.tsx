@@ -83,7 +83,7 @@ describe('VariantPriceDialog', () => {
     const onClose = vi.fn();
     renderDialog({ onSaved, onClose });
     await screen.findByLabelText('تاریخچهٔ قیمت تنوع');
-    fireEvent.change(screen.getByLabelText('قیمت خرید (ریال) *'), { target: { value: '1600' } });
+    fireEvent.change(screen.getByLabelText('قیمت خرید (ریال)'), { target: { value: '1600' } });
     fireEvent.change(screen.getByLabelText('دلیل تغییر'), { target: { value: 'افزایش قیمت' } });
     fireEvent.click(screen.getByRole('button', { name: 'به‌روزرسانی قیمت' }));
 
@@ -112,7 +112,7 @@ describe('VariantPriceDialog', () => {
     );
   });
 
-  it('rejects empty amounts before calling the API', async () => {
+  it('submits an explicitly unknown purchase cost as null', async () => {
     const empty = { ...variant, costPrice: { amount: '', currency: 'IRR' as const } };
     render(
       <FeedbackProvider>
@@ -121,8 +121,7 @@ describe('VariantPriceDialog', () => {
     );
     await screen.findByLabelText('تاریخچهٔ قیمت تنوع');
     fireEvent.click(screen.getByRole('button', { name: 'به‌روزرسانی قیمت' }));
-    expect(screen.getAllByText('فقط ارقام (بدون جداکننده) مجاز است.')).toHaveLength(1);
-    expect(mocks.updateVariantPrice).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.updateVariantPrice).toHaveBeenCalledWith('v1', expect.objectContaining({ costPrice: null, salePrice: { amount: '2500', currency: 'IRR' } })));
   });
 
   it('surfaces a generic error on update failure', async () => {

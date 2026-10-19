@@ -76,7 +76,7 @@ describe.sequential('CatalogService database integration', () => {
   afterAll(async () => {
     if (!connected) return;
 
-    const runProductSlugs = [productSlug, `publishable-${runId}`, `no-variant-${runId}`, `create-published-no-sku-${runId}`];
+    const runProductSlugs = [productSlug, `publishable-${runId}`, `no-cost-${runId}`, `no-variant-${runId}`, `create-published-no-sku-${runId}`];
 
     await prisma.productMedia.deleteMany({
       where: { createdById: actorId },
@@ -155,6 +155,36 @@ describe.sequential('CatalogService database integration', () => {
     });
     expect(persisted.costPrice).toBe(100000n);
     expect(persisted.salePrice).toBe(125000n);
+  });
+
+  it('keeps unknown purchase cost null while a valid sale-priced SKU can be published', async () => {
+    const sku = `NO-COST-SKU-${runId}`;
+    const created = await catalog.createProduct(actorId, key('create-no-cost-product'), {
+      name: 'Product with unknown purchase cost',
+      slug: `no-cost-${runId}`,
+      variants: [{ sku, costPrice: null, salePrice: { amount: '125000', currency: 'IRR' } }],
+    });
+    const productId = created.data.product.id;
+    expect(created.data.product.variants[0]?.costPrice).toBeNull();
+
+    const persisted = await prisma.productVariant.findUniqueOrThrow({ where: { sku } });
+    expect(persisted.costPrice).toBeNull();
+    expect(persisted.salePrice).toBe(125000n);
+
+    await prisma.productMedia.create({
+      data: {
+        productId, kind: 'IMAGE', state: 'READY', role: 'PRIMARY', position: 0,
+        objectKey: `test/${runId}/${productId}/no-cost-primary.webp`, originalFilename: 'primary.webp',
+        declaredMime: 'image/webp', declaredBytes: 100n, detectedMime: 'image/webp', bytes: 100n,
+        width: 100, height: 100, checksumSha256: 'cd'.repeat(32), createdById: actorId,
+        uploadExpiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    await catalog.changeProductStatus(actorId, key('publish-no-cost-product'), productId, { action: 'publish' });
+    const publicProduct = await catalog.getPublicProduct(`no-cost-${runId}`);
+    expect(publicProduct.data.product.status).toBe('PUBLISHED');
+    expect(publicProduct.data.product.variants[0]?.salePrice).toEqual({ amount: '125000', currency: 'IRR' });
+    expect(publicProduct.data.product.variants[0]).not.toHaveProperty('costPrice');
   });
 
   it('does not expose a draft product through the public catalog', async () => {
