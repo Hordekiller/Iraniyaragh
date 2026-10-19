@@ -184,6 +184,16 @@ describe('CatalogService', () => {
       expect(ctx.audit.record).toHaveBeenCalledTimes(1);
     });
 
+    it('persists an unknown purchase cost as null, never zero', async () => {
+      (ctx.tx.product.create as ReturnType<typeof vi.fn>).mockResolvedValue({ ...productRow, variants: [{ ...variant, costPrice: null }] });
+      const created = await ctx.service.createProduct('actor-1', 'unit-create-unknown-cost', {
+        name: 'Product with unknown cost', slug: 'unknown-cost-product',
+        variants: [{ sku: 'SKU-UNKNOWN-COST', costPrice: null, salePrice: { amount: '125000', currency: 'IRR' } }],
+      });
+      expect(ctx.tx.product.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ variants: { create: [expect.objectContaining({ costPrice: null, salePrice: 125000n })] } }) }));
+      expect(created.data.product.variants[0]?.costPrice).toBeNull();
+    });
+
     it('maps a duplicate slug or sku on create to Conflict (P2002)', async () => {
       (ctx.tx.product.create as ReturnType<typeof vi.fn>).mockRejectedValue(knownError('P2002', { target: ['slug'] }));
       await expect(

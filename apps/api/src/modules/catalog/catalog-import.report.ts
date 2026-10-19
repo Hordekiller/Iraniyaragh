@@ -13,7 +13,7 @@ const REPORT_LIMIT = 500;
 type DbProduct = { id: string; slug: string; name: string; description: string | null; status: ProductStatus; brandId: string | null; categoryId: string | null; brand: { slug: string } | null; category: { slug: string } | null };
 type DbAttribute = { id: string; code: string; name: string; description: string | null; status: 'ACTIVE' | 'INACTIVE' };
 type DbOption = { id: string; code: string; label: string; status: 'ACTIVE' | 'INACTIVE'; attribute: { code: string } };
-type DbVariant = { id: string; sku: string; skuKey: string; productId: string; barcode: string | null; title: string | null; costPrice: bigint; salePrice: bigint; weightGrams: number | null; status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'; attributeValues: Array<{ attribute: { code: string }; option: { code: string } }> };
+type DbVariant = { id: string; sku: string; skuKey: string; productId: string; barcode: string | null; title: string | null; costPrice: bigint | null; salePrice: bigint; weightGrams: number | null; status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'; attributeValues: Array<{ attribute: { code: string }; option: { code: string } }> };
 
 type Sink = {
   issue: (sheet: string, rowNumber: number, key: string | null, code: CatalogImportIssue['code'], message: string) => void;
@@ -96,7 +96,7 @@ function classifyVariants(sk: Sink, summary: CatalogImportSummary, rows: ParsedC
     const action: 'create' | 'update' | 'unchanged' = current ? (
       (row.barcode === undefined || current.barcode === row.barcode)
       && (row.title === undefined || current.title === row.title)
-      && current.costPrice.toString() === row.costPrice
+      && (row.costPrice === undefined || (current.costPrice?.toString() ?? null) === row.costPrice)
       && current.salePrice.toString() === row.salePrice
       && (row.weightGrams === undefined || current.weightGrams?.toString() === row.weightGrams)
       && (requestedStatus === undefined || current.status === requestedStatus)
@@ -105,7 +105,7 @@ function classifyVariants(sk: Sink, summary: CatalogImportSummary, rows: ParsedC
     ) : 'create';
     summary.variants[action]++;
     sk.addItem('Variants', row.sku, action);
-    if (!/^\d{1,15}$/u.test(row.costPrice) || !/^\d{1,15}$/u.test(row.salePrice)) sk.issue('Variants', rowNumber + 2, row.sku, 'IMPORT_VALIDATION', 'Prices must be integer IRR strings.');
+    if ((row.costPrice !== undefined && !/^\d{1,15}$/u.test(row.costPrice)) || !/^\d{1,15}$/u.test(row.salePrice)) sk.issue('Variants', rowNumber + 2, row.sku, 'IMPORT_VALIDATION', 'A supplied price must be an integer IRR string; sale price is required.');
   }
 }
 

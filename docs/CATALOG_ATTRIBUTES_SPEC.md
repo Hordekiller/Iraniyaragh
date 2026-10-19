@@ -68,8 +68,9 @@ Titles are never keys and never participate in identity.
 
 ## 4. Pricing
 
-- Authoritative price is per Variant: `costPrice`, `salePrice` as `Money` (integer
-  IRR). `Product` has no sell price.
+- Authoritative price is per Variant: `salePrice` is required `Money` (integer
+  IRR); `costPrice` is `Money | null` when purchase cost is unknown. `Product` has
+  no sell price. Unknown cost is never stored as zero and is not a valuation basis.
 - Every accepted price mutation appends a `VariantPriceRecord`
   (`costPrice`, `salePrice`, `effectiveAt`, `source`, `actorUserId`, `reason`,
   `requestId`, `createdAt`) inside the same transaction as the variant update and
@@ -133,7 +134,7 @@ the authorized product lifecycle command.
 | `sku`         | yes | canonical identity; change rejected |
 | `barcode`     |     | text, leading zeros preserved       |
 | `title`       |     | optional                            |
-| `costPrice`   |     | integer string, IRR                 |
+| `costPrice`   |     | integer string, IRR; blank means unknown, never zero |
 | `salePrice`   |     | integer string, IRR                 |
 | `weightGrams` |     | optional integer                    |
 | `status`      |     | `ACTIVE                             | INACTIVE | ARCHIVED` |

@@ -46,7 +46,7 @@ export function VariantPriceDialog({
   onClose: () => void;
 }) {
   const feedback = useFeedback();
-  const [costPrice, setCostPrice] = useState(variant.costPrice.amount);
+  const [costPrice, setCostPrice] = useState(variant.costPrice?.amount ?? '');
   const [salePrice, setSalePrice] = useState(variant.salePrice.amount);
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -73,7 +73,7 @@ export function VariantPriceDialog({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const errors: typeof fieldErrors = {};
-    if (!AMOUNT_PATTERN.test(costPrice.trim())) errors.costPrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
+    if (costPrice.trim() && !AMOUNT_PATTERN.test(costPrice.trim())) errors.costPrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
     if (!AMOUNT_PATTERN.test(salePrice.trim())) errors.salePrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
     setFieldErrors(errors);
     if (errors.costPrice || errors.salePrice) return;
@@ -81,7 +81,7 @@ export function VariantPriceDialog({
     setSaving(true);
     try {
       await updateVariantPrice(variant.id, {
-        costPrice: { amount: costPrice.trim(), currency: 'IRR' },
+        costPrice: costPrice.trim() ? { amount: costPrice.trim(), currency: 'IRR' } : null,
         salePrice: { amount: salePrice.trim(), currency: 'IRR' },
         ...(reason.trim() ? { reason: reason.trim() } : {}),
         expectedVersion: variant.version ?? 0,
@@ -114,8 +114,8 @@ export function VariantPriceDialog({
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <FormField
                 label="قیمت خرید (ریال)"
-                required
                 htmlFor="variant-price-cost"
+                helperText="خالی گذاشتن، هزینهٔ خرید را نامشخص ثبت می‌کند؛ صفر ثبت نمی‌شود."
                 error={Boolean(fieldErrors.costPrice)}
                 errorText={fieldErrors.costPrice}
               >

@@ -30,6 +30,7 @@ describe('catalog-labels', () => {
 
   it('formats Rial amounts with Persian digits', () => {
     expect(formatRial({ amount: '150000', currency: 'IRR' })).toBe('۱۵۰٬۰۰۰ ریال');
+    expect(formatRial(null)).toBe('ثبت نشده');
     expect(displayAmount('20000')).toBe('۲۰٬۰۰۰');
   });
 

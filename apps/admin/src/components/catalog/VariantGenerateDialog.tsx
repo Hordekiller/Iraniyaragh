@@ -54,7 +54,7 @@ export function VariantGenerateDialog({
   const [selection, setSelection] = useState<Record<string, string[]>>({});
   const [preview, setPreview] = useState<VariantGeneratePreviewResponse['data'] | null>(null);
   const [previewing, setPreviewing] = useState(false);
-  const [costPrice, setCostPrice] = useState(product.variants[0]?.costPrice.amount ?? '');
+  const [costPrice, setCostPrice] = useState(product.variants[0]?.costPrice?.amount ?? '');
   const [salePrice, setSalePrice] = useState(product.variants[0]?.salePrice.amount ?? '');
   const [titlePattern, setTitlePattern] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ costPrice?: string; salePrice?: string }>({});
@@ -125,7 +125,7 @@ export function VariantGenerateDialog({
 
   async function runGenerate() {
     const errors: typeof fieldErrors = {};
-    if (!AMOUNT_PATTERN.test(costPrice.trim())) errors.costPrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
+    if (costPrice.trim() && !AMOUNT_PATTERN.test(costPrice.trim())) errors.costPrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
     if (!AMOUNT_PATTERN.test(salePrice.trim())) errors.salePrice = 'فقط ارقام (بدون جداکننده) مجاز است.';
     setFieldErrors(errors);
     if (errors.costPrice || errors.salePrice || !preview) return;
@@ -133,7 +133,7 @@ export function VariantGenerateDialog({
     setGenerating(true);
     const input: Parameters<typeof generateVariants>[1] = {
       optionSelection: selection,
-      costPrice: { amount: costPrice.trim(), currency: 'IRR' },
+      costPrice: costPrice.trim() ? { amount: costPrice.trim(), currency: 'IRR' } : null,
       salePrice: { amount: salePrice.trim(), currency: 'IRR' },
       ...(titlePattern.trim() ? { titlePattern: titlePattern.trim() } : {}),
     };
@@ -241,8 +241,8 @@ export function VariantGenerateDialog({
                 <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
                   <FormField
                     label="قیمت خرید (ریال)"
-                    required
                     htmlFor="generate-cost"
+                    helperText="اگر مبلغ خرید مشخص نیست، خالی بگذارید؛ هزینهٔ نامشخص صفر محسوب نمی‌شود."
                     error={Boolean(fieldErrors.costPrice)}
                     errorText={fieldErrors.costPrice}
                   >

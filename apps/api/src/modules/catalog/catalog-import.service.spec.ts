@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import { describe, expect, it, vi } from 'vitest';
 import { CATALOG_SHEETS } from './catalog-import.parser';
 import { CatalogImportService } from './catalog-import.service';
+import { EMPTY_AXIS_SIGNATURE } from './variant-identifiers';
 
 async function workbookBuffer() {
   const workbook = new ExcelJS.Workbook();
@@ -73,7 +74,7 @@ function fakePrisma() {
     productVariant: {
       findMany: vi.fn(async () => []),
       findUnique: vi.fn(async () => null),
-      create: vi.fn(async () => variant),
+      create: vi.fn(async ({ data }: { data: { costPrice: bigint | null; salePrice: bigint } }) => ({ ...variant, ...data })),
       update: vi.fn(async () => variant),
     },
     attributeDefinition: { findMany: vi.fn(async () => []), upsert: vi.fn(async () => ({ id: 'attribute-1', code: 'color' })), findUnique: vi.fn(async () => null) },
@@ -146,6 +147,45 @@ describe('CatalogImportService', () => {
       update: expect.not.objectContaining({ status: expect.anything() }),
     }));
     expect(prisma.variantPriceRecord.create).toHaveBeenCalled();
+  });
+
+  it('creates a priced SKU with null purchase cost and records that unknown value as null', async () => {
+    const prisma = fakePrisma();
+    const buffer = await freshCatalogBuffer();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    workbook.getWorksheet('Variants')!.getCell('E2').value = null;
+    const idempotency = { run: vi.fn(async ({ execute }: { execute: (tx: typeof prisma) => Promise<{ response: unknown }> }) => (await execute(prisma)).response as never) };
+    const service = new CatalogImportService(prisma as never, { record: vi.fn() } as never, idempotency as never);
+    const upload = await service.upload('actor-1', 'unknown-cost-upload-key', '1', Buffer.from(await workbook.xlsx.writeBuffer()));
+    const dryRun = await service.dryRun('actor-1', upload.data.report.importId);
+
+    expect(dryRun.data.report.status).toBe('READY');
+    expect(dryRun.data.report.issues).toEqual([]);
+    await service.commit('actor-1', 'unknown-cost-commit-key', upload.data.report.importId);
+    expect(prisma.productVariant.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ costPrice: null, salePrice: 150000n }) }));
+    expect(prisma.variantPriceRecord.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ costPrice: null, salePrice: 150000n }) }));
+  });
+
+  it('preserves a known purchase cost when an import row leaves that cell blank', async () => {
+    const prisma = fakePrisma();
+    (prisma.productVariant.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 'variant-existing', productId: 'product-1', barcode: null, title: null, costPrice: 100000n,
+      salePrice: 150000n, weightGrams: null, status: 'ACTIVE', isActive: true,
+      combinationSignature: EMPTY_AXIS_SIGNATURE, attributeValues: [],
+    });
+    const buffer = await freshCatalogBuffer();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    workbook.getWorksheet('Variants')!.getCell('E2').value = null;
+    const idempotency = { run: vi.fn(async ({ execute }: { execute: (tx: typeof prisma) => Promise<{ response: unknown }> }) => (await execute(prisma)).response as never) };
+    const service = new CatalogImportService(prisma as never, { record: vi.fn() } as never, idempotency as never);
+    const upload = await service.upload('actor-1', 'preserve-cost-upload-key', '1', Buffer.from(await workbook.xlsx.writeBuffer()));
+
+    await service.commit('actor-1', 'preserve-cost-commit-key', upload.data.report.importId);
+
+    expect(prisma.productVariant.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ costPrice: 100000n }) }));
+    expect(prisma.variantPriceRecord.create).not.toHaveBeenCalled();
   });
 
   it('surfaces unknown brand references in the dry-run report', async () => {

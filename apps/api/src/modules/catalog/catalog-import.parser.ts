@@ -8,7 +8,7 @@ export const CATALOG_IMPORT_MAX_ROWS = 10_000;
 export const CATALOG_SHEETS = ['Products', 'Variants', 'Attributes', 'AttributeOptions', 'VariantAttributeValues'] as const;
 
 type ProductRow = { slug: string; name: string; description?: string; brandSlug?: string; categorySlug?: string; status?: string };
-type VariantRow = { productSlug: string; sku: string; barcode?: string; title?: string; costPrice: string; salePrice: string; weightGrams?: string; status?: string };
+type VariantRow = { productSlug: string; sku: string; barcode?: string; title?: string; costPrice?: string; salePrice: string; weightGrams?: string; status?: string };
 type AttributeRow = { code: string; name: string; description?: string; status?: string };
 type OptionRow = { attributeCode: string; code: string; label: string; status?: string };
 type ValueRow = { sku: string; attributeCode: string; optionCode: string };
@@ -97,7 +97,7 @@ export async function parseCatalogWorkbook(buffer: Buffer): Promise<ParsedCatalo
   }
   if (workbook.worksheets.length !== CATALOG_SHEETS.length || workbook.worksheets.some((sheet, index) => sheet.name !== CATALOG_SHEETS[index])) invalid('Workbook sheets must match the catalog v1 order exactly.');
   const products = parseSheet(workbook.getWorksheet('Products')!, HEADERS.Products, ([slug, name, description, brandSlug, categorySlug, status]) => ({ slug: text(slug, true, 'Products.slug')!, name: text(name, true, 'Products.name')!, description: importDescription(description), brandSlug: text(brandSlug, false, 'Products.brandSlug'), categorySlug: text(categorySlug, false, 'Products.categorySlug'), status: workbookStatus(status, 'Products', ['DRAFT','PUBLISHED','ARCHIVED']) }), new Set([0]));
-  const variants = parseSheet(workbook.getWorksheet('Variants')!, HEADERS.Variants, ([productSlug, sku, barcode, title, costPrice, salePrice, weightGrams, status]) => ({ productSlug: text(productSlug, true, 'Variants.productSlug')!, sku: text(sku, true, 'Variants.sku')!, barcode: text(barcode, false, 'Variants.barcode'), title: text(title, false, 'Variants.title'), costPrice: text(costPrice, true, 'Variants.costPrice')!, salePrice: text(salePrice, true, 'Variants.salePrice')!, weightGrams: text(weightGrams, false, 'Variants.weightGrams'), status: workbookStatus(status, 'Variants', ['ACTIVE','INACTIVE','ARCHIVED']) }), new Set([0, 1, 2]));
+  const variants = parseSheet(workbook.getWorksheet('Variants')!, HEADERS.Variants, ([productSlug, sku, barcode, title, costPrice, salePrice, weightGrams, status]) => ({ productSlug: text(productSlug, true, 'Variants.productSlug')!, sku: text(sku, true, 'Variants.sku')!, barcode: text(barcode, false, 'Variants.barcode'), title: text(title, false, 'Variants.title'), costPrice: text(costPrice, false, 'Variants.costPrice'), salePrice: text(salePrice, true, 'Variants.salePrice')!, weightGrams: text(weightGrams, false, 'Variants.weightGrams'), status: workbookStatus(status, 'Variants', ['ACTIVE','INACTIVE','ARCHIVED']) }), new Set([0, 1, 2]));
   const attributes = parseSheet(workbook.getWorksheet('Attributes')!, HEADERS.Attributes, ([code, name, description, status]) => ({ code: text(code, true, 'Attributes.code')!, name: text(name, true, 'Attributes.name')!, description: text(description, false, 'Attributes.description'), status: workbookStatus(status, 'Attributes', ['ACTIVE','INACTIVE']) }), new Set([0]));
   const options = parseSheet(workbook.getWorksheet('AttributeOptions')!, HEADERS.AttributeOptions, ([attributeCode, code, label, status]) => ({ attributeCode: text(attributeCode, true, 'AttributeOptions.attributeCode')!, code: text(code, true, 'AttributeOptions.code')!, label: text(label, true, 'AttributeOptions.label')!, status: workbookStatus(status, 'AttributeOptions', ['ACTIVE','INACTIVE']) }), new Set([0, 1]));
   const values = parseSheet(workbook.getWorksheet('VariantAttributeValues')!, HEADERS.VariantAttributeValues, ([sku, attributeCode, optionCode]) => ({ sku: text(sku, true, 'VariantAttributeValues.sku')!, attributeCode: text(attributeCode, true, 'VariantAttributeValues.attributeCode')!, optionCode: text(optionCode, true, 'VariantAttributeValues.optionCode')! }), new Set([0, 1, 2]));
@@ -114,7 +114,7 @@ export async function exportCatalogWorkbook(data: ParsedCatalogWorkbook): Promis
   for (const [name, headers, rows] of sheets) {
     const sheet = workbook.addWorksheet(name);
     sheet.addRow(headers as string[]);
-    for (const row of rows) sheet.addRow(Object.values(row));
+    for (const row of rows) sheet.addRow(headers.map(header => (row as Record<string, unknown>)[header] ?? null));
   }
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
