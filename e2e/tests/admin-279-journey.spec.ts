@@ -412,7 +412,7 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     const saveHomepage = page.waitForResponse(response => response.url().endsWith('/api/v1/catalog/homepage-collections/admin') && response.request().method() === 'PUT');
     await tap(page.getByRole('button', { name: 'افزودن دسته‌بندی' }));
     await page.getByLabel('دسته‌بندی').last().click();
-    await tap(page.getByRole('option', { name: new RegExp(rootName) }));
+    await tap(page.getByRole('option', { name: rootName, exact: true }));
     await page.getByLabel('ترتیب نمایش').last().click();
     await tap(page.getByRole('option', { name: 'جدیدترین', exact: true }));
     await tap(page.getByRole('button', { name: 'ذخیرهٔ چیدمان' }));
