@@ -399,12 +399,25 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
   });
 
   test('renders the description on the storefront with only trusted network origins', async ({ page }) => {
-    // The second storefront build has fixture mode off and renders the same
-    // API-created product on its homepage and detail page.
+    // The production storefront only renders curated homepage collections.
+    // Configure this journey's real parent category through the same Admin
+    // workflow before asserting that the newly published product is featured.
     const realStorefront = process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174';
     const target = realStorefront
       ? `${realStorefront}/product/${productSlug}`
       : `${storefrontUrl}/product/bosch-gws-750-grinder`;
+
+    await page.goto('/settings/homepage');
+    await expect(page.getByRole('heading', { name: 'چیدمان کاروسل صفحهٔ اصلی' })).toBeVisible();
+    const saveHomepage = page.waitForResponse(response => response.url().endsWith('/api/v1/catalog/homepage-collections/admin') && response.request().method() === 'PUT');
+    await tap(page.getByRole('button', { name: 'افزودن دسته‌بندی' }));
+    await page.getByLabel('دسته‌بندی').last().click();
+    await tap(page.getByRole('option', { name: new RegExp(rootName) }));
+    await page.getByLabel('ترتیب نمایش').last().click();
+    await tap(page.getByRole('option', { name: 'جدیدترین', exact: true }));
+    await tap(page.getByRole('button', { name: 'ذخیرهٔ چیدمان' }));
+    expect((await saveHomepage).status()).toBe(200);
+    await expect(page.getByText('چیدمان صفحهٔ اصلی ذخیره شد.')).toBeVisible();
 
     const tracker = createOriginGuardTracker(page);
     if (realStorefront) {
