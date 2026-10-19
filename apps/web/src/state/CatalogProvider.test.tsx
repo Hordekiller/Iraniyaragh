@@ -7,6 +7,7 @@ import { CatalogHttpClient } from '../services/catalog/http'
 
 const api: CatalogApi = {
   listCategories: vi.fn(async () => []),
+  getHomepageCollections: vi.fn(async () => ({ version: 0, sections: [], updatedAt: null })),
   listProducts: vi.fn(async () => ({ items: [], meta: { page: 1, perPage: 24, total: 0, pages: 0 } })),
   getProductBySlug: vi.fn(async () => { throw new Error('nope') }),
 }

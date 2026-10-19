@@ -44,6 +44,7 @@ function renderPageWithProduct(product: CatalogProduct) {
   const stub: CatalogApi = {
     getProductBySlug: vi.fn(async () => product),
     listCategories: vi.fn(async () => []),
+    getHomepageCollections: vi.fn(async () => ({ version: 0, sections: [], updatedAt: null })),
     listProducts: vi.fn(async () => ({
       items: [],
       meta: { page: 1, perPage: 24, total: 0, pages: 0 },

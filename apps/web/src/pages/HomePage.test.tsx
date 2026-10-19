@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { CatalogProvider } from '../state/CatalogProvider'
@@ -26,6 +26,7 @@ const PRODUCT: CatalogProduct = {
 function catalogApi(overrides: Partial<CatalogApi> = {}): CatalogApi {
   return {
     listCategories: vi.fn(async () => [{ id: 'category-1', parentId: null, name: 'یراق کابینت', slug: 'cabinet', productCount: 1, image: '' }]),
+    getHomepageCollections: vi.fn(async () => ({ version: 1, updatedAt: null, sections: [{ categoryId: 'category-1', sortBy: 'NEWEST' as const }] })),
     listProducts: vi.fn(async () => ({ items: [PRODUCT], meta: { page: 1, perPage: 24, total: 1, pages: 1 } })),
     getProductBySlug: vi.fn(async () => PRODUCT),
     ...overrides,
@@ -48,11 +49,15 @@ function renderHome(api: CatalogApi) {
 
 describe('HomePage', () => {
   it('renders only products and categories received from the catalog API', async () => {
-    renderHome(catalogApi())
+    const listProducts = vi.fn(async () => ({ items: [PRODUCT], meta: { page: 1, perPage: 8, total: 1, pages: 1 } }))
+    renderHome(catalogApi({ listProducts }))
 
     expect(screen.getByRole('status')).toHaveTextContent('در حال دریافت کاتالوگ')
     expect(await screen.findByRole('link', { name: 'یراق کابینت' })).toHaveAttribute('href', '/category/cabinet')
-    expect(screen.getByRole('link', { name: /کالای منتشرشده/ })).toHaveAttribute('href', '/product/published-product')
+    expect(screen.getAllByRole('link', { name: /کالای منتشرشده/ })[0]).toHaveAttribute('href', '/product/published-product')
+    expect(screen.getByRole('region', { name: 'جدیدترین یراق کابینت' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'کالاهای بعدی در جدیدترین یراق کابینت' })).toBeInTheDocument()
+    expect(listProducts).toHaveBeenCalledWith({ categoryId: 'category-1', sortBy: 'newest', perPage: 8 })
     expect(screen.getByRole('heading', { name: 'خبرنامه هنوز فعال نیست' })).toBeInTheDocument()
     expect(screen.queryByText('۲۵۰۰')).not.toBeInTheDocument()
   })
@@ -75,24 +80,36 @@ describe('HomePage', () => {
   it('does not fall back to fixture products when the API fails and retries explicitly', async () => {
     const listProducts = vi.fn()
       .mockRejectedValueOnce(new Error('API unavailable'))
-      .mockResolvedValueOnce({ items: [PRODUCT], meta: { page: 1, perPage: 24, total: 1, pages: 1 } })
+      .mockResolvedValue({ items: [PRODUCT], meta: { page: 1, perPage: 8, total: 1, pages: 1 } })
     renderHome(catalogApi({ listProducts }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('قیمت یا موجودی نمونه نمایش داده نمی‌شود')
-    expect(screen.queryByRole('link', { name: /کالای منتشرشده/ })).not.toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('بخشی از اطلاعات فروشگاه دریافت نشد')
+    expect(screen.getByText('کالاهای این دسته فعلاً دریافت نشدند.')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'محصولات یراق کابینت' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'تلاش دوباره' }))
-    expect(await screen.findByRole('link', { name: /کالای منتشرشده/ })).toBeInTheDocument()
-    expect(listProducts).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(listProducts).toHaveBeenCalledTimes(2))
+    expect(await screen.findAllByRole('link', { name: /کالای منتشرشده/ })).toHaveLength(1)
   })
 
-  it('fetches newest products again when returning from publishing in another tab', async () => {
+  it('refreshes configured category products when returning from publishing in another tab', async () => {
     const listProducts = vi.fn()
-      .mockResolvedValueOnce({ items: [], meta: { page: 1, perPage: 100, total: 0, pages: 0 } })
-      .mockResolvedValue({ items: [PRODUCT], meta: { page: 1, perPage: 100, total: 1, pages: 1 } })
+      .mockResolvedValueOnce({ items: [], meta: { page: 1, perPage: 8, total: 0, pages: 0 } })
+      .mockResolvedValue({ items: [PRODUCT], meta: { page: 1, perPage: 8, total: 1, pages: 1 } })
     renderHome(catalogApi({ listProducts }))
-    await screen.findByText('در حال حاضر کالای منتشرشده‌ای برای نمایش وجود ندارد.')
+    await waitFor(() => expect(listProducts).toHaveBeenCalledTimes(1))
     fireEvent.focus(window)
     expect(await screen.findByRole('link', { name: /کالای منتشرشده/ })).toBeInTheDocument()
-    expect(listProducts).toHaveBeenLastCalledWith({ sortBy: 'newest' })
+    expect(listProducts).toHaveBeenCalledWith({ categoryId: 'category-1', sortBy: 'newest', perPage: 8 })
+  })
+
+  it('uses the configured bestseller order and never guesses homepage categories', async () => {
+    const listProducts = vi.fn(async () => ({ items: [PRODUCT], meta: { page: 1, perPage: 8, total: 1, pages: 1 } }))
+    renderHome(catalogApi({
+      getHomepageCollections: vi.fn(async () => ({ version: 2, updatedAt: null, sections: [{ categoryId: 'category-1', sortBy: 'BESTSELLING' as const }] })),
+      listProducts,
+    }))
+    expect(await screen.findByRole('region', { name: 'پرفروش‌های یراق کابینت' })).toBeInTheDocument()
+    expect(listProducts).toHaveBeenCalledWith({ categoryId: 'category-1', sortBy: 'popular', perPage: 8 })
+    expect(screen.queryByRole('region', { name: 'تازه‌ترین کالاها' })).not.toBeInTheDocument()
   })
 })

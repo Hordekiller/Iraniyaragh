@@ -42,6 +42,7 @@ image: '/images/hero1.jpg',
 function stubCatalog(overrides: Partial<CatalogApi> = {}): CatalogApi {
   return {
     listCategories: vi.fn(async () => [CATEGORY]),
+    getHomepageCollections: vi.fn(async () => ({ version: 0, sections: [], updatedAt: null })),
     listProducts: vi.fn(async () => result()),
     getProductBySlug: vi.fn(async () => { throw new Error('not found') }),
     ...overrides,

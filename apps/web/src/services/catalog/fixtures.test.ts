@@ -18,6 +18,18 @@ describe('CatalogFixtureClient', () => {
     expect(result.items[0].slug).toBe('ronix-2210-hammer-drill')
   })
 
+  it('supports direct category-ID queries and bounded curated pages', async () => {
+    const client = new CatalogFixtureClient({ delayMs: 0 })
+    const categories = await client.listCategories()
+    const category = categories.find(item => item.slug === 'power-tools')!
+    const result = await client.listProducts({ categoryId: category.id, perPage: 1 })
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0].category?.id).toBe(category.id)
+    expect(result.meta.perPage).toBe(1)
+    expect(result.meta.total).toBeGreaterThan(1)
+    expect(result.meta.pages).toBe(result.meta.total)
+  })
+
   it('supports price and popularity ordering with stable metadata', async () => {
     const client = new CatalogFixtureClient({ delayMs: 0 })
     const ascending = await client.listProducts({ sortBy: 'price_asc' })

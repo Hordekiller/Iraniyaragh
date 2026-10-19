@@ -289,6 +289,7 @@ model User {
   stocktakesApproved          Stocktake[]                  @relation("StocktakeApprover")
   stocktakeLinesCounted       StocktakeItem[]              @relation("StocktakeLineCounter")
   stocktakeCommandRecords     StocktakeCommandRecord[]
+  homepageCollectionCommands  HomepageCollectionCommand[]
   customer                    Customer?
 
   @@index([status, createdAt])
@@ -1299,6 +1300,28 @@ model ShippingMethodMutation {
 
   @@unique([actorId, code, keyHash])
   @@index([expiresAt])
+}
+
+/// Singleton, versioned configuration for category-based storefront carousels.
+/// It contains only category IDs and a truthful sales/newness sort choice.
+model HomepageCollectionConfig {
+  id        String   @id @default("storefront") @db.VarChar(32)
+  version   Int      @default(0)
+  sections  Json     @default("[]")
+  updatedAt DateTime @updatedAt
+}
+
+/// Idempotency evidence for settings.manage writes; no storefront customer data.
+model HomepageCollectionCommand {
+  id          String   @id @default(cuid())
+  actorId     String
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
 }
 
 model ShippingQuote {

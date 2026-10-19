@@ -116,6 +116,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'تعرفهٔ ارسال', href: '/settings/shipping', icon: Truck, permission: 'settings.manage' },
       { label: 'تنظیمات فاکتور', href: '/settings/invoices', icon: ReceiptText, permission: 'settings.manage' },
       { label: 'روش هزینهٔ انبار', href: '/settings/inventory-cost', icon: Warehouse, permission: 'settings.manage' },
+      { label: 'چیدمان صفحهٔ اصلی', href: '/settings/homepage', icon: Settings2, permission: 'settings.manage' },
       { label: 'نشست‌ها و دستگاه‌ها', href: '/settings/sessions', icon: MonitorSmartphone },
       { label: 'تنظیمات', href: '/settings', icon: Settings2, permission: 'settings.manage' },
     ],

@@ -46,7 +46,8 @@ test.describe('web: storefront shell', () => {
     }
 
     await expect(page.getByRole('heading', { name: 'دسته‌بندی کالاها' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'کالاهای فروشگاه' })).toBeVisible();
+    const categoryCarousels = page.locator('section[aria-labelledby^="home-category-"]');
+    await expect(categoryCarousels.first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'خبرنامه هنوز فعال نیست' })).toBeVisible();
 
     // Unconfirmed contact and business claims must not reach the storefront.
@@ -105,9 +106,27 @@ test.describe('web: storefront shell', () => {
     await page.goto('/');
 
     await expect(page.locator('section#categories').getByRole('link')).toHaveCount(6);
-    await expect(page.getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ }).first()).toBeVisible();
+    const categoryCarousels = page.locator('section[aria-labelledby^="home-category-"]');
+    await expect(categoryCarousels.first().getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ })).toBeVisible();
+    const productCount = await categoryCarousels.first().getByRole('listitem').count();
+    expect(productCount).toBeGreaterThan(0);
+    expect(productCount).toBeLessThanOrEqual(8);
+
+    expect(await categoryCarousels.count()).toBeLessThanOrEqual(3);
+    await expect(categoryCarousels.first().getByRole('link', { name: 'مشاهده همه' })).toHaveAttribute('href', /\/category\//);
 
     await network.assertNone();
+  });
+
+  test('homepage product carousels remain operable in RTL on desktop and mobile', async ({ page }) => {
+    await page.goto('/');
+    const carousel = page.locator('section[aria-labelledby^="home-category-"]').first();
+    const list = carousel.getByRole('list');
+    await expect(list).toHaveAttribute('dir', 'rtl');
+    const start = await list.evaluate(element => element.scrollLeft);
+    await tap(carousel.getByRole('button', { name: /کالاهای بعدی/ }));
+    await expect.poll(() => list.evaluate(element => element.scrollLeft)).not.toBe(start);
+    expect(await page.evaluate(() => document.body.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
   test('desktop: search submits the query and renders its route', async ({ page }) => {
