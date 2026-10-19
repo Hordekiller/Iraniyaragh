@@ -89,8 +89,8 @@ function classifyVariants(sk: Sink, summary: CatalogImportSummary, rows: ParsedC
       seenBarcodes.set(row.barcode, row.sku);
       if (dbVariants.some(item => item.barcode === row.barcode && item.sku !== row.sku)) sk.issue('Variants', rowNumber + 2, row.sku, 'DUPLICATE_BARCODE', 'Barcode already belongs to another SKU.');
     }
-    const expectedValues = workbook.values.filter(value => value.sku === row.sku).map(value => `${value.attributeCode}:${value.optionCode}`).sort();
-    const currentValues = current?.attributeValues.map(value => `${value.attribute.code}:${value.option.code}`).sort() ?? [];
+    const expectedValues = workbook.values.filter(value => value.sku === row.sku).map(value => `${value.attributeCode}:${value.optionCode}`).sort((left, right) => left.localeCompare(right));
+    const currentValues = current?.attributeValues.map(value => `${value.attribute.code}:${value.option.code}`).sort((left, right) => left.localeCompare(right)) ?? [];
     const requestedStatus = row.status as DbVariant['status'] | undefined;
     const attributesMatch = expectedValues.length === 0 || JSON.stringify(expectedValues) === JSON.stringify(currentValues);
     const action: 'create' | 'update' | 'unchanged' = current ? (

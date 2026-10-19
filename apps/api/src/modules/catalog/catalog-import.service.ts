@@ -130,7 +130,9 @@ export class CatalogImportService {
       if (existing && existing.productId !== product.id) throw new ConflictException({ code: 'SKU_CHANGE_NOT_ALLOWED', message: 'An existing SKU cannot move to another product.' });
       const signature = values.length ? combinationSignature(values) : existing?.combinationSignature ?? EMPTY_AXIS_SIGNATURE;
       const valueKey = (value: { attributeId: string; optionId: string }) => `${value.attributeId}:${value.optionId}`;
-      const sameValues = existing && JSON.stringify(existing.attributeValues.map(valueKey).sort()) === JSON.stringify(values.map(valueKey).sort());
+      const sameValues = existing
+        && JSON.stringify(existing.attributeValues.map(valueKey).sort((left, right) => left.localeCompare(right)))
+          === JSON.stringify(values.map(valueKey).sort((left, right) => left.localeCompare(right)));
       const priceSame = existing && existing.costPrice.toString() === String(BigInt(row.costPrice)) && existing.salePrice.toString() === String(BigInt(row.salePrice));
       const fieldsSame = existing
         && (row.barcode === undefined || existing.barcode === row.barcode)
