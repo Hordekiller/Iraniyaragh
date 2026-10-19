@@ -112,4 +112,26 @@ describe('HomePage', () => {
     expect(listProducts).toHaveBeenCalledWith({ categoryId: 'category-1', sortBy: 'popular', perPage: 8 })
     expect(screen.queryByRole('region', { name: 'تازه‌ترین کالاها' })).not.toBeInTheDocument()
   })
+
+  it('renders an admin-configured all-products carousel without a category filter', async () => {
+    const listProducts = vi.fn(async () => ({ items: [PRODUCT], meta: { page: 1, perPage: 8, total: 1, pages: 1 } }))
+    renderHome(catalogApi({
+      getHomepageCollections: vi.fn(async () => ({ version: 3, updatedAt: null, sections: [{ kind: 'ALL_PRODUCTS' as const, sortBy: 'NEWEST' as const }] })),
+      listProducts,
+    }))
+    expect(await screen.findByRole('region', { name: 'تازه‌ترین کالاها' })).toBeInTheDocument()
+    expect(listProducts).toHaveBeenCalledWith({ sortBy: 'newest', perPage: 8 })
+    expect(screen.getByRole('link', { name: 'مشاهده همه' })).toHaveAttribute('href', '/products')
+  })
+
+  it('renders verified bestseller ordering for the all-products carousel and links to the bestseller page', async () => {
+    const listProducts = vi.fn(async () => ({ items: [PRODUCT], meta: { page: 1, perPage: 8, total: 1, pages: 1 } }))
+    renderHome(catalogApi({
+      getHomepageCollections: vi.fn(async () => ({ version: 4, updatedAt: null, sections: [{ kind: 'ALL_PRODUCTS' as const, sortBy: 'BESTSELLING' as const }] })),
+      listProducts,
+    }))
+    expect(await screen.findByRole('region', { name: 'پرفروش‌ترین کالاها' })).toBeInTheDocument()
+    expect(listProducts).toHaveBeenCalledWith({ sortBy: 'popular', perPage: 8 })
+    expect(screen.getByRole('link', { name: 'مشاهده همه' })).toHaveAttribute('href', '/bestsellers')
+  })
 })

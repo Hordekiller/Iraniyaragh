@@ -10,10 +10,10 @@ import type { CatalogCategory, CatalogProduct } from '../services/catalog/types'
 import { useCatalogApi } from '../state/catalog-context'
 
 type HomePageLocationState = { scrollToCategories?: boolean }
-type HomeCategoryCollection = { category: CatalogCategory; sortBy: 'NEWEST' | 'BESTSELLING'; products: CatalogProduct[] | null }
+type HomeCollection = { key: string; title: string; description: string; moreHref: string; products: CatalogProduct[] | null }
 type HomeCatalog = {
   categories: CatalogCategory[] | null
-  categoryCollections: HomeCategoryCollection[]
+  collections: HomeCollection[]
 }
 const fixtureCatalogEnabled = import.meta.env.VITE_FIXTURE_CATALOG === 'true'
 const HOME_PRODUCT_LIMIT = 8
@@ -55,20 +55,41 @@ export function HomePage() {
         const settings = collectionsResult.status === 'fulfilled' ? collectionsResult.value : null
         const configuredSections = settings?.sections ?? []
 
-        const categoryCollections = await Promise.all(configuredSections.map(async section => {
-          const category = (categoriesResult.status === 'fulfilled' ? categoriesResult.value : []).find(item => item.id === section.categoryId)
-          if (!category) return null
+        const collections = await Promise.all(configuredSections.map(async section => {
+          const allProducts = section.kind === 'ALL_PRODUCTS'
+          const category = allProducts ? null : (categoriesResult.status === 'fulfilled' ? categoriesResult.value : []).find(item => item.id === section.categoryId)
+          if (!allProducts && !category) return null
+          const sortBy = section.sortBy === 'BESTSELLING' ? 'popular' : 'newest'
           try {
-            const result = await api.listProducts({ categoryId: category.id, sortBy: section.sortBy === 'BESTSELLING' ? 'popular' : 'newest', perPage: HOME_PRODUCT_LIMIT })
-            return { category, sortBy: section.sortBy, products: result.items }
+            const result = await api.listProducts({ ...(category ? { categoryId: category.id } : {}), sortBy, perPage: HOME_PRODUCT_LIMIT })
+            if (allProducts) return {
+              key: `all-products-${section.sortBy}`,
+              title: section.sortBy === 'BESTSELLING' ? 'پرفروش‌ترین کالاها' : 'تازه‌ترین کالاها',
+              description: section.sortBy === 'BESTSELLING' ? 'بر پایهٔ فروش ثبت‌شده و منهای مرجوعی‌های ثبت‌شده' : 'جدیدترین کالاهای منتشرشده در فروشگاه',
+              moreHref: section.sortBy === 'BESTSELLING' ? ROUTES.bestsellers : ROUTES.products,
+              products: result.items,
+            }
+            return {
+              key: `category-${category!.id}`,
+              title: section.sortBy === 'BESTSELLING' ? `پرفروش‌های ${category!.name}` : `جدیدترین ${category!.name}`,
+              description: section.sortBy === 'BESTSELLING' ? 'بر پایهٔ فروش ثبت‌شده و منهای مرجوعی‌های ثبت‌شده' : 'جدیدترین کالاهای منتشرشده در این دسته',
+              moreHref: ROUTES.category(category!.slug),
+              products: result.items,
+            }
           } catch {
-            return { category, sortBy: section.sortBy, products: null }
+            return {
+              key: allProducts ? `all-products-${section.sortBy}` : `category-${category!.id}`,
+              title: allProducts ? 'همهٔ محصولات' : `محصولات ${category!.name}`,
+              description: allProducts ? 'کالاهای فروشگاه فعلاً دریافت نشدند.' : 'کالاهای این دسته فعلاً دریافت نشدند.',
+              moreHref: allProducts ? (section.sortBy === 'BESTSELLING' ? ROUTES.bestsellers : ROUTES.products) : ROUTES.category(category!.slug),
+              products: null,
+            }
           }
         }))
         if (cancelled || current !== request) return
 
-        setCatalog({ categories, categoryCollections: categoryCollections.filter((item): item is HomeCategoryCollection => item !== null) })
-        setError(categories === null || settings === null || categoryCollections.some(collection => collection?.products === null || collection === null))
+        setCatalog({ categories, collections: collections.filter((item): item is HomeCollection => item !== null) })
+        setError(categories === null || settings === null || collections.some(collection => collection?.products === null || collection === null))
         setLoading(false)
       })
     }
@@ -128,15 +149,15 @@ export function HomePage() {
           </section>
 
           <div className="max-w-[1280px] mx-auto px-4 lg:px-6 pb-10 lg:pb-16">
-            {catalog.categoryCollections.map(({ category, sortBy, products }) => products === null ? (
-              <section key={category.id} className="mt-10 rounded-2xl border border-slate-200 bg-white p-5" aria-label={`محصولات ${category.name}`}>
-                <h2 className="font-black text-slate-900">محصولات {category.name}</h2>
-                <p className="mt-2 text-sm text-slate-600">کالاهای این دسته فعلاً دریافت نشدند.</p>
+            {catalog.collections.map(({ key, title, description, moreHref, products }) => products === null ? (
+              <section key={key} className="mt-10 rounded-2xl border border-slate-200 bg-white p-5" aria-label={title}>
+                <h2 className="font-black text-slate-900">{title}</h2>
+                <p className="mt-2 text-sm text-slate-600">{description}</p>
               </section>
             ) : products.length === 0 ? null : (
-              <ProductCarousel key={category.id} id={`home-category-${category.slug}`} title={sortBy === 'BESTSELLING' ? `پرفروش‌های ${category.name}` : `جدیدترین ${category.name}`} description={sortBy === 'BESTSELLING' ? 'بر پایهٔ فروش ثبت‌شده و منهای مرجوعی‌های ثبت‌شده' : 'جدیدترین کالاهای منتشرشده در این دسته'} products={products} moreHref={ROUTES.category(category.slug)} />
+              <ProductCarousel key={key} id={`home-${key}`} title={title} description={description} products={products} moreHref={moreHref} />
             ))}
-            {catalog.categoryCollections.length === 0 && <p className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-600">کاروسل‌های دسته‌بندی از پنل مدیریت تنظیم می‌شوند.</p>}
+            {catalog.collections.length === 0 && <p className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-600">کاروسل‌های صفحهٔ اصلی از پنل مدیریت تنظیم می‌شوند.</p>}
           </div>
         </>
       )}

@@ -55,9 +55,13 @@ describe('homepage collection settings HTTP security and contract', () => {
     expect((await call('PUT', '/admin', 'stale')).status).toBe(401);
     expect((await call('PUT', '/admin', 'staff')).status).toBe(200);
     expect(service.update).toHaveBeenCalledWith('operator', expect.any(String), body, 'homepage-key');
+    const allProducts = { expectedVersion: 0, sections: [{ kind: 'ALL_PRODUCTS', sortBy: 'BESTSELLING' }] };
+    expect((await call('PUT', '/admin', 'staff', allProducts)).status).toBe(200);
+    expect(service.update).toHaveBeenCalledWith('operator', expect.any(String), allProducts, 'homepage-key');
     for (const invalid of [
       { ...body, actorId: 'spoofed' }, { ...body, sections: Array.from({ length: 9 }, (_, index) => ({ categoryId: `c-${index}`, sortBy: 'NEWEST' })) },
       { ...body, sections: [{ categoryId: 'hinges', sortBy: 'reviews' }] }, { ...body, sections: [{ categoryId: 'hinges', sortBy: 'NEWEST', title: 'injected' }] },
+      { ...allProducts, sections: [allProducts.sections[0], allProducts.sections[0]] },
     ]) expect((await call('PUT', '/admin', 'staff', invalid)).status).toBe(400);
     expect((await call('PUT', '/admin', 'staff', body, '')).status).toBe(400);
   });
