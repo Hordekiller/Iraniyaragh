@@ -116,6 +116,8 @@ services:
     working_dir: /repo/apps/api
     env_file: [.env.staging]
     environment:
+      IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
       # Assembled from the POSTGRES_* credentials rather than read from a
       # separate DATABASE_URL, so the password cannot drift out of sync with
@@ -136,6 +138,8 @@ services:
     command: ['node', 'scripts/provision-media-bucket.mjs']
     env_file: [.env.staging]
     environment:
+      IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
       OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT}
       OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}
@@ -180,6 +184,10 @@ services:
     restart: *restart
     env_file: [.env.staging]
     environment:
+      # deploy.sh records IMAGE_TAG only after success. Override env_file's prior
+      # release here using the same interpolation value as the selected image.
+      IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
       API_PORT: '4000'
       OBJECT_STORAGE_UPLOAD_ENDPOINT: ${OBJECT_STORAGE_UPLOAD_ENDPOINT:?Set the HTTPS browser upload origin}
@@ -209,6 +217,8 @@ services:
     command: ['node', 'dist/src/media-worker.js']
     env_file: [.env.staging]
     environment:
+      IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       PRODUCT_MEDIA_SCANNER_HOST: malware-scanner
       PRODUCT_MEDIA_SCANNER_PORT: '3310'
       PRODUCT_MEDIA_SCANNER_TIMEOUT_MS: '15000'
@@ -263,6 +273,8 @@ services:
     restart: *restart
     env_file: [.env.staging]
     environment:
+      IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       NODE_ENV: production
       PORT: '3001'
     depends_on:
@@ -274,6 +286,9 @@ services:
   web:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/web:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
+    environment:
+      IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     ports:
       - '${HTTP_PORT:-80}:80'
       - '${HTTPS_PORT:-443}:443'
