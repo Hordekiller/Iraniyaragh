@@ -35,7 +35,7 @@ async function freshCatalogBuffer() {
     ['sku', 'attributeCode', 'optionCode'],
   ];
   CATALOG_SHEETS.forEach((name, index) => workbook.addWorksheet(name).addRow(headers[index]));
-  workbook.getWorksheet('Products')!.addRow(['fresh-product', 'Fresh Product', '', '', '', 'DRAFT']);
+  workbook.getWorksheet('Products')!.addRow(['fresh-product', 'Fresh Product', '', '', '', 'PUBLISHED']);
   workbook.getWorksheet('Attributes')!.addRow(['color', 'Color', '', 'ACTIVE']);
   workbook.getWorksheet('AttributeOptions')!.addRow(['color', 'red', 'Red', 'ACTIVE']);
   workbook.getWorksheet('Variants')!.addRow(['fresh-product', 'FRESH-RED', '', '', '100000', '150000', '', 'ACTIVE']);
@@ -63,7 +63,7 @@ async function canonicalCollisionBuffer() {
 function fakePrisma() {
   const record = { id: 'import-1', status: 'READY', summary: null, issues: null, truncated: false, totalRows: 1 };
   const variant = { id: 'variant-1', costPrice: BigInt('100000'), salePrice: BigInt('150000') };
-  return {
+  const prisma = {
     catalogImportRecord: {
       create: vi.fn(async ({ data }: { data: typeof record }) => ({ ...record, ...data })),
       findFirst: vi.fn(async ({ where }: { where: { id: string } }) => ({ ...record, id: where.id })),
@@ -84,6 +84,7 @@ function fakePrisma() {
     productVariantAttributeValue: { deleteMany: vi.fn(async () => ({ count: 0 })), createMany: vi.fn(async () => ({ count: 1 })) },
     variantPriceRecord: { create: vi.fn(async () => ({ id: 'price-1' })) },
   };
+  return { ...prisma, $transaction: vi.fn(async (execute: (tx: typeof prisma) => Promise<unknown>) => execute(prisma)) };
 }
 
 describe('CatalogImportService', () => {
@@ -102,12 +103,14 @@ describe('CatalogImportService', () => {
   it('does not write catalog rows during dry-run', async () => {
     const prisma = fakePrisma();
     const idempotency = { run: vi.fn(async ({ execute }: { execute: (tx: typeof prisma) => Promise<{ response: unknown }> }) => (await execute(prisma)).response as never) };
-    const service = new CatalogImportService(prisma as never, { record: vi.fn() } as never, idempotency as never);
+    const audit = { record: vi.fn() };
+    const service = new CatalogImportService(prisma as never, audit as never, idempotency as never);
     const upload = await service.upload('actor-1', 'upload-key', '1', await workbookBuffer());
     await service.dryRun('actor-1', upload.data.report.importId);
 
     expect(prisma.product.findMany).toHaveBeenCalled();
     expect(prisma.catalogImportRecord.update).toHaveBeenCalled();
+    expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'catalog.import.dry_run', actorId: 'actor-1' }), expect.anything());
     expect(prisma.product).not.toHaveProperty('create');
   });
 
@@ -138,6 +141,10 @@ describe('CatalogImportService', () => {
 
     await expect(service.commit('actor-1', 'commit-key', upload.data.report.importId)).resolves.toBeDefined();
     expect(prisma.productAttributeConfiguration.upsert).toHaveBeenCalled();
+    expect(prisma.product.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ status: 'DRAFT' }),
+      update: expect.not.objectContaining({ status: expect.anything() }),
+    }));
     expect(prisma.variantPriceRecord.create).toHaveBeenCalled();
   });
 

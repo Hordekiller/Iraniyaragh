@@ -76,6 +76,15 @@ describe('catalog workbook parser', () => {
     ).rejects.toMatchObject({ response: { code: 'IMPORT_VALIDATION' } });
   });
 
+  it.each(['PUBLISHED', 'ARCHIVED'])('parses exported product status %s without authorizing a lifecycle transition', async (status) => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await workbookBuffer());
+    workbook.getWorksheet('Products')!.getCell('F2').value = status;
+
+    const parsed = await parseCatalogWorkbook(Buffer.from(await workbook.xlsx.writeBuffer()));
+    expect(parsed.products[0].status).toBe(status);
+  });
+
   it('exports the same fixed sheet contract', async () => {
     const output = await exportCatalogWorkbook({ products: [], variants: [], attributes: [], options: [], values: [], totalRows: 0 });
     const workbook = new ExcelJS.Workbook();

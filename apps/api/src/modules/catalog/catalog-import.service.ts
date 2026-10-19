@@ -45,12 +45,15 @@ export class CatalogImportService {
   }
 
   async dryRun(actorId: string, importId: string): Promise<CatalogImportDryRunResponse> {
-    const record = await this.prisma.catalogImportRecord.findFirst({ where: { id: importId, actorId } });
-    if (!record) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Catalog import not found.' });
-    const workbook = this.getParsed(importId);
-    const report = await buildCatalogImportReport(this.prisma, importId, workbook, record.status);
-    await this.prisma.catalogImportRecord.update({ where: { id: importId }, data: { summary: report.summary, issues: { issues: report.issues, items: report.items }, truncated: report.truncated, status: report.status, totalRows: report.totalRows } });
-    return { data: { report } };
+    return this.prisma.$transaction(async tx => {
+      const record = await tx.catalogImportRecord.findFirst({ where: { id: importId, actorId } });
+      if (!record) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Catalog import not found.' });
+      const workbook = this.getParsed(importId);
+      const report = await buildCatalogImportReport(tx, importId, workbook, record.status);
+      await tx.catalogImportRecord.update({ where: { id: importId }, data: { summary: report.summary, issues: { issues: report.issues, items: report.items }, truncated: report.truncated, status: report.status, totalRows: report.totalRows } });
+      await this.audit.record({ actorId, action: 'catalog.import.dry_run', entityType: 'CatalogImportRecord', entityId: importId, requestId: getRequestId(), after: { status: report.status, totalRows: report.totalRows, reportedIssueCount: report.issues.length, truncated: report.truncated } }, tx);
+      return { data: { report } };
+    });
   }
 
   async commit(actorId: string, key: string, importId: string): Promise<CatalogImportCommitResponse> {
@@ -101,8 +104,72 @@ export class CatalogImportService {
     const options = new Map<string, { id: string }>();
     for (const row of workbook.options) { const attribute = attributes.get(row.attributeCode) ?? await tx.attributeDefinition.findUnique({ where: { code: row.attributeCode }, select: { id: true } }); if (!attribute) throw new UnprocessableEntityException({ code: 'ATTRIBUTE_OPTION_INVALID', message: 'Attribute option references an unknown attribute.' }); attributes.set(row.attributeCode, attribute); const option = await tx.attributeOption.upsert({ where: { attributeId_code: { attributeId: attribute.id, code: row.code } }, create: { attributeId: attribute.id, code: row.code, label: row.label, status: (row.status ?? 'ACTIVE') as 'ACTIVE' | 'INACTIVE' }, update: { label: row.label, status: (row.status ?? 'ACTIVE') as 'ACTIVE' | 'INACTIVE', version: { increment: 1 } } }); options.set(`${row.attributeCode}:${row.code}`, option); }
     const products = new Map<string, { id: string }>();
-    for (const row of workbook.products) { const brand = row.brandSlug ? await tx.brand.findUnique({ where: { slug: row.brandSlug }, select: { id: true } }) : null; const category = row.categorySlug ? await tx.category.findUnique({ where: { slug: row.categorySlug }, select: { id: true } }) : null; if (row.brandSlug && !brand || row.categorySlug && !category) throw new UnprocessableEntityException({ code: 'IMPORT_VALIDATION', message: 'Product references an unknown brand or category.' }); const product = await tx.product.upsert({ where: { slug: row.slug }, create: { slug: row.slug, name: row.name, description: row.description, brandId: brand?.id, categoryId: category?.id, status: (row.status === 'PUBLISHED' ? 'ACTIVE' : row.status ?? 'DRAFT') as ProductStatus }, update: { name: row.name, description: row.description, brandId: brand?.id, categoryId: category?.id, status: (row.status === 'PUBLISHED' ? 'ACTIVE' : row.status ?? 'DRAFT') as ProductStatus, version: { increment: 1 } } }); products.set(row.slug, product); for (const attributeCode of new Set(workbook.values.filter(value => workbook.variants.some(variant => variant.productSlug === row.slug && variant.sku === value.sku)).map(value => value.attributeCode))) { const attribute = attributes.get(attributeCode) ?? await tx.attributeDefinition.findUnique({ where: { code: attributeCode }, select: { id: true } }); if (!attribute) throw new UnprocessableEntityException({ code: 'ATTRIBUTE_OPTION_INVALID', message: 'Variant value references an unknown attribute.' }); attributes.set(attributeCode, attribute); await tx.productAttributeConfiguration.upsert({ where: { productId_attributeId: { productId: product.id, attributeId: attribute.id } }, create: { productId: product.id, attributeId: attribute.id, isVariantAxis: true, isRequired: true }, update: { isVariantAxis: true, isRequired: true } }); } }
+    for (const row of workbook.products) {
+      const brand = row.brandSlug ? await tx.brand.findUnique({ where: { slug: row.brandSlug }, select: { id: true } }) : null;
+      const category = row.categorySlug ? await tx.category.findUnique({ where: { slug: row.categorySlug }, select: { id: true } }) : null;
+      if (row.brandSlug && !brand || row.categorySlug && !category) throw new UnprocessableEntityException({ code: 'IMPORT_VALIDATION', message: 'Product references an unknown brand or category.' });
+      const product = await tx.product.upsert({
+        where: { slug: row.slug },
+        // Imports may create drafts but must never perform lifecycle transitions.
+        create: { slug: row.slug, name: row.name, description: row.description, brandId: brand?.id, categoryId: category?.id, status: ProductStatus.DRAFT },
+        update: { name: row.name, description: row.description, brandId: brand?.id, categoryId: category?.id, version: { increment: 1 } },
+      });
+      products.set(row.slug, product);
+      for (const attributeCode of new Set(workbook.values.filter(value => workbook.variants.some(variant => variant.productSlug === row.slug && variant.sku === value.sku)).map(value => value.attributeCode))) {
+        const attribute = attributes.get(attributeCode) ?? await tx.attributeDefinition.findUnique({ where: { code: attributeCode }, select: { id: true } });
+        if (!attribute) throw new UnprocessableEntityException({ code: 'ATTRIBUTE_OPTION_INVALID', message: 'Variant value references an unknown attribute.' });
+        attributes.set(attributeCode, attribute);
+        await tx.productAttributeConfiguration.upsert({ where: { productId_attributeId: { productId: product.id, attributeId: attribute.id } }, create: { productId: product.id, attributeId: attribute.id, isVariantAxis: true, isRequired: true }, update: { isVariantAxis: true, isRequired: true } });
+      }
+    }
     const variants = new Map<string, { id: string }>();
-    for (const row of workbook.variants) { const product = products.get(row.productSlug)!; const values = workbook.values.filter(value => value.sku === row.sku).map(value => ({ attributeId: attributes.get(value.attributeCode)!.id, optionId: options.get(`${value.attributeCode}:${value.optionCode}`)!.id })); const signature = values.length ? combinationSignature(values) : EMPTY_AXIS_SIGNATURE; const existing = await tx.productVariant.findUnique({ where: { sku: row.sku }, select: { id: true, productId: true, barcode: true, title: true, costPrice: true, salePrice: true, weightGrams: true, status: true, isActive: true, combinationSignature: true } }); if (existing && existing.productId !== product.id) throw new ConflictException({ code: 'SKU_CHANGE_NOT_ALLOWED', message: 'An existing SKU cannot move to another product.' }); const attributeValues = existing ? await tx.productVariantAttributeValue.findMany({ where: { variantId: existing.id }, select: { attributeId: true, optionId: true } }) : []; const priceSame = existing && existing.costPrice.toString() === String(BigInt(row.costPrice)) && existing.salePrice.toString() === String(BigInt(row.salePrice)); const fieldsSame = existing && existing.barcode === (row.barcode ?? null) && existing.title === (row.title ?? null) && existing.weightGrams === (row.weightGrams ? Number(row.weightGrams) : null) && (existing.status === (row.status ?? 'ACTIVE')) && (existing.isActive === ((row.status ?? 'ACTIVE') === 'ACTIVE')) && existing.combinationSignature === signature && JSON.stringify(attributeValues.map(v => ({ attributeId: v.attributeId, optionId: v.optionId }))) === JSON.stringify(values.map(v => ({ attributeId: v.attributeId, optionId: v.optionId }))); const variant = existing && fieldsSame && priceSame ? existing : existing ? await tx.productVariant.update({ where: { id: existing.id }, data: { barcode: row.barcode ?? null, title: row.title ?? null, costPrice: BigInt(row.costPrice), salePrice: BigInt(row.salePrice), weightGrams: row.weightGrams ? Number(row.weightGrams) : null, status: (row.status ?? 'ACTIVE') as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED', isActive: (row.status ?? 'ACTIVE') === 'ACTIVE', combinationSignature: signature, version: { increment: 1 } } }) : await tx.productVariant.create({ data: { productId: product.id, sku: row.sku, skuKey: canonicalizeSku(row.sku), barcode: row.barcode ?? null, title: row.title ?? null, costPrice: BigInt(row.costPrice), salePrice: BigInt(row.salePrice), weightGrams: row.weightGrams ? Number(row.weightGrams) : null, status: (row.status ?? 'ACTIVE') as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED', isActive: (row.status ?? 'ACTIVE') === 'ACTIVE', combinationSignature: signature } }); variants.set(row.sku, variant); if (!(existing && fieldsSame && priceSame)) { await tx.productVariantAttributeValue.deleteMany({ where: { variantId: variant.id } }); if (values.length) await tx.productVariantAttributeValue.createMany({ data: values.map(value => ({ variantId: variant.id, ...value })) }); await tx.variantPriceRecord.create({ data: { variantId: variant.id, costPrice: variant.costPrice, salePrice: variant.salePrice, source: 'IMPORT', actorUserId: actorId, requestId: getRequestId(), reason: 'Catalog import' } }); } }
+    for (const row of workbook.variants) {
+      const product = products.get(row.productSlug)!;
+      const values = workbook.values.filter(value => value.sku === row.sku).map(value => ({ attributeId: attributes.get(value.attributeCode)!.id, optionId: options.get(`${value.attributeCode}:${value.optionCode}`)!.id }));
+      const existing = await tx.productVariant.findUnique({ where: { sku: row.sku }, select: { id: true, productId: true, barcode: true, title: true, costPrice: true, salePrice: true, weightGrams: true, status: true, isActive: true, combinationSignature: true, attributeValues: { select: { attributeId: true, optionId: true } } } });
+      if (existing && existing.productId !== product.id) throw new ConflictException({ code: 'SKU_CHANGE_NOT_ALLOWED', message: 'An existing SKU cannot move to another product.' });
+      const signature = values.length ? combinationSignature(values) : existing?.combinationSignature ?? EMPTY_AXIS_SIGNATURE;
+      const valueKey = (value: { attributeId: string; optionId: string }) => `${value.attributeId}:${value.optionId}`;
+      const sameValues = existing && JSON.stringify(existing.attributeValues.map(valueKey).sort()) === JSON.stringify(values.map(valueKey).sort());
+      const priceSame = existing && existing.costPrice.toString() === String(BigInt(row.costPrice)) && existing.salePrice.toString() === String(BigInt(row.salePrice));
+      const fieldsSame = existing
+        && (row.barcode === undefined || existing.barcode === row.barcode)
+        && (row.title === undefined || existing.title === row.title)
+        && (row.weightGrams === undefined || existing.weightGrams === Number(row.weightGrams))
+        && (row.status === undefined || (existing.status === row.status && existing.isActive === (row.status === 'ACTIVE')))
+        && (values.length === 0 || (existing.combinationSignature === signature && sameValues));
+      const variant = existing && fieldsSame && priceSame ? existing : existing
+        ? await tx.productVariant.update({ where: { id: existing.id }, data: {
+          // Blank optional cells mean "not supplied", never "clear stored value".
+          barcode: row.barcode,
+          title: row.title,
+          costPrice: BigInt(row.costPrice),
+          salePrice: BigInt(row.salePrice),
+          weightGrams: row.weightGrams === undefined ? undefined : Number(row.weightGrams),
+          status: row.status as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED' | undefined,
+          isActive: row.status === undefined ? undefined : row.status === 'ACTIVE',
+          combinationSignature: values.length ? signature : existing.combinationSignature,
+          version: { increment: 1 },
+        } })
+        : await tx.productVariant.create({ data: {
+          productId: product.id,
+          sku: row.sku,
+          skuKey: canonicalizeSku(row.sku),
+          barcode: row.barcode ?? null,
+          title: row.title ?? null,
+          costPrice: BigInt(row.costPrice),
+          salePrice: BigInt(row.salePrice),
+          weightGrams: row.weightGrams ? Number(row.weightGrams) : null,
+          status: (row.status ?? 'ACTIVE') as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED',
+          isActive: (row.status ?? 'ACTIVE') === 'ACTIVE',
+          combinationSignature: signature,
+        } });
+      variants.set(row.sku, variant);
+      if (!existing || values.length > 0 && !sameValues) {
+        await tx.productVariantAttributeValue.deleteMany({ where: { variantId: variant.id } });
+        if (values.length) await tx.productVariantAttributeValue.createMany({ data: values.map(value => ({ variantId: variant.id, ...value })) });
+      }
+      if (!existing || !priceSame) await tx.variantPriceRecord.create({ data: { variantId: variant.id, costPrice: variant.costPrice, salePrice: variant.salePrice, source: 'IMPORT', actorUserId: actorId, requestId: getRequestId(), reason: 'Catalog import' } });
+    }
   }
 }
