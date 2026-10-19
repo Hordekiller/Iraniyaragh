@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { signInDiAsAdmin } from './helpers';
 
-test('staff configures, reloads, and clears an ordered homepage category carousel', async ({ page }) => {
+test('staff configures, reloads, and clears category and all-products homepage carousels', async ({ page }) => {
   await signInDiAsAdmin(page);
   await page.goto('/settings/homepage');
 
