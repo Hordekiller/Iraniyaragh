@@ -24,7 +24,7 @@ const statusesToDb = (status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | undefined): P
   status === 'DRAFT' ? [ProductStatus.DRAFT, ProductStatus.INACTIVE] : status === 'PUBLISHED' ? [ProductStatus.ACTIVE] : status === 'ARCHIVED' ? [ProductStatus.ARCHIVED] : [];
 const statusToApi = (status: ProductStatus): 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' =>
   status === ProductStatus.ACTIVE ? 'PUBLISHED' : status === ProductStatus.ARCHIVED ? 'ARCHIVED' : 'DRAFT';
-const PRODUCT_SORT_FIELDS = new Set(['name', 'createdAt', 'updatedAt'] as const);
+const PRODUCT_SORT_FIELDS = new Set(['name', 'createdAt', 'updatedAt', 'popular'] as const);
 const ORDER_DIRECTIONS = new Set(['asc', 'desc'] as const);
 
 type CategoryTreeNode = { id: string; name: string; slug: string; parentId: string | null; children: CategoryTreeNode[]; createdAt: string; updatedAt: string };
@@ -153,13 +153,69 @@ export class CatalogService {
       ...(query.categoryId ? { categoryId: categoryIds ? { in: categoryIds } : query.categoryId } : {}),
       ...(query.search ? { OR: [{ name: { contains: query.search, mode: 'insensitive' } }, { slug: { contains: query.search, mode: 'insensitive' } }] } : {}),
     };
-    const sortBy = query.sortBy && PRODUCT_SORT_FIELDS.has(query.sortBy) ? query.sortBy : 'createdAt';
+    const requestedSort = query.sortBy && PRODUCT_SORT_FIELDS.has(query.sortBy) ? query.sortBy : 'createdAt';
+    const sortBy = includeDrafts && requestedSort === 'popular' ? 'createdAt' : requestedSort;
     const sortDir = query.sortDir && ORDER_DIRECTIONS.has(query.sortDir) ? query.sortDir : 'desc';
+    if (sortBy === 'popular' && !includeDrafts) {
+      const [ids, total] = await Promise.all([
+        this.popularProductIds({ categoryIds, brandId: query.brandId, search: query.search, page, perPage }),
+        this.prisma.product.count({ where }),
+      ]);
+      const byId = new Map((ids.length ? await this.prisma.product.findMany({ where: { id: { in: ids } }, include: this.publicListMediaInclude() }) : []).map(row => [row.id, row]));
+      const rows = ids.flatMap(id => { const row = byId.get(id); return row ? [row] : []; });
+      return { data: { items: rows.map(row => this.productListItem(row)), meta: { page, perPage, total, pages: Math.ceil(total / perPage) } } };
+    }
     const [rows, total] = await Promise.all([
       this.prisma.product.findMany({ where, orderBy: { [sortBy]: sortDir }, skip: (page - 1) * perPage, take: perPage, ...(includeDrafts ? {} : { include: this.publicListMediaInclude() }) }),
       this.prisma.product.count({ where }),
     ]);
     return { data: { items: rows.map(row => this.productListItem(row)), meta: { page, perPage, total, pages: Math.ceil(total / perPage) } } };
+  }
+
+  private async popularProductIds(input: { categoryIds: string[] | null; brandId?: string; search?: string; page: number; perPage: number }): Promise<string[]> {
+    if (input.categoryIds?.length === 0) return [];
+    const conditions: Prisma.Sql[] = [Prisma.sql`p.status::text = 'ACTIVE'`];
+    if (input.categoryIds) conditions.push(Prisma.sql`p."categoryId" IN (${Prisma.join(input.categoryIds)})`);
+    if (input.brandId) conditions.push(Prisma.sql`p."brandId" = ${input.brandId}`);
+    const salesConditions: Prisma.Sql[] = [Prisma.sql`product.status::text = 'ACTIVE'`];
+    if (input.categoryIds) salesConditions.push(Prisma.sql`product."categoryId" IN (${Prisma.join(input.categoryIds)})`);
+    if (input.brandId) salesConditions.push(Prisma.sql`product."brandId" = ${input.brandId}`);
+    if (input.search?.trim()) {
+      const term = `%${input.search.trim()}%`;
+      conditions.push(Prisma.sql`(p.name ILIKE ${term} OR p.slug ILIKE ${term})`);
+      salesConditions.push(Prisma.sql`(product.name ILIKE ${term} OR product.slug ILIKE ${term})`);
+    }
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+      WITH gross_sales AS (
+        SELECT variant."productId", SUM(item.quantity) AS units
+        FROM "OrderItem" item
+        JOIN "ProductVariant" variant ON variant.id = item."variantId"
+        JOIN "Product" product ON product.id = variant."productId"
+        JOIN "Order" sale ON sale.id = item."orderId"
+        WHERE (sale.status::text = 'CREDIT_APPROVED' OR (sale.status::text = 'PAID' AND EXISTS (
+          SELECT 1 FROM "Payment" payment WHERE payment."orderId" = sale.id AND payment.status::text IN ('PAID', 'PARTIALLY_REFUNDED')
+        ))) AND ${Prisma.join(salesConditions, ' AND ')}
+        GROUP BY variant."productId"
+      ), returned_sales AS (
+        SELECT variant."productId", SUM(returned.quantity) AS units
+        FROM "CreditSaleReturnLine" returned
+        JOIN "OrderItem" item ON item.id = returned."orderItemId"
+        JOIN "ProductVariant" variant ON variant.id = item."variantId"
+        JOIN "Product" product ON product.id = variant."productId"
+        JOIN "Order" sale ON sale.id = item."orderId" AND sale.status::text = 'CREDIT_APPROVED'
+        WHERE ${Prisma.join(salesConditions, ' AND ')}
+        GROUP BY variant."productId"
+      ), sold AS (
+        SELECT gross_sales."productId", GREATEST(gross_sales.units - COALESCE(returned_sales.units, 0), 0) AS units
+        FROM gross_sales LEFT JOIN returned_sales ON returned_sales."productId" = gross_sales."productId"
+      )
+      SELECT p.id
+      FROM "Product" p
+      LEFT JOIN sold ON sold."productId" = p.id
+      WHERE ${Prisma.join(conditions, ' AND ')}
+      ORDER BY COALESCE(sold.units, 0) DESC, p."createdAt" DESC, p.id ASC
+      LIMIT ${input.perPage} OFFSET ${(input.page - 1) * input.perPage}`);
+    return rows.map(row => row.id);
   }
 
   private async publicCategoryIds(id: string): Promise<string[]> {

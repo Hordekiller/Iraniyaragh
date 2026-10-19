@@ -19,6 +19,7 @@ function renderPage() {
 function renderUnavailablePage() {
   const unavailable: CatalogApi = {
     listCategories: () => Promise.reject(new Error('catalog down')),
+    getHomepageCollections: () => Promise.reject(new Error('catalog down')),
     listProducts: () => Promise.reject(new Error('catalog down')),
     getProductBySlug: () => Promise.reject(new Error('catalog down')),
   }

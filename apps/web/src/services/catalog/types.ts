@@ -2,6 +2,7 @@ import type {
   Money,
   ProductListMeta,
   CategorySummary,
+  HomepageCollectionsConfig,
   PublicProductMedia,
   VariantAttributeValue,
 } from '@iranyaragh/contracts'
@@ -52,9 +53,12 @@ export type CatalogProduct = {
 
 export type CatalogQuery = {
   search?: string
+  categoryId?: string
   categorySlug?: string
   brand?: string
   sortBy?: 'popular' | 'price_asc' | 'price_desc' | 'newest'
+  /** Bound small curated homepage collections without fetching a full catalog page. */
+  perPage?: number
 }
 
 /** Categories exposed to the storefront browsing UI. */
@@ -80,6 +84,7 @@ export type CatalogListResult = {
  */
 export interface CatalogApi {
   listCategories(): Promise<CatalogCategory[]>
+  getHomepageCollections(): Promise<HomepageCollectionsConfig>
   listProducts(query?: CatalogQuery): Promise<CatalogListResult>
   getProductBySlug(slug: string): Promise<CatalogProduct>
 }

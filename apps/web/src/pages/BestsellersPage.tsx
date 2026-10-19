@@ -6,6 +6,8 @@ import { toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import type { CatalogProduct } from '../services/catalog/types'
 
+const fixtureCatalogEnabled = import.meta.env.VITE_FIXTURE_CATALOG === 'true'
+
 export function BestsellersPage() {
   const api = useCatalogApi()
   const [items, setItems] = useState<CatalogProduct[] | null>(null)
@@ -45,6 +47,8 @@ export function BestsellersPage() {
       </nav>
 
       <h1 className="font-black text-slate-900 text-lg lg:text-xl">پرفروش‌ترین‌ها</h1>
+
+      {fixtureCatalogEnabled && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" role="note">پیش‌نمایش آزمایشی است؛ ترتیب کالاها آمار واقعی فروش نیست.</p>}
 
       {items === null && !error && (
         <div className="mt-8 text-slate-500" aria-live="polite">

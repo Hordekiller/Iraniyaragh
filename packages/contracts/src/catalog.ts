@@ -164,7 +164,7 @@ export type ProductListQuery = {
   status?: CatalogStatus;
   brandId?: string;
   categoryId?: string;
-  sortBy?: 'name' | 'createdAt' | 'updatedAt';
+  sortBy?: 'name' | 'createdAt' | 'updatedAt' | 'popular';
   sortDir?: 'asc' | 'desc';
 };
 

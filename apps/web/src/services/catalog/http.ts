@@ -5,6 +5,7 @@ import type {
   CategoryListResponse,
   ProductDetailPublicResponse,
   ProductListResponse,
+  HomepageCollectionsResponse,
   PublicProductMediaImage,
 } from '@iranyaragh/contracts'
 import type { PublicAvailabilityResponse } from '@iranyaragh/contracts'
@@ -58,10 +59,20 @@ export class CatalogHttpClient implements CatalogApi {
     return this.categoriesPromise
   }
 
+  async getHomepageCollections() {
+    const response = await this.request<HomepageCollectionsResponse>('/api/v1/catalog/homepage-collections')
+    return response.data.config
+  }
+
   async listProducts(query: CatalogQuery = {}): Promise<CatalogListResult> {
-    const params = new URLSearchParams({ page: '1', perPage: '100' })
+    const perPage = Number.isInteger(query.perPage)
+      ? Math.max(1, Math.min(100, query.perPage!))
+      : 100
+    const params = new URLSearchParams({ page: '1', perPage: String(perPage) })
     if (query.search?.trim()) params.set('search', query.search.trim())
-    if (query.categorySlug) {
+    if (query.categoryId) {
+      params.set('categoryId', query.categoryId)
+    } else if (query.categorySlug) {
       const category = (await this.listCategories()).find(
         (item) => item.slug === query.categorySlug,
       )
@@ -86,6 +97,8 @@ export class CatalogHttpClient implements CatalogApi {
     if (query.sortBy === 'newest') {
       params.set('sortBy', 'createdAt')
       params.set('sortDir', 'desc')
+    } else if (query.sortBy === 'popular') {
+      params.set('sortBy', 'popular')
     }
     const response = await this.request<ProductListResponse>(
       `/api/v1/catalog/products?${params}`,

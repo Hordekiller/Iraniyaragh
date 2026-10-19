@@ -48,6 +48,28 @@ describe('CatalogHttpClient', () => {
     expect(String(fetcher.mock.calls[1]?.[0])).toContain('categoryId=cat-1')
   })
 
+  it('bounds curated catalog reads to the requested page size', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      expect(String(input)).toContain('perPage=8')
+      expect(String(input)).toContain('categoryId=cat-1')
+      return response({ data: { items: [], meta: { page: 1, perPage: 8, total: 0, pages: 0 } } })
+    })
+    await new CatalogHttpClient({ fetch: fetcher }).listProducts({ categoryId: 'cat-1', perPage: 8 })
+  })
+
+  it('uses the API sales ranking for bestseller requests and loads admin-selected homepage sections', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/homepage-collections')) return response({ data: { config: { version: 3, sections: [{ categoryId: 'cat-1', sortBy: 'BESTSELLING' }], updatedAt: null } } })
+      expect(url).toContain('sortBy=popular')
+      return response({ data: { items: [], meta: { page: 1, perPage: 8, total: 0, pages: 0 } } })
+    })
+    const client = new CatalogHttpClient({ fetch: fetcher })
+    await expect(client.getHomepageCollections()).resolves.toMatchObject({ version: 3, sections: [{ categoryId: 'cat-1', sortBy: 'BESTSELLING' }] })
+    await client.listProducts({ categoryId: 'cat-1', sortBy: 'popular', perPage: 8 })
+    expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+
   it('maps detail primary media and active variant price', async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL) => String(input).includes('/availability')
       ? response({ items: [{ variantId: 'v-1', status: 'IN_STOCK' }] })

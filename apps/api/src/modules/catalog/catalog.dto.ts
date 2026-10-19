@@ -86,7 +86,7 @@ export class ProductListQueryDto {
   @IsOptional() @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED']) status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   @IsOptional() @IsString() brandId?: string;
   @IsOptional() @IsString() categoryId?: string;
-  @IsOptional() @IsEnum(['name', 'createdAt', 'updatedAt']) sortBy: 'name' | 'createdAt' | 'updatedAt' = 'createdAt';
+  @IsOptional() @IsEnum(['name', 'createdAt', 'updatedAt', 'popular']) sortBy: 'name' | 'createdAt' | 'updatedAt' | 'popular' = 'createdAt';
   @IsOptional() @IsEnum(['asc', 'desc']) sortDir: 'asc' | 'desc' = 'desc';
 }
 

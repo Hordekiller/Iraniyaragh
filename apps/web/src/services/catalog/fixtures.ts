@@ -28,6 +28,12 @@ export class CatalogFixtureClient implements CatalogApi {
     return this.categories.map(c => ({ ...c }));
   }
 
+  async getHomepageCollections() {
+    await this.wait()
+    const configured = this.categories.filter(category => category.parentId === null && category.productCount > 0).slice(0, 3)
+    return { version: 1, updatedAt: null, sections: configured.map(category => ({ categoryId: category.id, sortBy: 'NEWEST' as const })) }
+  }
+
   async listProducts(query: CatalogQuery = {}): Promise<CatalogListResult> {
     await this.wait();
 
@@ -44,7 +50,9 @@ export class CatalogFixtureClient implements CatalogApi {
       });
     }
 
-    if (query.categorySlug) {
+    if (query.categoryId) {
+      items = items.filter(product => product.category?.id === query.categoryId)
+    } else if (query.categorySlug) {
       items = items.filter(p => p.category?.slug === query.categorySlug);
     }
 
@@ -69,13 +77,15 @@ export class CatalogFixtureClient implements CatalogApi {
         break;
     }
 
-    const perPage = 24;
+    const perPage = Number.isInteger(query.perPage)
+      ? Math.max(1, Math.min(100, query.perPage!))
+      : 24
     const page = 1;
     const total = items.length;
     const pages = Math.max(1, Math.ceil(total / perPage));
 
     return {
-      items,
+      items: items.slice(0, perPage),
       meta: { page, perPage, total, pages },
     };
   }

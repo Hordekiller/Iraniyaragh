@@ -172,6 +172,7 @@ describe.sequential('CatalogService database integration', () => {
     const created = await catalog.createProduct(actorId, key('publish-product'), {
       name: 'Publishable Product',
       slug: `publishable-${runId}`,
+      categoryId,
       variants: [
         {
           sku: `PUB-SKU-${runId}`,
@@ -203,6 +204,8 @@ describe.sequential('CatalogService database integration', () => {
       salePrice: { amount: '60000', currency: 'IRR' },
     });
     expect(viaSlug.data.product.variants[0]).not.toHaveProperty('costPrice');
+    const bestsellerRead = await catalog.listPublicProducts({ categoryId, sortBy: 'popular', page: 1, perPage: 25 });
+    expect(bestsellerRead.data.items.some(item => item.id === id)).toBe(true);
 
     await prisma.auditLog.deleteMany({
       where: { requestId: { startsWith: requestIdPrefix } },

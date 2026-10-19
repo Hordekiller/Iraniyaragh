@@ -54,6 +54,7 @@ function buildService() {
   const client = createFakeClient();
   const tx = createFakeClient();
   const prisma = {
+    $queryRaw: vi.fn().mockResolvedValue([]),
     product: { findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn() },
     brand: {
       create: vi.fn(),
@@ -84,6 +85,19 @@ describe('CatalogService', () => {
 
   beforeEach(() => {
     ctx = buildService();
+  });
+
+  it('orders public bestseller results by committed sales minus recorded returns, with stable ties', async () => {
+    const second = { ...productRow, id: 'product-2', name: 'Product Two', slug: 'product-two', createdAt: new Date('2026-02-01T00:00:00Z') };
+    (ctx.prisma.$queryRaw as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: second.id }, { id: productRow.id }]);
+    (ctx.prisma.product.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([productRow, second]);
+    (ctx.prisma.product.count as ReturnType<typeof vi.fn>).mockResolvedValue(2);
+
+    const result = await ctx.service.listPublicProducts({ sortBy: 'popular', page: 1, perPage: 8 } as never);
+
+    expect(result.data.items.map(item => item.id)).toEqual(['product-2', 'product-1']);
+    expect(ctx.prisma.$queryRaw).toHaveBeenCalledOnce();
+    expect(ctx.prisma.product.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: { in: ['product-2', 'product-1'] } } }));
   });
 
   describe('public product detail', () => {
