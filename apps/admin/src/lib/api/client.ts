@@ -82,8 +82,13 @@ type RequestOptions = {
   recoverSession?: boolean;
   /** Some existing API routes return the contract body directly, without { data }. */
   responseShape?: 'raw';
+  /** Bounded deadline override for long-running operations such as workbook import. */
+  timeoutMs?: number;
 
 };
+
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+const MAX_REQUEST_TIMEOUT_MS = 120_000;
 
 let sessionRecovery: (() => Promise<string>) | null = null;
 type RecoverySerializer = <T>(operation: () => Promise<T>) => Promise<T>;
@@ -206,7 +211,11 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   let response: Response;
   let payload: unknown;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const requestedTimeoutMs = options.timeoutMs;
+  const timeoutMs = Number.isFinite(requestedTimeoutMs)
+    ? Math.min(Math.max(Math.floor(requestedTimeoutMs!), 1), MAX_REQUEST_TIMEOUT_MS)
+    : DEFAULT_REQUEST_TIMEOUT_MS;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
   try {
     const body: BodyInit | undefined =

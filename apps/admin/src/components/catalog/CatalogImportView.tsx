@@ -31,7 +31,7 @@ import { FormField } from '@/components/ui/FormField';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusChip, type StatusTone } from '@/components/ui/StatusChip';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
-import { ApiClientError } from '@/lib/api/client';
+import { ApiClientError, ApiNetworkError } from '@/lib/api/client';
 import {
   commitCatalogImport,
   createIdempotencyKey,
@@ -105,7 +105,7 @@ export function CatalogImportView() {
       idempotencyKeys.current.upload = undefined;
       feedback.success('فایل بارگذاری و پیش‌آزمایش انجام شد.');
     } catch (error) {
-      feedback.error(error instanceof ApiClientError ? error.message : 'بارگذاری فایل ناموفق بود؛ دوباره تلاش کنید.');
+      feedback.error(error instanceof ApiClientError || error instanceof ApiNetworkError ? error.message : 'بارگذاری فایل ناموفق بود؛ دوباره تلاش کنید.');
     } finally {
       setUploading(false);
     }

@@ -123,6 +123,36 @@ describe('apiFetch', () => {
     await rejected;
   });
 
+  it('honors a longer bounded timeout for catalog imports and caps arbitrary overrides', async () => {
+    vi.useFakeTimers();
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      signal = init.signal as AbortSignal;
+      return { ok: true, status: 200, text: () => new Promise<string>((_resolve, reject) => {
+        signal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+      }) } as Response;
+    }));
+    const request = apiFetch('/catalog/admin/imports', { method: 'POST', timeoutMs: 110_000 });
+    const rejected = expect(request).rejects.toBeInstanceOf(ApiNetworkError);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(signal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(80_000);
+    expect(signal?.aborted).toBe(true);
+    await rejected;
+
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      signal = init.signal as AbortSignal;
+      return { ok: true, status: 200, text: () => new Promise<string>((_resolve, reject) => {
+        signal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+      }) } as Response;
+    }));
+    const cappedRequest = apiFetch('/catalog/admin/imports', { timeoutMs: Number.MAX_SAFE_INTEGER });
+    const cappedRejected = expect(cappedRequest).rejects.toBeInstanceOf(ApiNetworkError);
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(signal?.aborted).toBe(true);
+    await cappedRejected;
+  });
+
   it('classifies cancellation during response reading without attempting auth recovery', async () => {
     const controller = new AbortController();
     const recovery = vi.fn(async () => 'unused');

@@ -39,6 +39,7 @@ const baseUrl = ['http:', '', 'localhost:4000'].join('/') + '/api/v1';
 
 describe('catalog admin api client', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     setAccessToken(null);
   });
@@ -251,6 +252,24 @@ describe('catalog admin api client', () => {
     const form = init.body as FormData;
     expect(form.get('file')).toBeTruthy();
     expect((form.get('file') as File).name).toBe('catalog.xlsx');
+  });
+
+  it('allows the catalog upload to finish within its bounded 110 second deadline', async () => {
+    vi.useFakeTimers();
+    let signal: AbortSignal | undefined;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      signal = init.signal as AbortSignal;
+      return { ok: true, status: 200, text: () => new Promise<string>((_resolve, reject) => {
+        signal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+      }) } as Response;
+    }));
+    const request = uploadCatalogImport(new Blob(['workbook']), 'catalog.xlsx', 'upload-key');
+    const rejected = expect(request).rejects.toMatchObject({ name: 'ApiNetworkError' });
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(signal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(80_000);
+    expect(signal?.aborted).toBe(true);
+    await rejected;
   });
 
   it('uploads with the x-iranyaragh-catalog-version header', async () => {
