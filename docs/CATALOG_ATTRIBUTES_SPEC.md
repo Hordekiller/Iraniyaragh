@@ -119,12 +119,11 @@ values; formulas are never evaluated and no macro/external link is honored.
 | `description`  |     | optional                                        |
 | `brandSlug`    |     | optional, must exist                            |
 | `categorySlug` |     | optional, must exist                            |
-| `status`       |     | `DRAFT` / `PUBLISHED` / `ARCHIVED`              |
+| `status`       |     | exported value is accepted for round-trip; import ignores it |
 
-> **Status reconciliation:** the workbook validates against contract
-> `CatalogStatus` (`DRAFT|PUBLISHED|ARCHIVED`). At `P1`, the platform maps contract
-> `PUBLISHED` ⇄ schema `ProductStatus.ACTIVE/INACTIVE` exactly as the #173 status
-> flow does; the import contract and the DB enum never silently drift.
+Import cannot publish, archive, or change the lifecycle state of an existing
+product. New products are always created as DRAFT. Lifecycle transitions must use
+the authorized product lifecycle command.
 
 ### `Variants`
 
@@ -175,18 +174,31 @@ key cells. Unknown columns are an error, not silently ignored, in v1.
    `CatalogImportUploadResponse` with storage reference only (raw file never stored
    long-term in the report).
 2. `GET /api/v1/catalog/admin/imports/:id` → current `CatalogImportDryRunReport`.
-3. `POST /api/v1/catalog/admin/imports/:id/dry-run` → recompute domain diff with
-   **zero mutations**; returns summary + bounded issues/items (`truncated` flag).
+3. `POST /api/v1/catalog/admin/imports/:id/dry-run` → recompute the catalog diff
+   without mutating products, variants, prices, categories, brands, or inventory;
+   it updates only the import report metadata and audit evidence. It returns a
+   summary plus bounded issues/items (`truncated` flag).
 4. `POST /api/v1/catalog/admin/imports/:id/commit` (`Idempotency-Key`) → single
    transaction; per-row outcomes; result report. Replaying the same key returns the
    stored result.
 5. `GET /api/v1/catalog/admin/export` → streamed workbook, same schema, filters via
    `CatalogExportQuery`.
 
-Import is an upsert keyed by `slug`/`sku`/`code`; it never deletes rows, never writes
-inventory, and never changes an existing `sku`. Commit applies creates first, then
-updates, then attributes/options before variants, in a deterministic order. Any
-`error` row aborts the whole commit (all-or-nothing).
+Import v1 accepts exactly five sheets and upserts by `slug`/`sku`/`code`. It never
+deletes rows, writes inventory, changes an existing SKU, or changes product
+lifecycle state. A new product is always DRAFT. Empty optional product/variant
+fields and an empty `VariantAttributeValues` sheet mean "leave existing data as-is"
+when the SKU already exists; they do not clear saved data. Price fields remain
+required integer IRR strings. Categories and brands are references only: the
+workbook does not create those records, and a missing reference makes Dry Run fail.
+Commit applies creates before updates, attributes/options before variants, in a
+deterministic order. Any validation error aborts the entire transaction.
+
+Inventory is intentionally a separate ledger-backed operation. There is no bulk
+inventory workbook/import endpoint. Each accepted opening quantity must be applied
+through the authenticated inventory change command as a receipt/adjustment, with an
+actor, reason, warehouse, location, variant, integer delta and idempotency key;
+fractional quantities are rejected by the current API.
 
 For every product that references an attribute through a `VariantAttributeValues`
 row, commit auto-configures that attribute as `isVariantAxis: true,
