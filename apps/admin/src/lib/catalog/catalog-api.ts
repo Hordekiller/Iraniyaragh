@@ -311,6 +311,7 @@ export async function uploadCatalogImport(file: Blob, fileName: string, idempote
   const response = await apiFetch<CatalogImportUploadResponse['data']>('/catalog/admin/imports', {
     method: 'POST', body: form, token: authToken(),
     headers: { 'Idempotency-Key': idempotencyKey, 'x-iranyaragh-catalog-version': version },
+    timeoutMs: 110_000,
   });
   return response.data;
 }

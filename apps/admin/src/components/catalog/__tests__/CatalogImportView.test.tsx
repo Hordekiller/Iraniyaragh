@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedbackProvider } from '@/components/ui/FeedbackProvider';
 import type { CatalogImportCommitResult, CatalogImportDryRunReport } from '@iranyaragh/contracts';
+import { ApiNetworkError } from '@/lib/api/client';
 import { CatalogImportView } from '../CatalogImportView';
 
 const mocks = vi.hoisted(() => ({
@@ -90,6 +91,13 @@ describe('CatalogImportView', () => {
       target: { files: [new File([new Uint8Array(11 * 1024 * 1024)], 'catalog.xlsx')] },
     });
     expect(await screen.findByText('حجم فایل حداکثر ۱۰ مگابایت است.')).toBeInTheDocument();
+  });
+
+  it('shows a recoverable network timeout instead of hiding it behind a generic upload error', async () => {
+    mocks.uploadCatalogImport.mockRejectedValueOnce(new ApiNetworkError('زمان دریافت پاسخ به پایان رسید. دوباره تلاش کنید.'));
+    writeFile(new File([new Uint8Array(1)], 'catalog.xlsx'));
+    fireEvent.click(screen.getByRole('button', { name: 'بارگذاری و پیش‌آزمایش' }));
+    expect(await screen.findByText('زمان دریافت پاسخ به پایان رسید. دوباره تلاش کنید.')).toBeInTheDocument();
   });
 
   it('uploads a workbook, runs the dry-run, and commits with stable idempotency keys', async () => {
