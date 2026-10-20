@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -13,6 +14,7 @@ import type {
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { advisoryLockIdKey } from "../../common/advisory-lock";
+import { orderExpirySystemContext, type OrderExpirySystemContext } from "../../common/order-expiry-system-context";
 import {
   ORDER_STATE_CONFLICT_ERROR,
   recordTransition,
@@ -121,6 +123,30 @@ export class OrderCommandService {
     options: { now?: Date; batchSize?: number } = {},
   ): Promise<OrderExpiryRunResponse> {
     this.assertTracked(context);
+    return this.expireBatch(context, options);
+  }
+
+  /** Internal worker entry point; no HTTP route or caller-selected principal. */
+  async expireAbandonedOrdersAsSystem(
+    requestId: string,
+    options: { now?: Date; batchSize?: number } = {},
+  ): Promise<OrderExpiryRunResponse> {
+    return this.expireBatch(orderExpirySystemContext(requestId), options);
+  }
+
+  /** One durable job; eligibility is always reread under the existing order lock. */
+  async expireAbandonedOrderAsSystem(orderId: string, requestId: string): Promise<boolean> {
+    const context = orderExpirySystemContext(requestId);
+    if (typeof orderId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(orderId)) {
+      throw new BadRequestException('A bounded order ID is required for order expiry.');
+    }
+    return this.expireOrder(orderId, context, new Date());
+  }
+
+  private async expireBatch(
+    context: OrderCommandContext | OrderExpirySystemContext,
+    options: { now?: Date; batchSize?: number },
+  ): Promise<OrderExpiryRunResponse> {
     const now = options.now ?? new Date();
     const batchSize = clampInt(
       options.batchSize,
@@ -133,6 +159,8 @@ export class OrderCommandService {
       where: {
         status: "PENDING_PAYMENT",
         reservationExpiresAt: { lte: now },
+        // Attempted payments require reconciliation, not deadline inference.
+        payments: { none: {} },
       },
       orderBy: [{ reservationExpiresAt: "asc" }, { id: "asc" }],
       select: { id: true },
@@ -142,8 +170,8 @@ export class OrderCommandService {
     let expired = 0;
     for (const candidate of candidates) {
       try {
-        const released = await this.expireOrder(candidate.id, context, now);
-        if (released > 0) expired += 1;
+        const transitioned = await this.expireOrder(candidate.id, context, now);
+        if (transitioned) expired += 1;
       } catch (error) {
         // A concurrent cancel or another expiry already moved the order out of
         // PENDING_PAYMENT. The worker writes no claim, so the race is benign;
@@ -319,9 +347,9 @@ export class OrderCommandService {
 
   private async expireOrder(
     orderId: string,
-    context: OrderCommandContext,
+    context: OrderCommandContext | OrderExpirySystemContext,
     now: Date,
-  ): Promise<number> {
+  ): Promise<boolean> {
     return withSerializableRetry({
       isContention: (error) => error instanceof OrderCommandContentionError,
       conflictMessage:
@@ -338,9 +366,15 @@ export class OrderCommandService {
                 number: true,
                 customerId: true,
                 status: true,
+                reservationExpiresAt: true,
+                payments: { select: { id: true }, take: 1 },
               },
             });
-            if (order?.status !== "PENDING_PAYMENT") return 0;
+            if (
+              order?.status !== "PENDING_PAYMENT" ||
+              order.reservationExpiresAt > now ||
+              order.payments.length > 0
+            ) return false;
 
             const requestId = requestIdForOrder(context.requestId, order.id);
             const transition = await recordTransition(
@@ -356,12 +390,9 @@ export class OrderCommandService {
               },
             );
 
-            const releasedReservations =
-              await this.inventory.releaseReservationsForOrder(
-                tx,
-                order.id,
-                context,
-              );
+            const releasedReservations = context.actorId === null
+              ? await this.inventory.releaseReservationsForOrderFromExpiry(tx, order.id, requestId)
+              : await this.inventory.releaseReservationsForOrder(tx, order.id, context);
 
             const expiredAt = now.toISOString();
             await tx.outboxEvent.create({
@@ -390,6 +421,7 @@ export class OrderCommandService {
                 metadata: {
                   reason: RELEASE_REASON.expiry,
                   transitionId: transition.id,
+                  ...(context.actorId === null ? { systemActor: context.systemActor } : {}),
                 },
                 actorId: context.actorId,
                 requestId,
@@ -397,7 +429,7 @@ export class OrderCommandService {
               tx,
             );
 
-            return releasedReservations;
+            return true;
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         ),

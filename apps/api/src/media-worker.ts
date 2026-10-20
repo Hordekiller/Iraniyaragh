@@ -6,6 +6,9 @@ import type { EnvironmentVariables } from './config/environment';
 import { ProductMediaImageProcessor } from './modules/media/image-processor.service';
 import { ProductMediaCleanupService } from './modules/media/media-cleanup.service';
 import { GuestCartService } from './modules/orders/guest-cart.service';
+import { OrderCommandService } from './modules/orders/order-command.service';
+import { startOrderExpiryRuntime } from './modules/orders/order-expiry-runtime';
+import { PrismaService } from './database/prisma.service';
 import { OutboxConsumerService } from './modules/outbox/outbox-consumer.service';
 import { OutboxRelayService } from './modules/outbox/outbox-relay.service';
 import { CustomerSmsDeliveryService } from './modules/notifications/customer-sms-delivery.service';
@@ -21,6 +24,12 @@ async function bootstrap(): Promise<void> {
   const outboxRelay = app.get(OutboxRelayService);
   const customerSms = app.get(CustomerSmsDeliveryService);
   const connection = { url: config.get('REDIS_URL', { infer: true }) };
+  const orderExpiry = await startOrderExpiryRuntime({
+    redisUrl: connection.url,
+    enabled: config.get('ORDER_EXPIRY_ENABLED', { infer: true }),
+    prisma: app.get(PrismaService),
+    commands: app.get(OrderCommandService),
+  });
   const worker = new Worker<{ mediaId: string }>(
     'product-media-processing',
     async job => processor.process(job.data.mediaId, {
@@ -141,6 +150,7 @@ async function bootstrap(): Promise<void> {
     closing = true;
     clearInterval(outboxTimer);
     clearInterval(smsTimer);
+    await orderExpiry.close();
     await outboxPass;
     await smsPass;
     await outboxWorker.close();
