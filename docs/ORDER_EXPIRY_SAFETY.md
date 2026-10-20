@@ -52,8 +52,9 @@ No API/schema, provider configuration or VPS deployment change is part of this
 source slice. Green tests alone do not activate it.
 
 The follow-up internal identity candidate is defined in
-[ADR-0032](adr/0032-order-expiry-system-attribution.md). It records the fixed
+[ADR-0033](adr/0033-order-expiry-system-attribution.md). It records the fixed
 `order-reservation-expiry` system identity in transactional order and inventory
 audit metadata without creating a User or relaxing human command checks. It is
-not scheduled or deployed; review, test results and runtime acceptance remain
+scheduled by default. The integrated [durable runtime](ORDER_EXPIRY_RUNTIME.md)
+requires explicit activation; review, test results and runtime acceptance remain
 separate gates.

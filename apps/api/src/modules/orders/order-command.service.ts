@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -131,6 +132,15 @@ export class OrderCommandService {
     options: { now?: Date; batchSize?: number } = {},
   ): Promise<OrderExpiryRunResponse> {
     return this.expireBatch(orderExpirySystemContext(requestId), options);
+  }
+
+  /** One durable job; eligibility is always reread under the existing order lock. */
+  async expireAbandonedOrderAsSystem(orderId: string, requestId: string): Promise<boolean> {
+    const context = orderExpirySystemContext(requestId);
+    if (typeof orderId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(orderId)) {
+      throw new BadRequestException('A bounded order ID is required for order expiry.');
+    }
+    return this.expireOrder(orderId, context, new Date());
   }
 
   private async expireBatch(

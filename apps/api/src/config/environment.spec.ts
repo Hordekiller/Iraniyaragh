@@ -72,6 +72,14 @@ const validDisabledStagingEnvironment = {
   SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID: undefined,
 };
 
+describe('order expiry activation', () => {
+  it('defaults off and requires an explicit boolean', () => {
+    expect(validateEnvironment(validDevelopmentEnvironment).ORDER_EXPIRY_ENABLED).toBe(false);
+    expect(validateEnvironment({ ...validDevelopmentEnvironment, ORDER_EXPIRY_ENABLED: 'true' }).ORDER_EXPIRY_ENABLED).toBe(true);
+    expect(() => validateEnvironment({ ...validDevelopmentEnvironment, ORDER_EXPIRY_ENABLED: 'yes' })).toThrow(/ORDER_EXPIRY_ENABLED/);
+  });
+});
+
 describe('parseCorsOrigins', () => {
   it('uses only known local origins by default in development', () => {
     expect(parseCorsOrigins(undefined, 'development')).toEqual(['http://localhost:5173', 'http://localhost:3001']);

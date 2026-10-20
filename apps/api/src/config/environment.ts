@@ -12,6 +12,7 @@ export type EnvironmentVariables = {
   API_PORT: number;
   DATABASE_URL: string;
   REDIS_URL: string;
+  ORDER_EXPIRY_ENABLED: boolean;
   CORS_ORIGINS: string;
   STOREFRONT_ORIGIN: string;
   TRUST_PROXY: TrustProxySetting;
@@ -464,6 +465,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     API_PORT: parsePort(config.API_PORT, environment),
     DATABASE_URL: databaseUrl,
     REDIS_URL: redisUrl,
+    ORDER_EXPIRY_ENABLED: parseBoolean(config.ORDER_EXPIRY_ENABLED, 'ORDER_EXPIRY_ENABLED', false),
     CORS_ORIGINS: parseCorsOrigins(config.CORS_ORIGINS, environment).join(','),
     STOREFRONT_ORIGIN: parseStorefrontOrigin(config.STOREFRONT_ORIGIN, environment),
     TRUST_PROXY: parseTrustProxy(config.TRUST_PROXY),

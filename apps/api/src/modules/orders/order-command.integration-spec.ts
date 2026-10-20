@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { Queue, QueueEvents } from 'bullmq';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
@@ -11,6 +12,7 @@ import {
   combinationSignature,
 } from '../catalog/variant-identifiers';
 import { OrderCommandService } from './order-command.service';
+import { ORDER_EXPIRY_QUEUE_NAME, startOrderExpiryRuntime } from './order-expiry-runtime';
 import { FulfillmentCommandService } from './fulfillment-command.service';
 import { FulfillmentPickService } from './fulfillment-pick.service';
 import { ShipmentDispatchService } from './shipment-dispatch.service';
@@ -378,6 +380,121 @@ describe.sequential('OrderCommandService database integration', () => {
       await assertPreserved(order.id, balanceBefore);
       expect(await prisma.auditLog.count({ where: { requestId: { startsWith: `${requestIdPrefix}-system-rollback` } } })).toBe(0);
     } finally { failure.mockRestore(); }
+  });
+
+  it('recovers a queued expiry across worker restart and commits effects exactly once', async () => {
+    const order = await createPendingOrderWithLines(customerId, [{ variantId: variantAId, locationId: locationAId, quantity: 1 }]);
+    await makeOverdue(order.id);
+    const reservationIds = await reservedIds(order.id);
+    const prefix = `expiry-restart-${runId}`;
+    const connection = { url: process.env.REDIS_URL ?? 'redis://127.0.0.1:6379' };
+    const queue = new Queue(ORDER_EXPIRY_QUEUE_NAME, { connection, prefix });
+    const events = new QueueEvents(ORDER_EXPIRY_QUEUE_NAME, { connection, prefix });
+    let runtime: Awaited<ReturnType<typeof startOrderExpiryRuntime>> | undefined;
+    try {
+      await events.waitUntilReady();
+      await queue.pause();
+      const job = await queue.add('dispatch', {});
+      runtime = await startOrderExpiryRuntime({ redisUrl: connection.url, enabled: true, prisma, commands, prefix, report: () => {} });
+      await runtime.close();
+      expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('PENDING_PAYMENT');
+      runtime = await startOrderExpiryRuntime({ redisUrl: connection.url, enabled: true, prisma, commands, prefix, report: () => {} });
+      await queue.resume();
+      await job.waitUntilFinished(events, 10_000);
+      const generated = await queue.getJob(`expiry-${sha256(order.id)}`);
+      expect(generated).not.toBeNull();
+      await generated!.waitUntilFinished(events, 10_000);
+      const replay = await queue.add('expire', { orderId: order.id });
+      await replay.waitUntilFinished(events, 10_000);
+      expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe('CANCELLED');
+      expect(await balanceAt(variantAId, locationAId)).toMatchObject({ onHand: 1, reserved: 0, available: 1 });
+      expect(await prisma.orderTransition.count({ where: { orderId: order.id, to: 'CANCELLED' } })).toBe(1);
+      expect(await prisma.outboxEvent.count({ where: { aggregateId: order.id, topic: 'ORDER_EXPIRED' } })).toBe(1);
+      const facts = await prisma.auditLog.findMany({ where: { entityId: order.id, action: 'order.expired' } });
+      expect(facts).toHaveLength(1);
+      expect(facts[0]).toMatchObject({ actorId: null, metadata: { systemActor: 'order-reservation-expiry' } });
+    } finally {
+      await runtime?.close();
+      await events.close();
+      await queue.obliterate({ force: true });
+      await (await queue.getBackend().client).del(`${prefix}:${ORDER_EXPIRY_QUEUE_NAME}:dispatch-cursor`);
+      await queue.close();
+      await prisma.auditLog.deleteMany({ where: { entityId: { in: [order.id, ...reservationIds] } } });
+    }
+  });
+
+  it('a queued expiry rechecks a payment inserted after dispatch without releasing stock', async () => {
+    const order = await createPendingOrderWithLines(customerId, [{ variantId: variantAId, locationId: locationAId, quantity: 1 }]);
+    await makeOverdue(order.id);
+    const before = await balanceAt(variantAId, locationAId);
+    const prefix = `expiry-payment-${runId}`;
+    const connection = { url: process.env.REDIS_URL ?? 'redis://127.0.0.1:6379' };
+    const queue = new Queue(ORDER_EXPIRY_QUEUE_NAME, { connection, prefix });
+    const events = new QueueEvents(ORDER_EXPIRY_QUEUE_NAME, { connection, prefix });
+    let runtime: Awaited<ReturnType<typeof startOrderExpiryRuntime>> | undefined;
+    try {
+      await events.waitUntilReady();
+      await queue.pause();
+      const job = await queue.add('expire', { orderId: order.id });
+      const payment = await prisma.payment.create({ data: {
+        orderId: order.id, provider: 'zarinpal', amount: 150n, status: 'PENDING',
+        idempotencyKey: `expiry-runtime-${runId}`, idempotencyFingerprint: sha256('isolated-expiry-runtime'),
+      } });
+      runtime = await startOrderExpiryRuntime({ redisUrl: connection.url, enabled: true, prisma, commands, prefix, report: () => {} });
+      await queue.resume();
+      await job.waitUntilFinished(events, 10_000);
+      await assertPreserved(order.id, before);
+      expect(await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).toEqual(payment);
+    } finally {
+      await runtime?.close();
+      await events.close();
+      await queue.obliterate({ force: true });
+      await (await queue.getBackend().client).del(`${prefix}:${ORDER_EXPIRY_QUEUE_NAME}:dispatch-cursor`);
+      await queue.close();
+    }
+  });
+
+  it('dead-letters an inconsistent order without blocking a healthy order or leaking the error', async () => {
+    const poison = await createPendingOrderWithLines(customerId, [{ variantId: variantAId, locationId: locationAId, quantity: 1 }]);
+    const healthy = await createPendingOrderWithLines(otherCustomerId, [{ variantId: variantBId, locationId: locationBId, quantity: 1 }]);
+    await makeOverdue(poison.id);
+    await makeOverdue(healthy.id);
+    const before = await balanceAt(variantAId, locationAId);
+    const reservationIds = await reservedIds(healthy.id);
+    const prefix = `expiry-poison-${runId}`;
+    const connection = { url: process.env.REDIS_URL ?? 'redis://127.0.0.1:6379' };
+    const queue = new Queue(ORDER_EXPIRY_QUEUE_NAME, { connection, prefix });
+    const events = new QueueEvents(ORDER_EXPIRY_QUEUE_NAME, { connection, prefix });
+    const record = audit.record.bind(audit);
+    const failure = vi.spyOn(audit, 'record').mockImplementation(async (event, tx) => {
+      if (event.entityId === poison.id && event.action === 'order.expired') throw new Error('private injected audit failure');
+      return record(event, tx);
+    });
+    let runtime: Awaited<ReturnType<typeof startOrderExpiryRuntime>> | undefined;
+    try {
+      await events.waitUntilReady();
+      await queue.pause();
+      const failed = await queue.add('expire', { orderId: poison.id }, { attempts: 1 });
+      const next = await queue.add('expire', { orderId: healthy.id });
+      runtime = await startOrderExpiryRuntime({ redisUrl: connection.url, enabled: true, prisma, commands, prefix, report: () => {} });
+      const failedResult = failed.waitUntilFinished(events, 10_000);
+      const failedAssertion = expect(failedResult).rejects.toThrow(/^Order expiry processing failed;/);
+      await queue.resume();
+      await failedAssertion;
+      await next.waitUntilFinished(events, 10_000);
+      expect((await queue.getJob(failed.id!))?.failedReason).not.toContain('private');
+      await assertPreserved(poison.id, before);
+      expect((await prisma.order.findUniqueOrThrow({ where: { id: healthy.id } })).status).toBe('CANCELLED');
+      expect(await balanceAt(variantBId, locationBId)).toMatchObject({ onHand: 1, reserved: 0, available: 1 });
+    } finally {
+      await runtime?.close();
+      failure.mockRestore();
+      await events.close();
+      await queue.obliterate({ force: true });
+      await (await queue.getBackend().client).del(`${prefix}:${ORDER_EXPIRY_QUEUE_NAME}:dispatch-cursor`);
+      await queue.close();
+      await prisma.auditLog.deleteMany({ where: { entityId: { in: [healthy.id, ...reservationIds] } } });
+    }
   });
 
   it('expires overdue pending orders once and idempotently returns zero on a later run', async () => {

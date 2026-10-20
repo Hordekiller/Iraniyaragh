@@ -1,4 +1,4 @@
-# ADR-0032: Internal order-expiry identity and transactional attribution
+# ADR-0033: Internal order-expiry identity and transactional attribution
 
 Status: Proposed — implementation candidate; independent review pending
 
