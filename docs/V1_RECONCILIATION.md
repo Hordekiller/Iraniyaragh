@@ -22,14 +22,6 @@ it does not declare the full audit or V1 implementation finished.
 environment pending explicit owner instruction; this is not a claim that order
 expiry has been accepted live.
 
-Read-only runtime verification on 2026-10-18 confirms a clean deployed checkout,
-61 completed migrations / zero unfinished, healthy API/Admin/Web/PostgreSQL/Redis/
-RustFS/ClamAV, and running media-worker on the API image. `nginx -t`, TLS, homepage,
-Admin and readiness passed. Media-worker has no healthcheck; “running” is not an
-invented healthy probe. No provider configuration or business record was changed
-by this documentation reconciliation. The 2026-10-16 schema/checksum comparison
-was a prior checkpoint; this refresh does not claim a new live schema-drift audit.
-
 ## 1a. Evidence checkpoint — 2026-10-20 UTC
 
 Read-only reconciliation only; no code, deployment, provider send, seed or
@@ -43,6 +35,7 @@ financial record was changed by this checkpoint.
 | VPS drift vs main | one commit: test-only merge #444 (`stocktake two-location reconciliation`) |
 | VPS containers | api/admin/web/media-worker healthy; `IMAGE_TAG=7dbd0001…` |
 | `ORDER_EXPIRY_ENABLED` | `false` (fail-closed) |
+| Runtime provenance | #440 merged 2026-10-19; `compose.staging.yml` binds `APP_VERSION: ${IMAGE_TAG:?…}` per service |
 
 #444 (`test/stocktake-two-location-reconciliation`) rebased onto `7dbd000`, all
 nine exact-head checks green, squash-merged to `f4476d8`. One infrastructure CI
@@ -72,6 +65,14 @@ must rebase onto latest main and pass exact-head gates before merge), #426
 (actions bump), #386 (docs).
 
 ### Historical checkpoint — 2026-10-18
+
+Read-only runtime verification on 2026-10-18 confirmed a clean deployed checkout,
+61 completed migrations / zero unfinished, healthy API/Admin/Web/PostgreSQL/Redis/
+RustFS/ClamAV, and running media-worker on the API image. `nginx -t`, TLS, homepage,
+Admin and readiness passed. Media-worker has no healthcheck; “running” is not an
+invented healthy probe. No provider configuration or business record was changed
+by this documentation reconciliation. The 2026-10-16 schema/checksum comparison
+was a prior checkpoint; this refresh does not claim a new live schema-drift audit.
 
 | Image | Official published OCI index digest verified for exact e207094 |
 | --- | --- |
@@ -116,10 +117,13 @@ Zero browser page/network errors were observed in that run. No actual staff logi
 was attempted: **#400 authenticated operator idle/mutation acceptance remains open**.
 The supplied category names total 75 descendants; no 76th category was invented.
 
-Remaining operational gaps:
+Remaining operational gaps **as of the 2026-10-18 checkpoint** (historical; status
+re-read for each item in §1a where a newer fact exists):
 
-1. Selected IMAGE_TAG matches the release; permanent IMAGE_TAG/APP_VERSION binding
-   is still unmerged #440. APP_VERSION parity is not inferred from IMAGE_TAG.
+1. Selected IMAGE_TAG matched the release; permanent IMAGE_TAG/APP_VERSION binding
+   was still unmerged #440 at that time. **Superseded:** #440 merged 2026-10-19 and
+   `compose.staging.yml` now binds `APP_VERSION: ${IMAGE_TAG:?…}` for every service;
+   see §1a.
 2. Clam signatures were dated Sep 28 at the Oct 16 checkpoint; health alone does
    not establish freshness. No new signature freshness proof here; #393 stays open.
 3. Production test artifact exclusion is still unmerged #446. The prior image
