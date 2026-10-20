@@ -1,17 +1,26 @@
 # V1 source, deployment and acceptance reconciliation
 
-Evidence checkpoint: **2026-10-18 UTC**. Release decision: **NOT READY — BLOCKERS REMAIN**.
+Evidence checkpoint: **2026-10-20 UTC**. Release decision: **NOT READY — BLOCKERS REMAIN**.
 This document supersedes dated execution/status checkpoints, not accepted domain
 invariants or historical engineering evidence. It is a working evidence register;
 it does not declare the full audit or V1 implementation finished.
+
+> **Status-definition discipline.** The following states are distinct and are never
+> collapsed into one word: *Source implemented* / *PR merged* / *CI accepted* /
+> *Image published* / *Deployed* / *Operator-runtime accepted* / *Release accepted*.
+> A green CI run or a healthy container is not live business acceptance.
 
 ## 1. Independent baselines
 
 | Baseline | Observed fact | Limitation |
 | --- | --- | --- |
-| SOURCE_BASELINE | Fetched `origin/main`: `e2070948587b438dc5da55d8560ab870e23bf32d` | Merged source is not independent business acceptance of every feature |
-| DEPLOYED_BASELINE | VPS checkout and API/Admin/Web/media-worker select that exact SHA; verified running image digests | Public smoke and service health do not prove authenticated Admin/customer/financial acceptance |
+| SOURCE_BASELINE | Fetched `origin/main`: `f4476d83e9791b8f58b7f0a5630837c4a53db54d` | Merged source is not independent business acceptance of every feature |
+| DEPLOYED_BASELINE | VPS checkout and API/Admin/Web/media-worker run `7dbd0001959f398635467bedbd7d151c54676599`; `IMAGE_TAG`/`APP_VERSION` bind that SHA; containers healthy | Deployment lags main only by the #444 test-only merge; public smoke and service health do not prove authenticated Admin/customer/financial acceptance |
 | RELEASE_REQUIREMENTS | Current owner directive, accepted V1 outcome/exit gates and ADRs, original issue criteria, later approved staff-credit/store-invoice scope | Old staffing/sprint schedules are history; approved safety/domain criteria remain |
+
+`ORDER_EXPIRY_ENABLED=false` remains the fail-closed setting on the deployed
+environment pending explicit owner instruction; this is not a claim that order
+expiry has been accepted live.
 
 Read-only runtime verification on 2026-10-18 confirms a clean deployed checkout,
 61 completed migrations / zero unfinished, healthy API/Admin/Web/PostgreSQL/Redis/
@@ -20,6 +29,49 @@ Admin and readiness passed. Media-worker has no healthcheck; “running” is no
 invented healthy probe. No provider configuration or business record was changed
 by this documentation reconciliation. The 2026-10-16 schema/checksum comparison
 was a prior checkpoint; this refresh does not claim a new live schema-drift audit.
+
+## 1a. Evidence checkpoint — 2026-10-20 UTC
+
+Read-only reconciliation only; no code, deployment, provider send, seed or
+financial record was changed by this checkpoint.
+
+| Fact | Observed value |
+| --- | --- |
+| `origin/main` | `f4476d83e9791b8f58b7f0a5630837c4a53db54d` |
+| main required checks | CI, SonarCloud, Publish Images, Production Dependency Audit, Push on main — all success on `f4476d83` |
+| Deployed/verified VPS HEAD | `7dbd0001959f398635467bedbd7d151c54676599` |
+| VPS drift vs main | one commit: test-only merge #444 (`stocktake two-location reconciliation`) |
+| VPS containers | api/admin/web/media-worker healthy; `IMAGE_TAG=7dbd0001…` |
+| `ORDER_EXPIRY_ENABLED` | `false` (fail-closed) |
+
+#444 (`test/stocktake-two-location-reconciliation`) rebased onto `7dbd000`, all
+nine exact-head checks green, squash-merged to `f4476d8`. One infrastructure CI
+flake on the new main (`scripts/deploy/runtime-provenance.test.mjs:37`, offline
+compose validation requiring Docker) was cleared by re-run; all `f4476d8` gates
+are green.
+
+Source classification against **current** `origin/main` (code evidence, not the
+older register): #389 customer account **partial**; #388 admin product workflow
+**partial (mostly built)**; #359 role/permission write path **missing**;
+#419 invoice PDF **missing on main** (PRs #439/#449 not ancestors); #421 invoice
+corrections **partial**; #423 report exports **missing**; #422 valuation
+**partial** (inactive by ADR-0031); #348 general returns **partial**; #129/#126/
+#127 discovery **partial** (no sitemap/robots/SSR); #393 ClamAV freshness
+**partial**. Details and file:line evidence in the tracker comment on #363.
+
+#347 and #352 remain OPEN. Their bounded acceptance criteria are matched by
+merged source plus `e2e/tests/admin-stocktake.spec.ts:14` and
+`stocktake.integration-spec.ts`, executed as a real staff password+TOTP login in
+the CI `e2e` job (`.github/workflows/ci.yml:151-280`) that passed on PR #444
+exact head `6e7e652`. This is automated evidence, **not** operator physical-count
+acceptance; both stay open pending a staging operator run.
+
+Open PRs are unchanged in classification: #460 (carousel, out of scope — not to
+merge), #457/#425 (dependency bumps — not to merge), #439/#449 (invoice PDF —
+must rebase onto latest main and pass exact-head gates before merge), #426
+(actions bump), #386 (docs).
+
+### Historical checkpoint — 2026-10-18
 
 | Image | Official published OCI index digest verified for exact e207094 |
 | --- | --- |
