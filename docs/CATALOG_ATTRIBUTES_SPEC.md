@@ -22,7 +22,10 @@ without affecting any variant identity.
 - `AttributeOption`: belongs to one attribute; `code` (immutable) + `label` (mutable),
   unique per attribute, `status`, `version`.
 - `ProductAttributeConfiguration`: per product, `attributeCode`, `isVariantAxis`,
-  `isRequired`. Spec-only (`isVariantAxis=false`) attributes never generate SKUs.
+  `isRequired`, `sortOrder`. Spec-only (`isVariantAxis=false`) attributes never generate SKUs.
+- `sortOrder` is presentation-only: it is the position of the attribute in the
+  product's axis cascade. It never participates in variant identity, SKU
+  generation or any historical row — see §2.1.
 - `VariantAttributeValue`: a variant's selected `optionCode` per axis `attributeCode`.
 
 Code grammar (attributes and options): NFC, trim, ASCII lowercase, `[a-z0-9]+` runs
@@ -48,6 +51,29 @@ Titles are never keys and never participate in identity.
 - With zero configured axes, preview returns one `Default` empty-set combination;
   generation creates the product-slug SKU and an existing base variant is rejected
   by the normal duplicate SKU/combination guards.
+
+### 2.1 Axis presentation order and the public `axes` projection
+
+- A product's variant axes are ordered by `ProductAttributeConfiguration.sortOrder`
+  ascending, with the attribute code as a stable tie-breaker. The order is a
+  presentation decision an operator makes in the Admin; it is not part of variant
+  identity, and reordering axes never rewrites a variant, a SKU or a price record.
+- The public product detail carries an `axes` array: one entry per configured
+  variant axis, in the same order, each with the options that are actually
+  reachable — an option is exposed only when at least one active variant carries
+  it. The storefront therefore never offers a selection that cannot be resolved
+  to a sellable variant.
+- The storefront resolves the remaining selection as a cascade: choosing an
+  option on one axis narrows the options offered on the axes after it. The
+  cascade is client-side and derived from the axis values each variant carries;
+  the server exposes the ordered axes and the reachable options, not a
+  precomputed availability matrix.
+- The brand is a **product-level** attribute (`Product.brandId`), not a variant
+  axis. A variant is never distinguished by its brand, so `brand` is not part of
+  any product's axis set and is not offered as a selector.
+- An attribute whose `status` is not `ACTIVE` is excluded from the public
+  variant projection and from axis generation, so an attribute retired in the
+  Admin disappears from the storefront without touching variant rows.
 
 ## 3. SKU and barcode
 
@@ -242,8 +268,8 @@ Create a configurable multi-variant product:
   "name": "تی‌شرت نخی",
   "slug": "cotton-tee",
   "attributeConfig": [
-    { "attributeCode": "color", "isVariantAxis": true, "isRequired": true },
-    { "attributeCode": "size", "isVariantAxis": true, "isRequired": true }
+    { "attributeCode": "color", "isVariantAxis": true, "isRequired": true, "sortOrder": 0 },
+    { "attributeCode": "size", "isVariantAxis": true, "isRequired": true, "sortOrder": 1 }
   ],
   "variants": [
     {
@@ -293,3 +319,6 @@ Conflict response:
   zeros, large IRR values and Persian labels survive.
 - Public projection omits `costPrice`, barcode and internal signatures; publish is
   refused without an active variant.
+- Axis order is presentation-only: reordering a product's axes changes neither
+  variant identity, SKU nor price history, and the public `axes` array is
+  returned in the configured order.

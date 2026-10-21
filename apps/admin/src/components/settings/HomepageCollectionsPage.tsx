@@ -59,7 +59,7 @@ function HomepageCollectionsEditor() {
     try {
       const result = await readHomepageCollections(request.signal);
       if (!life.current.alive) return;
-      setConfig(result.config); setCategories(result.categories);
+      setConfig(result.config); setCategories(result.categories.filter(category => category.parentId === null));
       if (!pending.current) setSections(result.config.sections);
       setStale(false);
     } catch (cause) {
@@ -82,7 +82,7 @@ function HomepageCollectionsEditor() {
   }
 
   function addSection() {
-    if (sections.length >= 8) return;
+    if (sections.length >= 5) return;
     const category = categories.find(item => !sections.some(section => section.categoryId === item.id));
     if (!category) return;
     setSections(current => [...current, { categoryId: category.id, sortBy: 'NEWEST' }]);
@@ -120,7 +120,7 @@ function HomepageCollectionsEditor() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (life.current.flight || !config || loading || Boolean(loadError) || stale || uncertain) return;
-    if (sections.length > 8 || new Set(sections.map(section => section.categoryId)).size !== sections.length) {
+    if (sections.length !== 5 || new Set(sections.map(section => section.categoryId)).size !== sections.length) {
       setError(new ApiClientError({ code: 'INVALID_REQUEST', statusCode: 400, message: '', requestId: '' })); return;
     }
     pending.current = { body: { expectedVersion: config.version, sections }, key: `homepage-collections-${randomUuid()}` };
@@ -175,11 +175,11 @@ function HomepageCollectionsEditor() {
             </Paper>
           ))}
           <Stack direction="row" gap={1} flexWrap="wrap">
-            <Button type="button" variant="outlined" disabled={locked || sections.length >= 8 || categories.every(category => selected.has(category.id))} onClick={addSection}>افزودن دسته‌بندی</Button>
+            <Button type="button" variant="outlined" disabled={locked || sections.length >= 5 || categories.every(category => selected.has(category.id))} onClick={addSection}>افزودن دسته‌بندی</Button>
             {uncertain && <Button type="button" variant="outlined" onClick={() => void retry()}>بررسی و تکرار همان ذخیره</Button>}
-            <Button type="submit" variant="contained" disabled={locked || categories.length === 0}>{busy ? 'در حال ذخیره…' : 'ذخیرهٔ چیدمان'}</Button>
+            <Button type="submit" variant="contained" disabled={locked || categories.length < 5 || sections.length !== 5}>{busy ? 'در حال ذخیره…' : 'ذخیرهٔ چیدمان'}</Button>
           </Stack>
-          <Typography variant="caption" color="text.secondary">حداکثر ۸ کاروسل؛ ترتیب این فهرست، ترتیب نمایش در فروشگاه است. تنظیمات بعد از تأیید تازهٔ ورود ذخیره می‌شود.</Typography>
+          <Typography variant="caption" color="text.secondary">برای صفحهٔ اصلی دقیقاً ۵ دستهٔ مادر انتخاب کنید؛ زیرشاخه‌ها به‌صورت خودکار در محصولات همان دسته حساب می‌شوند. ترتیب این فهرست، ترتیب نمایش کاروسل‌هاست. تنظیمات بعد از تأیید تازهٔ ورود ذخیره می‌شود.</Typography>
         </Stack>
       </Paper>
     </Stack>

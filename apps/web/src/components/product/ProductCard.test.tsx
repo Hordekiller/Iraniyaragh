@@ -6,7 +6,7 @@ import { ProductCard } from './ProductCard'
 
 const product: CatalogProduct = {
   id: 'p-1', slug: 'no-price', name: 'کالای بدون قیمت', brand: null,
-  category: null, image: '/images/tool1.jpg', media: [], variants: [],
+  category: null, image: '/images/tool1.jpg', media: [], variants: [], axes: [],
   description: null, price: { amount: '0', currency: 'IRR' },
   priceAvailable: false, oldPrice: null, rating: null, reviews: 0,
   stockStatus: 'UNKNOWN', badge: null,

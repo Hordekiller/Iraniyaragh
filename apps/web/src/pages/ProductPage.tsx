@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -16,6 +16,12 @@ import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { MediaGallery } from '../components/product/MediaGallery'
 import { RichText } from '../components/product/RichText'
+import { VariantAxisSelector } from '../components/product/VariantAxisSelector'
+import {
+  resolveSelection,
+  resolvedSpecification,
+  type AxisSelection,
+} from '../lib/variant-cascade'
 import { serializeJsonLd } from '../lib/json-ld'
 import { richTextToPlainText } from '../lib/rich-text'
 import type { CatalogProduct } from '../services/catalog/types'
@@ -39,6 +45,7 @@ export function ProductPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [selectedVariantId, setSelectedVariantId] = useState('')
+  const [axisSelection, setAxisSelection] = useState<AxisSelection>({})
 
   const [resolvedSlug, setResolvedSlug] = useState(slug)
   if (resolvedSlug !== slug) {
@@ -61,6 +68,7 @@ export function ProductPage() {
             variant.stockStatus === 'LOW_STOCK',
         )
         setSelectedVariantId((sellable ?? p.variants[0])?.id ?? '')
+        setAxisSelection({})
         setLoading(false)
       })
       .catch(() => {
@@ -72,6 +80,16 @@ export function ProductPage() {
       cancelled = true
     }
   }, [api, slug])
+
+  // Resolved before the early returns so the hook order stays stable across
+  // the loading, not-found and loaded renders.
+  const axisResolution = useMemo(
+    () =>
+      product && product.axes.length > 0
+        ? resolveSelection(product, axisSelection)
+        : null,
+    [product, axisSelection],
+  )
 
   if (loading)
     return (
@@ -98,10 +116,12 @@ export function ProductPage() {
   }
 
   const item = product
-  const selectedVariant =
-    item.variants.find((variant) => variant.id === selectedVariantId) ??
-    item.variants[0] ??
-    null
+  const hasAxes = item.axes.length > 0
+  const selectedVariant = hasAxes
+    ? (axisResolution?.variant ?? null)
+    : (item.variants.find((variant) => variant.id === selectedVariantId) ??
+      item.variants[0] ??
+      null)
   const inCart = selectedVariant ? isInCart(selectedVariant.id) : false
   const qty = selectedVariant ? quantityOf(selectedVariant.id) : 0
   const available =
@@ -123,6 +143,14 @@ export function ProductPage() {
             100,
         )
       : 0
+  // With axes the price is only shown when it belongs to a matched variant;
+  // otherwise the lowest matching price is shown as a "starting from" range.
+  const axisPriceAmount = axisResolution?.lowestPrice ?? null
+  const displayPriceAmount = hasAxes
+    ? (selectedVariant?.price.amount ?? axisPriceAmount)
+    : (selectedVariant?.price.amount ?? product.price.amount)
+  const displayPricePrefix =
+    hasAxes && !selectedVariant && axisPriceAmount !== null ? 'از ' : ''
 
   async function handleAdd() {
     if (!available || !selectedVariant) return
@@ -254,7 +282,18 @@ export function ProductPage() {
             />
           )}
 
-          {product.variants.length > 1 && (
+          {hasAxes ? (
+            <section className="mt-5" aria-label="انتخاب تنوع">
+              <h2 className="text-sm font-black text-slate-900">
+                انتخاب تنوع
+              </h2>
+              <VariantAxisSelector
+                product={item}
+                selection={axisSelection}
+                onChange={setAxisSelection}
+              />
+            </section>
+          ) : product.variants.length > 1 ? (
             <fieldset className="mt-5">
               <legend className="text-sm font-black text-slate-900">
                 انتخاب تنوع
@@ -285,13 +324,23 @@ export function ProductPage() {
                 })}
               </div>
             </fieldset>
-          )}
+          ) : null}
 
-          {selectedVariant && selectedVariant.attributes.length > 0 && (
+          {selectedVariant &&
+            (hasAxes
+              ? resolvedSpecification(item, selectedVariant).length > 0
+              : selectedVariant.attributes.length > 0) && (
             <section className="mt-5" aria-label="ویژگی‌های تنوع انتخاب‌شده">
               <h2 className="text-sm font-black text-slate-900">مشخصات تنوع</h2>
               <dl data-testid="product-attributes" className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 px-3">
-                {selectedVariant.attributes.map(value => (
+                {(hasAxes
+                  ? resolvedSpecification(item, selectedVariant)
+                  : selectedVariant.attributes.map((value) => ({
+                      attributeCode: value.attributeCode,
+                      attributeName: value.attributeName,
+                      optionLabel: value.optionLabel,
+                    }))
+                ).map(value => (
                   <div key={value.attributeCode} className="flex justify-between gap-3 py-2 text-sm">
                     <dt className="text-slate-600">{value.attributeName}</dt>
                     <dd className="font-bold text-slate-900">{value.optionLabel}</dd>
@@ -303,8 +352,9 @@ export function ProductPage() {
 
           <div className="mt-5 flex items-baseline gap-3">
             <span className="font-black text-[22px] text-slate-900">
-              {selectedVariant || product.priceAvailable !== false
-                ? formatToman(selectedVariant?.price.amount ?? product.price.amount)
+              {displayPriceAmount !== null &&
+              (hasAxes ? (axisResolution?.matches.length ?? 0) > 0 : product.priceAvailable !== false)
+                ? `${displayPricePrefix}${formatToman(displayPriceAmount)}`
                 : 'قیمت در دسترس نیست'}
             </span>
             {product.oldPrice && (
@@ -364,7 +414,9 @@ export function ProductPage() {
                   {cartBusy
                     ? 'در حال آماده‌سازی سبد…'
                     : !selectedVariant
-                      ? 'تنوع قابل فروش موجود نیست'
+                      ? hasAxes
+                        ? 'گزینه‌ها را کامل انتخاب کنید'
+                        : 'تنوع قابل فروش موجود نیست'
                       : available
                         ? 'افزودن به سبد خرید'
                         : 'ناموجود'}

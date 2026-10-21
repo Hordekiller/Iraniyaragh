@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Header, Headers, Inject, Put, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ArrayMaxSize, ArrayUnique, IsArray, IsIn, IsInt, IsString, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsIn, IsInt, IsString, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { HomepageCollectionsConfig, HomepageCollectionsResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
@@ -17,7 +17,7 @@ class HomepageCollectionSectionDto {
 
 class HomepageCollectionsUpdateDto {
   @IsInt() @Min(0) expectedVersion!: number;
-  @IsArray() @ArrayMaxSize(8) @ArrayUnique(section => section.categoryId) @ValidateNested({ each: true }) @Type(() => HomepageCollectionSectionDto) sections!: HomepageCollectionSectionDto[];
+  @IsArray() @ArrayMinSize(5) @ArrayMaxSize(5) @ArrayUnique(section => section.categoryId) @ValidateNested({ each: true }) @Type(() => HomepageCollectionSectionDto) sections!: HomepageCollectionSectionDto[];
 }
 
 @ApiTags('homepage-collections')

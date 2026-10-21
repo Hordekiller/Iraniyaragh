@@ -49,11 +49,21 @@ export function HomePage() {
       ]).then(async ([categoriesResult, collectionsResult]) => {
         if (cancelled || current !== request) return
 
-        const categories = categoriesResult.status === 'fulfilled'
-          ? categoriesResult.value.filter(category => category.parentId === null)
-          : null
         const settings = collectionsResult.status === 'fulfilled' ? collectionsResult.value : null
         const configuredSections = settings?.sections ?? []
+        const allCategories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : []
+        const selectedRootIds = new Set(configuredSections.map(section => {
+          let category = allCategories.find(item => item.id === section.categoryId)
+          const seen = new Set<string>()
+          while (category?.parentId && !seen.has(category.id)) {
+            seen.add(category.id)
+            category = allCategories.find(item => item.id === category!.parentId)
+          }
+          return category?.parentId === null ? category.id : null
+        }).filter((id): id is string => id !== null))
+        const categories = categoriesResult.status === 'fulfilled'
+          ? categoriesResult.value.filter(category => category.parentId === null && selectedRootIds.has(category.id))
+          : null
 
         const categoryCollections = await Promise.all(configuredSections.map(async section => {
           const category = (categoriesResult.status === 'fulfilled' ? categoriesResult.value : []).find(item => item.id === section.categoryId)
@@ -133,7 +143,7 @@ export function HomePage() {
                 <h2 className="font-black text-slate-900">محصولات {category.name}</h2>
                 <p className="mt-2 text-sm text-slate-600">کالاهای این دسته فعلاً دریافت نشدند.</p>
               </section>
-            ) : products.length === 0 ? null : (
+            ) : (
               <ProductCarousel key={category.id} id={`home-category-${category.slug}`} title={sortBy === 'BESTSELLING' ? `پرفروش‌های ${category.name}` : `جدیدترین ${category.name}`} description={sortBy === 'BESTSELLING' ? 'بر پایهٔ فروش ثبت‌شده و منهای مرجوعی‌های ثبت‌شده' : 'جدیدترین کالاهای منتشرشده در این دسته'} products={products} moreHref={ROUTES.category(category.slug)} />
             ))}
             {catalog.categoryCollections.length === 0 && <p className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-600">کاروسل‌های دسته‌بندی از پنل مدیریت تنظیم می‌شوند.</p>}

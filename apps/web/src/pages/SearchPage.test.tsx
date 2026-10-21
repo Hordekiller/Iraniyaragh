@@ -17,6 +17,7 @@ function result(): CatalogListResult {
         image: '/images/hero1.jpg',
         media: [],
         variants: [],
+        axes: [],
         description: null,
         price: { amount: '28500000', currency: 'IRR' },
         oldPrice: null,

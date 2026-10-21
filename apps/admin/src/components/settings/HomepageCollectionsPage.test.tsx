@@ -8,11 +8,10 @@ vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => auth }));
 vi.mock('@/lib/settings/homepage-collections-api', () => ({ readHomepageCollections: vi.fn(), saveHomepageCollections: vi.fn() }));
 
 const categoryRows = [
-  { id: 'cabinet', name: 'کابینت', slug: 'cabinet', parentId: null, productCount: 3 },
-  { id: 'hinges', name: 'لولا', slug: 'hinges', parentId: 'cabinet', productCount: 2 },
-  { id: 'handles', name: 'دستگیره', slug: 'handles', parentId: 'cabinet', productCount: 1 },
+  ...Array.from({ length: 5 }, (_, index) => ({ id: `root-${index}`, name: `دسته ${index}`, slug: `root-${index}`, parentId: null, productCount: 3 - index })),
+  { id: 'hinges', name: 'لولا', slug: 'hinges', parentId: 'root-0', productCount: 2 },
 ];
-const config = { version: 2, updatedAt: null, sections: [{ categoryId: 'hinges', sortBy: 'NEWEST' as const }] };
+const config = { version: 2, updatedAt: null, sections: Array.from({ length: 5 }, (_, index) => ({ categoryId: `root-${index}`, sortBy: 'NEWEST' as const })) };
 
 describe('homepage category carousel settings', () => {
   beforeEach(() => {
@@ -21,11 +20,13 @@ describe('homepage category carousel settings', () => {
     vi.mocked(saveHomepageCollections).mockReset().mockResolvedValue({ ...config, version: 3 });
   });
 
-  it('loads editable nested categories, describes truthful ranking, and saves ordered choices with version and idempotency', async () => {
+  it('loads five parent categories, excludes subcategories and saves choices with version and idempotency', async () => {
     render(<HomepageCollectionsPage />);
     expect(await screen.findByText('دسته‌بندی‌های قابل نمایش را انتخاب و ترتیب و معیار هر کاروسل را تعیین کنید.')).toBeInTheDocument();
     expect(screen.getByText(/لغوها و مرجوعی ثبت‌شده از رتبه کم می‌شوند/)).toBeInTheDocument();
     expect(screen.getByText('بخش 1')).toBeInTheDocument();
+    expect(screen.getByText('بخش 5')).toBeInTheDocument();
+    expect(screen.queryByText('لولا')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'ذخیرهٔ چیدمان' }));
     await screen.findByText('چیدمان صفحهٔ اصلی ذخیره شد.');
     expect(saveHomepageCollections).toHaveBeenCalledWith({ expectedVersion: 2, sections: config.sections }, expect.stringMatching(/^homepage-collections-/));

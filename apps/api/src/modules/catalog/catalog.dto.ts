@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsDefined, IsEnum, IsIn, IsInt, IsNotIn, IsObject, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsDefined, IsEnum, IsIn, IsInt, IsNotIn, IsObject, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const AMOUNT = /^\d{1,15}$/u;
@@ -63,6 +63,8 @@ export class ProductAttributeConfigurationDto {
   @IsString() @MaxLength(40) attributeCode!: string;
   @IsBoolean() isVariantAxis!: boolean;
   @IsOptional() @IsBoolean() isRequired?: boolean;
+  @ApiPropertyOptional({ description: 'Display order of the configuration; lower values are shown first.' })
+  @IsOptional() @IsInt() @Min(0) @Max(1000) sortOrder?: number;
 }
 
 export class ProductAttributeConfigurationUpdateDto {

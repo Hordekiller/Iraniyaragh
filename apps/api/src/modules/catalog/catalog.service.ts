@@ -4,7 +4,7 @@ import { Prisma, ProductStatus } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import type {
   AttributeDefinitionResponse, AttributeListResponse, AttributeOptionResponse, BrandListResponse, BrandResponse, CategoryListResponse, CategoryResponse, CategoryTreeResponse,
-  ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, PublicProductMediaImage, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse,
+  ProductDetailPublicResponse, ProductDetailResponse, ProductListResponse, ProductStatusResponse, ProductVariantResponse, PublicProductAxis, PublicProductMediaImage, VariantGeneratePreviewResponse, VariantGenerateResponse, VariantPriceHistoryResponse, VariantPriceResponse,
 } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import type { EnvironmentVariables } from '../../config/environment';
@@ -33,7 +33,7 @@ type BrandRow = { id: string; name: string; slug: string; _count: { products: nu
 type CategoryRow = { id: string; name: string; slug: string; parentId: string | null; _count: { products: number } };
 type VariantAttributeValueRow = { attributeId: string; optionId: string; attribute: { code: string; name: string }; option: { code: string; label: string } };
 type VariantRow = { id: string; sku: string; barcode: string | null; title: string | null; costPrice: bigint | null; salePrice: bigint; weightGrams: number | null; lengthCm?: number | null; widthCm?: number | null; heightCm?: number | null; isActive: boolean; status?: string; version?: number; createdAt: Date; updatedAt: Date; attributeValues?: VariantAttributeValueRow[] };
-type ProductAttributeRow = { attributeId: string; isVariantAxis: boolean; isRequired: boolean; attribute: { code: string; name: string } };
+type ProductAttributeRow = { attributeId: string; isVariantAxis: boolean; isRequired: boolean; sortOrder?: number; attribute: { code: string; name: string; status?: string } };
 type PublicRenditionRow = { objectKey: string; format: string; width: number; height: number; purpose: string };
 type PublicMediaRow = { id: string; kind: string; role: string; position: number; altText: string | null; caption: string | null; width: number | null; height: number | null; renditions: PublicRenditionRow[] };
 type ProductDetailRow = { id: string; name: string; slug: string; description: string | null; status: ProductStatus; version: number; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; brand: BrandRow | null; category: CategoryRow | null; variants: VariantRow[]; attributes?: ProductAttributeRow[]; media?: PublicMediaRow[] };
@@ -60,10 +60,11 @@ export class CatalogService {
   }
 
   async configureProductAttributes(actorId: string, id: string, input: ProductAttributeConfigurationUpdateDto): Promise<ProductDetailResponse> {
-    const configurations = input.configurations.map(configuration => ({
+    const configurations = input.configurations.map((configuration, index) => ({
       ...configuration,
       attributeCode: configuration.attributeCode.trim(),
       isRequired: configuration.isRequired ?? false,
+      sortOrder: configuration.sortOrder ?? index,
     }));
     const codes = configurations.map(configuration => configuration.attributeCode);
     if (new Set(codes).size !== codes.length || configurations.some(configuration => configuration.isRequired && !configuration.isVariantAxis)) {
@@ -96,7 +97,7 @@ export class CatalogService {
       if (current.status === ProductStatus.ACTIVE) this.assertRequiredVariantValues(configurations.map(configuration => ({ attributeId: byCode.get(configuration.attributeCode)!, isRequired: configuration.isRequired })), current.variants);
       await tx.productAttributeConfiguration.deleteMany({ where: { productId: id } });
       if (configurations.length) {
-        await tx.productAttributeConfiguration.createMany({ data: configurations.map(configuration => ({ productId: id, attributeId: byCode.get(configuration.attributeCode)!, isVariantAxis: configuration.isVariantAxis, isRequired: configuration.isRequired })) });
+        await tx.productAttributeConfiguration.createMany({ data: configurations.map(configuration => ({ productId: id, attributeId: byCode.get(configuration.attributeCode)!, isVariantAxis: configuration.isVariantAxis, isRequired: configuration.isRequired, sortOrder: configuration.sortOrder ?? 0 })) });
       }
       const changed = await tx.product.updateMany({ where: { id, version: input.expectedVersion }, data: { version: { increment: 1 } } });
       if (changed.count !== 1) throw new ConflictException({ code: 'STALE_VERSION', message: 'version conflict', details: { expected: input.expectedVersion, actual: current.version } });
@@ -619,15 +620,39 @@ export class CatalogService {
   }
 
   private productInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, variants: true } as const; }
-  private adminProductInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, media: { where: { state: 'READY' as const, kind: 'IMAGE' as const }, orderBy: { position: 'asc' as const }, include: { renditions: true } }, attributes: { include: { attribute: { select: { code: true, name: true } } }, orderBy: { attribute: { code: 'asc' as const } } }, variants: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] as Prisma.ProductVariantOrderByWithRelationInput[], include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } } } as const; }
+  private adminProductInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, media: { where: { state: 'READY' as const, kind: 'IMAGE' as const }, orderBy: { position: 'asc' as const }, include: { renditions: true } }, attributes: { include: { attribute: { select: { code: true, name: true } } }, orderBy: [{ sortOrder: 'asc' as const }, { attribute: { code: 'asc' as const } }] as Prisma.ProductAttributeConfigurationOrderByWithRelationInput[] }, variants: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] as Prisma.ProductVariantOrderByWithRelationInput[], include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } } } as const; }
   private publicImageMediaFilter() { return { state: 'READY' as const, kind: 'IMAGE' as const, altText: { not: null }, width: { not: null }, height: { not: null } } as const; }
   private publicListMediaInclude() { return { variants: { where: { isActive: true }, select: { salePrice: true } }, media: { where: { ...this.publicImageMediaFilter(), role: 'PRIMARY' as const }, take: 1, include: { renditions: { where: { purpose: 'CARD' }, orderBy: { format: 'asc' as const } } } } } as const; }
-  private publicProductInclude() { return { brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, attributes: { include: { attribute: { select: { code: true, name: true } } } }, variants: { where: { isActive: true }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] as Prisma.ProductVariantOrderByWithRelationInput[], include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } }, media: { where: this.publicImageMediaFilter(), orderBy: { position: 'asc' as const }, include: { renditions: { orderBy: { width: 'asc' as const } } } } } as const; }
+  private publicProductInclude() { return { brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, attributes: { include: { attribute: { select: { code: true, name: true, status: true } } }, orderBy: [{ sortOrder: 'asc' as const }, { attribute: { code: 'asc' as const } }] as Prisma.ProductAttributeConfigurationOrderByWithRelationInput[] }, variants: { where: { isActive: true }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] as Prisma.ProductVariantOrderByWithRelationInput[], include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } }, media: { where: this.publicImageMediaFilter(), orderBy: { position: 'asc' as const }, include: { renditions: { orderBy: { width: 'asc' as const } } } } } as const; }
   private categoryInclude() { return { children: true } as const; }
   private productListItem(row: { id: string; name: string; slug: string; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; media?: PublicMediaRow[]; variants?: Array<{ salePrice: bigint }> }) { const prices = row.variants?.map(variant => variant.salePrice) ?? []; const startingPrice = prices.length ? { amount: prices.reduce((lowest, price) => price < lowest ? price : lowest, prices[0]!).toString(), currency: 'IRR' as const } : null; const primary = row.media && row.media[0] && row.media[0].kind === 'IMAGE' && row.media[0].altText !== null && row.media[0].width !== null && row.media[0].height !== null ? this.publicImage(row.media[0]) : null; return { id: row.id, name: row.name, slug: row.slug, status: statusToApi(row.status), brandId: row.brandId, categoryId: row.categoryId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), ...(row.media ? { primaryMedia: primary } : {}), ...(row.variants ? { startingPrice } : {}) }; }
   private categoryNode(row: CategoryInput): CategoryTreeNode { return { id: row.id, name: row.name, slug: row.slug, parentId: row.parentId, children: (row.children ?? []).map(child => this.categoryNode(child)), createdAt: new Date(row.createdAt).toISOString(), updatedAt: new Date(row.updatedAt).toISOString() }; }
-  private productDetail(row: ProductDetailRow) { return { ...this.productListItem(row), version: row.version, description: this.descriptionProjection(row.description, row.media), brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, attributes: row.attributes?.map(attribute => ({ attributeCode: attribute.attribute.code, attributeName: attribute.attribute.name, isVariantAxis: attribute.isVariantAxis, isRequired: attribute.isRequired })), variants: row.variants.map(variant => this.productVariantPrivateDetail(variant, row.attributes)) }; }
-  private productDetailPublic(row: ProductDetailRow) { return { ...this.productListItem(row), description: this.descriptionProjection(row.description, row.media), brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantPublic(variant, row.attributes)), media: (row.media ?? []).filter(media => media.kind === 'IMAGE').map(media => this.publicImage(media)) }; }
+  private productDetail(row: ProductDetailRow) { return { ...this.productListItem(row), version: row.version, description: this.descriptionProjection(row.description, row.media), brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, attributes: row.attributes?.map(attribute => ({ attributeCode: attribute.attribute.code, attributeName: attribute.attribute.name, isVariantAxis: attribute.isVariantAxis, isRequired: attribute.isRequired, sortOrder: attribute.sortOrder ?? 0 })), variants: row.variants.map(variant => this.productVariantPrivateDetail(variant, row.attributes)) }; }
+  private productDetailPublic(row: ProductDetailRow) { return { ...this.productListItem(row), description: this.descriptionProjection(row.description, row.media), brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantPublic(variant, row.attributes)), media: (row.media ?? []).filter(media => media.kind === 'IMAGE').map(media => this.publicImage(media)), axes: this.publicProductAxes(row) }; }
+  /**
+   * Ordered variant axes of a product together with the options that are
+   * actually reachable.
+   *
+   * Only options carried by at least one active variant are exposed, so the
+   * storefront never offers a selection that cannot be resolved to a
+   * sellable variant. The cascade itself is resolved on the client from the
+   * axis values each variant carries.
+   */
+  private publicProductAxes(row: ProductDetailRow): PublicProductAxis[] {
+    const configurations = (row.attributes ?? []).filter(configuration => configuration.isVariantAxis);
+    const axes: PublicProductAxis[] = [];
+    for (const configuration of configurations) {
+      const options = new Map<string, string>();
+      for (const variant of row.variants) {
+        for (const value of variant.attributeValues ?? []) {
+          if (value.attributeId !== configuration.attributeId) continue;
+          if (!options.has(value.option.code)) options.set(value.option.code, value.option.label);
+        }
+      }
+      axes.push({ attributeCode: configuration.attribute.code, attributeName: configuration.attribute.name, sortOrder: configuration.sortOrder ?? 0, options: [...options.entries()].map(([optionCode, optionLabel]) => ({ optionCode, optionLabel })) });
+    }
+    return axes.sort((left, right) => left.sortOrder - right.sortOrder || left.attributeCode.localeCompare(right.attributeCode));
+  }
   private publicImage(media: PublicMediaRow): PublicProductMediaImage {
     if (media.kind !== 'IMAGE' || media.width === null || media.height === null || media.altText === null) throw new Error('Invalid ready public image projection.');
     return { id: media.id, kind: 'IMAGE', position: media.position, role: media.role as PublicProductMediaImage['role'], alt: media.altText, caption: media.caption, width: media.width, height: media.height, sources: media.renditions.map(rendition => ({ url: `${this.mediaOrigin().replace(/\/$/u, '')}/${rendition.objectKey.split('/').map(encodeURIComponent).join('/')}`, width: rendition.width, height: rendition.height, type: rendition.format === 'jpeg' ? 'image/jpeg' : `image/${rendition.format}` })) };
@@ -655,10 +680,13 @@ export class CatalogService {
       throw error;
     }
   }
-  private variantAttributeValues(variant: { attributeValues?: VariantAttributeValueRow[] }, attributes?: readonly { attributeId: string; isVariantAxis: boolean }[]) {
+  private variantAttributeValues(variant: { attributeValues?: VariantAttributeValueRow[] }, attributes?: readonly { attributeId: string; isVariantAxis: boolean; attribute?: { status?: string } }[]) {
     return (variant.attributeValues ?? []).flatMap(value => {
       const configuration = attributes?.find(item => item.attributeId === value.attributeId);
-      return configuration ? [{ attributeCode: value.attribute.code, attributeName: value.attribute.name, optionCode: value.option.code, optionLabel: value.option.label, isVariantAxis: configuration.isVariantAxis }] : [];
+      if (!configuration) return [];
+      const status = configuration.attribute?.status;
+      if (status && status !== 'ACTIVE') return [];
+      return [{ attributeCode: value.attribute.code, attributeName: value.attribute.name, optionCode: value.option.code, optionLabel: value.option.label, isVariantAxis: configuration.isVariantAxis }];
     });
   }
   private productVariantPublic(variant: VariantRow, attributes?: readonly ProductAttributeRow[]) { return { id: variant.id, sku: variant.sku, title: variant.title ?? undefined, salePrice: { amount: variant.salePrice.toString(), currency: 'IRR' as const }, weightGrams: variant.weightGrams ?? undefined, isActive: variant.isActive, attributeValues: this.variantAttributeValues(variant, attributes), createdAt: variant.createdAt.toISOString(), updatedAt: variant.updatedAt.toISOString() }; }
@@ -680,7 +708,7 @@ export class CatalogService {
     return { ...this.attributeSummary(attribute), options: attribute.options.map(option => this.optionSummary(option)) };
   }
   private async loadGenerationContext(client: PrismaService | Prisma.TransactionClient, productId: string): Promise<GenerationContext> {
-    const product = await client.product.findUnique({ where: { id: productId }, select: { slug: true, status: true, attributes: { orderBy: { attribute: { code: 'asc' } }, include: { attribute: { include: { options: { where: { status: 'ACTIVE' }, orderBy: { code: 'asc' } } } } } } } });
+    const product = await client.product.findUnique({ where: { id: productId }, select: { slug: true, status: true, attributes: { orderBy: [{ sortOrder: 'asc' }, { attribute: { code: 'asc' } }], include: { attribute: { include: { options: { where: { status: 'ACTIVE' }, orderBy: { code: 'asc' } } } } } } } });
     if (!product) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Product not found.' });
     return { slug: product.slug, status: product.status, requiredAttributes: product.attributes, axes: product.attributes.filter(axis => axis.isVariantAxis && axis.attribute.status === 'ACTIVE').map(axis => ({ id: axis.attribute.id, code: axis.attribute.code, name: axis.attribute.name, options: axis.attribute.options.map(option => ({ attributeId: axis.attribute.id, attributeCode: axis.attribute.code, attributeName: axis.attribute.name, optionId: option.id, optionCode: option.code, optionLabel: option.label })) })) };
   }

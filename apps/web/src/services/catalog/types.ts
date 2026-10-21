@@ -26,6 +26,22 @@ export type CatalogVariant = {
   price: Money
   attributes: VariantAttributeValue[]
   stockStatus: StockStatus
+  /** Net weight in grams; null when the variant has no recorded weight. */
+  weightGrams: number | null
+}
+
+/**
+ * One step of the storefront's cascading variant selector.
+ *
+ * `options` only contains choices that a live variant actually carries, so a
+ * customer never reaches a dead end where the selected combination has no
+ * sellable variant.
+ */
+export type CatalogAxis = {
+  attributeCode: string
+  attributeName: string
+  sortOrder: number
+  options: Array<{ optionCode: string; optionLabel: string }>
 }
 
 export type CatalogProduct = {
@@ -39,6 +55,8 @@ export type CatalogProduct = {
   media: PublicProductMedia[]
   /** Sellable choices. List projections omit these; detail projections populate them. */
   variants: CatalogVariant[]
+  /** Ordered variant axes rendered as a cascading selector. */
+  axes: CatalogAxis[]
   description: string | null
   /** Lowest active-variant sale price, in IRR (Rial). */
   price: Money

@@ -43,6 +43,12 @@ export type ProductAttributeConfigurationPayload = {
   attributeCode: string;
   isVariantAxis: boolean;
   isRequired?: boolean;
+  /**
+   * Display order of the configuration. Lower values are shown first. The
+   * storefront renders the variant axes of a product as a cascade of
+   * selectors in this order.
+   */
+  sortOrder?: number;
 };
 
 export type CategoryNode = {
@@ -196,6 +202,11 @@ export type ProductAttributeConfiguration = {
   attributeName: string;
   isVariantAxis: boolean;
   isRequired: boolean;
+  /**
+   * Display order of the configuration. Lower values are shown first. The
+   * storefront renders variant axes as a cascade of selectors in this order.
+   */
+  sortOrder?: number;
 };
 
 export type ProductDetail = ProductListItem & {
@@ -214,12 +225,31 @@ export type ProductVariantPublic = Omit<
   'barcode' | 'costPrice'
 >;
 
+export type PublicProductAxis = {
+  attributeCode: string;
+  attributeName: string;
+  /** Display order of the axis in the selector cascade. Lower comes first. */
+  sortOrder: number;
+  /**
+   * Options that are actually reachable from the product's active variants.
+   * An option is listed only when at least one active variant carries it, so
+   * the storefront never offers a selection that cannot be resolved.
+   */
+  options: Array<{ optionCode: string; optionLabel: string }>;
+};
+
 export type ProductDetailPublic = ProductListItem & {
   description: string | null;
   brand: BrandSummary | null;
   category: CategorySummary | null;
   variants: ProductVariantPublic[];
   media: PublicProductMedia[];
+  /**
+   * Ordered variant axes of the product. The storefront renders them as a
+   * cascade of selectors; the matching variant is resolved from the axis
+   * values carried by each entry of `variants`.
+   */
+  axes: PublicProductAxis[];
 };
 
 export type ProductDetailPublicResponse = ApiSuccess<{
