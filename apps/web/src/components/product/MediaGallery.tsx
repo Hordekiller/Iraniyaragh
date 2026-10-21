@@ -143,7 +143,7 @@ export function MediaGallery({
   return (
     <div className="relative rounded-[28px] bg-slate-50 overflow-hidden lg:sticky lg:top-24 self-start">
       <div
-        className="relative flex items-center justify-center bg-slate-50"
+        className="relative flex max-h-[55svh] items-center justify-center bg-slate-50 lg:max-h-[640px]"
         style={stageRatio}
       >
         {active.kind === "IMAGE" ? (
@@ -223,7 +223,7 @@ export function MediaGallery({
           type="button"
           onClick={prev}
           aria-label="تصویر قبلی"
-          className="absolute top-1/2 right-3 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 shadow flex items-center justify-center text-slate-900 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 motion-reduce:transition-none"
+          className="absolute top-1/2 right-3 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 shadow flex items-center justify-center text-slate-900 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 motion-reduce:transition-none"
         >
           <ChevronRight size={20} aria-hidden="true" />
         </button>
@@ -233,7 +233,7 @@ export function MediaGallery({
           type="button"
           onClick={next}
           aria-label="تصویر بعدی"
-          className="absolute top-1/2 left-3 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 shadow flex items-center justify-center text-slate-900 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 motion-reduce:transition-none"
+          className="absolute top-1/2 left-3 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 shadow flex items-center justify-center text-slate-900 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 motion-reduce:transition-none"
         >
           <ChevronLeft size={20} aria-hidden="true" />
         </button>
