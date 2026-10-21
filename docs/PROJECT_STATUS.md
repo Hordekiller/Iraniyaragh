@@ -1,15 +1,19 @@
 # Project Status
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
+> **Current reconciliation — 2026-10-20:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
 > owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
+> Source `origin/main`: `f4476d83e9791b8f58b7f0a5630837c4a53db54d`.
+> Verified VPS (deployed): `7dbd0001959f398635467bedbd7d151c54676599`
+> (drift vs main is the test-only #444 merge).
 > [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
 > historical closure is not independent acceptance of every original criterion.
 > Dated checkpoints below are history; accepted domain and release criteria remain.
+> `ORDER_EXPIRY_ENABLED=false` remains fail-closed pending explicit owner instruction.
 
-## Current delivered state — 2026-10-18
+## Current delivered state — 2026-10-20
 
-Main and verified API/Admin/Web/media-worker run `e2070948587b438dc5da55d8560ab870e23bf32d`.
+Main is `f4476d83e9791b8f58b7f0a5630837c4a53db54d`; verified API/Admin/Web/
+media-worker on the VPS run `7dbd0001959f398635467bedbd7d151c54676599`.
 Official exact-SHA publication, restored PostgreSQL backup, migration completion,
 container digests, nginx and HTTPS were verified. Main CI: 3093 application units,
 418 PostgreSQL cases, 10 separate database security cases and 136 browser passes;
@@ -17,17 +21,21 @@ container digests, nginx and HTTPS were verified. Main CI: 3093 application unit
 
 - Deployed: #452 shipment-test synchronization, #456 root-category drill-down,
   #445 genuine-token auth-boundary tests, #447 cross-tab protected-request recovery.
+- Merged to main after the deployed SHA: #444 stocktake two-location upward+downward
+  reconciliation test (test-only; VPS deploy not required).
 - Source/runtime present: catalog/Jodit/images, suppliers/receiving/stocktake,
   server-priced checkout, staff credit/receipts/credit returns, operational reports,
   store-invoice policies/drafts/numbered immutable issuance/customer publication.
 - #351 is closed against its original automated ledger/receipt test criteria and
   current desktop/mobile CI; this does not accept physical warehouse operations.
 - Still open: #400 real authenticated idle/mutation acceptance; #450 durable
-  payment-aware expiry; #393 signature freshness; broader #388/#389/#403 acceptance.
-- Missing engineering: private PDF jobs/download (#419), corrections (#421), exports
-  (#423), general returns (#348), role administration (#359), articles (#125),
-  accepted public rendering/discovery (#126/#127/#129). Cost valuation (#422) stays
-  inactive by owner decision; configured policy is not a cost ledger.
+  payment-aware expiry; #393 signature freshness; broader #388/#389/#403 acceptance;
+  #347/#352 automated criteria covered but operator physical-count acceptance pending.
+- Missing engineering: private PDF jobs/download (#419, open PRs #439/#449 not merged),
+  corrections (#421), exports (#423), general returns (#348), role administration
+  (#359), articles (#125), accepted public rendering/discovery (#126/#127/#129).
+  Cost valuation (#422) stays inactive by owner decision (ADR-0031); configured
+  policy is not a cost ledger.
 
 See the central matrix for precise API/UI/database/test references and open PRs.
 The paragraphs below preserve the earlier integration checkpoint, not current absence.

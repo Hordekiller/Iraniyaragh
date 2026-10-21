@@ -1,6 +1,6 @@
 {
-  "checkpoint": "2026-10-18",
-  "sourceBaseline": "e2070948587b438dc5da55d8560ab870e23bf32d",
+  "checkpoint": "2026-10-20",
+  "sourceBaseline": "f4476d83e9791b8f58b7f0a5630837c4a53db54d",
   "requirementsReviewed": 150,
   "allCriteriaIndependentlyAccepted": false,
   "auditComplete": false,
@@ -3502,7 +3502,7 @@
     "mergedPRsWithIndependentApprovalOnFinalHead": 119,
     "limitation": "Review metadata is not independent acceptance of every functional, runtime or external-provider criterion."
   },
-  "deployedBaseline": "e2070948587b438dc5da55d8560ab870e23bf32d",
+  "deployedBaseline": "7dbd0001959f398635467bedbd7d151c54676599",
   "issueCounts": {
     "total": 150,
     "open": 51,
