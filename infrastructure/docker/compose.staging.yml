@@ -165,6 +165,13 @@ services:
       CLAMD_CONF_MaxQueue: '4'
       CLAMD_CONF_StreamMaxLength: '20M'
       FRESHCLAM_CHECKS: '12'
+      # Signature source. The official CDN (database.clamav.net) is the default
+      # and stays the only correct choice when reachable. The deployment network
+      # was observed receiving HTTP 403 from that CDN (#393), so an operator may
+      # point FreshClam at an approved private mirror or proxy instead. This is
+      # still CVD/TLS-verified by FreshClam: never an unverified manual copy.
+      # The value is a freshclam.conf `DatabaseMirror` host (no URL, no path).
+      FRESHCLAM_CONF_DatabaseMirror: ${FRESHCLAM_DATABASE_MIRROR:-database.clamav.net}
     volumes:
       - malware_signatures:/var/lib/clamav
     healthcheck:

@@ -366,6 +366,43 @@ curl --fail http://127.0.0.1:4000/api/v1/health/live
 curl --fail http://127.0.0.1:4000/api/v1/health/ready
 ```
 
+### ClamAV signature maintenance (#393)
+
+A healthy ClamD process does not prove its signatures are current: FreshClam can
+exit fatally while ClamD keeps serving the last loaded database, and media
+uploads keep passing a scan against stale signatures. Treat updater health and
+loaded-signature age as separate facts.
+
+The deployment network was observed receiving HTTP 403 from the official ClamAV
+CDN (`database.clamav.net`, `cf-ray` …`-FRA`), so FreshClam exited and the loaded
+`daily` database stayed at its last version. Resolve the network/CDN access with
+the hosting/CDN operator, or point FreshClam at an approved private mirror/proxy:
+
+- Set `FRESHCLAM_DATABASE_MIRROR` in `.env.staging` to a freshclam.conf
+  `DatabaseMirror` host (no scheme, no path). Unset keeps the official CDN, which
+  is correct whenever it is reachable.
+- FreshClam still verifies the CVD signature and TLS. Never substitute an
+  unverified manual signature copy, and never clear the CDN cooldown to evade a
+  block. A mirror that is itself stale is not an accepted fix.
+
+Supervise the loaded signature age, not just the process, with the read-only
+gate (safe to run against a live deployment and to schedule):
+
+```bash
+# Fails (exit 1) when the loaded daily database is older than 7 days.
+./scripts/deploy/check-clamav-freshness.sh
+./scripts/deploy/check-clamav-freshness.sh 3   # custom max age in days
+```
+
+It reads `sigtool --info` from inside the running `malware-scanner` service,
+prints only the engine version, signature build date and day count, and never
+downloads, reloads, restarts or writes a signature file. Exit 2 means the state
+could not be read (treat as unknown, not healthy). The acceptance criteria in
+#393 — an approved route that downloads and verifies current databases, a ClamD
+reload inside the staging memory budget, supervised updater recovery and a
+subsequent observed update — remain open until an approved route exists and is
+observed; this gate only makes the failure visible.
+
 ## Background jobs
 
 Use queues for work that should not slow synchronous user requests, such as:

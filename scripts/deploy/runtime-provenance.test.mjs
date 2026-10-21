@@ -44,6 +44,10 @@ for (const [name, recorded, selected] of [
       }
       assert.equal(configuration.services.api.environment.PAYMENT_PROVIDER_MODE, 'disabled');
       assert.equal(configuration.services.api.environment.SMS_PROVIDER_MODE, 'disabled');
+      const scanner = configuration.services['malware-scanner'].environment;
+      assert.equal(scanner.FRESHCLAM_CONF_DatabaseMirror, 'database.clamav.net',
+        'malware-scanner: default signature mirror is the official CDN');
+      assert.equal(scanner.CLAMD_CONF_StreamMaxLength, '20M', 'malware-scanner: stream limit preserved');
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
