@@ -82,7 +82,11 @@ export function ProductCarousel({
         aria-label={`فهرست ${title}; برای پیمایش افقی از کلیدهای جهت‌دار استفاده کنید`}
         className="mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-px-1 pb-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] sm:gap-4"
       >
-        {products.map((product) => (
+        {products.length === 0 ? (
+          <li className="w-full shrink-0 snap-start rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-600">
+            هنوز محصول منتشرشده‌ای در این دسته نیست. پس از تکمیل و انتشار کالاها، آن‌ها در این بخش نمایش داده می‌شوند.
+          </li>
+        ) : products.map((product) => (
           <li
             key={product.id}
             className="w-[72%] shrink-0 snap-start sm:w-[42%] lg:w-[calc(25%-12px)]"

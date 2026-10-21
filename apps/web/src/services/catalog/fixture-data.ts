@@ -27,9 +27,13 @@ function tomanToMoney(toman: number): Money {
 // tell it otherwise. The dataset is fabricated sample data, so shipping it in
 // a real deployment bundle is both dead weight and a correctness risk.
 function p(
-  partial: Omit<CatalogProduct, 'price' | 'oldPrice' | 'media' | 'variants'> & {
+  partial: Omit<
+    CatalogProduct,
+    'price' | 'oldPrice' | 'media' | 'variants' | 'axes'
+  > & {
     priceToman: number
     oldToman?: number
+    axes?: CatalogProduct['axes']
   },
 ): CatalogProduct {
   const price = tomanToMoney(partial.priceToman)
@@ -49,8 +53,10 @@ function p(
         price,
         attributes: [],
         stockStatus: partial.stockStatus,
+        weightGrams: null,
       },
     ],
+    axes: partial.axes ?? [],
     description: partial.description,
     price,
     oldPrice:

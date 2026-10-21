@@ -29,7 +29,7 @@ class TestModule {}
 
 describe('homepage collection settings HTTP security and contract', () => {
   let app: INestApplication; let origin: string;
-  const body = { expectedVersion: 0, sections: [{ categoryId: 'hinges', sortBy: 'BESTSELLING' }] };
+  const body = { expectedVersion: 0, sections: Array.from({ length: 5 }, (_, index) => ({ categoryId: `root-${index}`, sortBy: index === 0 ? 'BESTSELLING' : 'NEWEST' })) };
   const call = (method: 'GET' | 'PUT', suffix: '' | '/admin', token?: string, input: unknown = body, key = 'homepage-key') => fetch(`${origin}/api/v1/catalog/homepage-collections${suffix}`, {
     method, headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), 'content-type': 'application/json', ...(key ? { 'idempotency-key': key } : {}) }, body: method === 'PUT' ? JSON.stringify(input) : undefined,
   });
@@ -56,7 +56,8 @@ describe('homepage collection settings HTTP security and contract', () => {
     expect((await call('PUT', '/admin', 'staff')).status).toBe(200);
     expect(service.update).toHaveBeenCalledWith('operator', expect.any(String), body, 'homepage-key');
     for (const invalid of [
-      { ...body, actorId: 'spoofed' }, { ...body, sections: Array.from({ length: 9 }, (_, index) => ({ categoryId: `c-${index}`, sortBy: 'NEWEST' })) },
+      { ...body, actorId: 'spoofed' }, { ...body, sections: [] },
+      { ...body, sections: Array.from({ length: 6 }, (_, index) => ({ categoryId: `c-${index}`, sortBy: 'NEWEST' })) },
       { ...body, sections: [{ categoryId: 'hinges', sortBy: 'reviews' }] }, { ...body, sections: [{ categoryId: 'hinges', sortBy: 'NEWEST', title: 'injected' }] },
     ]) expect((await call('PUT', '/admin', 'staff', invalid)).status).toBe(400);
     expect((await call('PUT', '/admin', 'staff', body, '')).status).toBe(400);

@@ -27,7 +27,7 @@ const product: ProductDetail = {
   updatedAt: '2026-01-01T00:00:00Z',
   createdAt: '2026-01-01T00:00:00Z',
   attributes: [
-    { attributeCode: 'color', attributeName: 'رنگ', isVariantAxis: true, isRequired: false },
+    { attributeCode: 'color', attributeName: 'رنگ', isVariantAxis: true, isRequired: false, sortOrder: 0 },
   ],
   variants: [],
 };
@@ -82,13 +82,38 @@ describe('AttributeConfigEditor', () => {
         'p1',
         3,
         expect.arrayContaining([
-          { attributeCode: 'color', isVariantAxis: true, isRequired: false },
-          { attributeCode: 'size', isVariantAxis: false, isRequired: false },
+          { attributeCode: 'color', isVariantAxis: true, isRequired: false, sortOrder: 0 },
+          { attributeCode: 'size', isVariantAxis: false, isRequired: false, sortOrder: 1 },
         ]),
       ),
     );
     expect(await screen.findByText(/ویژگی‌های «قفل دستگیره‌ای» به‌روزرسانی شد/)).toBeInTheDocument();
     expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('reorders the axes and persists the new display order', async () => {
+    renderEditor({
+      product: {
+        ...product,
+        attributes: [
+          { attributeCode: 'color', attributeName: 'رنگ', isVariantAxis: true, isRequired: false, sortOrder: 0 },
+          { attributeCode: 'size', attributeName: 'سایز', isVariantAxis: true, isRequired: false, sortOrder: 1 },
+        ],
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'انتقال ویژگی size به بالا' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیرهٔ ویژگی‌ها' }));
+
+    await waitFor(() =>
+      expect(mocks.configureProductAttributes).toHaveBeenCalledWith(
+        'p1',
+        3,
+        expect.arrayContaining([
+          { attributeCode: 'size', isVariantAxis: true, isRequired: false, sortOrder: 0 },
+          { attributeCode: 'color', isVariantAxis: true, isRequired: false, sortOrder: 1 },
+        ]),
+      ),
+    );
   });
 
   it('drops the required flag when an axis is unchecked and hides the save button without changes', () => {

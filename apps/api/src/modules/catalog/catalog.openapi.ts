@@ -40,9 +40,19 @@ const publicProductItem: SchemaObject = {
   },
 };
 
+const publicProductAxis: SchemaObject = {
+  type: 'object',
+  required: ['attributeCode', 'attributeName', 'sortOrder', 'options'],
+  properties: {
+    attributeCode: { type: 'string' }, attributeName: { type: 'string' },
+    sortOrder: { type: 'integer', minimum: 0, description: 'Display order of the axis in the selector cascade; lower values come first.' },
+    options: { type: 'array', items: { type: 'object', required: ['optionCode', 'optionLabel'], properties: { optionCode: { type: 'string' }, optionLabel: { type: 'string' } } } },
+  },
+};
+
 export const openApiPublicCatalog: { products: SchemaObject; product: SchemaObject } = {
   products: { type: 'object', required: ['data'], properties: { data: { type: 'object', required: ['items', 'meta'], properties: { items: { type: 'array', items: publicProductItem }, meta: { type: 'object' } } } } },
-  product: { type: 'object', required: ['data'], properties: { data: { type: 'object', required: ['product'], properties: { product: { ...publicProductItem, required: [...(publicProductItem.required ?? []), 'description', 'brand', 'category', 'variants', 'media'], properties: { ...publicProductItem.properties, description: { type: 'string', nullable: true }, brand: { type: 'object', nullable: true }, category: { type: 'object', nullable: true }, variants: { type: 'array', items: { type: 'object' } }, media: { type: 'array', items: publicImage } } } } } } },
+  product: { type: 'object', required: ['data'], properties: { data: { type: 'object', required: ['product'], properties: { product: { ...publicProductItem, required: [...(publicProductItem.required ?? []), 'description', 'brand', 'category', 'variants', 'media', 'axes'], properties: { ...publicProductItem.properties, description: { type: 'string', nullable: true }, brand: { type: 'object', nullable: true }, category: { type: 'object', nullable: true }, variants: { type: 'array', items: { type: 'object' } }, media: { type: 'array', items: publicImage }, axes: { type: 'array', items: publicProductAxis } } } } } } },
 };
 
 export const openApiCatalogFailures = {

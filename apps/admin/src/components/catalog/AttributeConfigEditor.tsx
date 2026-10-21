@@ -13,7 +13,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import type { AttributeDefinitionSummary, ProductAttributeConfigurationPayload, ProductDetail } from '@iranyaragh/contracts';
 import { FormField } from '@/components/ui/FormField';
 import { useFeedback } from '@/components/ui/FeedbackProvider';
@@ -28,6 +28,7 @@ function serialize(configs: ProductAttributeConfigurationPayload[]): string {
         attributeCode: configuration.attributeCode,
         isVariantAxis: configuration.isVariantAxis,
         isRequired: Boolean(configuration.isRequired),
+        sortOrder: configuration.sortOrder ?? 0,
       }))
       .sort((a, b) => a.attributeCode.localeCompare(b.attributeCode)),
   );
@@ -48,11 +49,15 @@ export function AttributeConfigEditor({
 }) {
   const feedback = useFeedback();
   const [draft, setDraft] = useState<ProductAttributeConfigurationPayload[]>(() =>
-    (product.attributes ?? []).map((attribute) => ({
-      attributeCode: attribute.attributeCode,
-      isVariantAxis: attribute.isVariantAxis,
-      isRequired: attribute.isRequired,
-    })),
+    (product.attributes ?? [])
+      .slice()
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.attributeCode.localeCompare(b.attributeCode))
+      .map((attribute) => ({
+        attributeCode: attribute.attributeCode,
+        isVariantAxis: attribute.isVariantAxis,
+        isRequired: attribute.isRequired,
+        sortOrder: attribute.sortOrder ?? 0,
+      })),
   );
   const [creating, setCreating] = useState(false);
   const [addCode, setAddCode] = useState('');
@@ -64,11 +69,15 @@ export function AttributeConfigEditor({
 
   useEffect(() => {
     setDraft(
-      (product.attributes ?? []).map((attribute) => ({
-        attributeCode: attribute.attributeCode,
-        isVariantAxis: attribute.isVariantAxis,
-        isRequired: attribute.isRequired,
-      })),
+      (product.attributes ?? [])
+        .slice()
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.attributeCode.localeCompare(b.attributeCode))
+        .map((attribute) => ({
+          attributeCode: attribute.attributeCode,
+          isVariantAxis: attribute.isVariantAxis,
+          isRequired: attribute.isRequired,
+          sortOrder: attribute.sortOrder ?? 0,
+        })),
     );
   }, [product.attributes]);
 
@@ -101,10 +110,21 @@ export function AttributeConfigEditor({
     setDraft((current) => current.filter((_, i) => i !== index));
   }
 
+  function move(index: number, direction: -1 | 1) {
+    setError(null);
+    setDraft((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      return next.map((configuration, position) => ({ ...configuration, sortOrder: position }));
+    });
+  }
+
   function addSelected() {
     if (!addCode) return;
     setError(null);
-    setDraft((current) => [...current, { attributeCode: addCode, isVariantAxis: false, isRequired: false }]);
+    setDraft((current) => [...current, { attributeCode: addCode, isVariantAxis: false, isRequired: false, sortOrder: current.length }]);
     setAddCode('');
   }
 
@@ -133,9 +153,9 @@ export function AttributeConfigEditor({
         {canWrite ? <Button size="small" onClick={() => setCreating(true)} startIcon={<Plus size={16} />}>تعریف ویژگی جدید و گزینه‌های آن</Button> : null}
         {creating ? <AttributeDialog mode="create" onClose={() => setCreating(false)} onSaved={(attribute) => {
           onAttributeCreated(attribute);
-          setDraft((current) => [...current, { attributeCode: attribute.code, isVariantAxis: false, isRequired: false }]);
+          setDraft((current) => [...current, { attributeCode: attribute.code, isVariantAxis: false, isRequired: false, sortOrder: current.length }]);
         }} /> : null}
-        <Typography variant="body2" color="text.secondary">پس از ذخیرهٔ ویژگی‌ها، از اقدامات هر SKU «مقادیر ویژگی‌ها» را انتخاب کنید. محور واریانت برای ترکیب‌های متفاوت مانند رنگ و سایز است.</Typography>
+        <Typography variant="body2" color="text.secondary">پس از ذخیرهٔ ویژگی‌ها، از اقدامات هر SKU «مقادیر ویژگی‌ها» را انتخاب کنید. محور واریانت برای ترکیب‌های متفاوت مانند رنگ و سایز است. ترتیب نمایش محورها در فروشگاه با دکمه‌های بالا و پایین تعیین می‌شود؛ مثلاً «برند» در ابتدای زنجیرهٔ انتخاب قرار بگیرد.</Typography>
         {error ? <Alert severity="error">{error}</Alert> : null}
         {draft.length === 0 ? (
           <Alert severity="info">ویژگی‌ای به این کالا متصل نیست.{' '}
@@ -173,6 +193,26 @@ export function AttributeConfigEditor({
                 }
                 label="اجباری"
               />
+              {canWrite ? (
+                <Stack direction="row" spacing={0.5}>
+                  <IconButton
+                    size="small"
+                    disabled={saving || index === 0}
+                    aria-label={`انتقال ویژگی ${configuration.attributeCode} به بالا`}
+                    onClick={() => move(index, -1)}
+                  >
+                    <ChevronUp size={16} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    disabled={saving || index === draft.length - 1}
+                    aria-label={`انتقال ویژگی ${configuration.attributeCode} به پایین`}
+                    onClick={() => move(index, 1)}
+                  >
+                    <ChevronDown size={16} />
+                  </IconButton>
+                </Stack>
+              ) : null}
               {canWrite ? (
                 <IconButton
                   size="small"

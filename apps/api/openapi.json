@@ -822,7 +822,8 @@
                             "brand",
                             "category",
                             "variants",
-                            "media"
+                            "media",
+                            "axes"
                           ],
                           "properties": {
                             "id": {
@@ -1047,6 +1048,49 @@
                                           "minimum": 1
                                         },
                                         "type": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "axes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "attributeCode",
+                                  "attributeName",
+                                  "sortOrder",
+                                  "options"
+                                ],
+                                "properties": {
+                                  "attributeCode": {
+                                    "type": "string"
+                                  },
+                                  "attributeName": {
+                                    "type": "string"
+                                  },
+                                  "sortOrder": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "description": "Display order of the axis in the selector cascade; lower values come first."
+                                  },
+                                  "options": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "required": [
+                                        "optionCode",
+                                        "optionLabel"
+                                      ],
+                                      "properties": {
+                                        "optionCode": {
+                                          "type": "string"
+                                        },
+                                        "optionLabel": {
                                           "type": "string"
                                         }
                                       }
@@ -4733,7 +4777,8 @@
                             },
                             "sections": {
                               "type": "array",
-                              "maxItems": 8,
+                              "minItems": 1,
+                              "maxItems": 5,
                               "items": {
                                 "type": "object",
                                 "additionalProperties": false,
@@ -4813,7 +4858,8 @@
                             },
                             "sections": {
                               "type": "array",
-                              "maxItems": 8,
+                              "minItems": 1,
+                              "maxItems": 5,
                               "items": {
                                 "type": "object",
                                 "additionalProperties": false,
@@ -4964,7 +5010,8 @@
                   },
                   "sections": {
                     "type": "array",
-                    "maxItems": 8,
+                    "minItems": 1,
+                    "maxItems": 5,
                     "items": {
                       "type": "object",
                       "additionalProperties": false,
@@ -5024,7 +5071,8 @@
                             },
                             "sections": {
                               "type": "array",
-                              "maxItems": 8,
+                              "minItems": 1,
+                              "maxItems": 5,
                               "items": {
                                 "type": "object",
                                 "additionalProperties": false,

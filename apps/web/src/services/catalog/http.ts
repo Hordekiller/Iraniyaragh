@@ -130,6 +130,7 @@ export class CatalogHttpClient implements CatalogApi {
         attributes: variant.attributeValues ?? [],
         stockStatus:
           availabilityByVariant.get(variant.id) ?? ('UNKNOWN' as const),
+        weightGrams: variant.weightGrams ?? null,
       }))
     const statuses = variants.map((item) => item.stockStatus)
     const stockStatus = statuses.includes('IN_STOCK')
@@ -189,6 +190,19 @@ export class CatalogHttpClient implements CatalogApi {
       image: primary?.sources[0]?.url ?? PLACEHOLDER_IMAGE,
       media: detail?.media ?? [],
       variants: [],
+      axes:
+        detail?.axes
+          ?.slice()
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((axis) => ({
+            attributeCode: axis.attributeCode,
+            attributeName: axis.attributeName,
+            sortOrder: axis.sortOrder,
+            options: axis.options.map((option) => ({
+              optionCode: option.optionCode,
+              optionLabel: option.optionLabel,
+            })),
+          })) ?? [],
       description: detail?.description ?? null,
       price: product.startingPrice ??
         variantPrice ?? { amount: '0', currency: 'IRR' },

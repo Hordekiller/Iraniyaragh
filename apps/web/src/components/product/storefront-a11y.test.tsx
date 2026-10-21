@@ -26,6 +26,7 @@ const product: CatalogProduct = {
   image: '/images/tool1.jpg',
   media: [],
   variants: [],
+  axes: [],
   description: null,
   price: { amount: '125000000', currency: 'IRR' },
   priceAvailable: true,

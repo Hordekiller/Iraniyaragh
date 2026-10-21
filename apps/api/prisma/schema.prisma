@@ -659,11 +659,17 @@ model ProductAttributeConfiguration {
   attribute     AttributeDefinition @relation(fields: [attributeId], references: [id], onDelete: Restrict)
   isVariantAxis Boolean             @default(false)
   isRequired    Boolean             @default(false)
+  /// Display order of this configuration on the product page. Lower values are
+  /// shown first. It is presentation-only: the combination signature is
+  /// derived from the sorted set of axis values, so reordering axes never
+  /// changes variant identity.
+  sortOrder     Int                 @default(0)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
   @@unique([productId, attributeId])
   @@index([attributeId])
+  @@index([productId, sortOrder])
 }
 
 model ProductVariantAttributeValue {

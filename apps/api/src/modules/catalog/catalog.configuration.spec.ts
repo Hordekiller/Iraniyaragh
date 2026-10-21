@@ -59,6 +59,39 @@ describe('CatalogService product attribute configuration and generation', () => 
     expect(tx.productAttributeConfiguration.deleteMany).not.toHaveBeenCalled();
   });
 
+  it('persists the configured axis order so the storefront can cascade the selectors', async () => {
+    const current = {
+      version: 3,
+      attributes: [],
+      variants: [],
+      ...dates,
+    };
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      product: { findUnique: vi.fn().mockResolvedValue(current), updateMany: vi.fn().mockResolvedValue({ count: 1 }), findUniqueOrThrow: vi.fn().mockResolvedValue(current) },
+      attributeDefinition: { findMany: vi.fn().mockResolvedValue([{ id: 'brand-id', code: 'brand' }, { id: 'weight-id', code: 'weight' }]) },
+      productVariantAttributeValue: { count: vi.fn().mockResolvedValue(0) },
+      productAttributeConfiguration: { deleteMany: vi.fn(), createMany: vi.fn() },
+    };
+    const prisma = { $transaction: vi.fn(async (callback: (client: typeof tx) => unknown) => callback(tx)) };
+    const service = new CatalogService(prisma as never, { record: vi.fn() } as never, { run: vi.fn() } as never);
+
+    await service.configureProductAttributes('actor-1', 'product-1', {
+      expectedVersion: 3,
+      configurations: [
+        { attributeCode: 'brand', isVariantAxis: true, sortOrder: 0 },
+        { attributeCode: 'weight', isVariantAxis: true, sortOrder: 1 },
+      ],
+    });
+
+    expect(tx.productAttributeConfiguration.createMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([
+        expect.objectContaining({ attributeId: 'brand-id', isVariantAxis: true, isRequired: false, sortOrder: 0 }),
+        expect.objectContaining({ attributeId: 'weight-id', isVariantAxis: true, isRequired: false, sortOrder: 1 }),
+      ]),
+    });
+  });
+
   it('persists generated variants atomically with server-owned SKUs', async () => {
     const tx = {
       $queryRaw: vi.fn().mockResolvedValue([]),

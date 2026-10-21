@@ -14,6 +14,7 @@ const PRODUCT: CatalogProduct = {
   image: '/images/tool2.jpg',
   media: [],
   variants: [],
+  axes: [],
   description: null,
   price: { amount: '1000000', currency: 'IRR' },
   oldPrice: null,
@@ -62,19 +63,32 @@ describe('HomePage', () => {
     expect(screen.queryByText('۲۵۰۰')).not.toBeInTheDocument()
   })
 
-  it('shows only 13 roots when the API also returns 76 descendants', async () => {
+  it('shows exactly the five configured parent categories and excludes descendants', async () => {
     const roots: CatalogCategory[] = Array.from({ length: 13 }, (_, index) => ({
       id: `root-${index}`, parentId: null, name: `دسته اصلی ${index}`, slug: `root-${index}`, productCount: 0, image: '',
     }))
     const descendants: CatalogCategory[] = Array.from({ length: 76 }, (_, index) => ({
       id: `child-${index}`, parentId: roots[index % roots.length].id, name: `زیردسته ${index}`, slug: `child-${index}`, productCount: 0, image: '',
     }))
-    renderHome(catalogApi({ listCategories: vi.fn(async () => [...descendants, ...roots]) }))
+    const sections = roots.slice(0, 5).map((category, index) => ({ categoryId: category.id, sortBy: index === 0 ? 'BESTSELLING' as const : 'NEWEST' as const }))
+    renderHome(catalogApi({ listCategories: vi.fn(async () => [...descendants, ...roots]), getHomepageCollections: vi.fn(async () => ({ version: 2, updatedAt: null, sections })) }))
 
     const section = await screen.findByRole('region', { name: 'دسته‌بندی کالاها' })
-    expect(await within(section).findAllByRole('link')).toHaveLength(13)
+    expect(await within(section).findAllByRole('link')).toHaveLength(5)
     expect(within(section).queryByRole('link', { name: /زیردسته/ })).not.toBeInTheDocument()
     expect(within(section).getByRole('link', { name: 'دسته اصلی 0' })).toHaveAttribute('href', '/category/root-0')
+  })
+
+  it('keeps all five configured carousel sections visible when their products are still drafts', async () => {
+    const roots: CatalogCategory[] = Array.from({ length: 5 }, (_, index) => ({ id: `root-${index}`, parentId: null, name: `دسته ${index}`, slug: `root-${index}`, productCount: 0, image: '' }))
+    const sections = roots.map(category => ({ categoryId: category.id, sortBy: 'NEWEST' as const }))
+    renderHome(catalogApi({
+      listCategories: vi.fn(async () => roots),
+      getHomepageCollections: vi.fn(async () => ({ version: 1, updatedAt: null, sections })),
+      listProducts: vi.fn(async () => ({ items: [], meta: { page: 1, perPage: 8, total: 0, pages: 0 } })),
+    }))
+    expect(await screen.findByRole('region', { name: 'جدیدترین دسته 4' })).toBeInTheDocument()
+    expect(screen.getAllByText(/هنوز محصول منتشرشده‌ای در این دسته نیست/)).toHaveLength(5)
   })
 
   it('does not fall back to fixture products when the API fails and retries explicitly', async () => {

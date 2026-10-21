@@ -135,6 +135,55 @@ describe('CatalogService', () => {
       (ctx.prisma.product.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
       await expect(ctx.service.getPublicProduct('unknown')).rejects.toBeInstanceOf(NotFoundException);
     });
+
+    it('exposes the ordered variant axes and only the options a live variant carries', async () => {
+      const brandAxis = { attributeId: 'attr-brand', isVariantAxis: true, isRequired: false, sortOrder: 1, attribute: { code: 'hinge-brand', name: 'برند', status: 'ACTIVE' } };
+      const weightAxis = { attributeId: 'attr-weight', isVariantAxis: true, isRequired: false, sortOrder: 0, attribute: { code: 'hinge-weight', name: 'وزن', status: 'ACTIVE' } };
+      const inertAxis = { attributeId: 'attr-inert', isVariantAxis: false, isRequired: false, sortOrder: 2, attribute: { code: 'hinge-finish', name: 'رنگ', status: 'ACTIVE' } };
+      const attributeValue = (attributeId: string, code: string, label: string) => ({
+        attributeId,
+        optionId: `opt-${code}`,
+        attribute: { code, name: label },
+        option: { code, label },
+      });
+      const axisVariant = {
+        ...variant,
+        attributeValues: [
+          attributeValue('attr-brand', 'h-brand-amit', 'آمیت'),
+          attributeValue('attr-weight', 'h-w-90', '۹۰ گرم'),
+        ],
+      };
+      (ctx.prisma.product.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...productRow,
+        media: [readyPrimaryMedia],
+        attributes: [brandAxis, weightAxis, inertAxis],
+        variants: [axisVariant],
+      });
+
+      const detail = await ctx.service.getPublicProduct('product-one');
+
+      // Weight is configured first, so it is offered before the brand.
+      expect(detail.data.product.axes).toEqual([
+        { attributeCode: 'hinge-weight', attributeName: 'وزن', sortOrder: 0, options: [{ optionCode: 'h-w-90', optionLabel: '۹۰ گرم' }] },
+        { attributeCode: 'hinge-brand', attributeName: 'برند', sortOrder: 1, options: [{ optionCode: 'h-brand-amit', optionLabel: 'آمیت' }] },
+      ]);
+      // A configuration that is not a variant axis is not a selectable step.
+      expect(detail.data.product.axes.map(axis => axis.attributeCode)).not.toContain('hinge-finish');
+    });
+
+    it('offers no option that no live variant carries', async () => {
+      const brandAxis = { attributeId: 'attr-brand', isVariantAxis: true, isRequired: false, sortOrder: 0, attribute: { code: 'hinge-brand', name: 'برند', status: 'ACTIVE' } };
+      (ctx.prisma.product.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...productRow,
+        media: [readyPrimaryMedia],
+        attributes: [brandAxis],
+        variants: [{ ...variant, attributeValues: [] }],
+      });
+
+      const detail = await ctx.service.getPublicProduct('product-one');
+
+      expect(detail.data.product.axes[0]!.options).toEqual([]);
+    });
   });
 
   describe('product list projections', () => {
