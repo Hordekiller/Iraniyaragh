@@ -35,6 +35,13 @@ describe('homepage collection configuration', () => {
     expect(context.audit.record).toHaveBeenCalledOnce();
   });
 
+  it('accepts a smaller selection than the maximum, so a catalog with few root categories stays configurable', async () => {
+    const input = { expectedVersion: 0, sections: [{ categoryId: 'root-0', sortBy: 'BESTSELLING' as const }] };
+    await expect(context.service.update('staff-2', 'request-2', input, 'key-small')).resolves.toMatchObject({ version: 1, sections: input.sections });
+    await expect(context.service.update('staff-2', 'request-3', { expectedVersion: 0, sections: [] }, 'key-empty'))
+      .rejects.toMatchObject({ response: { code: 'INVALID_REQUEST' } });
+  });
+
   it('rejects duplicate categories, unsupported sort modes, unknown IDs and stale versions', async () => {
     await expect(context.service.update('staff', 'request', { expectedVersion: 0, sections: [
       ...Array.from({ length: 4 }, (_, index) => ({ categoryId: `root-${index}`, sortBy: 'NEWEST' as const })), { categoryId: 'root-0', sortBy: 'BESTSELLING' as const },

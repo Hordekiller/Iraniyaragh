@@ -4777,7 +4777,7 @@
                             },
                             "sections": {
                               "type": "array",
-                              "minItems": 5,
+                              "minItems": 1,
                               "maxItems": 5,
                               "items": {
                                 "type": "object",
@@ -4858,7 +4858,7 @@
                             },
                             "sections": {
                               "type": "array",
-                              "minItems": 5,
+                              "minItems": 1,
                               "maxItems": 5,
                               "items": {
                                 "type": "object",
@@ -5010,7 +5010,7 @@
                   },
                   "sections": {
                     "type": "array",
-                    "minItems": 5,
+                    "minItems": 1,
                     "maxItems": 5,
                     "items": {
                       "type": "object",
@@ -5071,7 +5071,7 @@
                             },
                             "sections": {
                               "type": "array",
-                              "minItems": 5,
+                              "minItems": 1,
                               "maxItems": 5,
                               "items": {
                                 "type": "object",

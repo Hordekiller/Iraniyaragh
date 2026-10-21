@@ -17,7 +17,11 @@ class HomepageCollectionSectionDto {
 
 class HomepageCollectionsUpdateDto {
   @IsInt() @Min(0) expectedVersion!: number;
-  @IsArray() @ArrayMinSize(5) @ArrayMaxSize(5) @ArrayUnique(section => section.categoryId) @ValidateNested({ each: true }) @Type(() => HomepageCollectionSectionDto) sections!: HomepageCollectionSectionDto[];
+  // A section is one root category. The bound is a maximum, not a fixed count:
+  // a catalog with fewer root categories than sections still has to be
+  // configurable, and the read path fills the remaining slots with the busiest
+  // roots it has.
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(5) @ArrayUnique(section => section.categoryId) @ValidateNested({ each: true }) @Type(() => HomepageCollectionSectionDto) sections!: HomepageCollectionSectionDto[];
 }
 
 @ApiTags('homepage-collections')

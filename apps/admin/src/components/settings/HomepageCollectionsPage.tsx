@@ -120,7 +120,7 @@ function HomepageCollectionsEditor() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (life.current.flight || !config || loading || Boolean(loadError) || stale || uncertain) return;
-    if (sections.length !== 5 || new Set(sections.map(section => section.categoryId)).size !== sections.length) {
+    if (sections.length < 1 || sections.length > 5 || new Set(sections.map(section => section.categoryId)).size !== sections.length) {
       setError(new ApiClientError({ code: 'INVALID_REQUEST', statusCode: 400, message: '', requestId: '' })); return;
     }
     pending.current = { body: { expectedVersion: config.version, sections }, key: `homepage-collections-${randomUuid()}` };
@@ -177,9 +177,9 @@ function HomepageCollectionsEditor() {
           <Stack direction="row" gap={1} flexWrap="wrap">
             <Button type="button" variant="outlined" disabled={locked || sections.length >= 5 || categories.every(category => selected.has(category.id))} onClick={addSection}>افزودن دسته‌بندی</Button>
             {uncertain && <Button type="button" variant="outlined" onClick={() => void retry()}>بررسی و تکرار همان ذخیره</Button>}
-            <Button type="submit" variant="contained" disabled={locked || categories.length < 5 || sections.length !== 5}>{busy ? 'در حال ذخیره…' : 'ذخیرهٔ چیدمان'}</Button>
+            <Button type="submit" variant="contained" disabled={locked || categories.length === 0 || sections.length < 1 || sections.length > 5}>{busy ? 'در حال ذخیره…' : 'ذخیرهٔ چیدمان'}</Button>
           </Stack>
-          <Typography variant="caption" color="text.secondary">برای صفحهٔ اصلی دقیقاً ۵ دستهٔ مادر انتخاب کنید؛ زیرشاخه‌ها به‌صورت خودکار در محصولات همان دسته حساب می‌شوند. ترتیب این فهرست، ترتیب نمایش کاروسل‌هاست. تنظیمات بعد از تأیید تازهٔ ورود ذخیره می‌شود.</Typography>
+          <Typography variant="caption" color="text.secondary">برای صفحهٔ اصلی حداکثر ۵ دستهٔ مادر انتخاب کنید؛ زیرشاخه‌ها به‌صورت خودکار در محصولات همان دسته حساب می‌شوند. ترتیب این فهرست، ترتیب نمایش کاروسل‌هاست. تنظیمات بعد از تأیید تازهٔ ورود ذخیره می‌شود.</Typography>
         </Stack>
       </Paper>
     </Stack>

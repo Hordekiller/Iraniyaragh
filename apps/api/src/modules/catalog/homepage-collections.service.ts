@@ -6,7 +6,10 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 
 const CONFIG_ID = 'storefront';
-const SECTION_COUNT = 5;
+// A section is one root category shown as a carousel on the storefront. Five is
+// the maximum the storefront renders; a catalog with fewer root categories than
+// that still has to be configurable, so the count is a bound and not a quota.
+const MAX_SECTIONS = 5;
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const EMPTY: HomepageCollectionSection[] = [];
 
@@ -20,11 +23,11 @@ function project(row: HomepageCollectionConfig | null): HomepageCollectionsConfi
 
 function validate(input: HomepageCollectionsUpdate): HomepageCollectionSection[] {
   const sections = input?.sections;
-  const valid = Number.isSafeInteger(input?.expectedVersion) && input.expectedVersion >= 0 && Array.isArray(sections) && sections.length === SECTION_COUNT &&
+  const valid = Number.isSafeInteger(input?.expectedVersion) && input.expectedVersion >= 0 && Array.isArray(sections) && sections.length >= 1 && sections.length <= MAX_SECTIONS &&
     sections.every(section => section && typeof section.categoryId === 'string' && /^[A-Za-z0-9_-]{1,128}$/u.test(section.categoryId) &&
       (section.sortBy === 'NEWEST' || section.sortBy === 'BESTSELLING')) &&
     new Set(sections.map(section => section.categoryId)).size === sections.length;
-  if (!valid) throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'Choose up to eight unique categories with a supported sort order.' });
+  if (!valid) throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'Choose up to five unique parent categories with a supported sort order.' });
   return sections.map(section => ({ categoryId: section.categoryId, sortBy: section.sortBy }));
 }
 
@@ -64,11 +67,11 @@ export class HomepageCollectionsService {
       if (!rootId || selected.has(rootId)) continue;
       selected.add(rootId);
       chosen.push({ categoryId: rootId, sortBy: section.sortBy });
-      if (chosen.length === SECTION_COUNT) break;
+      if (chosen.length === MAX_SECTIONS) break;
     }
     const candidates = [...roots].sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0) || a.name.localeCompare(b.name, 'fa') || a.id.localeCompare(b.id));
     for (const category of candidates) {
-      if (chosen.length === SECTION_COUNT) break;
+      if (chosen.length === MAX_SECTIONS) break;
       if (selected.has(category.id)) continue;
       selected.add(category.id);
       chosen.push({ categoryId: category.id, sortBy: 'NEWEST' });
@@ -91,7 +94,7 @@ export class HomepageCollectionsService {
       const current = await tx.homepageCollectionConfig.findUnique({ where: { id: CONFIG_ID } });
       if ((current?.version ?? 0) !== raw.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'Homepage settings changed; reload before saving.' });
       const categories = await tx.category.findMany({ where: { id: { in: sections.map(section => section.categoryId) } }, select: { id: true, parentId: true } });
-      if (categories.length !== SECTION_COUNT || categories.some(category => category.parentId !== null)) throw new BadRequestException({ code: 'INVALID_CATEGORY', message: 'Choose five existing parent categories.' });
+      if (categories.length !== sections.length || categories.some(category => category.parentId !== null)) throw new BadRequestException({ code: 'INVALID_CATEGORY', message: 'Choose up to five existing parent categories.' });
       const nextVersion = (current?.version ?? 0) + 1;
       const row = current
         ? await tx.homepageCollectionConfig.update({ where: { id: CONFIG_ID }, data: { version: nextVersion, sections: sections as unknown as Prisma.InputJsonValue } })
