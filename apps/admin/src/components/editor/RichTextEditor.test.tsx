@@ -41,6 +41,7 @@ const state = vi.hoisted(() => {
 vi.mock('jodit', () => ({ Jodit: { make: state.make } }));
 vi.mock('jodit/esm/plugins/indent/indent.js', () => ({}));
 vi.mock('jodit/esm/plugins/justify/justify.js', () => ({}));
+vi.mock('jodit/esm/plugins/source/source.js', () => ({}));
 
 const noop = () => undefined;
 

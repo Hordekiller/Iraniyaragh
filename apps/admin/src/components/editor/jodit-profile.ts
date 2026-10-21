@@ -21,6 +21,8 @@ export type JoditProfile = {
   showXPathInStatusbar?: boolean;
   askBeforePasteHTML?: boolean;
   processPasteHTML?: boolean;
+  sourceEditor?: 'area';
+  beautifyHTML?: boolean;
 };
 
 export type JoditProfileOptions = {
@@ -43,7 +45,6 @@ export const RICH_TEXT_DISABLED_PLUGINS = [
   'powered-by-jodit',
   'preview',
   'print',
-  'source',
   'speech-recognize',
   'video',
 ] as const;
@@ -61,6 +62,7 @@ export const RICH_TEXT_HEADINGS: Record<string, string> = {
 };
 
 const RICH_TEXT_TOOLBAR = [
+  'source',
   'undo',
   'redo',
   'paragraph',
@@ -121,5 +123,7 @@ export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfi
     showXPathInStatusbar: false,
     askBeforePasteHTML: false,
     processPasteHTML: true,
+    sourceEditor: 'area',
+    beautifyHTML: false,
   };
 }

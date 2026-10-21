@@ -37,6 +37,14 @@ describe('buildJoditProfile', () => {
     expect(profile.uploader).toEqual({ url: '', insertImageAsBase64URI: false });
   });
 
+  it('allows direct HTML editing with the bundled source editor and no CDN formatter', () => {
+    const profile = buildJoditProfile();
+    expect(profile.disablePlugins).not.toContain('source');
+    expect(profile.buttons).toContain('source');
+    expect(profile.sourceEditor).toBe('area');
+    expect(profile.beautifyHTML).toBe(false);
+  });
+
   it('exposes the required toolbar controls and keeps uploading ones out', () => {
     const profile = buildJoditProfile();
     expect(profile.buttons).toContain('paragraph');
