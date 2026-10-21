@@ -54,8 +54,11 @@ for (const [name, recorded, selected] of [
       assert.equal(scanner.TZ, 'UTC', 'daemon version timestamps have an explicit timezone');
       assert.equal(scanner.CLAMD_CONF_StreamMaxLength, '20M', 'malware-scanner: stream limit preserved');
       const sourceMount = configuration.services['malware-scanner'].volumes.find(volume => volume.target === '/etc/iranyaragh/configure-clamav-source.sh');
+      assert.equal(sourceMount.type, 'bind');
       assert.equal(sourceMount.read_only, true);
-      assert.equal(sourceMount.bind.create_host_path, false);
+      // Compose v2 omits this false-valued field from JSON; newer versions emit
+      // it. Both represent the same disabled setting. A true value must fail.
+      assert.equal(sourceMount.bind.create_host_path ?? false, false);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
