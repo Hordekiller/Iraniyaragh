@@ -84,6 +84,7 @@ export function RichTextEditor({
           import('jodit'),
           import('jodit/esm/plugins/indent/indent.js'),
           import('jodit/esm/plugins/justify/justify.js'),
+          import('jodit/esm/plugins/source/source.js'),
         ]);
         if (disposed) return;
         const profile = buildJoditProfile({

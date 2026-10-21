@@ -6,7 +6,6 @@ import {
   Plus,
   Star,
   Truck,
-  ShieldCheck,
   ShoppingBag,
 } from 'lucide-react'
 import { useCatalogApi } from '../state/catalog-context'
@@ -134,6 +133,14 @@ export function ProductPage() {
     }
   }
 
+  // Illustrations that already live inside the description are not repeated
+  // in the gallery, so the shopper never sees the same picture twice.
+  const descriptionMediaIds = new Set(
+    [...(product.description ?? '').matchAll(/<img\b[^>]*\bdata-media-id="([^"]+)"/giu)].map(
+      match => match[1],
+    ),
+  )
+
   // Structured data uses only values that actually exist in the API response;
   // counts and dates that are not returned are never invented (spec §7).
   const structuredData: Record<string, unknown>[] = []
@@ -168,7 +175,7 @@ export function ProductPage() {
   }
 
   return (
-    <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
+    <div className="max-w-[1280px] mx-auto px-4 pt-5 pb-[calc(11rem+env(safe-area-inset-bottom))] lg:px-6 lg:py-8">
       {structuredData.length > 0 && (
         <script
           type="application/ld+json"
@@ -191,19 +198,30 @@ export function ProductPage() {
             <span className="mx-1">/</span>
           </>
         )}
-        <span className="text-slate-600 font-bold">{product.name}</span>
+        <span className="inline-block max-w-[16rem] truncate align-bottom font-bold text-slate-600 sm:max-w-[32rem]">
+          {product.name}
+        </span>
       </nav>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <h1 className="mb-5 text-lg font-black leading-8 text-slate-900 sm:text-xl lg:text-2xl">
+        {product.name}
+      </h1>
+
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:gap-8">
         <MediaGallery
-          media={product.media}
+          media={product.media.filter(
+            (media) =>
+              media.kind !== 'IMAGE' ||
+              media.role === 'PRIMARY' ||
+              !descriptionMediaIds.has(media.id),
+          )}
           productName={product.name}
           badge={product.badge}
           fallbackImage={product.image}
         />
 
-        <div>
-          <nav className="flex items-center gap-2">
+        <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+          <nav className="flex flex-wrap items-center gap-2">
             {product.brand && (
               <span className="text-sm font-black text-slate-500">
                 {product.brand}
@@ -213,10 +231,6 @@ export function ProductPage() {
               {STOCK_LABEL[product.stockStatus]}
             </span>
           </nav>
-
-          <h1 className="mt-3 font-black text-lg lg:text-2xl leading-8 text-slate-900">
-            {product.name}
-          </h1>
 
           {product.rating != null && (
             <div className="flex items-center gap-1.5 mt-2 text-sm">
@@ -245,13 +259,6 @@ export function ProductPage() {
                 ({toPersianDigits(product.reviews)} نظر)
               </span>
             </div>
-          )}
-
-          {product.description && (
-            <RichText
-              html={product.description}
-              className="mt-4 text-[13px] text-slate-500"
-            />
           )}
 
           {product.variants.length > 1 && (
@@ -287,109 +294,144 @@ export function ProductPage() {
             </fieldset>
           )}
 
-          {selectedVariant && selectedVariant.attributes.length > 0 && (
-            <section className="mt-5" aria-label="ویژگی‌های تنوع انتخاب‌شده">
-              <h2 className="text-sm font-black text-slate-900">مشخصات تنوع</h2>
-              <dl data-testid="product-attributes" className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 px-3">
-                {selectedVariant.attributes.map(value => (
-                  <div key={value.attributeCode} className="flex justify-between gap-3 py-2 text-sm">
-                    <dt className="text-slate-600">{value.attributeName}</dt>
-                    <dd className="font-bold text-slate-900">{value.optionLabel}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          )}
+          <section
+            id="product-purchase"
+            aria-label="قیمت و خرید محصول"
+            className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgb(15_23_42_/_0.08)] lg:static lg:mt-5 lg:rounded-2xl lg:border lg:p-5 lg:shadow-none"
+          >
+            <div
+              className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
+              aria-live="polite"
+            >
+              <span className="text-xs text-slate-500">قیمت هر عدد</span>
+              <span className="font-black text-[22px] text-slate-900">
+                {selectedVariant || product.priceAvailable !== false
+                  ? formatToman(selectedVariant?.price.amount ?? product.price.amount)
+                  : 'قیمت در دسترس نیست'}
+              </span>
+              {product.oldPrice && (
+                <>
+                  <span className="text-sm text-slate-400 line-through">
+                    {formatToman(product.oldPrice.amount)}
+                  </span>
+                  <span className="px-2 py-1 rounded-full bg-red-500 text-white text-xs font-black">
+                    ٪{toPersianDigits(discountPercent)} تخفیف
+                  </span>
+                </>
+              )}
+            </div>
 
-          <div className="mt-5 flex items-baseline gap-3">
-            <span className="font-black text-[22px] text-slate-900">
-              {selectedVariant || product.priceAvailable !== false
-                ? formatToman(selectedVariant?.price.amount ?? product.price.amount)
-                : 'قیمت در دسترس نیست'}
-            </span>
-            {product.oldPrice && (
-              <>
-                <span className="text-sm text-slate-400 line-through">
-                  {formatToman(product.oldPrice.amount)}
-                </span>
-                <span className="px-2 py-1 rounded-full bg-red-500 text-white text-xs font-black">
-                  ٪{toPersianDigits(discountPercent)} تخفیف
-                </span>
-              </>
-            )}
-          </div>
-
-          <div className="mt-6 flex items-center gap-3">
-            {inCart ? (
-              <div className="flex items-center gap-3 rounded-full border-2 border-[#0F172A] p-1">
+            <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">
+              {inCart ? (
+                <div className="flex items-center gap-3 rounded-full border-2 border-[#0F172A] p-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectedVariant &&
+                      void setQuantity(selectedVariant.id, qty + 1)
+                    }
+                    aria-label="افزایش تعداد"
+                    className="w-10 h-10 rounded-full bg-[#0F172A] text-white flex items-center justify-center hover:bg-black disabled:opacity-40"
+                    disabled={!available}
+                  >
+                    <Plus size={18} aria-hidden="true" />
+                  </button>
+                  <span
+                    className="min-w-[24px] text-center font-black"
+                    aria-label={toPersianDigits(qty)}
+                  >
+                    {toPersianDigits(qty)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectedVariant &&
+                      void setQuantity(selectedVariant.id, qty - 1)
+                    }
+                    aria-label="کاهش تعداد"
+                    className="w-10 h-10 rounded-full bg-slate-100 text-slate-900 flex items-center justify-center hover:bg-slate-200"
+                  >
+                    <Minus size={18} aria-hidden="true" />
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  onClick={() =>
-                    selectedVariant &&
-                    void setQuantity(selectedVariant.id, qty + 1)
-                  }
-                  aria-label="افزایش تعداد"
-                  className="w-10 h-10 rounded-full bg-[#0F172A] text-white flex items-center justify-center hover:bg-black disabled:opacity-40"
-                  disabled={!available}
+                  onClick={() => void handleAdd()}
+                  disabled={!available || cartBusy}
+                  className="flex-1 h-12 rounded-full bg-[#FF4D00] text-white font-black hover:bg-[#E54400] disabled:bg-slate-300 disabled:cursor-not-allowed transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
                 >
-                  <Plus size={18} aria-hidden="true" />
+                  <span className="inline-flex items-center gap-2">
+                    <ShoppingBag size={18} aria-hidden="true" />
+                    {cartBusy
+                      ? 'در حال آماده‌سازی سبد…'
+                      : !selectedVariant
+                        ? 'تنوع قابل فروش موجود نیست'
+                        : available
+                          ? 'افزودن به سبد خرید'
+                          : 'ناموجود'}
+                  </span>
                 </button>
-                <span
-                  className="min-w-[24px] text-center font-black"
-                  aria-label={toPersianDigits(qty)}
-                >
-                  {toPersianDigits(qty)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    selectedVariant &&
-                    void setQuantity(selectedVariant.id, qty - 1)
-                  }
-                  aria-label="کاهش تعداد"
-                  className="w-10 h-10 rounded-full bg-slate-100 text-slate-900 flex items-center justify-center hover:bg-slate-200"
-                >
-                  <Minus size={18} aria-hidden="true" />
-                </button>
-              </div>
-            ) : (
+              )}
+
               <button
                 type="button"
-                onClick={() => void handleAdd()}
-                disabled={!available || cartBusy}
-                className="flex-1 h-12 rounded-full bg-[#FF4D00] text-white font-black hover:bg-[#E54400] disabled:bg-slate-300 disabled:cursor-not-allowed transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
+                onClick={() => navigate(ROUTES.cart)}
+                className="h-12 shrink-0 px-4 sm:px-6 rounded-full border-2 border-slate-900 font-black hover:bg-slate-900 hover:text-white transition"
               >
-                <span className="inline-flex items-center gap-2">
-                  <ShoppingBag size={18} aria-hidden="true" />
-                  {cartBusy
-                    ? 'در حال آماده‌سازی سبد…'
-                    : !selectedVariant
-                      ? 'تنوع قابل فروش موجود نیست'
-                      : available
-                        ? 'افزودن به سبد خرید'
-                        : 'ناموجود'}
-                </span>
+                مشاهده سبد
               </button>
-            )}
+            </div>
+          </section>
 
-            <button
-              type="button"
-              onClick={() => navigate(ROUTES.cart)}
-              className="h-12 px-6 rounded-full border-2 border-slate-900 font-black hover:bg-slate-900 hover:text-white transition"
-            >
-              مشاهده سبد
-            </button>
-          </div>
-
-          <div className="flex items-center justify-center gap-5 mt-6 text-xs text-slate-400 rounded-2xl bg-slate-50 py-3">
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-slate-50 p-3 text-xs leading-6 text-slate-600">
             <span className="flex items-center gap-1.5">
               <Truck size={15} /> هزینه ارسال پس از ثبت آدرس محاسبه می‌شود
             </span>
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={15} /> ضمانت اصالت کالا
-            </span>
           </div>
         </div>
+      </div>
+
+      <div className="mt-8 space-y-8 lg:mt-12">
+        {selectedVariant && selectedVariant.attributes.length > 0 && (
+          <section aria-label="ویژگی‌های تنوع انتخاب‌شده">
+            <h2 className="text-sm font-black text-slate-900">مشخصات تنوع</h2>
+            <dl
+              data-testid="product-attributes"
+              className="mt-3 grid divide-y divide-slate-100 rounded-xl border border-slate-200 px-3 lg:grid-cols-2 lg:gap-x-8"
+            >
+              {selectedVariant.attributes.map(value => (
+                <div
+                  key={value.attributeCode}
+                  className="grid min-w-0 grid-cols-2 gap-3 py-3 text-sm"
+                >
+                  <dt className="text-slate-600">{value.attributeName}</dt>
+                  <dd className="font-bold text-slate-900">
+                    {value.optionLabel}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+
+        {product.description && (
+          <section
+            aria-labelledby="product-description-heading"
+            className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 lg:p-8"
+          >
+            <h2
+              id="product-description-heading"
+              className="mb-4 text-lg font-black text-slate-900"
+            >
+              توضیحات و راهنمای محصول
+            </h2>
+            <RichText
+              html={product.description}
+              className="text-sm leading-8 text-slate-700 sm:text-base"
+            />
+          </section>
+        )}
       </div>
     </div>
   )
