@@ -23,6 +23,9 @@ for (const [name, recorded, selected] of [
       copyFileSync(join(infrastructure, 'compose.staging.yml'), join(directory, 'compose.yml'));
       copyFileSync(join(infrastructure, '.env.staging.example'), join(directory, '.env.staging'));
       appendFileSync(join(directory, '.env.staging'), `\nIMAGE_TAG=${recorded}\nAPP_VERSION=${recorded}\n`);
+      if (name === 'rollback') {
+        appendFileSync(join(directory, '.env.staging'), '\nFRESHCLAM_DATABASE_MIRROR=approved.example.invalid\nFRESHCLAM_PROXY_HOST=proxy.example.invalid\nFRESHCLAM_PROXY_PORT=3128\n');
+      }
       let configuration;
       try {
         configuration = JSON.parse(execFileSync('docker', [
@@ -45,9 +48,14 @@ for (const [name, recorded, selected] of [
       assert.equal(configuration.services.api.environment.PAYMENT_PROVIDER_MODE, 'disabled');
       assert.equal(configuration.services.api.environment.SMS_PROVIDER_MODE, 'disabled');
       const scanner = configuration.services['malware-scanner'].environment;
-      assert.equal(scanner.FRESHCLAM_CONF_DatabaseMirror, 'database.clamav.net',
-        'malware-scanner: default signature mirror is the official CDN');
+      assert.equal(scanner.FRESHCLAM_DATABASE_MIRROR, name === 'rollback' ? 'approved.example.invalid' : 'database.clamav.net');
+      assert.equal(scanner.FRESHCLAM_PROXY_HOST, name === 'rollback' ? 'proxy.example.invalid' : '');
+      assert.equal(scanner.FRESHCLAM_PROXY_PORT, name === 'rollback' ? '3128' : '');
+      assert.equal(scanner.TZ, 'UTC', 'daemon version timestamps have an explicit timezone');
       assert.equal(scanner.CLAMD_CONF_StreamMaxLength, '20M', 'malware-scanner: stream limit preserved');
+      const sourceMount = configuration.services['malware-scanner'].volumes.find(volume => volume.target === '/etc/iranyaragh/configure-clamav-source.sh');
+      assert.equal(sourceMount.read_only, true);
+      assert.equal(sourceMount.bind.create_host_path, false);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

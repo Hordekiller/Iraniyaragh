@@ -155,6 +155,10 @@ services:
   # Preloaded signatures allow startup; FreshClam maintains the persistent DB.
   malware-scanner:
     image: clamav/clamav:1.5.4-debian13-slim@sha256:9bb8712a50f0e75166e936c452cd82dd5e5be0b85586598930b5bbb84a99a578
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - sh /etc/iranyaragh/configure-clamav-source.sh /etc/clamav/freshclam.conf; exec /init
     restart: *restart
     mem_limit: 3g
     environment:
@@ -171,9 +175,18 @@ services:
       # point FreshClam at an approved private mirror or proxy instead. This is
       # still CVD/TLS-verified by FreshClam: never an unverified manual copy.
       # The value is a freshclam.conf `DatabaseMirror` host (no URL, no path).
-      FRESHCLAM_CONF_DatabaseMirror: ${FRESHCLAM_DATABASE_MIRROR:-database.clamav.net}
+      FRESHCLAM_DATABASE_MIRROR: ${FRESHCLAM_DATABASE_MIRROR:-database.clamav.net}
+      FRESHCLAM_PROXY_HOST: ${FRESHCLAM_PROXY_HOST:-}
+      FRESHCLAM_PROXY_PORT: ${FRESHCLAM_PROXY_PORT:-}
+      TZ: UTC
     volumes:
       - malware_signatures:/var/lib/clamav
+      - type: bind
+        source: ../../scripts/deploy/configure-clamav-source.sh
+        target: /etc/iranyaragh/configure-clamav-source.sh
+        read_only: true
+        bind:
+          create_host_path: false
     healthcheck:
       test: ['CMD', 'clamdcheck.sh']
       interval: 15s

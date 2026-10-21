@@ -378,9 +378,20 @@ CDN (`database.clamav.net`, `cf-ray` …`-FRA`), so FreshClam exited and the loa
 `daily` database stayed at its last version. Resolve the network/CDN access with
 the hosting/CDN operator, or point FreshClam at an approved private mirror/proxy:
 
-- Set `FRESHCLAM_DATABASE_MIRROR` in `.env.staging` to a freshclam.conf
-  `DatabaseMirror` host (no scheme, no path). Unset keeps the official CDN, which
-  is correct whenever it is reachable.
+- Set `FRESHCLAM_DATABASE_MIRROR` in the private `.env.staging` to an
+  operator-approved hostname (no scheme, path, credentials or newline). Unset
+  keeps `database.clamav.net`. No public third-party mirror is preselected.
+- The read-only mounted `configure-clamav-source.sh` validates settings and
+  renders exactly one HTTPS `DatabaseMirror` in the container's ephemeral config
+  before invoking the pinned image's original `/init`. It does not touch signature
+  data. This avoids the image entrypoint appending a second mirror behind the
+  blocked default. Repeated startup is idempotent.
+- Optional `FRESHCLAM_PROXY_HOST` and `FRESHCLAM_PROXY_PORT` configure an approved
+  unauthenticated CONNECT proxy (default port 3128 when a host is supplied).
+  HTTPS certificate validation remains end-to-end. Credential-bearing URLs,
+  configuration injection and invalid ports are rejected before config changes.
+  Authenticated proxies require a separately reviewed secret/config arrangement;
+  do not put a proxy password into these fields or diagnostic output.
 - FreshClam still verifies the CVD signature and TLS. Never substitute an
   unverified manual signature copy, and never clear the CDN cooldown to evade a
   block. A mirror that is itself stale is not an accepted fix.
@@ -389,15 +400,41 @@ Supervise the loaded signature age, not just the process, with the read-only
 gate (safe to run against a live deployment and to schedule):
 
 ```bash
-# Fails (exit 1) when the loaded daily database is older than 7 days.
+# Fails (exit 1) when the loaded daily database exceeds exactly 7 * 86400 seconds.
 ./scripts/deploy/check-clamav-freshness.sh
 ./scripts/deploy/check-clamav-freshness.sh 3   # custom max age in days
 ```
 
-It reads `sigtool --info` from inside the running `malware-scanner` service,
-prints only the engine version, signature build date and day count, and never
-downloads, reloads, restarts or writes a signature file. Exit 2 means the state
-could not be read (treat as unknown, not healthy). The acceptance criteria in
+It reads the running daemon's VERSION response with `clamdscan --version` inside
+`malware-scanner`, not the files FreshClam may have replaced before a failed
+reload. An engine-only client fallback is rejected even when the client exits
+zero. The scanner timezone is UTC; the host check uses GNU `date` and bounds the
+Docker probe with GNU `timeout` (15 seconds plus a two-second kill grace).
+Diagnostics contain only engine/database versions, build time and numeric age;
+the check never downloads, scans, reloads, restarts or writes signatures.
+Exit 2 means unavailable, malformed/future timestamp or invalid configuration;
+both exit 1 and exit 2 must alert, never report healthy. Age limits are decimal
+whole days (0..999999), compared in seconds without rounding down. Normal
+monitoring must leave the deterministic test hook `CLAMAV_NOW_EPOCH` unset.
+
+Schedule the read-only check through the deployment's monitoring facility and
+route either failure code to an operator. Passing freshness does not establish
+that the next scheduled update, updater recovery or alert delivery works. This
+change adds no API readiness dependency and installs no host timer by itself.
+
+Sources: [ClamAV mirror/proxy guidance](https://docs.clamav.net/appendix/CvdPrivateMirror.html),
+[pinned engine configuration](https://github.com/Cisco-Talos/clamav/blob/clamav-1.5.4/etc/freshclam.conf.sample)
+and [daemon-version client behavior](https://github.com/Cisco-Talos/clamav/blob/clamav-1.5.4/clamdscan/clamdscan.c).
+
+Changes to production mirror/proxy settings, scanner restart or deployment require
+owner authorization. Keep the image digest and private-only network; never clear
+cooldowns, disable TLS/CVD checks or use a forged CLEAN response. After approved
+rollout, verify the effective route, successful signed download and actual loaded
+daemon version, then observe a subsequent scheduled check/update. Inspect private
+updater logs locally and redact before sharing. Test real clean-image publication
+and EICAR rejection against the updated daemon.
+
+The acceptance criteria in
 #393 — an approved route that downloads and verifies current databases, a ClamD
 reload inside the staging memory budget, supervised updater recovery and a
 subsequent observed update — remain open until an approved route exists and is

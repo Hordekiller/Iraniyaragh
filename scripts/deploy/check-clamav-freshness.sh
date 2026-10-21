@@ -7,8 +7,8 @@
 #
 # ClamD can be perfectly healthy while FreshClam is dead and the loaded
 # signatures have gone stale. Process health therefore proves nothing about
-# signature maintenance. This script reads the loaded database's own version and
-# build date from inside the running container and refuses to pass when it is
+# signature maintenance. This script reads the daemon's own version response
+# from inside its container and refuses to pass when its loaded daily database is
 # older than MAX_AGE_DAYS.
 #
 # It only reads. It never downloads, reloads, restarts, clears a cooldown or
@@ -17,55 +17,55 @@
 # non-zero result means signature maintenance is not (or no longer) working.
 #
 # Diagnostics intentionally print only the engine version, the signature build
-# date and the day count. Never add credentials, signed URLs, object keys or
+# date and bounded numeric age. Never add credentials, signed URLs, object keys or
 # file content here.
 
 set -Eeuo pipefail
+export LC_ALL=C
+
+unknown() { printf '%s\n' "$1" >&2; exit 2; }
+[[ $# -le 1 ]] || unknown 'usage: check-clamav-freshness.sh [max-age-days]'
+MAX_AGE_RAW="${1-${CLAMAV_MAX_AGE_DAYS-7}}"
+[[ "${MAX_AGE_RAW}" =~ ^[0-9]{1,6}$ ]] || unknown 'max age must be a whole number of days (0..999999)'
+# Explicit base ten prevents leading-zero limits from becoming Bash octal input.
+MAX_AGE_DAYS=$((10#${MAX_AGE_RAW}))
+# Override only for deterministic tests or replaying a captured report; live
+# monitoring must use the real clock (the default).
+NOW_EPOCH="${CLAMAV_NOW_EPOCH-$(date -u +%s)}"
+[[ "${NOW_EPOCH}" =~ ^[0-9]{1,12}$ ]] || unknown 'CLAMAV_NOW_EPOCH must be bounded epoch seconds'
+NOW_EPOCH=$((10#${NOW_EPOCH}))
 
 INFRA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../infrastructure/docker" && pwd)"
 ENV_FILE="${ENV_FILE:-${INFRA_DIR}/.env.staging}"
 COMPOSE_FILE="${INFRA_DIR}/compose.staging.yml"
 SERVICE="${CLAMAV_SERVICE:-malware-scanner}"
-DEFAULT_MAX_AGE_DAYS=7
+[[ -f "${ENV_FILE}" ]] || unknown 'deployment environment file is unavailable'
+command -v timeout >/dev/null || unknown 'GNU timeout is required for a bounded daemon probe'
 
-MAX_AGE_DAYS="${1:-${CLAMAV_MAX_AGE_DAYS:-${DEFAULT_MAX_AGE_DAYS}}}"
-[[ "${MAX_AGE_DAYS}" =~ ^[0-9]+$ ]] || { echo "max age must be a whole number of days" >&2; exit 2; }
-
-[[ -f "${ENV_FILE}" ]] || { echo "missing ${ENV_FILE}" >&2; exit 2; }
-
-compose() {
-  docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"
-}
-
-# `sigtool --info` prints a human-readable block per database file; the `daily`
-# database carries `Version:` and `Build time:`. Read it from inside the running
-# service so the check reflects what ClamD actually loaded, not the image tag.
-INFO="$(compose exec -T "${SERVICE}" sh -c 'sigtool --info /var/lib/clamav/daily.cvd 2>/dev/null || sigtool --info /var/lib/clamav/daily.cld 2>/dev/null' 2>/dev/null || true)"
-[[ -n "${INFO}" ]] || { echo "could not read ClamAV signature info from ${SERVICE}" >&2; exit 2; }
-
-BUILD_TIME="$(printf '%s\n' "${INFO}" | sed -n 's/^Build time: //p' | head -n1)"
-VERSION="$(printf '%s\n' "${INFO}" | sed -n 's/^Version: //p' | head -n1)"
-[[ -n "${BUILD_TIME}" ]] || { echo "signature build time not found in ClamAV info" >&2; exit 2; }
-
+# clamdscan --version asks the running daemon for VERSION. Its engine-only
+# fallback can exit zero when the daemon is unavailable; reject that response.
+# Unlike sigtool, this cannot mistake a fresh on-disk file for a completed reload.
+if ! INFO="$(timeout --kill-after=2s 15s docker compose --env-file "${ENV_FILE}" \
+  -f "${COMPOSE_FILE}" exec -T "${SERVICE}" clamdscan --version 2>/dev/null)"; then
+  unknown 'could not read ClamAV signature info from daemon'
+fi
+[[ "${INFO}" != *$'\n'* && "${INFO}" =~ ^ClamAV[[:space:]]([[:alnum:].+_-]{1,64})/([0-9]{1,10})/([^/]{1,96})$ ]] \
+  || unknown 'could not read ClamAV signature info from daemon'
+ENGINE="${BASH_REMATCH[1]}"
+VERSION="${BASH_REMATCH[2]}"
+BUILD_TIME="${BASH_REMATCH[3]}"
 if ! BUILD_EPOCH="$(date -u -d "${BUILD_TIME}" +%s 2>/dev/null)"; then
-  echo "could not parse signature build time: ${BUILD_TIME}" >&2
-  exit 2
+  unknown 'could not parse loaded signature build time'
 fi
+[[ "${BUILD_EPOCH}" =~ ^[0-9]{1,12}$ ]] || unknown 'invalid loaded signature epoch'
+(( BUILD_EPOCH <= NOW_EPOCH )) || unknown 'loaded signature timestamp is in the future; check clock synchronization'
+AGE_SECONDS=$((NOW_EPOCH - BUILD_EPOCH))
+LIMIT_SECONDS=$((MAX_AGE_DAYS * 86400))
 
-NOW_EPOCH="$(date -u +%s)"
-# Deterministic override for automated tests and for re-checking a captured
-# report at a known time. Unset in normal use; the real clock is the default.
-if [[ -n "${CLAMAV_NOW_EPOCH:-}" ]]; then
-  [[ "${CLAMAV_NOW_EPOCH}" =~ ^[0-9]+$ ]] || { echo "CLAMAV_NOW_EPOCH must be epoch seconds" >&2; exit 2; }
-  NOW_EPOCH="${CLAMAV_NOW_EPOCH}"
-fi
-AGE_DAYS=$(( (NOW_EPOCH - BUILD_EPOCH) / 86400 ))
-
-echo "ClamAV signatures: version ${VERSION:-unknown}, built ${BUILD_TIME}, age ${AGE_DAYS}d (limit ${MAX_AGE_DAYS}d)."
-
-if (( AGE_DAYS > MAX_AGE_DAYS )); then
-  echo "::error::ClamAV signatures are stale: ${AGE_DAYS} days old (limit ${MAX_AGE_DAYS}). Signature maintenance is not working; check FreshClam and the configured mirror (#393)." >&2
+printf 'ClamAV loaded signatures: engine %s, version %s, built %s UTC, age %ss (limit %sd).\n' \
+  "${ENGINE}" "${VERSION}" "${BUILD_TIME}" "${AGE_SECONDS}" "${MAX_AGE_DAYS}"
+if (( AGE_SECONDS > LIMIT_SECONDS )); then
+  printf '::error::ClamAV signatures are stale; check FreshClam and the approved update route (#393).\n' >&2
   exit 1
 fi
-
-echo "ClamAV signature freshness OK."
+printf 'ClamAV signature freshness OK.\n'
