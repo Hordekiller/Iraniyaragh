@@ -31,6 +31,8 @@ jobs:
         run: node --test .github/scripts/audit-prod.test.mjs
       - name: Verify exact-SHA deployment environment precedence
         run: node --test scripts/deploy/runtime-provenance.test.mjs
+      - name: Verify ClamAV signature-freshness gate
+        run: node --test scripts/deploy/check-clamav-freshness.test.mjs scripts/deploy/configure-clamav-source.test.mjs
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
