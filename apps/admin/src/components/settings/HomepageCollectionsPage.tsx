@@ -76,16 +76,46 @@ function HomepageCollectionsEditor() {
     return () => { current.alive = false; for (const request of current.requests) request.abort(); };
   }, []);
 
-  function replaceSection(index: number, patch: Partial<HomepageCollectionSection>) {
-    setSections(current => current.map((section, currentIndex) => currentIndex === index ? { ...section, ...patch } : section));
+  function replaceSort(index: number, sortBy: HomepageCollectionSection['sortBy']) {
+    const section = sections[index];
+    if (section?.kind === 'ALL_PRODUCTS' && sections.some((other, otherIndex) => otherIndex !== index && other.kind === 'ALL_PRODUCTS' && other.sortBy === sortBy)) return;
+    setSections(current => current.map((section, currentIndex) => currentIndex === index ? { ...section, sortBy } : section));
+    setSaved(false); setError(null); pending.current = null;
+  }
+
+  function replaceCategory(index: number, categoryId: string) {
+    setSections(current => current.map((section, currentIndex) => currentIndex === index && section.kind !== 'ALL_PRODUCTS'
+      ? { kind: 'CATEGORY', categoryId, sortBy: section.sortBy }
+      : section));
+    setSaved(false); setError(null); pending.current = null;
+  }
+
+  function changeKind(index: number, kind: 'CATEGORY' | 'ALL_PRODUCTS') {
+    const current = sections[index];
+    if (!current || (current.kind ?? 'CATEGORY') === kind) return;
+    const usedByOthers = new Set(sections.filter((_, sectionIndex) => sectionIndex !== index).flatMap(section => section.kind === 'ALL_PRODUCTS' ? [] : [section.categoryId]));
+    if (kind === 'ALL_PRODUCTS') {
+      if (sections.some((section, sectionIndex) => sectionIndex !== index && section.kind === 'ALL_PRODUCTS' && section.sortBy === current.sortBy)) return;
+      setSections(items => items.map((section, sectionIndex) => sectionIndex === index ? { kind: 'ALL_PRODUCTS', sortBy: current.sortBy } : section));
+    } else {
+      const category = categories.find(item => !usedByOthers.has(item.id));
+      if (!category) return;
+      setSections(items => items.map((section, sectionIndex) => sectionIndex === index ? { kind: 'CATEGORY', categoryId: category.id, sortBy: current.sortBy } : section));
+    }
     setSaved(false); setError(null); pending.current = null;
   }
 
   function addSection() {
     if (sections.length >= 8) return;
-    const category = categories.find(item => !sections.some(section => section.categoryId === item.id));
+    const category = categories.find(item => !sections.some(section => section.kind !== 'ALL_PRODUCTS' && section.categoryId === item.id));
     if (!category) return;
-    setSections(current => [...current, { categoryId: category.id, sortBy: 'NEWEST' }]);
+    setSections(current => [...current, { kind: 'CATEGORY', categoryId: category.id, sortBy: 'NEWEST' }]);
+    setSaved(false); setError(null); pending.current = null;
+  }
+
+  function addAllProductsSection(sortBy: HomepageCollectionSection['sortBy']) {
+    if (sections.length >= 8 || sections.some(section => section.kind === 'ALL_PRODUCTS' && section.sortBy === sortBy)) return;
+    setSections(current => [...current, { kind: 'ALL_PRODUCTS', sortBy }]);
     setSaved(false); setError(null); pending.current = null;
   }
 
@@ -120,7 +150,7 @@ function HomepageCollectionsEditor() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (life.current.flight || !config || loading || Boolean(loadError) || stale || uncertain) return;
-    if (sections.length > 8 || new Set(sections.map(section => section.categoryId)).size !== sections.length) {
+    if (sections.length > 8 || new Set(sections.map(section => section.kind === 'ALL_PRODUCTS' ? 'ALL_PRODUCTS' : `CATEGORY:${section.categoryId}`)).size !== sections.length) {
       setError(new ApiClientError({ code: 'INVALID_REQUEST', statusCode: 400, message: '', requestId: '' })); return;
     }
     pending.current = { body: { expectedVersion: config.version, sections }, key: `homepage-collections-${randomUuid()}` };
@@ -135,7 +165,9 @@ function HomepageCollectionsEditor() {
   }
 
   const locked = loading || busy || uncertain || stale || !config || Boolean(loadError);
-  const selected = new Set(sections.map(section => section.categoryId));
+  const selected = new Set(sections.flatMap(section => section.kind === 'ALL_PRODUCTS' ? [] : [section.categoryId]));
+  const hasAllProductsNewest = sections.some(section => section.kind === 'ALL_PRODUCTS' && section.sortBy === 'NEWEST');
+  const hasAllProductsBestselling = sections.some(section => section.kind === 'ALL_PRODUCTS' && section.sortBy === 'BESTSELLING');
   return <Box>
     <PageHeader title="چیدمان کاروسل صفحهٔ اصلی" description="دسته‌بندی‌های قابل نمایش را انتخاب و ترتیب و معیار هر کاروسل را تعیین کنید." breadcrumbs={[{ label: 'تنظیمات', href: '/settings' }, { label: 'صفحهٔ اصلی' }]} />
     <Stack gap={2}>
@@ -150,18 +182,26 @@ function HomepageCollectionsEditor() {
         <Stack gap={2}>
           {sections.length === 0 && !loading && <Alert severity="warning">هنوز کاروسلی انتخاب نشده؛ برای جلوگیری از شلوغی، فهرست گستردهٔ کالاها نمایش داده نمی‌شود.</Alert>}
           {sections.map((section, index) => (
-            <Paper key={`${section.categoryId}-${index}`} variant="outlined" sx={{ p: 2 }}>
+            <Paper key={`${section.kind === 'ALL_PRODUCTS' ? 'all-products' : section.categoryId}-${index}`} variant="outlined" sx={{ p: 2 }}>
               <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }} gap={1.5}>
                 <Typography sx={{ minWidth: 70, fontWeight: 700 }}>بخش {index + 1}</Typography>
                 <FormControl fullWidth size="small">
-                  <InputLabel id={`homepage-category-${index}`}>دسته‌بندی</InputLabel>
-                  <Select labelId={`homepage-category-${index}`} label="دسته‌بندی" value={section.categoryId} disabled={locked} onChange={event => replaceSection(index, { categoryId: event.target.value })}>
-                    {categories.map(category => <MenuItem key={category.id} value={category.id} disabled={selected.has(category.id) && category.id !== section.categoryId}>{categoryLabel(category, categories)}</MenuItem>)}
+                  <InputLabel id={`homepage-kind-${index}`}>نوع کاروسل</InputLabel>
+                  <Select labelId={`homepage-kind-${index}`} label="نوع کاروسل" value={section.kind === 'ALL_PRODUCTS' ? 'ALL_PRODUCTS' : 'CATEGORY'} disabled={locked} onChange={event => changeKind(index, event.target.value as 'CATEGORY' | 'ALL_PRODUCTS')}>
+                    <MenuItem value="CATEGORY">یک دسته‌بندی</MenuItem>
+                    <MenuItem value="ALL_PRODUCTS" disabled={section.kind !== 'ALL_PRODUCTS' && ((section.sortBy === 'NEWEST' && hasAllProductsNewest) || (section.sortBy === 'BESTSELLING' && hasAllProductsBestselling))}>همهٔ محصولات</MenuItem>
                   </Select>
                 </FormControl>
+                {section.kind !== 'ALL_PRODUCTS' && <FormControl fullWidth size="small">
+                  <InputLabel id={`homepage-category-${index}`}>دسته‌بندی</InputLabel>
+                  <Select labelId={`homepage-category-${index}`} label="دسته‌بندی" value={section.categoryId} disabled={locked} onChange={event => replaceCategory(index, event.target.value)}>
+                    {categories.map(category => <MenuItem key={category.id} value={category.id} disabled={selected.has(category.id) && category.id !== section.categoryId}>{categoryLabel(category, categories)} ({category.productCount})</MenuItem>)}
+                  </Select>
+                </FormControl>}
+                {section.kind !== 'ALL_PRODUCTS' && categories.find(category => category.id === section.categoryId)?.productCount === 0 && <Alert severity="warning" sx={{ width: '100%' }}>این دسته محصول منتشرشده ندارد؛ کاروسل آن تا زمان انتشار کالا در صفحهٔ اصلی دیده نمی‌شود.</Alert>}
                 <FormControl fullWidth size="small">
                   <InputLabel id={`homepage-sort-${index}`}>ترتیب نمایش</InputLabel>
-                  <Select labelId={`homepage-sort-${index}`} label="ترتیب نمایش" value={section.sortBy} disabled={locked} onChange={event => replaceSection(index, { sortBy: event.target.value as HomepageCollectionSection['sortBy'] })}>
+                  <Select labelId={`homepage-sort-${index}`} label="ترتیب نمایش" value={section.sortBy} disabled={locked} onChange={event => replaceSort(index, event.target.value as HomepageCollectionSection['sortBy'])}>
                     <MenuItem value="NEWEST">جدیدترین</MenuItem>
                     <MenuItem value="BESTSELLING">پرفروش</MenuItem>
                   </Select>
@@ -176,8 +216,10 @@ function HomepageCollectionsEditor() {
           ))}
           <Stack direction="row" gap={1} flexWrap="wrap">
             <Button type="button" variant="outlined" disabled={locked || sections.length >= 8 || categories.every(category => selected.has(category.id))} onClick={addSection}>افزودن دسته‌بندی</Button>
+            <Button type="button" variant="outlined" disabled={locked || sections.length >= 8 || hasAllProductsNewest} onClick={() => addAllProductsSection('NEWEST')}>افزودن تازه‌ترین محصولات</Button>
+            <Button type="button" variant="outlined" disabled={locked || sections.length >= 8 || hasAllProductsBestselling} onClick={() => addAllProductsSection('BESTSELLING')}>افزودن پرفروش‌ترین محصولات</Button>
             {uncertain && <Button type="button" variant="outlined" onClick={() => void retry()}>بررسی و تکرار همان ذخیره</Button>}
-            <Button type="submit" variant="contained" disabled={locked || categories.length === 0}>{busy ? 'در حال ذخیره…' : 'ذخیرهٔ چیدمان'}</Button>
+            <Button type="submit" variant="contained" disabled={locked}>{busy ? 'در حال ذخیره…' : 'ذخیرهٔ چیدمان'}</Button>
           </Stack>
           <Typography variant="caption" color="text.secondary">حداکثر ۸ کاروسل؛ ترتیب این فهرست، ترتیب نمایش در فروشگاه است. تنظیمات بعد از تأیید تازهٔ ورود ذخیره می‌شود.</Typography>
         </Stack>

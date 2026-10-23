@@ -4735,26 +4735,59 @@
                               "type": "array",
                               "maxItems": 8,
                               "items": {
-                                "type": "object",
-                                "additionalProperties": false,
-                                "required": [
-                                  "categoryId",
-                                  "sortBy"
-                                ],
-                                "properties": {
-                                  "categoryId": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 128
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "categoryId",
+                                      "sortBy"
+                                    ],
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "CATEGORY"
+                                        ]
+                                      },
+                                      "categoryId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "sortBy": {
+                                        "type": "string",
+                                        "enum": [
+                                          "NEWEST",
+                                          "BESTSELLING"
+                                        ]
+                                      }
+                                    }
                                   },
-                                  "sortBy": {
-                                    "type": "string",
-                                    "enum": [
-                                      "NEWEST",
-                                      "BESTSELLING"
-                                    ]
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "kind",
+                                      "sortBy"
+                                    ],
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ALL_PRODUCTS"
+                                        ]
+                                      },
+                                      "sortBy": {
+                                        "type": "string",
+                                        "enum": [
+                                          "NEWEST",
+                                          "BESTSELLING"
+                                        ]
+                                      }
+                                    }
                                   }
-                                }
+                                ]
                               }
                             },
                             "updatedAt": {
@@ -4815,26 +4848,59 @@
                               "type": "array",
                               "maxItems": 8,
                               "items": {
-                                "type": "object",
-                                "additionalProperties": false,
-                                "required": [
-                                  "categoryId",
-                                  "sortBy"
-                                ],
-                                "properties": {
-                                  "categoryId": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 128
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "categoryId",
+                                      "sortBy"
+                                    ],
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "CATEGORY"
+                                        ]
+                                      },
+                                      "categoryId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "sortBy": {
+                                        "type": "string",
+                                        "enum": [
+                                          "NEWEST",
+                                          "BESTSELLING"
+                                        ]
+                                      }
+                                    }
                                   },
-                                  "sortBy": {
-                                    "type": "string",
-                                    "enum": [
-                                      "NEWEST",
-                                      "BESTSELLING"
-                                    ]
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "kind",
+                                      "sortBy"
+                                    ],
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ALL_PRODUCTS"
+                                        ]
+                                      },
+                                      "sortBy": {
+                                        "type": "string",
+                                        "enum": [
+                                          "NEWEST",
+                                          "BESTSELLING"
+                                        ]
+                                      }
+                                    }
                                   }
-                                }
+                                ]
                               }
                             },
                             "updatedAt": {
@@ -4966,26 +5032,59 @@
                     "type": "array",
                     "maxItems": 8,
                     "items": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "categoryId",
-                        "sortBy"
-                      ],
-                      "properties": {
-                        "categoryId": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 128
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "categoryId",
+                            "sortBy"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "CATEGORY"
+                              ]
+                            },
+                            "categoryId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 128
+                            },
+                            "sortBy": {
+                              "type": "string",
+                              "enum": [
+                                "NEWEST",
+                                "BESTSELLING"
+                              ]
+                            }
+                          }
                         },
-                        "sortBy": {
-                          "type": "string",
-                          "enum": [
-                            "NEWEST",
-                            "BESTSELLING"
-                          ]
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "kind",
+                            "sortBy"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "ALL_PRODUCTS"
+                              ]
+                            },
+                            "sortBy": {
+                              "type": "string",
+                              "enum": [
+                                "NEWEST",
+                                "BESTSELLING"
+                              ]
+                            }
+                          }
                         }
-                      }
+                      ]
                     }
                   }
                 }
@@ -5026,26 +5125,59 @@
                               "type": "array",
                               "maxItems": 8,
                               "items": {
-                                "type": "object",
-                                "additionalProperties": false,
-                                "required": [
-                                  "categoryId",
-                                  "sortBy"
-                                ],
-                                "properties": {
-                                  "categoryId": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 128
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "categoryId",
+                                      "sortBy"
+                                    ],
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "CATEGORY"
+                                        ]
+                                      },
+                                      "categoryId": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 128
+                                      },
+                                      "sortBy": {
+                                        "type": "string",
+                                        "enum": [
+                                          "NEWEST",
+                                          "BESTSELLING"
+                                        ]
+                                      }
+                                    }
                                   },
-                                  "sortBy": {
-                                    "type": "string",
-                                    "enum": [
-                                      "NEWEST",
-                                      "BESTSELLING"
-                                    ]
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "kind",
+                                      "sortBy"
+                                    ],
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ALL_PRODUCTS"
+                                        ]
+                                      },
+                                      "sortBy": {
+                                        "type": "string",
+                                        "enum": [
+                                          "NEWEST",
+                                          "BESTSELLING"
+                                        ]
+                                      }
+                                    }
                                   }
-                                }
+                                ]
                               }
                             },
                             "updatedAt": {
