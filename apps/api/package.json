@@ -9,6 +9,7 @@
     "auth:e2e-staff": "node scripts/provision-e2e-staff.mjs",
     "media:bucket": "node scripts/provision-media-bucket.mjs",
     "invoice-pdf:capacity": "node scripts/provision-invoice-pdf-capacity.mjs",
+    "report-export:capacity": "node scripts/provision-report-export-capacity.mjs",
     "dev": "nest start --watch",
     "worker:media": "node dist/src/media-worker.js",
     "worker:pdf": "node dist/src/pdf-render-worker.js",

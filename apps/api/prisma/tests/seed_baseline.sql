@@ -22,6 +22,7 @@ DECLARE
     'pricing.read',
     'pricing.write',
     'reports.read',
+    'reports.export',
     'roles.manage',
     'settings.manage',
     'shipments.manage',

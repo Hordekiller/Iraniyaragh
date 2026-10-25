@@ -2181,6 +2181,87 @@ model InvoicePdfRenderJobCommand {
   @@unique([scope, actorId, documentId, keyHash], map: "InvoicePdfRenderJobCommand_request_key")
 }
 
+// Bounded operational-report export jobs (ADR R2/#423). Persian financial
+// evidence stays in UTC with integer IRR; the definition snapshot immutably
+// fixes which filters/grain consumed — a later live query is a new export.
+model ReportExportStorageCapacity {
+  id              String  @id @db.VarChar(32)
+  budgetBytes     BigInt
+  maxArtifacts    Int
+  storedBytes     BigInt  @default(0)
+  artifactCount   Int     @default(0)
+  pendingJobCount Int     @default(0)
+  maxPendingJobs  Int     @default(0)
+  maxRetentionMs  BigInt  @default(0)
+  isEnabled       Boolean @default(false)
+  version         Int     @default(1)
+}
+
+model ReportExportJob {
+  id                  String      @id @default(cuid())
+  reportKind          String      @db.VarChar(30)
+  outputFormat        String      @db.VarChar(10)
+  definitionHash      String      @db.Char(64)
+  definition          Json
+  rendererRevision    String      @db.VarChar(100)
+  status              String      @db.VarChar(20)
+  failureReason       String?     @db.VarChar(100)
+  attempts            Int         @default(0)
+  leaseVersion        Int         @default(0)
+  leaseOwner          String?     @db.VarChar(64)
+  leaseIssuedAt       DateTime?
+  leaseExpireAt       DateTime?
+  requestedByUserId   String
+  requestedByScope    String      @db.VarChar(20)
+  requestKeyHash      String      @db.Char(64)
+  payloadHash         String      @db.Char(64)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  artifacts           ReportExportArtifact[]
+  commands            ReportExportCommand[]
+
+  @@index([status, createdAt, id])
+  @@index([requestedByUserId, createdAt, id])
+}
+
+// Exactly-once request identity for one actor/kind/definition/format/key.
+model ReportExportCommand {
+  id             String  @id @default(cuid())
+  actorId        String
+  reportKind     String  @db.VarChar(30)
+  outputFormat   String  @db.VarChar(10)
+  definitionHash String  @db.Char(64)
+  keyHash        String  @db.Char(64)
+  payloadHash    String  @db.Char(64)
+  jobId          String
+  outcome        String  @db.VarChar(20)
+  createdAt      DateTime @default(now())
+  job            ReportExportJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, reportKind, outputFormat, definitionHash, keyHash], map: "ReportExportCommand_request_key")
+}
+
+// Private exported byte evidence living only until its retention moment;
+// the database keeps the audit trail, never the file, after expiry.
+model ReportExportArtifact {
+  id               String   @id @default(cuid())
+  jobId            String
+  jobRequestKeyHash String  @db.Char(64)
+  reportKind       String   @db.VarChar(30)
+  outputFormat     String   @db.VarChar(10)
+  definitionHash   String   @db.Char(64)
+  rendererRevision String   @db.VarChar(100)
+  contentSha256    String   @db.Char(64)
+  byteCount        Int
+  bytes            Bytes
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  job              ReportExportJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
+
+  @@unique([jobId])
+  @@index([expiresAt])
+}
+
 model InvoiceDocumentLine {
   id          String          @id @default(cuid())
   documentId  String

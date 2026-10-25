@@ -7,7 +7,6 @@ import {
 import { Prisma } from '@prisma/client';
 import type {
   Money,
-  OperationalReportQuery,
   OperationalReportSummary,
   ReportMetric,
   ReportOrderRow,
@@ -41,7 +40,11 @@ const metrics: ReportMetric[] = [
   'recordedCreditRefundPayouts',
   'issuedInvoiceValue',
 ];
-function orderScope(query: OperationalReportQuery) {
+export function orderScope(query: {
+  customerId?: string;
+  productId?: string;
+  status?: string;
+}) {
   const customer = query.customerId
     ? Prisma.sql`AND o."customerId"=${query.customerId}`
     : Prisma.empty;
@@ -53,8 +56,92 @@ function orderScope(query: OperationalReportQuery) {
     : Prisma.empty;
   return Prisma.sql`SELECT o.id,o.number,o."customerId",o.status,o."createdAt",o."grandTotal" FROM "Order" o WHERE true ${customer} ${status} ${product}`;
 }
-function settlementCte() {
+export function settlementCte() {
   return Prisma.sql`SELECT p.id,p."orderId",p.amount,p."gatewayEnvironment",MIN(t."createdAt") AS at FROM "Payment" p JOIN scope o ON o.id=p."orderId" JOIN "PaymentTransition" t ON t."paymentId"=p.id AND t."to"::text='PAID' WHERE p."referenceId" IS NOT NULL GROUP BY p.id`;
+}
+export function debtorsCte(asOf: Date, customerId?: string) {
+  return Prisma.sql`WITH document_balances AS(SELECT d.id,d."accountId",d."dueAt",SUM(e.amount) AS outstanding FROM "ReceivableDocument" d JOIN "CreditLedgerEntry" e ON e."documentId"=d.id WHERE d."issuedAt"<=${asOf} AND e."effectiveAt"<=${asOf} GROUP BY d.id),
+    payouts AS(SELECT "returnId",SUM(amount) AS amount FROM "CreditRefundPayout" WHERE "effectiveAt"<=${asOf} GROUP BY "returnId"),
+    obligations AS(SELECT d."accountId",SUM(r."refundDue"-COALESCE(p.amount,0)) AS amount FROM "CreditSaleReturn" r JOIN "ReceivableDocument" d ON d.id=r."documentId" LEFT JOIN payouts p ON p."returnId"=r.id WHERE r."createdAt"<=${asOf} GROUP BY d."accountId"),
+    accounts AS(SELECT a.id AS "accountId",a."customerId",a.status::text AS "accountStatus",COUNT(b.id) FILTER(WHERE b.outstanding>0)::text AS documents,
+      COALESCE(SUM(b.outstanding),0)::text AS outstanding,COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt">=${asOf}),0)::text AS "notDue",
+      COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt"<${asOf} AND b."dueAt">=${asOf}::timestamp-INTERVAL '30 days'),0)::text AS "overdueUpTo30Days",
+      COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt"<${asOf}::timestamp-INTERVAL '30 days' AND b."dueAt">=${asOf}::timestamp-INTERVAL '60 days'),0)::text AS "overdue31To60Days",
+      COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt"<${asOf}::timestamp-INTERVAL '60 days' AND b."dueAt">=${asOf}::timestamp-INTERVAL '90 days'),0)::text AS "overdue61To90Days",
+      COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt"<${asOf}::timestamp-INTERVAL '90 days'),0)::text AS "overdueOver90Days",COALESCE(o.amount,0)::text AS "refundObligation"
+      FROM "CreditAccount" a LEFT JOIN document_balances b ON b."accountId"=a.id LEFT JOIN obligations o ON o."accountId"=a.id WHERE true ${customerId ? Prisma.sql`AND a."customerId"=${customerId}` : Prisma.empty}
+      GROUP BY a.id,o.amount HAVING COALESCE(SUM(b.outstanding),0)>0 OR COALESCE(o.amount,0)>0)`;
+}
+export type OrderRowRaw = {
+  id: string;
+  number: string;
+  customerId: string;
+  status: OrderStatus;
+  createdAt: Date;
+  total: bigint;
+  attempts: string;
+  settled: string;
+  refunded: string;
+  invoice: string | null;
+};
+export type DebtorRowRaw = {
+  customerId: string;
+  accountId: string;
+  accountStatus: string;
+  documents: string;
+  outstanding: string;
+  notDue: string;
+  overdueUpTo30Days: string;
+  overdue31To60Days: string;
+  overdue61To90Days: string;
+  overdueOver90Days: string;
+  refundObligation: string;
+};
+export function orderItems(rows: OrderRowRaw[]): ReportOrderRow[] {
+  return rows.map((row) => ({
+    id: row.id,
+    number: row.number,
+    customerId: row.customerId,
+    status: row.status,
+    createdAt: row.createdAt.toISOString(),
+    total: money(row.total),
+    paymentAttempts: count(row.attempts),
+    providerSettled: money(row.settled),
+    gatewayRefunded: money(row.refunded),
+    issuedInvoiceNumber: row.invoice,
+  }));
+}
+export function debtorItems(rows: DebtorRowRaw[]): DebtorReportRow[] {
+  return rows.map((row) => ({
+    customerId: row.customerId,
+    accountId: row.accountId,
+    accountStatus: row.accountStatus,
+    documents: count(row.documents),
+    outstanding: money(row.outstanding),
+    notDue: money(row.notDue),
+    overdueUpTo30Days: money(row.overdueUpTo30Days),
+    overdue31To60Days: money(row.overdue31To60Days),
+    overdue61To90Days: money(row.overdue61To90Days),
+    overdueOver90Days: money(row.overdueOver90Days),
+    refundObligation: money(row.refundObligation),
+  }));
+}
+function orderRowsSql(
+  filters: { customerId?: string; productId?: string; status?: string },
+  from: Date,
+  toExclusive: Date,
+  offset: number,
+  limit: number,
+) {
+  return Prisma.sql`
+    WITH scope AS NOT MATERIALIZED(${orderScope(filters)}), settled AS(${settlementCte()}), page AS(SELECT * FROM scope WHERE "createdAt">=${from} AND "createdAt"<${toExclusive} ORDER BY "createdAt" DESC,id DESC OFFSET ${offset} LIMIT ${limit})
+    SELECT o.id,o.number,o."customerId",o.status,o."createdAt",o."grandTotal" AS total,(SELECT COUNT(*)::text FROM "Payment" p WHERE p."orderId"=o.id) AS attempts,
+     COALESCE((SELECT SUM(s.amount)::text FROM settled s WHERE s."orderId"=o.id),'0') AS settled,
+     COALESCE((SELECT SUM(r.amount)::text FROM "Refund" r JOIN "Payment" p ON p.id=r."paymentId" WHERE p."orderId"=o.id),'0') AS refunded,
+     (SELECT d.number FROM "InvoiceDocument" d WHERE d."orderId"=o.id) AS invoice FROM page o ORDER BY o."createdAt" DESC,o.id DESC`;
+}
+function debtorRowsSql(base: Prisma.Sql, offset: number, limit: number) {
+  return Prisma.sql`${base} SELECT * FROM accounts ORDER BY outstanding::numeric DESC,"accountId" OFFSET ${offset} LIMIT ${limit}`;
 }
 @Injectable()
 export class OperationalReportService {
@@ -217,109 +304,75 @@ export class OperationalReportService {
       const [{ total }] = await tx.$queryRaw<{ total: string }[]>(
         Prisma.sql`WITH scope AS NOT MATERIALIZED(${orderScope(query.filters)}) SELECT count(*)::text AS total FROM scope WHERE "createdAt">=${query.from} AND "createdAt"<${query.toExclusive}`,
       );
-      const rows = await tx.$queryRaw<
-        {
-          id: string;
-          number: string;
-          customerId: string;
-          status: OrderStatus;
-          createdAt: Date;
-          total: bigint;
-          attempts: string;
-          settled: string;
-          refunded: string;
-          invoice: string | null;
-        }[]
-      >(Prisma.sql`
-    WITH scope AS NOT MATERIALIZED(${orderScope(query.filters)}), settled AS(${settlementCte()}), page AS(SELECT * FROM scope WHERE "createdAt">=${query.from} AND "createdAt"<${query.toExclusive} ORDER BY "createdAt" DESC,id DESC OFFSET ${query.offset} LIMIT ${query.limit})
-    SELECT o.id,o.number,o."customerId",o.status,o."createdAt",o."grandTotal" AS total,(SELECT COUNT(*)::text FROM "Payment" p WHERE p."orderId"=o.id) AS attempts,
-     COALESCE((SELECT SUM(s.amount)::text FROM settled s WHERE s."orderId"=o.id),'0') AS settled,
-     COALESCE((SELECT SUM(r.amount)::text FROM "Refund" r JOIN "Payment" p ON p.id=r."paymentId" WHERE p."orderId"=o.id),'0') AS refunded,
-     (SELECT d.number FROM "InvoiceDocument" d WHERE d."orderId"=o.id) AS invoice FROM page o ORDER BY o."createdAt" DESC,o.id DESC`);
-      const items: ReportOrderRow[] = rows.map((row) => ({
-        id: row.id,
-        number: row.number,
-        customerId: row.customerId,
-        status: row.status,
-        createdAt: row.createdAt.toISOString(),
-        total: money(row.total),
-        paymentAttempts: count(row.attempts),
-        providerSettled: money(row.settled),
-        gatewayRefunded: money(row.refunded),
-        issuedInvoiceNumber: row.invoice,
-      }));
+      const rows = await tx.$queryRaw<OrderRowRaw[]>(
+        orderRowsSql(query.filters, query.from, query.toExclusive, query.offset, query.limit),
+      );
       return {
         generatedAt,
-        items,
+        items: orderItems(rows),
         count: count(total),
         offset: query.offset,
         limit: query.limit,
       };
     });
   }
+  /** Whole-set bounded order rows inside one export snapshot transaction.
+   * Export surfaces consume the same settlement/refund/invoice evidence as the
+   * paged report, so a later live query cannot be claimed as the same snapshot.
+   */
+  async ordersForExport(
+    filters: { customerId?: string; productId?: string; status?: string },
+    from: Date,
+    toExclusive: Date,
+    maxRows: number,
+  ): Promise<{ generatedAt: string; items: ReportOrderRow[]; count: number }> {
+    const generatedAt = new Date().toISOString();
+    return this.snapshot(async (tx) => {
+      const [{ total }] = await tx.$queryRaw<{ total: string }[]>(
+        Prisma.sql`WITH scope AS NOT MATERIALIZED(${orderScope(filters)}) SELECT count(*)::text AS total FROM scope WHERE "createdAt">=${from} AND "createdAt"<${toExclusive}`,
+      );
+      const rows = await tx.$queryRaw<OrderRowRaw[]>(
+        orderRowsSql(filters, from, toExclusive, 0, maxRows),
+      );
+      return { generatedAt, items: orderItems(rows), count: count(total) };
+    });
+  }
   async debtors(raw: Record<string, unknown>) {
     const query = debtorRange(raw),
       generatedAt = new Date().toISOString();
     return this.snapshot(async (tx) => {
-      const base = Prisma.sql`WITH document_balances AS(SELECT d.id,d."accountId",d."dueAt",SUM(e.amount) AS outstanding FROM "ReceivableDocument" d JOIN "CreditLedgerEntry" e ON e."documentId"=d.id WHERE d."issuedAt"<=${query.asOf} AND e."effectiveAt"<=${query.asOf} GROUP BY d.id),
-    payouts AS(SELECT "returnId",SUM(amount) AS amount FROM "CreditRefundPayout" WHERE "effectiveAt"<=${query.asOf} GROUP BY "returnId"),
-    obligations AS(SELECT d."accountId",SUM(r."refundDue"-COALESCE(p.amount,0)) AS amount FROM "CreditSaleReturn" r JOIN "ReceivableDocument" d ON d.id=r."documentId" LEFT JOIN payouts p ON p."returnId"=r.id WHERE r."createdAt"<=${query.asOf} GROUP BY d."accountId"),
-    accounts AS(SELECT a.id AS "accountId",a."customerId",a.status::text AS "accountStatus",COUNT(b.id) FILTER(WHERE b.outstanding>0)::text AS documents,
-      COALESCE(SUM(b.outstanding),0)::text AS outstanding,COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt">=${query.asOf}),0)::text AS "notDue",
-      COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt"<${query.asOf} AND b."dueAt">=${query.asOf}::timestamp-INTERVAL '30 days'),0)::text AS "overdueUpTo30Days",
-      COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt"<${query.asOf}::timestamp-INTERVAL '30 days' AND b."dueAt">=${query.asOf}::timestamp-INTERVAL '60 days'),0)::text AS "overdue31To60Days",
-      COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt"<${query.asOf}::timestamp-INTERVAL '60 days' AND b."dueAt">=${query.asOf}::timestamp-INTERVAL '90 days'),0)::text AS "overdue61To90Days",
-      COALESCE(SUM(b.outstanding) FILTER(WHERE b."dueAt"<${query.asOf}::timestamp-INTERVAL '90 days'),0)::text AS "overdueOver90Days",COALESCE(o.amount,0)::text AS "refundObligation"
-      FROM "CreditAccount" a LEFT JOIN document_balances b ON b."accountId"=a.id LEFT JOIN obligations o ON o."accountId"=a.id WHERE true ${query.customerId ? Prisma.sql`AND a."customerId"=${query.customerId}` : Prisma.empty}
-      GROUP BY a.id,o.amount HAVING COALESCE(SUM(b.outstanding),0)>0 OR COALESCE(o.amount,0)>0)`;
+      const base = debtorsCte(query.asOf, query.customerId);
       const [{ total }] = await tx.$queryRaw<{ total: string }[]>(
         Prisma.sql`${base} SELECT COUNT(*)::text AS total FROM accounts`,
       );
-      const rows = await tx.$queryRaw<
-        (Omit<
-          DebtorReportRow,
-          | 'documents'
-          | 'outstanding'
-          | 'notDue'
-          | 'overdueUpTo30Days'
-          | 'overdue31To60Days'
-          | 'overdue61To90Days'
-          | 'overdueOver90Days'
-          | 'refundObligation'
-        > & {
-          documents: string;
-          outstanding: string;
-          notDue: string;
-          overdueUpTo30Days: string;
-          overdue31To60Days: string;
-          overdue61To90Days: string;
-          overdueOver90Days: string;
-          refundObligation: string;
-        })[]
-      >(
-        Prisma.sql`${base} SELECT * FROM accounts ORDER BY outstanding::numeric DESC,"accountId" OFFSET ${query.offset} LIMIT ${query.limit}`,
+      const rows = await tx.$queryRaw<DebtorRowRaw[]>(
+        debtorRowsSql(base, query.offset, query.limit),
       );
-      const items: DebtorReportRow[] = rows.map((row) => ({
-        customerId: row.customerId,
-        accountId: row.accountId,
-        accountStatus: row.accountStatus,
-        documents: count(row.documents),
-        outstanding: money(row.outstanding),
-        notDue: money(row.notDue),
-        overdueUpTo30Days: money(row.overdueUpTo30Days),
-        overdue31To60Days: money(row.overdue31To60Days),
-        overdue61To90Days: money(row.overdue61To90Days),
-        overdueOver90Days: money(row.overdueOver90Days),
-        refundObligation: money(row.refundObligation),
-      }));
       return {
         generatedAt,
         asOf: query.asOf.toISOString(),
-        items,
+        items: debtorItems(rows),
         count: count(total),
         offset: query.offset,
         limit: query.limit,
       };
+    });
+  }
+  /** Whole-set bounded debtor rows inside one export snapshot transaction. */
+  async debtorsForExport(
+    debtors: { asOf: Date; customerId?: string },
+    maxRows: number,
+  ): Promise<{ generatedAt: string; items: DebtorReportRow[]; count: number }> {
+    const generatedAt = new Date().toISOString();
+    return this.snapshot(async (tx) => {
+      const base = debtorsCte(debtors.asOf, debtors.customerId);
+      const [{ total }] = await tx.$queryRaw<{ total: string }[]>(
+        Prisma.sql`${base} SELECT COUNT(*)::text AS total FROM accounts`,
+      );
+      const rows = await tx.$queryRaw<DebtorRowRaw[]>(
+        debtorRowsSql(base, 0, maxRows),
+      );
+      return { generatedAt, items: debtorItems(rows), count: count(total) };
     });
   }
 }

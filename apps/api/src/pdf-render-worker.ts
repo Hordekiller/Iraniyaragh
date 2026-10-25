@@ -7,14 +7,20 @@ import type { EnvironmentVariables } from './config/environment';
 import { InvoicePdfJobService } from './modules/invoices/invoice-pdf-job.service';
 import { InvoicePdfRenderProcessor } from './modules/invoices/invoice-pdf-render.processor';
 import { INVOICE_PDF_QUEUE_NAME, INVOICE_PDF_QUEUE_PREFIX } from './modules/invoices/invoice-pdf-queue.port';
+import { ReportExportJobService } from './modules/reports/report-export-job.service';
+import { ReportExportRenderer } from './modules/reports/report-export.renderer';
+import { ReportExportArtifactStore } from './modules/reports/report-export-artifact.store';
+import { ReportExportRenderProcessor } from './modules/reports/report-export-render.processor';
+import { REPORT_EXPORT_QUEUE_NAME, REPORT_EXPORT_QUEUE_PREFIX } from './modules/reports/report-export-queue.port';
 import { PrismaService } from './database/prisma.service';
 
 // Dedicated unprivileged PDF render process. It never accepts sockets and is
 // never the API image; the job database lease stays the single source of truth.
+// The same image multiplexes the bounded report-export render worker.
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
   const config = app.get<ConfigService<EnvironmentVariables, true>>(ConfigService);
-  const processor = new InvoicePdfRenderProcessor(
+  const invoiceProcessor = new InvoicePdfRenderProcessor(
     app.get(InvoicePdfJobService),
     app.get(PrismaService),
     {
@@ -23,22 +29,53 @@ async function bootstrap(): Promise<void> {
       assetsDir: config.get('INVOICE_PDF_ASSETS_DIR', { infer: true }),
     },
   );
-  const worker = new Worker<{ jobId: string }>(
+  const invoiceWorker = new Worker<{ jobId: string }>(
     INVOICE_PDF_QUEUE_NAME,
     async job => {
       if (job.name !== 'render' || typeof job.data.jobId !== 'string') {
         throw new Error('Unsupported invoice PDF render job.');
       }
-      await processor.process(job.data.jobId, {
+      await invoiceProcessor.process(job.data.jobId, {
         finalAttempt: job.attemptsMade + 1 >= (job.opts.attempts ?? 1),
       });
     },
     { connection: { url: config.get('REDIS_URL', { infer: true }) }, prefix: INVOICE_PDF_QUEUE_PREFIX, concurrency: 1 },
   );
-  worker.on('error', () => process.stderr.write('Invoice PDF render worker infrastructure error.\n'));
-  worker.on('failed', job => {
+  invoiceWorker.on('error', () => process.stderr.write('Invoice PDF render worker infrastructure error.\n'));
+  invoiceWorker.on('failed', job => {
     if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
       process.stderr.write('Invoice PDF render attempt dead-lettered; inspect database job evidence.\n');
+    }
+  });
+
+  const exportProcessor = new ReportExportRenderProcessor(
+    app.get(ReportExportJobService),
+    app.get(ReportExportRenderer),
+    app.get(PrismaService),
+    app.get(ReportExportArtifactStore),
+    {
+      workerId: resolveWorkerId(config.get('REPORT_EXPORT_WORKER_ID', { infer: true })),
+      renderTimeoutMs: config.get('REPORT_EXPORT_RENDER_TIMEOUT_MS', { infer: true }),
+      cleanupIntervalMs: config.get('REPORT_EXPORT_CLEANUP_INTERVAL_MS', { infer: true }),
+    },
+  );
+  exportProcessor.start();
+  const exportWorker = new Worker<{ jobId: string }>(
+    REPORT_EXPORT_QUEUE_NAME,
+    async job => {
+      if (job.name !== 'export' || typeof job.data.jobId !== 'string') {
+        throw new Error('Unsupported report export render job.');
+      }
+      await exportProcessor.process(job.data.jobId, {
+        finalAttempt: job.attemptsMade + 1 >= (job.opts.attempts ?? 1),
+      });
+    },
+    { connection: { url: config.get('REDIS_URL', { infer: true }) }, prefix: REPORT_EXPORT_QUEUE_PREFIX, concurrency: 1 },
+  );
+  exportWorker.on('error', () => process.stderr.write('Report export render worker infrastructure error.\n'));
+  exportWorker.on('failed', job => {
+    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+      process.stderr.write('Report export render attempt dead-lettered; inspect database job evidence.\n');
     }
   });
 
@@ -46,14 +83,17 @@ async function bootstrap(): Promise<void> {
   const close = async () => {
     if (closing) return;
     closing = true;
-    await worker.close();
+    await Promise.allSettled([invoiceWorker.close(), exportWorker.close()]);
+    await exportProcessor.stop();
     await app.close();
   };
   process.once('SIGTERM', () => void close());
   process.once('SIGINT', () => void close());
 }
 
-function resolveWorkerId(cooked: EnvironmentVariables['INVOICE_PDF_WORKER_ID']): string {
+function resolveWorkerId(
+  cooked: EnvironmentVariables['INVOICE_PDF_WORKER_ID'] | EnvironmentVariables['REPORT_EXPORT_WORKER_ID'],
+): string {
   if (typeof cooked === 'string' && /^[a-zA-Z0-9_-]{4,64}$/u.test(cooked)) return cooked;
   const hostname = process.env.HOSTNAME ?? '';
   if (/^[a-zA-Z0-9_-]{4,64}$/u.test(hostname)) return hostname;
