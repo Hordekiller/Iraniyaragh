@@ -69,7 +69,7 @@ RUN set -eu; \
 # The digest resolves a single linux/amd64 manifest, which is the only platform
 # this deployment publishes for, so the browser runtime cannot shift underneath
 # the pinned playwright JavaScript package.
-FROM mcr.microsoft.com/playwright:v1.52.0-noble@sha256:891f067b28ce2b6ee763aca5ec49b16cede0c87eb35bf01c4f2d86d52cbf3af7 AS runtime
+FROM mcr.microsoft.com/playwright:v1.55.1-noble@sha256:d8e0bdf35da90942fc8f97a65fa7f1969200ccd916ec0fd78780d80d9b81e07b AS runtime
 
 # tini reaps zombie browser processes and forwards SIGTERM so an in-flight
 # render can settle before close. The base image ships no init, so add it while

@@ -30,7 +30,7 @@ import {
 import { InvoicePdfArtifactStore } from './invoice-pdf-artifact.store';
 import { INVOICE_PDF_QUEUE, type InvoicePdfQueue } from './invoice-pdf-queue.port';
 
-export const INVOICE_PDF_RENDERER_REVISION = 'invoice-pdf-jobs-1';
+export const INVOICE_PDF_RENDERER_REVISION = 'invoice-pdf-jobs-2';
 // Bounded lease and attempts keep restart recovery honest without unbounded work.
 export const INVOICE_PDF_MAX_ATTEMPTS = 5;
 export const INVOICE_PDF_LEASE_SECONDS = 45;
