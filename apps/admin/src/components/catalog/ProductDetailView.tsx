@@ -68,7 +68,8 @@ export function ProductDetailView({ productId }: { productId: string }) {
     setError(null);
     Promise.all([getProduct(productId, controller.signal), listAttributes(controller.signal)])
       .then(([detail, attributeItems]) => {
-        setProduct(detail.product);
+        setProduct((current) => current?.id === detail.product.id &&
+          (current.version ?? 0) > (detail.product.version ?? 0) ? current : detail.product);
         setAttributes(attributeItems.items);
       })
       .catch((fetchError: unknown) => {
@@ -185,6 +186,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
               </Box>
               {canWrite ? (
                 <ProductDescriptionEditor
+                  key={productId}
                   productId={productId}
                   description={product.description}
                   version={product.version ?? 0}

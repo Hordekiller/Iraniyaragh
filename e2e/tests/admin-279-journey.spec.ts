@@ -361,9 +361,19 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
         new URL(response.url()).pathname.endsWith('/description') &&
         response.request().method() === 'PATCH',
     );
-    await tap(page.getByTestId('description-save'));
+    // Save in the same turn as the last native edit. Waiting for Jodit's
+    // throttled callback here used to hide the lost-last-edit regression.
+    await editorBody.evaluate((element) => {
+      element.focus();
+      const paragraph = document.createElement('p');
+      paragraph.textContent = 'آخرین ویرایش پیش از ثبت';
+      element.append(paragraph);
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      document.querySelector<HTMLButtonElement>('[data-testid="description-save"]')!.click();
+    });
     const saved = await saveResponse;
     expect(saved.status()).toBe(200);
+    expect(saved.request().postDataJSON().description).toContain('آخرین ویرایش پیش از ثبت');
     await expect(page.getByTestId('description-error')).toHaveCount(0);
     await expect(page.getByTestId('description-stale')).toHaveCount(0);
   });
@@ -374,6 +384,7 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     await waitForEditorReady(page);
 
     const html = (await richEditorBody(page).innerHTML()) ?? '';
+    expect(html).toContain('آخرین ویرایش پیش از ثبت');
     expect(html).toContain('دربارهٔ این قفل');
     expect(html).toContain('<h2');
     expect(html).toContain('<table');
