@@ -19,6 +19,7 @@ import {
   updateProductDescription,
 } from '@/lib/catalog/catalog-api';
 import { RichTextEditor } from '@/components/editor/RichTextEditor';
+import type { RichTextEditorHandle } from '@/components/editor/RichTextEditor';
 import { useProductMediaPicker } from '@/components/editor/ProductMediaPickerDialog';
 
 export type DescriptionSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -58,16 +59,33 @@ export function ProductDescriptionEditor({
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const { handle: mediaPicker, host: mediaPickerHost } = useProductMediaPicker(productId);
   const versionRef = useRef(version);
+  const editorRef = useRef<RichTextEditorHandle>(null);
+  const draftRef = useRef(draft);
+  const savingRef = useRef(false);
+  const requestGenerationRef = useRef(0);
+  const pendingSaveRef = useRef<{
+    draft: string;
+    description: string | null;
+    expectedVersion: number;
+    key: string;
+  } | null>(null);
 
   const dirty = draft !== savedContent;
+
+  useEffect(() => {
+    requestGenerationRef.current += 1;
+    return () => { requestGenerationRef.current += 1; };
+  }, [productId]);
 
   const applyServerContent = useCallback(
     (nextDescription: string | null, nextVersion: number, nextStatus: DescriptionSaveStatus) => {
       const content = nextDescription ?? '';
+      draftRef.current = content;
       setDraft(content);
       setSavedContent(content);
       versionRef.current = nextVersion;
       setIdempotencyKey(null);
+      pendingSaveRef.current = null;
       setErrorMessage(null);
       setStale(false);
       setStatus(nextStatus);
@@ -76,9 +94,14 @@ export function ProductDescriptionEditor({
   );
 
   useEffect(() => {
-    if (version === versionRef.current) return;
+    if (version <= versionRef.current) return;
+    if (dirty || savingRef.current) {
+      setStale(true);
+      setErrorMessage('نسخهٔ محصول تغییر کرده است؛ نوشتهٔ شما حفظ شده است. پیش از ثبت، نسخهٔ تازه را دریافت و بازبینی کنید.');
+      return;
+    }
     applyServerContent(description, version, 'idle');
-  }, [description, version, applyServerContent]);
+  }, [description, version, applyServerContent, dirty]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -91,9 +114,12 @@ export function ProductDescriptionEditor({
   }, [dirty]);
 
   const refreshFromServer = useCallback(async () => {
+    if (savingRef.current || reloading) return;
+    const generation = requestGenerationRef.current;
     setReloading(true);
     try {
       const data = await getProduct(productId);
+      if (generation !== requestGenerationRef.current) return;
       applyServerContent(
         data.product.description,
         data.product.version ?? versionRef.current,
@@ -101,38 +127,64 @@ export function ProductDescriptionEditor({
       );
       onServerProduct(data.product);
     } catch (err) {
+      if (generation !== requestGenerationRef.current) return;
       setStale(true);
       setErrorMessage(
         err instanceof Error ? err.message : 'بازیابی نسخهٔ تازهٔ محصول ناموفق بود.',
       );
     } finally {
-      setReloading(false);
+      if (generation === requestGenerationRef.current) setReloading(false);
     }
-  }, [applyServerContent, onServerProduct, productId]);
+  }, [applyServerContent, onServerProduct, productId, reloading]);
 
   const save = useCallback(() => {
-    if (!canWrite || status === 'saving' || reloading || !dirty) return;
-    const content = draft.trim() ? draft : null;
-    const key = idempotencyKey ?? createIdempotencyKey('product-description');
+    if (!canWrite || savingRef.current || reloading || stale) return;
+    // React's last render may precede Jodit's throttled change callback.
+    // Snapshot the editor itself before disabling it or issuing the command.
+    const currentDraft = editorRef.current?.getValue() ?? draftRef.current;
+    if (currentDraft === savedContent && !pendingSaveRef.current) return;
+    draftRef.current = currentDraft;
+    setDraft(currentDraft);
+    // Retrying an uncertain request must replay its exact original payload.
+    // A changed draft is retained separately until that outcome is known.
+    const command = pendingSaveRef.current ?? {
+      draft: currentDraft,
+      description: currentDraft.trim() ? currentDraft : null,
+      expectedVersion: versionRef.current,
+      key: createIdempotencyKey('product-description'),
+    };
+    pendingSaveRef.current = command;
+    const key = command.key;
+    const generation = requestGenerationRef.current;
     if (idempotencyKey !== key) setIdempotencyKey(key);
+    savingRef.current = true;
     setStatus('saving');
     setErrorMessage(null);
     setStale(false);
     updateProductDescription(
       productId,
-      { description: content, expectedVersion: versionRef.current },
+      { description: command.description, expectedVersion: command.expectedVersion },
       key,
     )
       .then(({ product }) => {
+        if (generation !== requestGenerationRef.current) return;
+        const latestDraft = editorRef.current?.getValue() ?? draftRef.current;
+        const editedSinceSubmit = latestDraft !== command.draft;
         applyServerContent(
           product.description,
           product.version ?? versionRef.current + 1,
-          'saved',
+          editedSinceSubmit ? 'idle' : 'saved',
         );
+        if (editedSinceSubmit) {
+          draftRef.current = latestDraft;
+          setDraft(latestDraft);
+        }
         onServerProduct(product);
       })
       .catch((err: unknown) => {
+        if (generation !== requestGenerationRef.current) return;
         if (err instanceof ApiClientError && err.statusCode === 409) {
+          pendingSaveRef.current = null;
           setIdempotencyKey(null);
           setStale(true);
           setStatus('error');
@@ -144,6 +196,7 @@ export function ProductDescriptionEditor({
           return;
         }
         if (err instanceof ApiClientError && err.statusCode === 403) {
+          pendingSaveRef.current = null;
           setIdempotencyKey(null);
           setStatus('error');
           setErrorMessage(
@@ -163,22 +216,28 @@ export function ProductDescriptionEditor({
               ? 'برقراری ارتباط با سرویس ناموفق بود.'
               : 'ذخیرهٔ توضیحات رد شد.',
         );
-        if (!retryable) setIdempotencyKey(null);
+        if (!retryable) {
+          pendingSaveRef.current = null;
+          setIdempotencyKey(null);
+        }
+      })
+      .finally(() => {
+        if (generation === requestGenerationRef.current) savingRef.current = false;
       });
   }, [
     applyServerContent,
     canWrite,
-    dirty,
     idempotencyKey,
     onServerProduct,
     productId,
     reloading,
-    status,
-    draft,
+    savedContent,
+    stale,
   ]);
 
   const startEditing = useCallback(
     (next: string) => {
+      draftRef.current = next;
       setDraft(next);
       if (status === 'saved') setStatus('idle');
     },
@@ -186,6 +245,7 @@ export function ProductDescriptionEditor({
   );
 
   const clearContent = useCallback(() => {
+    draftRef.current = '';
     setDraft('');
     if (status === 'saved') setStatus('idle');
   }, [status]);
@@ -206,6 +266,7 @@ export function ProductDescriptionEditor({
             <Button
               size="small"
               data-testid="description-reload"
+              disabled={saving || reloading}
               onClick={() => void refreshFromServer()}
               startIcon={<RefreshCw size={14} />}
             >
@@ -236,6 +297,7 @@ export function ProductDescriptionEditor({
         </Alert>
       ) : null}
       <RichTextEditor
+        ref={editorRef}
         value={draft}
         onChange={startEditing}
         placeholder="توضیحات محصول را بنویسید… (تصویر را از دکمهٔ Insert image انتخاب کنید)"
@@ -250,7 +312,7 @@ export function ProductDescriptionEditor({
           <Button
             variant="contained"
             onClick={save}
-            disabled={saving || reloading || !dirty}
+            disabled={saving || reloading || stale || !dirty}
             startIcon={saving ? <CircularProgress size={14} /> : undefined}
             data-testid="description-save"
           >
