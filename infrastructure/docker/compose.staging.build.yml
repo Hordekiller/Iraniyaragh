@@ -37,6 +37,10 @@ services:
       context: ../..
       dockerfile: infrastructure/docker/api.Dockerfile
       target: runtime
+  pdf-render-worker:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/pdf.Dockerfile
   admin:
     build:
       context: ../..

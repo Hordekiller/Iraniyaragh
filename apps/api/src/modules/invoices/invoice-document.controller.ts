@@ -1,12 +1,14 @@
-import { Body, Controller, ForbiddenException, Get, Header, Headers, Inject, Param, Post, Query, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Header, Headers, HttpCode, Inject, Param, Post, Query, Res, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiCreatedResponse, ApiTags, ApiProperty, ApiResponse } from '@nestjs/swagger';
 import { IsInt, Min, Max } from 'class-validator';
+import { Response } from 'express';
 import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { normalizeIdempotencyKey } from '../../common/idempotency-key';
 import { getRequestId } from '../../common/request-context';
 import { invoiceInvalid } from './invoice-policy.validation';
 import { InvoiceDocumentService } from './invoice-document.service';
+import { InvoicePdfJobService } from './invoice-pdf-job.service';
 import { invoiceDocumentOpenApi } from './invoice-document.openapi';
 import { failureError } from '../orders/order-openapi-schemas';
 export class InvoiceIssueDto {
@@ -32,7 +34,8 @@ function pagination(query: Record<string, unknown>) {
 @ApiResponse({ status: 409, schema: failureError(['STALE_VERSION','IDEMPOTENCY_CONFLICT','INVOICE_ISSUE_CONFLICT','INVOICE_SOURCE_CHANGED','INVOICE_REQUOTE_REQUIRED','INVOICE_POLICY_REQUIRED','CONFLICT'], 409) })
 @ApiResponse({ status: 500, schema: failureError(['INVOICE_ISSUE_UNAVAILABLE'], 500) })
 export class InvoiceDocumentController {
-  constructor(@Inject(InvoiceDocumentService) private readonly service: InvoiceDocumentService) {}
+  constructor(@Inject(InvoiceDocumentService) private readonly service: InvoiceDocumentService,
+    @Inject(InvoicePdfJobService) private readonly pdf: InvoicePdfJobService) {}
   @Get('documents') @Header('Cache-Control','no-store') @ApiOkResponse({ schema: invoiceDocumentOpenApi.list })
   async list(@Query() query: Record<string, unknown>) { const page = pagination(query); return { data: await this.service.list(page.offset, page.limit) }; }
   @Get('documents/:id') @Header('Cache-Control','no-store') @ApiOkResponse({ schema: invoiceDocumentOpenApi.read })
@@ -51,5 +54,46 @@ export class InvoiceDocumentController {
     @Body(new ValidationPipe({ expectedType: InvoiceIssueDto, transform: true, whitelist: true, forbidNonWhitelisted: true })) input: InvoiceIssueDto) {
     if (!principal.permissions.has('invoices.read')) throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Current invoice read permission is required.' });
     return { data: await this.service.issue(principal.userId, getRequestId(), id, input, normalizeIdempotencyKey(key)) };
+  }
+
+  /** Private raster-render request for an issued document (fresh evidence only). */
+  @Post('documents/:id/pdf') @Header('Cache-Control','no-store') @HttpCode(200)
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiOkResponse({ schema: invoiceDocumentOpenApi.pdfRequest })
+  @ApiResponse({ status: 409, schema: failureError(['IDEMPOTENCY_CONFLICT','INVOICE_PDF_CAPACITY_EXCEEDED'], 409) })
+  @ApiResponse({ status: 400, schema: failureError(['INVOICE_PDF_DISABLED','INVALID_REQUEST'], 400) })
+  @ApiResponse({ status: 503, schema: failureError(['INVOICE_PDF_STORAGE_UNAVAILABLE'], 503) })
+  async requestPdf(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Headers('idempotency-key') key: string,
+    @Query() query: Record<string, unknown>) {
+    if (Object.keys(query).length) throw invoiceInvalid('This resource accepts no owner or query override.');
+    return { data: await this.pdf.request({ scope: 'staff', actorId: principal.userId, requestId: getRequestId(), documentId: id, key: normalizeIdempotencyKey(key) }) };
+  }
+
+  /** Poll the render status of one issued document. */
+  @Get('documents/:id/pdf') @Header('Cache-Control','no-store')
+  @ApiOkResponse({ schema: invoiceDocumentOpenApi.pdfRequest })
+  @ApiResponse({ status: 409, schema: failureError(['INVOICE_PDF_NOT_READY'], 409) })
+  async pdfStatus(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Query() query: Record<string, unknown>) {
+    if (Object.keys(query).length) throw invoiceInvalid('This resource accepts no owner or query override.');
+    return { data: await this.pdf.status({ scope: 'staff', actorId: principal.userId, documentId: id }) };
+  }
+
+  /** Authoritative private artifact download; bytes are verified and never READY-early. */
+  @Get('documents/:id/pdf/artifact') @Header('Cache-Control','no-store')
+  @ApiResponse({ status: 409, schema: failureError(['INVOICE_PDF_NOT_READY'], 409) })
+  async downloadPdf(@Param('id') id: string, @Query() query: Record<string, unknown>, @Res({ passthrough: false }) response: Response) {
+    if (Object.keys(query).length) throw invoiceInvalid('This resource accepts no owner or query override.');
+    const download = await this.pdf.downloadStaff(id);
+    return this.sendPdf(response, download);
+  }
+
+  private sendPdf(response: Response, download: { bytes: Buffer; pdfSha256: string; byteCount: number; filename: string }) {
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader('Content-Length', String(download.byteCount));
+    response.setHeader('Content-Disposition', `attachment; filename="${download.filename}"`);
+    response.setHeader('X-Content-SHA256', download.pdfSha256);
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.end(download.bytes);
+    return response;
   }
 }

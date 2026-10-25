@@ -5,10 +5,13 @@ import {
   Get,
   Header,
   Headers,
+  HttpCode,
   Inject,
   Param,
+  Post,
   Put,
   Query,
+  Res,
   ValidationPipe,
 } from '@nestjs/common';
 import {
@@ -29,6 +32,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { Response } from 'express';
 import {
   CurrentPrincipal,
   RequireAuthentication,
@@ -44,6 +48,7 @@ import {
   invoicePage,
   InvoicePublicationService,
 } from './invoice-publication.service';
+import { InvoicePdfJobService } from './invoice-pdf-job.service';
 import { invoicePublicationOpenApi } from './invoice-publication.openapi';
 class PublicationDto {
   @ApiProperty({ type: Number, minimum: 0, maximum: 2147483646 })
@@ -168,6 +173,7 @@ export class CustomerInvoiceController {
   constructor(
     @Inject(InvoicePublicationService)
     private readonly service: InvoicePublicationService,
+    @Inject(InvoicePdfJobService) private readonly pdf: InvoicePdfJobService,
   ) {}
   @Get()
   @Header('Cache-Control', 'no-store')
@@ -198,5 +204,90 @@ export class CustomerInvoiceController {
     return {
       data: { invoice: await this.service.customerRead(principal.userId, id) },
     };
+  }
+
+  /** Private render request bounded to an ACTIVE customer's published invoice. */
+  @Post(':id/pdf')
+  @Header('Cache-Control', 'no-store')
+  @HttpCode(200)
+  @ApiHeader({ name: 'Idempotency-Key', required: true })
+  @ApiOkResponse({ schema: invoicePublicationOpenApi.pdfRequest })
+  @ApiResponse({
+    status: 409,
+    schema: failureError(
+      ['INVOICE_PDF_NOT_READY', 'INVOICE_PDF_CAPACITY_EXCEEDED', 'IDEMPOTENCY_CONFLICT'],
+      409,
+    ),
+  })
+  @ApiResponse({ status: 400, schema: failureError(['INVOICE_PDF_DISABLED', 'INVALID_REQUEST'], 400) })
+  @ApiResponse({
+    status: 503,
+    schema: failureError(['INVOICE_PDF_STORAGE_UNAVAILABLE'], 503),
+  })
+  async requestPdf(
+    @CurrentPrincipal() principal: AuthPrincipalContext,
+    @Param('id') id: string,
+    @Headers('idempotency-key') key: string,
+    @Query() query: Record<string, unknown>,
+  ) {
+    if (Object.keys(query).length)
+      throw invoiceInvalid('This resource accepts no owner or query override.');
+    return {
+      data: await this.pdf.request({
+        scope: 'customer',
+        actorId: principal.userId,
+        requestId: getRequestId(),
+        documentId: id,
+        key: normalizeIdempotencyKey(key),
+      }),
+    };
+  }
+
+  /** Render status poll for one published invoice. */
+  @Get(':id/pdf')
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({ schema: invoicePublicationOpenApi.pdfRequest })
+  async pdfStatus(
+    @CurrentPrincipal() principal: AuthPrincipalContext,
+    @Param('id') id: string,
+    @Query() query: Record<string, unknown>,
+  ) {
+    if (Object.keys(query).length)
+      throw invoiceInvalid('This resource accepts no owner or query override.');
+    return {
+      data: await this.pdf.status({
+        scope: 'customer',
+        actorId: principal.userId,
+        documentId: id,
+      }),
+    };
+  }
+
+  /** Verified private download; consistent identity re-checked at GET time. */
+  @Get(':id/pdf/artifact')
+  @Header('Cache-Control', 'no-store')
+  async downloadPdf(
+    @CurrentPrincipal() principal: AuthPrincipalContext,
+    @Param('id') id: string,
+    @Query() query: Record<string, unknown>,
+    @Res({ passthrough: false }) response: Response,
+  ) {
+    if (Object.keys(query).length)
+      throw invoiceInvalid('This resource accepts no owner or query override.');
+    const download = await this.pdf.downloadCustomer(principal.userId, id);
+    return this.sendPdf(response, download);
+  }
+
+  private sendPdf(
+    response: Response,
+    download: { bytes: Buffer; pdfSha256: string; byteCount: number; filename: string },
+  ) {
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader('Content-Length', String(download.byteCount));
+    response.setHeader('Content-Disposition', `attachment; filename="${download.filename}"`);
+    response.setHeader('X-Content-SHA256', download.pdfSha256);
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.end(download.bytes);
+    return response;
   }
 }

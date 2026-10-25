@@ -1,7 +1,9 @@
+import { createHash, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, request as pwRequest, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { adminSidebar, signInDiAsAdmin, tap } from './helpers';
+import { signInStaff } from './staff-auth';
 
 const rial = new Intl.NumberFormat('fa-IR');
 const SAMPLE_IMAGE = resolve(__dirname, '../../apps/web/public/images/hero1.jpg');
@@ -197,6 +199,7 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     createSellableVariantWithStock(page, suffix),
   );
   let orderHref = '';
+  let documentHref = '';
   const { mobile, canonicalMobile } = await test.step('register the customer', () =>
     createCustomer(page, suffix),
   );
@@ -327,7 +330,7 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await expect(page.getByRole('textbox', { name: /تعداد 1/ })).toBeDisabled();
     const documentLink = page.getByRole('link', { name: 'مشاهدهٔ سند نهایی' });
     await expect(documentLink).toBeVisible();
-    const documentHref = await documentLink.getAttribute('href');
+    documentHref = await documentLink.getAttribute('href') ?? '';
     expect(documentHref).toMatch(/^\/invoices\/documents\/[^/]+$/);
     await tap(documentLink);
     await expect(page.getByRole('heading', { name: /^فاکتور IRY-\d{4}-\d+$/ })).toBeVisible();
@@ -475,6 +478,68 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await expect(cells.nth(3)).toHaveText(rial.format(10));
     await expect(cells.nth(4)).toHaveText(rial.format(0));
     await expect(cells.nth(5)).toHaveText(rial.format(10));
+  });
+
+  await test.step('render the issued document through the durable private pipeline', async () => {
+    // Real staff API session, exactly as an operator client would. This step
+    // runs last because a fresh staff password challenge retires the previous
+    // one — the admin page's earlier session is no longer needed here.
+    // Isolated worker prerequisites (ci.yml e2e job): the rendered PDF-ready
+    // evidence comes only from `apps/api worker:pdf`, never from a UI run.
+    const api = await pwRequest.newContext({ baseURL: process.env.API_E2E_URL ?? 'http://127.0.0.1:4000' });
+    try {
+      const { accessToken } = await signInStaff(api);
+      const documentId = documentHref.replace(/^\/invoices\/documents\//u, '');
+      expect(documentId).toMatch(/^[a-zA-Z0-9_-]+$/u);
+      const key = `e2e-staff-pdf-${randomUUID()}`;
+
+      const ask = await api.post(`/api/v1/invoices/admin/documents/${documentId}/pdf`, {
+        headers: { authorization: `Bearer ${accessToken}`, 'idempotency-key': key },
+      });
+      expect(ask.status()).toBe(200);
+      const asked = (await ask.json()) as { data: { documentId: string; status: string; sha256: string | null; byteCount: number | null; replayed: boolean } };
+      expect(asked.data).toMatchObject({ documentId, status: 'PENDING', replayed: false });
+
+      // The isolated render worker claims the lease, renders and finalises.
+      let ready: { status: string; sha256: string | null; byteCount: number | null; replayed: boolean } | undefined;
+      await expect.poll(async () => {
+        const polling = await api.get(`/api/v1/invoices/admin/documents/${documentId}/pdf`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        });
+        expect(polling.status()).toBe(200);
+        const body = (await polling.json()) as { data: { status: string; sha256: string | null; byteCount: number | null; replayed: boolean } };
+        ready = body.data;
+        return ready.status;
+      }, { timeout: 80_000, intervals: [2_000] }).toBe('READY');
+      expect(ready!.replayed).toBe(false);
+      expect(ready!.sha256).toMatch(/^[a-f0-9]{64}$/u);
+      expect(ready!.byteCount).toBeGreaterThan(0);
+
+      const artifact = await api.get(`/api/v1/invoices/admin/documents/${documentId}/pdf/artifact`, {
+        headers: { authorization: `Bearer ${accessToken}` },
+      });
+      expect(artifact.status()).toBe(200);
+      const bytes = await artifact.body();
+      const wireSha256 = createHash('sha256').update(bytes).digest('hex');
+      // Stored-integrity holds on the wire: browser-provided bytes match both
+      // the status digest claim and the X-Content-SHA256 header.
+      expect(wireSha256).toBe(ready!.sha256);
+      expect(artifact.headers()['x-content-sha256']).toBe(ready!.sha256);
+      expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
+      expect(Number(artifact.headers()['content-length'])).toBe(bytes.length);
+      expect(artifact.headers()['content-type']).toBe('application/pdf');
+      expect(artifact.headers()['x-content-type-options']).toBe('nosniff');
+
+      // Same-key replay converges on the same artifact identity, no new job.
+      const replay = await api.post(`/api/v1/invoices/admin/documents/${documentId}/pdf`, {
+        headers: { authorization: `Bearer ${accessToken}`, 'idempotency-key': key },
+      });
+      expect(replay.status()).toBe(200);
+      expect(((await replay.json()) as { data: { status: string; replayed: boolean } }).data)
+        .toMatchObject({ status: 'READY', replayed: true });
+    } finally {
+      await api.dispose();
+    }
   });
 
 });

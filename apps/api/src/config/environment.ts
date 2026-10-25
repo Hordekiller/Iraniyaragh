@@ -54,6 +54,9 @@ export type EnvironmentVariables = {
   PRODUCT_MEDIA_SCANNER_HOST?: string;
   PRODUCT_MEDIA_SCANNER_PORT: number;
   PRODUCT_MEDIA_SCANNER_TIMEOUT_MS: number;
+  INVOICE_PDF_RENDER_TIMEOUT_MS: number;
+  INVOICE_PDF_ASSETS_DIR?: string;
+  INVOICE_PDF_WORKER_ID?: string;
 };
 
 const supportedEnvironments = new Set<NodeEnvironment>(['development', 'test', 'staging', 'production']);
@@ -220,6 +223,25 @@ function parseBoundedInteger(value: unknown, key: string, minimum: number, maxim
   const candidate = typeof value === 'number' ? value : Number(value);
   if (!Number.isSafeInteger(candidate) || candidate < minimum || candidate > maximum) {
     throw new Error(`${key} must be an integer between ${minimum} and ${maximum}.`);
+  }
+  return candidate;
+}
+
+function parseBoundedPath(value: unknown, key: string): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const candidate = typeof value === 'string' ? value.trim() : '';
+  if (!candidate.startsWith('/') || candidate.length > 300
+    || candidate.split('/').some(segment => segment === '..' || segment === '')) {
+    throw new Error(`${key} must be an absolute bounded directory path without traversal segments.`);
+  }
+  return candidate;
+}
+
+function parseBoundedIdentifier(value: unknown, key: string): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const candidate = typeof value === 'string' ? value.trim() : '';
+  if (!/^[a-zA-Z0-9_-]{4,64}$/u.test(candidate)) {
+    throw new Error(`${key} must be 4-64 characters of letters, digits, dashes or underscores.`);
   }
   return candidate;
 }
@@ -556,5 +578,13 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
       1,
       16,
     ),
+    INVOICE_PDF_RENDER_TIMEOUT_MS: parseBoundedInteger(
+      config.INVOICE_PDF_RENDER_TIMEOUT_MS ?? 20_000,
+      'INVOICE_PDF_RENDER_TIMEOUT_MS',
+      5_000,
+      60_000,
+    ),
+    INVOICE_PDF_ASSETS_DIR: parseBoundedPath(config.INVOICE_PDF_ASSETS_DIR, 'INVOICE_PDF_ASSETS_DIR'),
+    INVOICE_PDF_WORKER_ID: parseBoundedIdentifier(config.INVOICE_PDF_WORKER_ID, 'INVOICE_PDF_WORKER_ID'),
   };
 }

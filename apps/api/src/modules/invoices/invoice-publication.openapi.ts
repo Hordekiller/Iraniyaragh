@@ -106,4 +106,15 @@ export const invoicePublicationOpenApi = {
       limit: { type: 'integer', minimum: 1, maximum: 100 },
     }),
   }),
+  pdfRequest: object({
+    data: object({
+      pdf: object({
+        documentId: text,
+        status: { type: 'string', enum: ['PENDING', 'READY'] },
+        sha256: { ...text, pattern: '^[a-f0-9]{64}$', nullable: true },
+        byteCount: { type: 'integer', minimum: 0, nullable: true },
+        replayed: { type: 'boolean' },
+      }),
+    }),
+  }),
 };

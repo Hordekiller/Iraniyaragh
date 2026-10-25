@@ -268,6 +268,44 @@ services:
       malware-scanner:
         condition: service_healthy
 
+  # Isolated invoice-PDF render worker (ADR-0030): the only process allowed to
+  # launch a browser engine. It is its own image (pdf-render-worker) built on a
+  # Playwright base that has Chromium and every sandbox helper baked in, and it
+  # runs unprivileged with the sandbox ON. It owns no ports and no HTTP surface;
+  # Postgres remains the source of truth for job leases, Redis only wakes the
+  # worker up. It starts harmlessly while capacity is not approved yet: the
+  # database singleton (`invoice-pdf`) is bought online by an operator through
+  # the admin settings command, not by a restart.
+  pdf-render-worker:
+    image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/pdf-render-worker:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+    restart: *restart
+    env_file: [.env.staging]
+    environment:
+      IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      NODE_ENV: ${APP_ENVIRONMENT:-staging}
+      # Same reasoning as media-worker: the shared config validation refuses to
+      # boot without a port in staging/production, but the worker never binds
+      # one, so it only satisfies validation.
+      API_PORT: '4000'
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: ${REDIS_URL}
+      # Font and wordmark are baked into the image at /app/assets; the value
+      # only names that location for the template's hash verification.
+      INVOICE_PDF_ASSETS_DIR: /app/assets
+      INVOICE_PDF_RENDER_TIMEOUT_MS: ${INVOICE_PDF_RENDER_TIMEOUT_MS:-20000}
+    # No HTTP liveness is possible (same rationale as media-worker): the honest
+    # signal is the process staying up while Redis reconnects on its own.
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
   admin:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/admin:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart

@@ -160,3 +160,47 @@ dedicated sandboxed worker/image/resource proof, current-authority request and
 download contracts, customer revocation checks, Admin/customer UI, operator
 capacity approval, restored-backup artifact hash verification and exact-SHA
 runtime acceptance. Issue #419 remains open.
+
+## Durable request pipeline (implemented, not deployed)
+
+The jobs slice adds a request contract on top of the persistence foundation
+without changing the artifact invariants. Staff submit
+`POST /api/v1/invoices/admin/documents/{id}/pdf` with an explicit
+`Idempotency-Key`; an equal-key replay returns the original request result
+(even a foreign body) instead of enqueueing new work. A failed attempt stores
+its terminal reason and the same key replays as "not ready" (HTTP 409), so
+retrying deliberately requires a fresh key. Customer endpoints mirror the same
+contract for already-published documents; a revoked publication withholds
+creation, status and bytes alike.
+
+The request rows are durable in PostgreSQL (`InvoicePdfRenderJob` with
+fenced `attempts`/`leaseVersion`); append-only command evidence records each
+claim/completion/failure. The worker loops claim → Chromium render →
+transactional artifact insert (which runs the existing capacity/audit
+triggers) → job completion in one serializable database transaction; higher
+attempt counters win fenced leases and reject stale completions, so a restarted
+or duplicated worker can only finish work the lease still owns. Redis sends a
+wake-up hint only; the database, not the queue, is the execution authority.
+Pending-request reservations increment at enqueue, release on claim and
+terminal states, protecting the same `InvoicePdfStorageCapacity` budget
+(version-incrementing writes only).
+
+Artifact bytes are immutable from creation and the download endpoint rechecks
+current access plus stored SHA-256 per response. Customer publication windows
+(read → pre-signed-URL replacement is never used) are driven by
+`InvoicePublication`; download revocation is immediate because the bytes live
+in the same database as the publication state. The customer UI in web keeps a
+preserved request key, explicit pending/failed states and downloads only
+verified READY bytes; the admin staff order e2e journey drives the full
+pipeline against a real worker.
+
+The dedicated `pdf-render-worker` image runs the same Nest application with no
+HTTP port: a pinned Ubuntu 24.04 Playwright base whose Chromium revision
+matches the renderer, sandbox asserted on (SUID `chrome_sandbox`), process
+user `pwuser`, fonts and wordmark baked into the image and verified at render.
+`compose.staging.yml`/`publish-images.yml` build and run it next to
+`media-worker`; `ci.yml` performs a real database render in the e2e job
+instead of stubbing a download. Capacity remains an operator-approved admin
+action. What stays open for #419: controlled staging rollout with a real
+invoice and browser acceptance, restored-backup PDF hash verification and the
+production-audit sign-off; nothing in this slice claims live production PDFs.

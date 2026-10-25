@@ -65,3 +65,12 @@ export type CustomerInvoiceListResponse = ApiSuccess<{
   offset: number;
   limit: number;
 }>;
+export type InvoicePdfStatus = 'PENDING' | 'READY';
+export type InvoicePdfRequestResult = {
+  documentId: string;
+  status: InvoicePdfStatus;
+  sha256: string | null;
+  byteCount: number | null;
+  replayed: boolean;
+};
+export type InvoicePdfRequestResponse = ApiSuccess<{ pdf: InvoicePdfRequestResult }>;

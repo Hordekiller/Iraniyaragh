@@ -2059,6 +2059,8 @@ model InvoiceSeriesCounter {
 
 model InvoiceDocument {
   pdfArtifacts        InvoicePdfArtifact[]
+  pdfRenderJobs       InvoicePdfRenderJob[]
+  pdfRenderCommands   InvoicePdfRenderJobCommand[]
   publication         InvoicePublication?
   publicationEvents   InvoicePublicationEvent[]
   publicationCommands InvoicePublicationCommand[]
@@ -2121,13 +2123,62 @@ model InvoicePdfArtifact {
 
 // Absent until an operator approves a budget. Migration never enables rendering.
 model InvoicePdfStorageCapacity {
-  id            String  @id @db.VarChar(32)
-  budgetBytes   BigInt
-  maxArtifacts  Int
-  storedBytes   BigInt  @default(0)
-  artifactCount Int     @default(0)
-  isEnabled     Boolean @default(false)
-  version       Int     @default(1)
+  id             String  @id @db.VarChar(32)
+  budgetBytes    BigInt
+  maxArtifacts   Int
+  storedBytes    BigInt  @default(0)
+  artifactCount  Int     @default(0)
+  pendingJobCount Int    @default(0)
+  maxPendingJobs Int    @default(0)
+  isEnabled      Boolean @default(false)
+  version        Int     @default(1)
+}
+
+// Durable render request. Eligibility and authorization are reread on the API;
+// the renderer claims a database lease and never trusts the queue for accuracy.
+model InvoicePdfRenderJob {
+  id                  String   @id @default(cuid())
+  documentId          String
+  documentPayloadHash String   @db.Char(64)
+  renderInputHash     String   @db.Char(64)
+  rendererRevision    String   @db.VarChar(100)
+  templateRevision    String   @db.VarChar(100)
+  fontSha256          String   @db.Char(64)
+  status              String   @db.VarChar(20)
+  failureReason       String?  @db.VarChar(100)
+  attempts            Int      @default(0)
+  leaseVersion        Int      @default(0)
+  leaseOwner          String?  @db.VarChar(64)
+  leaseIssuedAt       DateTime?
+  leaseExpireAt       DateTime?
+  requestedByUserId   String
+  requestedByScope    String   @db.VarChar(20)
+  requestKeyHash      String   @db.Char(64)
+  payloadHash         String   @db.Char(64)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  document            InvoiceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  commands            InvoicePdfRenderJobCommand[]
+
+  @@index([status, createdAt, id])
+  @@index([documentId, createdAt, id])
+}
+
+// Exactly-once request identity: one accepted HTTP request per actor/scope/key.
+model InvoicePdfRenderJobCommand {
+  id          String   @id @default(cuid())
+  documentId  String
+  actorId     String
+  scope       String   @db.VarChar(20)
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  jobId       String
+  outcome     String   @db.VarChar(20)
+  createdAt   DateTime @default(now())
+  job         InvoicePdfRenderJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  document    InvoiceDocument     @relation(fields: [documentId], references: [id], onDelete: Restrict)
+
+  @@unique([scope, actorId, documentId, keyHash], map: "InvoicePdfRenderJobCommand_request_key")
 }
 
 model InvoiceDocumentLine {
