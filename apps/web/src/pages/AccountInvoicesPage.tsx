@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type {
+  AuthenticatedJsonRequest,
+} from '../state/auth-context'
+import type {
   CustomerInvoice,
   CustomerInvoiceListResponse,
+  InvoicePdfRequestResult,
 } from '@iranyaragh/contracts'
 import { useAuth } from '../state/auth-context'
 import { AuthApiError } from '../lib/auth/errors'
+import {
+  requestCustomerInvoicePdf,
+  customerInvoicePdfStatus,
+  downloadCustomerInvoicePdf,
+} from '../lib/invoices/invoice-pdf-api'
 import {
   AccountNavigation,
   SessionRestoring,
@@ -192,8 +201,7 @@ function InvoiceContent({
             <div className="mb-4">
               <StoreBrandLogo variant="wordmark" />
             </div>
-            <h2 className="font-black">{invoice.seller.name}</h2>
-            <p>{invoice.seller.address}</p>
+            <h2 className="font-black">{invoice.seller.name}</h2>            <p>{invoice.seller.address}</p>
             <p>{invoice.seller.contact}</p>
             <p className="mt-3">
               شماره: {invoice.number} — {formatTimestamp(invoice.issuedAt)}
@@ -212,6 +220,7 @@ function InvoiceContent({
               مشاهدهٔ سفارش مبنا
             </Link>
           </section>
+          <CustomerInvoicePdf invoice={invoice} request={request.forCurrentPrincipal()} />
           <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
             <table className="w-full text-right text-sm">
               <caption className="p-3 font-bold">اقلام فاکتور</caption>
@@ -283,5 +292,119 @@ function InvoiceContent({
         </>
       )}
     </div>
+  )
+}
+
+/** Private downloadable copy of one published invoice; requests remain bounded
+ * and the saved file is verified against the server-stored digest. */
+function CustomerInvoicePdf({
+  invoice,
+  request,
+}: {
+  invoice: CustomerInvoice
+  request: AuthenticatedJsonRequest
+}) {
+  const [status, setStatus] = useState<InvoicePdfRequestResult>()
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  let active = true
+  const pending = new Set<AbortController>()
+  useEffect(() => () => {
+    active = false
+    for (const controller of pending) controller.abort()
+  }, [])
+  async function run(action: () => Promise<InvoicePdfRequestResult>) {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    setMessage('')
+    const controller = new AbortController()
+    pending.add(controller)
+    try {
+      const result = await action()
+      if (!active) return
+      setStatus(result)
+      setMessage(result.status === 'READY'
+        ? 'پروندهٔ فاکتور آماده است.'
+        : 'درخواست ثبت شد؛ کمی بعد وضعیت را بررسی کنید.')
+    } catch (cause) {
+      if (!active) return
+      if (cause instanceof AuthApiError) setError('تنظیمات چاپ در دسترس نیست؛ کمی بعد دوباره امتحان کنید.')
+      else setError('درخواست تأیید نشد؛ دوباره تلاش کنید.')
+    } finally {
+      pending.delete(controller)
+      if (active) setBusy(false)
+    }
+  }
+  function handleRequest() {
+    const key = crypto.randomUUID()
+    void run(() => requestCustomerInvoicePdf(request, invoice.id, key))
+  }
+  function handleStatus() {
+    void run(() => customerInvoicePdfStatus(request, invoice.id))
+  }
+  async function handleDownload() {
+    if (busy || status?.status !== 'READY') return
+    setBusy(true)
+    setError('')
+    setMessage('')
+    const controller = new AbortController()
+    pending.add(controller)
+    try {
+      const artifact = await downloadCustomerInvoicePdf(request, invoice.id, invoice.number)
+      const digest = await crypto.subtle.digest('SHA-256', artifact.bytes)
+      const sha256 = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('')
+      if (artifact.serverSha256 && artifact.serverSha256 !== sha256) {
+        setError('پروندهٔ دریافت‌شده با هش ثبت‌شده سازگار نیست؛ دوباره بارگیری کنید.')
+        return
+      }
+      const url = URL.createObjectURL(new Blob([artifact.bytes], { type: 'application/pdf' }))
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.rel = 'noopener'
+      anchor.download = artifact.filename
+      anchor.click()
+      URL.revokeObjectURL(url)
+      if (active) setMessage('پروندهٔ بررسی‌شده ذخیره شد.')
+    } catch (cause) {
+      if (!active) return
+      setError(cause instanceof AuthApiError
+        ? 'پرونده در این لحازه در دسترس نیست؛ کمی بعد دوباره امتحان کنید.'
+        : 'بارگیری تأیید نشد؛ دوباره امتحان کنید.')
+    } finally {
+      pending.delete(controller)
+      active = true
+      setBusy(false)
+    }
+  }
+  return (
+    <section aria-label="پروندهٔ خصوصی فاکتور" className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
+      <h2 className="font-black">پروندهٔ خصوصی فاکتور</h2>
+      <p className="mt-2 text-sm text-slate-600">
+        درخواست یک نسخهٔ فایلِ ذخیره‌شده از همین فاکتور؛ ظرفیت و هش در سرور کنترل می‌شود.
+      </p>
+      {message && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-emerald-800">{message}</p>}
+      {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-red-800">{error}</p>}
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button type="button" className={button} onClick={handleRequest} disabled={busy}>درخواست ساخت پرونده</button>
+        <button type="button" className={button} onClick={handleStatus} disabled={busy}>بررسی وضعیت</button>
+        <button
+          type="button"
+          className={`${button} bg-orange-700 text-white`}
+          onClick={() => void handleDownload()}
+          disabled={busy || status?.status !== 'READY'}
+        >
+          بارگیری پروندهٔ فاکتور
+        </button>
+      </div>
+      {status && (
+        <p className="mt-3 text-sm text-slate-700">
+          وضعیت: {status.status === 'READY' ? 'آماده' : 'در انتظار چاپ'}
+          {status.status === 'READY' && status.sha256 ? ` — هش ${status.sha256.slice(0, 12)}…` : ''}
+          {status.replayed ? '؛ پاسخ تکرارِ درخواست قبلی است.' : ''}
+        </p>
+      )}
+    </section>
   )
 }

@@ -36,7 +36,7 @@ for (const [name, recorded, selected] of [
       } catch {
         assert.fail('Offline Compose validation failed; Docker Compose is required. No raw configuration is printed.');
       }
-      for (const service of ['api', 'media-worker', 'migrate', 'media-bucket', 'admin', 'web']) {
+      for (const service of ['api', 'media-worker', 'pdf-render-worker', 'migrate', 'media-bucket', 'admin', 'web']) {
         const value = configuration.services[service];
         assert.ok(value.image.endsWith(`:${selected}`), `${service}: exact image`);
         assert.equal(value.environment.IMAGE_TAG, selected, `${service}: runtime tag`);
@@ -44,6 +44,8 @@ for (const [name, recorded, selected] of [
       }
       assert.equal(configuration.services.api.environment.PAYMENT_PROVIDER_MODE, 'disabled');
       assert.equal(configuration.services.api.environment.SMS_PROVIDER_MODE, 'disabled');
+      // ADR-0030: the worker's provenance is the PDF image, never the API image.
+      assert.match(configuration.services['pdf-render-worker'].image, /iranyaragh\/pdf-render-worker:/);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

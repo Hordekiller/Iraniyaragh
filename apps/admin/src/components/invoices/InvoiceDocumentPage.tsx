@@ -12,6 +12,7 @@ import { listInvoiceDocuments, readInvoiceDocument } from '@/lib/invoices/invoic
 import { invoiceDocumentError } from './InvoiceIssue';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { InvoicePublication } from './InvoicePublication';
+import { InvoicePdfActions } from './InvoicePdfActions';
 import { brandAsset } from '@/lib/brand';
 import { prepareInvoicePrint } from '@/lib/invoices/invoice-print';
 import printStyles from './InvoicePrint.module.css';
@@ -68,6 +69,7 @@ function Documents({id}:{id?:string}) {
       <Typography className={printStyles.pageFooter}>{document.number} — فاکتور فروشگاهی ایران یراق — واحد مبالغ: ریال</Typography>
       </Stack>
       <InvoicePublication id={document.id}/>
+      <InvoicePdfActions id={document.id} number={document.number}/>
     </>}
     {!id&&list&&<Paper sx={{p:2}}>{list.count===0?<Typography>هنوز فاکتوری صادر نشده است.</Typography>:list.items.map(item=><Box key={item.id} sx={{py:1}}><Link href={`/invoices/documents/${encodeURIComponent(item.id)}`}>{item.number} — {item.buyerLabel} — {formatRial(item.total)}</Link></Box>)}
       <Button disabled={loading||offset===0} onClick={()=>setOffset(value=>Math.max(0,value-25))}>صفحهٔ قبل</Button><Button disabled={loading||offset+25>=list.count} onClick={()=>setOffset(value=>value+25)}>صفحهٔ بعد</Button></Paper>}

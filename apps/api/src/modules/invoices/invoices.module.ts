@@ -9,5 +9,23 @@ import { InvoiceDocumentController } from './invoice-document.controller';
 import { InvoiceDocumentService } from './invoice-document.service';
 import { InvoicePublicationController, CustomerInvoiceController } from './invoice-publication.controller';
 import { InvoicePublicationService } from './invoice-publication.service';
-@Module({ imports: [AuditModule, OrdersModule], controllers: [InvoicePolicyController, InvoiceDraftController, InvoiceDocumentController, InvoicePublicationController, CustomerInvoiceController], providers: [InvoicePolicyService, InvoiceDraftService, InvoiceDocumentService, InvoicePublicationService], exports: [InvoicePolicyService] })
+import { InvoicePdfArtifactStore } from './invoice-pdf-artifact.store';
+import { BullMqInvoicePdfQueue } from './bullmq-invoice-pdf-queue.adapter';
+import { InvoicePdfJobService } from './invoice-pdf-job.service';
+import { INVOICE_PDF_QUEUE } from './invoice-pdf-queue.port';
+@Module({
+  imports: [AuditModule, OrdersModule],
+  controllers: [InvoicePolicyController, InvoiceDraftController, InvoiceDocumentController, InvoicePublicationController, CustomerInvoiceController],
+  providers: [
+    InvoicePolicyService,
+    InvoiceDraftService,
+    InvoiceDocumentService,
+    InvoicePublicationService,
+    InvoicePdfArtifactStore,
+    BullMqInvoicePdfQueue,
+    { provide: INVOICE_PDF_QUEUE, useExisting: BullMqInvoicePdfQueue },
+    InvoicePdfJobService,
+  ],
+  exports: [InvoicePolicyService],
+})
 export class InvoicesModule {}

@@ -451,3 +451,49 @@ Do not repair balances with direct SQL or reset order/payment state. Investigate
 the request ID and use approved domain commands for reconciliation. On failure,
 disable the future scheduler and retain reservations/evidence for investigation.
 No scheduler flag or runtime activation is introduced by this candidate.
+
+## Private invoice PDF rendering — ADR-0030 operations
+
+The private invoice PDF stack runs from one dedicated worker image
+(`pdf-render-worker`, built on a pinned Playwright base whose Chromium revision
+matches the renderer package). Compose ships the worker next to
+`media-worker`; both are reuse-free single-purpose processes:
+
+- The worker owns no port and no HTTP surface. Postgres stays the source of
+  truth for job leases (`InvoicePdfRenderJob`), Redis only wakes it up. A lost
+  or duplicated queue delivery cannot render anything that the database lease
+  does not already authorize, so reconciling after a worker restart is a
+  database read, never a message replay.
+- The Chromium sandbox stays on. The image asserts the SUID `chrome_sandbox`
+  permission mode at build time, and the process runs as `pwuser`; never pass
+  `--no-sandbox` or an equivalent in any environment.
+- Rendering capacity is operator state, not deploy state. Enabling the private
+  PDF store happens through the admin settings command that approves the
+  `invoice-pdf` capacity singleton (byte budget, artifact and pending-job
+  caps). The worker starts inert and does nothing until that approval exists;
+  disabling withholds new claims and requests, while verifying existing bytes
+  (backup restore, download integrity) keeps working.
+- Environment knobs are minimal: `INVOICE_PDF_RENDER_TIMEOUT_MS` (default
+  20000, 5000–60000) and an optional `INVOICE_PDF_WORKER_ID`; the font and
+  wordmark are baked into the image under `/app/assets` and verified by hash
+  on every render.
+- Failure codes are deliberately bounded (`RENDER_FAILED`, `RENDER_TIMEOUT`,
+  `RENDER_UNAVAILABLE`, `STORE_REJECTED`); a final attempt stores the reason,
+  releases the lease and decrements the pending budget. Replay of a failed
+  job's request key returns "not ready" and only a fresh idempotency key opens
+  a new bounded attempt. Operators reconcile from database evidence and audit
+  log; there is no "retry forever" queue churn to clean up.
+
+Activation checklist (same shape as the payment/SMS gates):
+
+1. Deploy contains the `pdf-render-worker` image and the approved migration
+   (tables/triggers forward-only).
+2. Operator approves capacity through the admin settings command; the value is
+   sized to disk, not inherited from defaults.
+3. Backups: a restored database must still verify artifact hashes through the
+   download endpoints; bytea evidence is part of the restore just like the
+   media bucket, and `pg_dump` restore scripts already cover the catalog table.
+4. The e2e journey (`admin-staff-order` final step) proves the real pipeline:
+   request → queued wake-up → leased render → READY → verified download with
+   the same staff identity; it runs only when a worker is up, so a missing
+   worker fails loudly instead of simulating readiness.

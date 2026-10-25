@@ -19,4 +19,10 @@ export const invoiceDocumentOpenApi = {
   issue: object({ data: object({ document, committedVersion: integer, replayed: { type: 'boolean', description: 'Returns the original immutable issued document on replay.' } }) }),
   list: object({ data: object({ items: { type: 'array', maxItems: 100, items: object({ ...summary, total: money }) }, count: integer, offset: integer,
     limit: { type: 'integer', minimum: 1, maximum: 100 } }) }),
+  pdfRequest: object({ data: object({ pdf: object({
+    documentId: text,
+    status: { type: 'string', enum: ['PENDING', 'READY'] },
+    sha256: { type: 'string', pattern: '^[a-f0-9]{64}$', nullable: true },
+    byteCount: { type: 'integer', minimum: 0, nullable: true },
+    replayed: { type: 'boolean' } }) }) }),
 };
