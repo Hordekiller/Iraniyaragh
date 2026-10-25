@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Header, Headers, Inject, Param, Post, Query, Res, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Header, Headers, HttpCode, Inject, Param, Post, Query, Res, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiCreatedResponse, ApiTags, ApiProperty, ApiResponse } from '@nestjs/swagger';
 import { IsInt, Min, Max } from 'class-validator';
 import { Response } from 'express';
@@ -57,7 +57,7 @@ export class InvoiceDocumentController {
   }
 
   /** Private raster-render request for an issued document (fresh evidence only). */
-  @Post('documents/:id/pdf') @Header('Cache-Control','no-store')
+  @Post('documents/:id/pdf') @Header('Cache-Control','no-store') @HttpCode(200)
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   @ApiOkResponse({ schema: invoiceDocumentOpenApi.pdfRequest })
   @ApiResponse({ status: 409, schema: failureError(['IDEMPOTENCY_CONFLICT','INVOICE_PDF_CAPACITY_EXCEEDED'], 409) })

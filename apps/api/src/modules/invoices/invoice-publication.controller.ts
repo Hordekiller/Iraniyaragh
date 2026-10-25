@@ -5,6 +5,7 @@ import {
   Get,
   Header,
   Headers,
+  HttpCode,
   Inject,
   Param,
   Post,
@@ -208,6 +209,7 @@ export class CustomerInvoiceController {
   /** Private render request bounded to an ACTIVE customer's published invoice. */
   @Post(':id/pdf')
   @Header('Cache-Control', 'no-store')
+  @HttpCode(200)
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   @ApiOkResponse({ schema: invoicePublicationOpenApi.pdfRequest })
   @ApiResponse({
