@@ -96,8 +96,23 @@ export function RichTextEditor({
             ? (editor) => openMediaPicker(editor)
             : undefined,
         });
-        const editor = Jodit.make(host, profile as unknown as JoditMakeOptions);
-        editor.value = value;
+        const editor = Jodit.make(host, {
+          ...(profile as unknown as JoditMakeOptions),
+          iframe: false,
+          useSearch: false,
+          spellcheck: false,
+          askBeforePasteHTML: false,
+          askBeforePasteFromWord: false,
+          processPasteHTML: true,
+          defaultActionOnPaste: 'insert_as_html',
+          pasteHTMLActionList: [{ value: 'insert_as_html', text: 'درج به عنوان HTML' }],
+          cleanHTML: {
+            fillEmptyParagraph: false,
+            replaceNBSP: false,
+            removeEmptyElements: false,
+          },
+        });
+        editor.value = value ?? '';
         editorRef.current = editor;
         setStatus('ready');
       } catch (err) {
