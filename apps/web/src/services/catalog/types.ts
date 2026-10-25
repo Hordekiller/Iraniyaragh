@@ -52,6 +52,7 @@ export type CatalogProduct = {
 }
 
 export type CatalogQuery = {
+  page?: number
   search?: string
   categoryId?: string
   categorySlug?: string

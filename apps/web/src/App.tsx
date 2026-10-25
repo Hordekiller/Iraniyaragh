@@ -12,6 +12,7 @@ const CategoryPage = lazy(() => import('./pages/CategoryPage').then(module => ({
 const ProductPage = lazy(() => import('./pages/ProductPage').then(module => ({ default: module.ProductPage })))
 const SearchPage = lazy(() => import('./pages/SearchPage').then(module => ({ default: module.SearchPage })))
 const BestsellersPage = lazy(() => import('./pages/BestsellersPage').then(module => ({ default: module.BestsellersPage })))
+const ProductsPage = lazy(() => import('./pages/ProductsPage').then(module => ({ default: module.ProductsPage })))
 const CartPage = lazy(() => import('./pages/CartPage').then(module => ({ default: module.CartPage })))
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then(module => ({ default: module.CheckoutPage })))
 const PaymentPage = lazy(() => import('./pages/PaymentPage').then(module => ({ default: module.PaymentPage })))
@@ -49,6 +50,7 @@ export default function App() {
                       <Route path={ROUTE_PATHS.category} element={<CategoryPage />} />
                       <Route path={ROUTE_PATHS.product} element={<ProductPage />} />
                       <Route path={ROUTE_PATHS.search} element={<SearchPage />} />
+                      <Route path={ROUTE_PATHS.products} element={<ProductsPage />} />
                       <Route path={ROUTE_PATHS.bestsellers} element={<BestsellersPage />} />
                       <Route path={ROUTE_PATHS.cart} element={<CartPage />} />
                       <Route path={ROUTE_PATHS.checkout} element={<CheckoutPage />} />

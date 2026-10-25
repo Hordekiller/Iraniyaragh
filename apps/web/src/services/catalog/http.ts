@@ -68,7 +68,8 @@ export class CatalogHttpClient implements CatalogApi {
     const perPage = Number.isInteger(query.perPage)
       ? Math.max(1, Math.min(100, query.perPage!))
       : 100
-    const params = new URLSearchParams({ page: '1', perPage: String(perPage) })
+    const page = Number.isInteger(query.page) ? Math.max(1, query.page!) : 1
+    const params = new URLSearchParams({ page: String(page), perPage: String(perPage) })
     if (query.search?.trim()) params.set('search', query.search.trim())
     if (query.categoryId) {
       params.set('categoryId', query.categoryId)

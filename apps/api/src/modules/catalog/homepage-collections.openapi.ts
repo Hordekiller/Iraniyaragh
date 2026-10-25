@@ -1,9 +1,14 @@
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { failureError } from '../orders/order-openapi-schemas';
 
-const section: SchemaObject = { type: 'object', additionalProperties: false, required: ['categoryId', 'sortBy'], properties: {
-  categoryId: { type: 'string', minLength: 1, maxLength: 128 }, sortBy: { type: 'string', enum: ['NEWEST', 'BESTSELLING'] },
-} };
+const section: SchemaObject = { oneOf: [
+  { type: 'object', additionalProperties: false, required: ['categoryId', 'sortBy'], properties: {
+    kind: { type: 'string', enum: ['CATEGORY'] }, categoryId: { type: 'string', minLength: 1, maxLength: 128 }, sortBy: { type: 'string', enum: ['NEWEST', 'BESTSELLING'] },
+  } },
+  { type: 'object', additionalProperties: false, required: ['kind', 'sortBy'], properties: {
+    kind: { type: 'string', enum: ['ALL_PRODUCTS'] }, sortBy: { type: 'string', enum: ['NEWEST', 'BESTSELLING'] },
+  } },
+] };
 const config: SchemaObject = { type: 'object', required: ['version', 'sections', 'updatedAt'], properties: {
   version: { type: 'integer', minimum: 0 }, sections: { type: 'array', maxItems: 8, items: section }, updatedAt: { type: 'string', format: 'date-time', nullable: true },
 } };

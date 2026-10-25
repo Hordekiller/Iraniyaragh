@@ -31,6 +31,29 @@ describe('homepage category carousel settings', () => {
     expect(saveHomepageCollections).toHaveBeenCalledWith({ expectedVersion: 2, sections: config.sections }, expect.stringMatching(/^homepage-collections-/));
   });
 
+  it('adds an all-products carousel and preserves it in the versioned idempotent save', async () => {
+    render(<HomepageCollectionsPage />);
+    await screen.findByText('بخش 1');
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن تازه‌ترین محصولات' }));
+    expect(screen.getByText('بخش 2')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('نوع کاروسل')[1]).toHaveTextContent('همهٔ محصولات');
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیرهٔ چیدمان' }));
+    await screen.findByText('چیدمان صفحهٔ اصلی ذخیره شد.');
+    expect(saveHomepageCollections).toHaveBeenCalledWith({
+      expectedVersion: 2,
+      sections: [config.sections[0], { kind: 'ALL_PRODUCTS', sortBy: 'NEWEST' }],
+    }, expect.stringMatching(/^homepage-collections-/));
+  });
+
+  it('warns when an empty category is selected because it will not produce a storefront carousel', async () => {
+    vi.mocked(readHomepageCollections).mockResolvedValue({
+      config: { version: 2, updatedAt: null, sections: [{ categoryId: 'empty', sortBy: 'NEWEST' }] },
+      categories: [...categoryRows, { id: 'empty', name: 'بدون کالا', slug: 'empty', parentId: null, productCount: 0 }],
+    });
+    render(<HomepageCollectionsPage />);
+    expect(await screen.findByText(/این دسته محصول منتشرشده ندارد؛ کاروسل آن تا زمان انتشار کالا در صفحهٔ اصلی دیده نمی‌شود/)).toBeInTheDocument();
+  });
+
   it('does not read or write settings when the operator lacks settings.manage', () => {
     auth.user.permissions = [];
     render(<HomepageCollectionsPage />);

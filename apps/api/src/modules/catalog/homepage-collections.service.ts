@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import { Prisma, type HomepageCollectionConfig } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import type { HomepageCollectionSection, HomepageCollectionsConfig, HomepageCollectionsUpdate } from '@iranyaragh/contracts';
+import type { HomepageCollectionSection, HomepageCollectionSectionInput, HomepageCollectionsConfig, HomepageCollectionsUpdate } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 
@@ -11,9 +11,13 @@ const digest = (value: string) => createHash('sha256').update(value).digest('hex
 const EMPTY: HomepageCollectionSection[] = [];
 
 function project(row: HomepageCollectionConfig | null): HomepageCollectionsConfig {
+  const storedSections = (row?.sections ?? EMPTY) as unknown as Array<Record<string, unknown>>;
   return {
     version: row?.version ?? 0,
-    sections: (row?.sections ?? EMPTY) as unknown as HomepageCollectionSection[],
+    // Older configurations predate `kind`; keep them readable as category sections.
+    sections: storedSections.map(section => section.kind === 'ALL_PRODUCTS'
+      ? { kind: 'ALL_PRODUCTS', sortBy: section.sortBy as HomepageCollectionSection['sortBy'] }
+      : { kind: 'CATEGORY', categoryId: String(section.categoryId ?? ''), sortBy: section.sortBy as HomepageCollectionSection['sortBy'] }),
     updatedAt: row?.updatedAt.toISOString() ?? null,
   };
 }
@@ -21,11 +25,17 @@ function project(row: HomepageCollectionConfig | null): HomepageCollectionsConfi
 function validate(input: HomepageCollectionsUpdate): HomepageCollectionSection[] {
   const sections = input?.sections;
   const valid = Number.isSafeInteger(input?.expectedVersion) && input.expectedVersion >= 0 && Array.isArray(sections) && sections.length <= MAX_SECTIONS &&
-    sections.every(section => section && typeof section.categoryId === 'string' && /^[A-Za-z0-9_-]{1,128}$/u.test(section.categoryId) &&
-      (section.sortBy === 'NEWEST' || section.sortBy === 'BESTSELLING')) &&
-    new Set(sections.map(section => section.categoryId)).size === sections.length;
+    sections.every(section => {
+      if (!section || (section.sortBy !== 'NEWEST' && section.sortBy !== 'BESTSELLING')) return false;
+      const kind = section.kind ?? 'CATEGORY'; // Accept the previous category-only request shape.
+      if (kind === 'ALL_PRODUCTS') return section.categoryId === undefined;
+      return kind === 'CATEGORY' && typeof section.categoryId === 'string' && /^[A-Za-z0-9_-]{1,128}$/u.test(section.categoryId);
+    }) &&
+    new Set(sections.map(section => section.kind === 'ALL_PRODUCTS' ? `ALL_PRODUCTS:${section.sortBy}` : `CATEGORY:${section.categoryId}`)).size === sections.length;
   if (!valid) throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'Choose up to eight unique categories with a supported sort order.' });
-  return sections.map(section => ({ categoryId: section.categoryId, sortBy: section.sortBy }));
+  return (sections as HomepageCollectionSectionInput[]).map(section => section.kind === 'ALL_PRODUCTS'
+    ? { kind: 'ALL_PRODUCTS', sortBy: section.sortBy }
+    : { kind: 'CATEGORY', categoryId: section.categoryId!, sortBy: section.sortBy });
 }
 
 @Injectable()
@@ -40,7 +50,12 @@ export class HomepageCollectionsService {
   async update(actorId: string, requestId: string, raw: HomepageCollectionsUpdate, idempotencyKey: string): Promise<HomepageCollectionsConfig> {
     const sections = validate(raw);
     const keyHash = digest(idempotencyKey);
-    const payloadHash = digest(JSON.stringify({ expectedVersion: raw.expectedVersion, sections }));
+    // Preserve the pre-kind canonical payload so an in-flight category retry
+    // can still reconcile after this version is deployed.
+    const payloadSections = sections.map(section => section.kind === 'ALL_PRODUCTS'
+      ? section
+      : { categoryId: section.categoryId, sortBy: section.sortBy });
+    const payloadHash = digest(JSON.stringify({ expectedVersion: raw.expectedVersion, sections: payloadSections }));
     return this.prisma.$transaction(async tx => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(1752064112, 1935892595)`;
       const replay = await tx.homepageCollectionCommand.findUnique({ where: { actorId_keyHash: { actorId, keyHash } } });
@@ -51,9 +66,10 @@ export class HomepageCollectionsService {
 
       const current = await tx.homepageCollectionConfig.findUnique({ where: { id: CONFIG_ID } });
       if ((current?.version ?? 0) !== raw.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'Homepage settings changed; reload before saving.' });
-      if (sections.length) {
-        const categories = await tx.category.findMany({ where: { id: { in: sections.map(section => section.categoryId) } }, select: { id: true } });
-        if (categories.length !== sections.length) throw new BadRequestException({ code: 'INVALID_CATEGORY', message: 'One or more selected categories no longer exist.' });
+      const categoryIds = sections.flatMap(section => section.kind !== 'ALL_PRODUCTS' ? [section.categoryId] : []);
+      if (categoryIds.length) {
+        const categories = await tx.category.findMany({ where: { id: { in: categoryIds } }, select: { id: true } });
+        if (categories.length !== categoryIds.length) throw new BadRequestException({ code: 'INVALID_CATEGORY', message: 'One or more selected categories no longer exist.' });
       }
       const nextVersion = (current?.version ?? 0) + 1;
       const row = current

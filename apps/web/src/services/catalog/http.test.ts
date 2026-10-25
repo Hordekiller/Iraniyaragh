@@ -70,6 +70,13 @@ describe('CatalogHttpClient', () => {
     expect(fetcher).toHaveBeenCalledTimes(2)
   })
 
+  it('requests the requested catalog page for the all-products listing', async () => {
+    const fetcher = vi.fn(async () => response({ data: { items: [], meta: { page: 3, perPage: 24, total: 70, pages: 3 } } }))
+    const client = new CatalogHttpClient({ fetch: fetcher as unknown as typeof fetch })
+    await client.listProducts({ page: 3, perPage: 24, sortBy: 'newest' })
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining('page=3&perPage=24&sortBy=createdAt&sortDir=desc'), expect.anything())
+  })
+
   it('maps detail primary media and active variant price', async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL) => String(input).includes('/availability')
       ? response({ items: [{ variantId: 'v-1', status: 'IN_STOCK' }] })

@@ -80,12 +80,12 @@ export class CatalogFixtureClient implements CatalogApi {
     const perPage = Number.isInteger(query.perPage)
       ? Math.max(1, Math.min(100, query.perPage!))
       : 24
-    const page = 1;
+    const page = Number.isInteger(query.page) ? Math.max(1, query.page!) : 1;
     const total = items.length;
     const pages = Math.max(1, Math.ceil(total / perPage));
 
     return {
-      items: items.slice(0, perPage),
+      items: items.slice((page - 1) * perPage, page * perPage),
       meta: { page, perPage, total, pages },
     };
   }

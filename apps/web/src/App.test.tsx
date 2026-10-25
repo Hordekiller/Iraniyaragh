@@ -104,6 +104,13 @@ const routes: Array<[string, () => Promise<void> | void]> = [
     },
   ],
   [
+    '/products',
+    async () => {
+      expect(await screen.findByRole('heading', { name: 'همهٔ محصولات' })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: /دریل چکشی/ })).toBeInTheDocument()
+    },
+  ],
+  [
     '/search',
     async () => {
       expect(
