@@ -2178,7 +2178,7 @@ model InvoicePdfRenderJobCommand {
   job         InvoicePdfRenderJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
   document    InvoiceDocument     @relation(fields: [documentId], references: [id], onDelete: Restrict)
 
-  @@unique([scope, actorId, documentId, keyHash])
+  @@unique([scope, actorId, documentId, keyHash], map: "InvoicePdfRenderJobCommand_request_key")
 }
 
 model InvoiceDocumentLine {

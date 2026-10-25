@@ -23,6 +23,7 @@ import {
   InvoicePublicationController,
 } from './invoice-publication.controller';
 import { InvoicePublicationService } from './invoice-publication.service';
+import { InvoicePdfJobService } from './invoice-pdf-job.service';
 const principal = (
   userId: string,
   level: 'CUSTOMER_OTP' | 'STAFF_MFA',
@@ -82,11 +83,34 @@ const service = {
     limit: 25,
   })),
 };
+const pdf = {
+  request: vi.fn(async () => ({
+    documentId: 'doc-a',
+    status: 'PENDING',
+    sha256: null,
+    byteCount: null,
+    replayed: false,
+  })),
+  status: vi.fn(async () => ({
+    documentId: 'doc-a',
+    status: 'READY',
+    sha256: 'ab'.repeat(32),
+    byteCount: 64,
+    replayed: false,
+  })),
+  downloadCustomer: vi.fn(async () => ({
+    bytes: Buffer.from('%PDF-1.4 synthetic'),
+    pdfSha256: 'ab'.repeat(32),
+    byteCount: 64,
+    filename: 'invoice.pdf',
+  })),
+};
 @Module({
   imports: [ApiFoundationModule],
   controllers: [InvoicePublicationController, CustomerInvoiceController],
   providers: [
     { provide: InvoicePublicationService, useValue: service },
+    { provide: InvoicePdfJobService, useValue: pdf },
     { provide: AuthPrincipalService, useValue: resolver },
     {
       provide: APP_GUARD,

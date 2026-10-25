@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type {
   AuthenticatedJsonRequest,
@@ -308,11 +308,11 @@ function CustomerInvoicePdf({
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  let active = true
-  const pending = new Set<AbortController>()
+  const activeRef = useRef(true)
+  const pendingRef = useRef<Set<AbortController>>(new Set<AbortController>())
   useEffect(() => () => {
-    active = false
-    for (const controller of pending) controller.abort()
+    activeRef.current = false
+    for (const controller of pendingRef.current) controller.abort()
   }, [])
   async function run(action: () => Promise<InvoicePdfRequestResult>) {
     if (busy) return
@@ -320,21 +320,21 @@ function CustomerInvoicePdf({
     setError('')
     setMessage('')
     const controller = new AbortController()
-    pending.add(controller)
+    pendingRef.current.add(controller)
     try {
       const result = await action()
-      if (!active) return
+      if (!activeRef.current) return
       setStatus(result)
       setMessage(result.status === 'READY'
         ? 'پروندهٔ فاکتور آماده است.'
         : 'درخواست ثبت شد؛ کمی بعد وضعیت را بررسی کنید.')
     } catch (cause) {
-      if (!active) return
+      if (!activeRef.current) return
       if (cause instanceof AuthApiError) setError('تنظیمات چاپ در دسترس نیست؛ کمی بعد دوباره امتحان کنید.')
       else setError('درخواست تأیید نشد؛ دوباره تلاش کنید.')
     } finally {
-      pending.delete(controller)
-      if (active) setBusy(false)
+      pendingRef.current.delete(controller)
+      if (activeRef.current) setBusy(false)
     }
   }
   function handleRequest() {
@@ -350,7 +350,7 @@ function CustomerInvoicePdf({
     setError('')
     setMessage('')
     const controller = new AbortController()
-    pending.add(controller)
+    pendingRef.current.add(controller)
     try {
       const artifact = await downloadCustomerInvoicePdf(request, invoice.id, invoice.number)
       const digest = await crypto.subtle.digest('SHA-256', artifact.bytes)
@@ -366,15 +366,14 @@ function CustomerInvoicePdf({
       anchor.download = artifact.filename
       anchor.click()
       URL.revokeObjectURL(url)
-      if (active) setMessage('پروندهٔ بررسی‌شده ذخیره شد.')
+      if (activeRef.current) setMessage('پروندهٔ بررسی‌شده ذخیره شد.')
     } catch (cause) {
-      if (!active) return
+      if (!activeRef.current) return
       setError(cause instanceof AuthApiError
-        ? 'پرونده در این لحازه در دسترس نیست؛ کمی بعد دوباره امتحان کنید.'
+        ? 'پرونده در این لحظه در دسترس نیست؛ کمی بعد دوباره امتحان کنید.'
         : 'بارگیری تأیید نشد؛ دوباره امتحان کنید.')
     } finally {
-      pending.delete(controller)
-      active = true
+      pendingRef.current.delete(controller)
       setBusy(false)
     }
   }
