@@ -21,7 +21,7 @@ export function RichText({ html, className, ...rest }: RichTextProps) {
       {...rest}
       data-rich-text="true"
       className={[
-        'leading-7',
+        'min-w-0 max-w-full break-words leading-7',
         '[&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-black',
         '[&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-black',
         '[&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-black',
@@ -34,7 +34,7 @@ export function RichText({ html, className, ...rest }: RichTextProps) {
         '[&_blockquote]:mt-3 [&_blockquote]:border-r-4 [&_blockquote]:border-slate-200 [&_blockquote]:pr-4 [&_blockquote]:text-slate-500',
         '[&_hr]:mt-4 [&_hr]:border-slate-200',
         '[&_a]:text-[#FF4D00] [&_a]:underline [&_a]:hover:text-[#E54400]',
-        '[&_table]:mt-4 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm',
+        '[&_table]:mt-4 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm',
         '[&_th]:border [&_th]:border-slate-200 [&_th]:px-2 [&_th]:py-1 [&_th]:font-bold [&_th]:text-start',
         '[&_td]:border [&_td]:border-slate-200 [&_td]:px-2 [&_td]:py-1',
         '[&_figure]:mt-4',

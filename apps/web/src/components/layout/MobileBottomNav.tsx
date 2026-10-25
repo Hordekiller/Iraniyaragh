@@ -11,6 +11,9 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavPr
   const { pathname } = useLocation()
   const { state: authState } = useAuth()
 
+  // Product pages provide their own persistent purchase controls.
+  if (pathname.startsWith('/product/')) return null
+
   function openCategories() {
     if (pathname === ROUTES.home) {
       document.getElementById(SECTION_IDS.categories)?.scrollIntoView({ behavior: 'smooth' })

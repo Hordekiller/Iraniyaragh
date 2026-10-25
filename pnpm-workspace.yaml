@@ -5,9 +5,10 @@ packages:
 
 overrides:
   '@prisma/config>deepmerge-ts': 8.0.2
-  # Keep Nest's multipart parser on the patched release; 2.3.0 is affected by
-  # GHSA-3pph-fpjx-jg34 (orphaned disk writes on aborted uploads).
-  multer: 2.4.0
+  # GHSA-q7qp-rjg7-q26m: release pending fileFilter callbacks after teardown.
+  multer: 2.5.0
+  # GHSA-27r3-jxmh-p828: reject trailing compressed request-body bytes safely.
+  body-parser: 2.4.0
   # ExcelJS accepts uuid.v4 from the patched uuid major; older uuid releases
   # are rejected by dependency-review for missing buffer bounds checks.
   uuid: 11.1.1

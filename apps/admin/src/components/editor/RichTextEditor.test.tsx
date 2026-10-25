@@ -4,6 +4,7 @@ import type { Jodit } from 'jodit';
 import { RichTextEditor } from './RichTextEditor';
 import type { JoditProfile } from './jodit-profile';
 import type { MediaPickerItem } from '@/lib/editor/media-picker';
+import { preserveRawHtmlSource } from './raw-html-source';
 
 const state = vi.hoisted(() => {
   const make = vi.fn();
@@ -41,6 +42,9 @@ const state = vi.hoisted(() => {
 vi.mock('jodit', () => ({ Jodit: { make: state.make } }));
 vi.mock('jodit/esm/plugins/indent/indent.js', () => ({}));
 vi.mock('jodit/esm/plugins/justify/justify.js', () => ({}));
+vi.mock('jodit/esm/plugins/source/source.js', () => ({}));
+vi.mock('jodit/esm/plugins/clean-html/clean-html.js', () => ({}));
+vi.mock('./raw-html-source', () => ({ preserveRawHtmlSource: vi.fn() }));
 
 const noop = () => undefined;
 
@@ -89,6 +93,8 @@ describe('RichTextEditor', () => {
     await settle();
     const [host, profile] = state.make.mock.calls[0] as [HTMLElement, JoditProfile];
     expect(host.dataset.testid).toBe('rich-text-editor-host');
+    expect(host.tagName).toBe('TEXTAREA');
+    expect(preserveRawHtmlSource).toHaveBeenCalledWith(state.editor);
     expect(profile.direction).toBe('rtl');
     expect(profile.uploader?.url).toBe('');
     expect(profile.disablePlugins).toContain('image');

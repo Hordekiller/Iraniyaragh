@@ -21,6 +21,18 @@ export type JoditProfile = {
   showXPathInStatusbar?: boolean;
   askBeforePasteHTML?: boolean;
   processPasteHTML?: boolean;
+  sourceEditor?: 'area';
+  beautifyHTML?: boolean;
+  cleanHTML?: {
+    fillEmptyParagraph?: boolean;
+    replaceNBSP?: boolean;
+    removeEmptyElements?: boolean;
+    allowTags?: string;
+    denyTags?: string;
+  };
+  defaultActionOnPaste?: string;
+  pasteHTMLActionList?: Array<{ value: string; text: string }>;
+  askBeforePasteFromWord?: boolean;
 };
 
 export type JoditProfileOptions = {
@@ -43,7 +55,6 @@ export const RICH_TEXT_DISABLED_PLUGINS = [
   'powered-by-jodit',
   'preview',
   'print',
-  'source',
   'speech-recognize',
   'video',
 ] as const;
@@ -61,6 +72,7 @@ export const RICH_TEXT_HEADINGS: Record<string, string> = {
 };
 
 const RICH_TEXT_TOOLBAR = [
+  'source',
   'undo',
   'redo',
   'paragraph',
@@ -120,6 +132,19 @@ export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfi
     controls: { paragraph: { list: { ...RICH_TEXT_HEADINGS } } },
     showXPathInStatusbar: false,
     askBeforePasteHTML: false,
+    askBeforePasteFromWord: false,
     processPasteHTML: true,
+    sourceEditor: 'area',
+    beautifyHTML: false,
+    cleanHTML: {
+      fillEmptyParagraph: false,
+      replaceNBSP: false,
+      removeEmptyElements: false,
+    },
+    defaultActionOnPaste: 'insert_as_html',
+    pasteHTMLActionList: [
+      { value: 'insert_as_html', text: 'Insert as HTML' },
+    ],
   };
 }
+

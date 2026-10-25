@@ -157,6 +157,26 @@ describe('ProductPage commerce', () => {
 })
 
 describe('ProductPage rich description', () => {
+  it('keeps the purchase controls ahead of the long description', async () => {
+    renderPageWithProduct(drillWithDescription('<p>راهنمای بلند محصول</p>'))
+    const purchase = await screen.findByRole('region', { name: 'قیمت و خرید محصول' })
+    const description = screen.getByRole('region', { name: 'توضیحات و راهنمای محصول' })
+    expect(purchase.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(purchase).toHaveTextContent('قیمت هر عدد')
+  })
+
+  it('keeps article illustrations in the description instead of duplicating them in the gallery', async () => {
+    const product = drillWithDescription('<p>راهنما</p><img data-media-id="article-image" src="/article.webp" alt="تصویر راهنما">')
+    const primary = product.media[0]
+    if (primary.kind !== 'IMAGE') throw new Error('Expected the primary image fixture')
+    product.media.push({ ...primary, id: 'article-image', kind: 'IMAGE', role: 'GALLERY', position: 1 })
+    product.media.push({ ...primary, id: 'gallery-image', kind: 'IMAGE', role: 'GALLERY', position: 2 })
+    renderPageWithProduct(product)
+    await screen.findByRole('heading', { name: 'توضیحات و راهنمای محصول' })
+    expect(screen.getAllByRole('button', { name: /^عکس / })).toHaveLength(2)
+    expect(screen.getByRole('img', { name: 'تصویر راهنما' })).toHaveAttribute('src', '/article.webp')
+  })
+
   it('renders the sanitized description as markup, never escaped text', async () => {
     const { container } = renderPageWithProduct(
       drillWithDescription(

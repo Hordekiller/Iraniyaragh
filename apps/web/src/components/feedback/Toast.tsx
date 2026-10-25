@@ -45,7 +45,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             onMouseLeave={() => setPaused(false)}
             onFocus={() => setPaused(true)}
             onBlur={() => setPaused(false)}
-            className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border border-white/10"
+            className="fixed bottom-40 lg:bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl text-sm font-bold flex items-center gap-2 border border-white/10"
             role="status"
             aria-live="polite"
           >

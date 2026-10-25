@@ -5,6 +5,7 @@ import { Alert, Box, Typography } from '@mui/material';
 import type { Jodit } from 'jodit';
 import 'jodit/es2018/jodit.min.css';
 import { buildJoditProfile } from './jodit-profile';
+import { preserveRawHtmlSource } from './raw-html-source';
 import { buildMediaImageHtml } from '@/lib/editor/media-picker';
 import type { MediaPickerHandle } from '@/lib/editor/media-picker';
 
@@ -37,7 +38,7 @@ export function RichTextEditor({
   mediaPicker,
   onError,
 }: RichTextEditorProps) {
-  const hostRef = useRef<HTMLDivElement | null>(null);
+  const hostRef = useRef<HTMLTextAreaElement | null>(null);
   const editorRef = useRef<Jodit | null>(null);
   const [status, setStatus] = useState<EditorStatus>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +85,8 @@ export function RichTextEditor({
           import('jodit'),
           import('jodit/esm/plugins/indent/indent.js'),
           import('jodit/esm/plugins/justify/justify.js'),
+          import('jodit/esm/plugins/source/source.js'),
+          import('jodit/esm/plugins/clean-html/clean-html.js'),
         ]);
         if (disposed) return;
         const profile = buildJoditProfile({
@@ -95,9 +98,15 @@ export function RichTextEditor({
             ? (editor) => openMediaPicker(editor)
             : undefined,
         });
-        const editor = Jodit.make(host, profile as unknown as JoditMakeOptions);
-        editor.value = value;
+        const editor = Jodit.make(host, {
+          ...(profile as unknown as JoditMakeOptions),
+          iframe: false,
+          useSearch: false,
+          spellcheck: false,
+        });
         editorRef.current = editor;
+        preserveRawHtmlSource(editor);
+        editor.value = value ?? '';
         setStatus('ready');
       } catch (err) {
         if (disposed) return;
@@ -146,7 +155,7 @@ export function RichTextEditor({
           {error}
         </Alert>
       ) : null}
-      <Box ref={hostRef} data-testid="rich-text-editor-host" />
+      <textarea ref={hostRef} data-testid="rich-text-editor-host" hidden />
     </Box>
   );
 }

@@ -157,7 +157,9 @@ jobs:
     # credential, and the API accepts each 30-second TOTP step only once. A full
     # run therefore spends real time waiting for unused code windows and takes
     # about 27 minutes locally; keep headroom for install, build and MinIO.
-    timeout-minutes: 50
+    # A clean main run reaches ~48 minutes in CI, so the cap has to stay well
+    # above that or the required check is cancelled and blocks every merge.
+    timeout-minutes: 75
     env:
       NODE_ENV: test
       ALLOW_DATABASE_SEED: "true"
