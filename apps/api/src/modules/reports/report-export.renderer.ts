@@ -1,16 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ReportExportDefinition } from '@iranyaragh/contracts';
-import type {
-  OperationalReportSummary,
-  DebtorReportRow,
-  ReportOrderRow,
-} from '@iranyaragh/contracts';
+import type { OperationalReportSummary, DebtorReportRow, ReportOrderRow } from '@iranyaragh/contracts';
 import { OperationalReportService } from './operational-report.service';
 
 // Row tables are pure snapshots of already-approved report surfaces: counts and
 // integer IRR amounts serialize as strings so CSV/XLSX stays exact.
 export type ReportExportTable = { headers: string[]; rows: string[][] };
-export type ReportExportRender = ReportExportTable & { generatedAt: string; truncated: boolean };
+export type ReportExportRender = ReportExportTable & {
+  generatedAt: string;
+  truncated: boolean;
+};
 
 class ReportExportRenderUnavailable extends Error {
   readonly code = 'RENDER_FAILED';
@@ -19,7 +18,8 @@ class ReportExportRenderUnavailable extends Error {
 @Injectable()
 export class ReportExportRenderer {
   constructor(
-    @Inject(OperationalReportService) private readonly reports: OperationalReportService,
+    @Inject(OperationalReportService)
+    private readonly reports: OperationalReportService,
   ) {}
 
   async render(definition: ReportExportDefinition): Promise<ReportExportRender> {
@@ -33,15 +33,11 @@ export class ReportExportRenderer {
       return await this.summaryTable(definition);
     } catch (error) {
       if (error instanceof ReportExportRenderUnavailable) throw error;
-      throw new ReportExportRenderUnavailable(
-        error instanceof Error ? error.message : 'unavailable',
-      );
+      throw new ReportExportRenderUnavailable('Report source unavailable.');
     }
   }
 
-  private async summaryTable(
-    definition: ReportExportDefinition,
-  ): Promise<ReportExportRender> {
+  private async summaryTable(definition: ReportExportDefinition): Promise<ReportExportRender> {
     const filters = definition.filters;
     if (!filters) throw new ReportExportRenderUnavailable('filters required');
     const summary: OperationalReportSummary = await this.reports.summary({
@@ -60,34 +56,13 @@ export class ReportExportRenderer {
       ]);
     }
     for (const [metric, total] of Object.entries(summary.totals)) {
-      rows.push([
-        'totals',
-        '',
-        metric,
-        '',
-        String(total.count),
-        total.amount.amount,
-      ]);
+      rows.push(['totals', '', metric, '', String(total.count), total.amount.amount]);
     }
     for (const row of summary.orderStatuses) {
-      rows.push([
-        'order-statuses',
-        '',
-        row.status,
-        '',
-        String(row.count),
-        row.amount.amount,
-      ]);
+      rows.push(['order-statuses', '', row.status, '', String(row.count), row.amount.amount]);
     }
     for (const row of summary.paymentAttemptStatuses) {
-      rows.push([
-        'payment-attempts',
-        '',
-        row.status,
-        '',
-        String(row.count),
-        row.amount.amount,
-      ]);
+      rows.push(['payment-attempts', '', row.status, '', String(row.count), row.amount.amount]);
     }
     for (const row of summary.topItems) {
       rows.push([
@@ -107,9 +82,7 @@ export class ReportExportRenderer {
     };
   }
 
-  private async ordersTable(
-    definition: ReportExportDefinition,
-  ): Promise<ReportExportRender> {
+  private async ordersTable(definition: ReportExportDefinition): Promise<ReportExportRender> {
     const filters = definition.filters;
     if (!filters) throw new ReportExportRenderUnavailable('filters required');
     const report = await this.reports.ordersForExport(
@@ -153,9 +126,7 @@ export class ReportExportRenderer {
     };
   }
 
-  private async debtorsTable(
-    definition: ReportExportDefinition,
-  ): Promise<ReportExportRender> {
+  private async debtorsTable(definition: ReportExportDefinition): Promise<ReportExportRender> {
     const debtors = definition.debtors;
     if (!debtors) throw new ReportExportRenderUnavailable('debtors scope required');
     const report = await this.reports.debtorsForExport(

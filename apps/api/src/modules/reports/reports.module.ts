@@ -8,6 +8,7 @@ import { ReportExportArtifactStore } from './report-export-artifact.store';
 import { BullMqReportExportQueue } from './bullmq-report-export-queue.adapter';
 import { ReportExportJobService } from './report-export-job.service';
 import { ReportExportController } from './report-export.controller';
+import { ReportExportRenderer } from './report-export.renderer';
 import { REPORT_EXPORT_QUEUE } from './report-export-queue.port';
 
 @Module({
@@ -20,7 +21,8 @@ import { REPORT_EXPORT_QUEUE } from './report-export-queue.port';
     BullMqReportExportQueue,
     { provide: REPORT_EXPORT_QUEUE, useExisting: BullMqReportExportQueue },
     ReportExportJobService,
+    ReportExportRenderer,
   ],
-  exports: [],
+  exports: [ReportExportJobService, ReportExportRenderer, ReportExportArtifactStore],
 })
 export class ReportsModule {}

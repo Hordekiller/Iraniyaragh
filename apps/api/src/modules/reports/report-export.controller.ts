@@ -1,24 +1,22 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Header,
-  HttpCode,
-  Inject,
-  Headers,
-  Param,
-  Post,
-  Res,
-} from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, Inject, Headers, Param, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiBearerAuth, ApiHeader, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication, RequirePermission } from '../auth/auth.guard';
+import {
+  CurrentPrincipal,
+  RequireAuthentication,
+  RequireFreshAuthentication,
+  RequirePermission,
+} from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { failureError } from '../orders/order-openapi-schemas';
 import { getRequestId } from '../../common/request-context';
 import { normalizeIdempotencyKey } from '../../common/idempotency-key';
 import { reportExportOpenApi } from './report-export.openapi';
-import { reportExportId, reportExportInvalid, validateReportExportDefinition } from './report-export.validation';
+import {
+  reportExportId,
+  reportExportInvalid,
+  validateReportExportDefinition,
+} from './report-export.validation';
 import { ReportExportJobService } from './report-export-job.service';
 
 @ApiTags('reports')
@@ -26,10 +24,19 @@ import { ReportExportJobService } from './report-export-job.service';
 @Controller({ path: 'reports/admin', version: '1' })
 @RequireAuthentication('STAFF_MFA')
 @RequirePermission('reports.read')
-@ApiResponse({ status: 400, schema: failureError(['INVALID_REQUEST', 'REPORT_EXPORT_INPUT_INVALID', 'REPORT_EXPORT_DISABLED'], 400) })
-@ApiResponse({ status: 401, schema: failureError(['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED'], 401) })
+@ApiResponse({
+  status: 400,
+  schema: failureError(['INVALID_REQUEST', 'REPORT_EXPORT_INPUT_INVALID', 'REPORT_EXPORT_DISABLED'], 400),
+})
+@ApiResponse({
+  status: 401,
+  schema: failureError(['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED'], 401),
+})
 @ApiResponse({ status: 403, schema: failureError(['FORBIDDEN'], 403) })
-@ApiResponse({ status: 500, schema: failureError(['REPORT_EXPORT_STORAGE_UNAVAILABLE'], 500) })
+@ApiResponse({
+  status: 500,
+  schema: failureError(['REPORT_EXPORT_STORAGE_UNAVAILABLE'], 500),
+})
 export class ReportExportController {
   constructor(
     @Inject(ReportExportJobService)
@@ -47,7 +54,10 @@ export class ReportExportController {
   @ApiOperation({ summary: 'Request an approved report snapshot export' })
   @ApiResponse({
     status: 409,
-    schema: failureError(['REPORT_EXPORT_NOT_READY', 'REPORT_EXPORT_CAPACITY_EXCEEDED', 'IDEMPOTENCY_CONFLICT'], 409),
+    schema: failureError(
+      ['REPORT_EXPORT_NOT_READY', 'REPORT_EXPORT_CAPACITY_EXCEEDED', 'IDEMPOTENCY_CONFLICT'],
+      409,
+    ),
   })
   async request(
     @CurrentPrincipal() principal: AuthPrincipalContext,
@@ -55,7 +65,7 @@ export class ReportExportController {
     @Headers('idempotency-key') key: string,
   ) {
     if (!body || typeof body !== 'object') throw reportExportInvalid('An export request object is required.');
-    if (Object.keys(body).some(allowed => !['definition', 'format'].includes(allowed))) {
+    if (Object.keys(body).some((allowed) => !['definition', 'format'].includes(allowed))) {
       throw reportExportInvalid('The export request takes one definition and one format.');
     }
     const definition = validateReportExportDefinition(body.definition);
@@ -75,15 +85,30 @@ export class ReportExportController {
   }
 
   @Get('exports/:exportId')
+  @RequirePermission('reports.export')
+  @RequireFreshAuthentication('STAFF_MFA')
   @Header('Cache-Control', 'no-store')
   @ApiOkResponse({ schema: reportExportOpenApi.request })
   @ApiOperation({ summary: 'Poll one approved export request' })
-  async status(
-    @CurrentPrincipal() principal: AuthPrincipalContext,
-    @Param('exportId') exportId: string,
-  ) {
+  async status(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('exportId') exportId: string) {
     if (!principal.userId) throw reportExportInvalid('An actor identity is required.');
-    return { data: await this.jobs.status(reportExportId(exportId)) };
+    return {
+      data: await this.jobs.status(reportExportId(exportId), principal.userId),
+    };
+  }
+
+  @Get('exports/:exportId/snapshot')
+  @Header('Cache-Control', 'no-store')
+  @RequirePermission('reports.export')
+  @RequireFreshAuthentication('STAFF_MFA')
+  @ApiOkResponse({ schema: reportExportOpenApi.snapshot })
+  @ApiOperation({
+    summary: 'Read the exact retained table behind a private export',
+  })
+  async snapshot(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('exportId') exportId: string) {
+    return {
+      data: await this.jobs.snapshotStaff(reportExportId(exportId), principal.userId, getRequestId()),
+    };
   }
 
   /** Verified artifact download; export permission replaces the read guard. */
@@ -98,7 +123,11 @@ export class ReportExportController {
     @Res({ passthrough: false }) response: Response,
   ) {
     if (!principal.userId) throw reportExportInvalid('An actor identity is required.');
-    const download = await this.jobs.downloadStaff(reportExportId(exportId));
+    const download = await this.jobs.downloadStaff(
+      reportExportId(exportId),
+      principal.userId,
+      getRequestId(),
+    );
     response.setHeader('Content-Type', download.contentType);
     response.setHeader('Content-Length', String(download.byteCount));
     response.setHeader('Content-Disposition', `attachment; filename="${download.filename}"`);

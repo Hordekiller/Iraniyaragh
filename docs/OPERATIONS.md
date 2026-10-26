@@ -507,9 +507,9 @@ for the `report-export` queue, Postgres stays the execution authority
 Redis only wakes the worker up. The same activation shape as the invoice PDF
 gate applies:
 
-- Capacity is operator state. The admin settings command that approves
-  invoice-PDF storage also approves the `report-export` singleton (byte
-  budget, artifact and pending-job caps). Until that approval exists the
+- Capacity is operator state. The `report-export` singleton separately bounds snapshot and artifact bytes,
+  artifact count, pending jobs and retention. Production activation remains a
+  release prerequisite; no report activation API is delivered in this slice. Until that approval exists the
   worker claims nothing and requests fail closed with
   `REPORT_EXPORT_DISABLED`; disabling withholds new claims and requests while
   verified downloads and cleanup keep working. Test and CI runs provision the
@@ -526,3 +526,10 @@ gate applies:
 - Reconcile from database evidence: `failureReason`, lease state, audit log.
   Cleanup runs bounded maintenance that frees expired artifact bytes and the
   byte budget; it never deletes audit or job history.
+
+Report jobs retain one immutable materialized table, then serialize CSV/XLSX from
+that table across retries. A new idempotency key always means new evidence;
+reusing an actor/key with changed filters or format is rejected. Status, table
+and artifact endpoints require the current export permission, fresh staff MFA
+and matching owner; private table reads and downloads are audited. A recurring
+queue wake-up recovers lost deliveries without relying on an HTTP retry.

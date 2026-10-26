@@ -1,21 +1,11 @@
 import 'reflect-metadata';
 import { Module, VersioningType } from '@nestjs/common';
 import { APP_GUARD, NestFactory, type INestApplication } from '@nestjs/core';
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ApiFoundationModule } from '../../common/api-foundation.module';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AuthGuard } from '../auth/auth.guard';
-import {
-  AuthPrincipalService,
-  type AuthPrincipalContext,
-} from '../auth/auth-principal.service';
+import { AuthPrincipalService, type AuthPrincipalContext } from '../auth/auth-principal.service';
 import { AuthSessionException } from '../auth/auth-session.service';
 import { ReportExportController } from './report-export.controller';
 import { ReportExportJobService } from './report-export-job.service';
@@ -36,19 +26,11 @@ const principal = (
 const principals = {
   staff: principal('operator', 'STAFF_MFA', ['reports.read', 'reports.export']),
   reader: principal('operator', 'STAFF_MFA', ['reports.read']),
-  stale: principal(
-    'operator',
-    'STAFF_MFA',
-    ['reports.read', 'reports.export'],
-    false,
-  ),
+  stale: principal('operator', 'STAFF_MFA', ['reports.read', 'reports.export'], false),
 };
 const resolver = {
   resolveBearerToken: vi.fn(async (authorization?: string) => {
-    const token = authorization?.replace(
-      'Bearer ',
-      '',
-    ) as keyof typeof principals;
+    const token = authorization?.replace('Bearer ', '') as keyof typeof principals;
     if (token in principals) return principals[token];
     throw new AuthSessionException('AUTH_SESSION_INVALID');
   }),
@@ -67,6 +49,11 @@ const jobs = {
     sha256: 'ab'.repeat(32),
     byteCount: 64,
     replayed: false,
+  })),
+  snapshotStaff: vi.fn(async () => ({
+    exportId: 'job-a',
+    headers: ['amount'],
+    rows: [['10']],
   })),
   downloadStaff: vi.fn(async () => ({
     bytes: Buffer.from('section,period,label,environment,count,amount\r\n'),
@@ -171,14 +158,25 @@ describe('Report export HTTP authorization and bounded snapshot contract', () =>
       headers: { authorization: 'Bearer staff' },
     });
     expect(response.status).toBe(200);
-    expect(jobs.status.mock.lastCall?.[0]).toBe('job-a');
+    expect(jobs.status.mock.lastCall).toEqual(['job-a', 'operator']);
   });
   it('keeps export downloads read-permission-gated', async () => {
     const response = await fetch(`${origin}/api/v1/reports/admin/exports/job-a/artifact`, {
       headers: { authorization: 'Bearer staff' },
     });
     expect(response.status).toBe(200);
-    expect(jobs.downloadStaff).toHaveBeenCalled();
+    expect(jobs.downloadStaff.mock.lastCall?.slice(0, 2)).toEqual(['job-a', 'operator']);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+  it.each(['reader', 'stale'])('rejects %s polling and private downloads', async (token) => {
+    for (const suffix of ['', '/artifact', '/snapshot']) {
+      const response = await fetch(`${origin}/api/v1/reports/admin/exports/job-a${suffix}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.status).toBe(token === 'reader' ? 403 : 401);
+    }
+    expect(jobs.status).not.toHaveBeenCalled();
+    expect(jobs.downloadStaff).not.toHaveBeenCalled();
   });
   it('rejects bad identity strings before service work', async () => {
     const response = await fetch(`${origin}/api/v1/reports/admin/exports/not-a-valid-identity/string`, {

@@ -1,13 +1,15 @@
 import { HttpException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { RedactedLogger } from '../../common/redacted-logger';
-import type { PrismaService } from '../../database/prisma.service';
 import { ReportExportRenderer, type ReportExportRender } from './report-export.renderer';
 import { serializeExport } from './report-export.format';
 import { ReportExportArtifactStore } from './report-export-artifact.store';
 import type { ReportExportClaimedJob } from './report-export-job.service';
 import { ReportExportJobService, REPORT_EXPORT_MAX_ATTEMPTS } from './report-export-job.service';
-import { REPORT_EXPORT_RENDERER_REVISION, type ReportExportFailureCode } from './report-export-artifact.store';
+import {
+  REPORT_EXPORT_RENDERER_REVISION,
+  type ReportExportFailureCode,
+} from './report-export-artifact.store';
 
 export type ReportExportRuntimeOptions = {
   workerId: string;
@@ -26,12 +28,11 @@ export class ReportExportRenderProcessor {
   private readonly cleanupIntervalMs: number;
   private logger = new RedactedLogger();
   private cleanupTimer?: NodeJS.Timeout;
-  private cleanupInFlight = false;
+  private cleanupInFlight?: Promise<void>;
 
   constructor(
     private readonly jobs: ReportExportJobService,
     private readonly renderer: ReportExportRenderer,
-    private readonly prisma: PrismaService,
     private readonly store: ReportExportArtifactStore,
     options: ReportExportRuntimeOptions,
   ) {
@@ -42,18 +43,19 @@ export class ReportExportRenderProcessor {
 
   start(): void {
     this.cleanupTimer = setInterval(() => {
-      void this.runCleanup();
+      this.cleanupInFlight ??= this.runCleanup().finally(() => {
+        this.cleanupInFlight = undefined;
+      });
     }, this.cleanupIntervalMs);
     this.cleanupTimer.unref?.();
   }
 
   async stop(): Promise<void> {
     if (this.cleanupTimer) clearInterval(this.cleanupTimer);
+    await this.cleanupInFlight;
   }
 
   private async runCleanup(): Promise<void> {
-    if (this.cleanupInFlight) return;
-    this.cleanupInFlight = true;
     try {
       const requestId = `cleanup-${randomUUID()}`;
       await this.store.cleanupExpired(new Date(), requestId);
@@ -63,8 +65,6 @@ export class ReportExportRenderProcessor {
         outcome: 'unknown',
         errorCode: 'REPORT_EXPORT_STORAGE_UNAVAILABLE',
       });
-    } finally {
-      this.cleanupInFlight = false;
     }
   }
 
@@ -80,10 +80,7 @@ export class ReportExportRenderProcessor {
       if (identity.attempts > REPORT_EXPORT_MAX_ATTEMPTS) {
         throw new Error('export attempt budget exhausted');
       }
-      const bytes = await withTimeout(
-        this.render(identity),
-        this.renderTimeoutMs,
-      );
+      const bytes = await withTimeout(this.render(identity), this.renderTimeoutMs);
       await this.jobs.completeRender(identity, bytes, requestId);
     } catch (error) {
       await this.recordFailure(identity, options.finalAttempt, resolveFailureCode(error), requestId);
@@ -91,15 +88,19 @@ export class ReportExportRenderProcessor {
   }
 
   private async render(identity: ReportExportClaimedJob): Promise<Buffer> {
-    const table: ReportExportRender = await this.renderer.render(identity.definition);
-    if (!table || !Array.isArray(table.headers) || !Array.isArray(table.rows)
-      || table.headers.length < 1 || table.headers.length > 64) {
+    const table: ReportExportRender =
+      (await this.jobs.readSnapshot(identity)) ??
+      (await this.jobs.persistSnapshot(identity, await this.renderer.render(identity.definition)));
+    if (
+      !table ||
+      !Array.isArray(table.headers) ||
+      !Array.isArray(table.rows) ||
+      table.headers.length < 1 ||
+      table.headers.length > 64
+    ) {
       throw new Error('export table rejected');
     }
-    return serializeExport(
-      identity.outputFormat === 'xlsx' ? 'xlsx' : 'csv',
-      table,
-    );
+    return serializeExport(identity.outputFormat === 'xlsx' ? 'xlsx' : 'csv', table);
   }
 
   private async recordFailure(
@@ -122,17 +123,20 @@ export class ReportExportRenderProcessor {
 }
 
 function resolveFailureCode(error: unknown): ReportExportFailureCode {
-  if (/timeout|timed out/iu.test(error instanceof Error ? error.message : String(error))) return 'RENDER_TIMEOUT';
+  if (/timeout|timed out/iu.test(error instanceof Error ? error.message : String(error)))
+    return 'RENDER_TIMEOUT';
   if (error instanceof HttpException) return 'STORE_REJECTED';
-  if (error instanceof Error && /revision mismatch|attempt budget/.test(error.message)) return 'RENDER_FAILED';
+  if (error instanceof Error && /revision mismatch|attempt budget/.test(error.message))
+    return 'RENDER_FAILED';
   return 'RENDER_UNAVAILABLE';
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timer: NodeJS.Timeout;
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => {
-      setTimeout(() => reject(new Error('export generation timed out')), timeoutMs);
+      timer = setTimeout(() => reject(new Error('export generation timed out')), timeoutMs);
     }),
-  ]);
+  ]).finally(() => clearTimeout(timer));
 }

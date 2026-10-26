@@ -12,6 +12,21 @@ const object = (
 });
 /** Direct `data` of both the request response and the status poll. */
 export const reportExportOpenApi = {
+  snapshot: object({
+    data: object({
+      exportId: text,
+      definition: { type: 'object' },
+      sha256: { ...text, pattern: '^[a-f0-9]{64}$' },
+      generatedAt: { ...text, format: 'date-time' },
+      expiresAt: { ...text, format: 'date-time' },
+      headers: { type: 'array', minItems: 1, maxItems: 64, items: text },
+      rows: {
+        type: 'array',
+        maxItems: 20000,
+        items: { type: 'array', maxItems: 64, items: text },
+      },
+    }),
+  }),
   request: object({
     data: object({
       exportId: text,

@@ -7,12 +7,11 @@ import type { ReportExportTable } from './report-export.renderer';
  */
 export function escapeCsvCell(value: string): string {
   // Never expose a leading =, +, - or @ out of the spreadsheet surface.
-  const guarded = /^[=+\-@\t\r]/u.test(value) ? `'${value}` : value;
+  const guarded = /^(?:[\t\r\n]|[\s\p{Cc}]*[=+\-@])/u.test(value) ? `'${value}` : value;
   return `"${guarded.replaceAll('"', '""')}"`;
 }
 export function csvBytes(table: ReportExportTable): Buffer {
-  const lines = [table.headers, ...table.rows]
-    .map(row => row.map(escapeCsvCell).join('\r\n'));
+  const lines = [table.headers, ...table.rows].map((row) => row.map(escapeCsvCell).join(','));
   return Buffer.from(`\uFEFF${lines.join('\r\n')}\r\n`, 'utf8');
 }
 

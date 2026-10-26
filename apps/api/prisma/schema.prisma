@@ -2188,6 +2188,7 @@ model ReportExportStorageCapacity {
   id              String  @id @db.VarChar(32)
   budgetBytes     BigInt
   maxArtifacts    Int
+  snapshotBytes BigInt @default(0)
   storedBytes     BigInt  @default(0)
   artifactCount   Int     @default(0)
   pendingJobCount Int     @default(0)
@@ -2217,6 +2218,7 @@ model ReportExportJob {
   payloadHash         String      @db.Char(64)
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
+  snapshot            ReportExportSnapshot?
   artifacts           ReportExportArtifact[]
   commands            ReportExportCommand[]
 
@@ -2239,6 +2241,7 @@ model ReportExportCommand {
   job            ReportExportJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
 
   @@unique([actorId, reportKind, outputFormat, definitionHash, keyHash], map: "ReportExportCommand_request_key")
+  @@unique([actorId, keyHash], map: "ReportExportCommand_actor_key")
 }
 
 // Private exported byte evidence living only until its retention moment;
@@ -2250,6 +2253,7 @@ model ReportExportArtifact {
   reportKind       String   @db.VarChar(30)
   outputFormat     String   @db.VarChar(10)
   definitionHash   String   @db.Char(64)
+  snapshotSha256   String?  @db.Char(64)
   rendererRevision String   @db.VarChar(100)
   contentSha256    String   @db.Char(64)
   byteCount        Int
@@ -2349,4 +2353,19 @@ model InvoicePublicationCommand {
   event       InvoicePublicationEvent @relation(fields: [eventId], references: [id], onDelete: Restrict)
 
   @@unique([actorId, documentId, keyHash])
+}
+
+// Bounded, immutable materialization shared by display and every render retry.
+model ReportExportSnapshot {
+  jobId String @id
+  bytes Bytes
+  sha256 String @db.Char(64)
+  byteCount Int
+  rowCount Int
+  generatedAt DateTime
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  job ReportExportJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
+
+  @@index([expiresAt])
 }
