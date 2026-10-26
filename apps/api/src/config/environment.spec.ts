@@ -502,3 +502,17 @@ describe('private SMS operator test opt-in', () => {
       SMS_IR_TEST_MOBILE: '+989121234567' })).toThrow(/SMS_IR_TEST_/u);
   });
 });
+
+describe('invoice PDF worker asset directory', () => {
+  it('accepts the absolute directory baked into the production worker image', () => {
+    expect(validateEnvironment({ ...validProductionEnvironment, INVOICE_PDF_ASSETS_DIR: '/app/assets' })
+      .INVOICE_PDF_ASSETS_DIR).toBe('/app/assets');
+  });
+
+  it.each(['app/assets', '/', '/app//assets', '/app/assets/', '/app/../assets', `/${'a'.repeat(300)}`])(
+    'rejects an unbounded or noncanonical asset directory: %s', path => {
+      expect(() => validateEnvironment({ ...validProductionEnvironment, INVOICE_PDF_ASSETS_DIR: path }))
+        .toThrow(/INVOICE_PDF_ASSETS_DIR/u);
+    },
+  );
+});
