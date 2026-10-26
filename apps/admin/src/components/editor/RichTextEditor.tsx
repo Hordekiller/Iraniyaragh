@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import type { Ref } from 'react';
 import { Alert, Box, Typography } from '@mui/material';
 import type { Jodit } from 'jodit';
 import 'jodit/es2018/jodit.min.css';
@@ -9,7 +10,12 @@ import { preserveRawHtmlSource } from './raw-html-source';
 import { buildMediaImageHtml } from '@/lib/editor/media-picker';
 import type { MediaPickerHandle } from '@/lib/editor/media-picker';
 
+export type RichTextEditorHandle = {
+  getValue: () => string;
+};
+
 export type RichTextEditorProps = {
+  ref?: Ref<RichTextEditorHandle>;
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
@@ -28,6 +34,7 @@ type JoditMakeOptions = NonNullable<
 type EditorStatus = 'loading' | 'ready' | 'error';
 
 export function RichTextEditor({
+  ref,
   value,
   onChange,
   placeholder,
@@ -46,11 +53,21 @@ export function RichTextEditor({
   const onChangeRef = useRef(onChange);
   const mediaPickerRef = useRef(mediaPicker);
   const onErrorRef = useRef(onError);
+  const valueRef = useRef(value);
+  const disabledRef = useRef(disabled);
+  const applyingValueRef = useRef(false);
+  const lastPublishedRef = useRef<string | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    getValue: () => editorRef.current?.value ?? valueRef.current,
+  }), []);
 
   useEffect(() => {
     onChangeRef.current = onChange;
     mediaPickerRef.current = mediaPicker;
     onErrorRef.current = onError;
+    valueRef.current = value;
+    disabledRef.current = disabled;
   });
 
   useEffect(() => {
@@ -93,7 +110,11 @@ export function RichTextEditor({
           placeholder,
           height,
           readonly: disabled,
-          onChange: (html) => onChangeRef.current(html),
+          onChange: (html) => {
+            if (applyingValueRef.current) return;
+            lastPublishedRef.current = html;
+            onChangeRef.current(html);
+          },
           onInsertMedia: mediaPickerRef.current
             ? (editor) => openMediaPicker(editor)
             : undefined,
@@ -106,7 +127,18 @@ export function RichTextEditor({
         });
         editorRef.current = editor;
         preserveRawHtmlSource(editor);
-        editor.value = value ?? '';
+        // WYSIWYG synchronization is throttled by Jodit. Publish native input
+        // immediately so form state/dirty indicators include the last keystroke.
+        editor.e.on(editor.editor, 'input compositionend', () => {
+          if (!editor.getReadOnly()) editor.setEditorValue();
+        });
+        applyingValueRef.current = true;
+        try {
+          editor.value = valueRef.current ?? '';
+        } finally {
+          applyingValueRef.current = false;
+        }
+        editor.setReadOnly(disabledRef.current);
         setStatus('ready');
       } catch (err) {
         if (disposed) return;
@@ -127,7 +159,15 @@ export function RichTextEditor({
     const editor = editorRef.current;
     if (!editor || status !== 'ready') return;
     if (editor.value === value) return;
-    editor.setEditorValue(value);
+    // A controlled echo may arrive after another native edit. It must not
+    // replace newer content already present in the editor.
+    if (lastPublishedRef.current === value) return;
+    applyingValueRef.current = true;
+    try {
+      editor.setEditorValue(value);
+    } finally {
+      applyingValueRef.current = false;
+    }
   }, [value, status]);
 
   useEffect(() => {
