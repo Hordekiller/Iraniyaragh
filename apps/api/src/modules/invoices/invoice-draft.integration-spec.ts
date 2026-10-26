@@ -26,7 +26,7 @@ describe.sequential('Independent invoice draft PostgreSQL financial/security acc
     globalDiscount: draft.globalDiscount.amount, shippingMethodCode: draft.shipping.code, note: draft.note, expectedVersion: draft.version });
   async function clear() {
     assertIsolatedTestDatabase({ databaseUrl: process.env.DATABASE_URL, nodeEnvironment: process.env.NODE_ENV });
-    await prisma.$executeRawUnsafe('TRUNCATE "InvoicePublicationCommand", "InvoicePublicationEvent", "InvoicePublication", "InvoiceIssueCommand", "InvoiceDocumentEvent", "InvoiceDocumentLine", "InvoiceDocument", "InvoiceSeriesCounter", "InvoiceDraftCommand", "InvoiceDraftRevision", "InvoiceDraftLine", "InvoiceDraft", "InvoicePolicyCommand", "InvoicePolicyRevision"');
+    await prisma.$executeRawUnsafe('TRUNCATE "InvoicePdfRenderJobCommand", "InvoicePdfRenderJob", "InvoicePdfArtifact", "InvoicePdfStorageCapacity", "InvoicePublicationCommand", "InvoicePublicationEvent", "InvoicePublication", "InvoiceIssueCommand", "InvoiceDocumentEvent", "InvoiceDocumentLine", "InvoiceDocument", "InvoiceSeriesCounter", "InvoiceDraftCommand", "InvoiceDraftRevision", "InvoiceDraftLine", "InvoiceDraft", "InvoicePolicyCommand", "InvoicePolicyRevision"');
   }
   async function evidence() { return { orders: await prisma.order.findMany({ where: { customerId }, include: { items: true, reservations: true, payments: true } }),
     stock: await prisma.inventoryBalance.findMany({ where: { variantId } }), movements: await prisma.inventoryMovement.count({ where: { variantId } }),

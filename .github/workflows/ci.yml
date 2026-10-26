@@ -241,8 +241,12 @@ jobs:
         run: pnpm --filter @iranyaragh/api prisma:seed
       - name: Provision the staff identity for the real MFA sign-in
         run: pnpm --filter @iranyaragh/api auth:e2e-staff
+      - name: Approve the invoice PDF capacity for the isolated render worker
+        run: pnpm --filter @iranyaragh/api invoice-pdf:capacity
       - name: Install Chromium and system dependencies
         run: pnpm --filter @iranyaragh/e2e exec playwright install --with-deps chromium
+      - name: Ensure the isolated PDF worker's Chromium revision is present
+        run: pnpm --filter @iranyaragh/api exec playwright install chromium
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: '1.24.8'
@@ -265,21 +269,23 @@ jobs:
           done
           curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null 2>&1 || { echo "::error ::MinIO not ready"; tail -n 60 minio.log; exit 1; }
           pnpm --filter @iranyaragh/api media:bucket
-      - name: Build API, start it and the media worker, build and smoke web and admin
+      - name: Build API, start it and the media and PDF workers, build and smoke web and admin
         run: |
           pnpm --filter @iranyaragh/api build
           node apps/api/dist/src/main.js > api.log 2>&1 &
           API_PID=$!
           node apps/api/dist/src/media-worker.js > media-worker.log 2>&1 &
           MEDIA_WORKER_PID=$!
-          trap 'kill "$API_PID" "$MEDIA_WORKER_PID" 2>/dev/null || true' EXIT
+          node apps/api/dist/src/pdf-render-worker.js > pdf-render-worker.log 2>&1 &
+          PDF_WORKER_PID=$!
+          trap 'kill "$API_PID" "$MEDIA_WORKER_PID" "$PDF_WORKER_PID" 2>/dev/null || true' EXIT
           for i in $(seq 1 60); do
             curl -fsS http://127.0.0.1:4000/api/v1/health/ready >/dev/null 2>&1 && break
             kill -0 "$API_PID" 2>/dev/null || { echo "::error ::API crashed during startup"; tail -n 60 api.log; exit 1; }
             sleep 1
           done
           curl -fsS http://127.0.0.1:4000/api/v1/health/ready >/dev/null 2>&1 || { echo "::error ::API not ready after 60s"; tail -n 60 api.log; exit 1; }
-          if ! pnpm e2e; then tail -n 60 media-worker.log; exit 1; fi
+          if ! pnpm e2e; then tail -n 60 media-worker.log pdf-render-worker.log; exit 1; fi
       - name: Upload Playwright failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

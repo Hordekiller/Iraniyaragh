@@ -9,13 +9,15 @@ import { AuthPrincipalService, type AuthPrincipalContext } from '../auth/auth-pr
 import { AuthSessionException } from '../auth/auth-session.service';
 import { InvoiceDocumentController } from './invoice-document.controller';
 import { InvoiceDocumentService } from './invoice-document.service';
+import { InvoicePdfJobService } from './invoice-pdf-job.service';
 const principal = (level: 'CUSTOMER_OTP'|'STAFF_MFA', permissions: string[], fresh = true): AuthPrincipalContext => ({ userId:'operator',sessionId:'test-session',tokenId:'test-token',
   authenticationLevel:level,permissions:new Set(permissions),authenticatedAt:new Date(Date.now()-(fresh?0:600000)),accessExpiresAt:new Date(Date.now()+600000) });
 const principals = { staff:principal('STAFF_MFA',['invoices.read','invoices.issue']), reader:principal('STAFF_MFA',['invoices.read']),
   issuer:principal('STAFF_MFA',['invoices.issue']),stale:principal('STAFF_MFA',['invoices.read','invoices.issue'],false),customer:principal('CUSTOMER_OTP',['invoices.read','invoices.issue']),revoked:principal('STAFF_MFA',[]) };
 const resolver={resolveBearerToken:vi.fn(async(authorization?:string)=>{const token=authorization?.replace('Bearer ','') as keyof typeof principals;if(token in principals)return principals[token];throw new AuthSessionException('AUTH_SESSION_INVALID');})};
 const service={list:vi.fn(async()=>({items:[],count:0,offset:0,limit:25})),read:vi.fn(async()=>({id:'invoice'})),fromDraft:vi.fn(async()=>({id:'invoice'})),issue:vi.fn(async()=>({document:{id:'invoice'},committedVersion:1,replayed:false}))};
-@Module({imports:[ApiFoundationModule],controllers:[InvoiceDocumentController],providers:[{provide:InvoiceDocumentService,useValue:service},{provide:AuthPrincipalService,useValue:resolver},
+const pdfService={request:vi.fn(async()=>({documentId:'invoice',status:'PENDING',sha256:null,byteCount:null,replayed:false})),status:vi.fn(async()=>({documentId:'invoice',status:'READY',sha256:'cd'.repeat(32),byteCount:64,replayed:false})),downloadStaff:vi.fn(async()=>({bytes:Buffer.from('%PDF-1.4 synthetic'),pdfSha256:'cd'.repeat(32),byteCount:64,filename:'invoice.pdf'}))};
+@Module({imports:[ApiFoundationModule],controllers:[InvoiceDocumentController],providers:[{provide:InvoiceDocumentService,useValue:service},{provide:InvoicePdfJobService,useValue:pdfService},{provide:AuthPrincipalService,useValue:resolver},
   {provide:APP_GUARD,useValue:new AuthGuard(resolver as unknown as AuthPrincipalService,{record:vi.fn(async()=>undefined)} as unknown as AuditLogService)}]})class Harness{}
 describe('Invoice issuance HTTP current authorization and strict contract',()=>{
   let app:INestApplication;let origin:string;

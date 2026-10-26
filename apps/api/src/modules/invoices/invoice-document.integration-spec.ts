@@ -1,5 +1,5 @@
-import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { createHash, randomUUID } from 'node:crypto';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
 import { OperationalReportService } from '../reports/operational-report.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
@@ -11,6 +11,8 @@ import { InvoicePolicyService } from './invoice-policy.service';
 import { InvoiceDraftService } from './invoice-draft.service';
 import { InvoiceDocumentService } from './invoice-document.service';
 import { InvoicePublicationService } from './invoice-publication.service';
+import { InvoicePdfArtifactStore } from './invoice-pdf-artifact.store';
+import { INVOICE_PDF_ASSETS, INVOICE_PDF_TEMPLATE_REVISION } from './invoice-pdf-template';
 import { CustomersService } from '../customers/customers.service';
 
 describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', () => {
@@ -26,7 +28,7 @@ describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', ()
   const code = (name: string) => expect.objectContaining({ response: expect.objectContaining({ code: name }) });
   async function clearInvoices() {
     assertIsolatedTestDatabase({ databaseUrl: process.env.DATABASE_URL, nodeEnvironment: process.env.NODE_ENV });
-    await prisma.$executeRawUnsafe('TRUNCATE "InvoicePublicationCommand", "InvoicePublicationEvent", "InvoicePublication", "InvoiceIssueCommand", "InvoiceDocumentEvent", "InvoiceDocumentLine", "InvoiceDocument", "InvoiceSeriesCounter", "InvoiceDraftCommand", "InvoiceDraftRevision", "InvoiceDraftLine", "InvoiceDraft", "InvoicePolicyCommand", "InvoicePolicyRevision"');
+    await prisma.$executeRawUnsafe('TRUNCATE "InvoicePdfRenderJobCommand", "InvoicePdfRenderJob", "InvoicePdfArtifact", "InvoicePdfStorageCapacity", "InvoicePublicationCommand", "InvoicePublicationEvent", "InvoicePublication", "InvoiceIssueCommand", "InvoiceDocumentEvent", "InvoiceDocumentLine", "InvoiceDocument", "InvoiceSeriesCounter", "InvoiceDraftCommand", "InvoiceDraftRevision", "InvoiceDraftLine", "InvoiceDraft", "InvoicePolicyCommand", "InvoicePolicyRevision"');
   }
   async function policy(taxTreatment: 'INCLUSIVE'|'EXCLUSIVE' = 'INCLUSIVE', taxRateBps = 0) {
     const previous = await policies.current();
@@ -59,6 +61,7 @@ describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', ()
   });
   afterAll(async () => {
     if(!connected)return;await clearInvoices();
+    await prisma.auditLog.deleteMany({ where: { requestId, action: 'invoice.pdf.stored' } });
     const ids=(await prisma.order.findMany({ where:{customerId},select:{id:true} })).map(row=>row.id);
     await prisma.stockReservation.deleteMany({where:{orderId:{in:ids}}});await prisma.orderTransition.deleteMany({where:{orderId:{in:ids}}});
     await prisma.staffOrderCommandRecord.deleteMany({where:{orderId:{in:ids}}});await prisma.outboxEvent.deleteMany({where:{aggregateId:{in:ids}}});
@@ -185,6 +188,128 @@ describe.sequential('Immutable store invoice issuance PostgreSQL acceptance', ()
     expect((await access.read(document.id)).publication).toMatchObject({version:0,isPublished:false});expect(await prisma.invoicePublicationEvent.count({where:{documentId:document.id}})).toBe(0);
     expect(await prisma.invoicePublicationCommand.count({where:{documentId:document.id}})).toBe(0);
     expect(stringify(await prisma.auditLog.findMany({where:{action:{startsWith:'invoice.access.'}}}))).not.toContain('Private');
+  });
+  describe.sequential('private PDF artifact persistence foundation', () => {
+    const store = new InvoicePdfArtifactStore(prisma, audit);
+    // Synthetic byte constraints only, not renderer or handset acceptance.
+    const pdf = Buffer.from('%PDF-1.7\nSynthetic isolated storage boundary\n%%EOF');
+    const digest = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
+    beforeEach(async () => {
+      assertIsolatedTestDatabase({ databaseUrl: process.env.DATABASE_URL, nodeEnvironment: process.env.NODE_ENV });
+      await prisma.$executeRawUnsafe('TRUNCATE "InvoicePdfRenderJobCommand", "InvoicePdfRenderJob", "InvoicePdfArtifact", "InvoicePdfStorageCapacity"');
+      await policy();
+    });
+    async function input() {
+      const { document } = await issue(await fixture());
+      const row = await prisma.invoiceDocument.findUniqueOrThrow({ where: { id: document.id } });
+      return { documentId: document.id, documentPayloadHash: row.payloadHash, renderInputHash: digest(Buffer.from(key())),
+        rendererRevision: 'synthetic-storage-v1', templateRevision: INVOICE_PDF_TEMPLATE_REVISION, fontSha256: INVOICE_PDF_ASSETS.fontSha256, bytes: pdf };
+    }
+    const budget = (budgetBytes = BigInt(pdf.length * 2), maxArtifacts = 2) => prisma.invoicePdfStorageCapacity.create({
+      data: { id: 'invoice-pdf', budgetBytes, maxArtifacts, isEnabled: true } });
+    it('requires an approved enabled capacity without reporting a stored artifact', async () => {
+      const data = await input();
+      await expect(store.persist(data, requestId)).rejects.toMatchObject(code('INVOICE_PDF_STORAGE_UNAVAILABLE'));
+      await prisma.invoicePdfStorageCapacity.create({ data: { id: 'invoice-pdf', budgetBytes: BigInt(pdf.length), maxArtifacts: 1 } });
+      await expect(store.persist(data, requestId)).rejects.toMatchObject(code('INVOICE_PDF_STORAGE_UNAVAILABLE'));
+      expect(await prisma.invoicePdfArtifact.count()).toBe(0);
+      expect(await prisma.invoicePdfStorageCapacity.findUniqueOrThrow({ where: { id: 'invoice-pdf' } })).toMatchObject({ artifactCount: 0, storedBytes: 0n, isEnabled: false });
+    });
+    it('stores private immutable evidence atomically without repricing, stock or payment effects', async () => {
+      const data = await input(); await budget(); const before = await financialEvidence();
+      const result = await store.persist(data, requestId);
+      expect(result).toMatchObject({ replayed: false, artifact: { documentId: data.documentId, pdfSha256: digest(pdf), byteCount: pdf.length } });
+      expect(result.artifact).not.toHaveProperty('bytes');
+      const stored = await prisma.invoicePdfArtifact.findUniqueOrThrow({ where: { id: result.artifact.id } });
+      expect(Buffer.from(stored.bytes)).toEqual(pdf); expect(stored.documentPayloadHash).toBe(data.documentPayloadHash);
+      expect(await financialEvidence()).toBe(before);
+      expect(await prisma.invoicePdfStorageCapacity.findUniqueOrThrow({ where: { id: 'invoice-pdf' } })).toMatchObject({ artifactCount: 1, storedBytes: BigInt(pdf.length) });
+      const logs = await prisma.auditLog.findMany({ where: { action: 'invoice.pdf.stored', entityId: result.artifact.id } });
+      expect(logs).toHaveLength(1); expect(stringify(logs)).not.toContain('Synthetic isolated');
+      expect(stringify(logs)).not.toContain(address.mobile); expect(stringify(logs)).not.toContain(address.address);
+    });
+    it('concurrent identical input and a restarted process converge even when full or disabled', async () => {
+      const data = await input(); await budget(BigInt(pdf.length), 1);
+      const results = await Promise.all([store.persist(data, requestId), store.persist(data, requestId)]);
+      expect(new Set(results.map(row => row.artifact.id)).size).toBe(1); expect(results.filter(row => row.replayed)).toHaveLength(1);
+      await prisma.invoicePdfStorageCapacity.update({ where: { id: 'invoice-pdf' }, data: { isEnabled: false, version: 2 } });
+      const replay = await new InvoicePdfArtifactStore(prisma, audit).persist(data, requestId);
+      expect(replay).toMatchObject({ replayed: true, artifact: results[0].artifact });
+      expect(await prisma.invoicePdfArtifact.count()).toBe(1);
+      expect(await prisma.invoicePdfStorageCapacity.findUniqueOrThrow({ where: { id: 'invoice-pdf' } })).toMatchObject({ artifactCount: 1, storedBytes: BigInt(pdf.length) });
+    });
+    it.each(['bytes', 'count'] as const)('serializes different inputs at the final %s limit', async limit => {
+      const first = await input(); const second = await input();
+      await budget(BigInt(pdf.length * (limit === 'bytes' ? 1 : 2)), limit === 'count' ? 1 : 2);
+      const results = await Promise.allSettled([store.persist(first, requestId), store.persist(second, requestId)]);
+      expect(results.filter(row => row.status === 'fulfilled')).toHaveLength(1);
+      const failure = results.find(row => row.status === 'rejected');
+      expect(failure?.status === 'rejected' ? failure.reason : null).toMatchObject(code('INVOICE_PDF_CAPACITY_EXCEEDED'));
+      expect(await prisma.invoicePdfArtifact.count()).toBe(1);
+      expect(await prisma.invoicePdfStorageCapacity.findUniqueOrThrow({ where: { id: 'invoice-pdf' } })).toMatchObject({ artifactCount: 1, storedBytes: BigInt(pdf.length) });
+    });
+    it('rejects mismatched source and validates bounded bytes before storage', async () => {
+      const data = await input(); await budget();
+      await expect(store.persist({ ...data, documentPayloadHash: '0'.repeat(64) }, requestId)).rejects.toMatchObject(code('INVOICE_PDF_SOURCE_MISMATCH'));
+      for (const bytes of [Buffer.from('private non-PDF'), Buffer.alloc(2097153), Buffer.from([0xa5, 0xd0, 0xc4, 0xc6, 0xad])]) {
+        await expect(store.persist({ ...data, bytes }, requestId)).rejects.toMatchObject(code('INVOICE_PDF_ARTIFACT_INVALID'));
+      }
+      expect(await prisma.invoicePdfArtifact.count()).toBe(0);
+    });
+    it('SQL independently rejects invalid length/hash/header/source and oversized bytes without charging', async () => {
+      const data = await input(); await budget(8388608n, 10);
+      const base = { ...data, byteCount: pdf.length, pdfSha256: digest(pdf) };
+      const oversized = Buffer.alloc(2097153); pdf.copy(oversized);
+      const badHeader = Buffer.from('private invalid header');
+      for (const change of [{ byteCount: pdf.length - 1 }, { pdfSha256: '0'.repeat(64) }, { documentPayloadHash: '0'.repeat(64) },
+        { bytes: badHeader, byteCount: badHeader.length, pdfSha256: digest(badHeader) },
+        { bytes: oversized, byteCount: oversized.length, pdfSha256: digest(oversized) }, { rendererRevision: '' }]) {
+        await expect(prisma.invoicePdfArtifact.create({ data: { ...base, ...change } })).rejects.toBeDefined();
+      }
+      expect(await prisma.invoicePdfArtifact.count()).toBe(0);
+      expect(await prisma.invoicePdfStorageCapacity.findUniqueOrThrow({ where: { id: 'invoice-pdf' } })).toMatchObject({ storedBytes: 0n, artifactCount: 0 });
+    });
+    it('SQL enforces capacity, immutability, versioning and counter ownership independently of the store', async () => {
+      const data = await input(); await budget(BigInt(pdf.length), 1); const result = await store.persist(data, requestId);
+      await expect(prisma.invoicePdfArtifact.create({ data: { ...data, renderInputHash: '1'.repeat(64), byteCount: pdf.length, pdfSha256: digest(pdf) } })).rejects.toBeDefined();
+      for (const query of [prisma.$executeRaw`DELETE FROM "InvoicePdfArtifact" WHERE "id"=${result.artifact.id}`,
+        prisma.$executeRaw`UPDATE "InvoicePdfArtifact" SET "rendererRevision"='rewrite' WHERE "id"=${result.artifact.id}`,
+        prisma.$executeRaw`UPDATE "InvoicePdfStorageCapacity" SET "storedBytes"=0, "artifactCount"=0`,
+        prisma.$executeRaw`UPDATE "InvoicePdfStorageCapacity" SET "isEnabled"=false`,
+        prisma.$executeRaw`UPDATE "InvoicePdfStorageCapacity" SET "budgetBytes"=1, "version"=2`,
+        prisma.$executeRaw`DELETE FROM "InvoicePdfStorageCapacity"`]) await expect(query).rejects.toBeDefined();
+      expect(await prisma.invoicePdfArtifact.count()).toBe(1);
+    });
+    it('ON CONFLICT DO NOTHING does not consume another capacity reservation', async () => {
+      const data = await input(); await budget(); await store.persist(data, requestId);
+      expect(await prisma.invoicePdfArtifact.createMany({ data: [{ ...data, byteCount: pdf.length, pdfSha256: digest(pdf) }], skipDuplicates: true })).toEqual({ count: 0 });
+      expect(await prisma.invoicePdfStorageCapacity.findUniqueOrThrow({ where: { id: 'invoice-pdf' } })).toMatchObject({ artifactCount: 1, storedBytes: BigInt(pdf.length) });
+    });
+    it('independent concurrent SQL writers cannot overbook the global last slot', async () => {
+      const first = await input(); const second = await input(); await budget(BigInt(pdf.length), 1);
+      const results = await Promise.allSettled([first, second].map(data => prisma.invoicePdfArtifact.create({
+        data: { ...data, byteCount: pdf.length, pdfSha256: digest(pdf) } })));
+      expect(results.filter(row => row.status === 'fulfilled')).toHaveLength(1);
+      expect(await prisma.invoicePdfArtifact.count()).toBe(1);
+      expect(await prisma.invoicePdfStorageCapacity.findUniqueOrThrow({ where: { id: 'invoice-pdf' } })).toMatchObject({ storedBytes: BigInt(pdf.length), artifactCount: 1 });
+    });
+    it('accepts the exact 2 MiB bound without rounding or returning private bytes', async () => {
+      const data = await input(); const bytes = Buffer.alloc(2097152); pdf.copy(bytes); await budget(BigInt(bytes.length), 1);
+      expect(await store.persist({ ...data, bytes }, requestId)).toMatchObject({ artifact: { byteCount: 2097152, pdfSha256: digest(bytes) }, replayed: false });
+      expect(await prisma.invoicePdfStorageCapacity.findUniqueOrThrow({ where: { id: 'invoice-pdf' } })).toMatchObject({ storedBytes: 2097152n, artifactCount: 1 });
+    });
+    it('audit failure rolls back bytes and capacity, returns sanitized uncertainty and allows reconciliation', async () => {
+      const data = await input(); await budget();
+      const failure = vi.spyOn(audit, 'record').mockRejectedValueOnce(new Error('synthetic-private-pdf-text'));
+      try {
+        const error = await store.persist(data, requestId).catch(cause => cause);
+        expect(error).toMatchObject(code('INVOICE_PDF_STORAGE_UNAVAILABLE'));
+        expect(stringify(error)).not.toContain('synthetic-private-pdf-text');
+      } finally { failure.mockRestore(); }
+      expect(await prisma.invoicePdfArtifact.count()).toBe(0);
+      expect(await prisma.invoicePdfStorageCapacity.findUniqueOrThrow({ where: { id: 'invoice-pdf' } })).toMatchObject({ artifactCount: 0, storedBytes: 0n });
+      expect(await store.persist(data, requestId)).toMatchObject({ replayed: false });
+    });
   });
   it('SQL forbids erasing evidence or changing visibility without its contiguous command/event',async()=>{
     const {document}=await issue(await fixture());await access.change(actorId,requestId,document.id,{expectedVersion:0,isPublished:true,reason:'Approved'},key());

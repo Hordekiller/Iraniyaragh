@@ -5,6 +5,8 @@ import type { ApiSuccess } from '../lib/auth/types'
 
 export type AuthenticatedJsonRequest = {
   <T>(path: string, options?: Omit<RequestOptions, 'accessToken'>): Promise<ApiSuccess<T>>
+  /** Same authorization lifetime for non-JSON (binary artifact) payloads. */
+  response: (path: string, options?: Omit<RequestOptions, 'accessToken'>) => Promise<Response>
   /** Keep a multi-request operation under its original customer/login lifetime. */
   forCurrentPrincipal: () => AuthenticatedJsonRequest
 }

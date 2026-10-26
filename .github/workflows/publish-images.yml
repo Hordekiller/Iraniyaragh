@@ -126,6 +126,20 @@ jobs:
           cache-from: type=gha,scope=api-runtime
           cache-to: type=gha,mode=max,scope=api-runtime
 
+      # The invoice PDF render worker (ADR-0030) is deliberately a separate
+      # image: it is the only component that launches a browser engine, and
+      # keeping that capability out of the API image keeps the attack surface
+      # and the provenance story verifiable per deployment.
+      - name: Build and push the invoice PDF render worker image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: infrastructure/docker/pdf.Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_REGISTRY }}/iranyaragh/pdf-render-worker:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=pdf-render-worker
+          cache-to: type=gha,mode=max,scope=pdf-render-worker
+
       - name: Build and push the Admin image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -160,7 +174,7 @@ jobs:
       - name: Verify every published tag resolves to a digest
         run: |
           set -Eeuo pipefail
-          for image in api api-migrate admin web; do
+          for image in api api-migrate pdf-render-worker admin web; do
             reference="${IMAGE_REGISTRY}/iranyaragh/${image}:${IMAGE_TAG}"
             digest="$(docker buildx imagetools inspect --format '{{ .Manifest.Digest }}' "$reference")"
             test -n "$digest" || { echo "no digest for ${reference}" >&2; exit 1; }
@@ -172,7 +186,7 @@ jobs:
           {
             echo "### Images published for ${IMAGE_TAG}"
             echo
-            for image in api api-migrate admin web; do
+            for image in api api-migrate pdf-render-worker admin web; do
               digest="$(docker buildx imagetools inspect --format '{{ .Manifest.Digest }}' \
                 "${IMAGE_REGISTRY}/iranyaragh/${image}:${IMAGE_TAG}")"
               echo "- \`${image}\` \`${IMAGE_TAG}\` \`${digest}\`"
