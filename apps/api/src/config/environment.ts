@@ -57,6 +57,9 @@ export type EnvironmentVariables = {
   INVOICE_PDF_RENDER_TIMEOUT_MS: number;
   INVOICE_PDF_ASSETS_DIR?: string;
   INVOICE_PDF_WORKER_ID?: string;
+  REPORT_EXPORT_RENDER_TIMEOUT_MS: number;
+  REPORT_EXPORT_CLEANUP_INTERVAL_MS: number;
+  REPORT_EXPORT_WORKER_ID?: string;
 };
 
 const supportedEnvironments = new Set<NodeEnvironment>(['development', 'test', 'staging', 'production']);
@@ -586,5 +589,18 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     ),
     INVOICE_PDF_ASSETS_DIR: parseBoundedPath(config.INVOICE_PDF_ASSETS_DIR, 'INVOICE_PDF_ASSETS_DIR'),
     INVOICE_PDF_WORKER_ID: parseBoundedIdentifier(config.INVOICE_PDF_WORKER_ID, 'INVOICE_PDF_WORKER_ID'),
+    REPORT_EXPORT_RENDER_TIMEOUT_MS: parseBoundedInteger(
+      config.REPORT_EXPORT_RENDER_TIMEOUT_MS ?? 20_000,
+      'REPORT_EXPORT_RENDER_TIMEOUT_MS',
+      5_000,
+      60_000,
+    ),
+    REPORT_EXPORT_CLEANUP_INTERVAL_MS: parseBoundedInteger(
+      config.REPORT_EXPORT_CLEANUP_INTERVAL_MS ?? 300_000,
+      'REPORT_EXPORT_CLEANUP_INTERVAL_MS',
+      60_000,
+      3_600_000,
+    ),
+    REPORT_EXPORT_WORKER_ID: parseBoundedIdentifier(config.REPORT_EXPORT_WORKER_ID, 'REPORT_EXPORT_WORKER_ID'),
   };
 }

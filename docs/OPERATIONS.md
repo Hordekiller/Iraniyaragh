@@ -497,3 +497,39 @@ Activation checklist (same shape as the payment/SMS gates):
    request → queued wake-up → leased render → READY → verified download with
    the same staff identity; it runs only when a worker is up, so a missing
    worker fails loudly instead of simulating readiness.
+
+## Report export artifacts — #423 operations
+
+Report export snapshots (CSV/XLSX) share the ADR-0030 pipeline: the
+`pdf-render-worker` process multiplexes a second single-purpose BullMQ worker
+for the `report-export` queue, Postgres stays the execution authority
+(`ReportExportJob` leases, `ReportExportArtifact` byte-perfect rows), and
+Redis only wakes the worker up. The same activation shape as the invoice PDF
+gate applies:
+
+- Capacity is operator state. The `report-export` singleton separately bounds snapshot and artifact bytes,
+  artifact count, pending jobs and retention. Production activation remains a
+  release prerequisite; no report activation API is delivered in this slice. Until that approval exists the
+  worker claims nothing and requests fail closed with
+  `REPORT_EXPORT_DISABLED`; disabling withholds new claims and requests while
+  verified downloads and cleanup keep working. Test and CI runs provision the
+  same capacity through `pnpm report-export:capacity` (seed-guarded, test
+  environments only).
+- The export surface is the bounded #29 snapshot set (`operations-summary`,
+  `orders`, `debtors`) with fixed row caps, money as integer strings, IDs
+  instead of personal identifiers and no cost columns; CSV is BOM'd UTF-8 with
+  formula-inert cell escaping.
+- Request idempotency, attempt budget, failure codes and download gates match
+  ADR-0030 exactly (`reports.export` permission plus current fresh MFA,
+  provenance and `no-store` headers, hash/length verification before the
+  response).
+- Reconcile from database evidence: `failureReason`, lease state, audit log.
+  Cleanup runs bounded maintenance that frees expired artifact bytes and the
+  byte budget; it never deletes audit or job history.
+
+Report jobs retain one immutable materialized table, then serialize CSV/XLSX from
+that table across retries. A new idempotency key always means new evidence;
+reusing an actor/key with changed filters or format is rejected. Status, table
+and artifact endpoints require the current export permission, fresh staff MFA
+and matching owner; private table reads and downloads are audited. A recurring
+queue wake-up recovers lost deliveries without relying on an HTTP retry.

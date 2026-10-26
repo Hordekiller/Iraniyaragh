@@ -242,7 +242,9 @@ jobs:
       - name: Provision the staff identity for the real MFA sign-in
         run: pnpm --filter @iranyaragh/api auth:e2e-staff
       - name: Approve the invoice PDF capacity for the isolated render worker
-        run: pnpm --filter @iranyaragh/api invoice-pdf:capacity
+        run: |
+          pnpm --filter @iranyaragh/api invoice-pdf:capacity
+          pnpm --filter @iranyaragh/api report-export:capacity
       - name: Install Chromium and system dependencies
         run: pnpm --filter @iranyaragh/e2e exec playwright install --with-deps chromium
       - name: Ensure the isolated PDF worker's Chromium revision is present

@@ -64,6 +64,7 @@ export const CANONICAL_PERMISSIONS = [
   ["users.manage", "Manage users", "users"],
   ["roles.manage", "Manage roles", "roles"],
   ["reports.read", "Read reports", "reports"],
+  ["reports.export", "Export report snapshots", "reports"],
   ["audit.read", "Read audit history", "audit"],
   ["settings.manage", "Manage settings", "settings"],
 ].map(([key, name, group]) => ({

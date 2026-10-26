@@ -21,6 +21,7 @@ DECLARE
     'payments.refund',
     'pricing.read',
     'pricing.write',
+    'reports.export',
     'reports.read',
     'roles.manage',
     'settings.manage',
