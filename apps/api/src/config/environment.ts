@@ -234,7 +234,7 @@ function parseBoundedPath(value: unknown, key: string): string | undefined {
   if (value === undefined || value === null || value === '') return undefined;
   const candidate = typeof value === 'string' ? value.trim() : '';
   if (!candidate.startsWith('/') || candidate.length > 300
-    || candidate.split('/').some(segment => segment === '..' || segment === '')) {
+    || candidate.slice(1).split('/').some(segment => segment === '..' || segment === '')) {
     throw new Error(`${key} must be an absolute bounded directory path without traversal segments.`);
   }
   return candidate;
