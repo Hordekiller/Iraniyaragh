@@ -4,6 +4,7 @@ import { ApiFoundationModule } from './common/api-foundation.module';
 import { DatabaseModule } from './database/database.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AccessModule } from './modules/access/access.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CreditModule } from './modules/credit/credit.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
@@ -35,6 +36,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     DatabaseModule,
     HealthModule,
     AuthModule,
+    AccessModule,
     CatalogModule,
     MediaModule,
     InventoryModule,

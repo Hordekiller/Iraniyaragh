@@ -13,7 +13,7 @@ const REPO_FALLBACK_DIR = resolve(__dirname, '../../../../../web/public');
 export type InvoicePdfAssets = { fontWoff2: Buffer; wordmarkPng: Buffer };
 export const invoicePdfAssetHashes = {
   font: '4e3fa217d38fdafc1fea4414ceb58ca5e662cf0ab5fa735a8c8c20e8b42cad92',
-  brand: '457401b43c2c484ced56e1858da9c84a0998d86099ab0935e82bad90f69cbcc4',
+  brand: 'c58b4bf6c4dc2b8fc848ba66a5f17e04ec297ae03f7a3a8bfae99df0585b0e5c',
 } as const;
 
 function hash(bytes: Buffer): string {

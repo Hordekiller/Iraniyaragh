@@ -110,7 +110,7 @@ export const navigation: NavigationGroup[] = [
   {
     label: 'سیستم',
     items: [
-      { label: 'نقش‌ها و دسترسی', href: '/access', icon: ShieldCheck, permission: 'roles.manage', status: 'planned' },
+      { label: 'نقش‌ها و دسترسی', href: '/access', icon: ShieldCheck, permission: 'roles.manage' },
       { label: 'گزارش ممیزی', href: '/audit', icon: FileClock, permission: 'audit.read' },
       { label: 'سرویس پیامک', href: '/settings/sms', icon: Send, permission: 'settings.manage' },
       { label: 'تعرفهٔ ارسال', href: '/settings/shipping', icon: Truck, permission: 'settings.manage' },

@@ -38,7 +38,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
       <div className="max-w-[1280px] mx-auto px-4 lg:px-6">
         <div className="flex items-center gap-2 sm:gap-4 lg:gap-8 h-[64px] lg:h-[76px]">
           {/* Logo */}
-          <Link to={ROUTES.home} aria-label="ایران یراق؛ صفحهٔ اصلی" className="flex shrink-0 items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]">
+          <Link to={ROUTES.home} aria-label="ایرانی یراق؛ صفحهٔ اصلی" className="flex shrink-0 items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]">
             <StoreBrandLogo />
           </Link>
 

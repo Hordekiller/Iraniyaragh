@@ -38,7 +38,7 @@ export function ProductCarousel({
     <section className="mt-10 lg:mt-14" aria-labelledby={`${id}-title`}>
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-bold text-[#C2410C]">ایران یراق</p>
+          <p className="text-xs font-bold text-[#C2410C]">ایرانی یراق</p>
           <h2
             id={`${id}-title`}
             className="mt-1 text-xl font-black text-slate-900 lg:text-2xl"

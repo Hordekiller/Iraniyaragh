@@ -31,7 +31,7 @@ const root = path.resolve(__dirname, "..");
     .resize({ width: 1086 })
     .png({ compressionLevel: 9 })
     .toBuffer();
-  const manifest = { revision: "operator-2026-10-14", sources: {}, files: {} };
+  const manifest = { revision: "brand-name-correction-2026-10-26", sources: {}, files: {} };
   for (const [name, p] of Object.entries({ mark, wordmark: word }))
     manifest.sources[name] = crypto
       .createHash("sha256")

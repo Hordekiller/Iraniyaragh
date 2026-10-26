@@ -51,7 +51,7 @@ describe('immutable issued invoice views', () => {
   it('prints the immutable branded sheet only after its local assets are ready', async () => {
     const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
     render(<InvoiceDocumentPage id="doc-a" />); await screen.findByRole('heading', { name: 'فاکتور IRY-2026-000001' });
-    expect(screen.getByRole('img', { name: 'ایران یراق' })).toHaveAttribute('src', '/brand/wordmark-print.png');
+    expect(screen.getByRole('img', { name: 'ایرانی یراق' })).toHaveAttribute('src', '/brand/wordmark-print.png');
     fireEvent.click(screen.getByRole('button', { name: 'چاپ فاکتور A4' })); await waitFor(() => expect(print).toHaveBeenCalledTimes(1));
     expect(prepareInvoicePrint).toHaveBeenCalledWith(screen.getByRole('article', { name: 'سند فاکتور IRY-2026-000001' }));
     expect(screen.getByRole('table')).toHaveTextContent('۹٬۰۰۷٬۱۹۹٬۲۵۴٬۷۴۰٬۹۹۳');

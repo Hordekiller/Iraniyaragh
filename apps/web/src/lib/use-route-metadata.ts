@@ -3,8 +3,8 @@ import { SITE_NAME } from './site-config'
 import { ROUTES } from './routes'
 
 const documents: Record<string, { title: string; description: string }> = {
-  [ROUTES.privacy]: { title: 'حریم خصوصی', description: 'نحوهٔ استفاده از اطلاعات حساب، سبد خرید، نشانی و سفارش در ایران یراق.' },
-  [ROUTES.terms]: { title: 'قوانین و شرایط فروش', description: 'اطلاعات خرید، پرداخت، ارسال و شرایط اعلام‌شدهٔ فروشنده در ایران یراق.' },
+  [ROUTES.privacy]: { title: 'حریم خصوصی', description: 'نحوهٔ استفاده از اطلاعات حساب، سبد خرید، نشانی و سفارش در ایرانی یراق.' },
+  [ROUTES.terms]: { title: 'قوانین و شرایط فروش', description: 'اطلاعات خرید، پرداخت، ارسال و شرایط اعلام‌شدهٔ فروشنده در ایرانی یراق.' },
 }
 
 /** The shell owns metadata so private-route robots/canonical state cannot leak to the next route. */
@@ -15,7 +15,7 @@ export function useRouteMetadata(pathname: string) {
     document.title = info ? `${info.title} | ${SITE_NAME}` : SITE_NAME
     for (const [name, content] of [
       ['robots', privateRoute ? 'noindex, follow' : 'index, follow'],
-      ['description', info?.description ?? 'کاتالوگ ابزار و یراق و خرید از ایران یراق.'],
+      ['description', info?.description ?? 'کاتالوگ ابزار و یراق و خرید از ایرانی یراق.'],
     ]) {
       let meta = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)
       if (!meta) { meta = document.createElement('meta'); meta.name = name; document.head.append(meta) }

@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -5,8 +6,8 @@ import { PrismaService } from '../../database/prisma.service';
 export class AuthPermissionService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async effectivePermissionKeys(userId: string, now: Date = new Date()): Promise<ReadonlySet<string>> {
-    const assignments = await this.prisma.userRole.findMany({
+  async effectivePermissionKeys(userId: string, now: Date = new Date(), client: Pick<Prisma.TransactionClient, 'userRole'> = this.prisma): Promise<ReadonlySet<string>> {
+    const assignments = await client.userRole.findMany({
       where: {
         userId,
         revokedAt: null,

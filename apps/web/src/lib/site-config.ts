@@ -14,7 +14,7 @@ import { toPersianDigits } from './format'
 
 // ── Identity ─────────────────────────────────────────────────────────────────
 
-export const SITE_NAME = 'ایران یراق'
+export const SITE_NAME = 'ایرانی یراق'
 export const SITE_TAGLINE = 'فروشگاه تخصصی ابزار و یراق‌آلات'
 
 // ── Business contact (deployment configuration) ──────────────────────────────

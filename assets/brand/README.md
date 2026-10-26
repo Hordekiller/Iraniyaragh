@@ -1,8 +1,15 @@
-# Approved Iran Yaraq assets
+# ایرانی یراق assets
 
-Operator-supplied `5ico.png` and `logo type desctop.png` are preserved as
-`source/mark.png` and `source/wordmark.png`; manifest source hashes identify the
-exact inputs. No redesigned mark, remote font/logo or CDN is introduced.
+The operator-supplied `5ico.png` remains `source/mark.png`. The wordmark's
+display name was corrected to **ایرانی یراق** on 2026-10-26; the previous
+operator input is preserved in Git history. Manifest source hashes identify the
+exact inputs. All served assets remain local.
+
+The corrected transparent `source/wordmark.png` was edited with the built-in
+imagegen tool using the existing print wordmark. Prompt: add the final Persian
+ی to the silver word ایران so it reads ایرانی; preserve the blue یراق, metallic
+style, hinge icon, tagline and transparent background; clean the alpha edges.
+The standalone mark and favicon input were not changed.
 
 `node scripts/prepare-brand-assets.cjs` creates transparent size-specific WebP
 for UI, PNG browser/touch icons, and a higher-resolution PNG for invoice printing.
@@ -20,3 +27,5 @@ change payment, stock or financial history.
 Browser A4 printing is distinct from #419's queued private PDF artifacts. That
 worker must reuse the print asset with a stored brand/template revision and hash;
 existing stored artifacts must never be overwritten when branding changes.
+New PDF renders use template revision `store-invoice-a4-v2` and the new pinned
+asset hash; previously issued seller snapshots and stored PDFs are untouched.

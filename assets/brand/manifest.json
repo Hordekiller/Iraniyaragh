@@ -1,8 +1,8 @@
 {
-  "revision": "operator-2026-10-14",
+  "revision": "brand-name-correction-2026-10-26",
   "sources": {
     "mark": "5feb1586d82bd803224f26896c7254976d21d5521acebbb0629f6e3fc9da079a",
-    "wordmark": "7095dd0c10a4576905a0e890fcde2edd89c1dee637829563d7b5c5ad33034c6a"
+    "wordmark": "1d37a1106b57b86929eac321af3f6ea5c1ef77d5c86ea55f6f0acf9e122c427e"
   },
   "files": {
     "mark-64.webp": {
@@ -18,14 +18,14 @@
       "height": 128
     },
     "wordmark-432.webp": {
-      "sha256": "736fe98284aa8ca9e2285d7f68a581b475561f06d47dc568a904eafb737983ff",
-      "bytes": 52804,
+      "sha256": "3d52f044834af9db695c92cbb405c8011c346918da39e1113525b8b25d88aa7c",
+      "bytes": 52470,
       "width": 432,
       "height": 144
     },
     "wordmark-864.webp": {
-      "sha256": "e14cb292fae525b0aafb6b995408adbb01440f73353e54d70927794d38f10db5",
-      "bytes": 167896,
+      "sha256": "b392e4444a612906b25168943173bbf1294a0f32459d36570a2b9c3aa2de2117",
+      "bytes": 166486,
       "width": 864,
       "height": 288
     },
@@ -42,8 +42,8 @@
       "height": 180
     },
     "wordmark-print.png": {
-      "sha256": "457401b43c2c484ced56e1858da9c84a0998d86099ab0935e82bad90f69cbcc4",
-      "bytes": 459686,
+      "sha256": "c58b4bf6c4dc2b8fc848ba66a5f17e04ec297ae03f7a3a8bfae99df0585b0e5c",
+      "bytes": 431445,
       "width": 1086,
       "height": 362
     }

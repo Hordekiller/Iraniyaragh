@@ -40,6 +40,7 @@ import {
   readReportOptions,
 } from '@/lib/reports/operational-report-api';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { ReportExportButton } from './ReportExportButton';
 const metricLabels: Record<ReportMetric, string> = {
   createdOrderValue: 'ارزش سفارش‌های ایجادشده',
   providerSettlements: 'تسویه‌های تأییدشدهٔ درگاه (همهٔ محیط‌ها)',
@@ -274,6 +275,16 @@ function Reports({
       <PageHeader
         title="گزارش‌های عملیاتی"
         description="سفارش، وصول، بازپرداخت، فاکتور و بدهی با مبنای ثبت‌شدهٔ خودشان گزارش می‌شوند."
+        actions={
+          <ReportExportButton
+            definition={{
+              kind: view === 'summary' ? 'operations-summary' : view === 'orders' ? 'orders' : 'debtors',
+              filters: view !== 'debtors' ? query : undefined,
+              debtors: view === 'debtors' ? { asOf, customerId: customerId || undefined } : undefined,
+              maxRows: 10000,
+            }}
+          />
+        }
       />
       <Paper
         component="form"
