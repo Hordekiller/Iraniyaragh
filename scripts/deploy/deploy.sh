@@ -98,6 +98,9 @@ PREVIOUS_TAG="${PREVIOUS_TAG:-none}"
 #
 # Probed with `compose ps`, the same command that later resolves the container, so
 # the check cannot disagree with what the script then operates on.
+# Validate all required public/runtime inputs before treating an absent container
+# as first deployment. A configuration failure is never proof of an empty stack.
+IMAGE_TAG="${NEW_TAG}" compose config --quiet || fail "deployment Compose configuration is invalid."
 PREVIOUS_WEB_ID="$(compose ps -q web 2>/dev/null || true)"
 if [[ -z "${PREVIOUS_WEB_ID}" ]]; then
   log "No running stack: first deploy, so there is no database to back up yet"
@@ -127,8 +130,8 @@ IMAGE_TAG="${NEW_TAG}" compose up -d
 
 log "Waiting for readiness"
 # The API is the only service whose health implies its dependencies, but the
-# storefront and the Admin are separately reachable surfaces a user hits first,
-# so all three are confirmed rather than assuming the API implies them.
+# renderer, proxy and Admin are separately reachable surfaces a user hits first,
+# so each is confirmed rather than assuming the API implies them.
 #
 # The media worker has no healthcheck: it is a queue consumer that never binds a
 # port, so the image's HTTP probe cannot apply to it. It is checked by state
@@ -137,6 +140,7 @@ log "Waiting for readiness"
 READY=0
 for _ in $(seq 1 60); do
   if compose ps --format json api 2>/dev/null | grep -q '"Health":"healthy"' \
+    && compose ps --format json storefront 2>/dev/null | grep -q '"Health":"healthy"' \
     && compose ps --format json web 2>/dev/null | grep -q '"Health":"healthy"' \
     && compose ps --format json admin 2>/dev/null | grep -q '"Health":"healthy"' \
     && compose ps --format json malware-scanner 2>/dev/null | grep -q '"Health":"healthy"' \
@@ -174,8 +178,12 @@ curl -fsS -o /dev/null "${resolve[@]}" "https://${PUBLIC_HOST}:${HTTPS_PORT_PATH
   || fail "Nginx did not answer over HTTPS at https://${PUBLIC_HOST}:${HTTPS_PORT_PATH}/."
 curl -fsS -o /dev/null "${resolve[@]}" "https://${PUBLIC_HOST}:${HTTPS_PORT_PATH}/" \
   || fail "Storefront did not answer over HTTPS."
-# The Admin is mounted on a subpath, so this also proves the built base path and
-# the proxy agree: a mismatch returns 404 here and a blank Admin for staff.
+# Discovery must reach its API-owned projections through the public edge.
+curl -fsS -o /dev/null "${resolve[@]}" "https://${PUBLIC_HOST}:${HTTPS_PORT_PATH}/robots.txt" \
+  || fail "API-owned robots policy did not answer over HTTPS."
+curl -fsS -o /dev/null "${resolve[@]}" "https://${PUBLIC_HOST}:${HTTPS_PORT_PATH}/sitemap.xml" \
+  || fail "API-owned sitemap did not answer over HTTPS."
+# The Admin base path and proxy must agree as well.
 curl -fsS -o /dev/null "${resolve[@]}" "https://${PUBLIC_HOST}:${HTTPS_PORT_PATH}/admin/" \
   || fail "Admin did not answer at /admin/ over HTTPS."
 # Plain HTTP has to redirect rather than serve, since every origin the API accepts

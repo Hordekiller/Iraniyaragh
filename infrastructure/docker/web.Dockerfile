@@ -1,85 +1,6 @@
 # syntax=docker/dockerfile:1
-#
-# Web image: the built Vite storefront served as static files by the same Nginx
-# image that terminates public traffic. The storefront is a client-side app, so
-# there is no Node process in the runtime stage; Nginx only needs the `dist/`
-# output and the `public/` assets that Vite copies into it.
-
-# --- build stage -------------------------------------------------------------
-FROM node:22-bookworm-slim AS build
-
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable
-
-WORKDIR /repo
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json .npmrc* ./
-COPY apps/web/package.json apps/web/
-COPY apps/api/package.json apps/api/
-COPY apps/admin/package.json apps/admin/
-COPY e2e/package.json e2e/
-COPY packages/contracts/package.json packages/contracts/
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
-
-COPY packages/contracts packages/contracts
-COPY apps/web apps/web
-
-# Fail the image build if a fixture-backed storefront would be shipped.
-# `VITE_FIXTURE_CATALOG` serves hand-authored products instead of the real
-# catalog and `VITE_FIXTURE_AUTH` fakes customer sign-in. Both are legitimate
-# for local dev and the Playwright `fixture-e2e` build, and neither may reach a
-# deployed image, so the build refuses rather than trusting the deploy config.
-#
-# These are declared as ARGs purely so the guard can see them: an undeclared
-# `--build-arg` is dropped by BuildKit and the check below would silently pass.
-# They are deliberately never promoted to ENV, so `vite build` cannot see them
-# either. Declared-and-rejected is stronger than merely undocumented.
-ARG VITE_FIXTURE_CATALOG
-ARG VITE_FIXTURE_AUTH
-RUN node -e "\
-  for (const flag of ['VITE_FIXTURE_CATALOG', 'VITE_FIXTURE_AUTH']) { \
-    if (process.env[flag] === 'true') { \
-      console.error(flag + ' must not be set for a production Web image.'); \
-      process.exit(1); \
-    } \
-  }"
-
-# The browser talks to the API through the public Nginx origin, so the API base
-# URL is a build arg. Contact details are unconfirmed business data: they default
-# to null and are only published when the deploy supplies verified values.
-ARG VITE_API_BASE_URL
-ARG VITE_SITE_PHONE
-ARG VITE_SITE_POSTAL_CODE
-ARG VITE_SITE_ADDRESS
-ARG VITE_SITE_EMAIL
-ARG VITE_INSTAGRAM_HANDLE
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_SITE_PHONE=$VITE_SITE_PHONE
-ENV VITE_SITE_POSTAL_CODE=$VITE_SITE_POSTAL_CODE
-ENV VITE_SITE_ADDRESS=$VITE_SITE_ADDRESS
-ENV VITE_SITE_EMAIL=$VITE_SITE_EMAIL
-ENV VITE_INSTAGRAM_HANDLE=$VITE_INSTAGRAM_HANDLE
-
-RUN pnpm --filter @iranyaragh/web build
-
-# Prove the shipped bundle cannot contain fixture data. The fixture module is
-# annotated `@__PURE__` so Rollup drops it from a non-fixture build; this check
-# fails the image build if any of it survived, which would mean a deployment
-# could show fabricated products.
-RUN node -e "\
-  const fs = require('node:fs'), path = require('node:path'); \
-  const dir = 'apps/web/dist/assets'; \
-  const markers = ['ronix-2210-hammer-drill', 'cat-garden', 'FIXTURE-', 'fixture-quote', 'CatalogFixtureClient']; \
-  const hits = []; \
-  for (const f of fs.readdirSync(dir)) { \
-    if (!f.endsWith('.js')) continue; \
-    const body = fs.readFileSync(path.join(dir, f), 'utf8'); \
-    for (const m of markers) if (body.includes(m)) hits.push(f + ': ' + m); \
-  } \
-  if (hits.length) { console.error('Fixture data shipped in the Web bundle:\n  ' + hits.join('\n  ')); process.exit(1); } \
-  console.log('Web bundle verified free of fixture data.');"
+# TLS reverse proxy only. The Next storefront runs in the internal storefront
+# service; both images are published for the same immutable release SHA.
 
 # --- runtime stage -----------------------------------------------------------
 # A throwaway self-signed pair for the build-time Nginx check below, generated in
@@ -101,7 +22,6 @@ COPY infrastructure/nginx/storefront.conf /etc/nginx/conf.d/default.conf
 COPY infrastructure/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 # The request routing, shared by the HTTP and HTTPS server blocks.
 COPY infrastructure/nginx/storefront-locations.conf /etc/nginx/snippets/storefront-locations.conf
-COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 # The build-time check's throwaway pair, at the path the check points Nginx at.
 COPY --from=certgen /tmp/fullchain.pem /tmp/tls-check/fullchain.pem
 COPY --from=certgen /tmp/privkey.pem   /tmp/tls-check/privkey.pem

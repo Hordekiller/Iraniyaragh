@@ -30,7 +30,9 @@ jobs:
       - name: Verify dependency audit failure handling
         run: node --test .github/scripts/audit-prod.test.mjs
       - name: Verify exact-SHA deployment environment precedence
-        run: node --test scripts/deploy/runtime-provenance.test.mjs
+        run: node --test --test-concurrency=2 scripts/deploy/runtime-provenance.test.mjs scripts/deploy/rollback-topology.test.mjs
+      - name: Verify real TLS proxy route boundaries
+        run: node --test scripts/deploy/storefront-routing.test.mjs
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
