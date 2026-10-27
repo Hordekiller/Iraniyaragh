@@ -166,7 +166,7 @@ describe('ProductCreateForm', () => {
   it('requires a SKU and sale price but permits an unknown purchase cost', async () => {
     mocks.listBrands.mockResolvedValue([]);
     mocks.listCategories.mockResolvedValue([]);
-    mocks.createProduct.mockResolvedValue({ product: { id: 'no-cost-product', name: 'قفل دستگیره‌ای' } });
+    mocks.createProduct.mockResolvedValue({ product: { id: 'no-cost-product', name: 'قفل دستگیره‌ای', slug: 'lock-handle' } });
     renderForm();
     await screen.findByText('مشخصات پایه');
     fireEvent.change(screen.getByLabelText(/نام کالا/), { target: { value: 'قفل دستگیره‌ای' } });
@@ -181,7 +181,7 @@ describe('ProductCreateForm', () => {
     mocks.listBrands.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('offline'));
     mocks.listCategories.mockResolvedValue([]);
     mocks.createBrand.mockResolvedValue({ brand: { id: 'new-brand', name: 'برند تازه', slug: 'new-brand' } });
-    mocks.createProduct.mockResolvedValue({ product: { id: 'p9', name: 'قفل' } });
+    mocks.createProduct.mockResolvedValue({ product: { id: 'p9', name: 'قفل', slug: 'lock-handle' } });
     renderForm();
     await fillRequiredFields();
     fireEvent.click(screen.getByRole('button', { name: 'افزودن برند' }));
@@ -203,7 +203,7 @@ describe('ProductCreateForm', () => {
     });
     mocks.listBrands.mockResolvedValue([]);
     mocks.listCategories.mockResolvedValue([]);
-    mocks.createProduct.mockResolvedValue({ product: { id: 'saved-draft', name: 'قفل' } });
+    mocks.createProduct.mockResolvedValue({ product: { id: 'saved-draft', name: 'قفل', slug: 'lock-handle' } });
     renderForm();
     await fillRequiredFields();
     const input = screen.getByLabelText('تصاویر کالا', { exact: true });

@@ -6,6 +6,7 @@ import { SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { RedactedLogger } from './common/redacted-logger';
+import { configureRequestBody } from './common/request-body';
 import type { EnvironmentVariables, TrustProxySetting } from './config/environment';
 import { createApiDocument, OPENAPI_UI_PATH } from './swagger';
 
@@ -23,6 +24,7 @@ function trustProxyExpressValue(setting: TrustProxySetting): boolean | number | 
 async function bootstrap() {
   const logger = new RedactedLogger();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, logger });
+  configureRequestBody(app);
   const config = app.get(ConfigService<EnvironmentVariables, true>);
   const corsOrigins = config.get('CORS_ORIGINS', { infer: true }).split(',');
 

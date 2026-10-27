@@ -315,6 +315,23 @@ describe.sequential('ProductDescription database integration', () => {
     expect(JSON.stringify(audits[0].after)).not.toContain('<p>');
   });
 
+  it('persists long Persian SEO content and reads it intact from a fresh service/database connection', async () => {
+    const before = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+    const html = `<h2>راهنمای خرید و نصب یراق</h2><p>${'توضیحات دقیق فارسی محصول '.repeat(3000)}</p><h3>مشخصات فنی</h3><table><tbody><tr><th scope="col">جنس</th><td>فولاد</td></tr></tbody></table><p><a href="https://example.test/guide">راهنمای نصب</a></p>`;
+    expect(html.length).toBeLessThan(100000);
+    expect(Buffer.byteLength(html, 'utf8')).toBeGreaterThan(100 * 1024);
+    const saved = await catalog.updateProductDescription(actorId, key('long-persian'), productId, { description: html, expectedVersion: before.version });
+    const fresh = new PrismaService();
+    try {
+      await fresh.$connect();
+      const reloaded = await new CatalogService(fresh, new AuditLogService(fresh), new CatalogIdempotencyService(fresh)).getAdminProduct(productId);
+      expect(reloaded.data.product.description).toBe(html);
+      expect(reloaded.data.product.version).toBe(before.version + 1);
+      expect((await fresh.product.findUniqueOrThrow({ where: { id: productId } })).description).toBe(html);
+      expect(saved.data.product.description).toBe(reloaded.data.product.description);
+    } finally { await fresh.$disconnect(); }
+  });
+
   it('drops image markup from create-product descriptions', async () => {
     const draft = await catalog.createProduct(actorId, key('create-drops-images'), {
       name: 'Create Drops Images',
