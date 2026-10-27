@@ -5,7 +5,13 @@ import { signInDiAsAdmin } from './helpers';
 async function sourceEditor(page: Page) {
   await expect(page.locator('[data-rich-text-editor]')).toHaveAttribute('data-status', 'ready');
   const source = page.locator('textarea.jodit-source__mirror');
-  if (!await source.isVisible()) await page.locator('[data-ref="source"] button').click();
+  if (!await source.isVisible()) {
+    const control = page.locator('[data-ref="source"] button');
+    await control.scrollIntoViewIfNeeded();
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    await control.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'center' }));
+    await control.click();
+  }
   await expect(source).toBeVisible(); return source;
 }
 const descriptionResponse = (page: Page) => page.waitForResponse(response => response.request().method() === 'PATCH' && new URL(response.url()).pathname.endsWith('/description'));
