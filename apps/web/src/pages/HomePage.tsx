@@ -8,6 +8,7 @@ import { ROUTES } from '../lib/routes'
 import { SECTION_IDS } from '../lib/site-config'
 import type { CatalogCategory, CatalogProduct } from '../services/catalog/types'
 import { useCatalogApi } from '../state/catalog-context'
+import { setDynamicMetadata, setCanonicalUrl } from '../lib/use-route-metadata'
 
 type HomePageLocationState = { scrollToCategories?: boolean }
 type HomeCategoryCollection = { category: CatalogCategory; sortBy: 'NEWEST' | 'BESTSELLING'; products: CatalogProduct[] | null }
@@ -19,6 +20,14 @@ const fixtureCatalogEnabled = import.meta.env.VITE_FIXTURE_CATALOG === 'true'
 const HOME_PRODUCT_LIMIT = 8
 
 export function HomePage() {
+  useEffect(() => {
+    setDynamicMetadata({
+      title: 'فروشگاه تخصصی ابزار و یراق‌آلات',
+      description: 'ایرانی یراق — فروشگاه تخصصی یراق‌آلات و ابزار با تجربه خرید سریع و حرفه‌ای',
+      type: 'website',
+    })
+    setCanonicalUrl(window.location.origin + '/')
+  }, [])
   const api = useCatalogApi()
   const navigate = useNavigate()
   const location = useLocation()

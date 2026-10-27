@@ -17,6 +17,7 @@ import { MediaGallery } from '../components/product/MediaGallery'
 import { RichText } from '../components/product/RichText'
 import { serializeJsonLd } from '../lib/json-ld'
 import { richTextToPlainText } from '../lib/rich-text'
+import { setDynamicMetadata, setCanonicalUrl } from '../lib/use-route-metadata'
 import type { CatalogProduct } from '../services/catalog/types'
 import { commerceErrorMessage } from '../services/commerce/errors'
 
@@ -122,6 +123,55 @@ export function ProductPage() {
             100,
         )
       : 0
+
+  // SEO metadata
+  useEffect(() => {
+    if (!product) return
+    const plainDescription = product.description ? richTextToPlainText(product.description).replace(/\s+/g, ' ').trim() : ''
+    const desc = plainDescription.slice(0, 155) || `خرید ${product.name} از فروشگاه ایرانی یراق با بهترین قیمت و ارسال سریع`
+    const primaryImage = product.media.find(m => m.kind === 'IMAGE')
+    const imageUrl = primaryImage?.sources[0]?.url
+    setDynamicMetadata({
+      title: product.name,
+      description: desc,
+      image: imageUrl,
+      type: 'product',
+    })
+    setCanonicalUrl(`${window.location.origin}/product/${product.slug}`)
+    
+    // Add Product JSON-LD
+    const existingScript = document.querySelector('script[data-product-schema]')
+    if (existingScript) existingScript.remove()
+    
+    const schema: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: desc,
+      url: window.location.href,
+    }
+    if (imageUrl) schema.image = imageUrl
+    if (selectedVariant) {
+      schema.offers = {
+        '@type': 'Offer',
+        priceCurrency: 'IRR',
+        price: selectedVariant.price.amount,
+        availability: (selectedVariant.stockStatus === 'IN_STOCK' || selectedVariant.stockStatus === 'LOW_STOCK') 
+          ? 'https://schema.org/InStock' 
+          : 'https://schema.org/OutOfStock',
+        url: window.location.href,
+      }
+    }
+    const script = document.createElement('script')
+    script.type = 'application/ld+json'
+    script.setAttribute('data-product-schema', 'true')
+    script.textContent = JSON.stringify(schema)
+    document.head.appendChild(script)
+    
+    return () => {
+      document.querySelector('script[data-product-schema]')?.remove()
+    }
+  }, [product, selectedVariant])
 
   async function handleAdd() {
     if (!available || !selectedVariant) return
@@ -436,3 +486,4 @@ export function ProductPage() {
     </div>
   )
 }
+

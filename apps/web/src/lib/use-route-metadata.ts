@@ -28,3 +28,76 @@ export function useRouteMetadata(pathname: string) {
     } else canonical?.remove()
   }, [pathname])
 }
+
+
+function ensureMetaTag(name: string, attribute: 'name' | 'property' = 'name'): HTMLMetaElement {
+  let meta = document.head.querySelector<HTMLMetaElement>(`meta[${attribute}="${name}"]`)
+  if (!meta) {
+    meta = document.createElement('meta')
+    meta.setAttribute(attribute, name)
+    document.head.append(meta)
+  }
+  return meta
+}
+
+function ensureLinkTag(rel: string): HTMLLinkElement {
+  let link = document.head.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`)
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = rel
+    document.head.append(link)
+  }
+  return link
+}
+
+export type DynamicMetadata = {
+  title?: string
+  description?: string
+  image?: string
+  type?: 'website' | 'product' | 'article'
+  noindex?: boolean
+}
+
+export function setDynamicMetadata(meta: DynamicMetadata) {
+  const siteName = SITE_NAME
+  const fullTitle = meta.title ? `${meta.title} | ${siteName}` : siteName
+  document.title = fullTitle
+  
+  const desc = meta.description || 'کاتالوگ ابزار و یراق و خرید از ایرانی یراق.'
+  ensureMetaTag('description').content = desc
+  
+  const robots = meta.noindex ? 'noindex, follow' : 'index, follow'
+  ensureMetaTag('robots').content = robots
+  
+  // OpenGraph
+  ensureMetaTag('og:title', 'property').content = meta.title || siteName
+  ensureMetaTag('og:site_name', 'property').content = siteName
+  ensureMetaTag('og:description', 'property').content = desc
+  ensureMetaTag('og:type', 'property').content = meta.type || 'website'
+  ensureMetaTag('og:url', 'property').content = window.location.href
+  ensureMetaTag('og:locale', 'property').content = 'fa_IR'
+  if (meta.image) {
+    ensureMetaTag('og:image', 'property').content = meta.image
+  } else {
+    document.head.querySelector('meta[property="og:image"]')?.remove()
+  }
+  
+  // Twitter Card
+  ensureMetaTag('twitter:card').content = meta.image ? 'summary_large_image' : 'summary'
+  ensureMetaTag('twitter:title').content = meta.title || siteName
+  ensureMetaTag('twitter:description').content = desc
+  if (meta.image) {
+    ensureMetaTag('twitter:image').content = meta.image
+  } else {
+    document.head.querySelector('meta[name="twitter:image"]')?.remove()
+  }
+}
+
+export function setCanonicalUrl(url: string) {
+  const canonical = ensureLinkTag('canonical')
+  canonical.href = url
+}
+
+export function removeCanonicalUrl() {
+  document.head.querySelector('link[rel="canonical"]')?.remove()
+}

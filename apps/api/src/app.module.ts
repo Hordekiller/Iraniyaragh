@@ -22,6 +22,7 @@ import { RedisModule } from './modules/redis/redis.module';
 import { MediaModule } from './modules/media/media.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
+import { DiscoveryModule } from './modules/discovery/discovery.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     StocktakeModule,
     ReportsModule,
     OutboxModule,
+    DiscoveryModule,
     AuditModule,
   ],
 })
