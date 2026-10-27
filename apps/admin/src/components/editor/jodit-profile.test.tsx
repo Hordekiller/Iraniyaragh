@@ -42,6 +42,7 @@ describe('buildJoditProfile', () => {
     expect(profile.disablePlugins).not.toContain('source');
     expect(profile.buttons).toContain('source');
     expect(profile.sourceEditor).toBe('area');
+    expect(profile.toolbarSticky).toBe(false);
     expect(profile.beautifyHTML).toBe(false);
   });
 
