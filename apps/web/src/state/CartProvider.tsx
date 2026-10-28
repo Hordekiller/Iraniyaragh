@@ -7,7 +7,6 @@ import type { CommerceApi } from '../services/commerce/types'
 import { CartContext } from './cart-context'
 import { useAuth } from './auth-context'
 
-const fixtureCommerceEnabled = process.env.NEXT_PUBLIC_FIXTURE_CATALOG === 'true'
 
 export function CartProvider({
   children,
@@ -20,7 +19,7 @@ export function CartProvider({
   const value = useMemo(() => {
     const commerceApi =
       api ??
-      (fixtureCommerceEnabled
+      (process.env.NEXT_PUBLIC_FIXTURE_CATALOG === 'true'
         ? new CommerceFixtureClient()
         : new CommerceHttpClient(
             auth.request,
