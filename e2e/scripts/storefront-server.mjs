@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, renameSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,7 +10,7 @@ if (!['fixture', 'real'].includes(mode)) throw new Error('Usage: storefront-serv
 const fixture = mode === 'fixture';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const app = join(root, 'apps/web');
-const distDir = `.next/e2e-${mode}`;
+const distDir = `.next-e2e-${mode}`;
 const output = join(app, distDir);
 const standaloneApp = join(output, 'standalone/apps/web');
 const port = process.env.STOREFRONT_E2E_PORT || (fixture ? '4173' : '4174');
@@ -57,13 +57,10 @@ const run = (command, args, cwd) => new Promise((resolveRun, reject) => {
 const buildStatus = await run('pnpm', ['--filter', '@iranyaragh/web', 'build'], root);
 if (buildStatus !== 0) process.exit(buildStatus);
 const server = join(standaloneApp, 'server.js');
-const commonJsServer = join(standaloneApp, 'server.cjs');
 if (!existsSync(server)) throw new Error('Next standalone server was not built');
-// Next emits a CommonJS entry; the storefront package deliberately uses ESM.
-renameSync(server, commonJsServer);
 // Standalone omits browser assets/public by design; mirror the production image
 // copies, retaining the monorepo's apps/web path and this build's custom distDir.
 mkdirSync(join(standaloneApp, distDir), { recursive: true });
 cpSync(join(output, 'static'), join(standaloneApp, distDir, 'static'), { recursive: true });
 cpSync(join(app, 'public'), join(standaloneApp, 'public'), { recursive: true });
-process.exit(await run(process.execPath, [commonJsServer], standaloneApp));
+process.exit(await run(process.execPath, [server], standaloneApp));

@@ -49,11 +49,11 @@ WORKDIR /app
 COPY --from=build --chown=node:node /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=node:node /repo/apps/web/public ./apps/web/public
-RUN mv apps/web/server.js apps/web/server.cjs && test -f apps/web/server.cjs && test -d apps/web/.next/static && test -d apps/web/public
+RUN test -f apps/web/server.js && test -d apps/web/.next/static && test -d apps/web/public
 USER node
 EXPOSE 3000
 # Liveness of the renderer is separate from API readiness and edge TLS health.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["node", "apps/web/server.cjs"]
+CMD ["node", "apps/web/server.js"]
