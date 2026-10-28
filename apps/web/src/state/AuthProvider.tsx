@@ -36,7 +36,6 @@ export type AuthProviderProps = {
  * explicitly set, so a shipped build without the opt-in can never load a fake
  * auth path (AUTH_CONTRACT §17).
  */
-const fixtureAuthEnabled = process.env.NEXT_PUBLIC_FIXTURE_AUTH === "true";
 
 /** Monotonic clock injected into the controller (module scope keeps render pure). */
 const nowClock = (): number => Date.now();
@@ -53,7 +52,7 @@ export function AuthProvider({ children, api, store, bus, refreshCoordinator }: 
     const sessionBus = bus ?? new CrossTabSessionBus();
     const client =
       api ??
-      (fixtureAuthEnabled
+      (process.env.NEXT_PUBLIC_FIXTURE_AUTH === 'true'
         ? new AuthFixtureClient({ store: sessionStore })
         : new AuthHttpClient({
             store: sessionStore,
