@@ -44,6 +44,14 @@ describe('MobileBottomNav', () => {
     expect(screen.getByRole('navigation', { name: 'ناوبری پایین' })).toBeInTheDocument()
   })
 
+  it('includes each visible label in the accessible name for voice navigation', () => {
+    render(<MemoryRouter><Harness /></MemoryRouter>)
+    for (const button of screen.getAllByRole('button')) {
+      const visibleLabel = button.textContent!.trim()
+      expect(button).toHaveAccessibleName(expect.stringContaining(visibleLabel))
+    }
+  })
+
   it('triggers the search opener', () => {
     const onOpenSearch = vi.fn()
     render(
