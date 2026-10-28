@@ -1,6 +1,6 @@
 {
-  "checkpoint": "2026-10-20",
-  "sourceBaseline": "f4476d83e9791b8f58b7f0a5630837c4a53db54d",
+  "checkpoint": "2026-10-28",
+  "sourceBaseline": "92b23a43aa095a563d798712d24d1ffdf8020f14",
   "requirementsReviewed": 150,
   "allCriteriaIndependentlyAccepted": false,
   "auditComplete": false,
@@ -15,7 +15,7 @@
     "decision": "Requires a product or policy decision",
     "accepted": "Original bounded issue acceptance independently reconciled against source and successful tests; not blanket live business/V1 acceptance."
   },
-  "method": "All 150 issue bodies inventoried and reviewed; existing source groups and historical PR/timeline references retained. Current main/VPS and exact-SHA CI verified separately. #351 original test-only criteria reconciled and issue closed; #12 current operator-authorized protection policy recorded, documentation merge still pending. Closed state and source presence alone do not prove acceptance. Historical review evidence remains dated; criterion-level audit of every historical issue is still incomplete.",
+  "method": "All previously open issue bodies and open PRs reconciled against current main, verified deployment and successful exact-head/combined main CI. Historical closed issue states synchronized without reopening or claiming blanket acceptance. Bounded #352 tests and #338 architecture decision accepted; all remaining live acceptance and explicit missing implementation are recorded. Review by implementing agent, not independent approval.",
   "issues": [
     {
       "issue": 1,
@@ -47,7 +47,13 @@
         173,
         222
       ],
-      "sourceEvidenceGroup": "foundation"
+      "sourceEvidenceGroup": "foundation",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Foundation/auth/session/permissions/audit delivered. Runtime access management #359 and remaining operational acceptance prevent blanket foundation/release completion.",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/auth/auth.guard.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 3,
@@ -69,41 +75,59 @@
       "title": "Epic 0.3: warehouse ledger, reservations and transfers",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/4",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         102,
         109
       ],
-      "sourceEvidenceGroup": "inventory"
+      "sourceEvidenceGroup": "inventory",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "nextAction": "Ledger/reservation/transfer implementations and concurrency tests delivered; controlled worker and full warehouse operator acceptance remain #450/#347.",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/inventory/inventory.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 5,
       "title": "Epic 0.4: cart, checkout, orders and admin operations",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/5",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         239,
         241,
         242
       ],
-      "sourceEvidenceGroup": "commerce"
+      "sourceEvidenceGroup": "commerce",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "nextAction": "Real cart, checkout, immutable order snapshots and Admin commands implemented; final customer/operator lifecycle acceptance remains #389/#401/#450.",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/orders/order-command.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 6,
       "title": "Epic 0.5: verified payment, shipping and notifications",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/6",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         28,
         174
       ],
       "sourceEvidenceGroup": "payment_fulfillment",
-      "acceptanceCheckpoint": "2026-10-16: separately authorized exact-main configuration deployment activates live gateway; one 100000 IRR real product sale has authoritative Order/Payment PAID and operator-confirmed return. Not full reconciliation/refund/fulfillment acceptance. See issuecomment-6214026750."
+      "acceptanceCheckpoint": "2026-10-16: separately authorized exact-main configuration deployment activates live gateway; one 100000 IRR real product sale has authoritative Order/Payment PAID and operator-confirmed return. Not full reconciliation/refund/fulfillment acceptance. See issuecomment-6214026750.",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "nextAction": "Verified callback/payment/fulfillment/shipment/notification implementations exist and controlled historical evidence is bounded. Provider, uncertainty/refund and full dispatch/delivery acceptance remain.",
+      "sourceEvidencePaths": [
+        "docs/OPERATIONS.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 7,
@@ -118,7 +142,13 @@
         337,
         340
       ],
-      "sourceEvidenceGroup": "purchasing"
+      "sourceEvidenceGroup": "purchasing",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Purchasing/receiving/stocktake and operational reports deployed; general paid-order returns #348, final warehouse UAT and applicable financial gates remain.",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/stocktake/stocktake.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 8,
@@ -133,7 +163,13 @@
         40,
         42
       ],
-      "sourceEvidenceGroup": "operations"
+      "sourceEvidenceGroup": "operations",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Latest main is deployed with exact image digests, restored backup and public smoke. V1 tag remains withheld: access, general returns, corrections, articles and operational acceptance remain.",
+      "sourceEvidencePaths": [
+        "docs/V1_RECONCILIATION.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 9,
@@ -167,7 +203,7 @@
       "issue": 12,
       "title": "Enable enforced main branch protection when private-repo plan supports it",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/12",
-      "githubState": "OPEN",
+      "githubState": "CLOSED",
       "classification": "partial",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [],
@@ -649,7 +685,13 @@
         209,
         316
       ],
-      "sourceEvidenceGroup": "governance"
+      "sourceEvidenceGroup": "governance",
+      "reconciliationState": "OUT_OF_SCOPE",
+      "nextAction": "Owner deferred the broad breaking framework/tool train for V1. Compatible patch/minor updates #470/#478 landed. Prisma 7, Nest Swagger 12 and other breaking candidates need a separate post-V1 decision, not automatic merge.",
+      "sourceEvidencePaths": [
+        ".github/dependabot.yml"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 78,
@@ -692,7 +734,7 @@
       "title": "perf(inventory): batch reservation expiry before production worker rollout",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/81",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         69,
@@ -708,7 +750,12 @@
       "candidatePRs": [
         451
       ],
-      "nextAction": "Review and integrate measured batching candidate #451; complete operational runner/reconciliation in #450. No automatic expiry deployment is claimed."
+      "nextAction": "Grouped bounded reservation expiry and PostgreSQL query/concurrency evidence merged through #464. Keep runtime enablement and controlled live reconciliation linked to #450.",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/inventory/inventory-expiry.integration-spec.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 82,
@@ -826,7 +873,13 @@
       "relatedPRs": [
         131
       ],
-      "sourceEvidenceGroup": "content_seo"
+      "sourceEvidenceGroup": "content_seo",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Accepted rendering migration and lifecycle-safe catalog discovery deployed. Articles, Merchant feed, IndexNow and field acceptance remain; AI retrieval #128 is post-V1.",
+      "sourceEvidencePaths": [
+        "docs/SEO_GEO_AI_DISCOVERY_PLAN.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 123,
@@ -838,7 +891,13 @@
       "relatedPRs": [
         134
       ],
-      "sourceEvidenceGroup": "content_seo"
+      "sourceEvidenceGroup": "content_seo",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Discovery contracts, no-JS/browser and route/provenance checks exist. Production audit origin, field budgets/RUM/alert owners and 30-day evidence remain; no test pass substitutes for field acceptance.",
+      "sourceEvidencePaths": [
+        ".github/workflows/discovery-audit.yml"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 124,
@@ -861,15 +920,20 @@
       "classification": "not_implemented",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [],
-      "nextAction": "Only product rich-text sanitizer/editor exists; no article model/controller/Admin workflow. Do not count product Jodit as a CMS.",
-      "sourceEvidenceGroup": "content_seo"
+      "nextAction": "No governed article/revision/scheduling/media-ownership API/Admin lifecycle. Product Jodit and sanitizer are reusable dependencies, not article management.",
+      "sourceEvidenceGroup": "content_seo",
+      "reconciliationState": "MISSING",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/content"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 126,
       "title": "Server-rendered public templates and metadata parity",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/126",
       "githubState": "OPEN",
-      "classification": "not_implemented",
+      "classification": "partial",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         131,
@@ -877,8 +941,13 @@
         167,
         175
       ],
-      "nextAction": "Current Web is a Vite SPA; accepted SSR migration, initial HTML and metadata parity remain unimplemented.",
-      "sourceEvidenceGroup": "content_seo"
+      "nextAction": "Server-readable home/catalog/category/brand/product/policy HTML, canonicals and real 308/404 deployed via #481. Guide/article templates await #125; global staging noindex remains deliberately active.",
+      "sourceEvidenceGroup": "content_seo",
+      "reconciliationState": "PARTIAL",
+      "sourceEvidencePaths": [
+        "apps/web/src/app/page.tsx"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 127,
@@ -888,7 +957,13 @@
       "classification": "partial",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [],
-      "sourceEvidenceGroup": "content_seo"
+      "sourceEvidenceGroup": "content_seo",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Public projection-backed Product/Offer and Breadcrumb structured data deployed. Merchant feed/parity and unsupported policy/schema branches remain; never fabricate ratings/GTIN/stock/price.",
+      "sourceEvidencePaths": [
+        "apps/web/src/server/structured-data.tsx"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 128,
@@ -898,7 +973,13 @@
       "classification": "future",
       "releaseScope": "V1.1+ / post-V1",
       "relatedPRs": [],
-      "sourceEvidenceGroup": "content_seo"
+      "sourceEvidenceGroup": "content_seo",
+      "reconciliationState": "OUT_OF_SCOPE",
+      "nextAction": "AI retrieval is explicitly post-V1 and must not block commerce. Requires separate provider/data-retention policy and safety/evaluation evidence.",
+      "sourceEvidencePaths": [
+        "docs/SEO_GEO_AI_DISCOVERY_PLAN.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 129,
@@ -912,7 +993,13 @@
         137,
         167
       ],
-      "sourceEvidenceGroup": "content_seo"
+      "sourceEvidenceGroup": "content_seo",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Dynamic gzip sitemap index/shards, canonical robots, ETag/freshness/rate bounds deployed via #481. Content shards await #125 and IndexNow worker/DLQ/outbox invalidation are not delivered; keep issue open.",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/discovery/discovery.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 130,
@@ -922,7 +1009,13 @@
       "classification": "partial",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [],
-      "sourceEvidenceGroup": "content_seo"
+      "sourceEvidenceGroup": "content_seo",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Robots policy and rate/capacity controls exist. Verified-bot governance, reviewed training/search policy, citation baseline and optional experiment acceptance remain; no AI citation promise.",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/discovery/discovery.policy.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 136,
@@ -938,8 +1031,13 @@
         144,
         167
       ],
-      "nextAction": "Request IDs/structured logs/readiness/outbox exist; current alert/load/recovery acceptance and runtime provenance fix #440 remain.",
-      "sourceEvidenceGroup": "operations"
+      "nextAction": "Structured/redacted diagnostics, readiness and worker reliability exist; alert delivery/ownership/recovery acceptance still requires evidence. Host disk was cleaned after verified deployment.",
+      "sourceEvidenceGroup": "operations",
+      "reconciliationState": "PARTIAL",
+      "sourceEvidencePaths": [
+        "docs/OPERATIONS.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 140,
@@ -951,7 +1049,13 @@
       "relatedPRs": [
         142
       ],
-      "sourceEvidenceGroup": "commerce"
+      "sourceEvidenceGroup": "commerce",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Dynamic catalog/public rendering delivered; governed articles/content lifecycle #125 and full customer UAT remain.",
+      "sourceEvidencePaths": [
+        "apps/web/src/server/catalog.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 141,
@@ -964,8 +1068,13 @@
         142,
         294
       ],
-      "nextAction": "Explicit V1.1 multi-provider scope; do not expand V1 or modify payment mode.",
-      "sourceEvidenceGroup": "sms"
+      "nextAction": "Explicit V1.1+ scope: multi-provider orchestration. V1 retains one selected SMS/payment provider and uncertain-result reconciliation.",
+      "sourceEvidenceGroup": "sms",
+      "reconciliationState": "OUT_OF_SCOPE",
+      "sourceEvidencePaths": [
+        "docs/PRODUCT_SPEC.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 162,
@@ -1164,8 +1273,13 @@
         254,
         316
       ],
-      "nextAction": "Current trusted Sonar scans pass; organization administrator has not confirmed historical suspension banner resolution.",
-      "sourceEvidenceGroup": "governance"
+      "nextAction": "Exact-head and main Sonar scans/quality gates now pass. Only organization administrator confirmation of account/suspension state can close the original external account issue.",
+      "sourceEvidenceGroup": "governance",
+      "reconciliationState": "BLOCKED",
+      "sourceEvidencePaths": [
+        "docs/REPOSITORY_WORKFLOW.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 215,
@@ -1300,7 +1414,13 @@
       "relatedPRs": [
         254
       ],
-      "sourceEvidenceGroup": "governance"
+      "sourceEvidenceGroup": "governance",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Vuexy-inspired project-owned Admin surfaces exist. Runtime access management #359 and complete approved workflow acceptance remain. Never copy the licensed reference wholesale.",
+      "sourceEvidencePaths": [
+        "apps/admin/src/config/navigation.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 253,
@@ -1344,7 +1464,7 @@
       "title": "Storefront UI completion: production-ready customer journeys with real APIs",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/258",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         268,
@@ -1352,7 +1472,13 @@
         333,
         365
       ],
-      "sourceEvidenceGroup": "commerce"
+      "sourceEvidenceGroup": "commerce",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "nextAction": "Shared UI, real customer commerce APIs and accepted Next public rendering deployed with asset/fixture guards; final route-by-route real responsive UAT remains.",
+      "sourceEvidencePaths": [
+        "apps/web/src/app/layout.tsx"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 260,
@@ -1693,8 +1819,8 @@
       "issue": 338,
       "title": "Credit V1: ADR for receivables ledger, staff sale and fulfillment safety",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/338",
-      "githubState": "OPEN",
-      "classification": "partial",
+      "githubState": "CLOSED",
+      "classification": "accepted",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         412,
@@ -1703,7 +1829,12 @@
         432
       ],
       "sourceEvidenceGroup": "credit_returns",
-      "nextAction": "ADR-0023 and credit/sale/receipt/fulfillment/credit-return source exist. The ADR expressly does not close #336/#338 from foundation alone; reconcile every original financial criterion and real operator sale/statement/receipt/return acceptance before closure."
+      "nextAction": "Bounded architecture decision delivered in ADR-0023 and reviewed through dedicated credit implementation #427/#428; staff-only channel, receivables/allocations and inventory coupling exist. Separate returns/operator gate #431 remains open.",
+      "reconciliationState": "ACCEPTED",
+      "sourceEvidencePaths": [
+        "docs/adr/0023-customer-credit-and-receivable-ledger.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 339,
@@ -1768,25 +1899,35 @@
         368,
         411
       ],
-      "nextAction": "Stocktake source and PostgreSQL tests deployed via #411; exact two-location up/down browser criterion and live physical operator acceptance remain #352.",
+      "nextAction": "Stocktake session/review/ledger reconciliation and full two-location browser coverage deployed (#411/#444). Retain live physical-count operator acceptance; test scope separately closed in #352.",
       "sourceEvidenceGroup": "inventory",
       "candidatePRs": [
         444
-      ]
+      ],
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/stocktake/stocktake.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 348,
       "title": "Warehouse+ G7-05: Customer returns and after-sales resolution",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/348",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "not_implemented",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         411,
         412
       ],
-      "nextAction": "Only accepted sellable credit-return compensation is implemented. General paid-order customer RMA/inspection/quarantine/refund workflow is not complete.",
-      "sourceEvidenceGroup": "credit_returns"
+      "nextAction": "No general paid-order return workflow. Inventory RETURN_IN primitives and the credit-sale-only return command do not satisfy paid-order returns/refund linkage. Reuse their invariants, not their eligibility assumptions.",
+      "sourceEvidenceGroup": "credit_returns",
+      "reconciliationState": "MISSING",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/credit/credit-return.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 349,
@@ -1854,17 +1995,22 @@
       "issue": 352,
       "title": "Test: stocktake count session coverage for slice #347 (API, Admin, E2E)",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/352",
-      "githubState": "OPEN",
-      "classification": "implemented_missing_acceptance",
+      "githubState": "CLOSED",
+      "classification": "accepted",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         411
       ],
-      "nextAction": "Baseline browser journey has one location/downward variance. Original two-location upward+downward reconciliation criterion remains, despite PostgreSQL multi-line coverage.",
+      "nextAction": "Bounded test-only task satisfied: PostgreSQL invariants/concurrency/blind reads, HTTP permissions/DTO bounds, Admin uncertainty/permissions, and real desktop/mobile two-location up/down E2E. #444 merged and combined main CI passed. Live physical-count acceptance remains #347/#8.",
       "sourceEvidenceGroup": "inventory",
       "candidatePRs": [
         444
-      ]
+      ],
+      "reconciliationState": "ACCEPTED",
+      "sourceEvidencePaths": [
+        "e2e/tests/admin-stocktake.spec.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 353,
@@ -1876,7 +2022,13 @@
       "relatedPRs": [
         360
       ],
-      "sourceEvidenceGroup": "governance"
+      "sourceEvidenceGroup": "governance",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Audit/shipments/customers/reports surfaces delivered; runtime role/permission administration #359 and final Admin acceptance remain.",
+      "sourceEvidencePaths": [
+        "apps/admin/src/config/navigation.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 354,
@@ -1941,8 +2093,13 @@
         435,
         436
       ],
-      "nextAction": "Operational day/week/month reporting deployed #435; full expanded scope still depends on #421/#422/#423. Reopened, old no-reports statement retained as history.",
-      "sourceEvidenceGroup": "reports"
+      "nextAction": "Operational reports and owned durable CSV/XLSX/PDF exports #476 deployed. Correction-document reporting #421 and integrated acceptance remain; valuation #422 intentionally inactive.",
+      "sourceEvidenceGroup": "reports",
+      "reconciliationState": "PARTIAL",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/reports/report-export-job.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 359,
@@ -1954,8 +2111,13 @@
       "relatedPRs": [
         360
       ],
-      "nextAction": "Role/grant schema and effective-permission reader exist, but no runtime access API/Admin page. ADR-0014 remains Proposed; last-admin/self-escalation/concurrency controls require review.",
-      "sourceEvidenceGroup": "admin_operations"
+      "nextAction": "No access module or /access page on main. Local candidate commit 301bdf3 exists on feat/v1-completion; preserve it, integrate/review security and pass fresh CI before claiming delivery.",
+      "sourceEvidenceGroup": "admin_operations",
+      "reconciliationState": "MISSING",
+      "sourceEvidencePaths": [
+        "apps/admin/src/config/navigation.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 363,
@@ -1968,7 +2130,13 @@
         364,
         366
       ],
-      "sourceEvidenceGroup": "governance"
+      "sourceEvidenceGroup": "governance",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Use the current release reconciliation and live issue dispositions. Old lane allocation is historical. V1 remains incomplete because mandatory engineering and operator gates remain.",
+      "sourceEvidencePaths": [
+        "docs/V1_RECONCILIATION.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 388,
@@ -1982,15 +2150,20 @@
         392,
         394
       ],
-      "nextAction": "Draft/variants/IRR/attributes/Jodit/image source is present. #456 root-category drill-down deployed: 13 roots / 75 supplied descendants, 88 total. Full live authoring acceptance, unsupported video and scanner signature freshness #393 remain open.",
-      "sourceEvidenceGroup": "catalog"
+      "nextAction": "Product save/Jodit fixes #473/#475/#480 deployed and tested, including long Persian HTML/reload/replay. Broader master-data/media/publish/operator acceptance and scanner freshness remain.",
+      "sourceEvidenceGroup": "catalog",
+      "reconciliationState": "PARTIAL",
+      "sourceEvidencePaths": [
+        "apps/admin/src/components/catalog"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 389,
       "title": "[Feature]: Complete the customer account panel end to end",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/389",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         391,
@@ -2002,21 +2175,26 @@
         407,
         408
       ],
-      "nextAction": "Customer-self profile/addresses/orders/credit/invoices exist. Complete live account/security/privacy/backend-dependent acceptance remains open.",
-      "sourceEvidenceGroup": "commerce"
+      "nextAction": "Owned profile/addresses/security/orders/cart UI and APIs exist. Complete fixture-disabled customer lifecycle, reload and ownership/session acceptance; do not infer verified identity changes.",
+      "sourceEvidenceGroup": "commerce",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/web/src/views/AccountPage.tsx"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 393,
       "title": "ops: restore verified automatic ClamAV signature updates on staging (CDN 403)",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/393",
       "githubState": "OPEN",
-      "classification": "blocked",
+      "classification": "partial",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         392,
         394
       ],
-      "nextAction": "Live engine healthy but signatures version 28137 dated 2026-09-28; current automatic update/freshness remains unaccepted.",
+      "nextAction": "Pinned scanner process health does not prove current signatures. Existing PR #468 is the reusable route/freshness candidate; approved updater route and daemon-loaded freshness/real scan acceptance remain.",
       "sourceEvidenceGroup": "inventory",
       "runtimeCheckpoint": {
         "dateUTC": "2026-10-16",
@@ -2026,7 +2204,12 @@
         "signatureDate": "2026-09-28",
         "cdnReachabilityToday": "not re-probed",
         "status": "OPEN; approved update route, updater supervision, freshness alerting and subsequent scheduled scan acceptance remain"
-      }
+      },
+      "reconciliationState": "PARTIAL",
+      "sourceEvidencePaths": [
+        "infrastructure/docker/compose.staging.yml"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 400,
@@ -2041,7 +2224,7 @@
         445,
         447
       ],
-      "nextAction": "#445 boundary coverage and #447 protected replay fix merged/deployed in e207094. Real authenticated operator idle/reload/mutation acceptance remains open; do not assert every single-tab symptom has the cross-tab cause or extend TTLs speculatively.",
+      "nextAction": "Protected replay/session refresh fixes #445/#447 and Jodit save recovery #480 are deployed. Real authenticated idle/reload/mutation acceptance is still distinct from CI.",
       "sourceEvidenceGroup": "auth",
       "candidatePRs": [],
       "criterionEvidence": [
@@ -2065,22 +2248,32 @@
       "deliveredPRs": [
         445,
         447
-      ]
+      ],
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/admin/src/lib/auth"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 401,
       "title": "feat(web): reconcile customer account UI, mobile order tracking navigation, and homepage hero slider",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/401",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         402,
         406,
         407
       ],
-      "nextAction": "Hero slider/mobile order nav/account integration now exist; original source-current-state paragraphs are dated. Full fixture-disabled live journey still pending.",
-      "sourceEvidenceGroup": "commerce"
+      "nextAction": "Hero slider, mobile order tracking and account UI deployed; #470 mobile labels fixed. Complete real responsive session/reload/error/customer ownership acceptance with #389/#403.",
+      "sourceEvidenceGroup": "commerce",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/web/src/components/layout/MobileBottomNav.tsx"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 403,
@@ -2092,8 +2285,13 @@
       "relatedPRs": [
         438
       ],
-      "nextAction": "Real OTP login is operator-attested; one real order-paid SMS now has authoritative effect/provider acceptance and operator-confirmed handset receipt. Dispatch/delivery handset, failure/replay and full session lifecycle acceptance remain. See issuecomment-6214025982.",
-      "sourceEvidenceGroup": "sms"
+      "nextAction": "Historical operator-attested OTP/order-paid receipt is not full SMS acceptance. Dispatch/delivery handset, failure/replay and full session evidence remain; no new message was sent.",
+      "sourceEvidenceGroup": "sms",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "docs/SMS_IR_TEMPLATE_COPY.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 413,
@@ -2116,7 +2314,13 @@
         437,
         439
       ],
-      "sourceEvidenceGroup": "invoices"
+      "sourceEvidenceGroup": "invoices",
+      "reconciliationState": "PARTIAL",
+      "nextAction": "Policy, drafts, issuance, publication, private PDF and CSV/XLSX/PDF report snapshots deployed. Corrections and integrated operator acceptance remain; do not rebuild delivered services.",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/invoices/invoices.module.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 414,
@@ -2128,8 +2332,13 @@
       "relatedPRs": [
         412
       ],
-      "nextAction": "Store invoice scope, exact policy/draft/issuance/publication/report ADRs landed. Whole corrective/PDF/export/valuation contracts and independent final acceptance are not all complete.",
-      "sourceEvidenceGroup": "invoices"
+      "nextAction": "Store-invoice policy/draft/issuance/PDF ADRs and contracts exist; reconcile pending correction/credit-document lifecycle decisions and explicit external fiscal boundaries.",
+      "sourceEvidenceGroup": "invoices",
+      "reconciliationState": "PARTIAL",
+      "sourceEvidencePaths": [
+        "docs/adr/0024-store-invoice-policy.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 415,
@@ -2141,8 +2350,13 @@
       "relatedPRs": [
         429
       ],
-      "nextAction": "Policy API/Admin and exact IRR quotations deployed via #429; approved operator policy and integrated invoice acceptance remain, no invented tax.",
-      "sourceEvidenceGroup": "invoices"
+      "nextAction": "Versioned seller/tax/discount policy and exact IRR arithmetic deployed via #429/#430; operator must supply/accept real policy, never infer rates.",
+      "sourceEvidenceGroup": "invoices",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/invoices/invoice-quote.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 416,
@@ -2154,8 +2368,13 @@
       "relatedPRs": [
         430
       ],
-      "nextAction": "Independent proforma source deployed via #430; reconcile full quote/edit/version/restart/conversion criteria and operator acceptance.",
-      "sourceEvidenceGroup": "invoices"
+      "nextAction": "Versioned independent drafts and real customer/SKU quote workflow deployed via #430; complete controlled operator draft/reload/conflict/issue acceptance under #424.",
+      "sourceEvidenceGroup": "invoices",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/invoices/invoice-draft.integration-spec.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 417,
@@ -2169,8 +2388,13 @@
         433,
         434
       ],
-      "nextAction": "Unique immutable issuance deployed via #433; preserve original financial snapshots, complete original criterion and operator acceptance.",
-      "sourceEvidenceGroup": "invoices"
+      "nextAction": "Atomic numbering and immutable issued snapshots/SQL guards deployed via #433; collect controlled invoice financial acceptance without rewriting originals.",
+      "sourceEvidenceGroup": "invoices",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/invoices/invoice-document.integration-spec.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 418,
@@ -2183,15 +2407,20 @@
         433,
         434
       ],
-      "nextAction": "Customer publication/revocation deployed via #434; current permission/ownership tests exist, real two-customer publish/read/revoke acceptance still pending.",
-      "sourceEvidenceGroup": "invoices"
+      "nextAction": "Publication/revocation and current-owner private reads deployed via #434/#449; remaining integrated two-customer operator acceptance belongs to #424.",
+      "sourceEvidenceGroup": "invoices",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/invoices/invoice-publication.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 419,
       "title": "Invoice I4: self-hosted Persian A4 PDF and private document artifacts",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/419",
-      "githubState": "OPEN",
-      "classification": "partial",
+      "githubState": "CLOSED",
+      "classification": "accepted",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         433,
@@ -2201,24 +2430,31 @@
         439,
         449
       ],
-      "nextAction": "Review template #439 and internal private PostgreSQL artifact persistence #449; implement durable render jobs/worker, current-authority download and Admin/Web integration.",
+      "nextAction": "Bounded private PDF/report snapshot implementation is merged, tested and deployed; integrated operator acceptance remains #420/#424.",
       "sourceEvidenceGroup": "invoices",
       "candidatePRs": [
         439,
         449
       ],
-      "remainingWork": "Private-store candidate #449 is not merged/deployed and has no worker, job claims, HTTP/download authorization, UI or operator capacity activation. Main remains at 61 migrations; candidate adds forward migration only."
+      "remainingWork": "Private-store candidate #449 is not merged/deployed and has no worker, job claims, HTTP/download authorization, UI or operator capacity activation. Main remains at 61 migrations; candidate adds forward migration only.",
+      "reconciliationState": "ACCEPTED",
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 420,
       "title": "Invoice I5: complete Admin and customer invoice journeys",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/420",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [],
-      "nextAction": "Existing Admin draft/issue/history/publish and customer list/detail/print integrated. Actual private PDF download and complete browser/live chain depend on #419.",
-      "sourceEvidenceGroup": "invoices"
+      "nextAction": "Admin drafts/issuance/publication and owned customer PDF interfaces exist, including #449; controlled draft-edit-issue-publish-owner-download-revoke operator journey remains.",
+      "sourceEvidenceGroup": "invoices",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/admin/src/components/invoices/InvoicePdfActions.tsx"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 421,
@@ -2233,37 +2469,49 @@
         434,
         435
       ],
-      "nextAction": "No append-only corrective invoice lifecycle/signed delta implementation. Credit debt entries cannot replace a corrective invoice.",
-      "sourceEvidenceGroup": "invoices"
+      "nextAction": "Implement append-only linked correction/cancellation documents and signed deltas through existing authoritative financial commands; issued originals must remain immutable.",
+      "sourceEvidenceGroup": "invoices",
+      "reconciliationState": "MISSING",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/invoices/invoice-document.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 422,
       "title": "Reports R1: approved inventory cost basis and valuation evidence",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/422",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "blocked",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         434,
         435,
         436
       ],
-      "nextAction": "Only configurable cost method deployed #436; valuationEnabled=false by owner request. Cost ledger/approved attribution/opening evidence absent; never activate or invent history.",
-      "sourceEvidenceGroup": "inventory"
+      "nextAction": "Owner explicitly keeps valuation inactive. Cost evidence and approved attribution/opening/return policies are prerequisites; the configuration selector is not a cost ledger.",
+      "sourceEvidenceGroup": "inventory",
+      "reconciliationState": "BLOCKED",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/inventory/inventory-cost-policy.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 423,
       "title": "Reports R2: secure snapshot-based CSV Excel and PDF exports",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/423",
-      "githubState": "OPEN",
-      "classification": "not_implemented",
+      "githubState": "CLOSED",
+      "classification": "accepted",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         434,
         435
       ],
-      "nextAction": "No bounded owned private snapshot export pipeline. Installed ExcelJS import is not a report export capability.",
-      "sourceEvidenceGroup": "reports"
+      "nextAction": "Bounded private PDF/report snapshot implementation is merged, tested and deployed; integrated operator acceptance remains #420/#424.",
+      "sourceEvidenceGroup": "reports",
+      "reconciliationState": "ACCEPTED",
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 424,
@@ -2275,8 +2523,13 @@
       "relatedPRs": [
         412
       ],
-      "nextAction": "Composite release gate: incomplete #419/#420/#421/#422/#423 and remaining real provider/operator acceptance cannot be greened by deployment.",
-      "sourceEvidenceGroup": "invoices"
+      "nextAction": "Integrated release gate remains open for corrections #421, general returns #348 where applicable, and real invoice/report operator acceptance. Cost valuation #422 stays inactive by owner decision.",
+      "sourceEvidenceGroup": "invoices",
+      "reconciliationState": "PARTIAL",
+      "sourceEvidencePaths": [
+        "docs/REPORTING_AND_INVOICE_AUDIT.md"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 431,
@@ -2288,15 +2541,20 @@
       "relatedPRs": [
         432
       ],
-      "nextAction": "Sellable credit cancellation/return/refund obligation source deployed #432. Financial operator acceptance and broader general returns remain separate.",
-      "sourceEvidenceGroup": "credit_returns"
+      "nextAction": "Credit-sale cancellation/returns/refund-liability commands deployed via #432; operator goods/refund evidence acceptance remains. General paid-order returns stay #348.",
+      "sourceEvidenceGroup": "credit_returns",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/credit/credit-return.service.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     },
     {
       "issue": 450,
       "title": "fix(commerce): execute reservation expiry safely and recover stale payment journeys",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/450",
       "githubState": "OPEN",
-      "classification": "partial",
+      "classification": "implemented_missing_acceptance",
       "releaseScope": "V1 revenue and stock integrity",
       "relatedPRs": [
         451,
@@ -2305,13 +2563,18 @@
         455
       ],
       "sourceEvidenceGroup": "commerce",
-      "nextAction": "Rebase/integrate safety #454 then retarget #455 onto main, then #451/#453 with combined checks. All four are unmerged candidates. Implement durable scheduled bounded worker/restart/fencing and prove reservation release/storefront recovery. Any payment attempt prevents automatic expiry pending explicit reconciliation. No fake Staff actor or direct stock repair.",
+      "nextAction": "Durable payment-aware worker and checkout deadline recovery merged in #464; controlled live expiry/restart/reservation reconciliation remains required. Keep ORDER_EXPIRY_ENABLED unchanged.",
       "candidatePRs": [
         454,
         455,
         451,
         453
-      ]
+      ],
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "sourceEvidencePaths": [
+        "apps/api/src/modules/orders/order-expiry-runtime.ts"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28"
     }
   ],
   "defaultAcceptanceState": "Criterion-level independent acceptance review pending. Source anchors/merged PRs/closed issue states are not a full acceptance claim.",
@@ -3502,10 +3765,15 @@
     "mergedPRsWithIndependentApprovalOnFinalHead": 119,
     "limitation": "Review metadata is not independent acceptance of every functional, runtime or external-provider criterion."
   },
-  "deployedBaseline": "7dbd0001959f398635467bedbd7d151c54676599",
+  "deployedBaseline": "92b23a43aa095a563d798712d24d1ffdf8020f14",
   "issueCounts": {
     "total": 150,
     "open": 51,
     "closed": 99
+  },
+  "counts": {
+    "total": 150,
+    "open": 46,
+    "closed": 104
   }
 }

@@ -1,25 +1,23 @@
 # Page, Content and Release Matrix
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
+> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
+> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
+> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
+> Older dates/status rows below are historical; accepted domain requirements remain.
 
-## Current route and acceptance overlay — 2026-10-18
+## Current route and acceptance overlay — 2026-10-28
 
 | Surface | Source/deployed status | Remaining boundary |
 | --- | --- | --- |
-| Homepage/catalog/category navigation | Present; #456 root-only display/drill-down verified, 13 roots / 88 nodes | Supplied names total 75 descendants, not an invented 76th; full responsive UAT remains |
-| Account profile/addresses/security/cart/orders | Real customer-self contracts and UI present | Full authenticated reload/ownership/checkout acceptance (#389/#401) |
-| Account credit / invoices | Owned API projections and Web pages present | Financial acceptance and live publication/revocation (#336/#418); no public credit checkout |
-| Admin stocktake/receiving/credit/reports/invoices | Present in verified running release | #444 additional stocktake coverage unmerged; PDF/corrections/exports missing |
-| Payment return | Authoritative verification and one controlled sale accepted | Refund/reconciliation/uncertainty acceptance still required |
-| Articles and public SSR/discovery | Accepted scope, incomplete implementation | #125/#126/#127/#129; product editor is not editorial CMS |
-
-A route being present is not business acceptance. The historical inventory below
-retains scope; its outdated absence/provider/deployment columns are superseded.
+| Public home/catalog/category/brand/product/policy | Server-readable Next HTML, metadata/canonicals/schema and dynamic API robots/sitemaps deployed | Articles/guides, Merchant feed, remaining IndexNow/content lifecycle and field acceptance; staging noindex |
+| Customer account/cart/checkout/orders/tracking | Existing real owned APIs/UI preserved through rendering migration | Full authenticated responsive/session/provider acceptance |
+| Admin products/Jodit | Current live draft snapshot, long Persian HTML transport, recovery and replay fix deployed | Full operator master-data/media/publish acceptance and scanner freshness |
+| Admin invoices / customer invoices | Draft/issue/publish/revoke and private PDF actions deployed | Complete controlled two-customer operator journey; corrections not delivered |
+| Reports | Operational projections and durable owned CSV/XLSX/PDF snapshots deployed | Correction-document integration, applicable acceptance; valuation intentionally inactive |
+| Warehouse / purchasing / stocktake / credit returns | Delivered workflows with PostgreSQL and real desktop/mobile CI | Physical operator acceptance; general paid-order returns not delivered |
+| Access management | Not present on main; local candidate only | Integrate/review/test #359 before delivery claim |
 
 ## Historical page inventory and required journeys
 

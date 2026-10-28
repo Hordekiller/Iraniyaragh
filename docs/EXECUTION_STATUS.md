@@ -1,30 +1,15 @@
 # Execution Status and Handoff
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
+> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
+> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
+> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
+> Older dates/status rows below are historical; accepted domain requirements remain.
 
-## Current execution queue — 2026-10-18
+## Current execution state — 2026-10-28
 
-Current reviewed/deployed baseline: `e207094`. #445/#447/#452/#456 are merged;
-#400 remains open for operator acceptance. Refresh existing documentation PR #443
-and conditionally resolve governance #12 only when those documents reach main.
-
-Next integration train: #448 → #441 → #442 → #446 → #440. Rebase onto latest main,
-resolve semantic conflicts, and rerun combined validation after every 2–3 merges.
-An old green branch run is not combined-source proof. Then expiry #454 → #455
-(retarget/rebase after #454) → #451 → #453 → durable worker → live #450 acceptance.
-Do not create unrelated PRs ahead of this queue. Existing stocktake/PDF candidates
-remain separate and must be freshly checked before integration.
-
-Current policy requires nine strict exact-head checks and recorded engineering
-review; the owner removed mandatory account approval/last-push approval on Oct 17.
-No required check, security invariant or deployment gate was removed. See
-[workflow](REPOSITORY_WORKFLOW.md). Start fresh CI for one completed slice, then
-pause for the owner's next instruction; never label an in-progress run passed.
+Deployment and disk cleanup are verified. #470/#478 are merged and deployed. The old hardening and expiry candidate trains below have already been integrated; do not repeat them. Current issue/PR dispositions, external acceptance and the short remaining queue are in V1_RECONCILIATION.md. Runtime role administration exists only on an unmerged local candidate, not main. Preserve local work and current provider/valuation modes.
 
 ## Historical execution board
 

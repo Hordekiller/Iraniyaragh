@@ -1,6 +1,6 @@
 {
-  "checkpointUTC": "2026-10-18",
-  "sourceBaseline": "e2070948587b438dc5da55d8560ab870e23bf32d",
+  "checkpointUTC": "2026-10-28",
+  "sourceBaseline": "92b23a43aa095a563d798712d24d1ffdf8020f14",
   "scope": "Declared invoice/report issue dependencies and current execution/release gates; not an acceptance claim.",
   "issueDependencies": [
     {
@@ -101,11 +101,8 @@
         419,
         420
       ],
-      "candidatePRs": [
-        439,
-        449
-      ],
-      "state": "template and private internal persistence candidates; durable jobs/worker/current-authority download/UI remain"
+      "candidatePRs": [],
+      "state": "Private template/jobs/worker/download/UI merged via #449/#479 and deployed; full operator acceptance remains #420/#424."
     },
     {
       "gate": "invoice_corrections",
@@ -120,7 +117,7 @@
         358,
         423
       ],
-      "state": "implementation remains; PDF depends on 419"
+      "state": "Durable owned CSV/XLSX/PDF snapshots merged via #476 and deployed; #423 closed, integrated reporting/correction acceptance remains #358/#421/#424."
     },
     {
       "gate": "general_returns",
@@ -134,7 +131,7 @@
       "issues": [
         359
       ],
-      "state": "proposed ADR/API review then implementation required"
+      "state": "No runtime API/UI on main; preserve local candidate 301bdf3, integrate security review and fresh exact-head checks."
     },
     {
       "gate": "content_and_public_rendering",
@@ -144,7 +141,7 @@
         127,
         129
       ],
-      "state": "accepted V1 content/SSR/technical SEO implementation remains; AI retrieval 128 stays future"
+      "state": "Catalog/public Next rendering, metadata/schema and robots/sitemaps deployed #481/#482. Articles/guides, Merchant feed and IndexNow/content lifecycle remain partial; AI #128 future."
     },
     {
       "gate": "provider_and_operations_acceptance",
@@ -170,14 +167,10 @@
         81,
         450
       ],
-      "candidatePRs": [
-        454,
-        455,
-        451,
-        453
-      ],
-      "state": "All four candidates unmerged; #455 stacked on #454. Durable scheduler/restart/fencing and live stock release/recovery remain. Any payment attempt blocks automatic expiry pending explicit reconciliation."
+      "candidatePRs": [],
+      "state": "Merged durable payment-aware runtime and batched reservations via #464; controlled live restart/expiry/reconciliation and explicit enablement remain #450/#81."
     }
   ],
-  "releaseRule": "All nine required checks on the final exact head, recorded engineering review and current protection (owner-authorized zero mandatory approving accounts/no last-push approval; strict checks and other protections preserved). Then fresh restore-verified backup, exact-SHA image publication/digests, official authorized deployment and actual runtime/operator/provider acceptance. Neither merged code nor green CI is full acceptance."
+  "releaseRule": "All nine required checks on the final exact head, recorded engineering review and current protection (owner-authorized zero mandatory approving accounts/no last-push approval; strict checks and other protections preserved). Then fresh restore-verified backup, exact-SHA image publication/digests, official authorized deployment and actual runtime/operator/provider acceptance. Neither merged code nor green CI is full acceptance.",
+  "deployedBaseline": "92b23a43aa095a563d798712d24d1ffdf8020f14"
 }
