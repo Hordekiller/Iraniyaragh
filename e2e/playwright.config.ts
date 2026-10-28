@@ -82,19 +82,22 @@ export default defineConfig({
       },
     },
   ],
+  // Playwright starts these in order, bounding Next builds to one at a time.
+  // Both servers run standalone output with separate fixture/real browser chunks.
   webServer: [
     {
-      command: 'pnpm --filter @iranyaragh/web exec vite build --mode real-e2e --outDir dist-real && pnpm --filter @iranyaragh/web exec vite preview --outDir dist-real --host 127.0.0.1 --port 4174 --strictPort',
-      env: { VITE_FIXTURE_CATALOG: 'false', VITE_FIXTURE_AUTH: 'false', VITE_API_BASE_URL: API_URL },
+      command: 'node scripts/storefront-server.mjs real',
+      env: { STOREFRONT_E2E_API_URL: API_URL, STOREFRONT_E2E_PORT: new URL(REAL_WEB_URL).port || '4174' },
       url: REAL_WEB_URL,
       reuseExistingServer: !CI,
-      timeout: 60_000,
+      timeout: 180_000,
     },
     {
-      command: 'pnpm --filter @iranyaragh/web preview --host 127.0.0.1 --port 4173 --strictPort',
+      command: 'node scripts/storefront-server.mjs fixture',
+      env: { STOREFRONT_E2E_API_URL: API_URL, STOREFRONT_E2E_PORT: new URL(WEB_URL).port || '4173' },
       url: WEB_URL,
       reuseExistingServer: !CI,
-      timeout: 60_000,
+      timeout: 180_000,
     },
     {
       command: 'pnpm --filter @iranyaragh/admin start --hostname 127.0.0.1',

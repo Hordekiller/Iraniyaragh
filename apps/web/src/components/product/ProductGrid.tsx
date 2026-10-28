@@ -1,3 +1,5 @@
+'use client'
+
 import { ProductCard } from './ProductCard'
 import type { CatalogProduct } from '../../services/catalog/types'
 

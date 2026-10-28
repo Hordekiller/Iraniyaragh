@@ -14,7 +14,7 @@ import { toPersianDigits } from './format'
 
 // ── Identity ─────────────────────────────────────────────────────────────────
 
-export const SITE_NAME = 'ایران یراق'
+export const SITE_NAME = 'ایرانی یراق'
 export const SITE_TAGLINE = 'فروشگاه تخصصی ابزار و یراق‌آلات'
 
 // ── Business contact (deployment configuration) ──────────────────────────────
@@ -25,15 +25,15 @@ function optionalSetting(value: string | undefined): string | null {
 }
 
 /** Verified storefront phone number, or `null` when the deployment has none. */
-export const SITE_PHONE = optionalSetting(import.meta.env.VITE_SITE_PHONE)
+export const SITE_PHONE = optionalSetting(process.env.NEXT_PUBLIC_SITE_PHONE)
 /** Verified storefront postal code, or `null`. */
-export const SITE_POSTAL_CODE = optionalSetting(import.meta.env.VITE_SITE_POSTAL_CODE)
+export const SITE_POSTAL_CODE = optionalSetting(process.env.NEXT_PUBLIC_SITE_POSTAL_CODE)
 /** Verified storefront address, or `null`. */
-export const SITE_ADDRESS_LINE = optionalSetting(import.meta.env.VITE_SITE_ADDRESS)
+export const SITE_ADDRESS_LINE = optionalSetting(process.env.NEXT_PUBLIC_SITE_ADDRESS)
 /** Verified storefront email, or `null`. */
-export const SITE_EMAIL = optionalSetting(import.meta.env.VITE_SITE_EMAIL)
+export const SITE_EMAIL = optionalSetting(process.env.NEXT_PUBLIC_SITE_EMAIL)
 /** Verified Instagram handle (without `@`), or `null`. */
-export const INSTAGRAM_HANDLE = optionalSetting(import.meta.env.VITE_INSTAGRAM_HANDLE)
+export const INSTAGRAM_HANDLE = optionalSetting(process.env.NEXT_PUBLIC_INSTAGRAM_HANDLE)
 
 export const INSTAGRAM_URL = INSTAGRAM_HANDLE
   ? `https://www.instagram.com/${INSTAGRAM_HANDLE.replace(/^@/u, '')}`

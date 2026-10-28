@@ -39,8 +39,8 @@ function renderHome(api: CatalogApi) {
       <CatalogProvider api={api}>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/category/:slug" element={<span>صفحه دسته</span>} />
-          <Route path="/product/:slug" element={<span>صفحه محصول</span>} />
+          <Route path="/categories/:slug" element={<span>صفحه دسته</span>} />
+          <Route path="/products/:slug" element={<span>صفحه محصول</span>} />
         </Routes>
       </CatalogProvider>
     </MemoryRouter>,
@@ -53,8 +53,8 @@ describe('HomePage', () => {
     renderHome(catalogApi({ listProducts }))
 
     expect(screen.getByRole('status')).toHaveTextContent('در حال دریافت کاتالوگ')
-    expect(await screen.findByRole('link', { name: 'یراق کابینت' })).toHaveAttribute('href', '/category/cabinet')
-    expect(screen.getAllByRole('link', { name: /کالای منتشرشده/ })[0]).toHaveAttribute('href', '/product/published-product')
+    expect(await screen.findByRole('link', { name: 'یراق کابینت' })).toHaveAttribute('href', '/categories/cabinet')
+    expect(screen.getAllByRole('link', { name: /کالای منتشرشده/ })[0]).toHaveAttribute('href', '/products/published-product')
     expect(screen.getByRole('region', { name: 'جدیدترین یراق کابینت' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'کالاهای بعدی در جدیدترین یراق کابینت' })).toBeInTheDocument()
     expect(listProducts).toHaveBeenCalledWith({ categoryId: 'category-1', sortBy: 'newest', perPage: 8 })
@@ -74,7 +74,7 @@ describe('HomePage', () => {
     const section = await screen.findByRole('region', { name: 'دسته‌بندی کالاها' })
     expect(await within(section).findAllByRole('link')).toHaveLength(13)
     expect(within(section).queryByRole('link', { name: /زیردسته/ })).not.toBeInTheDocument()
-    expect(within(section).getByRole('link', { name: 'دسته اصلی 0' })).toHaveAttribute('href', '/category/root-0')
+    expect(within(section).getByRole('link', { name: 'دسته اصلی 0' })).toHaveAttribute('href', '/categories/root-0')
   })
 
   it('does not fall back to fixture products when the API fails and retries explicitly', async () => {

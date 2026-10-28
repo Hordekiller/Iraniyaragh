@@ -5,27 +5,27 @@ import { AuthProvider } from './state/AuthProvider'
 import { CatalogProvider } from './state/CatalogProvider'
 import { CartProvider } from './state/CartProvider'
 import { AppLayout } from './components/layout/AppLayout'
-import { HomePage } from './pages/HomePage'
+import { HomePage } from './views/HomePage'
 import { ROUTE_PATHS } from './lib/routes'
 
-const CategoryPage = lazy(() => import('./pages/CategoryPage').then(module => ({ default: module.CategoryPage })))
-const ProductPage = lazy(() => import('./pages/ProductPage').then(module => ({ default: module.ProductPage })))
-const SearchPage = lazy(() => import('./pages/SearchPage').then(module => ({ default: module.SearchPage })))
-const BestsellersPage = lazy(() => import('./pages/BestsellersPage').then(module => ({ default: module.BestsellersPage })))
-const CartPage = lazy(() => import('./pages/CartPage').then(module => ({ default: module.CartPage })))
-const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then(module => ({ default: module.CheckoutPage })))
-const PaymentPage = lazy(() => import('./pages/PaymentPage').then(module => ({ default: module.PaymentPage })))
-const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage').then(module => ({ default: module.PaymentReturnPage })))
-const AccountCreditPage = lazy(() => import('./pages/AccountCreditPage').then(module => ({ default: module.AccountCreditPage })))
-const AccountInvoicesPage = lazy(() => import('./pages/AccountInvoicesPage').then(module => ({ default: module.AccountInvoicesPage })))
-const AccountPage = lazy(() => import('./pages/AccountPage').then(module => ({ default: module.AccountPage })))
-const AccountAddressesPage = lazy(() => import('./pages/AccountAddressesPage').then(module => ({ default: module.AccountAddressesPage })))
-const AccountSecurityPage = lazy(() => import('./pages/AccountSecurityPage').then(module => ({ default: module.AccountSecurityPage })))
-const OrdersPage = lazy(() => import('./pages/OrdersPage').then(module => ({ default: module.OrdersPage })))
-const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage').then(module => ({ default: module.OrderDetailPage })))
-const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then(module => ({ default: module.PrivacyPage })))
-const TermsPage = lazy(() => import('./pages/TermsPage').then(module => ({ default: module.TermsPage })))
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(module => ({ default: module.NotFoundPage })))
+const CategoryPage = lazy(() => import('./views/CategoryPage').then(module => ({ default: module.CategoryPage })))
+const ProductPage = lazy(() => import('./views/ProductPage').then(module => ({ default: module.ProductPage })))
+const SearchPage = lazy(() => import('./views/SearchPage').then(module => ({ default: module.SearchPage })))
+const BestsellersPage = lazy(() => import('./views/BestsellersPage').then(module => ({ default: module.BestsellersPage })))
+const CartPage = lazy(() => import('./views/CartPage').then(module => ({ default: module.CartPage })))
+const CheckoutPage = lazy(() => import('./views/CheckoutPage').then(module => ({ default: module.CheckoutPage })))
+const PaymentPage = lazy(() => import('./views/PaymentPage').then(module => ({ default: module.PaymentPage })))
+const PaymentReturnPage = lazy(() => import('./views/PaymentReturnPage').then(module => ({ default: module.PaymentReturnPage })))
+const AccountCreditPage = lazy(() => import('./views/AccountCreditPage').then(module => ({ default: module.AccountCreditPage })))
+const AccountInvoicesPage = lazy(() => import('./views/AccountInvoicesPage').then(module => ({ default: module.AccountInvoicesPage })))
+const AccountPage = lazy(() => import('./views/AccountPage').then(module => ({ default: module.AccountPage })))
+const AccountAddressesPage = lazy(() => import('./views/AccountAddressesPage').then(module => ({ default: module.AccountAddressesPage })))
+const AccountSecurityPage = lazy(() => import('./views/AccountSecurityPage').then(module => ({ default: module.AccountSecurityPage })))
+const OrdersPage = lazy(() => import('./views/OrdersPage').then(module => ({ default: module.OrdersPage })))
+const OrderDetailPage = lazy(() => import('./views/OrderDetailPage').then(module => ({ default: module.OrderDetailPage })))
+const PrivacyPage = lazy(() => import('./views/PrivacyPage').then(module => ({ default: module.PrivacyPage })))
+const TermsPage = lazy(() => import('./views/TermsPage').then(module => ({ default: module.TermsPage })))
+const NotFoundPage = lazy(() => import('./views/NotFoundPage').then(module => ({ default: module.NotFoundPage })))
 
 function RouteLoading() {
   return (

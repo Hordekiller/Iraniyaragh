@@ -70,12 +70,12 @@ export function SiteFooter() {
               rel="noopener"
               referrerPolicy="origin"
               className="mt-6 inline-flex rounded-lg border border-slate-100 p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]"
-              aria-label="نماد اعتماد الکترونیکی ایران یراق؛ باز شدن در پنجرهٔ جدید"
+              aria-label="نماد اعتماد الکترونیکی ایرانی یراق؛ باز شدن در پنجرهٔ جدید"
             >
               <img
                 referrerPolicy="origin"
                 src="https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3"
-                alt="نماد اعتماد الکترونیکی ایران یراق"
+                alt="نماد اعتماد الکترونیکی ایرانی یراق"
                 width={128}
                 height={128}
                 loading="lazy"

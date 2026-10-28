@@ -51,7 +51,7 @@ export class CrossTabSessionBus {
   }
 
   open(): void {
-    if (this.channel || typeof BroadcastChannel === 'undefined' || this.testBroadcast) return;
+    if (typeof window === 'undefined' || this.channel || typeof BroadcastChannel === 'undefined' || this.testBroadcast) return;
     this.channel = new BroadcastChannel(this.channelName);
     this.channel.onmessage = (event: MessageEvent<SessionSignal>) => {
       for (const listener of this.listeners) listener(event.data);

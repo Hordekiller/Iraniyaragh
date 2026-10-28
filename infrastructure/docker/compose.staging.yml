@@ -190,6 +190,7 @@ services:
       APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
       API_PORT: '4000'
+      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:?Set the trusted canonical HTTPS apex origin}
       OBJECT_STORAGE_UPLOAD_ENDPOINT: ${OBJECT_STORAGE_UPLOAD_ENDPOINT:?Set the HTTPS browser upload origin}
       # Assembled from the POSTGRES_* credentials rather than read from a
       # separate DATABASE_URL, so the password cannot drift out of sync with
@@ -229,6 +230,7 @@ services:
       # value is never bound. It is set here so the worker shares exactly the
       # same validated environment as the API instead of a second, weaker one.
       API_PORT: '4000'
+      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:?Set the trusted canonical HTTPS apex origin}
       # Assembled from the POSTGRES_* credentials rather than read from a
       # separate DATABASE_URL, so the password cannot drift out of sync with
       # the role Postgres was actually initialised with. A hand-edited URL was
@@ -288,6 +290,7 @@ services:
       # boot without a port in staging/production, but the worker never binds
       # one, so it only satisfies validation.
       API_PORT: '4000'
+      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:?Set the trusted canonical HTTPS apex origin}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_URL: ${REDIS_URL}
       # Font and wordmark are baked into the image at /app/assets; the value
@@ -320,7 +323,25 @@ services:
         condition: service_healthy
     # No `ports:`. The Admin is only reachable through Nginx on /admin.
 
-  # The only published service: static storefront plus the reverse proxy.
+  # Server rendering has no credentials or published ports. Never inherit the
+  # full .env.staging here: public projection reads need no database/provider keys.
+  storefront:
+    image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/storefront:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+    restart: *restart
+    environment:
+      IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
+      NODE_ENV: production
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-staging}
+      PUBLIC_WEB_ORIGIN: ${PUBLIC_WEB_ORIGIN:?Set the trusted canonical HTTPS apex origin}
+      API_INTERNAL_URL: http://api:4000
+      PORT: '3000'
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # The only published service: TLS and the reverse proxy.
   web:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/web:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
@@ -355,6 +376,8 @@ services:
       api:
         condition: service_healthy
       admin:
+        condition: service_healthy
+      storefront:
         condition: service_healthy
 
 volumes:

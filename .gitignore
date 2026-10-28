@@ -20,3 +20,6 @@ coverage
 e2e/test-results/
 e2e/playwright-report/
 e2e/blob-report/
+
+# Isolated storefront E2E builds use sibling directories to preserve package type.
+**/.next-e2e-*/

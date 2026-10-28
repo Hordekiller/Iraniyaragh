@@ -10,7 +10,8 @@ inspectable on a real host.
 | --- | --- |
 | `infrastructure/docker/api.Dockerfile` | Compiled API + media worker + migration job |
 | `infrastructure/docker/admin.Dockerfile` | Next.js standalone Admin |
-| `infrastructure/docker/web.Dockerfile` | Static storefront, served by the Nginx image |
+| `infrastructure/docker/web.Dockerfile` | TLS Nginx reverse proxy |
+| `infrastructure/docker/storefront.Dockerfile` | Internal Next.js standalone storefront renderer |
 | `infrastructure/nginx/storefront.conf` | Public vhost: HTTP for ACME + redirect, HTTPS for everything else. The only published ports |
 | `infrastructure/nginx/storefront-locations.conf` | The request routing, shared by both server blocks so they cannot drift |
 | `infrastructure/docker/compose.staging.yml` | Full stack, internal-only data tier. Pulls images; has no `build:` section |
@@ -39,14 +40,16 @@ function of the commit alone. The host sets `IMAGE_TAG` to a SHA and runs
 `docker compose pull`; `compose.staging.yml` has no `build:` section, so there
 is no path by which a host can quietly build something of its own.
 
-Four images are published:
+Six images are published:
 
 | Image | Compose target | Runs |
 | --- | --- | --- |
 | `iranyaragh/api` | `api.Dockerfile` `runtime` | the API, the media worker and the media bucket |
 | `iranyaragh/api-migrate` | `api.Dockerfile` `migrate` | the one-shot `migrate deploy` |
+| `iranyaragh/pdf-render-worker` | `pdf.Dockerfile` | isolated invoice/report PDF renderer |
 | `iranyaragh/admin` | `admin.Dockerfile` | the Admin |
-| `iranyaragh/web` | `web.Dockerfile` | the storefront and Nginx |
+| `iranyaragh/storefront` | `storefront.Dockerfile` | the public Next.js renderer |
+| `iranyaragh/web` | `web.Dockerfile` | TLS and reverse proxy |
 
 `api` is published once and shared by three services, because those three are
 the same Dockerfile target and therefore the same digest.
@@ -128,6 +131,54 @@ The offline regression command is
 `node --test scripts/deploy/runtime-provenance.test.mjs`. It resolves the real
 Compose file with an isolated copy of the public example environment for upgrade
 and rollback; it starts no containers and reads no private staging configuration.
+
+## Storefront rendering and discovery
+
+`web` remains the only published service and owns TLS, ACME, `/admin`, `/api`
+and signed private/media proxy behavior. Its catch-all forwards whole paths,
+including `/_next`, to `storefront:3000`. There is no SPA success fallback: Next
+owns status/redirect/cache headers, and upstream failures remain failures. The
+edge does not cache HTML or forward customer credentials to object storage.
+`/robots.txt`, `/sitemap.xml` and `/sitemaps/*` map directly to API-owned
+`/api/v1/discovery/*` projections. Admin chunks stay under `/admin/_next`.
+
+Before the first renderer release, add `PUBLIC_WEB_ORIGIN=https://iraniyaragh.com`
+to the private deployment environment. It is the trusted HTTPS apex canonical
+source for both API and Next; it must match `STOREFRONT_ORIGIN` and the pinned
+Nginx canonical domain. Nginx redirects alternate/unknown hosts to that apex and
+never uses a request header to select a canonical domain. A domain change requires
+a reviewed proxy configuration change and a matching valid TLS certificate.
+`API_INTERNAL_URL=http://api:4000` is an internal origin, not a public canonical.
+
+The renderer receives only explicit public runtime configuration, no database,
+SMS, payment or object-storage credentials. `NODE_ENV=production` enables the
+Next production runtime; `APP_ENVIRONMENT=staging` retains preview noindex policy.
+Only a deliberately configured production environment may be indexed. Deploy
+waits for API, renderer, Admin and proxy health independently and probes public
+HTML, robots and sitemap over TLS. A healthy renderer does not prove API or sales
+acceptance; the existing backup/restore and controlled provider gates still apply.
+
+The renderer is published as an additional exact-SHA image, never built on the
+VPS. For rollback, `rollback.sh` reads the target commit's Compose file from the
+local Git object database, then pulls that topology and replaces only application
+services with `--no-deps`. It never runs migrations or recreates the data tier.
+This also supports releases predating the renderer: the old Nginx image serves
+its own static files and the renderer becomes an orphan removed without deleting
+volumes. Fetch/retain target Git commits and their GHCR images before relying on
+that rollback. Schema rollback still requires the verified pre-migration backup.
+
+Offline runtime contracts (synthetic config and upstreams only):
+
+```bash
+node --test scripts/deploy/runtime-provenance.test.mjs scripts/deploy/rollback-topology.test.mjs
+node --test scripts/deploy/storefront-routing.test.mjs
+```
+
+The routing contract launches the real Nginx TLS configuration against bounded
+local synthetic upstreams. It verifies status preservation, discovery gzip bytes,
+canonical host redirects, Next/Admin assets and quarantine restrictions; it is
+not provider or customer-flow acceptance. Full image build and browser gates run
+in CI before the official immutable release.
 
 ## TLS
 
@@ -368,7 +419,7 @@ row is worse than no row at all.
 ## Ordering guarantees
 
 - **Migrate before traffic.** `migrate` runs `prisma migrate deploy` as a
-  one-shot service; `api`, `media-worker` and therefore `admin`/`web` depend on
+  one-shot service; `api`, `media-worker` and therefore `admin`/`storefront`/`web` depend on
   it completing successfully. A half-migrated schema never serves traffic.
 - **Only Nginx publishes a port.** Postgres, Redis, the object store, the API and
   the Admin have no `ports:`. They are reachable only on the internal network.
@@ -393,8 +444,8 @@ These are not conventions to remember. Each one fails a build or a boot:
 
 | Requirement | Where it is enforced |
 | --- | --- |
-| No fixture storefront in a deployed image | `web.Dockerfile` fails the build on `VITE_FIXTURE_CATALOG`/`VITE_FIXTURE_AUTH` |
-| No fixture data in the shipped bundle | `web.Dockerfile` scans `dist/assets` for fixture markers after the build |
+| No fixture storefront in a deployed image | `storefront.Dockerfile` rejects both `VITE_` and `NEXT_PUBLIC_` fixture flags |
+| No fixture data in the shipped bundle | `storefront.Dockerfile` scans `.next/static` for fixture markers after the build |
 | No fixture staff client in a deployed Admin | `admin.Dockerfile` fails the build on `NEXT_PUBLIC_FIXTURE_AUTH` |
 | No development access code | removed from the product in #372; no compose service re-enables it |
 | Real payment gateway | API refuses to boot unless `PAYMENT_PROVIDER_MODE` is `live` with a merchant id and https callback, or `disabled`, which no-ops every call |

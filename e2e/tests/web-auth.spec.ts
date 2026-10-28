@@ -86,7 +86,7 @@ test.describe('web: customer OTP login (fixture client, #50)', () => {
     await page.locator('#login-otp-code').fill(INVALID_CODE);
     await tap(page.getByRole('button', { name: 'ورود به حساب', exact: true }));
 
-    await expect(page.getByRole('alert')).toContainText('کد واردشده صحیح نیست.');
+    await expect(page.getByRole('dialog').getByRole('alert')).toContainText('کد واردشده صحیح نیست.');
 
     await network.assertNone();
   });
@@ -103,7 +103,7 @@ test.describe('web: customer OTP login (fixture client, #50)', () => {
       await tap(page.getByRole('button', { name: 'ورود به حساب', exact: true }));
     }
 
-    await expect(page.getByRole('alert')).toContainText(
+    await expect(page.getByRole('dialog').getByRole('alert')).toContainText(
       'درخواست‌های زیادی ثبت شده است. کمی بعد دوباره تلاش کنید.',
     );
 

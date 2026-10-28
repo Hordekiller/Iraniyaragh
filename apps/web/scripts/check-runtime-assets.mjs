@@ -32,6 +32,12 @@ const ENAMAD_FOOTER_URLS = new Set([
   'https://trustseal.enamad.ir/?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3',
   'https://trustseal.enamad.ir/logo.aspx?id=8119011&Code=rwTZwxgkNaMb5nO8mWJkYJWzTIGgPpV3',
 ]);
+// These literals configure server-only API/local development origins. They are
+// not browser assets; every other URL in these files remains subject to policy.
+const SERVER_CONFIG_URLS = new Map([
+  [fileURLToPath(new URL('../src/server/catalog.ts', import.meta.url)), new Set(['http://127.0.0.1:4000'])],
+  [fileURLToPath(new URL('../src/server/policy.ts', import.meta.url)), new Set(['http://localhost:3000'])],
+]);
 const ENAMAD_FOOTER_FILE = fileURLToPath(new URL('../src/components/layout/SiteFooter.tsx', import.meta.url));
 
 function remoteUrls(file, content) {
@@ -39,6 +45,7 @@ function remoteUrls(file, content) {
   const re = new RegExp(REMOTE_URL_SRC.source, 'g');
   let match = null;
   while ((match = re.exec(content)) !== null) {
+    if (SERVER_CONFIG_URLS.get(file)?.has(match[0])) continue;
     if (file === ENAMAD_FOOTER_FILE && ENAMAD_FOOTER_URLS.has(match[0])) continue;
     if (!NAVIGATION_ONLY_DOMAINS.some(domain => match[0].includes(domain))) {
       matches.push(match[0]);
@@ -62,7 +69,8 @@ function isLegalText(file) {
 function contentToInspect(file, content) {
   if (isLegalText(file)) return '';
   const withoutNamespaces = content.replace(/xmlns(?::\w+)?="(?:https?:\/\/[^"]*)"/g, '');
-  return withoutNamespaces.replace(/['"]@context['"]\s*:\s*['"]https?:\/\/schema\.org['"]/g, '');
+  const withoutVocabularyValues = withoutNamespaces.replace(/['"]https:\/\/schema\.org\/(?:InStock|OutOfStock)['"]/g, '"schema-vocabulary-value"');
+  return withoutVocabularyValues.replace(/['"]@context['"]\s*:\s*['"]https?:\/\/schema\.org['"]/g, '');
 }
 
 function collectFiles(target) {

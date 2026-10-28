@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CategoryGrid } from '../components/catalog/CategoryGrid'
@@ -11,21 +13,21 @@ import { useCatalogApi } from '../state/catalog-context'
 
 type HomePageLocationState = { scrollToCategories?: boolean }
 type HomeCategoryCollection = { category: CatalogCategory; sortBy: 'NEWEST' | 'BESTSELLING'; products: CatalogProduct[] | null }
-type HomeCatalog = {
+export type HomeCatalog = {
   categories: CatalogCategory[] | null
   categoryCollections: HomeCategoryCollection[]
 }
-const fixtureCatalogEnabled = import.meta.env.VITE_FIXTURE_CATALOG === 'true'
+const fixtureCatalogEnabled = process.env.NEXT_PUBLIC_FIXTURE_CATALOG === 'true'
 const HOME_PRODUCT_LIMIT = 8
 
-export function HomePage() {
+export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = {}) {
   const api = useCatalogApi()
   const navigate = useNavigate()
   const location = useLocation()
   const handledKeyRef = useRef<string | null>(null)
-  const [catalog, setCatalog] = useState<HomeCatalog | null>(null)
+  const [catalog, setCatalog] = useState<HomeCatalog | null>(initialCatalog ?? null)
   const [error, setError] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialCatalog)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export function HomePage() {
       })
     }
     const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
-    refresh()
+    if (!initialCatalog || attempt > 0) refresh()
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onVisible)
     return () => {
@@ -81,7 +83,7 @@ export function HomePage() {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
     }
-  }, [api, attempt])
+  }, [api, attempt, initialCatalog])
 
   function retry() {
     setError(false)

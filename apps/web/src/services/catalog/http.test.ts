@@ -80,6 +80,12 @@ describe('CatalogHttpClient', () => {
     expect(product.media).toEqual([image])
   })
 
+  it('renders an unsellable published product without sending an invalid empty availability query', async () => {
+    const fetcher = vi.fn(async () => response({ data: { product: { id: 'p-1', name: 'محصول', slug: 'empty', description: null, brand: null, category: null, variants: [], media: [] } } }))
+    await expect(new CatalogHttpClient({ fetch: fetcher }).getProductBySlug('empty')).resolves.toMatchObject({ variants: [], stockStatus: 'UNKNOWN', priceAvailable: false })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
   it('derives low and out of stock states from public availability', async () => {
     const detail = { data: { product: { id: 'p-1', name: 'محصول', slug: 'item', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', description: null, brand: null, category: null, variants: [{ id: 'v-1', isActive: true, salePrice: null }, { id: 'v-2', isActive: true, salePrice: null }], media: [] } } }
     const fetcher = vi.fn(async (input: RequestInfo | URL) => String(input).includes('/availability')

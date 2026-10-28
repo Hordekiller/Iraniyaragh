@@ -7,7 +7,7 @@ import type { CommerceApi } from '../services/commerce/types'
 import { CartContext } from './cart-context'
 import { useAuth } from './auth-context'
 
-const fixtureCommerceEnabled = import.meta.env.VITE_FIXTURE_CATALOG === 'true'
+const fixtureCommerceEnabled = process.env.NEXT_PUBLIC_FIXTURE_CATALOG === 'true'
 
 export function CartProvider({
   children,
@@ -24,7 +24,7 @@ export function CartProvider({
         ? new CommerceFixtureClient()
         : new CommerceHttpClient(
             auth.request,
-            import.meta.env.VITE_API_BASE_URL,
+            process.env.NEXT_PUBLIC_API_BASE_URL,
           ))
     return {
       api: commerceApi,

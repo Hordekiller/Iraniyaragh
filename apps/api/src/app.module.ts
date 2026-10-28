@@ -1,3 +1,4 @@
+import { DiscoveryModule } from './modules/discovery/discovery.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ApiFoundationModule } from './common/api-foundation.module';
@@ -36,6 +37,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     HealthModule,
     AuthModule,
     CatalogModule,
+    DiscoveryModule,
     MediaModule,
     InventoryModule,
     OrdersModule,
