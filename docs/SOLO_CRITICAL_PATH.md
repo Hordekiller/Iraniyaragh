@@ -1,19 +1,16 @@
 # Historical V1 Critical Path
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) owns source/runtime/acceptance truth.
+> [Issue register](V1_ISSUE_REGISTER.json) covers all 151 issues (46 open / 105 closed).
+> Dated status/queue claims below are historical; security/domain requirements remain.
 
-## Current scheduling authority — 2026-10-18
+## Current scheduling authority — 2026-10-28
 
-This historical path no longer assigns implementation order. Main/VPS is e207094;
-#445/#447/#452/#456 are delivered. The active train, dependency graph, accepted V1
-gaps and provider/operator gates are in V1_RECONCILIATION.md. Do not restart an
-old feature queue, revive #390, or treat historical unmerged branch code as delivered.
-Current safety rules remain AGENTS.md, SECURITY.md and FOUNDATION.md.
+Use V1_RECONCILIATION.md and the live issue/PR dispositions. The old hardening,
+expiry, PDF/report and rendering queues have shipped. This historical sequence
+cannot assign current work or override the owner's priorities. Preserve safety
+rules in AGENTS.md, SECURITY.md and FOUNDATION.md.
 
 ## Historical sequence
 

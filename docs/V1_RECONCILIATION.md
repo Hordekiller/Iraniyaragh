@@ -15,7 +15,7 @@ Evidence checkpoint: **2026-10-28 UTC**. Release decision: **PARTIAL — mandato
 
 `ACCEPTED` applies to the original bounded issue criteria, not blanket real-world V1 acceptance. `DEPLOYED_NOT_ACCEPTED` identifies delivered code with remaining operator/provider evidence. `PARTIAL` records specific missing behavior; `MISSING` identifies a main-branch runtime gap, including implementations present only on unmerged branches. `BLOCKED` requires an external decision/action. `OUT_OF_SCOPE` is explicitly post-V1. No new `BROKEN` or `MERGED_NOT_DEPLOYED` state was established for this checkpoint.
 
-All 48 previously open issues were reconciled against their bodies and current source. Test-only #352 and architecture-decision #338 meet their bounded criteria and were closed with evidence; physical warehouse acceptance remains #347/#8 and credit returns/refund acceptance remains #431. The remaining 46 issues have a current disposition, evidence link and next action on GitHub. Historical closed issues retain their state; closure alone does not establish acceptance.
+All 48 previously open issues were reconciled against their bodies and current source. Test-only #352 and architecture-decision #338 meet their bounded criteria and were closed with evidence; physical warehouse acceptance remains #347/#8 and credit returns/refund acceptance remains #431. The remaining 46 issues have a current disposition, evidence link and next action on GitHub. The previously omitted closed #458 carousel issue was added, giving 151 total issues (46 open / 105 closed). Historical closed issues retain their state; closure alone does not establish acceptance.
 
 ### Required engineering and remaining acceptance
 

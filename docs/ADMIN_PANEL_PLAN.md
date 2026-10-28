@@ -1,26 +1,18 @@
 # Production Admin Panel Program
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) owns source/runtime/acceptance truth.
+> [Issue register](V1_ISSUE_REGISTER.json) covers all 151 issues (46 open / 105 closed).
+> Dated status/queue claims below are historical; security/domain requirements remain.
 
-## Current implementation delta — 2026-10-18
+## Current implementation delta — 2026-10-28
 
-Deployed Admin includes catalog/attributes/category hierarchy/Jodit/image media,
-warehouse/ledger/transfers, suppliers/partial receiving/stocktake, customers/staff
-orders, fulfillment, credit/receipts/sellable credit returns, operational reports,
-invoice policy/drafts/immutable issuance/publication and SMS template settings.
-The cross-tab protected-request recovery (#447) is deployed; #400 is still open
-for actual authenticated idle/mutation acceptance. Do not extend security TTLs
-without evidence. API permissions remain authoritative.
-
-Remaining engineering includes runtime role administration, general paid-order
-returns, invoice private PDFs/corrections/exports, and article editorial management.
-Product Jodit and browser invoice printing do not establish those modules. The
-older baseline below retains accepted UI/security criteria, not a current absence list.
+Delivered Admin includes catalog/Jodit recovery, warehouse/purchasing/stocktake,
+credit/credit returns, operational reports, invoice drafts/issue/publication/private
+PDF and report export snapshots. API permissions remain authoritative. Runtime
+role administration #359 is only a local candidate; general returns #348,
+correction documents #421, article management #125 and full operator acceptance
+remain. Historical absence rows below must not restart delivered modules.
 
 ## Historical program baseline and accepted UI requirements
 

@@ -1,7 +1,7 @@
 {
   "checkpoint": "2026-10-28",
   "sourceBaseline": "92b23a43aa095a563d798712d24d1ffdf8020f14",
-  "requirementsReviewed": 150,
+  "requirementsReviewed": 151,
   "allCriteriaIndependentlyAccepted": false,
   "auditComplete": false,
   "classificationDefinitions": {
@@ -2605,6 +2605,24 @@
         451,
         453
       ]
+    },
+    {
+      "issue": 458,
+      "title": "feat(web): reduce homepage catalog density with product carousels",
+      "url": "https://github.com/Hordekiller/Iraniyaragh/issues/458",
+      "githubState": "CLOSED",
+      "classification": "implemented_missing_acceptance",
+      "reconciliationState": "DEPLOYED_NOT_ACCEPTED",
+      "releaseScope": "V1 or supporting historical evidence",
+      "relatedPRs": [
+        459
+      ],
+      "sourceEvidenceGroup": "content_seo",
+      "sourceEvidencePaths": [
+        "apps/web/src/views/HomePage.tsx"
+      ],
+      "evidenceCheckpointUTC": "2026-10-28",
+      "nextAction": "Preserve historical closure: curated category carousel configuration merged in #459 and is deployed. This is distinct from the unmerged all-products extension #460 and does not imply all live homepage acceptance."
     }
   ],
   "defaultAcceptanceState": "Criterion-level independent acceptance review pending. Source anchors/merged PRs/closed issue states are not a full acceptance claim.",
@@ -3841,6 +3859,11 @@
       "state": "MERGED",
       "head": "0c7aa92c2a5ddd29235e8fb1cb10254fc5b032dc",
       "merge": "1da785d5e0cd8afe624cd2c0d78a114c6b80f0d5"
+    },
+    "459": {
+      "state": "MERGED",
+      "head": "b62ad385d8af9e9803a019662b6d5a7a2282bb90",
+      "merge": "721c75560087652f842e2d34fc44404d412288b4"
     }
   },
   "historicalReviewEvidence": {
@@ -3850,9 +3873,9 @@
   },
   "deployedBaseline": "92b23a43aa095a563d798712d24d1ffdf8020f14",
   "issueCounts": {
-    "total": 150,
+    "total": 151,
     "open": 46,
-    "closed": 104
+    "closed": 105
   },
   "pullRequestDispositions": [
     {

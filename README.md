@@ -12,7 +12,7 @@ Pre-release commerce and warehouse platform for Iranian hardware/fittings retail
 > Staging remains noindex; current provider and inactive valuation modes are preserved.
 > [V1 reconciliation](docs/V1_RECONCILIATION.md) owns current evidence and every
 > open issue/PR disposition; [issue register](docs/V1_ISSUE_REGISTER.json) preserves
-> all 150 issue records. Unmerged/local work is distinct from delivered source.
+> all 151 issue records. Unmerged/local work is distinct from delivered source.
 
 ## Workspace
 
