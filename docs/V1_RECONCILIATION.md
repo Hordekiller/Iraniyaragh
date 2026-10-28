@@ -77,20 +77,27 @@ All 48 previously open issues were reconciled against their bodies and current s
 | [#431](https://github.com/Hordekiller/Iraniyaragh/issues/431) | DEPLOYED_NOT_ACCEPTED | [credit-return.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/credit/credit-return.service.ts). Credit-sale cancellation/returns/refund-liability commands deployed via #432; operator goods/refund evidence acceptance remains. General paid-order returns stay #348. |
 | [#450](https://github.com/Hordekiller/Iraniyaragh/issues/450) | DEPLOYED_NOT_ACCEPTED | [order-expiry-runtime.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/orders/order-expiry-runtime.ts). Durable payment-aware worker and checkout deadline recovery merged in #464; controlled live expiry/restart/reservation reconciliation remains required. Keep ORDER_EXPIRY_ENABLED unchanged. |
 
-### Open PR dispositions at checkpoint
+### Disposition of the ten previously open PRs
 
 | PR | Disposition | Action |
 | --- | --- | --- |
-| [#439](https://github.com/Hordekiller/Iraniyaragh/pull/439) | SUPERSEDED | Template implementation and both test files are byte-identical on main via #449; ADR-0030 on main is a superset. Close as implemented elsewhere. |
-| [#386](https://github.com/Hordekiller/Iraniyaragh/pull/386) | SUPERSEDED | Routing harness is on main; current Next routing and TLS tests supersede the older candidate. Transfer remaining historical status notes to this documentation reconciliation, then close duplicate. |
+| [#439](https://github.com/Hordekiller/Iraniyaragh/pull/439) | CLOSED_SUPERSEDED | Template implementation and both test files are byte-identical on main via #449; ADR-0030 on main is a superset. Closed as implemented elsewhere. |
+| [#386](https://github.com/Hordekiller/Iraniyaragh/pull/386) | CLOSED_SUPERSEDED | Routing harness is on main; current Next routing and TLS tests supersede the older candidate. Historical status notes are transferred to #487; the older duplicate is closed. |
 | [#468](https://github.com/Hordekiller/Iraniyaragh/pull/468) | NEEDS_SYNC | Reusable #393 ClamAV route/freshness candidate; rebase and pass all exact-head checks, then approved live updater acceptance. No automatic mirror/provider change. |
 | [#471](https://github.com/Hordekiller/Iraniyaragh/pull/471) | NEEDS_SYNC | Preserve catalog-axis candidate. Reconcile its migration/contracts/Admin and the new Next public templates on latest main before fresh CI; no claim it is deployed. |
 | [#460](https://github.com/Hordekiller/Iraniyaragh/pull/460) | DEFERRED | All-products homepage carousel extension remains outside the current V1 critical path; preserve candidate for explicit post-V1 prioritization. |
 | [#477](https://github.com/Hordekiller/Iraniyaragh/pull/477) | NEEDS_SYNC | Current workflow bump candidate lacks required successful Analyze/CodeQL contexts (CodeQL skipped). Sync with current main and obtain every required check; no merge bypass. |
-| [#483](https://github.com/Hordekiller/Iraniyaragh/pull/483) | DEFERRED | Prisma 7 is a breaking migration under #77. Keep current CLI/client paired at 6.19.3; do not merge during the V1 freeze. |
-| [#484](https://github.com/Hordekiller/Iraniyaragh/pull/484) | DEFERRED | class-validator 0.15 and API Playwright 1.64 require compatibility work; PDF Playwright/browser image must move together. Retain working runtime while reviewed separately. |
-| [#485](https://github.com/Hordekiller/Iraniyaragh/pull/485) | DEFERRED | eslint-plugin-react-refresh 0.4 to 0.5 is a potentially breaking 0.x family change; review separately after V1. |
-| [#486](https://github.com/Hordekiller/Iraniyaragh/pull/486) | DEFERRED | Nest Swagger 12 is a breaking upgrade under #77, separate from supported Nest/API/OpenAPI release work. |
+| [#483](https://github.com/Hordekiller/Iraniyaragh/pull/483) | CLOSED_DEFERRED | Prisma 7 is a breaking migration under #77. Keep current CLI/client paired at 6.19.3; do not merge during the V1 freeze. |
+| [#484](https://github.com/Hordekiller/Iraniyaragh/pull/484) | CLOSED_DEFERRED | class-validator 0.15 and API Playwright 1.64 require compatibility work; PDF Playwright/browser image must move together. Retain working runtime while reviewed separately. |
+| [#485](https://github.com/Hordekiller/Iraniyaragh/pull/485) | CLOSED_DEFERRED | eslint-plugin-react-refresh 0.4 to 0.5 is a potentially breaking 0.x family change; review separately after V1. |
+| [#486](https://github.com/Hordekiller/Iraniyaragh/pull/486) | CLOSED_DEFERRED | Nest Swagger 12 is a breaking upgrade under #77, separate from supported Nest/API/OpenAPI release work. |
+
+Current open PRs are #460 (deferred), #468 and #471 (source conflicts, needs sync), #477 (required checks incomplete, needs sync), and #487 (this documentation review). Closing a superseded/deferred PR is not a merge or a feature-acceptance claim.
+
+### Dependency alert and branch hygiene
+
+- One low-severity `deepmerge` advisory remains open, with no upstream patched version reported at this checkpoint. The lockfile reverse edge is `fork-ts-checker-webpack-plugin` → `deepmerge`, reached by `@nestjs/cli`; traversal from production importer dependency roots does not reach it. GitHub labels the advisory runtime, so this scoped source result is not an alert dismissal. Follow-up remains #77; no advisory or security control was suppressed.
+- All 34 remote branches were inventoried. Only `chore/repository-workflow`, proven an ancestor of main and not bound to a worktree/open PR, was removed. Its exact commit was retained in a local archive ref before the guarded remote deletion. The remaining 33 branches include main, active PR/worktree heads, explicit archives and historical squashed/unmerged heads; those were retained because non-ancestry alone cannot establish safe deletion. No local branch/worktree or uncommitted file was deleted.
 
 No candidate is merged merely for tidiness. Current exact-head protection remains mandatory; skipped/missing CodeQL is not a pass. Local worktrees, untracked files and the original workspace's uncommitted documentation edits remain untouched.
 

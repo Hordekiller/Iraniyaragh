@@ -3775,5 +3775,58 @@
     "total": 150,
     "open": 46,
     "closed": 104
-  }
+  },
+  "pullRequestDispositions": [
+    {
+      "pr": 386,
+      "state": "CLOSED_SUPERSEDED",
+      "tracking": "#487"
+    },
+    {
+      "pr": 439,
+      "state": "CLOSED_SUPERSEDED",
+      "tracking": "#487"
+    },
+    {
+      "pr": 460,
+      "state": "DEFERRED",
+      "tracking": "#487"
+    },
+    {
+      "pr": 468,
+      "state": "NEEDS_SYNC",
+      "tracking": "#487"
+    },
+    {
+      "pr": 471,
+      "state": "NEEDS_SYNC",
+      "tracking": "#487"
+    },
+    {
+      "pr": 477,
+      "state": "NEEDS_SYNC",
+      "tracking": "#487"
+    },
+    {
+      "pr": 483,
+      "state": "CLOSED_DEFERRED",
+      "tracking": "#77"
+    },
+    {
+      "pr": 484,
+      "state": "CLOSED_DEFERRED",
+      "tracking": "#77"
+    },
+    {
+      "pr": 485,
+      "state": "CLOSED_DEFERRED",
+      "tracking": "#77"
+    },
+    {
+      "pr": 486,
+      "state": "CLOSED_DEFERRED",
+      "tracking": "#77"
+    }
+  ],
+  "documentationPR": 487
 }
