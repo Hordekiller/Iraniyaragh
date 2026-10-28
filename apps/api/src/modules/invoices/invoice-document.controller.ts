@@ -1,7 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Header, Headers, HttpCode, Inject, Param, Post, Query, Res, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiCreatedResponse, ApiTags, ApiProperty, ApiResponse } from '@nestjs/swagger';
 import { IsInt, Min, Max } from 'class-validator';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { normalizeIdempotencyKey } from '../../common/idempotency-key';
