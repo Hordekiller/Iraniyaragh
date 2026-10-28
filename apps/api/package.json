@@ -46,7 +46,7 @@
     "ioredis": "^6.0.0",
     "jsonwebtoken": "9.0.3",
     "otplib": "13.5.0",
-    "playwright": "1.64.1",
+    "playwright": "1.55.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sanitize-html": "2.18.1",
@@ -67,6 +67,7 @@
     "prisma": "6.19.3",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "vite": "7.3.7"
   }
 }
