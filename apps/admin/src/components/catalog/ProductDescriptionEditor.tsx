@@ -387,8 +387,8 @@ export function ProductDescriptionEditor({
         mediaPicker={mediaPicker}
       />
       {mediaPickerHost}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-        <Stack direction="row" spacing={1}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
           <Button
             variant="contained"
             onClick={save}

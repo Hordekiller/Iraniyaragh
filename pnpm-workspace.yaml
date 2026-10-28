@@ -9,6 +9,8 @@ overrides:
   multer: 2.5.0
   # GHSA-27r3-jxmh-p828: reject trailing compressed request-body bytes safely.
   body-parser: 2.4.0
+  # GHSA-6pq8-jhm2-2vcw: guard comma-array stringification from untrusted objects.
+  qs: 6.16.1
   # ExcelJS accepts uuid.v4 from the patched uuid major; older uuid releases
   # are rejected by dependency-review for missing buffer bounds checks.
   uuid: 11.1.1

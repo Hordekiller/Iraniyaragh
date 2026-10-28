@@ -188,7 +188,7 @@ export function AttributeConfigEditor({
         )}
 
         {canWrite ? (
-          <Stack direction="row" spacing={1.5} alignItems="flex-end">
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'flex-end' }}>
             <FormField label="افزودن ویژگی" htmlFor="attribute-config-add" helperText="فقط ویژگی‌های فعال نمایش داده می‌شوند." disabled={candidates.length === 0}>
               <Select
                 id="attribute-config-add"
