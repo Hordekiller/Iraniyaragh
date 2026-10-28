@@ -7,7 +7,7 @@ import { CartProvider } from '../../state/CartProvider'
 import { commerceStub, signedInStore, testAuthProps } from '../../test/commerce'
 import { AppLayout } from './AppLayout'
 import { MemorySessionStore } from '../../lib/auth/session-store'
-import { CartPage } from '../../pages/CartPage'
+import { CartPage } from '../../views/CartPage'
 
 describe('AppLayout', () => {
   it('renders the shared RTL shell and live cart count', async () => {

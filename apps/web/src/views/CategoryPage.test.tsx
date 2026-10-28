@@ -51,10 +51,10 @@ function stubCatalog(overrides: Partial<CatalogApi> = {}): CatalogApi {
 
 function renderCategory(slug: string, api: CatalogApi) {
   return render(
-    <MemoryRouter initialEntries={[`/category/${slug}`]}>
+    <MemoryRouter initialEntries={[`/categories/${slug}`]}>
       <Routes>
         <Route
-          path="/category/:slug"
+          path="/categories/:slug"
           element={
             <CatalogProvider api={api}>
               <CategoryPage />
@@ -142,8 +142,8 @@ describe('CategoryPage', () => {
 
     await screen.findByRole('heading', { name: leaf.name })
     const breadcrumb = screen.getByRole('navigation', { name: 'مسیر دسته‌بندی' })
-    expect(within(breadcrumb).getByRole('link', { name: CATEGORY.name })).toHaveAttribute('href', '/category/power-tools')
-    expect(within(breadcrumb).getByRole('link', { name: child.name })).toHaveAttribute('href', '/category/drills')
+    expect(within(breadcrumb).getByRole('link', { name: CATEGORY.name })).toHaveAttribute('href', '/categories/power-tools')
+    expect(within(breadcrumb).getByRole('link', { name: child.name })).toHaveAttribute('href', '/categories/drills')
     expect(screen.getByRole('link', { name: /دریل چکشی رونیکس/ })).toBeInTheDocument()
   })
 
@@ -156,14 +156,14 @@ describe('CategoryPage', () => {
           <CatalogProvider api={stubCatalog({ listProducts })}>
             <CategoryPage />
           </CatalogProvider>
-          <button onClick={() => navigate('/category/hand-tools')}>next</button>
+          <button onClick={() => navigate('/categories/hand-tools')}>next</button>
         </div>
       )
     }
     render(
-      <MemoryRouter initialEntries={['/category/power-tools']}>
+      <MemoryRouter initialEntries={['/categories/power-tools']}>
         <Routes>
-          <Route path="/category/:slug" element={<Harness />} />
+          <Route path="/categories/:slug" element={<Harness />} />
         </Routes>
       </MemoryRouter>,
     )

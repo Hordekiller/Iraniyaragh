@@ -36,7 +36,7 @@ export type AuthProviderProps = {
  * explicitly set, so a shipped build without the opt-in can never load a fake
  * auth path (AUTH_CONTRACT §17).
  */
-const fixtureAuthEnabled = import.meta.env.VITE_FIXTURE_AUTH === "true";
+const fixtureAuthEnabled = process.env.NEXT_PUBLIC_FIXTURE_AUTH === "true";
 
 /** Monotonic clock injected into the controller (module scope keeps render pure). */
 const nowClock = (): number => Date.now();

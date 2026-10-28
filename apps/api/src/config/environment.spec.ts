@@ -37,6 +37,7 @@ const validProductionEnvironment = {
   NODE_ENV: 'production',
   CORS_ORIGINS: 'https://admin.example.com,https://shop.example.com',
   STOREFRONT_ORIGIN: 'https://shop.example.com',
+  PUBLIC_WEB_ORIGIN: 'https://shop.example.com',
   JWT_ACCESS_SECRET: 'access-secret-with-at-least-32-characters',
   AUTH_HASH_SECRET: 'hash-secret-with-at-least-32-characters',
   OBJECT_STORAGE_SECRET_KEY: 'object-secret-with-at-least-32-characters',

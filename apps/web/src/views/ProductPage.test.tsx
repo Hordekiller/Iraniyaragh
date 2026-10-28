@@ -19,10 +19,10 @@ import { ProductPage } from './ProductPage'
 
 function renderPage(store = signedInStore(), commerce = commerceStub()) {
   return render(
-    <MemoryRouter initialEntries={['/product/ronix-2210-hammer-drill']}>
+    <MemoryRouter initialEntries={['/products/ronix-2210-hammer-drill']}>
       <Routes>
         <Route
-          path="/product/:slug"
+          path="/products/:slug"
           element={
             <ToastProvider>
               <AuthProvider {...testAuthProps(store)}>
@@ -51,10 +51,10 @@ function renderPageWithProduct(product: CatalogProduct) {
     })),
   }
   return render(
-    <MemoryRouter initialEntries={['/product/ronix-2210-hammer-drill']}>
+    <MemoryRouter initialEntries={['/products/ronix-2210-hammer-drill']}>
       <Routes>
         <Route
-          path="/product/:slug"
+          path="/products/:slug"
           element={
             <ToastProvider>
               <AuthProvider {...testAuthProps(signedInStore())}>

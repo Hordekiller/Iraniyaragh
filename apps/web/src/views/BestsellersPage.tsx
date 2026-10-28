@@ -6,7 +6,7 @@ import { toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import type { CatalogProduct } from '../services/catalog/types'
 
-const fixtureCatalogEnabled = import.meta.env.VITE_FIXTURE_CATALOG === 'true'
+const fixtureCatalogEnabled = process.env.NEXT_PUBLIC_FIXTURE_CATALOG === 'true'
 
 export function BestsellersPage() {
   const api = useCatalogApi()

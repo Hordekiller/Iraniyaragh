@@ -1,3 +1,5 @@
+'use client'
+
 import { LegalDocument } from '../components/legal/LegalDocument'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../lib/routes'

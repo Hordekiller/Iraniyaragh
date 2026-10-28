@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -27,17 +29,17 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   UNKNOWN: 'موجودی در حال بررسی',
 }
 
-export function ProductPage() {
+export function ProductPage({ initialProduct, serverStructuredData = false }: { initialProduct?: CatalogProduct; serverStructuredData?: boolean } = {}) {
   const api = useCatalogApi()
   const { state: cartState, add, setQuantity, quantityOf, isInCart } = useCart()
   const { show } = useToast()
   const navigate = useNavigate()
   const { slug = '' } = useParams<{ slug: string }>()
 
-  const [product, setProduct] = useState<CatalogProduct | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [product, setProduct] = useState<CatalogProduct | null>(initialProduct ?? null)
+  const [loading, setLoading] = useState(!initialProduct)
   const [notFound, setNotFound] = useState(false)
-  const [selectedVariantId, setSelectedVariantId] = useState('')
+  const [selectedVariantId, setSelectedVariantId] = useState((initialProduct?.variants.find(variant => variant.stockStatus === 'IN_STOCK' || variant.stockStatus === 'LOW_STOCK') ?? initialProduct?.variants[0])?.id ?? '')
 
   const [resolvedSlug, setResolvedSlug] = useState(slug)
   if (resolvedSlug !== slug) {
@@ -48,6 +50,7 @@ export function ProductPage() {
   }
 
   useEffect(() => {
+    if (initialProduct?.slug === slug) return
     let cancelled = false
     api
       .getProductBySlug(slug)
@@ -70,7 +73,7 @@ export function ProductPage() {
     return () => {
       cancelled = true
     }
-  }, [api, slug])
+  }, [api, slug, initialProduct])
 
   if (loading)
     return (
@@ -144,7 +147,7 @@ export function ProductPage() {
   // Structured data uses only values that actually exist in the API response;
   // counts and dates that are not returned are never invented (spec §7).
   const structuredData: Record<string, unknown>[] = []
-  if (product.media.length > 0) {
+  if (!serverStructuredData && product.media.length > 0) {
     const imageUrls = product.media
       .filter((media) => media.kind === 'IMAGE')
       .flatMap((media) => media.sources.map((source) => source.url))
@@ -159,7 +162,7 @@ export function ProductPage() {
       productData.description = richTextToPlainText(product.description)
     structuredData.push(productData)
   }
-  for (const media of product.media) {
+  for (const media of serverStructuredData ? [] : product.media) {
     if (media.kind !== 'VIDEO') continue
     const videoData: Record<string, unknown> = {
       '@context': 'https://schema.org',
@@ -176,7 +179,7 @@ export function ProductPage() {
 
   return (
     <div className="max-w-[1280px] mx-auto px-4 pt-5 pb-[calc(11rem+env(safe-area-inset-bottom))] lg:px-6 lg:py-8">
-      {structuredData.length > 0 && (
+      {!serverStructuredData && structuredData.length > 0 && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }}

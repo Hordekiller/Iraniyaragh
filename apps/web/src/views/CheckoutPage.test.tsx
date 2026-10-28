@@ -95,8 +95,8 @@ describe('CheckoutPage', () => {
     expect(screen.getByLabelText('نام تحویل‌گیرنده')).toHaveValue('علی رضایی')
     expect(screen.getByLabelText('نشانی کامل')).toHaveValue('خیابان امام خمینی، پلاک ۴۲')
     expect(screen.queryByRole('button', { name: 'دریافت دوباره نشانی‌ها' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'حریم خصوصی' })).toHaveAttribute('href', '/privacy')
-    expect(screen.getByRole('link', { name: 'قوانین و شرایط فروش' })).toHaveAttribute('href', '/terms')
+    expect(screen.getByRole('link', { name: 'حریم خصوصی' })).toHaveAttribute('href', '/policies/privacy')
+    expect(screen.getByRole('link', { name: 'قوانین و شرایط فروش' })).toHaveAttribute('href', '/policies/terms')
   })
 
   it('defers OTP until Checkout and explains that the Guest Cart is preserved', async () => {

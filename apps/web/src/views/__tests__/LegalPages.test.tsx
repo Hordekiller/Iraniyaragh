@@ -19,6 +19,6 @@ describe('restored legal pages', () => {
     expect(screen.getByText(/در صورت فعال بودن درگاه/)).toBeInTheDocument()
     expect(screen.getByText(/ثبت سفارش به معنی پرداخت نیست/)).toBeInTheDocument()
     expect(screen.getAllByText(/در انتظار اعلام فروشنده/)).toHaveLength(2)
-    expect(screen.getByRole('link', { name: 'حریم خصوصی' })).toHaveAttribute('href', '/privacy')
+    expect(screen.getByRole('link', { name: 'حریم خصوصی' })).toHaveAttribute('href', '/policies/privacy')
   })
 })

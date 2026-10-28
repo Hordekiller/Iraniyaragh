@@ -1,0 +1,2 @@
+'use client'
+export default function ErrorPage({ reset }: { reset: () => void }) { return <div className="max-w-[1280px] mx-auto p-8 text-center"><h1 className="text-xl font-black">دریافت اطلاعات فروشگاه ممکن نشد</h1><p className="mt-3">اطلاعات قیمت و موجودی تأیید نشد. لطفاً دوباره تلاش کنید.</p><button className="mt-6 rounded-full bg-slate-900 text-white px-5 py-3" onClick={reset}>تلاش دوباره</button></div> }
