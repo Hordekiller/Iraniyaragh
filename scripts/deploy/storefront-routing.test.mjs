@@ -46,6 +46,7 @@ test(
             host: req.headers.host,
           });
           res.setHeader("X-Test-Upstream", name);
+          res.setHeader("Content-Type", "text/plain; charset=utf-8");
           if (req.url.includes("missing")) res.statusCode = 404;
           if (req.url.includes("removed")) res.statusCode = 410;
           if (req.url.includes("unavailable")) res.statusCode = 503;
@@ -80,6 +81,8 @@ test(
           "1",
           "-subj",
           "/CN=localhost",
+          "-addext",
+          "subjectAltName=DNS:localhost,IP:127.0.0.1",
           "-keyout",
           join(directory, "privkey.pem"),
           "-out",
@@ -131,7 +134,8 @@ test(
               port: tlsPort,
               path,
               method,
-              rejectUnauthorized: false,
+              ca: readFileSync(join(directory, "fullchain.pem")),
+              servername: "localhost",
               headers: { Host: "iraniyaragh.com", ...headers },
             },
             (res) => {

@@ -1,3 +1,4 @@
+import { Parser } from 'htmlparser2'
 import type { CatalogProduct } from '../services/catalog/types'
 import { serializeJsonLd } from '../lib/json-ld'
 import { absolute, entityPath } from './policy'
@@ -8,12 +9,20 @@ export function JsonLd({ data }: { data: unknown }) {
 export function breadcrumb(items: { name: string; path: string }[]) {
   return { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map((item, index) => ({ '@type': 'ListItem', position: index + 1, name: item.name, item: absolute(item.path) })) }
 }
+/** Plain text extraction, never a regex-based HTML sanitizer. Embedding stays escaped. */
 export function plainDescription(html: string | null) {
-  return (html ?? '').replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/giu, '').replace(/<[^>]*>/gu, ' ').replace(/&#(?:x([\da-f]+)|(\d+));/giu, (_, hex, decimal) => {
-    const code = parseInt(hex ?? decimal, hex ? 16 : 10)
-    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : ''
-  }).replace(/&(nbsp|amp|quot|apos|lt|gt);/gu, (_, name: string) => ({nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>'}[name]!)).replace(/\s+/gu, ' ').trim()
+  const text: string[] = []
+  const hidden = new Set(['script', 'style', 'template'])
+  let hiddenDepth = 0
+  const parser = new Parser({
+    onopentag(name) { if (hidden.has(name)) hiddenDepth++; if (!hiddenDepth) text.push(' ') },
+    ontext(value) { if (!hiddenDepth) text.push(value) },
+    onclosetag(name) { if (hidden.has(name) && hiddenDepth) hiddenDepth--; if (!hiddenDepth) text.push(' ') },
+  }, { decodeEntities: true })
+  parser.end(html ?? '')
+  return text.join('').replace(/\s+/gu, ' ').trim()
 }
+
 export function productJsonLd(product: CatalogProduct) {
   const images = product.media.filter(item => item.kind === 'IMAGE').flatMap(item => item.sources.map(source => source.url))
   const url = absolute(entityPath('products', product.slug))
