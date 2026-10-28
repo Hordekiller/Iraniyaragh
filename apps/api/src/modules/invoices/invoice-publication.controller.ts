@@ -32,7 +32,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { Response } from 'express';
+import type { Response } from 'express';
 import {
   CurrentPrincipal,
   RequireAuthentication,

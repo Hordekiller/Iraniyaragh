@@ -67,6 +67,7 @@
     "prisma": "6.19.3",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.72.0",
-    "vitest": "4.1.12"
+    "vitest": "4.1.12",
+    "vite": "7.3.7"
   }
 }
