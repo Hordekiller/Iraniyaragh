@@ -7,6 +7,14 @@ import {
 } from './content-sanitizer';
 
 describe('sanitizeDescriptionFragment', () => {
+  it('keeps safe links when dropping images on product create/import without throwing', () => {
+    const result = sanitizeDescriptionFragment('<h2>راهنمای نصب</h2><p><a href="https://example.test/guide" target="_blank">راهنما</a><img src="https://example.test/image.png"></p>', { images: 'drop' });
+    expect(result.html).toBe('<h2>راهنمای نصب</h2><p><a href="https://example.test/guide" target="_blank" rel="noopener noreferrer">راهنما</a></p>');
+    expect(result.imageIds).toEqual([]);
+  });
+  it.each(['javascript:alert(1)', 'vbscript:msgbox(1)', 'data:text/html,test', '//untrusted.example/path'])('still rejects unsafe link schemes in create/import mode: %s', href => {
+    expect(sanitizeDescriptionFragment(`<p><a href="${href}">پیوند</a></p>`, { images: 'drop' }).html).toBe('<p><a>پیوند</a></p>');
+  });
   it('returns null html for null, undefined and empty input', () => {
     expect(sanitizeDescriptionFragment(null)).toEqual({ html: null, imageIds: [] });
     expect(sanitizeDescriptionFragment(undefined)).toEqual({ html: null, imageIds: [] });

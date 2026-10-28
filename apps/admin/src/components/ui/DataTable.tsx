@@ -426,7 +426,7 @@ export function DataTable<T>({
         </Box>
       ) : null}
 
-      <TableContainer sx={{ maxHeight: 520 }}>
+      <TableContainer sx={{ maxHeight: 520, position: 'relative' }}>
         <Table stickyHeader size="small" sx={{ minWidth: 720 }}>
           <Box
             component="caption"

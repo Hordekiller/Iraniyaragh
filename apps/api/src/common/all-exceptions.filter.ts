@@ -74,6 +74,18 @@ export class AllExceptionsFilter implements OnModuleInit {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Pragma', 'no-cache');
 
+    // body-parser errors are plain Errors, not Nest HttpExceptions. Never log
+    // their body or classify a definite transport rejection as an uncertain 500.
+    if (typeof exception === 'object' && exception !== null &&
+      'type' in exception && exception.type === 'entity.too.large' &&
+      'status' in exception && exception.status === HttpStatus.PAYLOAD_TOO_LARGE) {
+      response.status(HttpStatus.PAYLOAD_TOO_LARGE).json(buildErrorEnvelope({
+        code: 'PAYLOAD_TOO_LARGE', statusCode: HttpStatus.PAYLOAD_TOO_LARGE,
+        message: 'The JSON request exceeds the allowed size.', requestId,
+      }));
+      return;
+    }
+
     if (exception instanceof HttpException) {
       const { statusCode, code, message, details } = normalizeHttpError(exception);
 

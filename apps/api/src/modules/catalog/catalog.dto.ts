@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { CONTENT_HTML_LIMIT_UTF16 } from '../content/content-sanitizer';
 import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsDefined, IsEnum, IsIn, IsInt, IsNotIn, IsObject, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
@@ -47,7 +48,7 @@ export class ProductVariantDto {
 export class ProductCreateDto {
   @IsString() @MaxLength(250) name!: string;
   @IsString() @Matches(SLUG) @MaxLength(250) slug!: string;
-  @IsOptional() @IsString() @MaxLength(100_000) description?: string;
+  @IsOptional() @IsString() @MaxLength(CONTENT_HTML_LIMIT_UTF16) description?: string;
   @IsOptional() @IsString() @MaxLength(128) brandId?: string;
   @IsOptional() @IsString() @MaxLength(128) categoryId?: string;
   @IsOptional() @IsEnum(['DRAFT']) status?: 'DRAFT';
@@ -55,7 +56,7 @@ export class ProductCreateDto {
 }
 
 export class ProductDescriptionDto {
-  @IsOptional() @IsString() @MaxLength(100_000) description?: string | null;
+  @IsOptional() @IsString() @MaxLength(CONTENT_HTML_LIMIT_UTF16) description?: string | null;
   @IsInt() @Min(0) expectedVersion!: number;
 }
 

@@ -209,6 +209,8 @@ function extractMediaId(tag: string): string | null {
   return match ? match[1] : null;
 }
 
-function protectImagesFromExternalSources(preserveImages: boolean) {
-  return preserveImages ? { img: ALLOWED_SCHEMES } : undefined;
+function protectImagesFromExternalSources(preserveImages: boolean): Record<string, string[]> {
+  // sanitize-html expects an object when checking a[href]. Explicit undefined
+  // overrides its default and throws for links on create/import (images: drop).
+  return preserveImages ? { img: ALLOWED_SCHEMES } : {};
 }
