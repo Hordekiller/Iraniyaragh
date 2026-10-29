@@ -1,6 +1,6 @@
 # Canonical PR, Review and Merge Workflow
 
-Protection read back: **2026-10-28**. Applies to contributors and agents.
+Protection read back: **2026-10-29**. Applies to contributors and agents.
 Current source/runtime and release gates: [V1 reconciliation](V1_RECONCILIATION.md).
 
 ## Current main protection
@@ -63,7 +63,8 @@ Never lower coverage or alter application behavior to hide infrastructure failur
 #213 remains open until an organization administrator confirms the historic
 suspension banner/account state. Green scans alone do not prove that state.
 Production audit passing does not imply that all default-branch advisory alerts
-are resolved; the scoped #441/#442 candidates remain distinct until integrated.
+are resolved. Scoped fixes #441/#442 are merged and deployed; remaining advisory
+triage stays tracked under #77 without suppressing security controls.
 
 ## Final merge checklist
 

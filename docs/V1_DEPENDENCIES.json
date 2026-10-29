@@ -1,5 +1,5 @@
 {
-  "checkpointUTC": "2026-10-28",
+  "checkpointUTC": "2026-10-29",
   "sourceBaseline": "92b23a43aa095a563d798712d24d1ffdf8020f14",
   "scope": "Declared invoice/report issue dependencies and current execution/release gates; not an acceptance claim.",
   "issueDependencies": [
@@ -63,14 +63,14 @@
   "releaseGates": [
     {
       "gate": "reviewed_security_and_provenance",
-      "candidatePRs": [
+      "deliveredPRs": [
         448,
         441,
         442,
         446,
         440
       ],
-      "state": "Unmerged. Rebase/latest-main exact-head checks and engineering review under current operator policy; combined validation after 2–3 merges."
+      "state": "Merged and deployed in 92b23a4; combined main CI, security checks and exact-SHA runtime provenance verified. Green audits do not dismiss remaining advisory alerts or establish provider acceptance."
     },
     {
       "gate": "stocktake_reconciliation",
@@ -78,10 +78,10 @@
         347,
         352
       ],
-      "candidatePRs": [
+      "deliveredPRs": [
         444
       ],
-      "state": "candidate tests green; live operator acceptance open"
+      "state": "Two-location automated reconciliation merged and deployed via #444; bounded test issue #352 closed. Physical-count operator acceptance remains #347/#8."
     },
     {
       "gate": "admin_session_recovery",

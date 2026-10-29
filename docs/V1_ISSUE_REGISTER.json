@@ -2659,7 +2659,7 @@
       "apps/api/src/modules/orders/checkout.controller.ts",
       "apps/api/src/modules/customers/customer-self.controller.ts",
       "apps/api/src/modules/customers/customer-self.integration-spec.ts",
-      "apps/web/src/pages/CheckoutPage.tsx",
+      "apps/web/src/views/CheckoutPage.tsx",
       "apps/web/src/components/content/HeroSlider.tsx",
       "e2e/tests/admin-staff-order.spec.ts"
     ],
@@ -2667,7 +2667,7 @@
       "apps/api/src/modules/payments/payment-verification.service.ts",
       "apps/api/src/modules/orders/fulfillment-pick.controller.ts",
       "apps/api/src/modules/payments/payment-verification.integration-spec.ts",
-      "apps/web/src/pages/PaymentReturnPage.tsx"
+      "apps/web/src/views/PaymentReturnPage.tsx"
     ],
     "purchasing": [
       "apps/api/src/modules/purchasing/purchasing.service.ts",
@@ -2725,7 +2725,7 @@
       "apps/api/src/modules/invoices/invoice-publication.service.ts",
       "apps/api/src/modules/invoices/invoice-draft.integration-spec.ts",
       "apps/api/src/modules/invoices/invoice-document.integration-spec.ts",
-      "apps/web/src/pages/AccountInvoicesPage.tsx",
+      "apps/web/src/views/AccountInvoicesPage.tsx",
       "docs/adr/0027-immutable-store-invoice-issuance.md"
     ]
   },
@@ -3930,5 +3930,6 @@
     }
   ],
   "documentationPR": 487,
-  "pullRequestMetadataCheckpointUTC": "2026-10-28"
+  "pullRequestMetadataCheckpointUTC": "2026-10-28",
+  "metadataVerifiedAtUTC": "2026-10-29"
 }

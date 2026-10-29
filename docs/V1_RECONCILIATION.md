@@ -33,7 +33,7 @@ All 48 previously open issues were reconciled against their bodies and current s
 | [#5](https://github.com/Hordekiller/Iraniyaragh/issues/5) | DEPLOYED_NOT_ACCEPTED | [order-command.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/orders/order-command.service.ts). Real cart, checkout, immutable order snapshots and Admin commands implemented; final customer/operator lifecycle acceptance remains #389/#401/#450. |
 | [#6](https://github.com/Hordekiller/Iraniyaragh/issues/6) | DEPLOYED_NOT_ACCEPTED | [OPERATIONS.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/OPERATIONS.md). Verified callback/payment/fulfillment/shipment/notification implementations exist and controlled historical evidence is bounded. Provider, uncertainty/refund and full dispatch/delivery acceptance remain. |
 | [#7](https://github.com/Hordekiller/Iraniyaragh/issues/7) | PARTIAL | [stocktake.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/stocktake/stocktake.service.ts). Purchasing/receiving/stocktake and operational reports deployed; general paid-order returns #348, final warehouse UAT and applicable financial gates remain. |
-| [#8](https://github.com/Hordekiller/Iraniyaragh/issues/8) | PARTIAL | [V1_RECONCILIATION.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/V1_RECONCILIATION.md). Latest main is deployed with exact image digests, restored backup and public smoke. V1 tag remains withheld: access, general returns, corrections, articles and operational acceptance remain. |
+| [#8](https://github.com/Hordekiller/Iraniyaragh/issues/8) | PARTIAL | [Deployment/restore/smoke evidence](https://github.com/Hordekiller/Iraniyaragh/pull/470#issuecomment-6471511791). Release `92b23a4` is deployed with exact image digests, restored backup and public smoke. V1 tag remains withheld: access, general returns, corrections, articles and operational acceptance remain. |
 | [#77](https://github.com/Hordekiller/Iraniyaragh/issues/77) | OUT_OF_SCOPE | [dependabot.yml](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/.github/dependabot.yml). Owner deferred the broad breaking framework/tool train for V1. Compatible patch/minor updates #470/#478 landed. Prisma 7, Nest Swagger 12 and other breaking candidates need a separate post-V1 decision, not automatic merge. |
 | [#81](https://github.com/Hordekiller/Iraniyaragh/issues/81) | DEPLOYED_NOT_ACCEPTED | [inventory-expiry.integration-spec.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/inventory/inventory-expiry.integration-spec.ts). Grouped bounded reservation expiry and PostgreSQL query/concurrency evidence merged through #464. Keep runtime enablement and controlled live reconciliation linked to #450. |
 | [#122](https://github.com/Hordekiller/Iraniyaragh/issues/122) | PARTIAL | [SEO_GEO_AI_DISCOVERY_PLAN.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/SEO_GEO_AI_DISCOVERY_PLAN.md). Accepted rendering migration and lifecycle-safe catalog discovery deployed. Articles, Merchant feed, IndexNow and field acceptance remain; AI retrieval #128 is post-V1. |
@@ -106,6 +106,18 @@ No candidate is merged merely for tidiness. Current exact-head protection remain
 - #382 delivered the permission-based Admin baseline; this is not runtime role administration #359.
 - #384 corrected deployment execution/path handling; current official deploy completed at the exact selected SHA.
 - #385 corrected the Admin canonical routing loop. Main includes the routing harness and evolved Next/TLS regression checks in `e2e/tests/nginx-routing.spec.ts`; current public Admin HTTPS and full CI passed.
+
+### Final metadata verification — 2026-10-29 UTC
+
+All 151 issue IDs/states still match GitHub (46 open / 105 closed); every open
+issue has a current disposition and next action. Linked PR head/merge/state
+metadata matches the live inventory. Source evidence groups now point to the
+Next migration's retained `src/views` files. The structured dependency gates
+record #440/#441/#442/#446/#448 and #444 as delivered, with physical stocktake
+acceptance kept separate. Current branch protection was read back unchanged;
+PR #487 has no unresolved review threads. This is documentation verification,
+not a new runtime/provider acceptance or a repeat deployment. The final amended
+head must pass all nine required checks before normal merge.
 
 ## Historical reconciliation snapshots — through 2026-10-20
 
