@@ -3,7 +3,8 @@ import { Parser } from 'htmlparser2';
 
 const SCOPE = '[data-rich-text="true"]';
 const IDENTIFIER = /^[A-Za-z][A-Za-z0-9_-]{0,99}$/u;
-const SELECTOR_TOKEN = /\s+|[>+~]|[.#][A-Za-z][A-Za-z0-9_-]*|\*|[a-z][a-z0-9-]*|::?(?:-webkit-details-marker|focus-visible|first-child|last-child|before|after|hover)|\[open\]/gy;
+const SELECTOR_TOKEN = /\s+|[>+~]|[.#][A-Za-z][A-Za-z0-9_-]*|\*|[a-z][a-z0-9-]*|::?[a-z-]+|\[open\]/y;
+const PSEUDOS = new Set([':hover', ':focus-visible', ':first-child', ':last-child', ':before', ':after', '::before', '::after', '::-webkit-details-marker']);
 const FORBIDDEN_TAGS = new Set(['html', 'body', 'head', 'script', 'style', 'iframe', 'input', 'button', 'form']);
 const PROPERTIES = new Set([
   'color', 'background', 'background-color', 'background-image', 'box-shadow',
@@ -22,6 +23,28 @@ const PROPERTIES = new Set([
   'cursor', 'list-style', 'float', 'outline', 'outline-offset', 'content',
 ]);
 const FUNCTIONS = new Set(['rgb', 'rgba', 'linear-gradient', 'clamp', 'min', 'max', 'minmax', 'repeat', 'calc', 'scale']);
+const PROPERTY_VALUES: Record<string, RegExp> = {
+  position: /^(?:static|relative|absolute)$/u,
+  'font-family': /^inherit$/u,
+  display: /^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|table|table-row|table-cell|none)$/u,
+  cursor: /^(?:auto|default|pointer|text)$/u,
+  transition: /^(?:background|background-color|color|opacity)\s+(?:0?\.\d+|[01])s(?:\s+(?:ease|linear|ease-in|ease-out))?$/u,
+};
+
+function onlyPresentationFunctions(value: string): boolean {
+  let word: { name: string; end: number } | null = null;
+  // Consume each word once instead of repeatedly backtracking over identifiers
+  // that are not followed by an opening parenthesis.
+  for (const token of value.matchAll(/[A-Za-z-]+|\(/gu)) {
+    if (token[0] !== '(') {
+      word = { name: token[0].toLowerCase(), end: token.index + token[0].length };
+      continue;
+    }
+    if (word && !value.slice(word.end, token.index).trim() && !FUNCTIONS.has(word.name)) return false;
+    word = null;
+  }
+  return true;
+}
 
 export function descriptionId(value: string): string | undefined {
   if (!IDENTIFIER.test(value.startsWith('iyc-') ? value.slice(4) : value)) return undefined;
@@ -38,12 +61,9 @@ function declaration(node: Declaration): string | null {
   if (!/^[A-Za-z0-9#%.,()\s/+*-]+$/u.test(value) || value.includes('/*') || value.includes('--')) return null;
   if ([...value.matchAll(/(?:^|[^A-Za-z0-9#])((?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)/gu)].some(match => Number(match[1]) > 4096)) return null;
   if ([...value.matchAll(/\brepeat\s*\(\s*(\d+(?:[eE][+-]?\d+)?)/gu)].some(match => Number(match[1]) > 12)) return null;
-  for (const match of value.matchAll(/([A-Za-z-]+)\s*\(/gu)) if (!FUNCTIONS.has(match[1]!.toLowerCase())) return null;
-  if (property === 'position' && !/^(?:static|relative|absolute)$/u.test(value)) return null;
-  if (property === 'font-family' && value !== 'inherit') return null;
-  if (property === 'display' && !/^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|table|table-row|table-cell|none)$/u.test(value)) return null;
-  if (property === 'cursor' && !/^(?:auto|default|pointer|text)$/u.test(value)) return null;
-  if (property === 'transition' && !/^(?:background|background-color|color|opacity)\s+(?:0?\.\d+|[01])s(?:\s+(?:ease|linear|ease-in|ease-out))?$/u.test(value)) return null;
+  if (!onlyPresentationFunctions(value)) return null;
+  const constraint = PROPERTY_VALUES[property];
+  if (constraint && !constraint.test(value)) return null;
   return `${property}:${value}`;
 }
 
@@ -55,6 +75,14 @@ export function descriptionInlineStyle(input: string): string {
   } catch { return ''; }
 }
 
+function safeSelectorToken(value: string): string | null {
+  if (FORBIDDEN_TAGS.has(value)) return null;
+  if (value.startsWith(':') && !PSEUDOS.has(value)) return null;
+  if (!value.startsWith('#')) return value;
+  const id = descriptionId(value.slice(1));
+  return id ? `#${id}` : null;
+}
+
 function scopedSelector(input: string): string | null {
   let source = input.trim();
   if (source.startsWith(`${SCOPE} `)) source = source.slice(SCOPE.length).trimStart();
@@ -64,14 +92,10 @@ function scopedSelector(input: string): string | null {
   while (SELECTOR_TOKEN.lastIndex < source.length) {
     const at = SELECTOR_TOKEN.lastIndex;
     const token = SELECTOR_TOKEN.exec(source);
-    if (!token || token.index !== at) return null;
-    const value = token[0];
-    if (FORBIDDEN_TAGS.has(value)) return null;
-    if (value.startsWith('#')) {
-      const id = descriptionId(value.slice(1));
-      if (!id) return null;
-      tokens.push(`#${id}`);
-    } else tokens.push(value);
+    if (token?.index !== at) return null;
+    const value = safeSelectorToken(token[0]);
+    if (value === null) return null;
+    tokens.push(value);
   }
   if (/^[>+~]/u.test(source)) return null;
   return `${SCOPE} ${tokens.join('')}`;

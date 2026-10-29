@@ -7,7 +7,9 @@ export function productStructuredData(product: CatalogProduct, url: string, desc
   // catalog prices are not free offers; breadcrumbs/content remain available.
   if (!variant || product.priceAvailable === false || variant.price?.currency !== 'IRR' || !/^\d+$/u.test(variant.price.amount)) return null
   const images = product.media.filter(item => item.kind === 'IMAGE').flatMap(item => item.sources.map(source => source.url))
-  const availability = variant.stockStatus === 'OUT_OF_STOCK' ? 'https://schema.org/OutOfStock' : variant.stockStatus === 'IN_STOCK' || variant.stockStatus === 'LOW_STOCK' ? 'https://schema.org/InStock' : undefined
+  let availability: string | undefined
+  if (variant.stockStatus === 'OUT_OF_STOCK') availability = 'https://schema.org/OutOfStock'
+  else if (variant.stockStatus === 'IN_STOCK' || variant.stockStatus === 'LOW_STOCK') availability = 'https://schema.org/InStock'
   return {
     '@context': 'https://schema.org', '@type': 'Product', name: product.name, url,
     ...(images.length ? { image: images } : {}),

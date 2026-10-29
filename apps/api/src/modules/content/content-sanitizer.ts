@@ -156,7 +156,8 @@ export function sanitizeDescriptionFragment(
   if (html.trim() === '') return { html: null, imageIds: [] };
   // Only parser-compiled, scoped presentation rules can cross this boundary.
   // Raw style tags were discarded by sanitize-html above.
-  const trimmed = `${styles ? `<style>${styles}</style>` : ''}${html.trim()}`;
+  const stylesheet = styles ? `<style>${styles}</style>` : '';
+  const trimmed = stylesheet + html.trim();
   assertWithinLimit(trimmed, limit);
 
   if (!preserveImages) return { html: trimmed, imageIds: [] };

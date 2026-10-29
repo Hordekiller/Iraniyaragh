@@ -126,7 +126,7 @@ export function RichTextEditor({
           spellcheck: false,
         });
         editorRef.current = editor;
-        editor.editor.setAttribute('data-rich-text', 'true');
+        editor.editor.dataset.richText = 'true';
         Object.assign(editor.editor.style, { position: 'relative', isolation: 'isolate', contain: 'layout paint' });
         preserveRawHtmlSource(editor);
         // WYSIWYG synchronization is throttled by Jodit. Publish native input
