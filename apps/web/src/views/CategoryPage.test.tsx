@@ -82,14 +82,14 @@ describe('CategoryPage', () => {
     renderCategory('nope', stubCatalog({ listProducts: vi.fn(async () => ({ items: [], meta: { page: 1, perPage: 24, total: 0, pages: 0 } })) }))
 
     expect(await screen.findByRole('heading', { name: 'دسته‌بندی' })).toBeInTheDocument()
-    expect(screen.getByText('هیچ محصولی در این دسته‌بندی موجود نیست.')).toBeInTheDocument()
+    expect(await screen.findByText('هیچ محصولی در این دسته‌بندی موجود نیست.')).toBeInTheDocument()
   })
 
   it('shows an empty hint for a known category without products', async () => {
     renderCategory('power-tools', stubCatalog({ listProducts: vi.fn(async () => ({ items: [], meta: { page: 1, perPage: 24, total: 0, pages: 0 } })) }))
 
     expect(await screen.findByRole('heading', { name: 'ابزار برقی' })).toBeInTheDocument()
-    expect(screen.getByText('هیچ محصولی در این دسته‌بندی موجود نیست.')).toBeInTheDocument()
+    expect(await screen.findByText('هیچ محصولی در این دسته‌بندی موجود نیست.')).toBeInTheDocument()
   })
 
   it('shows a Persian error alert when the category request fails', async () => {
@@ -144,7 +144,7 @@ describe('CategoryPage', () => {
     const breadcrumb = screen.getByRole('navigation', { name: 'مسیر دسته‌بندی' })
     expect(within(breadcrumb).getByRole('link', { name: CATEGORY.name })).toHaveAttribute('href', '/categories/power-tools')
     expect(within(breadcrumb).getByRole('link', { name: child.name })).toHaveAttribute('href', '/categories/drills')
-    expect(screen.getByRole('link', { name: /دریل چکشی رونیکس/ })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /دریل چکشی رونیکس/ })).toBeInTheDocument()
   })
 
   it('re-fetches when the slug route parameter changes', async () => {
