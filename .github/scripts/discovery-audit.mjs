@@ -103,7 +103,7 @@ function validatePage(html, headers, pageUrl) {
     }
     Object.values(node).forEach(value => { if (value && typeof value === "object") check(value); });
   }
-  for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/giu)) {
+  for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/giu)) {
     if (attributes(match[1]).type?.toLowerCase() === "application/ld+json") check(JSON.parse(match[2]));
   }
 }

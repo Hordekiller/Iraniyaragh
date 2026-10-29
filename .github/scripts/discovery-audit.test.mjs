@@ -42,6 +42,10 @@ test("rejects a product missing all required commercial/review evidence", async 
   fixtures({ html: `<link href="${origin}/products/test" rel="canonical"><script type="application/ld+json">{"@graph":[{"@type":"Product","name":"Isolated test"}]}</script>` });
   await assert.rejects(audit(origin), /Incomplete Product/u);
 });
+test("still checks Product JSON-LD with whitespace and ignored attributes on an HTML script end tag", async () => {
+  fixtures({ html: `<link href="${origin}/products/test" rel="canonical"><script type="application/ld+json">{"@type":"Product","name":"Isolated test"}</script\t\n bar>` });
+  await assert.rejects(audit(origin), /Incomplete Product/u);
+});
 test("rejects missing, duplicate and conflicting canonical tags", async () => {
   for (const html of ["<h1>Test</h1>", `<link rel="canonical" href="${origin}/other">`, `<link rel="canonical" href="${origin}/products/test"><link rel="canonical" href="${origin}/products/test">`]) {
     fixtures({ html });
