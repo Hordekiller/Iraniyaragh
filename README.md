@@ -2,22 +2,22 @@
 
 Pre-release commerce and warehouse platform for Iranian hardware/fittings retail.
 
-> Current evidence (2026-10-18): source and verified VPS select
-> `e2070948587b438dc5da55d8560ab870e23bf32d`; 61 migrations completed, none unfinished.
-> Staff orders, stocktake, staff credit, operational reports and store-invoice
-> policy/drafts/immutable issuance/customer publication are present. Admin cross-tab
-> refresh recovery is deployed; real operator idle acceptance remains open (#400).
-> SMS login and one real product payment/return-to-site/order-paid SMS are
-> operator-confirmed. Payment is live; refunds and broader provider acceptance
-> remain separate. **V1 is not ready:** automatic order expiry, private PDF service,
-> corrections/exports, general returns, role administration, content/SSR/SEO and
-> operational acceptance have remaining work.
-> [V1 reconciliation](docs/V1_RECONCILIATION.md) owns the evidence matrix and queue;
-> [issue register](docs/V1_ISSUE_REGISTER.json) covers all 150 issues.
+> Current evidence (2026-10-28): committed source and verified VPS release
+> `92b23a43aa095a563d798712d24d1ffdf8020f14` match. Combined CI, Sonar,
+> security audit, exact image digests, restored backup and HTTPS/public smoke passed.
+> Durable expiry, Jodit save recovery, private invoice PDF, report snapshots and
+> public Next rendering/discovery are deployed. **V1 remains partial:** runtime
+> access management, general paid-order returns, invoice corrections, articles,
+> remaining feed/discovery work and explicit operator/provider acceptance remain.
+> Staging remains noindex; current provider and inactive valuation modes are preserved.
+> [V1 reconciliation](docs/V1_RECONCILIATION.md) owns current evidence and every
+> open issue/PR disposition; [issue register](docs/V1_ISSUE_REGISTER.json) preserves
+> all 151 issue records. Unmerged/local work is distinct from delivered source.
 
 ## Workspace
 
-- `apps/web` — customer React/Vite storefront (accepted Next.js public migration remains open).
+- `apps/web` — customer React storefront with accepted Next.js public rendering;
+  the Nest API remains the sole catalog/commerce authority.
 - `apps/admin` — custom Persian RTL Next.js/MUI operations application, selectively
   based on the locally licensed Vuexy technical starter with self-hosted assets.
 - `apps/api` — NestJS modular-monolith business API.

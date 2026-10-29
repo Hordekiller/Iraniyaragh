@@ -1,20 +1,15 @@
 # Zero-to-Production Execution Backlog
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
+> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
+> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
+> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
+> Older dates/status rows below are historical; accepted domain requirements remain.
 
-## Current backlog interpretation — 2026-10-18
+## Current backlog interpretation — 2026-10-28
 
-Use V1_RECONCILIATION.md and V1_DEPENDENCIES.json for executable ordering and
-V1_ISSUE_REGISTER.json for all 150 issue dispositions. Stocktake, credit, reports
-and invoice issuance are present; unmerged candidates and live acceptance remain
-separate. The owner-authorized current protection policy is documented in
-REPOSITORY_WORKFLOW.md. Historical staffing, gate percentages and source-status
-rows below are not present completion measurements or active assignments.
+Use the live issue dispositions and V1_DEPENDENCIES.json. Durable expiry, PDF jobs/private download, report snapshots and accepted public rendering/discovery are delivered source. Remaining engineering is access administration, general returns, corrections, governed articles and the explicitly incomplete discovery/feed pieces. Live acceptance is separate from implementation. Historical staffing and gate percentages below are not current completion measurements.
 
 ## Historical work breakdown and accepted exit evidence
 

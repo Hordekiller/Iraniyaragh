@@ -1,23 +1,17 @@
-# نقشهٔ یکپارچه‌سازی MVP موجود ایرانی‌یراق
+# یکپارچه‌سازی MVP ایرانی یراق
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) owns source/runtime/acceptance truth.
+> [Issue register](V1_ISSUE_REGISTER.json) covers all 151 issues (46 open / 105 closed).
+> Dated status/queue claims below are historical; security/domain requirements remain.
 
-## وضعیت جاری — 2026-10-18
+## وضعیت جاری — 2026-10-28
 
-نسخهٔ main و VPS هر دو `e207094` هستند. انبارگردانی، نسیهٔ کارکنان، گزارش‌های
-پایه و صدور/انتشار فاکتور فروشگاهی موجودند؛ ادعای نبود آن‌ها در بازبینی قدیمی
-زیر، وضعیت امروز نیست. یک خرید واقعی و پیامک پرداخت به تأیید مالک رسیده است؛
-این تأیید جای پذیرش همهٔ جریان‌های مالی، مشتری و انبار را نمی‌گیرد.
-
-صف ادغام، مدرک تست‌ها و کمبودهای واقعی در V1_RECONCILIATION.md است. خروجی PDF
-خصوصی، اصلاحیه، خروجی گزارش، مرجوعی عمومی، مدیریت نقش و بخش‌های محتوا/SSR هنوز
-کار مهندسی دارند. مشکل نشست ادمین اصلاح و مستقر شده ولی پذیرش بیکاری و تغییر
-توسط کاربر در #400 باز است. بخش زیر سابقهٔ بازبینی شهریور است.
+نسخهٔ `92b23a4` روی VPS تأیید شده است. انبارگردانی، نسیه، PDF خصوصی، خروجی
+گزارش CSV/XLSX/PDF، اصلاح ذخیرهٔ Jodit و رندر عمومی Next موجودند. مدیریت نقش‌ها
+فقط کاندید محلی دارد؛ مرجوعی عمومی، اصلاحیهٔ فاکتور، مدیریت مقاله و بخش‌های باقی‌ماندهٔ
+فید/IndexNow و پذیرش عملیاتی باز هستند. جزئیات هر Issue و PR در سند تطبیق است.
+ارزش‌گذاری غیرفعال و محیط staging همچنان noindex است؛ موفقیت ارائه‌دهنده جعل نشده است.
 
 ## بازبینی تاریخی — 2026-09-30
 

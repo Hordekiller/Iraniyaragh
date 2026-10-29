@@ -1,26 +1,15 @@
-# V1.0 Master Plan — ایران‌یاراغ
+# V1.0 Master Plan — ایرانی یراق
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
+> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
+> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
+> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
+> Older dates/status rows below are historical; accepted domain requirements remain.
 
-## Current implementation and release boundary — 2026-10-18
+## Current implementation and release boundary — 2026-10-28
 
-Source/deployment baseline and release evidence are in the central reconciliation.
-Stocktake, staff credit, reports and store-invoice issuance/publication are present;
-old unchecked implementation rows below do not mean those modules are absent.
-#114 is historical SMS integration work; remaining real acceptance is tracked in
-#403. One real controlled payment/order-paid message is accepted, not all financial
-or transactional paths. #400 still requires authenticated idle acceptance.
-
-Use the dependency-aware queue in V1_RECONCILIATION.md, not historical contributor
-allocations. Private PDF/corrections/exports, general returns, runtime RBAC, content
-and accepted SSR/discovery still require engineering. Keep financial valuation
-inactive as requested. The V1 outcome/exit criteria below remain required; old
-status/owner/date assertions are retained as historical planning evidence.
+The reconciliation owns current execution and evidence. This document preserves accepted outcome/exit criteria below. Current main includes stocktake, credit, invoice policy/drafts/issuance/publication/private PDF, report exports and public rendering/discovery. Remaining engineering and real-world acceptance stay explicit in the issue register. Historical contributor allocations and unchecked old absence rows are not current instructions.
 
 ## Historical planning checkpoint and accepted V1 requirements
 

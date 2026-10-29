@@ -1,33 +1,24 @@
 # Reporting and invoice management — source audit and implementation plan
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
+> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
+> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
+> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
+> Older dates/status rows below are historical; accepted domain requirements remain.
 
-## Current implementation delta — 2026-10-18
+## Current implementation delta — 2026-10-28
 
-The October 12 pinned source audit below is historical. Current main/VPS includes
-staff credit, operational reports and store invoices; its original “no module”
-findings must not be read as current implementation status.
-
-| Scope | Current source evidence | Remaining acceptance/work |
+| Scope | Delivered source | Remaining work/acceptance |
 | --- | --- | --- |
-| Seller/tax policy and exact IRR quotation | `apps/api/src/modules/invoices`; invoice policy/draft tests; #429/#430 | Approved Admin configuration and complete operator proforma journey (#415/#416) |
-| Numbered immutable issuance | `invoice-document.service.ts`, SQL guards and concurrency tests; #433 | Operator financial acceptance (#417); never edit issued originals |
-| Customer visibility/revocation | `invoice-publication.service.ts`, Web AccountInvoices; #434 | Real two-customer publish/read/revoke acceptance (#418) |
-| Operational reports | `apps/api/src/modules/reports/operational-report.service.ts`; #432 | Corrections, approved valuation and private exports are not complete (#358) |
-| Persian browser printing | Existing Admin/Web invoice views, local fonts/brand | Not an authorized private PDF artifact service |
-| Private PDF | Unmerged #439 template / #449 internal persistence | Durable jobs, fencing, worker, current-authority downloads and UI (#419/#420) |
-| Corrections / report exports | No complete runtime lifecycle | #421 / #423 remain implementation work |
-| Stock financial valuation | Versioned configurable policy | Inactive per owner; missing cost history cannot be fabricated (#422) |
+| Seller/tax policy, exact IRR quote and independent drafts | #429/#430, policy/draft/quote services and tests | Real configured policy and operator proforma journey |
+| Numbered issuance and publication | #433/#434, immutable SQL guards and ownership/version controls | Controlled financial and two-customer publish/revoke acceptance |
+| Private Persian A4 PDF | #449/#479; durable job/worker/artifact/current-authority downloads and UI, shared #439 template already on main | Full operator journey and resource/recovery acceptance; no issued document overwrite |
+| Operational reports and CSV/XLSX/PDF snapshots | #435/#476; owned bounded durable exports sharing PDF worker | Integrated operator/report acceptance; correction reporting depends on #421 |
+| Linked correction/cancellation documents | Not delivered | #421; originals immutable, monetary/stock side effects authoritative and separate |
+| Stock financial valuation | Configurable policy, deliberately inactive | #422 requires approved cost evidence/policy; never infer costs or activate here |
 
-Invoice editing never changes balances directly. Order, payment, inventory and
-invoice states stay separate; immutable references connect their evidence. Store
-invoices do not claim official tax/Moadian compliance. See current traceability
-and release evidence in V1_RECONCILIATION.md; retain the design rationale below.
+The old October 12 absence findings below are historical. Store invoices do not imply fiscal/Moadian compliance, payment, refund, stock movement or provider acceptance.
 
 ## Historical source audit — 2026-10-12
 
