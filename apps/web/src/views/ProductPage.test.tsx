@@ -156,6 +156,24 @@ describe('ProductPage commerce', () => {
   })
 })
 
+describe('ProductPage structured offer parity', () => {
+  it('publishes a real offer for the selected variant even without gallery media', async () => {
+    const base = drillWithDescription(null)
+    const product: CatalogProduct = { ...base, media: [], variants: [
+      { ...base.variants[0], id: 'seo-unavailable', sku: 'TEST-UNAVAILABLE', title: 'ناموجود آزمایشی', stockStatus: 'OUT_OF_STOCK', price: { amount: '100', currency: 'IRR' } },
+      { ...base.variants[0], id: 'seo-default', sku: 'TEST-DEFAULT', title: 'انتخاب پیش‌فرض آزمایشی', stockStatus: 'IN_STOCK', price: { amount: '150000', currency: 'IRR' } },
+      { ...base.variants[0], id: 'seo-other', sku: 'TEST-OTHER', title: 'انتخاب دوم آزمایشی', stockStatus: 'LOW_STOCK', price: { amount: '250000', currency: 'IRR' } },
+    ] }
+    const { container } = renderPageWithProduct(product)
+    await screen.findByRole('button', { name: 'انتخاب پیش‌فرض آزمایشی' })
+    const schema = () => JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!)[0]
+    expect(schema()).toMatchObject({ '@type': 'Product', sku: 'TEST-DEFAULT', offers: { price: '150000', availability: 'https://schema.org/InStock' } })
+    fireEvent.click(screen.getByRole('button', { name: 'انتخاب دوم آزمایشی' }))
+    expect(schema()).toMatchObject({ sku: 'TEST-OTHER', offers: { price: '250000' } })
+    expect(schema()).not.toHaveProperty('aggregateRating')
+  })
+})
+
 describe('ProductPage rich description', () => {
   it('keeps the purchase controls ahead of the long description', async () => {
     renderPageWithProduct(drillWithDescription('<p>راهنمای بلند محصول</p>'))

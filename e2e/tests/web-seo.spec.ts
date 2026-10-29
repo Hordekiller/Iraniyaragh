@@ -54,13 +54,25 @@ test('web: public product and category primary content work without JavaScript',
   } finally { await context.close(); }
 });
 
+test('web: multi-variant products retain one complete server Product offer after hydration', async ({ page }) => {
+  await prisma.productVariant.create({ data: { productId, sku: `SEO-BROWSER-${run}-MULTI`, skuKey: `SEO-BROWSER-${run}-MULTI`.toUpperCase(), combinationSignature: `seo-test-${run}`, title: 'تنوع دوم آزمایشی سئو', salePrice: 250000n, status: 'ACTIVE', isActive: true } });
+  await page.goto(`${realWeb}/products/${slug}`, { waitUntil: 'networkidle' });
+  await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'تنوع دوم آزمایشی سئو' })).toBeVisible();
+  const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).flatMap(text => JSON.parse(text));
+  const products = schemas.filter(value => value['@type'] === 'Product');
+  expect(products).toHaveLength(1);
+  expect(products[0]).toMatchObject({ sku: `SEO-BROWSER-${run}`, offers: { '@type': 'Offer', price: '150000', priceCurrency: 'IRR', url: `${canonical}/products/${slug}` } });
+  expect(products[0]).not.toHaveProperty('aggregateRating');
+});
+
 test('web: legacy URLs redirect once and unknown or unpublished products return actual 404', async ({ request }) => {
   for (const path of [`/product/${slug}`, `/product/${productId}`, `/products/${productId}`]) {
     const response = await request.get(`${realWeb}${path}`, { maxRedirects: 0 });
     expect(response.status()).toBe(308);
     expect(new URL(response.headers().location, realWeb).pathname).toBe(`/products/${slug}`);
   }
-  for (const path of [`/products/${slug}-draft`, `/products/no-product-${run}`, `/categories/${categorySlug}?page=999999`, '/not-a-public-route']) {
+  for (const path of [`/products/${slug}-draft`, `/products/no-product-${run}`, `/categories/${categorySlug}?page=999999`, '/not-a-public-route', '/cart/anything', '/checkout/anything', '/account/unknown', '/account/invoices/test/extra', '/payment/test/unknown']) {
     const response = await request.get(`${realWeb}${path}`);
     expect(response.status()).toBe(404);
   }

@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/scripts/discovery-audit.mjs"
+      - ".github/scripts/discovery-audit.test.mjs"
       - ".github/workflows/discovery-audit.yml"
       - "docs/SEO_GEO_AI_DISCOVERY_PLAN.md"
   schedule:
@@ -32,7 +33,9 @@ jobs:
         with:
           node-version: 22
       - name: Verify discovery-audit invariants
-        run: node .github/scripts/discovery-audit.mjs --self-test
+        run: |
+          node .github/scripts/discovery-audit.mjs --self-test
+          node --test .github/scripts/discovery-audit.test.mjs
 
   production:
     if: github.event_name != 'pull_request'

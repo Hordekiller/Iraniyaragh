@@ -141,6 +141,12 @@ the underlying state.
   availability; never expose warehouse quantities;
 - MerchantReturnPolicy and OfferShippingDetails only after business policy is approved;
 - ProductGroup/variants only after canonical variant policy is accepted;
+- Until variant grouping is approved, Product/Offer describes the same default
+  variant selected in the visible purchase controls (first available choice,
+  otherwise the first published choice). Price stays an exact IRR integer string;
+  unknown stock is omitted. A product without a real priced variant emits no
+  incomplete Product node; breadcrumb and visible content remain. Neither ratings
+  nor an AggregateOffer for variants may be invented to satisfy validators.
 - AggregateRating/Review only from genuine visible reviews—never self-generated;
 - Article/HowTo/FAQ types only when the visible page and current search-feature
   eligibility justify them; markup does not guarantee a rich result.
@@ -148,6 +154,34 @@ the underlying state.
 Merchant Center/free-listing feed is generated from the same projection and checked
 for parity of ID, URL, title, image, price, currency and availability. Mismatch is a
 release-blocking data defect. Feed credentials and diagnostics are operational secrets.
+
+### Sitemap and indexing regression boundary — 2026-10-29
+
+The existing API sitemap index/shards remain authoritative. Include only canonical
+public URLs intended for indexing: root/catalog and eligible published products,
+brands and categories (including eligible category ancestors). Private journeys,
+filters, search, redirects, unpublished/archived entities and unapproved `noindex`
+policy pages stay out. Empty or invalid routes return a real 404, including unknown
+descendants of otherwise valid account/cart/payment routes. Existing canonical
+pagination and staging `noindex` controls remain in place.
+
+The existing discovery audit now reads actual gzip artifacts with transfer and
+decompression bounds, rejects duplicates across shards and validates sampled HTML
+for canonical conflicts, HTML/HTTP `noindex`, and incomplete Product JSON-LD. It
+remains a sample audit, not proof that every sitemap page has passed. Run it against
+an approved indexable production origin; staging is intentionally ineligible.
+
+Search Console's alternate-canonical, redirect and intentional private `noindex`
+exclusions are not blanket defects. Investigate unexpected URLs and keep them out
+of the sitemap; never erase a valid canonical or expose private pages to make a
+report count zero. Google controls crawl/index selection; passing these checks
+does not guarantee indexing or rich-result presentation. After deployment, inspect
+affected live URLs with Rich Results Test/URL Inspection and request validation in
+Search Console. Existing crawl reports can persist until Google recrawls.
+
+References: [Product snippet requirements](https://developers.google.com/search/docs/appearance/structured-data/product-snippet),
+[canonical consolidation](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls),
+[sitemap requirements](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap).
 
 ## 7. AI answer and citation readiness (GEO/AEO)
 

@@ -34,11 +34,31 @@ describe('public URL and indexing policy', () => {
 describe('truthful server structured data', () => {
   it('keeps integer IRR precision and omits unknown inventory and invented review evidence', () => {
     setup(); const schema = productJsonLd(item)
+    if (!schema) throw new Error('Expected a priced product')
     expect(schema).toMatchObject({ name: item.name, sku: 'TEST-HINGE', url: origin+'/products/test-hinge', offers: { price: '9007199254740993', priceCurrency: 'IRR' } })
     expect(schema.offers).not.toHaveProperty('availability'); expect(schema).not.toHaveProperty('aggregateRating'); expect(schema).not.toHaveProperty('review')
-    expect(productJsonLd({ ...item, variants: [item.variants[0], { ...item.variants[0], id: 'v2' }] })).not.toHaveProperty('offers')
+    expect(productJsonLd({ ...item, variants: [item.variants[0], { ...item.variants[0], id: 'v2' }] })).toMatchObject({ sku: 'TEST-HINGE', offers: { price: '9007199254740993' } })
     const outOfStock = productJsonLd({ ...item, variants: [{ ...item.variants[0], stockStatus: 'OUT_OF_STOCK' }] })
-    expect(outOfStock.offers).toMatchObject({ availability: 'https://schema.org/OutOfStock' })
+    expect(outOfStock?.offers).toMatchObject({ availability: 'https://schema.org/OutOfStock' })
+  })
+  it('describes the default visible in-stock variant rather than a cheaper unavailable SKU', () => {
+    setup()
+    const schema = productJsonLd({ ...item, price: { amount: '100', currency: 'IRR' }, variants: [
+      { ...item.variants[0], sku: 'UNAVAILABLE-TEST', price: { amount: '100', currency: 'IRR' }, stockStatus: 'OUT_OF_STOCK' },
+      { ...item.variants[0], id: 'v2', sku: 'AVAILABLE-TEST', price: { amount: '9007199254740993', currency: 'IRR' }, stockStatus: 'LOW_STOCK' },
+    ] })
+    expect(schema).toMatchObject({ sku: 'AVAILABLE-TEST', offers: { '@type': 'Offer', price: '9007199254740993', priceCurrency: 'IRR', availability: 'https://schema.org/InStock' } })
+    expect(schema).not.toHaveProperty('aggregateRating')
+    expect(schema).not.toHaveProperty('hasVariant')
+  })
+  it('never emits an incomplete Product or a fabricated free offer for a missing price', () => {
+    setup()
+    expect(productJsonLd({ ...item, variants: [] })).toBeNull()
+    expect(productJsonLd({ ...item, priceAvailable: false })).toBeNull()
+    for (const amount of ['-1', '1.25', '', 'NaN', '1e6']) {
+      expect(productJsonLd({ ...item, variants: [{ ...item.variants[0], price: { amount, currency: 'IRR' } }] })).toBeNull()
+    }
+    expect(productJsonLd({ ...item, variants: [{ ...item.variants[0], price: { amount: '0', currency: 'IRR' } }] })).toMatchObject({ offers: { price: '0' } })
   })
   it('embeds customer-controlled text without executable script boundaries', () => {
     setup(); const attack = '</script><img src=x onerror=alert(1)>'

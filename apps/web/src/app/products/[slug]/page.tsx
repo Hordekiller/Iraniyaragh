@@ -16,5 +16,6 @@ export default async function Page({ params, searchParams }: Props) {
   const item = await product(slug)
   const [indexable, query] = await Promise.all([eligibility('products', item.slug), searchParams])
   const crumbs = [{ name: 'خانه', path: '/' }, ...(item.category ? [{ name: item.category.name, path: entityPath('categories', item.category.slug) }] : []), { name: item.name, path: entityPath('products', item.slug) }]
-  return <>{indexable && Object.keys(query).length === 0 && <JsonLd data={[productJsonLd(item), breadcrumb(crumbs)]} />}<ProductIsland key={item.id} product={item} /></>
+  const schema = productJsonLd(item)
+  return <>{indexable && Object.keys(query).length === 0 && <JsonLd data={[...(schema ? [schema] : []), breadcrumb(crumbs)]} />}<ProductIsland key={item.id} product={item} /></>
 }

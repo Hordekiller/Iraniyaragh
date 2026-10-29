@@ -19,6 +19,8 @@ import { MediaGallery } from '../components/product/MediaGallery'
 import { RichText } from '../components/product/RichText'
 import { serializeJsonLd } from '../lib/json-ld'
 import { richTextToPlainText } from '../lib/rich-text'
+import { productStructuredData } from '../lib/product-json-ld'
+import { defaultCatalogVariant } from '../services/catalog/variants'
 import type { CatalogProduct } from '../services/catalog/types'
 import { commerceErrorMessage } from '../services/commerce/errors'
 
@@ -39,7 +41,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
   const [product, setProduct] = useState<CatalogProduct | null>(initialProduct ?? null)
   const [loading, setLoading] = useState(!initialProduct)
   const [notFound, setNotFound] = useState(false)
-  const [selectedVariantId, setSelectedVariantId] = useState((initialProduct?.variants.find(variant => variant.stockStatus === 'IN_STOCK' || variant.stockStatus === 'LOW_STOCK') ?? initialProduct?.variants[0])?.id ?? '')
+  const [selectedVariantId, setSelectedVariantId] = useState(defaultCatalogVariant(initialProduct?.variants ?? [])?.id ?? '')
 
   const [resolvedSlug, setResolvedSlug] = useState(slug)
   if (resolvedSlug !== slug) {
@@ -57,12 +59,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
       .then((p) => {
         if (cancelled) return
         setProduct(p)
-        const sellable = p.variants.find(
-          (variant) =>
-            variant.stockStatus === 'IN_STOCK' ||
-            variant.stockStatus === 'LOW_STOCK',
-        )
-        setSelectedVariantId((sellable ?? p.variants[0])?.id ?? '')
+        setSelectedVariantId(defaultCatalogVariant(p.variants)?.id ?? '')
         setLoading(false)
       })
       .catch(() => {
@@ -147,20 +144,9 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
   // Structured data uses only values that actually exist in the API response;
   // counts and dates that are not returned are never invented (spec §7).
   const structuredData: Record<string, unknown>[] = []
-  if (!serverStructuredData && product.media.length > 0) {
-    const imageUrls = product.media
-      .filter((media) => media.kind === 'IMAGE')
-      .flatMap((media) => media.sources.map((source) => source.url))
-    const productData: Record<string, unknown> = {
-      '@context': 'https://schema.org',
-      '@type': 'Product',
-      name: product.name,
-      url: ROUTES.product(product.slug),
-      image: imageUrls.length > 0 ? imageUrls : undefined,
-    }
-    if (product.description)
-      productData.description = richTextToPlainText(product.description)
-    structuredData.push(productData)
+  if (!serverStructuredData) {
+    const productData = productStructuredData(product, ROUTES.product(product.slug), richTextToPlainText(product.description ?? ''), selectedVariant)
+    if (productData) structuredData.push(productData)
   }
   for (const media of serverStructuredData ? [] : product.media) {
     if (media.kind !== 'VIDEO') continue

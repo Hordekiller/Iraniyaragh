@@ -57,6 +57,8 @@ describe.sequential('Real catalog sitemap PostgreSQL acceptance', () => {
     expect(urls).not.toContain(`https://iraniyaragh.com/products/${draftSlug}`);
     expect(urls).not.toContain(`https://iraniyaragh.com/products/${archivedSlug}`);
     expect(urls.some(url => /\/account|\/checkout|\/cart|\/admin|\/api\//u.test(url))).toBe(false);
+    expect(urls.some(url => /\/policies\//u.test(url))).toBe(false);
+    expect(urls.every(url => !new URL(url).search && !new URL(url).hash)).toBe(true);
     expect(new Set(urls).size).toBe(urls.length);
     expect(await prisma.inventoryBalance.count({ where: { variant: { productId: liveId } } })).toBe(0);
   });
@@ -80,5 +82,26 @@ describe.sequential('Real catalog sitemap PostgreSQL acceptance', () => {
     }
     await expect(service.catalogPolicy('products', liveSlug)).rejects.toMatchObject({ status: 404 });
     expect((await service.catalogPolicy('categories', rootSlug)).data.indexable).toBe(false);
+  });
+  it('automatically discovers a newly published product without a rebuild or manual sitemap edit', async () => {
+    const readProductUrls = async () => {
+      const index = (await service.index()).body.toString();
+      const urls: string[] = [];
+      for (const url of locations(index).filter(url => url.includes('/products-'))) {
+        urls.push(...locations(gunzipSync((await service.shard(filename(url))).body).toString()));
+      }
+      return urls;
+    };
+    // Prime the index before creation, then publish through the real database
+    // lifecycle. The next request must see it without cache flushing or builds.
+    await readProductUrls();
+    const later = await makeProduct('published-later', 'DRAFT');
+    const url = `https://iraniyaragh.com/products/${later.slug}`;
+    expect(await readProductUrls()).not.toContain(url);
+    await prisma.product.update({ where: { id: later.id }, data: { status: 'ACTIVE' } });
+    expect(await readProductUrls()).toContain(url);
+    expect((await service.catalogPolicy('products', later.slug)).data.indexable).toBe(true);
+    await prisma.product.update({ where: { id: later.id }, data: { status: 'ARCHIVED' } });
+    expect(await readProductUrls()).not.toContain(url);
   });
 });
