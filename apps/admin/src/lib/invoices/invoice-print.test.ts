@@ -10,8 +10,8 @@ describe('Bounded local invoice print preparation', () => {
   }
   it('waits for the local logo and both Persian font weights before printing is permitted', async () => {
     const { node, load } = sheet(true); await prepareInvoicePrint(node);
-    expect(load).toHaveBeenCalledWith('400 12px "Iraniyaragh Sans"', 'ایران یراق');
-    expect(load).toHaveBeenCalledWith('700 12px "Iraniyaragh Sans"', 'ایران یراق');
+    expect(load).toHaveBeenCalledWith('400 12px "Iraniyaragh Sans"', 'ایرانی یراق');
+    expect(load).toHaveBeenCalledWith('700 12px "Iraniyaragh Sans"', 'ایرانی یراق');
   });
   it('a failed logo cannot become a printable document', async () => { await expect(prepareInvoicePrint(sheet(false).node)).rejects.toThrow('Print image unavailable'); });
   it('missing local Persian fonts cannot silently turn into a fallback font success', async () => { await expect(prepareInvoicePrint(sheet(true, []).node)).rejects.toThrow('Print font unavailable'); });

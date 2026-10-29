@@ -49,7 +49,7 @@ describe('sanitizeDescriptionFragment', () => {
     const input =
       '<span style="background-image:url(https://evil.example/x.png);color:expression(alert(1));width:100%">x</span>';
     const result = sanitizeDescriptionFragment(input);
-    expect(result.html).toBe('<span>x</span>');
+    expect(result.html).toBe('<span style="width:100%">x</span>');
     expect(result.html).not.toMatch(/url\(|expression|background/i);
   });
 
@@ -61,10 +61,11 @@ describe('sanitizeDescriptionFragment', () => {
     expect(result.html).toContain('<em>italic</em>');
   });
 
-  it('rejects non-allowed styles', () => {
+  it('rejects fixed positioning while retaining bounded layout styles', () => {
     const input = '<span style="position:fixed;top:0;display:block">x</span>';
     const result = sanitizeDescriptionFragment(input);
-    expect(result.html).toBe('<span>x</span>');
+    expect(result.html).toBe('<span style="top:0;display:block">x</span>');
+    expect(result.html).not.toContain('fixed');
   });
 
   it('rewrites mailto links and adds rel noopener/noreferrer only for blank targets', () => {

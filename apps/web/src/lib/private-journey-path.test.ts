@@ -11,5 +11,8 @@ describe('private journey HTTP route boundary', () => {
     for (const path of ['cart/anything', 'checkout/anything', 'account/unknown', 'account/invoices/test-id/extra', 'payment', 'payment/test-id/unknown', 'payment-return/anything', 'orders/test-id/extra', 'search/anything', 'unknown', 'Account']) {
       expect(isPrivateJourneyPath(path.split('/')), path).toBe(false)
     }
+    expect(isPrivateJourneyPath(['orders', 'nested/id'])).toBe(false)
+    expect(isPrivateJourneyPath(['orders', 'nested\\id'])).toBe(false)
+    expect(isPrivateJourneyPath(['orders', ''])).toBe(false)
   })
 })

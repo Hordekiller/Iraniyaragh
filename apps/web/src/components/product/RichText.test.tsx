@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { RichText } from './RichText';
 
 describe('RichText', () => {
+  it('contains designed content and lets server-approved layout rules own its typography', () => {
+    const { container } = render(<RichText html='<style>[data-rich-text="true"] .test{display:grid}</style><section class="test"><h2>قالب آزمایشی</h2></section>' />);
+    const root = container.querySelector('[data-rich-text]');
+    expect(root).toHaveStyle({ position: 'relative', isolation: 'isolate', contain: 'layout paint' });
+    expect(root?.className).not.toContain('[&_table]:block');
+    expect(container.querySelector('style')).toHaveTextContent('display:grid');
+    expect(screen.getByRole('heading', { name: 'قالب آزمایشی' })).toBeVisible();
+  });
   it('renders server-sanitized markup as semantic nodes, not escaped text', () => {
     render(
       <RichText

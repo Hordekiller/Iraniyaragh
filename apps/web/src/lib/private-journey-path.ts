@@ -1,4 +1,3 @@
-import { matchPath } from 'react-router-dom'
 import { ROUTE_PATHS } from './routes'
 
 const patterns = [
@@ -10,6 +9,11 @@ const patterns = [
 
 /** Reject unknown descendants before Next sends a successful client-shell response. */
 export function isPrivateJourneyPath(segments: string[]): boolean {
-  const pathname = `/${segments.join('/')}`
-  return patterns.some(path => matchPath({ path, end: true, caseSensitive: true }, pathname) !== null)
+  if (segments.some(segment => !segment || segment.includes('/') || segment.includes('\\'))) return false
+  // This also runs in a React Server Component. Keep matching independent of
+  // the client router's conditional exports and use the shared route grammar.
+  return patterns.some(path => {
+    const parts = path.slice(1).split('/')
+    return parts.length === segments.length && parts.every((part, index) => part.startsWith(':') || part === segments[index])
+  })
 }

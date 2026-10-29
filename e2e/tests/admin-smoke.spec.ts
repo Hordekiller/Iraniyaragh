@@ -8,7 +8,7 @@ test.describe('admin: authentication gate', () => {
     await page.goto('/');
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page).toHaveTitle('پنل عملیات ایران یراق');
+    await expect(page).toHaveTitle('پنل عملیات ایرانی یراق');
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');

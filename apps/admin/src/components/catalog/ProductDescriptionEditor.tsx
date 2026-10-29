@@ -42,7 +42,7 @@ export function ProductDescriptionPreview({ description }: { description: string
       </Typography>
     );
   }
-  return <Box dangerouslySetInnerHTML={{ __html: description }} />;
+  return <Box data-rich-text="true" sx={{ position: 'relative', isolation: 'isolate', contain: 'layout paint' }} dangerouslySetInnerHTML={{ __html: description }} />;
 }
 
 export function ProductDescriptionEditor({

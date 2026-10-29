@@ -3,7 +3,7 @@ import type { CustomerInvoice, Money } from "@iranyaragh/contracts";
 
 // Internal rendering boundary only. Authorization, durable jobs and private
 // artifact downloads must be implemented before exposing a PDF endpoint.
-export const INVOICE_PDF_TEMPLATE_REVISION = "store-invoice-a4-v1";
+export const INVOICE_PDF_TEMPLATE_REVISION = "store-invoice-a4-v2";
 export const INVOICE_PDF_LIMITS = Object.freeze({
   lines: 100,
   inputBytes: 128 * 1024,
@@ -88,6 +88,7 @@ function taxText(policy: CustomerInvoice["taxPolicy"]): string {
 export function buildInvoicePdfHtml(
   invoice: CustomerInvoice,
   assets: { fontWoff2: Buffer; wordmarkPng: Buffer },
+  templateRevision: string = INVOICE_PDF_TEMPLATE_REVISION,
 ): {
   html: string;
   htmlSha256: string;
@@ -96,6 +97,8 @@ export function buildInvoicePdfHtml(
   brandSha256: string;
 } {
   try {
+    if (!["store-invoice-a4-v1", INVOICE_PDF_TEMPLATE_REVISION].includes(templateRevision)) throw new InvoicePdfInputError();
+    const brandName = templateRevision === "store-invoice-a4-v1" ? "ایران یراق" : "ایرانی یراق";
     if (
       !invoice ||
       Buffer.byteLength(JSON.stringify(invoice), "utf8") >
@@ -160,12 +163,12 @@ export function buildInvoicePdfHtml(
 <meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:">
 <title>فاکتور فروشگاهی ${number}</title><style>
 @font-face{font-family:InvoiceLocal;src:url(data:font/woff2;base64,${assets.fontWoff2.toString("base64")}) format('woff2');font-weight:100 900;font-display:block}
-@page{size:A4;margin:14mm 10mm 18mm;@bottom-center{content:"${number} — فاکتور فروشگاهی ایران یراق — واحد مبالغ: ریال";font-family:InvoiceLocal,sans-serif;font-size:8px;direction:rtl}}*{box-sizing:border-box}body{margin:0;color:#111;background:#fff;font:10px/1.8 InvoiceLocal,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+@page{size:A4;margin:14mm 10mm 18mm;@bottom-center{content:"${number} — فاکتور فروشگاهی ${brandName} — واحد مبالغ: ریال";font-family:InvoiceLocal,sans-serif;font-size:8px;direction:rtl}}*{box-sizing:border-box}body{margin:0;color:#111;background:#fff;font:10px/1.8 InvoiceLocal,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 h1{font-size:20px;margin:4mm 0}h2{font-size:13px;margin:0 0 2mm}p{margin:1mm 0;overflow-wrap:anywhere}.brand{width:60mm;height:20mm;object-fit:contain;display:block;margin:0 auto 3mm}
 .parties{display:table;table-layout:fixed;width:100%;margin:4mm 0}.party{display:table-cell;width:50%;vertical-align:top;padding:3mm;border:1px solid #aaa;overflow-wrap:anywhere}
 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px;line-height:1.8}caption{text-align:right;font-size:13px;font-weight:700;margin-bottom:2mm}thead{display:table-header-group}tr,.line{break-inside:avoid}th,td{border:1px solid #aaa;padding:2mm;text-align:right;overflow-wrap:anywhere}th{background:#eee}.item{background:#fafafa}bdi{unicode-bidi:isolate}.amount{white-space:nowrap;font-variant-numeric:tabular-nums;font-size:11px}
 .summary{break-inside:avoid;margin-top:4mm}.totals{width:90mm;margin:3mm 0 3mm auto;font-size:11px}.totals div{display:table;width:100%;border-bottom:1px solid #ddd}.totals dt,.totals dd{display:table-cell;width:50%;padding:1mm;margin:0}.totals dd{text-align:left}.totals div:last-child{font-weight:700;border-bottom:2px solid #111}.totals .amount{font-size:11px}.notice{border:1px solid #aaa;padding:2mm}
-</style></head><body><header><img class="brand" width="1086" height="362" src="data:image/png;base64,${assets.wordmarkPng.toString("base64")}" alt="ایران یراق"><h1>فاکتور فروشگاهی</h1><p>شمارهٔ سند: <bdi dir="ltr">${number}</bdi></p><p>زمان صدور: ${date}</p></header>
+</style></head><body><header><img class="brand" width="1086" height="362" src="data:image/png;base64,${assets.wordmarkPng.toString("base64")}" alt="${brandName}"><h1>فاکتور فروشگاهی</h1><p>شمارهٔ سند: <bdi dir="ltr">${number}</bdi></p><p>زمان صدور: ${date}</p></header>
 <section class="parties" aria-label="فروشنده و خریدار"><section class="party"><h2>فروشنده</h2><p>${text(invoice.seller.name, 200)}</p><p>${text(invoice.seller.address, 1000)}</p><p>${text(invoice.seller.contact, 200)}</p></section>
 <section class="party"><h2>خریدار</h2><p>${text(invoice.buyerLabel, 300)}</p><p>${text(invoice.address.city, 100)}، ${text(invoice.address.address, 500)}</p><p>کد پستی: <bdi dir="ltr">${text(invoice.address.postalCode, 32)}</bdi></p><p>گیرنده: ${text(invoice.address.recipient, 120)}</p><p>تلفن: <bdi dir="ltr">${text(invoice.address.mobile, 32)}</bdi></p></section></section>
 <p>روش تحویل: ${text(invoice.shippingTitle, 200)}</p><table><caption>اقلام فاکتور — مبالغ به ریال</caption><thead><tr>${["قیمت واحد", "تخفیف", "مالیات", "جمع"].map((label) => `<th scope="col">${label}</th>`).join("")}</tr></thead>${rows}</table>
@@ -176,7 +179,7 @@ table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px;line
     return {
       html,
       htmlSha256: hash(html),
-      templateRevision: INVOICE_PDF_TEMPLATE_REVISION,
+      templateRevision,
       ...INVOICE_PDF_ASSETS,
     };
   } catch {

@@ -344,7 +344,7 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     await expect(publicationReason).toBeVisible();
     const printedSheet = page.getByRole('article', { name: /^سند فاکتور IRY-/ });
     await expect.poll(() => printedSheet.locator('img').evaluate(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)).toBe(true);
-    await page.evaluate(async () => { await document.fonts.load('400 12px "Iraniyaragh Sans"', 'ایران یراق'); });
+    await page.evaluate(async () => { await document.fonts.load('400 12px "Iraniyaragh Sans"', 'ایرانی یراق'); });
     await page.emulateMedia({ media: 'print' });
     await expect(printedSheet).toBeVisible();
     await expect(printedSheet.getByRole('table')).toContainText(sku);

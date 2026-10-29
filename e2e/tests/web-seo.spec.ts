@@ -54,9 +54,28 @@ test('web: public product and category primary content work without JavaScript',
   } finally { await context.close(); }
 });
 
+test('web: saved description keeps inline and responsive styling inside its content boundary', async ({ page }) => {
+  await prisma.product.update({ where: { id: productId }, data: { description: '<style>#test-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:820px){#test-layout{grid-template-columns:1fr}}body{display:none}</style><section id="test-layout"><p style="font-size:18px;line-height:2;color:#123456">متن قالب آزمایشی</p><p>بخش دوم آزمایشی</p></section>' } });
+  await page.goto(`${realWeb}/products/${slug}`, { waitUntil: 'domcontentloaded' });
+  const text = page.getByText('متن قالب آزمایشی', { exact: true });
+  await expect(text).toBeVisible();
+  await expect(text).toHaveCSS('font-size', '18px');
+  await expect(text).toHaveCSS('line-height', '36px');
+  await expect(text).toHaveCSS('color', 'rgb(18, 52, 86)');
+  await expect(page.getByRole('link', { name: 'ایرانی یراق؛ صفحهٔ اصلی', exact: true })).toBeVisible();
+  const layout = page.locator('#iyc-test-layout');
+  await expect(layout).toHaveCSS('display', 'grid');
+  const columns = await layout.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length);
+  expect(columns).toBe(page.viewportSize()!.width <= 820 ? 1 : 2);
+  const data = (await page.locator('script[type="application/ld+json"]').allTextContents()).flatMap(value => JSON.parse(value));
+  expect(data.find(value => value['@type'] === 'Product').description).not.toMatch(/display:grid|@media/u);
+});
+
 test('web: multi-variant products retain one complete server Product offer after hydration', async ({ page }) => {
   await prisma.productVariant.create({ data: { productId, sku: `SEO-BROWSER-${run}-MULTI`, skuKey: `SEO-BROWSER-${run}-MULTI`.toUpperCase(), combinationSignature: `seo-test-${run}`, title: 'تنوع دوم آزمایشی سئو', salePrice: 250000n, status: 'ACTIVE', isActive: true } });
-  await page.goto(`${realWeb}/products/${slug}`, { waitUntil: 'networkidle' });
+  const hydrated = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/guest-cart' && response.request().method() === 'GET' && response.ok());
+  await page.goto(`${realWeb}/products/${slug}`, { waitUntil: 'domcontentloaded' });
+  await hydrated;
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
   await expect(page.getByRole('button', { name: 'تنوع دوم آزمایشی سئو' })).toBeVisible();
   const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).flatMap(text => JSON.parse(text));

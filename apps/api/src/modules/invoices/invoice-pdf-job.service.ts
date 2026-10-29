@@ -138,7 +138,7 @@ export class InvoicePdfJobService {
         operation: (): Promise<InvoicePdfRequestResult> => this.prisma.$transaction(async (tx): Promise<InvoicePdfRequestResult> => {
           const prior = await tx.invoicePdfRenderJobCommand.findUnique({
             where: { scope_actorId_documentId_keyHash: { scope, actorId, documentId, keyHash } },
-            include: { job: { select: { id: true, status: true, renderInputHash: true } } },
+            include: { job: { select: { id: true, status: true, renderInputHash: true, rendererRevision: true, templateRevision: true, fontSha256: true } } },
           });
           if (prior) {
             if (prior.payloadHash !== payloadHash) {
@@ -146,7 +146,7 @@ export class InvoicePdfJobService {
             }
             if (prior.job.status === 'READY') {
               const artifact = await tx.invoicePdfArtifact.findUnique({
-                where: { documentId_renderInputHash_rendererRevision_templateRevision_fontSha256: artifactIdentity(documentId, prior.job.renderInputHash) },
+                where: { documentId_renderInputHash_rendererRevision_templateRevision_fontSha256: { documentId, renderInputHash: prior.job.renderInputHash, rendererRevision: prior.job.rendererRevision, templateRevision: prior.job.templateRevision, fontSha256: prior.job.fontSha256 } },
                 select: { pdfSha256: true, byteCount: true },
               });
               return { documentId, status: 'READY', sha256: artifact?.pdfSha256 ?? null, byteCount: artifact?.byteCount ?? null, replayed: true };

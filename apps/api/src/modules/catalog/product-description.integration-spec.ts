@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
@@ -263,6 +265,24 @@ describe.sequential('ProductDescription database integration', () => {
         expectedVersion: 999,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('persists the owner-supplied responsive layout and returns the same scoped styles after reload', async () => {
+    const input = readFileSync(resolve(__dirname, '../content/fixtures/user-supplied-hinge-layout.html'), 'utf8');
+    const before = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+    try {
+      const saved = await catalog.updateProductDescription(actorId, key('styled-layout'), productId, { description: input, expectedVersion: before.version });
+      const persisted = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+      const reloaded = await catalog.getAdminProduct(productId);
+      expect(persisted.description).toBe(saved.data.product.description);
+      expect(reloaded.data.product.description).toBe(saved.data.product.description);
+      expect(persisted.description).toContain('grid-template-columns:1.13fr .87fr');
+      expect(persisted.description).toContain('@media (max-width:480px)');
+      expect(persisted.description).toContain('id="iyc-iy-hg1135"');
+      expect(persisted.description).not.toContain('store128.com');
+    } finally {
+      await prisma.product.update({ where: { id: productId }, data: { description: before.description, version: before.version } });
+    }
   });
 
   it('clears the description with null', async () => {

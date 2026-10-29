@@ -1,4 +1,6 @@
 import sanitizeHtml from 'sanitize-html';
+import { Parser } from 'htmlparser2';
+import { descriptionPresentationAttributes, descriptionStyles } from './description-layout';
 
 /**
  * Server-side rich-text sanitization contract for Product description content
@@ -11,10 +13,8 @@ import sanitizeHtml from 'sanitize-html';
  */
 export const CONTENT_HTML_LIMIT_UTF16 = 100_000;
 
-const HEX_OR_FUNCTIONAL_COLOR =
-  /^(?:#[0-9a-fA-F]{3,8}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(?:,\s*(?:0|1|0?\.\d+)\s*)?\))$/u;
-
 const ALLOWED_TAGS = [
+  'article', 'section', 'aside', 'header', 'footer', 'details', 'summary',
   'p',
   'br',
   'h1',
@@ -59,23 +59,12 @@ const ALLOWED_TAGS = [
 ];
 
 const ALLOWED_ATTRIBUTES: Record<string, string[]> = {
-  '*': ['dir', 'lang', 'style'],
+  '*': ['dir', 'lang', 'style', 'class', 'id', 'aria-label'],
   a: ['href', 'target', 'rel', 'title'],
   ol: ['start', 'type', 'reversed'],
   th: ['colspan', 'rowspan', 'scope'],
   td: ['colspan', 'rowspan'],
-};
-
-const ALLOWED_STYLES: Record<string, Record<string, RegExp[]>> = {
-  '*': {
-    color: [HEX_OR_FUNCTIONAL_COLOR],
-    'background-color': [HEX_OR_FUNCTIONAL_COLOR],
-    'text-align': [/^(?:left|right|center|justify|start|end)$/u],
-    direction: [/^(?:ltr|rtl)$/u],
-    'font-style': [/^(?:normal|italic|oblique)$/u],
-    'font-weight': [/^(?:normal|bold|[1-9]00)$/u],
-    'text-decoration': [/^(?:none|underline|overline|line-through)$/u],
-  },
+  details: ['open'],
 };
 
 const ALLOWED_SCHEMES = ['http', 'https', 'mailto', 'tel'];
@@ -136,6 +125,7 @@ export function sanitizeDescriptionFragment(
     return { html: null, imageIds: [] };
   }
   assertWithinLimit(input, limit);
+  const styles = descriptionStyles(input);
 
   const preserveImages = (options.images ?? 'preserve') === 'preserve';
   const tags = preserveImages ? ALLOWED_TAGS.concat('img') : ALLOWED_TAGS;
@@ -146,15 +136,15 @@ export function sanitizeDescriptionFragment(
   const html = sanitizeHtml(input, {
     allowedTags: tags,
     allowedAttributes: attributes,
-    allowedStyles: ALLOWED_STYLES,
     allowedSchemes: ALLOWED_SCHEMES,
     allowedSchemesByTag: protectImagesFromExternalSources(preserveImages),
     allowProtocolRelative: false,
     disallowedTagsMode: 'discard',
     nonTextTags: NON_TEXT_TAGS,
     transformTags: {
-      a: (tagName, attribs) => {
-        if (attribs.target !== '_blank') return { tagName, attribs };
+      '*': (tagName, original) => {
+        const attribs = descriptionPresentationAttributes(original);
+        if (tagName !== 'a' || attribs.target !== '_blank') return { tagName, attribs };
         const rel = new Set((attribs.rel ?? '').split(/\s+/u).filter(Boolean));
         rel.add('noopener');
         rel.add('noreferrer');
@@ -163,8 +153,10 @@ export function sanitizeDescriptionFragment(
     },
   });
 
-  const trimmed = html.trim();
-  if (trimmed === '') return { html: null, imageIds: [] };
+  if (html.trim() === '') return { html: null, imageIds: [] };
+  // Only parser-compiled, scoped presentation rules can cross this boundary.
+  // Raw style tags were discarded by sanitize-html above.
+  const trimmed = `${styles ? `<style>${styles}</style>` : ''}${html.trim()}`;
   assertWithinLimit(trimmed, limit);
 
   if (!preserveImages) return { html: trimmed, imageIds: [] };
@@ -195,10 +187,16 @@ export function rewriteDescriptionImages(
     const match = matches[index];
     const mediaId = extractMediaId(match[0]);
     const image = mediaId === null ? undefined : byId.get(mediaId);
+    let presentation = '';
+    const parser = new Parser({ onopentag(_name, attribs) {
+      const safe = descriptionPresentationAttributes(attribs);
+      presentation = ['class', 'id', 'style'].filter(name => safe[name]).map(name => ` ${name}="${escapeHtmlAttribute(safe[name]!)}"`).join('');
+    } });
+    parser.end(match[0]);
     const replacement =
       image === undefined
         ? ''
-        : `<img data-media-id="${escapeHtmlAttribute(image.id)}" src="${escapeHtmlAttribute(image.url)}" width="${image.width}" height="${image.height}" alt="${escapeHtmlAttribute(image.alt)}">`;
+        : `<img data-media-id="${escapeHtmlAttribute(image.id)}" src="${escapeHtmlAttribute(image.url)}" width="${image.width}" height="${image.height}" alt="${escapeHtmlAttribute(image.alt)}"${presentation}>`;
     result = `${result.slice(0, match.index)}${replacement}${result.slice(match.index + match[0].length)}`;
   }
   return result;

@@ -9,7 +9,7 @@ export async function prepareInvoicePrint(sheet: HTMLElement): Promise<void> {
           if (!image.complete || image.naturalWidth === 0) throw new Error('Print image unavailable.');
         }),
         ...[400, 700].map(async weight => {
-          const faces = await sheet.ownerDocument.fonts.load(`${weight} 12px "Iraniyaragh Sans"`, 'ایران یراق');
+          const faces = await sheet.ownerDocument.fonts.load(`${weight} 12px "Iraniyaragh Sans"`, 'ایرانی یراق');
           if (faces.length === 0 || faces.some(face => face.status !== 'loaded')) throw new Error('Print font unavailable.');
         }),
       ]),
