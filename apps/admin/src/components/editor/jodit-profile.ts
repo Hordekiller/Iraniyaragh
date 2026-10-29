@@ -107,7 +107,7 @@ export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfi
     extraButtons.push({
       name: 'image',
       icon: 'image',
-      tooltip: 'Insert image from the IranYaragh product library',
+      tooltip: 'درج تصویر از کتابخانهٔ محصولات ایرانی یراق',
       exec: (editor) => {
         options.onInsertMedia?.(editor);
       },

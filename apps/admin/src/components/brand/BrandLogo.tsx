@@ -17,9 +17,9 @@ export function BrandLogo({ compact = false, inverse = false }: Readonly<BrandLo
     .join(' ');
 
   return (
-    <div className={className} aria-label="ایران یراق، مرکز عملیات">
+    <div className={className} aria-label="ایرانی یراق، مرکز عملیات">
       {compact ? <Image className={styles.mark} src={brandAsset('mark-128.webp')} alt="" width={44} height={44} unoptimized /> :
-        <Image className={styles.wordmark} src={brandAsset('wordmark-864.webp')} alt="ایران یراق" width={216} height={72} unoptimized />}
+        <Image className={styles.wordmark} src={brandAsset('wordmark-864.webp')} alt="ایرانی یراق" width={216} height={72} unoptimized />}
       <span className={styles.copy}>
         <span>مرکز عملیات</span>
       </span>

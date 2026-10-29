@@ -70,6 +70,15 @@ function invoice(): CustomerInvoice {
 }
 
 describe("Private invoice PDF fixed template boundary", () => {
+  it("uses the corrected display brand for new PDFs and preserves the legacy render revision", () => {
+    const current = buildInvoicePdfHtml(invoice(), assets);
+    expect(current.templateRevision).toBe("store-invoice-a4-v2");
+    expect(current.html).toContain("فاکتور فروشگاهی ایرانی یراق");
+    const legacy = buildInvoicePdfHtml(invoice(), assets, "store-invoice-a4-v1");
+    expect(legacy.templateRevision).toBe("store-invoice-a4-v1");
+    expect(legacy.html).toContain("فاکتور فروشگاهی ایران یراق");
+    expect(() => buildInvoicePdfHtml(invoice(), assets, "unknown-template")).toThrow(InvoicePdfInputError);
+  });
   it("preserves stored IRR and document number without rounding, recalculation or input mutation", () => {
     const input = invoice(),
       before = structuredClone(input);

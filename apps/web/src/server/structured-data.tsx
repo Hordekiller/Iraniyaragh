@@ -2,6 +2,7 @@ import { Parser } from 'htmlparser2'
 import type { CatalogProduct } from '../services/catalog/types'
 import { serializeJsonLd } from '../lib/json-ld'
 import { absolute, entityPath } from './policy'
+import { productStructuredData } from '../lib/product-json-ld'
 
 export function JsonLd({ data }: { data: unknown }) {
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />
@@ -24,17 +25,6 @@ export function plainDescription(html: string | null) {
 }
 
 export function productJsonLd(product: CatalogProduct) {
-  const images = product.media.filter(item => item.kind === 'IMAGE').flatMap(item => item.sources.map(source => source.url))
   const url = absolute(entityPath('products', product.slug))
-  // Variant grouping policy is not approved: one unambiguous variant only. No guessed ratings, shipping or inventory.
-  const variant = product.variants.length === 1 ? product.variants[0] : null
-  const availability = variant?.stockStatus === 'OUT_OF_STOCK' ? 'https://schema.org/OutOfStock' : variant?.stockStatus === 'IN_STOCK' || variant?.stockStatus === 'LOW_STOCK' ? 'https://schema.org/InStock' : undefined
-  return {
-    '@context': 'https://schema.org', '@type': 'Product', name: product.name, url,
-    ...(images.length ? { image: images } : {}),
-    ...(product.description ? { description: plainDescription(product.description) } : {}),
-    ...(product.brand ? { brand: { '@type': 'Brand', name: product.brand } } : {}),
-    ...(variant?.sku ? { sku: variant.sku } : {}),
-    ...(variant && /^\d+$/u.test(variant.price.amount) && variant.price.currency === 'IRR' ? { offers: { '@type': 'Offer', url, price: variant.price.amount, priceCurrency: 'IRR', ...(availability ? { availability } : {}) } } : {}),
-  }
+  return productStructuredData(product, url, plainDescription(product.description))
 }

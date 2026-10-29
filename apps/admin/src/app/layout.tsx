@@ -10,10 +10,10 @@ import { brandAsset } from '@/lib/brand';
 
 export const metadata: Metadata = {
   title: {
-    default: 'پنل عملیات ایران یراق',
-    template: '%s | ایران یراق',
+    default: 'پنل عملیات ایرانی یراق',
+    template: '%s | ایرانی یراق',
   },
-  description: 'مدیریت یکپارچه فروش، انبار و عملیات ایران یراق',
+  description: 'مدیریت یکپارچه فروش، انبار و عملیات ایرانی یراق',
   robots: { index: false, follow: false },
   icons: { icon: [{ url: brandAsset('favicon-32.png'), sizes: '32x32', type: 'image/png' }],
     apple: [{ url: brandAsset('apple-touch-icon.png'), sizes: '180x180', type: 'image/png' }] },

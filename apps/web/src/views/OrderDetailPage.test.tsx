@@ -38,7 +38,7 @@ it('cancels only after confirmation and retries an uncertain response with the o
   expect(cancelOrder).toHaveBeenCalledTimes(2)
   expect(cancelOrder.mock.calls[1]).toEqual(cancelOrder.mock.calls[0])
   expect(cancelOrder.mock.calls[0]).toEqual([ORDER.id, expect.stringMatching(/^order-cancel-/)])
-  expect(api.getOrder).toHaveBeenCalledTimes(2)
+  await waitFor(() => expect(api.getOrder).toHaveBeenCalledTimes(2))
 })
 
 it('does not offer customer cancellation of a paid order', async () => {

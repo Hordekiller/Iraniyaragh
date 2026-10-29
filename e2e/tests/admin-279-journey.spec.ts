@@ -149,7 +149,7 @@ async function insertHtmlInEditor(page: Page, chunks: string[]) {
 async function clickImageToolbarButton(page: Page) {
   const button = page
     .locator('[data-rich-text-editor]')
-    .getByRole('button', { name: 'Insert image from the IranYaragh product library' });
+    .getByRole('button', { name: 'درج تصویر از کتابخانهٔ محصولات ایرانی یراق' });
   try {
     await button.first().waitFor({ state: 'visible', timeout: 5_000 });
   } catch {
@@ -367,6 +367,7 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
       element.focus();
       const paragraph = document.createElement('p');
       paragraph.textContent = 'آخرین ویرایش پیش از ثبت';
+      paragraph.style.cssText = 'font-size:18px;line-height:2;padding:8px';
       element.append(paragraph);
       element.dispatchEvent(new Event('input', { bubbles: true }));
       document.querySelector<HTMLButtonElement>('[data-testid="description-save"]')!.click();
@@ -374,6 +375,10 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     const saved = await saveResponse;
     expect(saved.status()).toBe(200);
     expect(saved.request().postDataJSON().description).toContain('آخرین ویرایش پیش از ثبت');
+    const savedDescription = (await saved.json()).data.product.description as string;
+    expect(savedDescription).toContain('font-size:18px');
+    expect(savedDescription).toContain('line-height:2');
+    expect(savedDescription).toContain('padding:8px');
     await expect(page.getByTestId('description-error')).toHaveCount(0);
     await expect(page.getByTestId('description-stale')).toHaveCount(0);
   });
@@ -385,6 +390,8 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
 
     const html = (await richEditorBody(page).innerHTML()) ?? '';
     expect(html).toContain('آخرین ویرایش پیش از ثبت');
+    await expect(richEditorBody(page).getByText('آخرین ویرایش پیش از ثبت', { exact: true })).toHaveCSS('font-size', '18px');
+    await expect(richEditorBody(page).getByText('آخرین ویرایش پیش از ثبت', { exact: true })).toHaveCSS('line-height', '36px');
     expect(html).toContain('دربارهٔ این قفل');
     expect(html).toContain('<h2');
     expect(html).toContain('<table');
@@ -474,6 +481,8 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
       expect(html).toContain('<h2');
       expect(html).toContain('<table');
       expect(html).toContain('href="https://iranyaragh.test/docs"');
+      await expect(rich.getByText('آخرین ویرایش پیش از ثبت', { exact: true })).toHaveCSS('font-size', '18px');
+      await expect(rich.getByText('آخرین ویرایش پیش از ثبت', { exact: true })).toHaveCSS('line-height', '36px');
       expect(html).toMatch(/<img[^>]+src="[^"]+"/u);
 
       const mediaSrcs = await rich

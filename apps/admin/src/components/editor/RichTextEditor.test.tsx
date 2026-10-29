@@ -18,7 +18,7 @@ const state = vi.hoisted(() => {
   const insertHTML = vi.fn();
   const editor = {
     value: '',
-    editor: {},
+    editor: { dataset: {}, style: {} },
     e: { on: vi.fn() },
     getReadOnly: vi.fn(() => false),
     setEditorValue,

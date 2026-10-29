@@ -86,7 +86,7 @@ describe('buildJoditProfile', () => {
     picker?.exec?.(editor);
     expect(onInsertMedia).toHaveBeenCalledWith(editor);
     expect(picker?.icon).toBe('image');
-    expect(picker?.tooltip).toContain('IranYaragh');
+    expect(picker?.tooltip).toContain('ایرانی یراق');
   });
 
   it('keeps the image control as a plain exec action with no popup or sub-commands', () => {

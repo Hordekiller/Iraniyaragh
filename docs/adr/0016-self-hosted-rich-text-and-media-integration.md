@@ -21,6 +21,12 @@ duplicate that pipeline and create nested-modal/focus problems.
 
 ## Decisions
 
+Presentation update (2026-10-29): [ADR-0035](0035-scoped-product-description-layout.md)
+extends the initial formatting profile with server-compiled, scoped responsive
+styles and semantic layout elements. The raw-style prohibitions below describe
+the initial profile; arbitrary/unscoped CSS and all executable content remain
+prohibited. Media ownership and sanitization on every write/read still apply.
+
 ### Editor engine and asset boundary
 
 - Use the open-source MIT `jodit` package, exact-pinned at `4.15.1` for the first

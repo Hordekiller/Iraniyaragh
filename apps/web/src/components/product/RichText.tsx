@@ -15,13 +15,16 @@ type RichTextProps = Omit<
  * sanctioned `dangerouslySetInnerHTML` consumer in the storefront. It must never
  * be given client-authored or fixture-authored arbitrary HTML.
  */
-export function RichText({ html, className, ...rest }: RichTextProps) {
+export function RichText({ html, className, style, ...rest }: RichTextProps) {
+  const hasLayout = html.startsWith('<style>');
   return (
     <div
       {...rest}
       data-rich-text="true"
+      style={{ ...style, position: 'relative', isolation: 'isolate', contain: 'layout paint' }}
       className={[
         'min-w-0 max-w-full break-words leading-7',
+        ...(!hasLayout ? [
         '[&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-black',
         '[&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-black',
         '[&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-black',
@@ -40,6 +43,7 @@ export function RichText({ html, className, ...rest }: RichTextProps) {
         '[&_figure]:mt-4',
         '[&_figcaption]:mt-1 [&_figcaption]:text-xs [&_figcaption]:text-slate-500',
         '[&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-xl',
+        ] : []),
         className,
       ]
         .filter(Boolean)

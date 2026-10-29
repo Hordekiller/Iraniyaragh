@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
 import { assertIsolatedTestDatabase } from '../../test/database-url.guard';
@@ -11,7 +11,7 @@ import { InvoiceDraftService } from './invoice-draft.service';
 import { InvoiceDocumentService } from './invoice-document.service';
 import { InvoicePublicationService } from './invoice-publication.service';
 import { InvoicePdfArtifactStore } from './invoice-pdf-artifact.store';
-import { InvoicePdfJobService, INVOICE_PDF_MAX_ATTEMPTS, INVOICE_PDF_RENDERER_REVISION } from './invoice-pdf-job.service';
+import { InvoicePdfJobService, INVOICE_PDF_MAX_ATTEMPTS, INVOICE_PDF_RENDERER_REVISION, renderInputHash } from './invoice-pdf-job.service';
 import type { InvoicePdfQueue } from './invoice-pdf-queue.port';
 import {
   INVOICE_PDF_ASSETS,
@@ -198,6 +198,33 @@ describe.sequential('Private invoice PDF render jobs PostgreSQL acceptance', () 
     expect(artifactRow?.pdfSha256).toBe(ready.sha256);
     expect(artifactRow?.byteCount).toBe(bytes.length);
     expect(await prisma.auditLog.count({ where: { action: 'invoice.pdf.stored', entityId: artifactRow!.id } })).toBe(1);
+  });
+
+  it('replays a legacy template command against its original immutable artifact after the brand revision changes', async () => {
+    await reset();
+    await enablePdf();
+    const issued = await issueDocument();
+    const document = await prisma.invoiceDocument.findUniqueOrThrow({ where: { id: issued.documentId } });
+    const legacyKey = key();
+    const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+    const keyHash = digest(legacyKey);
+    const payloadHash = digest({ action: 'invoice-pdf:staff', documentId: issued.documentId });
+    // Reconstruct a pre-upgrade PENDING fixture; never mutate an immutable identity.
+    const legacy = await prisma.invoicePdfRenderJob.create({ data: {
+      documentId: issued.documentId, documentPayloadHash: document.payloadHash,
+      renderInputHash: renderInputHash(document), rendererRevision: INVOICE_PDF_RENDERER_REVISION,
+      templateRevision: 'store-invoice-a4-v1', fontSha256: INVOICE_PDF_ASSETS.fontSha256, status: 'PENDING',
+      requestedByUserId: actorId, requestedByScope: 'staff', requestKeyHash: keyHash, payloadHash,
+    } });
+    await prisma.invoicePdfRenderJobCommand.create({ data: { documentId: issued.documentId, actorId, scope: 'staff', keyHash, payloadHash, jobId: legacy.id, outcome: 'PENDING' } });
+    await prisma.invoicePdfStorageCapacity.update({ where: { id: 'invoice-pdf' }, data: { pendingJobCount: { increment: 1 }, version: { increment: 1 } } });
+    const identity = await jobs.claim('legacy-brand-worker');
+    expect(identity).toMatchObject({ templateRevision: 'store-invoice-a4-v1' });
+    const bytes = pdfBytes('synthetic-legacy-template');
+    expect(await jobs.completeRender(identity!, bytes, `${requestId}-legacy`)).toBe('READY');
+    const replay = await staffRequest(issued.documentId, legacyKey);
+    expect(replay).toMatchObject({ status: 'READY', replayed: true, byteCount: bytes.length });
+    expect(replay.sha256).toBe(createHash('sha256').update(bytes).digest('hex'));
   });
 
   it('publishes for the owner only and keeps the artifact out of reach before publication', async () => {
