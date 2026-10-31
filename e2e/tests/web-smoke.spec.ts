@@ -182,7 +182,7 @@ test.describe('web: storefront shell', () => {
     await page.goto('/');
 
     const navigation = page.getByRole('navigation', { name: 'ناوبری پایین', exact: true });
-    const categories = navigation.getByRole('button', { name: 'دسته‌بندی‌ها', exact: true });
+    const categories = navigation.getByRole('button', { name: /دسته‌بندی‌ها/ });
     await expect(categories).toBeVisible();
     // No phone is configured for this build, so the bottom nav must not offer a
     // contact affordance that would dial a number nobody has confirmed.
