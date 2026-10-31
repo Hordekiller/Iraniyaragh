@@ -1,8 +1,9 @@
 {
-  "revision": "brand-name-correction-2026-10-26",
+  "revision": "brand-ui-correction-preserve-pdf-v2-2026-10-31",
   "sources": {
     "mark": "5feb1586d82bd803224f26896c7254976d21d5521acebbb0629f6e3fc9da079a",
-    "wordmark": "1d37a1106b57b86929eac321af3f6ea5c1ef77d5c86ea55f6f0acf9e122c427e"
+    "wordmark": "1d37a1106b57b86929eac321af3f6ea5c1ef77d5c86ea55f6f0acf9e122c427e",
+    "invoiceWordmark": "457401b43c2c484ced56e1858da9c84a0998d86099ab0935e82bad90f69cbcc4"
   },
   "files": {
     "mark-64.webp": {
@@ -42,8 +43,8 @@
       "height": 180
     },
     "wordmark-print.png": {
-      "sha256": "c58b4bf6c4dc2b8fc848ba66a5f17e04ec297ae03f7a3a8bfae99df0585b0e5c",
-      "bytes": 431445,
+      "sha256": "457401b43c2c484ced56e1858da9c84a0998d86099ab0935e82bad90f69cbcc4",
+      "bytes": 459686,
       "width": 1086,
       "height": 362
     }

@@ -7,7 +7,8 @@ const crypto = require("node:crypto");
 const root = path.resolve(__dirname, "..");
 (async () => {
   const mark = path.join(root, "assets/brand/source/mark.png"),
-    word = path.join(root, "assets/brand/source/wordmark.png");
+    word = path.join(root, "assets/brand/source/wordmark.png"),
+    invoiceWordmark = path.join(root, "assets/brand/source/invoice-wordmark-v2.png");
   const outputs = {};
   for (const size of [64, 128])
     outputs[`mark-${size}.webp`] = await sharp(mark)
@@ -27,12 +28,11 @@ const root = path.resolve(__dirname, "..");
     .resize(180, 180)
     .png({ compressionLevel: 9 })
     .toBuffer();
-  outputs["wordmark-print.png"] = await sharp(word)
-    .resize({ width: 1086 })
-    .png({ compressionLevel: 9 })
-    .toBuffer();
-  const manifest = { revision: "brand-name-correction-2026-10-26", sources: {}, files: {} };
-  for (const [name, p] of Object.entries({ mark, wordmark: word }))
+  // PDF v1/v2 jobs bind this exact print asset. Web logo edits must never
+  // silently change the bytes of an existing invoice template revision.
+  outputs["wordmark-print.png"] = await fs.readFile(invoiceWordmark);
+  const manifest = { revision: "brand-ui-correction-preserve-pdf-v2-2026-10-31", sources: {}, files: {} };
+  for (const [name, p] of Object.entries({ mark, wordmark: word, invoiceWordmark }))
     manifest.sources[name] = crypto
       .createHash("sha256")
       .update(await fs.readFile(p))

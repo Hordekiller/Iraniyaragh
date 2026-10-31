@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { InvoicePdfInputError } from './invoice-pdf-template';
+import { INVOICE_PDF_ASSETS, InvoicePdfInputError } from './invoice-pdf-template';
 
 const FONT_RELATIVE = join('fonts', 'Vazirmatn[wght].woff2');
 const WORDMARK_RELATIVE = join('brand', 'wordmark-print.png');
@@ -12,8 +12,8 @@ const REPO_FALLBACK_DIR = resolve(__dirname, '../../../../../web/public');
 // a later file replacement can no longer mutate in-flight render evidence.
 export type InvoicePdfAssets = { fontWoff2: Buffer; wordmarkPng: Buffer };
 export const invoicePdfAssetHashes = {
-  font: '4e3fa217d38fdafc1fea4414ceb58ca5e662cf0ab5fa735a8c8c20e8b42cad92',
-  brand: 'c58b4bf6c4dc2b8fc848ba66a5f17e04ec297ae03f7a3a8bfae99df0585b0e5c',
+  font: INVOICE_PDF_ASSETS.fontSha256,
+  brand: INVOICE_PDF_ASSETS.brandSha256,
 } as const;
 
 function hash(bytes: Buffer): string {

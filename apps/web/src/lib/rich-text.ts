@@ -79,15 +79,3 @@ export function richTextToPlainText(html: string | null | undefined): string {
     .forEach((node) => node.remove());
   return textOf(parsed.body).replace(/\s+/gu, ' ').trim();
 }
-export function extractTextFromHtml(html: string | null | undefined, maxLength = 160): string {
-  if (!html) return ''
-  // Remove script and style tags
-  const withoutScripts = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/giu, ' ')
-  const withoutStyles = withoutScripts.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/giu, ' ')
-  // Remove HTML tags
-  const text = withoutStyles.replace(/<[^>]+>/gu, ' ')
-  // Normalize whitespace
-  const normalized = text.replace(/\s+/gu, ' ').trim()
-  if (normalized.length <= maxLength) return normalized
-  return normalized.slice(0, maxLength).trim() + '...'
-}

@@ -71,3 +71,15 @@ deployed for this source. Current CI must validate and rebuild the official
 
 A green UI build does not establish live SMS, payment, storage or end-to-end
 sales acceptance. Preserve the existing controlled acceptance requirements.
+
+## CI integration fixes
+
+- The access schema's user version is completed by forward migration
+  `20261031190000_access_user_version`; earlier migration files are unchanged.
+- The committed OpenAPI artifact is regenerated for the access routes.
+- Existing PDF v1/v2 print bytes are retained separately from the corrected UI
+  wordmark. The loader and renderer share the same asset hashes; no stored PDF,
+  pending job identity or template revision is rewritten.
+- The unused regex HTML extractor is removed in favor of the existing parsed
+  text projection. Asset-policy tests assert the exact retained document markup
+  rather than appearing to validate hostnames with unanchored regexes.

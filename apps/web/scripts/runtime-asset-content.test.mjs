@@ -39,7 +39,7 @@ test('allows valid inline JSON-LD while preserving a script resource URL', () =>
   const source = '<script type="application/ld+json" src="https://cdn.example/data.json">{"@context":"https://schema.org","url":"https://iraniyaragh.com"}</script>';
   const result = contentToInspect(html, source);
   assert.match(result, /https:\/\/cdn\.example\/data\.json/);
-  assert.doesNotMatch(result, /schema\.org|iraniyaragh\.com/);
+  assert.equal(result, '<script type="application/ld+json" src="https://cdn.example/data.json"></script>');
 });
 
 test('keeps malformed JSON-LD and executable script content inspected', () => {
@@ -58,7 +58,7 @@ test('allows only the canonical sitemap declaration in the shipped robots file',
 
 test('allows canonical sitemap locations but preserves offsite locations and resource URLs', () => {
   const result = contentToInspect(sitemap, '<url><loc>https://iraniyaragh.com/categories</loc><image>https://cdn.example/item.png</image></url><url><loc>https://other.example/</loc></url>');
-  assert.doesNotMatch(result, /https:\/\/iraniyaragh\.com\//);
+  assert.equal(result, '<url><image>https://cdn.example/item.png</image></url><url><loc>https://other.example/</loc></url>');
   assert.match(result, /https:\/\/cdn\.example\/item\.png/);
   assert.match(result, /https:\/\/other\.example\//);
   assert.match(contentToInspect(file, '<loc>https://iraniyaragh.com/</loc>'), /https:\/\//);

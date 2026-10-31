@@ -121,11 +121,13 @@ test('web: drawer fits small phones, landscape and tablets without horizontal ov
 
 test('web: mobile categories button opens its own page and supports nested discovery', async ({ page, isMobile }, testInfo) => {
   test.skip(!isMobile, 'The bottom navigation is visible on mobile.')
-  await mockCatalog(page)
-  await page.goto(origin)
+  // SSR reads its initial taxonomy before browser routes can intercept fetches.
+  // Use the separately built, explicitly isolated fixture storefront here.
+  const categoryOrigin = process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173'
+  await page.goto(categoryOrigin)
   const navigation = page.getByRole('navigation', { name: 'ناوبری پایین' })
   await navigation.getByRole('button', { name: /دسته‌بندی‌ها/ }).click()
-  await expect(page).toHaveURL(`${origin}/categories`)
+  await expect(page).toHaveURL(`${categoryOrigin}/categories`)
   await expect(page.getByRole('heading', { name: 'دسته‌بندی کالاها', level: 1 })).toBeVisible()
   await expect(navigation.getByRole('button', { name: /دسته‌بندی‌ها/ })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -138,9 +140,9 @@ test('web: mobile categories button opens its own page and supports nested disco
   expect(audit.violations).toEqual([])
   await page.getByRole('searchbox', { name: 'جستجو در دسته‌بندی کالاها' }).fill(categoryName.trim())
   await page.locator('main article').first().getByRole('link').first().click()
-  await expect(page).toHaveURL(`${origin}${categoryHref}`)
+  await expect(page).toHaveURL(`${categoryOrigin}${categoryHref}`)
   await navigation.getByRole('button', { name: /دسته‌بندی‌ها/ }).click()
-  await expect(page).toHaveURL(`${origin}/categories`)
+  await expect(page).toHaveURL(`${categoryOrigin}/categories`)
   await page.reload()
   await expect(page.getByRole('heading', { name: 'دسته‌بندی کالاها', level: 1 })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
