@@ -56,14 +56,13 @@ test('Browser routing harness loads shared diagnostics and preserves safe correl
     assert.equal(response.headers.get('x-request-id'), 'harness-request');
     assert.equal(response.headers.get('x-correlation-id'), 'harness-parent');
     assert.deepEqual(hits, [{ requestId: 'harness-request', correlationId: 'harness-parent' }]);
-    const tlsStatus = await new Promise((resolve, reject) => {
-      const req = request(`https://127.0.0.1:${tlsPort}/nginx-health`, { rejectUnauthorized: false }, res => {
-        res.resume(); res.on('end', () => resolve(res.statusCode));
-      });
-      req.setTimeout(5000, () => req.destroy(new Error('Isolated TLS probe timed out')));
-      req.on('error', reject); req.end();
-    });
-    assert.equal(tlsStatus, 200);
+    const harnessDirectory = readFileSync(join(directory, 'iranyaragh-e2e-nginx.state'), 'utf8');
+    assert.ok(harnessDirectory.startsWith(directory + '/'));
+    const tlsStatus = execFileSync('curl', [
+      '--fail', '--silent', '--show-error', '--cacert', join(harnessDirectory, 'fullchain.pem'),
+      '--output', '/dev/null', '--write-out', '%{http_code}', `https://127.0.0.1:${tlsPort}/nginx-health`,
+    ], { encoding: 'utf8', timeout: 5000 });
+    assert.equal(tlsStatus, '200');
     const logs = docker(['logs', container]);
     assert.ok(!logs.includes('synthetic-private'));
     const entries = logs.split('\n').filter(line => line.startsWith('{')).map(JSON.parse);
