@@ -81,7 +81,7 @@ export class DiscoveryService {
     if (filename === 'pages-home.xml.gz') {
       // Policy text still awaits business approval and its HTML is noindex.
       // Only canonical, indexable public destinations belong in the sitemap.
-      return this.singleflight(filename, () => this.urlset(['/', '/catalog'].map(path => ({ path }))));
+      return this.singleflight(filename, () => this.urlset(['/', '/catalog', '/categories'].map(path => ({ path }))));
     }
     const match = /^(products|categories|brands)-([A-Za-z0-9_-]{1,320})\.xml\.gz$/u.exec(filename);
     if (!match || !isDiscoveryKind(match[1]!)) throw new NotFoundException('Unknown sitemap shard.');

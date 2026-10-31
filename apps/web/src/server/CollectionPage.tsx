@@ -37,7 +37,7 @@ export async function CollectionPage({ kind, slug = '', query }: { kind: Kind; s
   const data = await collectionData(kind, slug, query)
   return <>
     <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
-      <nav aria-label="مسیر صفحه" className="text-xs text-slate-500 mb-3"><Link href="/">خانه</Link>{data.ancestors.map(ancestor => <span key={ancestor.id}> / <Link href={entityPath('categories', ancestor.slug)}>{ancestor.name}</Link></span>)} / <span aria-current="page">{data.title}</span></nav>
+      <nav aria-label="مسیر صفحه" className="text-xs text-slate-500 mb-3"><Link href="/">خانه</Link>{kind === 'categories' && <><span className="mx-1" aria-hidden="true">/</span><Link href="/categories">همه دسته‌بندی‌ها</Link></>}{data.ancestors.map(ancestor => <span key={ancestor.id}> / <Link href={entityPath('categories', ancestor.slug)}>{ancestor.name}</Link></span>)} / <span aria-current="page">{data.title}</span></nav>
       <h1 className="font-black text-slate-900 text-xl">{data.title}{data.page > 1 ? ` — صفحهٔ ${data.page}` : ''}</h1>
       {data.children.length > 0 && <section className="mt-6" aria-labelledby="category-children-title"><h2 id="category-children-title" className="text-base font-bold text-slate-900">زیردسته‌های {data.title}</h2><CategoryGrid categories={data.children} /></section>}
       <div className="mt-5">{data.result.items.length ? <ProductGrid products={data.result.items} /> : <p>هنوز کالای منتشرشده‌ای وجود ندارد.</p>}</div>

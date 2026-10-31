@@ -4,6 +4,7 @@
  */
 export const ROUTES = {
   home: '/',
+  categories: '/categories',
   privacy: '/policies/privacy',
   terms: '/policies/terms',
   category: (slug: string) => `/categories/${slug}`,
@@ -28,6 +29,7 @@ export const ROUTES = {
 /** Route path patterns for react-router `<Route path>` definitions. */
 export const ROUTE_PATHS = {
   home: '/',
+  categories: '/categories',
   privacy: '/policies/privacy',
   terms: '/policies/terms',
   category: '/categories/:slug',
