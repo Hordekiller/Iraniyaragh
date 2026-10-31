@@ -8,6 +8,7 @@ import { AppLayout } from './components/layout/AppLayout'
 import { HomePage } from './views/HomePage'
 import { ROUTE_PATHS } from './lib/routes'
 
+const CategoriesPage = lazy(() => import('./views/CategoriesPage').then(module => ({ default: module.CategoriesPage })))
 const CategoryPage = lazy(() => import('./views/CategoryPage').then(module => ({ default: module.CategoryPage })))
 const ProductPage = lazy(() => import('./views/ProductPage').then(module => ({ default: module.ProductPage })))
 const SearchPage = lazy(() => import('./views/SearchPage').then(module => ({ default: module.SearchPage })))
@@ -46,6 +47,7 @@ export default function App() {
                   <Routes>
                     <Route element={<AppLayout />}>
                       <Route path={ROUTE_PATHS.home} element={<HomePage />} />
+                      <Route path={ROUTE_PATHS.categories} element={<CategoriesPage />} />
                       <Route path={ROUTE_PATHS.category} element={<CategoryPage />} />
                       <Route path={ROUTE_PATHS.product} element={<ProductPage />} />
                       <Route path={ROUTE_PATHS.search} element={<SearchPage />} />

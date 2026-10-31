@@ -74,6 +74,7 @@ export function AppLayout({ children, serverMetadata = false }: { children?: Rea
 
 function routeAnnouncement(pathname: string): string {
   if (pathname === '/') return 'صفحه خانه'
+  if (pathname === '/categories') return 'صفحه دسته‌بندی کالاها'
   if (pathname === '/policies/privacy') return 'صفحه حریم خصوصی'
   if (pathname === '/policies/terms') return 'صفحه قوانین و شرایط فروش'
   if (pathname === '/account/addresses') return 'صفحه دفتر نشانی‌ها'
