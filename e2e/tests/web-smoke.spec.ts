@@ -181,13 +181,17 @@ test.describe('web: storefront shell', () => {
 
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: 'دسته‌بندی‌ها' })).toBeVisible();
+    const navigation = page.getByRole('navigation', { name: 'ناوبری پایین', exact: true });
+    const categories = navigation.getByRole('button', { name: 'دسته‌بندی‌ها', exact: true });
+    await expect(categories).toBeVisible();
     // No phone is configured for this build, so the bottom nav must not offer a
     // contact affordance that would dial a number nobody has confirmed.
     await expect(page.getByRole('link', { name: 'تماس با فروشگاه' })).toHaveCount(0);
 
-    await tap(page.getByRole('button', { name: 'دسته‌بندی‌ها' }));
-    await expect(page.locator('section#categories')).toBeInViewport();
+    await tap(categories);
+    await expect(page).toHaveURL(/\/categories$/);
+    await expect(page.getByRole('heading', { name: 'دسته‌بندی کالاها', level: 1 })).toBeVisible();
+    await expect(categories).toHaveAttribute('aria-current', 'page');
 
     await tap(page.getByRole('button', { name: 'جستجو' }).first());
     await expect(page.locator('input[placeholder="جستجوی ابزار..."]')).toBeVisible();
