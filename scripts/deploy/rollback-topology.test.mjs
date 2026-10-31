@@ -30,6 +30,7 @@ for (const renderer of [false, true]) {
       mkdirSync(scripts, { recursive: true });
       mkdirSync(bin);
       copyFileSync(rollback, join(scripts, "rollback.sh"));
+      for (const file of ["archive-diagnostics.sh", "diagnostic-log-filter.py"]) copyFileSync(fileURLToPath(new URL(file, import.meta.url)), join(scripts, file));
       const git = (args) =>
         execFileSync("git", args, {
           cwd: directory,
@@ -75,6 +76,7 @@ if(args.includes('ps')) process.stdout.write('{"Health":"healthy","State":"runni
         env: {
           ...process.env,
           ENV_FILE: environmentFile,
+          DIAGNOSTIC_ARCHIVE_DIR: join(directory, "diagnostics"),
           PATH: `${bin}:${process.env.PATH}`,
           RUNTIME_RECORDER: recorder,
         },
@@ -84,7 +86,8 @@ if(args.includes('ps')) process.stdout.write('{"Health":"healthy","State":"runni
         .split("\n")
         .map((line) => JSON.parse(line));
       assert.ok(calls.length > 3);
-      for (const call of calls) {
+      assert.ok(calls.some(call => call.args.includes("logs")), "archive current logs before replacement");
+      for (const call of calls.filter(call => !call.args.includes("logs"))) {
         assert.equal(call.tag, target);
         assert.equal(
           call.services.includes("storefront"),

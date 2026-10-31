@@ -62,10 +62,21 @@ in force, including short credential assignments and credentials/queries in URLs
 
 Compose uses Docker's local logging driver, 10 MB segments, five files and
 compression for each service. Rotation is size-based, not a guaranteed number of
-days. These are local container logs; replacing a container can remove its old log
-history. This is not a durable external log archive or an alerting service. Capture
-only the needed bounded, redacted incident evidence into an operator-private
-location before replacing an affected container. Never commit incident exports.
+days. The official deploy/rollback captures a private compressed metadata archive before
+replacing containers. Archives live in `/var/log/iranyaragh/diagnostics`, retain up
+to 30 files for at most 14 days, and cap each snapshot at 10,000 records from finite
+24-hour/2,000-line-per-service input. Archive directories are mode 0700 and files
+0600. A second allowlist removes arbitrary messages, request bodies and unknown
+payload fields, retaining approved failure codes, validation rules and coordinates.
+Archive creation must succeed before replacement; temporary partial files are
+removed on failure. These are local operator archives, not an external alerting
+service. Never commit incident exports.
+
+To look up a code from an older release on the VPS:
+
+```sh
+zcat /var/log/iranyaragh/diagnostics/diagnostics-*.jsonl.gz | python3 scripts/deploy/diagnostic-log-filter.py --request-id SUPPORT_CODE
+```
 
 Changing the logging driver recreates containers, including data services on the
 first rollout. Use the official deployment, restore-verified backup and readiness

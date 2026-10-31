@@ -58,6 +58,8 @@ done
 [[ " ${APPLICATION_SERVICES[*]} " == *" api "* && " ${APPLICATION_SERVICES[*]} " == *" web "* ]] \
   || { echo "target release lacks the required API/web services" >&2; exit 1; }
 
+"${INFRA_DIR}/../../scripts/deploy/archive-diagnostics.sh" || { echo "diagnostic archive failed; previous release is unchanged" >&2; exit 1; }
+
 echo "Rolling back to ${TARGET}"
 compose pull || { echo "could not pull the images for ${TARGET}" >&2; exit 1; }
 
