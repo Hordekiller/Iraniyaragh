@@ -13,6 +13,13 @@ test('allows schema context and conditional availability identifiers only as met
   assert.doesNotMatch(contentToInspect(file, source), /https?:\/\//);
 });
 
+test('allows stock vocabulary assigned to the availability metadata variable', () => {
+  const source = "let availability; if (soldOut) availability = 'https://schema.org/OutOfStock'; else availability = 'https://schema.org/InStock';";
+  assert.doesNotMatch(contentToInspect(file, source), /https?:\/\//);
+  assert.doesNotMatch(contentToInspect(file, "const availability = 'https://schema.org/InStock'"), /https?:\/\//);
+  assert.match(contentToInspect(file, "const image = 'https://schema.org/InStock'"), /https?:\/\//);
+});
+
 test('keeps identical schema URLs when used as runtime resources or executable calls', () => {
   for (const source of [
     '<img src="https://schema.org/InStock" />',

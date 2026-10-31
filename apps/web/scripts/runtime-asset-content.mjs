@@ -21,6 +21,10 @@ function isSchemaIdentifier(node) {
     } else if (ts.isPropertyAssignment(parent) && parent.initializer === expression) {
       const name = parent.name.getText().replace(/^['"]|['"]$/g, '');
       return context ? name === '@context' : name === 'availability';
+    } else if (availability && ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && parent.right === expression) {
+      return ts.isIdentifier(parent.left) && parent.left.text === 'availability';
+    } else if (availability && ts.isVariableDeclaration(parent) && parent.initializer === expression) {
+      return ts.isIdentifier(parent.name) && parent.name.text === 'availability';
     } else return false;
   }
   return false;
