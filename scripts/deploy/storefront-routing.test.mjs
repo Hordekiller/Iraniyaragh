@@ -23,6 +23,60 @@ const listen = (server) =>
 const close = (server) => new Promise((resolve) => server.close(resolve));
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+test('Browser routing harness loads shared diagnostics and preserves safe correlation over HTTP/TLS', { timeout: 45000 }, async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'iranyaragh-e2e-routing-'));
+  const container = `iranyaragh-e2e-contract-${process.pid}`;
+  const script = join(root, 'e2e/scripts/nginx-routing-proxy.sh');
+  const hits = [];
+  const upstream = createServer((req, res) => {
+    hits.push({ requestId: req.headers['x-request-id'], correlationId: req.headers['x-correlation-id'] });
+    res.statusCode = 503;
+    res.end('isolated unavailable upstream');
+  });
+  const httpProbe = createServer();
+  const tlsProbe = createServer();
+  const upstreamPort = await listen(upstream);
+  const httpPort = await listen(httpProbe);
+  const tlsPort = await listen(tlsProbe);
+  await Promise.all([close(httpProbe), close(tlsProbe)]);
+  const env = { ...process.env, TMPDIR: directory,
+    NGINX_E2E_CONTAINER: container, NGINX_E2E_HTTP_PORT: String(httpPort), NGINX_E2E_HTTPS_PORT: String(tlsPort),
+    NGINX_E2E_API_PORT: String(upstreamPort), NGINX_E2E_ADMIN_PORT: String(upstreamPort),
+    NGINX_E2E_MEDIA_PORT: String(upstreamPort), NGINX_E2E_STOREFRONT_PORT: String(upstreamPort),
+  };
+  const options = { env, timeout: 20000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] };
+  try {
+    execFileSync('bash', [script, 'start'], options);
+    const response = await fetch(`http://127.0.0.1:${httpPort}/api/v1/unavailable?token=synthetic-private`, {
+      headers: { 'X-Request-ID': 'harness-request', 'X-Correlation-ID': 'harness-parent' },
+      signal: AbortSignal.timeout(5000),
+    });
+    await response.text();
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('x-request-id'), 'harness-request');
+    assert.equal(response.headers.get('x-correlation-id'), 'harness-parent');
+    assert.deepEqual(hits, [{ requestId: 'harness-request', correlationId: 'harness-parent' }]);
+    const tlsStatus = await new Promise((resolve, reject) => {
+      const req = request(`https://127.0.0.1:${tlsPort}/nginx-health`, { rejectUnauthorized: false }, res => {
+        res.resume(); res.on('end', () => resolve(res.statusCode));
+      });
+      req.setTimeout(5000, () => req.destroy(new Error('Isolated TLS probe timed out')));
+      req.on('error', reject); req.end();
+    });
+    assert.equal(tlsStatus, 200);
+    const logs = docker(['logs', container]);
+    assert.ok(!logs.includes('synthetic-private'));
+    const entries = logs.split('\n').filter(line => line.startsWith('{')).map(JSON.parse);
+    assert.ok(entries.some(entry => entry.requestId === 'harness-request' && entry.correlationId === 'harness-parent' && entry.statusCode === 503));
+  } finally {
+    try { execFileSync('bash', [script, 'stop'], options); } catch {
+      try { docker(['rm', '-f', container]); } catch { /* startup cleanup already removed it */ }
+    }
+    await close(upstream);
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 // Real shipped TLS vhost and routing snippets, isolated synthetic upstreams.
 // No app/DB/fixture authentication, external provider or production host access.
 test(

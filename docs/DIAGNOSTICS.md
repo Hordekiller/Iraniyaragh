@@ -60,6 +60,9 @@ Filters stream input with a bounded line buffer. Docker/operator access is requi
   strings are absent. Native per-request Nginx error text is disabled because it
   cannot be redacted; structured access errors remain, and startup/configuration
   errors still use the container's global startup error stream.
+  The deployed proxy and browser routing harness include the same HTTP-context
+  diagnostic definitions. Quality checks start both real Nginx configurations
+  and verify HTTP/TLS correlation and query redaction before browser journeys.
 - Admin/storefront: failed HTTP/network/timeout/parse attempts have metadata-only
   browser records. Next server error hooks add release, route template and safe
   error classification; the request and raw exception are never serialized by
