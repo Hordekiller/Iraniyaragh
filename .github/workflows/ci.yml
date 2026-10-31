@@ -275,6 +275,7 @@ jobs:
           pnpm --filter @iranyaragh/api media:bucket
       - name: Build API, start it and the media and PDF workers, build and smoke web and admin
         run: |
+          pnpm --filter @iranyaragh/contracts build
           pnpm --filter @iranyaragh/api build
           node apps/api/dist/src/main.js > api.log 2>&1 &
           API_PID=$!

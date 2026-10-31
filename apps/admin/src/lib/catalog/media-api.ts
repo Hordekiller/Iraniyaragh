@@ -69,7 +69,7 @@ export function uploadMediaObject(
     const failed = (message: string, kind: 'network' | 'timeout' | 'http') => {
       let requestId = clientRequestId;
       try { requestId = diagnosticId(request.getResponseHeader?.('X-Request-ID')) ?? clientRequestId; } catch { /* opaque cross-origin failure */ }
-      logClientFailure('admin', requestId, kind, request.status || undefined);
+      logClientFailure('admin', requestId, kind, request.status || undefined, { method: 'PUT', path: '/catalog/admin/products/:id/media/uploads/bytes' });
       reject(new ApiNetworkError(message, requestId, kind === 'timeout' ? 'timeout' : 'network'));
     };
     request.open(upload.method, upload.uploadUrl);

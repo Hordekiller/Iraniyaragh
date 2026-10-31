@@ -1,6 +1,9 @@
+import { adminDiagnosticOperation } from "./admin-diagnostics";
+
 /** Correlation identifiers are opaque diagnostic references, never authorization. */
 export function diagnosticId(value: unknown): string | undefined {
-  return typeof value === 'string' && /^[A-Za-z0-9._:-]{1,128}$/u.test(value.trim())
+  return typeof value === "string" &&
+    /^[A-Za-z0-9._:-]{1,128}$/u.test(value.trim())
     ? value.trim()
     : undefined;
 }
@@ -10,21 +13,25 @@ export function createDiagnosticId(): string {
 }
 
 export function logClientFailure(
-  service: 'admin' | 'storefront',
+  service: "admin" | "storefront",
   requestId: string,
-  kind: 'network' | 'timeout' | 'parse' | 'http',
+  kind: "network" | "timeout" | "parse" | "http",
   statusCode?: number,
+  operation?: { method: string; path: string },
 ): void {
   try {
     console.warn(
       JSON.stringify({
         timestamp: new Date().toISOString(),
         service: `iranyaragh-${service}`,
-        level: kind === 'http' && (statusCode ?? 500) < 500 ? 'warn' : 'error',
-        event: 'client.request.failed',
+        level: kind === "http" && (statusCode ?? 500) < 500 ? "warn" : "error",
+        event: "client.request.failed",
         requestId: diagnosticId(requestId),
         kind,
         statusCode,
+        ...(service === "admin" && operation
+          ? adminDiagnosticOperation(operation.method, operation.path)
+          : {}),
       }),
     );
   } catch {
@@ -34,10 +41,21 @@ export function logClientFailure(
 
 export function diagnosticReference(error: unknown): string {
   const id =
-    error && typeof error === 'object'
-      ? diagnosticId(Object.getOwnPropertyDescriptor(error, 'requestId')?.value)
+    error && typeof error === "object"
+      ? diagnosticId(Object.getOwnPropertyDescriptor(error, "requestId")?.value)
       : undefined;
-  return id ? `کد پیگیری: ${id}` : '';
+  return id ? `کد پیگیری: ${id}` : "";
+}
+
+/** Keep the existing user explanation and append a copyable support reference. */
+export function withDiagnosticReference(
+  message: string,
+  error: unknown,
+): string {
+  const reference = diagnosticReference(error);
+  return reference && !message.includes(reference)
+    ? `${message} (${reference})`
+    : message;
 }
 
 /** No exception messages/SQL, source excerpts, full paths or user input. */
@@ -48,26 +66,29 @@ export function diagnosticException(error: unknown): {
 } {
   try {
     const knownNames = new Set([
-      'Error',
-      'TypeError',
-      'SyntaxError',
-      'RangeError',
-      'AbortError',
-      'TimeoutError',
-      'PrismaClientKnownRequestError',
-      'PrismaClientInitializationError',
-      'PrismaClientValidationError',
+      "Error",
+      "TypeError",
+      "SyntaxError",
+      "RangeError",
+      "AbortError",
+      "TimeoutError",
+      "PrismaClientKnownRequestError",
+      "PrismaClientInitializationError",
+      "PrismaClientValidationError",
     ]);
-    const name = error instanceof Error ? error.name : '';
+    const name = error instanceof Error ? error.name : "";
     const code =
-      error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      typeof error.code === "string"
         ? error.code
-        : '';
+        : "";
     const frames =
       error instanceof Error
-        ? (error.stack ?? '')
+        ? (error.stack ?? "")
             .slice(0, 16_000)
-            .split('\n')
+            .split("\n")
             .slice(1, 16)
             .flatMap((line) => {
               const match =
@@ -79,7 +100,7 @@ export function diagnosticException(error: unknown): {
             .slice(0, 8)
         : [];
     return {
-      errorType: knownNames.has(name) ? name : 'Error',
+      errorType: knownNames.has(name) ? name : "Error",
       ...(/^(?:P\d{4}|E(?:CONNRESET|CONNREFUSED|TIMEDOUT|PIPE|NOTFOUND|AI_AGAIN)|UND_ERR_[A-Z_]{1,40})$/u.test(
         code,
       )
@@ -88,13 +109,13 @@ export function diagnosticException(error: unknown): {
       frames,
     };
   } catch {
-    return { errorType: 'Error', frames: [] };
+    return { errorType: "Error", frames: [] };
   }
 }
 
 /** A framework hook supplies a registered route template, never a request URL. */
 export function logRenderFailure(
-  service: 'iranyaragh-admin' | 'iranyaragh-storefront',
+  service: "iranyaragh-admin" | "iranyaragh-storefront",
   version: string | undefined,
   requestId: unknown,
   routePath: string,
@@ -102,14 +123,16 @@ export function logRenderFailure(
   correlationId?: unknown,
 ): void {
   try {
-    const route = /^\/[A-Za-z0-9_/.[\]()-]{0,240}$/u.test(routePath) ? routePath : 'unknown';
+    const route = /^\/[A-Za-z0-9_/.[\]()-]{0,240}$/u.test(routePath)
+      ? routePath
+      : "unknown";
     console.error(
       JSON.stringify({
         timestamp: new Date().toISOString(),
-        level: 'error',
+        level: "error",
         service,
-        version: version ?? 'unknown',
-        event: 'render.request.failed',
+        version: version ?? "unknown",
+        event: "render.request.failed",
         requestId: diagnosticId(requestId),
         correlationId: diagnosticId(correlationId) ?? diagnosticId(requestId),
         route,

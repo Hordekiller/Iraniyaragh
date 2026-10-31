@@ -4,6 +4,13 @@ This extends the existing redacted logger, request context, exception envelope,
 Docker logs and business audit. It adds no public log reader, customer telemetry
 collector, external analytics destination or diagnostic database table.
 
+The shared contracts package now builds a CommonJS runtime for the API/workers;
+browser bundlers keep transpiling its typed source. Turbo builds this dependency
+first, and each Docker build explicitly includes it. For a standalone API build
+outside Turbo, run `pnpm --filter @iranyaragh/contracts build` first. The API
+artifact check actually loads the runtime exports so a typecheck-only success
+cannot hide a missing or incompatible package in production.
+
 ## Follow one failure
 
 Product creation and description-save errors display **کد پیگیری**. The same
@@ -18,6 +25,8 @@ On the VPS, from `/opt/iranyaragh`:
 ./scripts/deploy/logs.sh --request-id SUPPORT_CODE --since 2h -n 1000
 ./scripts/deploy/logs.sh --level error --since 30m --no-follow
 ./scripts/deploy/logs.sh --follow --event http.request.completed api
+./scripts/deploy/logs.sh --area catalog --since 2h -n 1000 api
+./scripts/deploy/logs.sh --operation catalog.product.create --level error --no-follow api
 ```
 
 The first command joins `requestId` and `correlationId` across services. Session
@@ -33,9 +42,16 @@ Filters stream input with a bounded line buffer. Docker/operator access is requi
 ## What is recorded
 
 - API: every rejected/aborted request, every write completion and reads taking
-  at least two seconds. Healthy quick reads stay quiet. UTC timestamp, release,
+  at least two seconds, plus fast Admin reads. Healthy quick public reads stay quiet. UTC timestamp, release,
   service, request/correlation IDs, registered route template, method, HTTP status,
   duration, stable error code and approved source coordinates are included.
+- Admin operations include fixed area/operation labels. Product creation, description
+  saves, status changes, attribute configuration, variant generation/prices, media
+  upload preparation/transfer/confirmation, and workbook upload/validation/commit
+  can be filtered independently. Labels are derived from known routes; product IDs,
+  search/filter values and signed URLs are never copied into them. Other Admin
+  areas retain coarse read/write labels. Browser failures use the same labels;
+  client reports remain browser-local and never establish a business outcome.
 - Validation: registered field paths and constraint names, bounded to 16 findings
   and five nested levels. Unknown extra field names are masked. No submitted field
   value, product HTML, file, body, query or credential is recorded.

@@ -39,10 +39,8 @@ COPY packages/contracts/package.json packages/contracts/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
-# `@iranyaragh/contracts` is a type-only workspace package (it ships no runtime
-# build output), so the API compiles against its source and never requires it at
-# runtime. Copying the workspace sources here is therefore only needed for the
-# compiler's type resolution.
+# Shared diagnostics are required by the compiled CommonJS API at runtime.
+# Build their package before the API and include dist in the deployed workspace.
 COPY packages/contracts packages/contracts
 COPY apps/api apps/api
 
@@ -56,7 +54,7 @@ RUN set -eu; \
     cp -r /repo/node_modules/.pnpm/@prisma+client@*/node_modules/.prisma /tmp/generated-prisma-client; \
     test -d /tmp/generated-prisma-client/client
 
-RUN pnpm --filter @iranyaragh/api build
+RUN pnpm --filter @iranyaragh/contracts build && pnpm --filter @iranyaragh/api build
 
 # Re-resolve the dependency tree for the runtime stage only, so devDependencies
 # and the other workspaces stay out of the shipped image. `--legacy` is required
@@ -92,6 +90,7 @@ COPY --from=build /repo/apps/api/dist ./dist
 COPY --from=build /repo/apps/api/prisma ./prisma
 COPY --from=build /repo/apps/api/package.json ./package.json
 COPY --from=build /repo/apps/api/scripts ./scripts
+RUN node -e "require('node:assert/strict').equal(typeof require('@iranyaragh/contracts').diagnosticException, 'function')"
 
 # The Prisma query engine is a native binary linked against OpenSSL, and the
 # only way to know the image actually ships a loadable engine is to resolve the

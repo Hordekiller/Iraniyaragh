@@ -44,7 +44,7 @@ RUN set -eu; \
     cp -r /repo/node_modules/.pnpm/@prisma+client@*/node_modules/.prisma /tmp/generated-prisma-client; \
     test -d /tmp/generated-prisma-client/client
 
-RUN pnpm --filter @iranyaragh/api build
+RUN pnpm --filter @iranyaragh/contracts build && pnpm --filter @iranyaragh/api build
 
 # Approved print assets live in the storefront workspace. They are stashed
 # before `pnpm deploy --prod /out` below, because that step prunes /repo of
@@ -85,6 +85,7 @@ WORKDIR /app
 COPY --from=build --chown=pwuser:pwuser /out/node_modules ./node_modules
 COPY --from=build --chown=pwuser:pwuser /repo/apps/api/dist ./dist
 COPY --from=build --chown=pwuser:pwuser /repo/apps/api/package.json ./package.json
+RUN node -e "require('node:assert/strict').equal(typeof require('@iranyaragh/contracts').diagnosticException, 'function')"
 # The same hash-verified font and wordmark the template binds. Copied as a flat
 # tree at runtime assets location, owned by the worker user, read-only in use.
 COPY --from=build --chown=pwuser:pwuser /tmp/pdf-assets/fonts ./assets/fonts

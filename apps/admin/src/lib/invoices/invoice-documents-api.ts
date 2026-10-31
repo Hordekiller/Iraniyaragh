@@ -46,7 +46,7 @@ export async function downloadInvoicePdfArtifact(id: string, signal?: AbortSigna
     if (!response.ok) {
       const body = await response.json().catch(() => null) as Record<string, unknown> | null;
       const failure = new ApiClientError({ code: typeof body?.code === 'string' ? body.code : 'INTERNAL_ERROR', message: typeof body?.message === 'string' ? body.message : 'دریافت فایل ناموفق بود.', requestId: diagnosticId(body?.requestId) ?? returnedId, statusCode: response.status }, response.headers);
-      logClientFailure('admin', failure.requestId, 'http', response.status);
+      logClientFailure('admin', failure.requestId, 'http', response.status, { method: 'GET', path: `${root}/documents/:id/pdf/artifact` });
       throw failure;
     }
     const disposition = response.headers.get('Content-Disposition') ?? '';
@@ -57,7 +57,7 @@ export async function downloadInvoicePdfArtifact(id: string, signal?: AbortSigna
     if (error instanceof ApiClientError) throw error;
     if (signal?.aborted) throw new ApiAbortError();
     const kind = controller.signal.aborted ? 'timeout' : 'network';
-    logClientFailure('admin', returnedId, kind);
+    logClientFailure('admin', returnedId, kind, undefined, { method: 'GET', path: `${root}/documents/:id/pdf/artifact` });
     throw new ApiNetworkError('دریافت فایل از سامانه ناموفق بود.', returnedId, kind);
   } finally { clearTimeout(timer); }
 }

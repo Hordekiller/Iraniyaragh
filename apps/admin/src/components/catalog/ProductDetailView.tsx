@@ -1,5 +1,6 @@
 'use client';
 
+import { withDiagnosticReference } from '@iranyaragh/contracts';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -75,7 +76,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
       })
       .catch((fetchError: unknown) => {
         if (fetchError instanceof ApiAbortError) return;
-        setError(fetchError instanceof Error ? fetchError.message : 'بارگیری کالا ناموفق بود.');
+        setError(withDiagnosticReference(fetchError instanceof Error ? fetchError.message : 'بارگیری کالا ناموفق بود.', fetchError));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);

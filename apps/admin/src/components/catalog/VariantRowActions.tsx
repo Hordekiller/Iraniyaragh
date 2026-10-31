@@ -1,5 +1,6 @@
 'use client';
 
+import { withDiagnosticReference } from '@iranyaragh/contracts';
 import { useRef, useState } from 'react';
 import {
   CircularProgress,
@@ -56,7 +57,7 @@ export function VariantRowActions({ variant, attributes = [], definitions = [], 
       onChanged();
       delete idempotencyKeys.current[target];
     } catch (error) {
-      feedback.error(error instanceof ApiClientError ? error.message : 'تغییر وضعیت تنوع ناموفق بود؛ دوباره تلاش کنید.');
+      feedback.error(withDiagnosticReference(error instanceof ApiClientError ? error.message : 'تغییر وضعیت تنوع ناموفق بود؛ دوباره تلاش کنید.', error));
     } finally {
       setBusy(false);
     }

@@ -34,7 +34,7 @@ ENV NEXT_PUBLIC_FIXTURE_AUTH=false
 
 # All browser traffic uses this origin's /api proxy. Canonicals, environment
 # indexability and the internal API address are runtime-only server settings.
-RUN pnpm --filter @iranyaragh/web build
+RUN pnpm --filter @iranyaragh/contracts build && pnpm --filter @iranyaragh/web build
 RUN node -e "const fs=require('node:fs'),p=require('node:path');const hits=[];function scan(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const f=p.join(dir,e.name);if(e.isDirectory())scan(f);else if(e.name.endsWith('.js')){const b=fs.readFileSync(f,'utf8');for(const m of ['ronix-2210-hammer-drill','cat-garden','FIXTURE-','fixture-quote','CatalogFixtureClient'])if(b.includes(m))hits.push(f+': '+m)}}}scan('apps/web/.next/static');if(hits.length){console.error('Fixture data shipped in storefront browser bundle:',hits);process.exit(1)}"
 
 FROM node:22-bookworm-slim AS runtime

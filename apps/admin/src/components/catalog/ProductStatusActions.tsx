@@ -1,5 +1,6 @@
 'use client';
 
+import { withDiagnosticReference } from '@iranyaragh/contracts';
 import { useRef, useState } from 'react';
 import { Alert, Button, Stack, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import { Archive, MoreVertical, Rocket, Undo2 } from 'lucide-react';
@@ -64,8 +65,9 @@ export function ProductStatusActions({ product, onChanged, inline = false }: Pro
           : error.code === 'ATTRIBUTE_OPTION_INVALID' ? 'مقادیر ویژگی‌های اجباری را برای تمام SKUهای فعال ذخیره کنید.'
           : error.code === 'UNPROCESSABLE' ? 'برای انتشار، حداقل یک SKU فعال لازم است.' : error.message
         : 'تغییر وضعیت ناموفق بود؛ دوباره تلاش کنید.';
-      setErrorMessage(message);
-      feedback.error(message);
+      const trackedMessage = withDiagnosticReference(message, error);
+      setErrorMessage(trackedMessage);
+      feedback.error(trackedMessage);
     } finally {
       setBusy(false);
     }

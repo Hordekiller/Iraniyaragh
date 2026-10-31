@@ -19,6 +19,19 @@ test('level and event filters include structured proxy failures', () => {
   assert.deepEqual(run(['--level', 'error']), [rows[0], rows[2]]);
   assert.deepEqual(run(['--event', 'http.request.completed']), [rows[1]]);
 });
+test('Admin operation filters work for API, browser and archived metadata', () => {
+  const rows = [
+    { event: 'http.request.completed', data: { surface: 'admin', area: 'catalog', operation: 'catalog.product.create', statusCode: 409 } },
+    { event: 'client.request.failed', area: 'catalog', operation: 'catalog.product.description.save' },
+    { event: 'http.request.completed', data: { area: 'invoices', operation: 'invoices.read' } },
+  ];
+  const input = rows.map(row => JSON.stringify(row)).join('\n');
+  const output = args => execFileSync('python3', [filter, ...args], { input, encoding: 'utf8' }).trim().split('\n').filter(Boolean).map(JSON.parse);
+  assert.deepEqual(output(['--area', 'catalog']), rows.slice(0, 2));
+  assert.deepEqual(output(['--operation', 'catalog.product.create']), [rows[0]]);
+  const archived = output(['--area', 'catalog', '--operation', 'catalog.product.create', '--archive-safe']);
+  assert.deepEqual(archived[0].data, rows[0].data);
+});
 test('oversized/malformed diagnostic lines are bounded and skipped', () => {
   const output = execFileSync('python3', [filter, '--level', 'error'], { input: 'x'.repeat(80000) + '\n{broken}\n' + JSON.stringify(rows[2]), encoding: 'utf8' });
   assert.deepEqual(JSON.parse(output), rows[2]);

@@ -423,7 +423,7 @@ describe('apiFetch', () => {
     vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => { sentId = new Headers(init.headers).get('x-request-id')!; throw new Error('password=synthetic-private'); }));
     await expect(apiFetch('/catalog/admin/products', { method: 'POST', body: { name: 'synthetic-private' } })).rejects.toMatchObject({ requestId: expect.any(String), kind: 'network' });
     expect(sentId).toMatch(/^[0-9a-f-]{36}$/u);
-    expect(JSON.parse(String(log.mock.calls[0][0]))).toMatchObject({ requestId: sentId, kind: 'network' });
+    expect(JSON.parse(String(log.mock.calls[0][0]))).toMatchObject({ requestId: sentId, kind: 'network', surface: 'admin', area: 'catalog', operation: 'catalog.product.create' });
     expect(JSON.stringify(log.mock.calls)).not.toContain('synthetic-private');
   });
   it('retains proxy rejection status and header ID when an HTML error has no API envelope', async () => {

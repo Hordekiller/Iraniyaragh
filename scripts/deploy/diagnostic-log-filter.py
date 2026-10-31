@@ -6,14 +6,17 @@ import re
 import sys
 
 
-def matches(entry, request_id=None, level=None, event=None):
+def matches(entry, request_id=None, level=None, event=None, area=None, operation=None):
     if request_id and request_id not in (entry.get('requestId'), entry.get('correlationId')):
         return False
     severity = entry.get('level', entry.get('severity'))
     if severity is None and isinstance(entry.get('statusCode'), int):
         status = entry['statusCode']
         severity = 'error' if status >= 500 else 'warn' if status >= 400 else 'info'
-    return (not level or severity == level) and (not event or entry.get('event') == event)
+    data = entry.get('data') if isinstance(entry.get('data'), dict) else {}
+    return ((not level or severity == level) and (not event or entry.get('event') == event)
+            and (not area or entry.get('area', data.get('area')) == area)
+            and (not operation or entry.get('operation', data.get('operation')) == operation))
 
 
 def archive_record(entry):
@@ -47,6 +50,14 @@ def archive_record(entry):
             value = source.get(key)
             if isinstance(value, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_.:-]{0,99}|[0-9a-f]{16}', value):
                 data[key] = value
+        if source.get('surface') == 'admin':
+            data['surface'] = 'admin'
+        areas = ('catalog', 'invoices', 'reports', 'orders', 'customers', 'credit', 'notifications', 'settings', 'audit', 'inventory', 'purchasing')
+        if source.get('area') in areas:
+            data['area'] = source['area']
+        operation = source.get('operation')
+        if isinstance(operation, str) and re.fullmatch(r'(?:' + '|'.join(areas) + r')\.[a-z.]{1,64}', operation):
+            data['operation'] = operation
         for key in ['statusCode', 'attempt', 'claimed', 'published', 'deadLettered', 'accepted', 'pending', 'failed']:
             value = source.get(key)
             if type(value) is int and 0 <= value <= 100000000:
@@ -74,9 +85,11 @@ def main():
     parser.add_argument('--request-id')
     parser.add_argument('--level', choices=['info', 'warn', 'error', 'debug', 'verbose', 'fatal'])
     parser.add_argument('--event')
+    parser.add_argument('--area')
+    parser.add_argument('--operation')
     parser.add_argument('--archive-safe', action='store_true')
     args = parser.parse_args()
-    filtered = bool(args.request_id or args.level or args.event or args.archive_safe)
+    filtered = bool(args.request_id or args.level or args.event or args.area or args.operation or args.archive_safe)
     emitted = 0
     while True:
         line = sys.stdin.readline(65537)
@@ -92,7 +105,7 @@ def main():
             if not filtered:
                 print(line.rstrip(), flush=True)
             continue
-        if isinstance(entry, dict) and matches(entry, args.request_id, args.level, args.event):
+        if isinstance(entry, dict) and matches(entry, args.request_id, args.level, args.event, args.area, args.operation):
             if args.archive_safe:
                 entry = archive_record(entry)
                 if not entry or emitted >= 10000:

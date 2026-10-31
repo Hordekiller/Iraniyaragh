@@ -52,7 +52,7 @@ ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_MEDIA_ORIGIN=$NEXT_PUBLIC_MEDIA_ORIGIN
 ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
 
-RUN pnpm --filter @iranyaragh/admin build
+RUN pnpm --filter @iranyaragh/contracts build && pnpm --filter @iranyaragh/admin build
 
 # --- runtime stage -----------------------------------------------------------
 FROM node:22-bookworm-slim AS runtime

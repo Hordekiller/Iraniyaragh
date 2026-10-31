@@ -1,5 +1,6 @@
 'use client';
 
+import { withDiagnosticReference } from '@iranyaragh/contracts';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -75,7 +76,7 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
       onClose();
     } catch (error) {
       setSubmitError(
-        error instanceof ApiClientError ? error.message : 'ذخیرهٔ برند ناموفق بود؛ دوباره تلاش کنید.',
+        withDiagnosticReference(error instanceof ApiClientError ? error.message : 'ذخیرهٔ برند ناموفق بود؛ دوباره تلاش کنید.', error),
       );
     } finally {
       setSubmitting(false);

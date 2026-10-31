@@ -257,7 +257,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       throw new ApiAbortError();
     }
     const kind = controller.signal.aborted ? 'timeout' : phase;
-    logClientFailure('admin', responseRequestId, kind);
+    logClientFailure('admin', responseRequestId, kind, undefined, { method, path });
     if (kind === 'timeout') throw new ApiNetworkError('زمان دریافت پاسخ به پایان رسید. دوباره تلاش کنید.', responseRequestId, kind);
     throw new ApiNetworkError(kind === 'parse' ? 'پاسخ معتبر از سامانه دریافت نشد؛ نتیجهٔ ثبت را پیگیری کنید.' : 'امکان برقراری ارتباط با سامانه وجود ندارد.', responseRequestId, kind);
   } finally {
@@ -272,7 +272,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       requestId: diagnosticId(candidate.requestId) ?? responseRequestId,
       statusCode: response.status,
     };
-    logClientFailure('admin', failure.requestId, 'http', response.status);
+    logClientFailure('admin', failure.requestId, 'http', response.status, { method, path });
     if (response.status === 401 && failure.code === 'AUTH_SESSION_INVALID' && options.token && options.recoverSession !== false && sessionRecovery) {
       if (getSessionRevision() !== sessionRevision) throw new ApiAbortError();
       return replayWithRecoveredSession(freshToken => {
@@ -293,7 +293,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   if (options.responseShape === 'raw') return payload as T;
   if (!payload || typeof payload !== 'object' || !('data' in payload)) {
-    logClientFailure('admin', responseRequestId, 'parse', response.status);
+    logClientFailure('admin', responseRequestId, 'parse', response.status, { method, path });
     throw new ApiNetworkError('پاسخ معتبر از سامانه دریافت نشد؛ نتیجهٔ ثبت را پیگیری کنید.', responseRequestId, 'parse');
   }
   return payload as ApiSuccess<T>;
