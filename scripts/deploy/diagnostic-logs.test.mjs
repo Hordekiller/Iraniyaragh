@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, readdirSync, statSync, mkdirSync, utimesSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, constants, fstatSync, mkdtempSync, openSync, readFileSync, readdirSync, statSync, mkdirSync, utimesSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -81,9 +81,12 @@ test('deployment archive is private and compressed', () => {
     assert.ok(!files.includes('diagnostics-expired.jsonl.gz'));
     assert.equal(statSync(archives).mode & 0o777, 0o700);
     const file = join(archives, files.find(name => !name.includes('seed')));
-    assert.equal(statSync(file).mode & 0o777, 0o600);
-    const content = gunzipSync(readFileSync(file)).toString();
-    assert.equal(JSON.parse(content).requestId, 'archive-test');
-    assert.ok(!content.includes('synthetic-private'));
+    const descriptor = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      assert.equal(fstatSync(descriptor).mode & 0o777, 0o600);
+      const content = gunzipSync(readFileSync(descriptor)).toString();
+      assert.equal(JSON.parse(content).requestId, 'archive-test');
+      assert.ok(!content.includes('synthetic-private'));
+    } finally { closeSync(descriptor); }
   } finally { rmSync(temporary, { recursive: true, force: true }); }
 });
