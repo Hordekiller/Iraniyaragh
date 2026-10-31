@@ -1,5 +1,7 @@
 "use client";
 
+import { diagnosticReference } from "@iranyaragh/contracts";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -69,8 +71,9 @@ const stateLabel: Record<AdminProductMedia["state"], string> = {
 };
 
 function message(error: unknown): string {
+  const reference = diagnosticReference(error);
   return error instanceof ApiClientError || error instanceof ApiNetworkError
-    ? error.message
+    ? [error.message, reference].filter(Boolean).join(" ")
     : "عملیات رسانه ناموفق بود؛ دوباره تلاش کنید.";
 }
 

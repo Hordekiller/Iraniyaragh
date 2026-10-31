@@ -162,4 +162,17 @@ describe("media-api", () => {
     });
     expect(progress).toHaveBeenCalledWith(50);
   });
+  it.each(['load', 'error', 'timeout', 'abort'])('keeps a safe upload diagnostic reference for %s without changing signed headers', async event => {
+    class FailedRequest extends EventTarget {
+      upload = new EventTarget(); status = event === 'load' ? 403 : 0;
+      open() {} setRequestHeader() {}
+      getResponseHeader() { return 'media-proxy-reference'; }
+      send() { this.dispatchEvent(new Event(event)); }
+    }
+    vi.stubGlobal('XMLHttpRequest', FailedRequest);
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(uploadMediaObject({ mediaId: 'test', uploadUrl: 'https://storage.invalid/signed?token=synthetic-private', method: 'PUT', requiredHeaders: {}, expiresAt: '', version: 1 }, new File(['private-bytes'], 'private-file'), vi.fn())).rejects.toMatchObject({ requestId: 'media-proxy-reference', kind: event === 'timeout' ? 'timeout' : 'network' });
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/synthetic-private|private-bytes|private-file/u);
+  });
+
 });

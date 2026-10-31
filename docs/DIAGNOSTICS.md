@@ -20,7 +20,7 @@ On the VPS, from `/opt/iranyaragh`:
 ./scripts/deploy/logs.sh --follow --event http.request.completed api
 ```
 
-The first command joins `requestId` and `correlationId` across services. Admin session
+The first command joins `requestId` and `correlationId` across services. Session
 recovery retains the root correlation while each attempt has its own request ID.
 Identifiers are diagnostic references, never authentication or idempotency keys.
 The existing same-key mutation/reconciliation rules remain authoritative.
@@ -47,7 +47,8 @@ Filters stream input with a bounded line buffer. Docker/operator access is requi
 - Admin/storefront: failed HTTP/network/timeout/parse attempts have metadata-only
   browser records. Next server error hooks add release, route template and safe
   error classification; the request and raw exception are never serialized by
-  these hooks. Public SSR catalog calls forward the original request ID to API.
+  these hooks. Public SSR catalog calls retain their own attempt IDs and forward the incoming
+  correlation ID to API.
 - Media/PDF/report/outbox workers: distinct service identity, connection failures,
   retries and exhausted deliveries. Job references are SHA-256 prefixes, not job
   payloads. Existing private domain job evidence remains the source of final

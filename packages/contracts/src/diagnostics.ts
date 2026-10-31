@@ -99,6 +99,7 @@ export function logRenderFailure(
   requestId: unknown,
   routePath: string,
   error: unknown,
+  correlationId?: unknown,
 ): void {
   try {
     const route = /^\/[A-Za-z0-9_/.[\]()-]{0,240}$/u.test(routePath) ? routePath : 'unknown';
@@ -110,6 +111,7 @@ export function logRenderFailure(
         version: version ?? 'unknown',
         event: 'render.request.failed',
         requestId: diagnosticId(requestId),
+        correlationId: diagnosticId(correlationId) ?? diagnosticId(requestId),
         route,
         ...diagnosticException(error),
       }),

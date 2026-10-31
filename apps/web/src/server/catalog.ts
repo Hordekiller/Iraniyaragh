@@ -20,7 +20,9 @@ function apiOrigin() {
 const publicFetch: typeof fetch = async (input, init) => {
   const incoming = await headers()
   const outgoing = new Headers(init?.headers)
-  outgoing.set('X-Request-ID', diagnosticId(incoming.get('x-request-id')) ?? createDiagnosticId())
+  const requestId = diagnosticId(incoming.get('x-request-id')) ?? createDiagnosticId()
+  outgoing.set('X-Request-ID', diagnosticId(outgoing.get('x-request-id')) ?? requestId)
+  outgoing.set('X-Correlation-ID', diagnosticId(incoming.get('x-correlation-id')) ?? requestId)
   return fetch(input, { ...init, headers: outgoing, cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(8_000) })
 }
 function isolatedFixture() { return process.env.APP_ENVIRONMENT === 'test' && process.env.NEXT_PUBLIC_FIXTURE_CATALOG === 'true' }

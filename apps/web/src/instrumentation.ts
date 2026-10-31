@@ -8,5 +8,6 @@ export const onRequestError: Instrumentation.onRequestError = (error, request, c
     request.headers['x-request-id'],
     context.routePath,
     error,
+    request.headers['x-correlation-id'],
   );
 };
