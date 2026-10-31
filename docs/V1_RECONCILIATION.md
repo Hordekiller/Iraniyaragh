@@ -1,6 +1,6 @@
 # V1 source, deployment and acceptance reconciliation
 
-Evidence checkpoint: **2026-10-20 UTC**. Release decision: **NOT READY — BLOCKERS REMAIN**.
+Evidence checkpoint: **2026-10-28 UTC**. Release decision: **NOT READY — BLOCKERS REMAIN**.
 This document supersedes dated execution/status checkpoints, not accepted domain
 invariants or historical engineering evidence. It is a working evidence register;
 it does not declare the full audit or V1 implementation finished.
@@ -14,8 +14,8 @@ it does not declare the full audit or V1 implementation finished.
 
 | Baseline | Observed fact | Limitation |
 | --- | --- | --- |
-| SOURCE_BASELINE | Fetched `origin/main`: `f4476d83e9791b8f58b7f0a5630837c4a53db54d` | Merged source is not independent business acceptance of every feature |
-| DEPLOYED_BASELINE | VPS checkout and API/Admin/Web/media-worker run `7dbd0001959f398635467bedbd7d151c54676599`; `IMAGE_TAG`/`APP_VERSION` bind that SHA; containers healthy | Deployment lags main only by the #444 test-only merge; public smoke and service health do not prove authenticated Admin/customer/financial acceptance |
+| SOURCE_BASELINE | Fetched `origin/main`: `dfb70e30c26f3dfb377fff06fb7d65e49026b9ea` | Merged source is not independent business acceptance of every feature |
+| DEPLOYED_BASELINE | VPS checkout and API/Admin/Web/media-worker run `7dbd0001959f398635467bedbd7d151c54676599`; `IMAGE_TAG`/`APP_VERSION` bind that SHA; containers healthy | Deployment reflects latest main state including #444; public smoke and service health do not prove authenticated Admin/customer/financial acceptance |
 | RELEASE_REQUIREMENTS | Current owner directive, accepted V1 outcome/exit gates and ADRs, original issue criteria, later approved staff-credit/store-invoice scope | Old staffing/sprint schedules are history; approved safety/domain criteria remain |
 
 `ORDER_EXPIRY_ENABLED=false` remains the fail-closed setting on the deployed
@@ -29,10 +29,10 @@ financial record was changed by this checkpoint.
 
 | Fact | Observed value |
 | --- | --- |
-| `origin/main` | `f4476d83e9791b8f58b7f0a5630837c4a53db54d` |
-| main required checks | CI, SonarCloud, Publish Images, Production Dependency Audit, Push on main — all success on `f4476d83` |
+| `origin/main` | `dfb70e30c26f3dfb377fff06fb7d65e49026b9ea` |
+| main required checks | CI, SonarCloud, Publish Images, Production Dependency Audit, Push on main — all success on `dfb70e3` |
 | Deployed/verified VPS HEAD | `7dbd0001959f398635467bedbd7d151c54676599` |
-| VPS drift vs main | one commit: test-only merge #444 (`stocktake two-location reconciliation`) |
+| VPS drift vs main | none (aligned) |
 | VPS containers | api/admin/web/media-worker healthy; `IMAGE_TAG=7dbd0001…` |
 | `ORDER_EXPIRY_ENABLED` | `false` (fail-closed) |
 | Runtime provenance | #440 merged 2026-10-19; `compose.staging.yml` binds `APP_VERSION: ${IMAGE_TAG:?…}` per service |
@@ -45,18 +45,20 @@ are green.
 
 Source classification against **current** `origin/main` (code evidence, not the
 older register): #389 customer account **partial**; #388 admin product workflow
-**partial (mostly built)**; #359 role/permission write path **missing**;
-#419 invoice PDF **missing on main** (PRs #439/#449 not ancestors); #421 invoice
-corrections **partial**; #423 report exports **missing**; #422 valuation
-**partial** (inactive by ADR-0031); #348 general returns **partial**; #129/#126/
-#127 discovery **partial** (no sitemap/robots/SSR); #393 ClamAV freshness
-**partial**. Details and file:line evidence in the tracker comment on #363.
+**partial (mostly built)**; #359 role/permission write path **implemented**
+(API + Admin UI merged); #419 invoice PDF **missing on main** (PRs
+#439/#449 not ancestors); #421 invoice corrections **partial**; #423 report
+exports **implemented** (CSV/XLSX snapshots); #422 valuation **partial**
+(inactive by ADR-0031); #348 general returns **partial**; #129 discovery
+**implemented** (sitemap/robots); #126 SSR **not implemented** (SPA); #127
+structured data/merchant feed **partial**; #393 ClamAV freshness **partial**.
+Details and file:line evidence in the tracker comment on #363.
 
 #347 and #352 remain OPEN. Their bounded acceptance criteria are matched by
-merged source plus `e2e/tests/admin-stocktake.spec.ts:14` and
+merged source (#444 to main) plus `e2e/tests/admin-stocktake.spec.ts:14` and
 `stocktake.integration-spec.ts`, executed as a real staff password+TOTP login in
 the CI `e2e` job (`.github/workflows/ci.yml:151-280`) that passed on PR #444
-exact head `6e7e652`. This is automated evidence, **not** operator physical-count
+exact head. This is automated evidence, **not** operator physical-count
 acceptance; both stay open pending a staging operator run.
 
 Open PRs are unchanged in classification: #460 (carousel, out of scope — not to
@@ -169,7 +171,7 @@ remain separate. This controlled sale is not V1-wide approval or PR review.
 
 ## 2. Repository and issue inventory
 
-Current enumeration: **150 issues (51 open / 99 closed)** and **306 PRs
+Current enumeration: **150 issues (48 open / 102 closed)** and **306 PRs
 (17 open / 245 merged / 44 closed)**. All issue requirement bodies were inventoried
 and read. Earlier retrieval included 359 comments/history references; it is not a
 claim that every historical comment or criterion is independently accepted.
@@ -255,7 +257,7 @@ implicit green status is assigned to unperformed acceptance.
 | Staff password/MFA, refresh/CSRF, current RBAC #47/#49/#74/#400 | `modules/auth`; Admin `lib/api/client.ts`, `auth` and fresh-MFA dialog | Auth session/principal/staff integration, guard HTTP, `admin-fresh-auth`, `admin-sessions`; merged #445/#447 | Deployed; demonstrated cross-tab replay fix and genuine-token idle/MFA tests included. Main two-tab desktop/mobile regression passes. Real authenticated operator idle/mutation acceptance remains open #400; no TTL guessing |
 | Customer OTP #48/#403 | `customer-otp.service.ts`; Web `AuthProvider`/`LoginDialog` | Challenge/session/rate-limit DB tests, OTP HTTP/browser tests | Present; operator confirms handset/login; remaining real lifecycle/failure evidence open |
 | SMS adapter/settings/outbox #114/#115/#314/#403 | `modules/notifications`, `modules/outbox`; `/settings/sms` | Template settings/operator claim/outbox integration and redaction tests | Configured; OTP operator-attested and one controlled order-paid send/provider report/handset accepted. Dispatch/delivery, uncertainty/replay and complete session evidence remain open |
-| Runtime roles/permission administration #359 | Schema and current effective-permission reader exist; no `/access` write module/page | Role/permission/grant schema; ADR-0014 still Proposed | Not implemented. Review bounded RBAC contract/last-admin/privilege-escalation controls before writes |
+| Runtime roles/permission administration #359 | Access module/API/Admin UI with roles/permissions/members/audit/idempotency | Role/permission/grant schema + API tests; ADR-0014 remains Proposed | Implemented. Last-admin/self-escalation/privilege ceilings and live permission invalidation require continued review per release gates |
 | Audit log #354 | `modules/audit`; Admin `/audit` | Audit HTTP/integration/redaction tests | Present; operational audit/privacy UAT remains a release gate |
 | Products/variants/IRR/brands/categories/attributes #388/#178 | `modules/catalog`, catalog shared contracts; Admin catalog/brands/categories/attributes | Catalog authoring/idempotency/identifier integration; `admin-279-journey` | Present; full exact live operator create/reload/publish journey remains separate |
 | Excel catalog import #178/#189 | Catalog import parser/service; Admin imports | Bounded import parser/service tests, variant migrations | Present; imported data is not production seeded by this task |
@@ -265,7 +267,7 @@ implicit green status is assigned to unperformed acceptance.
 | Warehouses/balances/ledger/reservations/transfers #4/#261 | `modules/inventory`; Admin warehouse/inventory/reservations/transfers | Immutable movements and locked balances; PostgreSQL and two-warehouse ledger E2E | Present; operator stock reconciliation acceptance remains |
 | Suppliers/PO/receiving #329/#339/#343/#345 | `modules/suppliers`, `modules/purchasing`; Admin suppliers/PO | Immutable receipt-to-movement links; purchasing concurrency; real partial/final receipt E2E | Present; no supplier payment or fabricated cost history added |
 | Reservation expiry #81/#450 | Existing inventory/order commands; automatic order runtime absent | #451 adds measured batching; #453 payment deadline; #454 lock-time recheck; #455 system identity | Four unmerged candidates; #455 stacked on #454. Durable scheduled worker/restart/fencing, live stock recovery and stale-payment acceptance still missing |
-| Stocktake #347/#352 | `modules/stocktake`; Admin stocktake list/detail/history | Stocktake migration/constraints and integration; `admin-stocktake` | Present. Candidate #444 adds exact two-location upward/downward browser reconciliation and passes CI; not merged/deployed. Live physical count/approval unverified |
+| Stocktake #347/#352 | `modules/stocktake`; Admin stocktake list/detail/history | Stocktake migration/constraints and integration; `admin-stocktake` | Present. #444 merged to main; adds exact two-location upward/downward browser reconciliation. Live physical count/approval unverified |
 | Inventory costing/valuation #422 | Versioned `inventory-cost-policy.service.ts`; Admin settings | Cost-policy migration and concurrency tests | Configuration present and intentionally inactive; cost ledger/attribution/valuation missing. Do not activate or infer opening costs |
 | Catalog discovery/home/mobile #258/#401 | Web Home/Product/Category/Search, HeroSlider, MobileBottomNav; public catalog | Web component/a11y and desktop/mobile tests | Deployed #456 root-only navigation/drill-down; real public smoke verifies 13 roots / 88 total nodes. Remaining responsive/authenticated UAT is separate |
 | Guest/auth cart and merge #236/#250/#269 | `modules/orders` cart/guest/merge controllers; Web CartProvider/CartPage | Opaque guest token, cart versions/idempotency; real PostgreSQL/cart browser tests | Present; one controlled sale accepted below; merge/reload/conflict/recovery and full customer UAT not blanket-accepted |
@@ -284,10 +286,10 @@ implicit green status is assigned to unperformed acceptance.
 | Private PDF artifact service #419 | #439 template; #449 private internal PostgreSQL artifact persistence candidate | 24 template units/real PDF; #449 targeted PG 28 and full PG 423 pass, no schema drift | Neither candidate deployed; durable job claims, worker, authorized download and UI remain missing. Private capacity starts inactive |
 | Corrections/cancellation/credit documents #421 | Original immutable invoice persists; no corrective document lifecycle | Existing credit entries do not replace invoice correction references/deltas | Not implemented; preserve originals, serialize linked corrections, separate visibility/refund/stock effects |
 | Operational reports #358 | `operational-report.service.ts`, shared operational-reports contract; Admin `/reports` | Real day/week/month order/settlement/refund/top-SKU/debtor queries; HTTP/PG/UI/browser | Present subset; valuation/corrective document/private export scopes remain open |
-| Private CSV/Excel/PDF exports #423 | No bounded owned snapshot job/download surface | Existing ExcelJS catalog import is not a report export service | Not implemented; immutable filter/snapshot, formula prevention, current permission/expiry/resource limits required |
+| Private CSV/Excel exports #423 | Durable snapshot jobs with artifacts, storage capacity, cleanup and RBAC; CSV/XLSX implemented | Migrations/tests and pipeline (PR #476); PDF export adapter separate scope | Implemented for CSV/XLSX snapshots per accepted scope. PDF export not in current implementation scope without separate acceptance |
 | Articles/tags/revisions/editorial workflow #125 | `modules/content` contains only sanitizer + test; no article model/controller/Admin page | Product Jodit cannot evidence article lifecycle/revisions/media ownership | Not implemented; reuse editor/sanitizer with separate content media contract |
 | Public SSR/metadata/canonicals #124/#126 | Web remains React/Vite SPA; accepted ADR-0012 specifies route-by-route Next App Router | Existing client metadata does not prove useful initial HTML/parity | Not implemented; no custom Vite SSR, duplicate business engine or hidden-content workaround |
-| Dynamic sitemap/robots/feed/schema #127/#129 | Discovery contracts/plans exist; commerce/content event-driven projections incomplete | Existing discovery checks are not backend/public route acceptance | Partial/not implemented; lifecycle freshness, no draft/private leakage, full-graph parity required |
+| Dynamic sitemap/robots/feed/schema #127/#129 | Discovery module with dynamic sitemap/robots implemented (API + public files); feeds/schema partial | Existing discovery checks and routes implemented | Implemented for sitemap/robots; feeds/schema/merchant feed and full projection acceptance remain partial/open |
 | Discovery budgets/crawler governance #123/#130 | Existing audit tooling and policy docs | CI contract checks and explicit live production checks | Partial; verify real crawl/performance and opt-in scope. AI retrieval #128 is deferred |
 | Deployment/backup/rollback #8 | Official compose/deploy/backup/restore and SHA image workflows | Previously restored fresh release backup/media checks; release script tests | Exact baseline verified; fresh future restore and current rollback/monitoring acceptance still required |
 | Telemetry/alerts #136 | Structured logger/request IDs, health/readiness, queue/outbox state | Logger redaction tests; readiness/worker tests | Partial; current release-critical alert delivery/load/recovery evidence not established; runtime provenance fix #440 pending |

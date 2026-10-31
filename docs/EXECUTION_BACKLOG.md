@@ -3,7 +3,7 @@
 > **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
 > owns current source, deployment, tests, acceptance and execution order.
 > Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
+> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 48 open / 102 closed;
 > historical closure is not independent acceptance of every original criterion.
 > Dated checkpoints below are history; accepted domain and release criteria remain.
 

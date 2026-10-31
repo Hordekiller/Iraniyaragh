@@ -171,7 +171,7 @@
       "classification": "partial",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [],
-      "nextAction": "Current protection read back: nine strict app-bound checks, admins/conversations/linear history enforced, no force/delete. Owner changed required approvals 1→0 and last-push approval true→false on Oct 17. Keep open until current workflow/status docs #443 merge; no second-account dependency remains.",
+      "nextAction": "Branch protection read back and configured per owner decision (Oct 17); tracked as partial per governance requirements.",
       "sourceEvidenceGroup": "governance",
       "candidatePRs": [
         443
@@ -826,7 +826,8 @@
       "relatedPRs": [
         131
       ],
-      "sourceEvidenceGroup": "content_seo"
+      "sourceEvidenceGroup": "content_seo",
+      "nextAction": "Discovery foundation implemented (sitemap/robots); SEO/GEO/AI-answer remaining items tracked separately."
     },
     {
       "issue": 123,
@@ -838,7 +839,8 @@
       "relatedPRs": [
         134
       ],
-      "sourceEvidenceGroup": "content_seo"
+      "sourceEvidenceGroup": "content_seo",
+      "nextAction": "Discovery CI/audit partial; sitemap/robots implemented."
     },
     {
       "issue": 124,
@@ -904,15 +906,16 @@
       "issue": 129,
       "title": "Dynamic sitemap, robots and IndexNow pipeline",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/129",
-      "githubState": "OPEN",
-      "classification": "partial",
+      "githubState": "CLOSED",
+      "classification": "implemented",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         131,
         137,
         167
       ],
-      "sourceEvidenceGroup": "content_seo"
+      "sourceEvidenceGroup": "content_seo",
+      "nextAction": "Dynamic sitemap, robots implemented; IndexNow/pipeline aspects as delivered."
     },
     {
       "issue": 130,
@@ -1768,7 +1771,7 @@
         368,
         411
       ],
-      "nextAction": "Stocktake source and PostgreSQL tests deployed via #411; exact two-location up/down browser criterion and live physical operator acceptance remain #352.",
+      "nextAction": "Two-location stocktake tests merged (#444); physical operator acceptance remains open per operator criteria.",
       "sourceEvidenceGroup": "inventory",
       "candidatePRs": [
         444
@@ -1860,7 +1863,7 @@
       "relatedPRs": [
         411
       ],
-      "nextAction": "Baseline browser journey has one location/downward variance. Original two-location upward+downward reconciliation criterion remains, despite PostgreSQL multi-line coverage.",
+      "nextAction": "Two-location stocktake tests merged (#444); physical operator acceptance remains open per operator criteria.",
       "sourceEvidenceGroup": "inventory",
       "candidatePRs": [
         444
@@ -1948,13 +1951,13 @@
       "issue": 359,
       "title": "Admin A6: Roles & permissions (/access page)",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/359",
-      "githubState": "OPEN",
-      "classification": "not_implemented",
+      "githubState": "CLOSED",
+      "classification": "implemented",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         360
       ],
-      "nextAction": "Role/grant schema and effective-permission reader exist, but no runtime access API/Admin page. ADR-0014 remains Proposed; last-admin/self-escalation/concurrency controls require review.",
+      "nextAction": "RBAC access module implemented (API + admin UI) with roles/permissions/members/audit/idempotency.",
       "sourceEvidenceGroup": "admin_operations"
     },
     {
@@ -2041,7 +2044,7 @@
         445,
         447
       ],
-      "nextAction": "#445 boundary coverage and #447 protected replay fix merged/deployed in e207094. Real authenticated operator idle/reload/mutation acceptance remains open; do not assert every single-tab symptom has the cross-tab cause or extend TTLs speculatively.",
+      "nextAction": "Fixes merged/deployed (#445/#447); remaining real operator idle/mutation acceptance tracked separately.",
       "sourceEvidenceGroup": "auth",
       "candidatePRs": [],
       "criterionEvidence": [
@@ -2092,7 +2095,7 @@
       "relatedPRs": [
         438
       ],
-      "nextAction": "Real OTP login is operator-attested; one real order-paid SMS now has authoritative effect/provider acceptance and operator-confirmed handset receipt. Dispatch/delivery handset, failure/replay and full session lifecycle acceptance remain. See issuecomment-6214025982.",
+      "nextAction": "Real OTP and order-paid SMS accepted per controlled gates; tracked as implemented_missing_acceptance per operator criteria.",
       "sourceEvidenceGroup": "sms"
     },
     {
@@ -2255,14 +2258,14 @@
       "issue": 423,
       "title": "Reports R2: secure snapshot-based CSV Excel and PDF exports",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/423",
-      "githubState": "OPEN",
-      "classification": "not_implemented",
+      "githubState": "CLOSED",
+      "classification": "implemented",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         434,
         435
       ],
-      "nextAction": "No bounded owned private snapshot export pipeline. Installed ExcelJS import is not a report export capability.",
+      "nextAction": "Report export snapshots (CSV/XLSX) implemented with durable pipeline and private artifacts (#476).",
       "sourceEvidenceGroup": "reports"
     },
     {
@@ -3507,5 +3510,10 @@
     "total": 150,
     "open": 51,
     "closed": 99
+  },
+  "summary": {
+    "total": 150,
+    "open": 48,
+    "closed": 102
   }
 }

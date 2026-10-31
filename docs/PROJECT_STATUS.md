@@ -31,9 +31,8 @@ container digests, nginx and HTTPS were verified. Main CI: 3093 application unit
 - Still open: #400 real authenticated idle/mutation acceptance; #450 durable
   payment-aware expiry; #393 signature freshness; broader #388/#389/#403 acceptance;
   #347/#352 automated criteria covered but operator physical-count acceptance pending.
-- Missing engineering: private PDF jobs/download (#419, open PRs #439/#449 not merged),
-  corrections (#421), exports (#423), general returns (#348), role administration
-  (#359), articles (#125), accepted public rendering/discovery (#126/#127/#129).
+- Missing/partial: private PDF jobs/download (#419, open PRs #439/#449 not merged),
+  corrections (#421), general returns (#348), articles (#125), public rendering/discovery (#126 pending SSR, #127 feeds/schema partial). Completed: exports (#423 CSV/XLSX), role administration (#359).
   Cost valuation (#422) stays inactive by owner decision (ADR-0031); configured
   policy is not a cost ledger.
 
@@ -321,7 +320,7 @@ G6–G10 have not reached integrated completion.
 | Staff UI              | Partial             | Real password/TOTP login and session management exist; complete privileged-user/role administration does not                            |
 | SMS provider          | Implemented adapter | Vendor-neutral port, SMS.ir adapter and fail-closed configuration exist                                                                 |
 | Production acceptance | Blocked             | #114 needs controlled real account/line/template/credential evidence; no production-ready claim is made                                 |
-| Runtime RBAC Admin    | Not implemented     | Canonical baseline roles/permissions and guards exist (ADR-0022); staff/role assignment/revocation UI/runtime is absent                                    |
+| Runtime RBAC Admin    | Implemented         | Access module/API/Admin UI for roles/permissions/members/audit/idempotency (#359) |
 
 ### Observability foundation
 

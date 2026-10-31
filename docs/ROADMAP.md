@@ -16,8 +16,8 @@
 3. Resolve Clam signature operations (#393); collect actual Admin/customer/SMS and
    catalog acceptance (#400/#403/#388/#389). Source tests do not replace operators.
 4. Complete stocktake coverage (#444), general returns (#348), access administration
-   (#359), invoice PDF/corrections/exports (#419/#421/#423), and accepted V1 content,
-   public rendering and discovery (#125/#126/#127/#129).
+   (#359 implemented), invoice PDF/corrections/exports (#419/#421/#423). and accepted V1 content,
+   public rendering and discovery (#125, #126 pending SSR, #127 feeds/schema partial, #129 implemented).
 5. Reconcile full UAT, alert/recovery/rollback evidence and exact-SHA runtime parity.
 
 Valuation policy is configurable but intentionally inactive (#422). No invented

@@ -71,6 +71,8 @@ export function CategoryPage() {
     <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
       <nav aria-label="مسیر دسته‌بندی" className="text-xs text-slate-400 mb-3">
         <Link to={ROUTES.home} className="hover:text-[#FF4D00]">خانه</Link>
+        <span className="mx-1" aria-hidden="true">/</span>
+        <Link to={ROUTES.categories} className="hover:text-[#FF4D00]">همه دسته‌بندی‌ها</Link>
         {ancestors.map(ancestor => (
           <span key={ancestor.id}>
             <span className="mx-1" aria-hidden="true">/</span>

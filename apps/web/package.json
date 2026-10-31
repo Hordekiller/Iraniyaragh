@@ -9,7 +9,7 @@
     "lint": "eslint . && pnpm check:runtime-assets",
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "node --test scripts/runtime-asset-content.test.mjs && vitest run",
     "check:runtime-assets": "node scripts/check-runtime-assets.mjs"
   },
   "dependencies": {

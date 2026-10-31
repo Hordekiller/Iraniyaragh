@@ -34,6 +34,14 @@ const routes: Array<[string, () => Promise<void> | void]> = [
     },
   ],
   [
+    '/categories',
+    async () => {
+      expect(await screen.findByRole('heading', { name: 'دسته‌بندی کالاها', level: 1 })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: 'ابزار برقی' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'دسته‌بندی‌ها' })).toHaveAttribute('aria-current', 'page')
+    },
+  ],
+  [
     '/category/power-tools',
     async () => {
       expect(

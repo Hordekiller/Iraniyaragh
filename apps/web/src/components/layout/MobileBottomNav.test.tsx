@@ -82,15 +82,17 @@ describe('MobileBottomNav', () => {
     expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.home)
   })
 
-  it('routes the categories button to home when not on the home page', () => {
+  it.each(['/', '/elsewhere', '/category/power-tools'])('routes the categories button from %s to its dedicated page', (path) => {
     render(
-      <MemoryRouter initialEntries={['/elsewhere']}>
+      <MemoryRouter initialEntries={[path]}>
         <Harness />
       </MemoryRouter>,
     )
 
     fireEvent.click(screen.getByRole('button', { name: /دسته‌بندی‌ها/ }))
 
-    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.home)
+    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.categories)
+    expect(screen.getByRole('button', { name: 'دسته‌بندی‌ها' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'خانه' })).not.toHaveAttribute('aria-current')
   })
 })

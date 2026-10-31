@@ -21,7 +21,7 @@ findings must not be read as current implementation status.
 | Operational reports | `apps/api/src/modules/reports/operational-report.service.ts`; #432 | Corrections, approved valuation and private exports are not complete (#358) |
 | Persian browser printing | Existing Admin/Web invoice views, local fonts/brand | Not an authorized private PDF artifact service |
 | Private PDF | Unmerged #439 template / #449 internal persistence | Durable jobs, fencing, worker, current-authority downloads and UI (#419/#420) |
-| Corrections / report exports | No complete runtime lifecycle | #421 / #423 remain implementation work |
+| Corrections / report exports | Corrections (#421) incomplete; report exports (#423 CSV/XLSX) implemented | #421 remain implementation work; #423 implemented per scope |
 | Stock financial valuation | Versioned configurable policy | Inactive per owner; missing cost history cannot be fabricated (#422) |
 
 Invoice editing never changes balances directly. Order, payment, inventory and

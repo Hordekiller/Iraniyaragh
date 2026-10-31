@@ -1,12 +1,14 @@
-import { AnimatePresence, motion } from 'framer-motion'
-import { Link, useNavigate } from 'react-router-dom'
-import { Phone, Search, ShoppingBag, X } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { ChevronDown, Menu, Phone, Search, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '../../state/cart-context'
 import { toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
 import { AccountMenu } from '../auth/AccountMenu'
 import { HAS_SITE_PHONE, SITE_PHONE } from '../../lib/site-config'
 import { StoreBrandLogo } from '../brand/StoreBrandLogo'
+import { SiteNavigationDrawer } from './SiteNavigationDrawer'
 
 type SiteHeaderProps = {
   searchQuery: string
@@ -18,6 +20,13 @@ type SiteHeaderProps = {
 
 export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSearch, onOpenLogin }: SiteHeaderProps) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const reduceMotion = useReducedMotion()
+  const [menu, setMenu] = useState({ locationKey: location.key, open: false })
+  if (menu.locationKey !== location.key) setMenu({ locationKey: location.key, open: false })
+  const menuOpen = menu.locationKey === location.key && menu.open
+  const closeMenu = useCallback(() => setMenu(current => ({ ...current, open: false })), [])
+  const openMenu = () => setMenu({ locationKey: location.key, open: true })
   const { state } = useCart()
   const itemCount = state.cart.lines.reduce((sum, line) => sum + line.quantity, 0)
 
@@ -36,21 +45,17 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-100">
       <div className="max-w-[1280px] mx-auto px-4 lg:px-6">
-        <div className="flex items-center gap-2 sm:gap-4 lg:gap-8 h-[64px] lg:h-[76px]">
+        <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 h-[72px] lg:h-[88px]">
+          <button type="button" onClick={openMenu} aria-label="باز کردن منوی فروشگاه" aria-expanded={menuOpen} aria-controls="store-navigation" aria-haspopup="dialog" className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-800">
+            <Menu size={22} strokeWidth={1.8} aria-hidden="true" />
+          </button>
           {/* Logo */}
           <Link to={ROUTES.home} aria-label="ایرانی یراق؛ صفحهٔ اصلی" className="flex shrink-0 items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]">
             <StoreBrandLogo />
           </Link>
 
-          {/* Nav - Desktop */}
-          <nav className="hidden lg:flex items-center gap-7 mr-6 text-[14px] font-medium text-slate-700">
-            <Link to={ROUTES.home} className="text-[#C2410C] font-bold flex items-center gap-1">خانه <span className="w-1.5 h-1.5 rounded-full bg-[#C2410C]" /></Link>
-            <Link to={ROUTES.home} state={{ scrollToCategories: true }} className="hover:text-[#FF4D00] transition">دسته‌بندی‌ها</Link>
-            <Link to={ROUTES.orders} className="hover:text-[#FF4D00] transition">سفارش‌ها</Link>
-          </nav>
-
           {/* Search - Desktop */}
-          <div className="hidden lg:flex items-center flex-1 max-w-[420px] mr-auto">
+          <div className="hidden min-w-0 lg:flex items-center flex-1 max-w-[480px] mr-auto">
             <div className="relative w-full">
               <input
                 id="site-search-desktop"
@@ -70,7 +75,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
 
           {/* Actions */}
           <div className="flex shrink-0 items-center gap-2 mr-auto lg:mr-0">
-            <button onClick={onToggleSearch} aria-label="جستجو" className="lg:hidden w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center"><Search size={18} /></button>
+            <button onClick={onToggleSearch} aria-label="جستجو" aria-expanded={showSearch} aria-controls="mobile-header-search" className="lg:hidden w-11 h-11 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center"><Search size={18} aria-hidden="true" /></button>
             {HAS_SITE_PHONE && (
               <a href={`tel:${SITE_PHONE}`} className="hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-[#0F172A] text-white text-[13px] font-bold hover:bg-black transition">
                 <Phone size={16} aria-hidden="true" /> تماس با فروشگاه
@@ -79,7 +84,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
             <Link
               to={ROUTES.cart}
               aria-label={`سبد خرید، ${toPersianDigits(itemCount)} کالا`}
-              className="relative w-10 h-10 lg:w-11 lg:h-11 rounded-full border border-slate-200 bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-white hover:border-[#FF4D00]/30 hover:text-[#FF4D00] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
+              className="relative w-11 h-11 rounded-full border border-slate-200 bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-white hover:border-[#FF4D00]/30 hover:text-[#FF4D00] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
             >
               <ShoppingBag size={18} aria-hidden="true" />
               {itemCount > 0 && (
@@ -92,10 +97,16 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
           </div>
         </div>
 
+        <nav aria-label="ناوبری اصلی" className="hidden lg:flex min-h-12 items-center gap-7 border-t border-slate-100 text-[13px] font-medium text-slate-600">
+          <button type="button" onClick={openMenu} aria-expanded={menuOpen} aria-controls="store-navigation" aria-haspopup="dialog" className="flex min-h-12 items-center gap-2 border-l border-slate-200 pl-6 font-bold text-orange-800 transition-colors hover:text-orange-950"><Menu size={18} aria-hidden="true" /> دسته‌بندی کالاها <ChevronDown size={14} aria-hidden="true" /></button>
+          {[{ to: ROUTES.home, label: 'خانه' }, { to: ROUTES.search, label: 'همه کالاها' }, { to: ROUTES.bestsellers, label: 'پرفروش‌ها' }, { to: ROUTES.orders, label: 'پیگیری سفارش' }].map(item => <NavLink key={item.to} to={item.to} end className={({ isActive }) => `inline-flex min-h-12 items-center border-b-2 transition-colors hover:text-orange-800 ${isActive ? 'border-orange-700 font-bold text-orange-800' : 'border-transparent'}`}>{item.label}</NavLink>)}
+          <span className="mr-auto text-[11px] text-slate-500">فروشگاه تخصصی ابزار و یراق‌آلات</span>
+        </nav>
+
         {/* Mobile Search Expand */}
         <AnimatePresence>
           {showSearch && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="lg:hidden overflow-hidden">
+            <motion.div id="mobile-header-search" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className="lg:hidden overflow-hidden">
               <div className="pb-4">
                 <div className="relative">
                   <input id="site-search-mobile" autoFocus value={searchQuery} onChange={e => onSearchChange(e.target.value)} onKeyDown={handleKeyDown} aria-label="جستجو در محصولات" placeholder="جستجوی ابزار..." className="w-full h-12 pr-11 pl-12 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-[#FF4D00]" />
@@ -113,6 +124,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
           )}
         </AnimatePresence>
       </div>
+      {menuOpen && <SiteNavigationDrawer onClose={closeMenu} />}
     </header>
   )
 }

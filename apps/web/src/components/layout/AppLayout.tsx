@@ -74,6 +74,7 @@ export function AppLayout() {
 
 function routeAnnouncement(pathname: string): string {
   if (pathname === '/') return 'صفحه خانه'
+  if (pathname === '/categories') return 'صفحه دسته‌بندی کالاها'
   if (pathname === '/privacy') return 'صفحه حریم خصوصی'
   if (pathname === '/terms') return 'صفحه قوانین و شرایط فروش'
   if (pathname === '/account/addresses') return 'صفحه دفتر نشانی‌ها'

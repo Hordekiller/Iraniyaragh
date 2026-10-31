@@ -73,56 +73,10 @@ export function ProductPage() {
     }
   }, [api, slug])
 
-  if (loading)
-    return (
-      <div className="max-w-[1280px] mx-auto px-4 py-10 text-slate-500">
-        در حال بارگذاری...
-      </div>
-    )
-
-  if (notFound || !product) {
-    return (
-      <div className="max-w-[1280px] mx-auto px-4 py-20 text-center">
-        <h1 className="font-black text-slate-900 text-xl">محصول یافت نشد</h1>
-        <p className="mt-2 text-slate-500 text-sm">
-          محصول موردنظر موجود نیست یا آدرس آن تغییر کرده است.
-        </p>
-        <Link
-          to={ROUTES.home}
-          className="inline-flex items-center gap-2 mt-6 h-11 px-6 rounded-full bg-[#0F172A] text-white font-bold"
-        >
-          <ArrowLeft size={16} /> بازگشت به فروشگاه
-        </Link>
-      </div>
-    )
-  }
-
-  const item = product
   const selectedVariant =
-    item.variants.find((variant) => variant.id === selectedVariantId) ??
-    item.variants[0] ??
+    product?.variants.find((variant) => variant.id === selectedVariantId) ??
+    product?.variants[0] ??
     null
-  const inCart = selectedVariant ? isInCart(selectedVariant.id) : false
-  const qty = selectedVariant ? quantityOf(selectedVariant.id) : 0
-  const available =
-    selectedVariant != null &&
-    (selectedVariant.stockStatus === 'IN_STOCK' ||
-      selectedVariant.stockStatus === 'LOW_STOCK')
-  const cartBusy =
-    cartState.phase === 'idle' ||
-    cartState.phase === 'loading' ||
-    cartState.phase === 'merging' ||
-    (selectedVariant != null &&
-      cartState.pendingVariantIds.includes(selectedVariant.id))
-  const discountPercent =
-    product.oldPrice && Number(product.oldPrice.amount) > 0
-      ? Math.round(
-          (1 -
-            Number(selectedVariant?.price.amount ?? product.price.amount) /
-              Number(product.oldPrice.amount)) *
-            100,
-        )
-      : 0
 
   // SEO metadata
   useEffect(() => {
@@ -172,6 +126,52 @@ export function ProductPage() {
       document.querySelector('script[data-product-schema]')?.remove()
     }
   }, [product, selectedVariant])
+
+  if (loading)
+    return (
+      <div className="max-w-[1280px] mx-auto px-4 py-10 text-slate-500">
+        در حال بارگذاری...
+      </div>
+    )
+
+  if (notFound || !product) {
+    return (
+      <div className="max-w-[1280px] mx-auto px-4 py-20 text-center">
+        <h1 className="font-black text-slate-900 text-xl">محصول یافت نشد</h1>
+        <p className="mt-2 text-slate-500 text-sm">
+          محصول موردنظر موجود نیست یا آدرس آن تغییر کرده است.
+        </p>
+        <Link
+          to={ROUTES.home}
+          className="inline-flex items-center gap-2 mt-6 h-11 px-6 rounded-full bg-[#0F172A] text-white font-bold"
+        >
+          <ArrowLeft size={16} /> بازگشت به فروشگاه
+        </Link>
+      </div>
+    )
+  }
+
+  const inCart = selectedVariant ? isInCart(selectedVariant.id) : false
+  const qty = selectedVariant ? quantityOf(selectedVariant.id) : 0
+  const available =
+    selectedVariant != null &&
+    (selectedVariant.stockStatus === 'IN_STOCK' ||
+      selectedVariant.stockStatus === 'LOW_STOCK')
+  const cartBusy =
+    cartState.phase === 'idle' ||
+    cartState.phase === 'loading' ||
+    cartState.phase === 'merging' ||
+    (selectedVariant != null &&
+      cartState.pendingVariantIds.includes(selectedVariant.id))
+  const discountPercent =
+    product.oldPrice && Number(product.oldPrice.amount) > 0
+      ? Math.round(
+          (1 -
+            Number(selectedVariant?.price.amount ?? product.price.amount) /
+              Number(product.oldPrice.amount)) *
+            100,
+        )
+      : 0
 
   async function handleAdd() {
     if (!available || !selectedVariant) return
