@@ -1,3 +1,4 @@
+import { diagnosticException } from '@iranyaragh/contracts';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
@@ -7,6 +8,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { RedactedLogger } from './common/redacted-logger';
 import { configureRequestBody } from './common/request-body';
+import { diagnosticValidationFactory } from './common/validation-diagnostics';
 import type { EnvironmentVariables, TrustProxySetting } from './config/environment';
 import { createApiDocument, OPENAPI_UI_PATH } from './swagger';
 
@@ -48,7 +50,7 @@ async function bootstrap() {
   });
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, exceptionFactory: diagnosticValidationFactory() }));
 
   if (process.env.ENABLE_SWAGGER !== 'false') {
     const document = createApiDocument(app);
@@ -61,4 +63,4 @@ async function bootstrap() {
   await app.listen(config.get('API_PORT', { infer: true }), '0.0.0.0');
 }
 
-void bootstrap();
+void bootstrap().catch(error => { new RedactedLogger().event('error', { event: 'api.startup.failed', outcome: 'failure', data: diagnosticException(error) }); process.exit(1); });

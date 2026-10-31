@@ -36,6 +36,10 @@ for (const [name, recorded, selected] of [
       } catch {
         assert.fail('Offline Compose validation failed; Docker Compose is required. No raw configuration is printed.');
       }
+      for (const service of Object.values(configuration.services)) {
+        assert.equal(service.logging.driver, 'local');
+        assert.deepEqual(service.logging.options, { 'max-size': '10m', 'max-file': '5', compress: 'true' });
+      }
       for (const service of ['api', 'media-worker', 'pdf-render-worker', 'migrate', 'media-bucket', 'admin', 'storefront', 'web']) {
         const value = configuration.services[service];
         assert.ok(value.image.endsWith(`:${selected}`), `${service}: exact image`);

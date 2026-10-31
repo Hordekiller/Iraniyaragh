@@ -1,8 +1,16 @@
+import { createDiagnosticId, diagnosticId, logClientFailure } from '@iranyaragh/contracts'
 import { AuthApiError, authApiErrorFromResponse } from './errors'
 import { jsonRequest, type RequestOptions } from './request'
 import type { MemorySessionStore } from './session-store'
 import type { ApiSuccess } from './types'
 import type { AuthenticatedJsonRequest } from '../../state/auth-context'
+
+function correlatedHeaders(input: Record<string, string> = {}): Record<string, string> {
+  const correlationId = diagnosticId(new Headers(input).get('x-correlation-id')) ?? createDiagnosticId()
+  const result = { ...input }
+  for (const key of Object.keys(result)) if (key.toLowerCase() === 'x-correlation-id') delete result[key]
+  return { ...result, 'X-Correlation-ID': correlationId }
+}
 
 type Identity = { userId: string | null; version: number }
 type RefreshState = { pending: Promise<boolean> | null; version: number | null }
@@ -29,6 +37,7 @@ export function createAuthenticatedRequest(
     return pending
   }
   const request = async <T>(path: string, options: Omit<RequestOptions, 'accessToken'> = {}): Promise<ApiSuccess<T>> => {
+    const headers = correlatedHeaders(options.headers)
     const identity = boundIdentity ?? currentIdentity()
     const assertIdentity = () => {
       if (!identity.userId || identity.userId !== store.getPrincipal()?.userId || identity.version !== store.getIdentityVersion()) {
@@ -40,7 +49,7 @@ export function createAuthenticatedRequest(
       assertIdentity()
       const accessToken = store.getAccessToken()
       if (!accessToken) throw new AuthApiError({ code: 'AUTH_SESSION_INVALID', statusCode: 401, message: 'A live customer session is required.' })
-      const result = await jsonRequest<T>(path, { ...options, accessToken })
+      const result = await jsonRequest<T>(path, { ...options, headers, accessToken })
       assertIdentity()
       return result
     }
@@ -55,6 +64,7 @@ export function createAuthenticatedRequest(
   }
   /** Same authorization lifetime for non-JSON artifact payloads. */
   const response = async (path: string, options: Omit<RequestOptions, 'accessToken'> = {}): Promise<Response> => {
+    const headers = correlatedHeaders(options.headers)
     const identity = boundIdentity ?? currentIdentity()
     const assertIdentity = () => {
       if (!identity.userId || identity.userId !== store.getPrincipal()?.userId || identity.version !== store.getIdentityVersion()) {
@@ -66,20 +76,30 @@ export function createAuthenticatedRequest(
       assertIdentity()
       const accessToken = store.getAccessToken()
       if (!accessToken) throw new AuthApiError({ code: 'AUTH_SESSION_INVALID', statusCode: 401, message: 'A live customer session is required.' })
+      const requestId = diagnosticId(new Headers(headers).get('x-request-id')) ?? createDiagnosticId()
+      const binaryHeaders: Record<string, string> = { Authorization: `Bearer ${accessToken}`, ...headers }
+      for (const key of Object.keys(binaryHeaders)) if (key.toLowerCase() === 'x-request-id') delete binaryHeaders[key]
+      binaryHeaders['X-Request-ID'] = requestId
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 15_000)
       try {
         const result = await fetch(`${options.baseUrl ?? ''}${path}`, {
           credentials: options.credentials ?? 'same-origin',
           signal: controller.signal,
-          headers: { Authorization: `Bearer ${accessToken}`, ...(options.headers ?? {}) },
+          headers: binaryHeaders,
         })
-        if (!result.ok) throw await authApiErrorFromResponse(result)
+        if (!result.ok) {
+          const failure = await authApiErrorFromResponse(result, undefined, requestId)
+          logClientFailure('storefront', failure.requestId ?? requestId, 'http', result.status)
+          throw failure
+        }
         assertIdentity()
         return result
       } catch (error) {
         if (error instanceof AuthApiError) throw error
-        throw new AuthApiError({ code: 'NETWORK_ERROR', statusCode: 0, message: 'The body response could not be retrieved.' })
+        const kind = controller.signal.aborted ? 'timeout' : 'network'
+        logClientFailure('storefront', requestId, kind)
+        throw new AuthApiError({ code: kind === 'timeout' ? 'TIMEOUT' : 'NETWORK_ERROR', statusCode: 0, requestId, message: 'The body response could not be retrieved.' })
       } finally {
         clearTimeout(timer)
       }

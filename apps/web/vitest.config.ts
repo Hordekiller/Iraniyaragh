@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
@@ -12,9 +13,10 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     coverage: {
+      allowExternal: true,
       enabled: process.env.CI === 'true',
       provider: 'v8',
-      reporter: ['text', 'json-summary', 'lcov'],
+      reporter: ['text', 'json-summary', ['lcov', { projectRoot: fileURLToPath(new URL('../..', import.meta.url)) }]],
       exclude: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', 'src/test/**'],
       thresholds: {
         lines: 80,

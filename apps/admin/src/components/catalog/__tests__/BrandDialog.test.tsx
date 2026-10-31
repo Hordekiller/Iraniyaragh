@@ -92,6 +92,6 @@ describe('BrandDialog', () => {
     fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'good-slug' } });
     fireEvent.click(screen.getByRole('button', { name: 'ساخت برند' }));
 
-    expect(await screen.findByText('اسلاگ تکراری است')).toBeInTheDocument();
+    expect(await screen.findByText('اسلاگ تکراری است (کد پیگیری: r)')).toBeInTheDocument();
   });
 });

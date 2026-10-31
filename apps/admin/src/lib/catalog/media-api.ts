@@ -1,3 +1,4 @@
+import { createDiagnosticId, diagnosticId, logClientFailure } from "@iranyaragh/contracts";
 import type {
   AdminProductMedia,
   AdminProductMediaListResponse,
@@ -64,9 +65,16 @@ export function uploadMediaObject(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
+    const clientRequestId = createDiagnosticId();
+    const failed = (message: string, kind: 'network' | 'timeout' | 'http') => {
+      let requestId = clientRequestId;
+      try { requestId = diagnosticId(request.getResponseHeader?.('X-Request-ID')) ?? clientRequestId; } catch { /* opaque cross-origin failure */ }
+      logClientFailure('admin', requestId, kind, request.status || undefined, { method: 'PUT', path: '/catalog/admin/products/:id/media/uploads/bytes' });
+      reject(new ApiNetworkError(message, requestId, kind === 'timeout' ? 'timeout' : 'network'));
+    };
     request.open(upload.method, upload.uploadUrl);
     request.timeout = 120000;
-    request.addEventListener("timeout", () => reject(new ApiNetworkError("زمان ارسال تصویر به پایان رسید؛ دوباره تلاش کنید.")));
+    request.addEventListener("timeout", () => failed("زمان ارسال تصویر به پایان رسید؛ دوباره تلاش کنید.", "timeout"));
     for (const [name, value] of Object.entries(upload.requiredHeaders))
       request.setRequestHeader(name, value);
     request.upload.addEventListener("progress", (event) => {
@@ -76,15 +84,13 @@ export function uploadMediaObject(
     request.addEventListener("load", () => {
       if (request.status >= 200 && request.status < 300) resolve();
       else
-        reject(
-          new ApiNetworkError("ارسال فایل به فضای ذخیره‌سازی ناموفق بود."),
-        );
+        failed("ارسال فایل به فضای ذخیره‌سازی ناموفق بود.", "http");
     });
     request.addEventListener("error", () =>
-      reject(new ApiNetworkError("ارتباط با فضای ذخیره‌سازی برقرار نشد.")),
+      failed("ارتباط با فضای ذخیره‌سازی برقرار نشد.", "network"),
     );
     request.addEventListener("abort", () =>
-      reject(new ApiNetworkError("ارسال فایل لغو شد.")),
+      failed("ارسال فایل لغو شد.", "network"),
     );
     request.send(file);
   });

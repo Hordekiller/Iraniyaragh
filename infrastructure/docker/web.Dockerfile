@@ -22,6 +22,7 @@ COPY infrastructure/nginx/storefront.conf /etc/nginx/conf.d/default.conf
 COPY infrastructure/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 # The request routing, shared by the HTTP and HTTPS server blocks.
 COPY infrastructure/nginx/storefront-locations.conf /etc/nginx/snippets/storefront-locations.conf
+COPY infrastructure/nginx/request-diagnostics.conf /etc/nginx/snippets/request-diagnostics.conf
 # The build-time check's throwaway pair, at the path the check points Nginx at.
 COPY --from=certgen /tmp/fullchain.pem /tmp/tls-check/fullchain.pem
 COPY --from=certgen /tmp/privkey.pem   /tmp/tls-check/privkey.pem

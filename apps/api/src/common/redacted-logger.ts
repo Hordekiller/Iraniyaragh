@@ -7,6 +7,8 @@ type DiagnosticOutcome = "success" | "failure" | "unknown";
 
 export type DiagnosticEvent = {
   event: string;
+  /** Trusted registered route template; never a request URL or parameter. */
+  route?: string;
   outcome?: DiagnosticOutcome;
   durationMs?: number;
   errorCode?: string;
@@ -39,10 +41,10 @@ export class RedactedLogger implements LoggerService {
     const environment =
       options.environment ?? process.env.NODE_ENV ?? "development";
     this.options = {
-      service: options.service ?? "iranyaragh-api",
+      service: options.service ?? process.env.SERVICE_NAME ?? "iranyaragh-api",
       environment,
       version: options.version ?? process.env.APP_VERSION ?? "unknown",
-      includeStack: options.includeStack ?? environment !== "production",
+      includeStack: options.includeStack ?? ["development", "test"].includes(environment),
     };
   }
 
@@ -66,6 +68,7 @@ export class RedactedLogger implements LoggerService {
       environment: this.options.environment,
       version: this.options.version,
       event: event?.event ?? "application.log",
+      ...(event?.route ? { route: event.route } : {}),
       message: safeErrorMessage(message),
       requestId,
       correlationId: context?.correlationId ?? requestId,

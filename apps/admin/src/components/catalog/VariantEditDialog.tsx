@@ -1,5 +1,6 @@
 'use client';
 
+import { withDiagnosticReference } from '@iranyaragh/contracts';
 import { useState } from 'react';
 import {
   Box,
@@ -96,7 +97,7 @@ export function VariantEditDialog({
       onSaved();
       onClose();
     } catch (error) {
-      feedback.error(error instanceof ApiClientError ? error.message : 'ویرایش تنوع ناموفق بود؛ دوباره تلاش کنید.');
+      feedback.error(withDiagnosticReference(error instanceof ApiClientError ? error.message : 'ویرایش تنوع ناموفق بود؛ دوباره تلاش کنید.', error));
     } finally {
       setSaving(false);
     }

@@ -160,6 +160,7 @@ describe('ProductCreateForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ثبت کالا' }));
 
     expect(await screen.findByText('این شناسه از قبل ثبت شده')).toBeInTheDocument();
+    expect(screen.getByText('کد پیگیری: r')).toBeInTheDocument();
     expect(mocks.replace).not.toHaveBeenCalled();
   }, 15_000);
 

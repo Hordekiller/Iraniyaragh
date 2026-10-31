@@ -1,3 +1,6 @@
+import { API_ERROR_CODES } from '@iranyaragh/contracts';
+
+const diagnosticCodes = new Set<string>(API_ERROR_CODES);
 const SENSITIVE_KEY_PATTERN =
   /(password|passwd|secret|token|authorization|credential|api[-_]?key|otp|client[-_]?secret|refresh[-_]?token|private[-_]?key|pin|jwt|bearer|cookie|set[-_]?cookie)/i;
 const BLOCKED_CONTAINER_PATTERN =
@@ -26,6 +29,11 @@ function scrubString(value: string): string {
       ? `${value.slice(0, MAX_STRING_LENGTH)}${TRUNCATED}`
       : value;
   return bounded
+    .replace(/\b(?:Bearer|Basic)\s+[^\s,;]+/giu, REDACTED)
+    .replace(/((?:password|passwd|secret|token|api[-_]?key|otp)\s*[=:]\s*)[^\s,;]+/giu, `$1${REDACTED}`)
+    .replace(/https?:\/\/[^\s<>"']+/giu, value => {
+      try { const url = new URL(value); url.username = ''; url.password = ''; url.search = ''; url.hash = ''; return url.toString(); } catch { return REDACTED; }
+    })
     .replace(SECRET_VALUE_PATTERN, REDACTED)
     .replace(PII_PATTERN, REDACTED);
 }
@@ -36,6 +44,8 @@ function scrubUrl(value: unknown): unknown {
     const parsed = new URL(value, "http://redaction.invalid");
     parsed.search = "";
     parsed.hash = "";
+    parsed.username = "";
+    parsed.password = "";
     return scrubString(
       parsed.origin === "http://redaction.invalid"
         ? parsed.pathname
@@ -102,7 +112,8 @@ function walkNode(node: unknown, depth: number, seen: Set<unknown>): unknown {
     seen.add(node);
     const result: Record<string, unknown> = {};
     for (const [key, value] of readOwnEntries(node)) {
-      if (
+      if (key === 'errorCode' && typeof value === 'string' && diagnosticCodes.has(value)) result[key] = value;
+      else if (
         SENSITIVE_KEY_PATTERN.test(key) ||
         BLOCKED_CONTAINER_PATTERN.test(key)
       )

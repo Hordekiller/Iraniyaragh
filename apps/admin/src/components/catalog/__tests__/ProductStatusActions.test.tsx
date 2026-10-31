@@ -79,7 +79,7 @@ describe('ProductStatusActions', () => {
     openMenu(baseProduct);
     fireEvent.click(screen.getByText('افزودن به پیش‌نویس'));
 
-    expect(await screen.findByText('قفل نامعتبر')).toBeInTheDocument();
+    expect(await screen.findByText('قفل نامعتبر (کد پیگیری: r)')).toBeInTheDocument();
     expect(onChanged).not.toHaveBeenCalled();
   });
 

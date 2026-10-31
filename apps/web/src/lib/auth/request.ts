@@ -1,3 +1,4 @@
+import { createDiagnosticId, diagnosticId, logClientFailure } from '@iranyaragh/contracts';
 import {
   AuthApiError,
   authApiErrorFromResponse,
@@ -44,29 +45,39 @@ export async function jsonRequest<T>(
     allowNoContent = false,
   } = options;
 
+  const requestHeaders: Record<string, string> = {
+    ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...headers,
+  };
+  const requestId = diagnosticId(new Headers(requestHeaders).get('x-request-id')) ?? createDiagnosticId();
+  for (const key of Object.keys(requestHeaders)) if (key.toLowerCase() === 'x-request-id') delete requestHeaders[key];
+  requestHeaders['X-Request-ID'] = requestId;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   let response: Response;
+  let parsed: unknown;
+  let responseRequestId = requestId;
   try {
     response = await fetch(`${baseUrl}${path}`, {
       method,
       credentials,
       signal: controller.signal,
-      headers: {
-        ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}),
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        ...headers,
-      },
+      headers: requestHeaders,
       ...(json !== undefined ? { body: JSON.stringify(json) } : {}),
     });
+    responseRequestId = diagnosticId(response.headers?.get('x-request-id')) ?? requestId;
+    parsed = await response.json().catch((error: unknown) => { if (controller.signal.aborted) throw error; return null; });
   } catch (cause) {
     clearTimeout(timer);
     const code = clientErrorCodeFromCause(
       cause,
-      cause instanceof DOMException && cause.name === 'AbortError',
+      controller.signal.aborted,
     );
+    logClientFailure('storefront', responseRequestId, code === 'TIMEOUT' ? 'timeout' : 'network');
     throw new AuthApiError({
+      requestId: responseRequestId,
       code,
       message:
         code === 'TIMEOUT'
@@ -78,14 +89,16 @@ export async function jsonRequest<T>(
   }
 
   if (!response.ok) {
-    throw await authApiErrorFromResponse(response);
+    const error = await authApiErrorFromResponse(response, parsed, responseRequestId);
+    logClientFailure('storefront', error.requestId ?? requestId, 'http', response.status);
+    throw error;
   }
 
   if (allowNoContent && response.status === 204) {
     return { data: undefined as T };
   }
 
-  const body = (await response.json().catch(() => null)) as unknown;
+  const body = parsed;
   if (
     body &&
     typeof body === 'object' &&
@@ -96,7 +109,9 @@ export async function jsonRequest<T>(
 
   // The API should always return { data, ... } on 2xx. If it does not, treat
   // the response as malformed rather than fabricating a success.
+  logClientFailure('storefront', responseRequestId, 'parse', response.status);
   throw new AuthApiError({
+    requestId: responseRequestId,
     code: 'PARSE_ERROR',
     message: 'The server returned an unexpected response shape.',
     statusCode: response.status,

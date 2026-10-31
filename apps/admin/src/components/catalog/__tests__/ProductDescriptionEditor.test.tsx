@@ -141,7 +141,7 @@ describe('ProductDescriptionEditor', () => {
 
   it('replays an ambiguous failure with the same idempotency key', async () => {
     vi.mocked(updateProductDescription)
-      .mockRejectedValueOnce(new ApiNetworkError('قطع ارتباط با سرویس'))
+      .mockRejectedValueOnce(new ApiNetworkError('قطع ارتباط با سرویس', 'diagnostic-description-test'))
       .mockResolvedValueOnce({
         product: productDetail({ description: '<p>متن ذخیره‌شده</p>', version: 4 }),
       } as never);
@@ -152,6 +152,7 @@ describe('ProductDescriptionEditor', () => {
 
     expect(await screen.findByTestId('description-error')).toBeInTheDocument();
     expect(screen.getByText('قطع ارتباط با سرویس')).toBeInTheDocument();
+    expect(screen.getByText('کد پیگیری: diagnostic-description-test')).toBeInTheDocument();
     expect(screen.getByTestId('rte')).toHaveValue('<p>متن ذخیره‌شده</p>');
 
     fireEvent.click(screen.getByTestId('description-retry'));

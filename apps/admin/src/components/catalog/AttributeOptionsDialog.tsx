@@ -1,5 +1,6 @@
 'use client';
 
+import { withDiagnosticReference } from '@iranyaragh/contracts';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -103,7 +104,7 @@ export function AttributeOptionsDialog({
       onChanged();
       setRefreshKey((current) => current + 1);
     } catch (error) {
-      feedback.error(error instanceof ApiClientError ? error.message : 'ساخت گزینه ناموفق بود؛ دوباره تلاش کنید.');
+      feedback.error(withDiagnosticReference(error instanceof ApiClientError ? error.message : 'ساخت گزینه ناموفق بود؛ دوباره تلاش کنید.', error));
     } finally {
       setAdding(false);
     }
@@ -120,7 +121,7 @@ export function AttributeOptionsDialog({
       onChanged();
       setRefreshKey((current) => current + 1);
     } catch (error) {
-      feedback.error(error instanceof ApiClientError ? error.message : 'تغییر وضعیت گزینه ناموفق بود.');
+      feedback.error(withDiagnosticReference(error instanceof ApiClientError ? error.message : 'تغییر وضعیت گزینه ناموفق بود.', error));
     } finally {
       setBusyOptionId(null);
     }

@@ -1,3 +1,6 @@
+import { RedactedLogger } from './common/redacted-logger';
+import { diagnosticException } from '@iranyaragh/contracts';
+import { observeWorker } from './common/worker-diagnostics';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { Queue, Worker } from 'bullmq';
@@ -13,6 +16,9 @@ import { OutboxConsumerService } from './modules/outbox/outbox-consumer.service'
 import { OutboxRelayService } from './modules/outbox/outbox-relay.service';
 import { CustomerSmsDeliveryService } from './modules/notifications/customer-sms-delivery.service';
 import { OUTBOX_QUEUE_NAME, OUTBOX_QUEUE_PREFIX } from './modules/outbox/outbox-queue.port';
+
+process.env.SERVICE_NAME ??= 'iranyaragh-media-worker';
+const diagnostics = new RedactedLogger();
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
@@ -100,17 +106,12 @@ async function bootstrap(): Promise<void> {
     },
     { connection, prefix: OUTBOX_QUEUE_PREFIX, concurrency: 4 },
   );
-  worker.on('error', () => process.stderr.write('Product media worker infrastructure error.\n'));
-  maintenanceWorker.on('error', () => process.stderr.write('Product media maintenance worker error.\n'));
-  commerceMaintenanceWorker.on('error', () =>
-    process.stderr.write('Commerce maintenance worker error.\n'),
-  );
-  outboxWorker.on('error', () => process.stderr.write('Commerce outbox worker error.\n'));
-  outboxWorker.on('failed', job => {
-    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
-      process.stderr.write('Commerce outbox processing dead-lettered; inspect database evidence.\n');
-    }
-  });
+  observeWorker(worker, 'product-media-processing');
+  observeWorker(maintenanceWorker, 'product-media-maintenance');
+  observeWorker(commerceMaintenanceWorker, 'commerce-maintenance');
+  observeWorker(outboxWorker, OUTBOX_QUEUE_NAME);
+  maintenanceQueue.on('error', error => diagnostics.event('error', { event: 'worker.queue.failed', outcome: 'failure', data: { queue: 'product-media-maintenance', ...diagnosticException(error) } }));
+  commerceMaintenanceQueue.on('error', error => diagnostics.event('error', { event: 'worker.queue.failed', outcome: 'failure', data: { queue: 'commerce-maintenance', ...diagnosticException(error) } }));
 
   let outboxPass: Promise<void> | null = null;
   const runOutbox = () => {
@@ -118,12 +119,10 @@ async function bootstrap(): Promise<void> {
     outboxPass = outboxRelay.dispatchBatch()
       .then(result => {
         if (result.claimed > 0) {
-          process.stdout.write(
-            `Outbox relay claimed=${result.claimed} published=${result.published} dead_lettered=${result.deadLettered}\n`,
-          );
+          diagnostics.event('info', { event: 'outbox.relay.completed', data: { ...result } });
         }
       })
-      .catch(() => { process.stderr.write('Outbox relay pass failed.\n'); })
+      .catch(() => { diagnostics.event('error', { event: 'outbox.relay.failed', outcome: 'unknown' }); })
       .finally(() => { outboxPass = null; });
   };
   const outboxTimer = setInterval(runOutbox, 5_000);
@@ -135,10 +134,10 @@ async function bootstrap(): Promise<void> {
     smsPass = customerSms.dispatchBatch()
       .then(result => {
         if (result.claimed > 0) {
-          process.stdout.write(`Customer SMS claimed=${result.claimed} accepted=${result.accepted} pending=${result.pending} failed=${result.failed}\n`);
+          diagnostics.event('info', { event: 'sms.delivery.completed', data: { ...result } });
         }
       })
-      .catch(() => { process.stderr.write('Customer SMS delivery pass failed; inspect effect evidence.\n'); })
+      .catch(() => { diagnostics.event('error', { event: 'sms.delivery.failed', outcome: 'unknown' }); })
       .finally(() => { smsPass = null; });
   };
   const smsTimer = setInterval(runSms, 5_000);
@@ -165,4 +164,4 @@ async function bootstrap(): Promise<void> {
   process.once('SIGINT', () => void close());
 }
 
-void bootstrap();
+void bootstrap().catch(error => { diagnostics.event('error', { event: 'worker.startup.failed', outcome: 'failure', data: diagnosticException(error) }); process.exit(1); });

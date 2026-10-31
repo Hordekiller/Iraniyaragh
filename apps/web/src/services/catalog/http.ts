@@ -1,4 +1,4 @@
-import { API_ERROR_CODES } from '@iranyaragh/contracts'
+import { API_ERROR_CODES, createDiagnosticId, diagnosticId, logClientFailure } from '@iranyaragh/contracts'
 import type {
   ApiErrorCode,
   BrandListResponse,
@@ -202,75 +202,45 @@ export class CatalogHttpClient implements CatalogApi {
     }
   }
 
-  private async request<T extends { data: unknown }>(path: string): Promise<T> {
-    let response: Response
+  private async readResponse(path: string): Promise<{ response: Response; body: Record<string, unknown> | null; requestId: string }> {
+    const requestId = createDiagnosticId()
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15_000)
+    let returnedId = requestId
     try {
-      response = await this.fetcher(`${this.baseUrl}${path}`, {
-        headers: { Accept: 'application/json' },
+      const response = await this.fetcher(`${this.baseUrl}${path}`, {
+        headers: { Accept: 'application/json', 'X-Request-ID': requestId }, signal: controller.signal,
       })
+      returnedId = diagnosticId(response.headers?.get('x-request-id')) ?? requestId
+      const body = await response.json().catch((error: unknown) => { if (controller.signal.aborted) throw error; return null }) as Record<string, unknown> | null
+      if (!diagnosticId(response.headers?.get('x-request-id'))) returnedId = diagnosticId(body?.requestId) ?? requestId
+      return { response, body, requestId: returnedId }
     } catch {
-      throw new CatalogError({
-        code: 'UPSTREAM_UNAVAILABLE',
-        message: 'ارتباط با کاتالوگ برقرار نشد.',
-      })
-    }
-    const body = (await response.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null
+      logClientFailure('storefront', returnedId, controller.signal.aborted ? 'timeout' : 'network')
+      throw new CatalogError({ code: 'UPSTREAM_UNAVAILABLE', message: 'ارتباط با کاتالوگ برقرار نشد.', requestId: returnedId })
+    } finally { clearTimeout(timeout) }
+  }
+
+  private async request<T extends { data: unknown }>(path: string): Promise<T> {
+    const { response, body, requestId } = await this.readResponse(path)
     if (!response.ok) {
-      const error = body && typeof body.code === 'string' ? body : {}
-      const code =
-        typeof error.code === 'string' &&
-        (API_ERROR_CODES as readonly string[]).includes(error.code)
-          ? (error.code as ApiErrorCode)
-          : 'INTERNAL_ERROR'
-      throw new CatalogError({
-        code,
-        message:
-          typeof error.message === 'string'
-            ? error.message
-            : 'دریافت اطلاعات کاتالوگ ناموفق بود.',
-        statusCode: response.status,
-        requestId:
-          typeof error.requestId === 'string' ? error.requestId : undefined,
-        details: error.details,
-      })
+      const code = typeof body?.code === 'string' && (API_ERROR_CODES as readonly string[]).includes(body.code) ? body.code as ApiErrorCode : 'INTERNAL_ERROR'
+      logClientFailure('storefront', requestId, 'http', response.status)
+      throw new CatalogError({ code, message: typeof body?.message === 'string' ? body.message : 'دریافت اطلاعات کاتالوگ ناموفق بود.', statusCode: response.status, requestId, details: body?.details })
     }
-    if (!body || !('data' in body))
-      throw new CatalogError({
-        code: 'INTERNAL_ERROR',
-        message: 'پاسخ کاتالوگ معتبر نیست.',
-        statusCode: response.status,
-      })
+    if (!body || !('data' in body)) {
+      logClientFailure('storefront', requestId, 'parse', response.status)
+      throw new CatalogError({ code: 'INTERNAL_ERROR', message: 'پاسخ کاتالوگ معتبر نیست.', statusCode: response.status, requestId })
+    }
     return body as T
   }
 
   private async requestFlat<T extends object>(path: string): Promise<T> {
-    let response: Response
-    try {
-      response = await this.fetcher(`${this.baseUrl}${path}`, {
-        headers: { Accept: 'application/json' },
-      })
-    } catch {
-      throw new CatalogError({
-        code: 'UPSTREAM_UNAVAILABLE',
-        message: 'ارتباط با موجودی برقرار نشد.',
-      })
+    const { response, body, requestId } = await this.readResponse(path)
+    if (!response.ok || !body || !Array.isArray(body.items)) {
+      logClientFailure('storefront', requestId, response.ok ? 'parse' : 'http', response.status)
+      throw new CatalogError({ code: 'INTERNAL_ERROR', message: 'دریافت موجودی ناموفق بود.', statusCode: response.status, requestId })
     }
-    const body = (await response.json().catch(() => null)) as T | null
-    if (!response.ok)
-      throw new CatalogError({
-        code: 'INTERNAL_ERROR',
-        message: 'دریافت موجودی ناموفق بود.',
-        statusCode: response.status,
-      })
-    if (!body || !Array.isArray((body as { items?: unknown }).items))
-      throw new CatalogError({
-        code: 'INTERNAL_ERROR',
-        message: 'پاسخ موجودی معتبر نیست.',
-        statusCode: response.status,
-      })
-    return body
+    return body as T
   }
 }

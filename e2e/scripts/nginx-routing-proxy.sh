@@ -95,9 +95,13 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
 # the TLS one smoke-tested. `/nginx-health` is deliberately not declared here --
 # the real snippets already define it, and nginx rejects a duplicate location.
 cat >"${WORKDIR}/default.conf" <<EOF
+include /etc/nginx/snippets/request-diagnostics.conf;
+
 server {
     listen ${HTTP_PORT};
     server_name _;
+    access_log /dev/stdout diagnostics;
+    error_log /dev/null;
 
     set \$api_upstream http://${API_UPSTREAM};
     set \$admin_upstream http://${ADMIN_UPSTREAM};
@@ -116,6 +120,8 @@ server {
     listen ${HTTPS_PORT} ssl;
     http2 on;
     server_name _;
+    access_log /dev/stdout diagnostics;
+    error_log /dev/null;
 
     set \$api_upstream http://${API_UPSTREAM};
     set \$admin_upstream http://${ADMIN_UPSTREAM};
@@ -135,7 +141,8 @@ server {
 }
 EOF
 
-docker run --rm -d --name "${CONTAINER}" --network host \
+# Keep startup failures inspectable; cleanup/teardown still removes the container.
+docker run -d --name "${CONTAINER}" --network host \
   -v "${WORKDIR}/default.conf:/etc/nginx/conf.d/default.conf:ro" \
   -v "${SNIPPETS}:/etc/nginx/snippets:ro" \
   -v "${WORKDIR}/fullchain.pem:/etc/nginx/tls/fullchain.pem:ro" \

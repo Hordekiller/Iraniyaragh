@@ -1,3 +1,4 @@
+import { diagnosticId } from '@iranyaragh/contracts';
 import type {
   ApiFailure,
   AuthApiErrorCode,
@@ -90,10 +91,12 @@ export function authApiErrorFromEnvelope(envelope: ApiFailure): AuthApiError {
  */
 export async function authApiErrorFromResponse(
   response: Response,
+  parsed?: unknown,
+  fallbackRequestId?: string,
 ): Promise<AuthApiError> {
   const envelope: Partial<ApiFailure> = {};
   try {
-    const body = (await response.json()) as unknown;
+    const body = parsed !== undefined ? parsed : (await response.json()) as unknown;
     if (body && typeof body === 'object') {
       const obj = body as Record<string, unknown>;
       if (typeof obj.code === 'string') {
@@ -135,7 +138,7 @@ export async function authApiErrorFromResponse(
       envelope.message ??
       `Request failed with status ${response.status} (${response.statusText ?? ''}).`,
     statusCode: envelope.statusCode ?? response.status,
-    requestId: envelope.requestId,
+    requestId: diagnosticId(envelope.requestId) ?? diagnosticId(response.headers.get('x-request-id')) ?? fallbackRequestId,
     details: envelope.details,
     retryAfterSeconds,
   });

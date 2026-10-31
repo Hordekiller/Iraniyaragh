@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import type { Response } from 'express';
 import { getRequestId } from './request-context';
 import { redact, safeErrorMessage } from './redaction';
+import { diagnosticException } from '@iranyaragh/contracts';
 import {
   type AppErrorCode,
   buildErrorEnvelope,
@@ -71,6 +72,9 @@ export class AllExceptionsFilter implements OnModuleInit {
   catch(exception: unknown, host: ArgumentsHost): void {
     const response: Response = host.switchToHttp().getResponse();
     const requestId = getRequestId();
+    // Attached only to the response, consumed by the single completion event.
+    // Raw exception bodies/messages/SQL are never diagnostic payloads.
+    response.locals ??= {};
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Pragma', 'no-cache');
 
@@ -79,6 +83,7 @@ export class AllExceptionsFilter implements OnModuleInit {
     if (typeof exception === 'object' && exception !== null &&
       'type' in exception && exception.type === 'entity.too.large' &&
       'status' in exception && exception.status === HttpStatus.PAYLOAD_TOO_LARGE) {
+      response.locals.diagnosticFailure = { errorCode: 'PAYLOAD_TOO_LARGE' };
       response.status(HttpStatus.PAYLOAD_TOO_LARGE).json(buildErrorEnvelope({
         code: 'PAYLOAD_TOO_LARGE', statusCode: HttpStatus.PAYLOAD_TOO_LARGE,
         message: 'The JSON request exceeds the allowed size.', requestId,
@@ -86,8 +91,16 @@ export class AllExceptionsFilter implements OnModuleInit {
       return;
     }
 
+    if (typeof exception === 'object' && exception !== null && 'type' in exception && exception.type === 'entity.parse.failed') {
+      response.locals.diagnosticFailure = { errorCode: 'INVALID_REQUEST' };
+      response.status(400).json(buildErrorEnvelope({ code: 'INVALID_REQUEST', statusCode: 400, message: 'The JSON request is malformed.', requestId }));
+      return;
+    }
+
     if (exception instanceof HttpException) {
       const { statusCode, code, message, details } = normalizeHttpError(exception);
+      response.locals.diagnosticFailure = { errorCode: code, ...diagnosticException(exception) };
+      if ('diagnosticValidation' in exception) response.locals.diagnosticFailure.validation = exception.diagnosticValidation;
 
       const retryAfterSeconds =
         statusCode === HttpStatus.TOO_MANY_REQUESTS
@@ -110,6 +123,7 @@ export class AllExceptionsFilter implements OnModuleInit {
     }
 
     if (isPrismaError(exception)) {
+      response.locals.diagnosticFailure = { errorCode: 'CONFLICT', causeCode: 'P2002' };
       response.status(HttpStatus.CONFLICT).json(
         buildErrorEnvelope({
           code: 'CONFLICT',
@@ -125,16 +139,14 @@ export class AllExceptionsFilter implements OnModuleInit {
     // generic 500 envelope, so operators had no way to see that a request failed
     // or why. The message is redacted and the request id is the only identifier
     // that leaves the process.
+    response.locals.diagnosticFailure = { errorCode: 'INTERNAL_ERROR', ...diagnosticException(exception) };
     this.logger.event('error', {
       event: 'http.unhandled_exception',
       outcome: 'failure',
       errorCode: 'INTERNAL_ERROR',
       data: {
         requestId,
-        reason: safeErrorMessage(
-          exception instanceof Error ? exception.message : String(exception),
-        ),
-        name: exception instanceof Error ? exception.name : typeof exception,
+        ...diagnosticException(exception),
       },
     });
 

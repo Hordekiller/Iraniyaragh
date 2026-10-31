@@ -1,5 +1,7 @@
 'use client';
 
+import { diagnosticReference } from '@iranyaragh/contracts';
+
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -103,6 +105,7 @@ export function ProductCreateForm() {
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [variantErrors, setVariantErrors] = useState<VariantErrors>({});
+  const [requestReference, setRequestReference] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uncertain, setUncertain] = useState(false);
@@ -172,6 +175,7 @@ export function ProductCreateForm() {
     submittingRef.current = true;
     setSubmitting(true);
     setFormError(null);
+    setRequestReference('');
     try {
       idempotencyKey.current ??= createIdempotencyKey('product-create');
       pendingCreate.current ??= { key: idempotencyKey.current, input: {
@@ -200,6 +204,7 @@ export function ProductCreateForm() {
       if (files.length) setSavedProductId(result.product.id);
       else router.replace(`/catalog/products/${result.product.id}`);
     } catch (error) {
+      setRequestReference(diagnosticReference(error));
       if (error instanceof ApiClientError && error.statusCode < 500) {
         pendingCreate.current = null; idempotencyKey.current = null; setUncertain(false);
         setFormError(error.message);
@@ -253,7 +258,7 @@ export function ProductCreateForm() {
       <Box component="form" onSubmit={handleSubmit} noValidate>
         <Stack spacing={3} sx={{ maxWidth: 860 }}>
           {referenceError ? <Alert severity="warning" action={<Button onClick={() => setReferenceAttempt(current => current + 1)}>تلاش دوباره</Button>}>{referenceError}</Alert> : null}
-          {formError ? <Alert severity="error">{formError}</Alert> : null}
+          {formError ? <Alert severity="error">{formError}{requestReference ? <Box component="span" display="block" dir="ltr">{requestReference}</Box> : null}</Alert> : null}
           <Box component="fieldset" disabled={submitting || uncertain} sx={{ border: 0, p: 0, m: 0, minWidth: 0 }}><Stack spacing={3}>
           <Card variant="outlined">
             <CardContent>

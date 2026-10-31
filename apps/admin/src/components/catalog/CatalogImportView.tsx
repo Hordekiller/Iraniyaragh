@@ -1,5 +1,6 @@
 'use client';
 
+import { withDiagnosticReference } from '@iranyaragh/contracts';
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -105,7 +106,7 @@ export function CatalogImportView() {
       idempotencyKeys.current.upload = undefined;
       feedback.success('فایل بارگذاری و پیش‌آزمایش انجام شد.');
     } catch (error) {
-      feedback.error(error instanceof ApiClientError || error instanceof ApiNetworkError ? error.message : 'بارگذاری فایل ناموفق بود؛ دوباره تلاش کنید.');
+      feedback.error(withDiagnosticReference(error instanceof ApiClientError || error instanceof ApiNetworkError ? error.message : 'بارگذاری فایل ناموفق بود؛ دوباره تلاش کنید.', error));
     } finally {
       setUploading(false);
     }
@@ -119,7 +120,7 @@ export function CatalogImportView() {
       setReport(data.report);
       feedback.success('پیش‌آزمایش مجدد انجام شد.');
     } catch (error) {
-      feedback.error(error instanceof ApiClientError ? error.message : 'انجام پیش‌آزمایش ناموفق بود.');
+      feedback.error(withDiagnosticReference(error instanceof ApiClientError ? error.message : 'انجام پیش‌آزمایش ناموفق بود.', error));
     } finally {
       setReportLoading(false);
     }
@@ -135,7 +136,7 @@ export function CatalogImportView() {
       setCommitResult(data.result);
       feedback.success('تغییرات کاتالوگ اعمال شد.');
     } catch (error) {
-      feedback.error(error instanceof ApiClientError ? error.message : 'اعمال تغییرات ناموفق بود؛ دوباره تلاش کنید.');
+      feedback.error(withDiagnosticReference(error instanceof ApiClientError ? error.message : 'اعمال تغییرات ناموفق بود؛ دوباره تلاش کنید.', error));
     } finally {
       setCommitting(false);
     }

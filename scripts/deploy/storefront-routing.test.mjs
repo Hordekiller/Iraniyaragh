@@ -23,6 +23,59 @@ const listen = (server) =>
 const close = (server) => new Promise((resolve) => server.close(resolve));
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+test('Browser routing harness loads shared diagnostics and preserves safe correlation over HTTP/TLS', { timeout: 45000 }, async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'iranyaragh-e2e-routing-'));
+  const container = `iranyaragh-e2e-contract-${process.pid}`;
+  const script = join(root, 'e2e/scripts/nginx-routing-proxy.sh');
+  const hits = [];
+  const upstream = createServer((req, res) => {
+    hits.push({ requestId: req.headers['x-request-id'], correlationId: req.headers['x-correlation-id'] });
+    res.statusCode = 503;
+    res.end('isolated unavailable upstream');
+  });
+  const httpProbe = createServer();
+  const tlsProbe = createServer();
+  const upstreamPort = await listen(upstream);
+  const httpPort = await listen(httpProbe);
+  const tlsPort = await listen(tlsProbe);
+  await Promise.all([close(httpProbe), close(tlsProbe)]);
+  const env = { ...process.env, TMPDIR: directory,
+    NGINX_E2E_CONTAINER: container, NGINX_E2E_HTTP_PORT: String(httpPort), NGINX_E2E_HTTPS_PORT: String(tlsPort),
+    NGINX_E2E_API_PORT: String(upstreamPort), NGINX_E2E_ADMIN_PORT: String(upstreamPort),
+    NGINX_E2E_MEDIA_PORT: String(upstreamPort), NGINX_E2E_STOREFRONT_PORT: String(upstreamPort),
+  };
+  const options = { env, timeout: 20000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] };
+  try {
+    execFileSync('bash', [script, 'start'], options);
+    const response = await fetch(`http://127.0.0.1:${httpPort}/api/v1/unavailable?token=synthetic-private`, {
+      headers: { 'X-Request-ID': 'harness-request', 'X-Correlation-ID': 'harness-parent' },
+      signal: AbortSignal.timeout(5000),
+    });
+    await response.text();
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('x-request-id'), 'harness-request');
+    assert.equal(response.headers.get('x-correlation-id'), 'harness-parent');
+    assert.deepEqual(hits, [{ requestId: 'harness-request', correlationId: 'harness-parent' }]);
+    const harnessDirectory = readFileSync(join(directory, 'iranyaragh-e2e-nginx.state'), 'utf8');
+    assert.ok(harnessDirectory.startsWith(directory + '/'));
+    const tlsStatus = execFileSync('curl', [
+      '--fail', '--silent', '--show-error', '--cacert', join(harnessDirectory, 'fullchain.pem'),
+      '--output', '/dev/null', '--write-out', '%{http_code}', `https://127.0.0.1:${tlsPort}/nginx-health`,
+    ], { encoding: 'utf8', timeout: 5000 });
+    assert.equal(tlsStatus, '200');
+    const logs = docker(['logs', container]);
+    assert.ok(!logs.includes('synthetic-private'));
+    const entries = logs.split('\n').filter(line => line.startsWith('{')).map(JSON.parse);
+    assert.ok(entries.some(entry => entry.requestId === 'harness-request' && entry.correlationId === 'harness-parent' && entry.statusCode === 503));
+  } finally {
+    try { execFileSync('bash', [script, 'stop'], options); } catch {
+      try { docker(['rm', '-f', container]); } catch { /* startup cleanup already removed it */ }
+    }
+    await close(upstream);
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 // Real shipped TLS vhost and routing snippets, isolated synthetic upstreams.
 // No app/DB/fixture authentication, external provider or production host access.
 test(
@@ -44,6 +97,8 @@ test(
             method: req.method,
             cookie: req.headers.cookie,
             host: req.headers.host,
+            requestId: req.headers["x-request-id"],
+            correlationId: req.headers["x-correlation-id"],
           });
           res.setHeader("X-Test-Upstream", name);
           res.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -163,7 +218,7 @@ test(
         if (ready) break;
         await pause(100);
       }
-      assert.ok(ready, "Nginx must start with the real shipped configuration");
+      if (!ready) assert.fail(`Nginx must start with the real shipped configuration: ${docker(["logs", container]).slice(-2000)}`);
       for (const [path, upstream, target] of [
         ["/", "storefront", "/"],
         [
@@ -272,6 +327,20 @@ test(
         undefined,
         "object storage never receives customer cookies",
       );
+      const safeCode = 'diagnostic-proxy-test';
+      const correlated = await get('/api/v1/products/unavailable?token=synthetic-private', { 'X-Request-ID': safeCode, 'X-Correlation-ID': 'diagnostic-parent-test' });
+      assert.equal(correlated.status, 503);
+      assert.equal(correlated.headers['x-request-id'], safeCode);
+      assert.equal(correlated.headers['x-correlation-id'], 'diagnostic-parent-test');
+      assert.equal(hits.at(-1).requestId, safeCode);
+      assert.equal(hits.at(-1).correlationId, 'diagnostic-parent-test');
+      const logs = docker(['logs', container]);
+      const entries = logs.split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+      assert.ok(entries.some(entry => entry.surface === 'media-upload' && entry.statusCode === 200));
+      assert.ok(entries.some(entry => entry.requestId === safeCode && entry.statusCode === 503 && entry.surface === 'api'));
+      assert.ok(!entries.some(entry => JSON.stringify(entry).includes('synthetic-private') || JSON.stringify(entry).includes('X-Amz-Signature') || 'uri' in entry || 'remote_addr' in entry));
+
+
     } finally {
       try {
         docker(["rm", "-f", container]);

@@ -24,7 +24,7 @@ inspectable on a real host.
 | `scripts/deploy/backup-postgres.sh` | Dumped automatically before every migration |
 | `scripts/deploy/restore-postgres.sh` | Destructive restore, with an explicit confirmation flag |
 | `scripts/deploy/rollback.sh` | Return to a named image tag |
-| `scripts/deploy/logs.sh` | Tail every service |
+| `scripts/deploy/logs.sh` | Filter/follow service logs by support ID, severity and time; see [diagnostics](../../docs/DIAGNOSTICS.md) |
 
 `infrastructure/docker/docker-compose.yml` remains the local development stack.
 It is not a deployment target: it publishes Postgres, Redis and the object store

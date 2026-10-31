@@ -1,3 +1,6 @@
+import { RedactedLogger } from './common/redacted-logger';
+import { diagnosticException } from '@iranyaragh/contracts';
+import { observeWorker } from './common/worker-diagnostics';
 import { NestFactory } from '@nestjs/core';
 import { randomUUID } from 'node:crypto';
 import { Queue, Worker } from 'bullmq';
@@ -21,6 +24,9 @@ import { PrismaService } from './database/prisma.service';
 // Dedicated unprivileged PDF render process. It never accepts sockets and is
 // never the API image; the job database lease stays the single source of truth.
 // The same image multiplexes the bounded report-export render worker.
+process.env.SERVICE_NAME ??= 'iranyaragh-pdf-render-worker';
+const diagnostics = new RedactedLogger();
+
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: false,
@@ -53,12 +59,7 @@ async function bootstrap(): Promise<void> {
       concurrency: 1,
     },
   );
-  invoiceWorker.on('error', () => process.stderr.write('Invoice PDF render worker infrastructure error.\n'));
-  invoiceWorker.on('failed', (job) => {
-    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
-      process.stderr.write('Invoice PDF render attempt dead-lettered; inspect database job evidence.\n');
-    }
-  });
+  observeWorker(invoiceWorker, INVOICE_PDF_QUEUE_NAME);
 
   const exportProcessor = new ReportExportRenderProcessor(
     app.get(ReportExportJobService),
@@ -91,12 +92,7 @@ async function bootstrap(): Promise<void> {
       concurrency: 1,
     },
   );
-  exportWorker.on('error', () => process.stderr.write('Report export render worker infrastructure error.\n'));
-  exportWorker.on('failed', (job) => {
-    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
-      process.stderr.write('Report export render attempt dead-lettered; inspect database job evidence.\n');
-    }
-  });
+  observeWorker(exportWorker, REPORT_EXPORT_QUEUE_NAME);
 
   // Redis deliveries are disposable; recurring wake-ups recover pending work
   // and expired database leases after a worker/queue restart or lost enqueue.
@@ -104,7 +100,7 @@ async function bootstrap(): Promise<void> {
     connection: { url: config.get('REDIS_URL', { infer: true }) },
     prefix: REPORT_EXPORT_QUEUE_PREFIX,
   });
-  recoveryQueue.on('error', () => process.stderr.write('Report export recovery queue unavailable.\n'));
+  recoveryQueue.on('error', () => diagnostics.event('error', { event: 'worker.recovery.queue.failed', outcome: 'failure' }));
   await scheduleDatabaseRecovery(recoveryQueue);
 
   let closing = false;
@@ -128,9 +124,4 @@ function resolveWorkerId(
   return randomUUID().replaceAll('-', '').slice(0, 32);
 }
 
-void bootstrap().catch(() => {
-  process.stderr.write(
-    'PDF/report worker startup failed; inspect configuration and database availability.\n',
-  );
-  process.exit(1);
-});
+void bootstrap().catch(error => { diagnostics.event('error', { event: 'worker.startup.failed', outcome: 'failure', data: diagnosticException(error) }); process.exit(1); });

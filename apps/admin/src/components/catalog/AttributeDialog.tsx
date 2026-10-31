@@ -1,5 +1,6 @@
 'use client';
 
+import { withDiagnosticReference } from '@iranyaragh/contracts';
 import { useRef, useState } from 'react';
 import {
   Box,
@@ -108,7 +109,7 @@ export function AttributeDialog({
       onSaved(saved);
       onClose();
     } catch (error) {
-      feedback.error(error instanceof ApiClientError ? error.message : 'ثبت ویژگی ناموفق بود؛ دوباره تلاش کنید.');
+      feedback.error(withDiagnosticReference(error instanceof ApiClientError ? error.message : 'ثبت ویژگی ناموفق بود؛ دوباره تلاش کنید.', error));
     } finally {
       setSaving(false);
     }

@@ -1,5 +1,6 @@
 'use client';
 
+import { withDiagnosticReference } from '@iranyaragh/contracts';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -214,5 +215,5 @@ export function VariantPriceDialog({
 }
 
 function AppError(error: unknown): string {
-  return error instanceof ApiClientError ? error.message : 'به‌روزرسانی قیمت ناموفق بود؛ دوباره تلاش کنید.';
+  return withDiagnosticReference(error instanceof ApiClientError ? error.message : 'به‌روزرسانی قیمت ناموفق بود؛ دوباره تلاش کنید.', error);
 }

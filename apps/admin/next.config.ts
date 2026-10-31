@@ -68,6 +68,7 @@ function getBasePath() {
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  transpilePackages: ['@iranyaragh/contracts'],
   poweredByHeader: false,
   images: { remotePatterns: [] },
   // Empty by default so local development and the existing tests are unaffected.

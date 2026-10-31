@@ -105,6 +105,8 @@ PREVIOUS_WEB_ID="$(compose ps -q web 2>/dev/null || true)"
 if [[ -z "${PREVIOUS_WEB_ID}" ]]; then
   log "No running stack: first deploy, so there is no database to back up yet"
 else
+  log "Archiving privacy-filtered diagnostics before container replacement"
+  "${SCRIPT_DIR}/archive-diagnostics.sh" || fail "diagnostic archive failed; previous release is unchanged."
   log "Backing up the database and media objects before migrating"
   "${SCRIPT_DIR}/backup-postgres.sh" || fail "pre-migrate backup failed; refusing to migrate."
 fi
