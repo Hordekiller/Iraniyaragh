@@ -2121,18 +2121,19 @@
       "title": "Admin A6: Roles & permissions (/access page)",
       "url": "https://github.com/Hordekiller/Iraniyaragh/issues/359",
       "githubState": "OPEN",
-      "classification": "not_implemented",
+      "classification": "implemented_pending_acceptance",
       "releaseScope": "V1 or supporting historical evidence",
       "relatedPRs": [
         360
       ],
-      "nextAction": "No access module or /access page on main. Local candidate commit 301bdf3 exists on feat/v1-completion; preserve it, integrate/review security and pass fresh CI before claiming delivery.",
+      "nextAction": "Access API/Admin/audit/idempotency implementation from 301bdf3 is included in the pending feat/v1-completion PR. Complete fresh GitHub CI and security review before merge; do not claim VPS or operator acceptance.",
       "sourceEvidenceGroup": "admin_operations",
-      "reconciliationState": "MISSING",
+      "reconciliationState": "PARTIAL",
       "sourceEvidencePaths": [
-        "apps/admin/src/config/navigation.ts"
+        "apps/api/src/modules/access/access.module.ts",
+        "apps/admin/src/app/(dashboard)/access/page.tsx"
       ],
-      "evidenceCheckpointUTC": "2026-10-28"
+      "evidenceCheckpointUTC": "2026-10-31"
     },
     {
       "issue": 363,

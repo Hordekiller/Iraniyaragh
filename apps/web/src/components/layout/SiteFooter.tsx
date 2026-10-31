@@ -28,15 +28,12 @@ export function SiteFooter() {
           <div className="lg:col-span-5">
             <Link to={ROUTES.home} aria-label="بازگشت به صفحهٔ اصلی فروشگاه"><StoreBrandLogo variant="wordmark" /></Link>
             <p className="mt-2 text-[13px] leading-7 text-slate-600">{SITE_TAGLINE}</p>
-            <p className="mt-3 text-[13px] leading-7 text-slate-500">
-              کالاها، قیمت‌ها و وضعیت موجودی را در کاتالوگ مشاهده کنید. مبلغ نهایی سفارش در مرحلهٔ تکمیل خرید از سرور محاسبه می‌شود.
-            </p>
           </div>
 
           <nav aria-label="دسترسی‌های فروشگاه" className="lg:col-span-3">
             <h2 className="font-black text-sm text-slate-900">دسترسی سریع</h2>
             <ul className="mt-4 space-y-3 text-[13px] text-slate-600">
-              <li><Link to={ROUTES.home} state={{ scrollToCategories: true }} className="hover:text-[#C2410C] focus-visible:underline">دسته‌بندی کالاها</Link></li>
+              <li><Link to={ROUTES.categories} className="hover:text-[#C2410C] focus-visible:underline">دسته‌بندی کالاها</Link></li>
               <li><Link to={ROUTES.search} className="hover:text-[#C2410C] focus-visible:underline">جستجوی کالا</Link></li>
               <li><Link to={ROUTES.cart} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline"><ShoppingBag size={15} aria-hidden="true" /> سبد خرید</Link></li>
               <li><Link to={ROUTES.account} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline"><UserRound size={15} aria-hidden="true" /> حساب کاربری</Link></li>

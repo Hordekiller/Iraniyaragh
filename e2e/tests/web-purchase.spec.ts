@@ -95,7 +95,8 @@ test.describe('web: fixture purchase journey', () => {
           await tap(page.getByRole('menuitem', { name: /سفارش‌های من/ }))
           await expect(page.getByRole('menu')).toBeHidden()
         } else {
-          await tap(page.getByRole('link', { name: 'پیگیری سفارش' }))
+          await tap(page.getByRole('navigation', { name: 'ناوبری اصلی', exact: true })
+            .getByRole('link', { name: 'پیگیری سفارش', exact: true }))
         }
       }
       await expect(page).toHaveURL(new RegExp(`${route}$`))

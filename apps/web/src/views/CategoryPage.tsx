@@ -6,6 +6,7 @@ import { useCatalogApi } from '../state/catalog-context'
 import { toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import type { CatalogCategory, CatalogProduct } from '../services/catalog/types'
+import { setDynamicMetadata, setCanonicalUrl } from '../lib/use-route-metadata'
 
 export function CategoryPage() {
   const api = useCatalogApi()
@@ -43,6 +44,17 @@ export function CategoryPage() {
 
   const category = categories.find(item => item.slug === slug) ?? null
   const children = category ? categories.filter(item => item.parentId === category.id) : []
+
+  useEffect(() => {
+    if (category) {
+      setDynamicMetadata({
+        title: category.name,
+        description: `خرید ${category.name} از ایرانی یراق - بهترین قیمت و تنوع کامل یراق‌آلات و ابزار`,
+        type: 'website',
+      })
+      setCanonicalUrl(`${window.location.origin}${ROUTES.category(category.slug)}`)
+    }
+  }, [category])
   const byId = new Map(categories.map(item => [item.id, item]))
   const ancestors: CatalogCategory[] = []
   const visited = new Set(category ? [category.id] : [])
@@ -59,6 +71,8 @@ export function CategoryPage() {
     <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
       <nav aria-label="مسیر دسته‌بندی" className="text-xs text-slate-400 mb-3">
         <Link to={ROUTES.home} className="hover:text-[#FF4D00]">خانه</Link>
+        <span className="mx-1" aria-hidden="true">/</span>
+        <Link to={ROUTES.categories} className="hover:text-[#FF4D00]">همه دسته‌بندی‌ها</Link>
         {ancestors.map(ancestor => (
           <span key={ancestor.id}>
             <span className="mx-1" aria-hidden="true">/</span>

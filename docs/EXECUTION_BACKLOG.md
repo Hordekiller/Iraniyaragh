@@ -1,5 +1,13 @@
 # Zero-to-Production Execution Backlog
 
+## Current branch integration — 2026-10-31
+
+The pending `feat/v1-completion` PR includes access-management implementation
+`301bdf3` (API/Admin/audit/idempotency), storefront navigation and the category
+index. It preserves the newer mainline Next/discovery, rich-text and dependency
+fixes. Fresh GitHub checks, review, merge and exact-SHA publication are still
+required. This source integration changes no recorded VPS/provider acceptance.
+
 > **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
 > [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
 > distinguish implementation, deployed code, operator acceptance and post-V1 scope.

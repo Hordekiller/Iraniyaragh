@@ -10,12 +10,12 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { contentToInspect } from './runtime-asset-content.mjs';
 
 const ROOTS = ['src', 'public', 'index.html'];
 const REMOTE_URL_SRC = /https?:\/\/[^\s"'<>)\]}]*/g;
 const REMOTE_CSS_IMPORT = /@import\s+url\([^)]*\/\//;
 const BINARY_EXT = new Set(['woff2', 'woff', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'avif']);
-const LEGAL_TXT = /(?:^|\/)(OFL\.txt|LICEN[CS]E.*|NOTICE.*|COPYING.*)$/i;
 
 /**
  * Outbound links are user navigation, not runtime asset fetches (navigating
@@ -52,25 +52,6 @@ function remoteUrls(file, content) {
     }
   }
   return matches;
-}
-
-function isLegalText(file) {
-  return LEGAL_TXT.test(file);
-}
-
-/**
- * XML namespace URIs (e.g. xmlns="http://www.w3.org/2000/svg" in SVG assets)
- * are identifiers, not runtime fetch targets, so they are stripped before the
- * remote URL check. The same applies to JSON-LD `@context` values (schema.org):
- * structured-data markup embeds the identifier for a data vocabulary the page
- * itself never fetches at runtime. Legal license texts (OFL.txt) are shipped
- * for attribution and are never fetched at runtime.
- */
-function contentToInspect(file, content) {
-  if (isLegalText(file)) return '';
-  const withoutNamespaces = content.replace(/xmlns(?::\w+)?="(?:https?:\/\/[^"]*)"/g, '');
-  const withoutVocabularyValues = withoutNamespaces.replace(/['"]https:\/\/schema\.org\/(?:InStock|OutOfStock)['"]/g, '"schema-vocabulary-value"');
-  return withoutVocabularyValues.replace(/['"]@context['"]\s*:\s*['"]https?:\/\/schema\.org['"]/g, '');
 }
 
 function collectFiles(target) {

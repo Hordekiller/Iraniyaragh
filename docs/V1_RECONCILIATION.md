@@ -1,5 +1,13 @@
 # V1 source, deployment and acceptance reconciliation
 
+## Current branch integration — 2026-10-31
+
+The pending `feat/v1-completion` PR includes access-management implementation
+`301bdf3` (API/Admin/audit/idempotency), storefront navigation and the category
+index. It preserves the newer mainline Next/discovery, rich-text and dependency
+fixes. Fresh GitHub checks, review, merge and exact-SHA publication are still
+required. This source integration changes no recorded VPS/provider acceptance.
+
 Evidence checkpoint: **2026-10-28 UTC**. Release decision: **PARTIAL — mandatory engineering and acceptance remain**.
 
 ## Current source and runtime

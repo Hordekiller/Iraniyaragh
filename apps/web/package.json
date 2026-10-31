@@ -9,7 +9,7 @@
     "lint": "eslint . && pnpm check:runtime-assets",
     "typecheck": "tsc --noEmit",
     "preview": "next start --port 4173",
-    "test": "vitest run",
+    "test": "node --test scripts/runtime-asset-content.test.mjs && vitest run",
     "check:runtime-assets": "node scripts/check-runtime-assets.mjs",
     "start": "next start --hostname 0.0.0.0 --port 3000"
   },

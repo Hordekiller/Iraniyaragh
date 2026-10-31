@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Private areas
+Disallow: /account/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /orders/
+Disallow: /payment
+Disallow: /payment-return
+Disallow: /credit
+Disallow: /invoices
+
+Sitemap: https://iraniyaragh.com/sitemap.xml

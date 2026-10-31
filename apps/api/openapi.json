@@ -499,6 +499,1845 @@
         ]
       }
     },
+    "/access/admin/roles": {
+      "get": {
+        "operationId": "AccessController_listRoles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "key",
+                              "name",
+                              "description",
+                              "isSystem",
+                              "isActive",
+                              "version",
+                              "permissionKeys",
+                              "memberCount",
+                              "activeMemberCount",
+                              "createdAt",
+                              "updatedAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "key": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "isSystem": {
+                                "type": "boolean"
+                              },
+                              "isActive": {
+                                "type": "boolean"
+                              },
+                              "version": {
+                                "type": "integer"
+                              },
+                              "permissionKeys": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "memberCount": {
+                                "type": "integer"
+                              },
+                              "activeMemberCount": {
+                                "type": "integer"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing roles.manage"
+          }
+        },
+        "summary": "List roles with permission and membership counts",
+        "tags": [
+          "Access"
+        ]
+      },
+      "post": {
+        "operationId": "AccessController_createRole",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "key",
+                  "name",
+                  "permissionKeys"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "example": "catalog-editor"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Catalog editor"
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "permissionKeys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "role"
+                      ],
+                      "properties": {
+                        "role": {
+                          "allOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "key",
+                                "name",
+                                "description",
+                                "isSystem",
+                                "isActive",
+                                "version",
+                                "permissionKeys",
+                                "memberCount",
+                                "activeMemberCount",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "isSystem": {
+                                  "type": "boolean"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "version": {
+                                  "type": "integer"
+                                },
+                                "permissionKeys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "memberCount": {
+                                  "type": "integer"
+                                },
+                                "activeMemberCount": {
+                                  "type": "integer"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "permissions",
+                                "members"
+                              ],
+                              "properties": {
+                                "permissions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "key",
+                                      "name",
+                                      "description",
+                                      "group",
+                                      "isActive"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "description": {
+                                        "type": "string"
+                                      },
+                                      "group": {
+                                        "type": "string"
+                                      },
+                                      "isActive": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                },
+                                "members": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "userId",
+                                      "displayName",
+                                      "mobileMasked",
+                                      "emailMasked",
+                                      "status",
+                                      "assignedAt",
+                                      "expiresAt",
+                                      "assignmentExpired"
+                                    ],
+                                    "properties": {
+                                      "userId": {
+                                        "type": "string"
+                                      },
+                                      "displayName": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "mobileMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "emailMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ACTIVE",
+                                          "PENDING",
+                                          "SUSPENDED",
+                                          "LOCKED",
+                                          "DELETED"
+                                        ]
+                                      },
+                                      "assignedAt": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      "expiresAt": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                      },
+                                      "assignmentExpired": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown permission or invalid role key"
+          },
+          "403": {
+            "description": "Missing roles.manage, stale MFA or privilege escalation"
+          },
+          "409": {
+            "description": "Role key already exists"
+          }
+        },
+        "summary": "Create a custom role",
+        "tags": [
+          "Access"
+        ]
+      }
+    },
+    "/access/admin/roles/{id}": {
+      "get": {
+        "operationId": "AccessController_getRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "role"
+                      ],
+                      "properties": {
+                        "role": {
+                          "allOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "key",
+                                "name",
+                                "description",
+                                "isSystem",
+                                "isActive",
+                                "version",
+                                "permissionKeys",
+                                "memberCount",
+                                "activeMemberCount",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "isSystem": {
+                                  "type": "boolean"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "version": {
+                                  "type": "integer"
+                                },
+                                "permissionKeys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "memberCount": {
+                                  "type": "integer"
+                                },
+                                "activeMemberCount": {
+                                  "type": "integer"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "permissions",
+                                "members"
+                              ],
+                              "properties": {
+                                "permissions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "key",
+                                      "name",
+                                      "description",
+                                      "group",
+                                      "isActive"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "description": {
+                                        "type": "string"
+                                      },
+                                      "group": {
+                                        "type": "string"
+                                      },
+                                      "isActive": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                },
+                                "members": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "userId",
+                                      "displayName",
+                                      "mobileMasked",
+                                      "emailMasked",
+                                      "status",
+                                      "assignedAt",
+                                      "expiresAt",
+                                      "assignmentExpired"
+                                    ],
+                                    "properties": {
+                                      "userId": {
+                                        "type": "string"
+                                      },
+                                      "displayName": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "mobileMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "emailMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ACTIVE",
+                                          "PENDING",
+                                          "SUSPENDED",
+                                          "LOCKED",
+                                          "DELETED"
+                                        ]
+                                      },
+                                      "assignedAt": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      "expiresAt": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                      },
+                                      "assignmentExpired": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Role not found"
+          }
+        },
+        "summary": "Get a role with its permissions, members and version",
+        "tags": [
+          "Access"
+        ]
+      },
+      "patch": {
+        "operationId": "AccessController_updateRole",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "role"
+                      ],
+                      "properties": {
+                        "role": {
+                          "allOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "key",
+                                "name",
+                                "description",
+                                "isSystem",
+                                "isActive",
+                                "version",
+                                "permissionKeys",
+                                "memberCount",
+                                "activeMemberCount",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "isSystem": {
+                                  "type": "boolean"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "version": {
+                                  "type": "integer"
+                                },
+                                "permissionKeys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "memberCount": {
+                                  "type": "integer"
+                                },
+                                "activeMemberCount": {
+                                  "type": "integer"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "permissions",
+                                "members"
+                              ],
+                              "properties": {
+                                "permissions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "key",
+                                      "name",
+                                      "description",
+                                      "group",
+                                      "isActive"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "description": {
+                                        "type": "string"
+                                      },
+                                      "group": {
+                                        "type": "string"
+                                      },
+                                      "isActive": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                },
+                                "members": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "userId",
+                                      "displayName",
+                                      "mobileMasked",
+                                      "emailMasked",
+                                      "status",
+                                      "assignedAt",
+                                      "expiresAt",
+                                      "assignmentExpired"
+                                    ],
+                                    "properties": {
+                                      "userId": {
+                                        "type": "string"
+                                      },
+                                      "displayName": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "mobileMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "emailMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ACTIVE",
+                                          "PENDING",
+                                          "SUSPENDED",
+                                          "LOCKED",
+                                          "DELETED"
+                                        ]
+                                      },
+                                      "assignedAt": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      "expiresAt": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                      },
+                                      "assignmentExpired": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "System role protection or privilege escalation"
+          },
+          "409": {
+            "description": "Version conflict or last-administrator protection"
+          }
+        },
+        "summary": "Rename, describe or deactivate a role with optimistic concurrency",
+        "tags": [
+          "Access"
+        ]
+      }
+    },
+    "/access/admin/roles/{id}/history": {
+      "get": {
+        "operationId": "AccessController_history",
+        "parameters": [
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "action",
+                              "actorId",
+                              "actorLabel",
+                              "metadata",
+                              "createdAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "action": {
+                                "type": "string"
+                              },
+                              "actorId": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "actorLabel": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "metadata": {
+                                "type": "object",
+                                "nullable": true,
+                                "additionalProperties": true
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List access-administration audit events for a role",
+        "tags": [
+          "Access"
+        ]
+      }
+    },
+    "/access/admin/permissions": {
+      "get": {
+        "operationId": "AccessController_listPermissions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "key",
+                              "name",
+                              "description",
+                              "group",
+                              "isActive"
+                            ],
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "group": {
+                                "type": "string"
+                              },
+                              "isActive": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the canonical permission catalogue",
+        "tags": [
+          "Access"
+        ]
+      }
+    },
+    "/access/admin/users": {
+      "get": {
+        "operationId": "AccessController_listUsers",
+        "parameters": [
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "meta"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "displayName",
+                              "mobileMasked",
+                              "emailMasked",
+                              "status",
+                              "roleKeys",
+                              "isActiveAdmin",
+                              "createdAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "mobileMasked": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "emailMasked": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "ACTIVE",
+                                  "PENDING",
+                                  "SUSPENDED",
+                                  "LOCKED",
+                                  "DELETED"
+                                ]
+                              },
+                              "roleKeys": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "isActiveAdmin": {
+                                "type": "boolean"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "required": [
+                            "page",
+                            "perPage",
+                            "total",
+                            "pages"
+                          ],
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "perPage": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            },
+                            "pages": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List staff users that can receive a role",
+        "tags": [
+          "Access"
+        ]
+      }
+    },
+    "/access/admin/roles/{id}/permissions": {
+      "put": {
+        "operationId": "AccessController_replacePermissions",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion",
+                  "permissionKeys"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer"
+                  },
+                  "permissionKeys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "role"
+                      ],
+                      "properties": {
+                        "role": {
+                          "allOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "key",
+                                "name",
+                                "description",
+                                "isSystem",
+                                "isActive",
+                                "version",
+                                "permissionKeys",
+                                "memberCount",
+                                "activeMemberCount",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "isSystem": {
+                                  "type": "boolean"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "version": {
+                                  "type": "integer"
+                                },
+                                "permissionKeys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "memberCount": {
+                                  "type": "integer"
+                                },
+                                "activeMemberCount": {
+                                  "type": "integer"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "permissions",
+                                "members"
+                              ],
+                              "properties": {
+                                "permissions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "key",
+                                      "name",
+                                      "description",
+                                      "group",
+                                      "isActive"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "description": {
+                                        "type": "string"
+                                      },
+                                      "group": {
+                                        "type": "string"
+                                      },
+                                      "isActive": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                },
+                                "members": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "userId",
+                                      "displayName",
+                                      "mobileMasked",
+                                      "emailMasked",
+                                      "status",
+                                      "assignedAt",
+                                      "expiresAt",
+                                      "assignmentExpired"
+                                    ],
+                                    "properties": {
+                                      "userId": {
+                                        "type": "string"
+                                      },
+                                      "displayName": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "mobileMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "emailMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ACTIVE",
+                                          "PENDING",
+                                          "SUSPENDED",
+                                          "LOCKED",
+                                          "DELETED"
+                                        ]
+                                      },
+                                      "assignedAt": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      "expiresAt": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                      },
+                                      "assignmentExpired": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing roles.manage or privilege escalation"
+          },
+          "409": {
+            "description": "Version conflict, last administrator or protected role"
+          }
+        },
+        "summary": "Replace a role permission set",
+        "tags": [
+          "Access"
+        ]
+      }
+    },
+    "/access/admin/roles/{id}/members": {
+      "post": {
+        "operationId": "AccessController_assignMember",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion",
+                  "userId"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer"
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "role"
+                      ],
+                      "properties": {
+                        "role": {
+                          "allOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "key",
+                                "name",
+                                "description",
+                                "isSystem",
+                                "isActive",
+                                "version",
+                                "permissionKeys",
+                                "memberCount",
+                                "activeMemberCount",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "isSystem": {
+                                  "type": "boolean"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "version": {
+                                  "type": "integer"
+                                },
+                                "permissionKeys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "memberCount": {
+                                  "type": "integer"
+                                },
+                                "activeMemberCount": {
+                                  "type": "integer"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "permissions",
+                                "members"
+                              ],
+                              "properties": {
+                                "permissions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "key",
+                                      "name",
+                                      "description",
+                                      "group",
+                                      "isActive"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "description": {
+                                        "type": "string"
+                                      },
+                                      "group": {
+                                        "type": "string"
+                                      },
+                                      "isActive": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                },
+                                "members": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "userId",
+                                      "displayName",
+                                      "mobileMasked",
+                                      "emailMasked",
+                                      "status",
+                                      "assignedAt",
+                                      "expiresAt",
+                                      "assignmentExpired"
+                                    ],
+                                    "properties": {
+                                      "userId": {
+                                        "type": "string"
+                                      },
+                                      "displayName": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "mobileMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "emailMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ACTIVE",
+                                          "PENDING",
+                                          "SUSPENDED",
+                                          "LOCKED",
+                                          "DELETED"
+                                        ]
+                                      },
+                                      "assignedAt": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      "expiresAt": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                      },
+                                      "assignmentExpired": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Inactive user, inactive role, already assigned or invalid expiry"
+          },
+          "403": {
+            "description": "Missing roles.manage or privilege escalation"
+          }
+        },
+        "summary": "Assign an active role to an active staff user",
+        "tags": [
+          "Access"
+        ]
+      }
+    },
+    "/access/admin/roles/{id}/members/{userId}/revoke": {
+      "post": {
+        "operationId": "AccessController_revokeMember",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "role"
+                      ],
+                      "properties": {
+                        "role": {
+                          "allOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "key",
+                                "name",
+                                "description",
+                                "isSystem",
+                                "isActive",
+                                "version",
+                                "permissionKeys",
+                                "memberCount",
+                                "activeMemberCount",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "isSystem": {
+                                  "type": "boolean"
+                                },
+                                "isActive": {
+                                  "type": "boolean"
+                                },
+                                "version": {
+                                  "type": "integer"
+                                },
+                                "permissionKeys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "memberCount": {
+                                  "type": "integer"
+                                },
+                                "activeMemberCount": {
+                                  "type": "integer"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "permissions",
+                                "members"
+                              ],
+                              "properties": {
+                                "permissions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "key",
+                                      "name",
+                                      "description",
+                                      "group",
+                                      "isActive"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "description": {
+                                        "type": "string"
+                                      },
+                                      "group": {
+                                        "type": "string"
+                                      },
+                                      "isActive": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                },
+                                "members": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "userId",
+                                      "displayName",
+                                      "mobileMasked",
+                                      "emailMasked",
+                                      "status",
+                                      "assignedAt",
+                                      "expiresAt",
+                                      "assignmentExpired"
+                                    ],
+                                    "properties": {
+                                      "userId": {
+                                        "type": "string"
+                                      },
+                                      "displayName": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "mobileMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "emailMasked": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "ACTIVE",
+                                          "PENDING",
+                                          "SUSPENDED",
+                                          "LOCKED",
+                                          "DELETED"
+                                        ]
+                                      },
+                                      "assignedAt": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      "expiresAt": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                      },
+                                      "assignmentExpired": {
+                                        "type": "boolean"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version conflict or last-administrator protection"
+          }
+        },
+        "summary": "Revoke a staff user role assignment",
+        "tags": [
+          "Access"
+        ]
+      }
+    },
     "/catalog/products": {
       "get": {
         "operationId": "CatalogController_publicProducts",

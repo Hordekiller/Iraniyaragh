@@ -1,10 +1,10 @@
-import { DiscoveryModule } from './modules/discovery/discovery.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ApiFoundationModule } from './common/api-foundation.module';
 import { DatabaseModule } from './database/database.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AccessModule } from './modules/access/access.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CreditModule } from './modules/credit/credit.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
@@ -22,6 +22,7 @@ import { RedisModule } from './modules/redis/redis.module';
 import { MediaModule } from './modules/media/media.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
+import { DiscoveryModule } from './modules/discovery/discovery.module';
 
 @Module({
   imports: [
@@ -36,8 +37,8 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     DatabaseModule,
     HealthModule,
     AuthModule,
+    AccessModule,
     CatalogModule,
-    DiscoveryModule,
     MediaModule,
     InventoryModule,
     OrdersModule,
@@ -51,6 +52,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     StocktakeModule,
     ReportsModule,
     OutboxModule,
+    DiscoveryModule,
     AuditModule,
   ],
 })

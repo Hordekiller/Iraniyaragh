@@ -221,6 +221,7 @@ enum StocktakeScopeType {
 }
 
 model User {
+  accessVersion              Int                          @default(1)
   invoicePublicationEvents    InvoicePublicationEvent[]
   invoicePublicationCommands  InvoicePublicationCommand[]
   issuedInvoiceDocuments      InvoiceDocument[]
@@ -268,6 +269,7 @@ model User {
   dispatchedShipments         Shipment[]                   @relation("ShipmentDispatcher")
   customerNotesAuthored       CustomerNote[]               @relation("CustomerNoteAuthor")
   customerCommandRecords      CustomerCommandRecord[]      @relation("CustomerCommandActor")
+  accessCommandRecords        AccessCommandRecord[]
   staffOrderCommandRecords    StaffOrderCommandRecord[]    @relation("StaffOrderCommandActor")
   roleAssignments             UserRole[]                   @relation("UserRoleSubject")
   roleAssignmentsGranted      UserRole[]                   @relation("UserRoleAssigner")
@@ -304,12 +306,27 @@ model Role {
   description String?          @db.Text
   isSystem    Boolean          @default(false)
   isActive    Boolean          @default(true)
+  version     Int              @default(1)
   users       UserRole[]
   permissions RolePermission[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
   @@index([isActive, key])
+}
+
+model AccessCommandRecord {
+  id          String   @id @default(cuid())
+  actorId     String
+  scope       String   @db.VarChar(160)
+  keyHash     String   @db.Char(64)
+  requestHash String   @db.Char(64)
+  response    Json
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, scope, keyHash])
+  @@index([createdAt])
 }
 
 model Permission {

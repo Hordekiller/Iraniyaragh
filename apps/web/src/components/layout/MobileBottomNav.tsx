@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Home, LayoutGrid, ShoppingBag, Search, User, PackageSearch } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
-import { SECTION_IDS } from '../../lib/site-config'
 import { useAuth } from '../../state/auth-context'
 
 type MobileBottomNavProps = { onOpenSearch: () => void; onOpenLogin: () => void; embedded?: boolean }
@@ -16,16 +15,10 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }:
     return <div aria-hidden="true" data-testid="product-dock-spacer" className="h-[var(--product-dock-height,14rem)] lg:h-0" />
   }
 
-  function openCategories() {
-    if (pathname === ROUTES.home) {
-      document.getElementById(SECTION_IDS.categories)?.scrollIntoView({ behavior: 'smooth' })
-    } else navigate(ROUTES.home, { state: { scrollToCategories: true } })
-  }
-
   const items = [
     { label: 'خانه', icon: Home, active: pathname === ROUTES.home, action: () => navigate(ROUTES.home) },
     { label: 'جستجو', icon: Search, active: pathname === ROUTES.search, action: () => { onOpenSearch(); window.scrollTo({ top: 0, behavior: 'smooth' }) } },
-    { label: 'دسته‌بندی‌ها', short: 'دسته‌ها', icon: LayoutGrid, active: pathname.startsWith('/category/'), action: openCategories },
+    { label: 'دسته‌بندی‌ها', short: 'دسته‌ها', icon: LayoutGrid, active: pathname === ROUTES.categories || pathname.startsWith('/categories/'), action: () => navigate(ROUTES.categories) },
     { label: 'سبد خرید', icon: ShoppingBag, active: pathname === ROUTES.cart || pathname === ROUTES.checkout, action: () => navigate(ROUTES.cart) },
     { label: 'پیگیری سفارش‌ها', short: 'پیگیری', icon: PackageSearch, active: pathname === ROUTES.orders || pathname.startsWith(`${ROUTES.orders}/`), action: () => navigate(ROUTES.orders) },
     { label: 'حساب کاربری', short: 'پروفایل', icon: User, active: pathname === ROUTES.account || pathname.startsWith(`${ROUTES.account}/`), action: () => { if (authState.phase === 'authenticated') navigate(ROUTES.account); else onOpenLogin() } },

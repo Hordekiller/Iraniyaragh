@@ -36,4 +36,8 @@ describe('richTextToPlainText', () => {
       richTextToPlainText('<p onclick="let()">متن امن</p><script>var x=1</script>'),
     ).toBe('متن امن');
   });
+
+  it('drops hidden content when closing tags contain browser-valid whitespace', () => {
+    expect(richTextToPlainText('<p>متن امن</p><script>hidden</script ><style>hidden</style ><p>پایان</p>')).toBe('متن امن پایان');
+  });
 });
