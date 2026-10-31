@@ -8,8 +8,8 @@ beforeAll(async () => {
   // All routes use the same catalog/auth contract. Load this module graph once:
   // resetting it between routes can race a pending React.lazy import with a new
   // CatalogContext identity after a slow initial render.
-  vi.stubEnv('VITE_FIXTURE_AUTH', 'true')
-  vi.stubEnv('VITE_FIXTURE_CATALOG', 'true')
+  vi.stubEnv('NEXT_PUBLIC_FIXTURE_AUTH', 'true')
+  vi.stubEnv('NEXT_PUBLIC_FIXTURE_CATALOG', 'true')
   App = (await import('./App')).default
 })
 
@@ -38,11 +38,11 @@ const routes: Array<[string, () => Promise<void> | void]> = [
     async () => {
       expect(await screen.findByRole('heading', { name: 'دسته‌بندی کالاها', level: 1 })).toBeInTheDocument()
       expect(await screen.findByRole('link', { name: 'ابزار برقی' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'دسته‌بندی‌ها' })).toHaveAttribute('aria-current', 'page')
+      expect(screen.getByRole('button', { name: /دسته‌بندی‌ها/ })).toHaveAttribute('aria-current', 'page')
     },
   ],
   [
-    '/category/power-tools',
+    '/categories/power-tools',
     async () => {
       expect(
         await screen.findByRole('heading', { name: 'ابزار برقی' }),
@@ -50,7 +50,7 @@ const routes: Array<[string, () => Promise<void> | void]> = [
     },
   ],
   [
-    '/product/ronix-2210-hammer-drill',
+    '/products/ronix-2210-hammer-drill',
     async () => {
       expect(
         await screen.findByRole('heading', { name: /رونیکس ۲۲۱۰/ }),

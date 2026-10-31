@@ -44,6 +44,14 @@ describe('MobileBottomNav', () => {
     expect(screen.getByRole('navigation', { name: 'ناوبری پایین' })).toBeInTheDocument()
   })
 
+  it('includes each visible label in the accessible name for voice navigation', () => {
+    render(<MemoryRouter><Harness /></MemoryRouter>)
+    for (const button of screen.getAllByRole('button')) {
+      const visibleLabel = button.textContent!.trim()
+      expect(button).toHaveAccessibleName(expect.stringContaining(visibleLabel))
+    }
+  })
+
   it('triggers the search opener', () => {
     const onOpenSearch = vi.fn()
     render(
@@ -82,7 +90,7 @@ describe('MobileBottomNav', () => {
     expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.home)
   })
 
-  it.each(['/', '/elsewhere', '/category/power-tools'])('routes the categories button from %s to its dedicated page', (path) => {
+  it.each(['/', '/elsewhere', '/categories/power-tools'])('routes the categories button from %s to its dedicated page', (path) => {
     render(
       <MemoryRouter initialEntries={[path]}>
         <Harness />
@@ -92,7 +100,13 @@ describe('MobileBottomNav', () => {
     fireEvent.click(screen.getByRole('button', { name: /دسته‌بندی‌ها/ }))
 
     expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.categories)
-    expect(screen.getByRole('button', { name: 'دسته‌بندی‌ها' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: /دسته‌بندی‌ها/ })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('button', { name: 'خانه' })).not.toHaveAttribute('aria-current')
   })
+  it('lets the product dock own the canonical product route without a second fixed menu', () => {
+    render(<MemoryRouter initialEntries={['/products/test-product']}><Harness /></MemoryRouter>)
+    expect(screen.queryByRole('navigation', { name: 'ناوبری پایین' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('product-dock-spacer')).toBeInTheDocument()
+  })
+
 })

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Outlet, useLocation, useSearchParams } from 'react-router-dom'
 import { TopBar } from './TopBar'
 import { SiteHeader } from './SiteHeader'
@@ -14,13 +14,13 @@ import { useAuth } from '../../state/auth-context'
  * renders the routed page content via <Outlet/>. Auth/Cart/Catalog providers
  * wrap this layout in App.
  */
-export function AppLayout() {
+export function AppLayout({ children, serverMetadata = false }: { children?: ReactNode; serverMetadata?: boolean } = {}) {
   const auth = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [searchParams] = useSearchParams()
   const location = useLocation()
-  useRouteMetadata(location.pathname)
+  useRouteMetadata(location.pathname, serverMetadata)
   const urlQuery = searchParams.get('q') ?? ''
 
   const [resolvedUrlQuery, setResolvedUrlQuery] = useState(urlQuery)
@@ -59,7 +59,7 @@ export function AppLayout() {
         {routeAnnouncement(location.pathname)}
       </div>
       <main id={SECTION_IDS.mainContent} tabIndex={-1}>
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
       <SiteFooter />
 
@@ -75,8 +75,8 @@ export function AppLayout() {
 function routeAnnouncement(pathname: string): string {
   if (pathname === '/') return 'صفحه خانه'
   if (pathname === '/categories') return 'صفحه دسته‌بندی کالاها'
-  if (pathname === '/privacy') return 'صفحه حریم خصوصی'
-  if (pathname === '/terms') return 'صفحه قوانین و شرایط فروش'
+  if (pathname === '/policies/privacy') return 'صفحه حریم خصوصی'
+  if (pathname === '/policies/terms') return 'صفحه قوانین و شرایط فروش'
   if (pathname === '/account/addresses') return 'صفحه دفتر نشانی‌ها'
   if (pathname === '/account/security') return 'صفحه امنیت و نشست‌ها'
   if (pathname === '/account') return 'صفحه حساب کاربری'
@@ -86,6 +86,6 @@ function routeAnnouncement(pathname: string): string {
   if (pathname.startsWith('/orders/')) return 'صفحه جزئیات سفارش'
   if (pathname.startsWith('/payment/')) return 'صفحه وضعیت پرداخت'
   if (pathname === '/payment-return') return 'صفحه نتیجه پرداخت'
-  if (pathname.startsWith('/product/')) return 'صفحه محصول'
+  if (pathname.startsWith('/products/')) return 'صفحه محصول'
   return 'صفحه جدید'
 }

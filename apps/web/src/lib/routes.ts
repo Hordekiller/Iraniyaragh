@@ -4,11 +4,11 @@
  */
 export const ROUTES = {
   home: '/',
-  privacy: '/privacy',
-  terms: '/terms',
   categories: '/categories',
-  category: (slug: string) => `/category/${slug}`,
-  product: (slug: string) => `/product/${slug}`,
+  privacy: '/policies/privacy',
+  terms: '/policies/terms',
+  category: (slug: string) => `/categories/${slug}`,
+  product: (slug: string) => `/products/${slug}`,
   search: '/search',
   bestsellers: '/bestsellers',
   cart: '/cart',
@@ -29,11 +29,11 @@ export const ROUTES = {
 /** Route path patterns for react-router `<Route path>` definitions. */
 export const ROUTE_PATHS = {
   home: '/',
-  privacy: '/privacy',
-  terms: '/terms',
   categories: '/categories',
-  category: '/category/:slug',
-  product: '/product/:slug',
+  privacy: '/policies/privacy',
+  terms: '/policies/terms',
+  category: '/categories/:slug',
+  product: '/products/:slug',
   search: '/search',
   bestsellers: '/bestsellers',
   cart: '/cart',

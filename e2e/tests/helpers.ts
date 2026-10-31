@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { generate } from 'otplib';
 import { waitForFreshTotpStep } from './totp-step';
-import type { Locator, Page, Request, Response } from '@playwright/test';
+import type { Frame, Locator, Page, Request, Response } from '@playwright/test';
 
 export const isMobile = (page: Page): boolean => (page.viewportSize()?.width ?? 1440) < 768;
 
@@ -24,13 +24,38 @@ function isApprovedStorefrontSeal(page: Page, request: Request): boolean {
 /** Await application resources; an unavailable external seal is not app readiness. */
 export function createApplicationRequestTracker(page: Page, include: (request: Request) => boolean = () => true) {
   const pending = new Set<Request>();
+  let navigation: Request | null = null;
+  let previousDocument: Set<Request> | null = null;
   const started = (request: Request) => {
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
+      navigation = request;
+      previousDocument = new Set(pending);
+    }
     if (/^https?:\/\//.test(request.url()) && include(request) && !isApprovedStorefrontSeal(page, request)) pending.add(request);
   };
-  const settled = (request: Request) => { pending.delete(request); };
+  const settled = (request: Request) => {
+    pending.delete(request);
+    if (request === navigation) { navigation = null; previousDocument = null; }
+  };
+  const committed = (frame: Frame) => {
+    if (frame !== page.mainFrame() || !previousDocument) return;
+    // Chromium can omit settlement events for abandoned prefetches when a
+    // document is replaced. Keep every request started by the new document,
+    // including its navigation. SPA transitions do not clear this tracker.
+    for (const request of pending) {
+      // Next may schedule another old-document prefetch while navigation is
+      // in flight. New-document JavaScript cannot prefetch before commit.
+      const abandonedPrefetch = request !== navigation
+        && request.headers()['next-router-prefetch'] === '1'
+        && request.frame() === frame;
+      if (previousDocument.has(request) || abandonedPrefetch) pending.delete(request);
+    }
+    navigation = null; previousDocument = null;
+  };
   page.on('request', started);
   page.on('requestfinished', settled);
   page.on('requestfailed', settled);
+  page.on('framenavigated', committed);
   return {
     async wait() {
       await page.waitForLoadState('load');
@@ -40,6 +65,7 @@ export function createApplicationRequestTracker(page: Page, include: (request: R
       page.off('request', started);
       page.off('requestfinished', settled);
       page.off('requestfailed', settled);
+      page.off('framenavigated', committed);
     },
   };
 }

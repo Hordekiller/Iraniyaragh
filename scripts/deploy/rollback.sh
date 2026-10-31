@@ -22,7 +22,11 @@ set -Eeuo pipefail
 
 INFRA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../infrastructure/docker" && pwd)"
 ENV_FILE="${ENV_FILE:-${INFRA_DIR}/.env.staging}"
-COMPOSE_FILE="${INFRA_DIR}/compose.staging.yml"
+# Roll back the target topology as well as its images. The pre-renderer web
+# image serves static files and has no storefront image: using today's Compose
+# would try to pull a nonexistent image for that old SHA and prevent rollback.
+COMPOSE_FILE="$(mktemp "${INFRA_DIR}/.compose.rollback.XXXXXX.yml")"
+trap 'rm -f "${COMPOSE_FILE}"' EXIT
 
 TARGET="${1:-}"
 [[ -n "${TARGET}" ]] || { echo "usage: $0 <full-commit-sha>" >&2; exit 1; }
@@ -36,7 +40,23 @@ if [[ ! "${TARGET}" =~ ^[0-9a-f]{40}$ ]]; then
   exit 1
 fi
 
+git -C "${INFRA_DIR}/../.." show "${TARGET}:infrastructure/docker/compose.staging.yml" > "${COMPOSE_FILE}" \
+  || { echo "could not read Compose topology for ${TARGET}; fetch the release commit first" >&2; exit 1; }
+
 compose() { IMAGE_TAG="${TARGET}" docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"; }
+
+AVAILABLE_SERVICES="$(compose config --services)" \
+  || { echo "target release Compose configuration is invalid" >&2; exit 1; }
+APPLICATION_SERVICES=()
+HEALTHY_SERVICES=()
+for service in api media-worker pdf-render-worker admin storefront web; do
+  if grep -qx "${service}" <<< "${AVAILABLE_SERVICES}"; then
+    APPLICATION_SERVICES+=("${service}")
+    case "${service}" in api|admin|storefront|web) HEALTHY_SERVICES+=("${service}");; esac
+  fi
+done
+[[ " ${APPLICATION_SERVICES[*]} " == *" api "* && " ${APPLICATION_SERVICES[*]} " == *" web "* ]] \
+  || { echo "target release lacks the required API/web services" >&2; exit 1; }
 
 echo "Rolling back to ${TARGET}"
 compose pull || { echo "could not pull the images for ${TARGET}" >&2; exit 1; }
@@ -45,17 +65,28 @@ compose pull || { echo "could not pull the images for ${TARGET}" >&2; exit 1; }
 # wrong here: this schema is whatever the failed deploy left behind, and the old
 # release's migration set must not be applied to it. Skip the service explicitly
 # so only the application tier is replaced.
-compose up -d --no-deps api media-worker admin web
+# Remove the renderer as an orphan when returning to a pre-renderer release.
+# Named volumes are retained; no schema or data service is recreated here.
+compose up -d --no-deps --remove-orphans "${APPLICATION_SERVICES[@]}"
 
 READY=0
 for _ in $(seq 1 60); do
-  if compose ps --format json api 2>/dev/null | grep -q '"Health":"healthy"'; then
+  ALL_HEALTHY=1
+  for service in "${HEALTHY_SERVICES[@]}"; do
+    compose ps --format json "${service}" 2>/dev/null | grep -q '"Health":"healthy"' || ALL_HEALTHY=0
+  done
+  for service in media-worker pdf-render-worker; do
+    if [[ " ${APPLICATION_SERVICES[*]} " == *" ${service} "* ]]; then
+      compose ps --format json "${service}" 2>/dev/null | grep -q '"State":"running"' || ALL_HEALTHY=0
+    fi
+  done
+  if [[ "${ALL_HEALTHY}" = 1 ]]; then
     READY=1
     break
   fi
   sleep 5
 done
-[[ "${READY}" = "1" ]] || { echo "FAILED: API not healthy after rollback" >&2; exit 1; }
+[[ "${READY}" = "1" ]] || { echo "FAILED: application services not healthy after rollback" >&2; exit 1; }
 
 sed -i.bak -E "s/^IMAGE_TAG=.*/IMAGE_TAG=${TARGET}/" "${ENV_FILE}" && rm -f "${ENV_FILE}.bak"
 

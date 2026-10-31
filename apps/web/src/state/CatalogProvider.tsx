@@ -15,7 +15,6 @@ import { CatalogContext } from './catalog-context'
  * explicit `VITE_FIXTURE_CATALOG=true` opt-in is supplied (local dev / e2e),
  * so a deployment cannot silently ship fake catalog data.
  */
-const fixtureCatalogEnabled = import.meta.env.VITE_FIXTURE_CATALOG === 'true'
 
 export function CatalogProvider({
   children,
@@ -26,7 +25,7 @@ export function CatalogProvider({
 }) {
   const value = useMemo(() => {
     return {
-      api: api ?? (fixtureCatalogEnabled ? new CatalogFixtureClient() : new CatalogHttpClient({ baseUrl: import.meta.env.VITE_API_BASE_URL })),
+      api: api ?? (process.env.NEXT_PUBLIC_FIXTURE_CATALOG === 'true' ? new CatalogFixtureClient() : new CatalogHttpClient({ baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL })),
     }
     // api is intentionally considered stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps

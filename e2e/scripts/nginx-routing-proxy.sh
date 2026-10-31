@@ -33,6 +33,7 @@ HTTPS_PORT="${NGINX_E2E_HTTPS_PORT:-8443}"
 ADMIN_UPSTREAM="127.0.0.1:${NGINX_E2E_ADMIN_PORT:-3001}"
 API_UPSTREAM="127.0.0.1:${NGINX_E2E_API_PORT:-4000}"
 MEDIA_UPSTREAM="127.0.0.1:${NGINX_E2E_MEDIA_PORT:-9000}"
+STOREFRONT_UPSTREAM="127.0.0.1:${NGINX_E2E_STOREFRONT_PORT:-4173}"
 CONTAINER="${NGINX_E2E_CONTAINER:-iranyaragh-e2e-nginx}"
 IMAGE="${NGINX_E2E_IMAGE:-nginx:1.27-alpine}"
 
@@ -40,13 +41,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${E2E_DIR}/.." && pwd)"
 SNIPPETS="${REPO_ROOT}/infrastructure/nginx"
-WEB_DIST="${REPO_ROOT}/apps/web/dist"
 
 fail() { printf '\nnginx routing harness: %s\n' "$*" >&2; exit 1; }
 
 command -v docker >/dev/null || fail "docker is required to run the real nginx image."
 [[ "$(uname -s)" == "Linux" ]] || fail "--network host needs Linux; the upstreams are host processes."
-[[ -d "${WEB_DIST}" ]] || fail "${WEB_DIST} is missing. Build the storefront first: pnpm --filter @iranyaragh/web build"
 
 STATE_FILE="${TMPDIR:-/tmp}/iranyaragh-e2e-nginx.state"
 
@@ -103,6 +102,7 @@ server {
     set \$api_upstream http://${API_UPSTREAM};
     set \$admin_upstream http://${ADMIN_UPSTREAM};
     set \$media_upstream http://${MEDIA_UPSTREAM};
+    set \$storefront_upstream http://${STOREFRONT_UPSTREAM};
 
     root /usr/share/nginx/html;
     index index.html;
@@ -120,6 +120,7 @@ server {
     set \$api_upstream http://${API_UPSTREAM};
     set \$admin_upstream http://${ADMIN_UPSTREAM};
     set \$media_upstream http://${MEDIA_UPSTREAM};
+    set \$storefront_upstream http://${STOREFRONT_UPSTREAM};
 
     root /usr/share/nginx/html;
     index index.html;
@@ -139,7 +140,6 @@ docker run --rm -d --name "${CONTAINER}" --network host \
   -v "${SNIPPETS}:/etc/nginx/snippets:ro" \
   -v "${WORKDIR}/fullchain.pem:/etc/nginx/tls/fullchain.pem:ro" \
   -v "${WORKDIR}/privkey.pem:/etc/nginx/tls/privkey.pem:ro" \
-  -v "${WEB_DIST}:/usr/share/nginx/html:ro" \
   "${IMAGE}" >/dev/null || fail "could not start ${IMAGE}"
 
 # A redirect loop is valid nginx syntax, so `nginx -t` proves nothing about it.

@@ -36,12 +36,19 @@ for (const [name, recorded, selected] of [
       } catch {
         assert.fail('Offline Compose validation failed; Docker Compose is required. No raw configuration is printed.');
       }
-      for (const service of ['api', 'media-worker', 'pdf-render-worker', 'migrate', 'media-bucket', 'admin', 'web']) {
+      for (const service of ['api', 'media-worker', 'pdf-render-worker', 'migrate', 'media-bucket', 'admin', 'storefront', 'web']) {
         const value = configuration.services[service];
         assert.ok(value.image.endsWith(`:${selected}`), `${service}: exact image`);
         assert.equal(value.environment.IMAGE_TAG, selected, `${service}: runtime tag`);
         assert.equal(value.environment.APP_VERSION, selected, `${service}: diagnostic version`);
       }
+      assert.equal(configuration.services.storefront.environment.API_INTERNAL_URL, 'http://api:4000');
+      assert.equal(configuration.services.storefront.environment.PUBLIC_WEB_ORIGIN, 'https://iraniyaragh.com');
+      assert.equal(configuration.services.storefront.environment.APP_ENVIRONMENT, 'staging');
+      assert.equal(configuration.services.storefront.environment.DATABASE_URL, undefined);
+      assert.equal(configuration.services.storefront.environment.SMS_IR_API_KEY, undefined);
+      assert.equal(configuration.services.storefront.ports, undefined);
+      assert.equal(configuration.services.web.depends_on.storefront.condition, 'service_healthy');
       assert.equal(configuration.services.api.environment.PAYMENT_PROVIDER_MODE, 'disabled');
       assert.equal(configuration.services.api.environment.SMS_PROVIDER_MODE, 'disabled');
       // ADR-0030: the worker's provenance is the PDF image, never the API image.

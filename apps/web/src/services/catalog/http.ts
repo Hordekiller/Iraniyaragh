@@ -68,7 +68,7 @@ export class CatalogHttpClient implements CatalogApi {
     const perPage = Number.isInteger(query.perPage)
       ? Math.max(1, Math.min(100, query.perPage!))
       : 100
-    const params = new URLSearchParams({ page: '1', perPage: String(perPage) })
+    const params = new URLSearchParams({ page: String(query.page ?? 1), perPage: String(perPage) })
     if (query.search?.trim()) params.set('search', query.search.trim())
     if (query.categoryId) {
       params.set('categoryId', query.categoryId)
@@ -114,9 +114,10 @@ export class CatalogHttpClient implements CatalogApi {
       `/api/v1/catalog/products/${encodeURIComponent(slug)}`,
     )
     const product = response.data.product
-    const availability = await this.requestFlat<PublicAvailabilityResponse>(
-      `/api/v1/inventory/public/availability?variantIds=${product.variants.map((variant) => encodeURIComponent(variant.id)).join(',')}`,
-    )
+    const activeVariants = product.variants.filter(variant => variant.isActive)
+    const availability = activeVariants.length ? await this.requestFlat<PublicAvailabilityResponse>(
+      `/api/v1/inventory/public/availability?variantIds=${activeVariants.map((variant) => encodeURIComponent(variant.id)).join(',')}`,
+    ) : { items: [] }
     const availabilityByVariant = new Map(
       availability.items.map((item) => [item.variantId, item.status]),
     )

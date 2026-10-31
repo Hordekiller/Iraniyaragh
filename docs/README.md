@@ -1,9 +1,11 @@
 # Iraniyaragh Documentation Index
 
-Current entry points: `MVP_INTEGRATION.md` for the user-directed assembly of
-merged capabilities, `PROJECT_STATUS.md` for verified capability state,
-`SECURITY.md`/`FOUNDATION.md` for safety invariants. Older sprint, ownership and
-parallel-agent plans below are retained for context, not current instructions.
+Current entry points (2026-10-28): [V1 reconciliation](V1_RECONCILIATION.md),
+[project status](PROJECT_STATUS.md), [issue register](V1_ISSUE_REGISTER.json),
+[dependency gates](V1_DEPENDENCIES.json) and [repository workflow](REPOSITORY_WORKFLOW.md).
+[ADR-0034](adr/0034-v1-dependency-upgrade-freeze.md) records the current dependency
+freeze. SECURITY.md and FOUNDATION.md retain domain/data-safety invariants.
+Older sprint, ownership and parallel-agent plans are historical context.
 
 1. `FOUNDATION.md` — existing architecture and money/inventory/order safety invariants.
 2. `ARCHITECTURE.md` — system shape, domains and scale path.

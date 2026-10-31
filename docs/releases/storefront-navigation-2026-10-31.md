@@ -1,8 +1,9 @@
 # Storefront navigation release candidate — 2026-10-31
 
-This is local release preparation. No merge, registry publication or VPS rollout
-is part of this checkpoint. The deployable release must later be identified by
-the full merged commit SHA, using the existing Publish Images workflow.
+This candidate includes all changes from `feat/v1-completion` and integrates
+mainline `36b2dad`. No registry publication or VPS rollout is part of this
+checkpoint. The deployable release must later be identified by the full merged
+commit SHA, using the existing Publish Images workflow.
 
 ## Included storefront changes
 
@@ -28,12 +29,14 @@ change, stock mutation or fixture-authentication activation.
 
 ## Source identity and release scope
 
-Preparation base: `9e1f4c1` on `feat/v1-completion`, plus the uncommitted
-storefront changes. A local candidate tag is not an official release identity.
-The branch already contains access-management and SEO commits beyond the local
-`origin/main` reference. Confirm their inclusion or isolate the storefront
-changes before merging; do not treat this branch as an isolated UI-only release.
-Pre-existing edits to project-status/backlog documents are outside this UI work.
+The owner authorized sending every current change, including access-management
+commit `301bdf3`, SEO commit `9e1f4c1`, navigation and status documentation.
+Newer mainline implementations supersede overlapping discovery/SEO code. The
+current storefront retains Next server rendering, canonical plural entity paths,
+the protected private-journey boundary and the product purchase dock fixes.
+`/categories` is server-rendered using current public category data. The old
+catalog/brand row below the newsletter is removed from the actual Next homepage.
+A local candidate tag is not an official release identity.
 
 ## Local validation
 
@@ -42,15 +45,16 @@ unit suite and the navigation/category Playwright suite against a non-fixture
 production preview. Browser test catalog responses are intercepted inside the
 test context; they never seed or connect to a sales database.
 
-The official Web Dockerfile built successfully as
+Before mainline integration, the Vite Web Dockerfile built successfully as
 `iranyaragh/web:ui-vps-candidate`. Its local manifest-list digest is
 `sha256:d267ce6b7dddc6917ce4ed31cc97b0f11ca7f0a41c8cf04340d0564012e2d3ea`.
 Its existing build gates reject fixture authentication/catalog flags, scan the
 production bundle for fixture records and validate Nginx configuration; the
 fixture scan and Nginx configuration check passed during this build.
-The final browser suite uses static files extracted from this exact local image.
-This candidate must not be substituted for an image published by the exact-SHA
-workflow.
+The pre-integration browser suite used files extracted from that local image.
+That historical image is superseded by the Next integration and must not be
+deployed for this source. Current CI must validate and rebuild the official
+`storefront.Dockerfile` and Nginx `web.Dockerfile` topology before publication.
 
 ## Later VPS rollout
 

@@ -45,6 +45,10 @@ services:
     build:
       context: ../..
       dockerfile: infrastructure/docker/admin.Dockerfile
+  storefront:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/storefront.Dockerfile
   web:
     build:
       context: ../..

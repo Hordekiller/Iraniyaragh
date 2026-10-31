@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../database/prisma.service';
@@ -265,6 +267,24 @@ describe.sequential('ProductDescription database integration', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('persists the owner-supplied responsive layout and returns the same scoped styles after reload', async () => {
+    const input = readFileSync(resolve(__dirname, '../content/fixtures/user-supplied-hinge-layout.html'), 'utf8');
+    const before = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+    try {
+      const saved = await catalog.updateProductDescription(actorId, key('styled-layout'), productId, { description: input, expectedVersion: before.version });
+      const persisted = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+      const reloaded = await catalog.getAdminProduct(productId);
+      expect(persisted.description).toBe(saved.data.product.description);
+      expect(reloaded.data.product.description).toBe(saved.data.product.description);
+      expect(persisted.description).toContain('grid-template-columns:1.13fr .87fr');
+      expect(persisted.description).toContain('@media (max-width:480px)');
+      expect(persisted.description).toContain('id="iyc-iy-hg1135"');
+      expect(persisted.description).not.toContain('store128.com');
+    } finally {
+      await prisma.product.update({ where: { id: productId }, data: { description: before.description, version: before.version } });
+    }
+  });
+
   it('clears the description with null', async () => {
     const cleared = await catalog.updateProductDescription(actorId, key('clear'), productId, {
       description: null,
@@ -313,6 +333,23 @@ describe.sequential('ProductDescription database integration', () => {
       version: expect.any(Number),
     });
     expect(JSON.stringify(audits[0].after)).not.toContain('<p>');
+  });
+
+  it('persists long Persian SEO content and reads it intact from a fresh service/database connection', async () => {
+    const before = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+    const html = `<h2>راهنمای خرید و نصب یراق</h2><p>${'توضیحات دقیق فارسی محصول '.repeat(3000)}</p><h3>مشخصات فنی</h3><table><tbody><tr><th scope="col">جنس</th><td>فولاد</td></tr></tbody></table><p><a href="https://example.test/guide">راهنمای نصب</a></p>`;
+    expect(html.length).toBeLessThan(100000);
+    expect(Buffer.byteLength(html, 'utf8')).toBeGreaterThan(100 * 1024);
+    const saved = await catalog.updateProductDescription(actorId, key('long-persian'), productId, { description: html, expectedVersion: before.version });
+    const fresh = new PrismaService();
+    try {
+      await fresh.$connect();
+      const reloaded = await new CatalogService(fresh, new AuditLogService(fresh), new CatalogIdempotencyService(fresh)).getAdminProduct(productId);
+      expect(reloaded.data.product.description).toBe(html);
+      expect(reloaded.data.product.version).toBe(before.version + 1);
+      expect((await fresh.product.findUniqueOrThrow({ where: { id: productId } })).description).toBe(html);
+      expect(saved.data.product.description).toBe(reloaded.data.product.description);
+    } finally { await fresh.$disconnect(); }
   });
 
   it('drops image markup from create-product descriptions', async () => {

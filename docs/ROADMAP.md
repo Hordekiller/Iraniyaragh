@@ -1,29 +1,23 @@
 # Delivery Roadmap
 
-> **Current reconciliation — 2026-10-18:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source and verified VPS: `e2070948587b438dc5da55d8560ab870e23bf32d`.
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
+## Current branch integration — 2026-10-31
 
-## Current release path — 2026-10-18
+The pending `feat/v1-completion` PR includes access-management implementation
+`301bdf3` (API/Admin/audit/idempotency), storefront navigation and the category
+index. It preserves the newer mainline Next/discovery, rich-text and dependency
+fixes. Fresh GitHub checks, review, merge and exact-SHA publication are still
+required. This source integration changes no recorded VPS/provider acceptance.
 
-1. Integrate the current hardening train with exact-head checks and combined main
-   validation: #448, #441, #442, #446, #440. #445/#447/#452/#456 are already deployed.
-2. Integrate expiry safety/batching #454/#455/#451/#453, then implement its durable
-   scheduler and prove stock release/restart/payment-uncertainty behavior (#450).
-3. Resolve Clam signature operations (#393); collect actual Admin/customer/SMS and
-   catalog acceptance (#400/#403/#388/#389). Source tests do not replace operators.
-4. Complete stocktake coverage (#444), general returns (#348), access administration
-   (#359 implemented), invoice PDF/corrections/exports (#419/#421/#423). and accepted V1 content,
-   public rendering and discovery (#125, #126 pending SSR, #127 feeds/schema partial, #129 implemented).
-5. Reconcile full UAT, alert/recovery/rollback evidence and exact-SHA runtime parity.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
+> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
+> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
+> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
+> Older dates/status rows below are historical; accepted domain requirements remain.
 
-Valuation policy is configurable but intentionally inactive (#422). No invented
-opening costs or tax policy. V1.1+ AI retrieval (#128), multi-provider (#141) and
-broad major dependency upgrades (#77) stay separate. No completion percentage is
-inferred from issues closed, open PRs, or old phase weights.
+## Current release path — 2026-10-28
+
+Complete the short remaining queue in V1_RECONCILIATION.md, collect authorized operational acceptance, then publish the accepted V1 tag. Do not reopen merged hardening/expiry/PDF/report/SSR work. Keep valuation inactive and AI/multi-provider/broad breaking upgrades post-V1. No completion percentage is inferred from issue counts.
 
 ## Historical roadmap context and accepted outcome requirements
 

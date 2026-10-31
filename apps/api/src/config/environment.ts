@@ -1,3 +1,4 @@
+import { parsePublicWebOrigin } from '../modules/discovery/discovery.policy';
 import { isIP } from 'node:net';
 
 export type NodeEnvironment = 'development' | 'test' | 'staging' | 'production';
@@ -15,6 +16,7 @@ export type EnvironmentVariables = {
   ORDER_EXPIRY_ENABLED: boolean;
   CORS_ORIGINS: string;
   STOREFRONT_ORIGIN: string;
+  PUBLIC_WEB_ORIGIN?: string;
   TRUST_PROXY: TrustProxySetting;
   AUTH_HASH_KEY_VERSION: number;
   AUTH_HASH_PREVIOUS_KEY_VERSION?: number;
@@ -493,6 +495,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     ORDER_EXPIRY_ENABLED: parseBoolean(config.ORDER_EXPIRY_ENABLED, 'ORDER_EXPIRY_ENABLED', false),
     CORS_ORIGINS: parseCorsOrigins(config.CORS_ORIGINS, environment).join(','),
     STOREFRONT_ORIGIN: parseStorefrontOrigin(config.STOREFRONT_ORIGIN, environment),
+    PUBLIC_WEB_ORIGIN: parsePublicWebOrigin(config.PUBLIC_WEB_ORIGIN, environment),
     TRUST_PROXY: parseTrustProxy(config.TRUST_PROXY),
     AUTH_HASH_KEY_VERSION: hashKeyVersion,
     AUTH_HASH_PREVIOUS_KEY_VERSION: previousHashKeyVersion,

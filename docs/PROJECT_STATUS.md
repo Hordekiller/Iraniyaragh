@@ -1,43 +1,27 @@
 # Project Status
 
-> **Current reconciliation — 2026-10-20:** [V1_RECONCILIATION.md](V1_RECONCILIATION.md)
-> owns current source, deployment, tests, acceptance and execution order.
-> Source `origin/main`: `f4476d83e9791b8f58b7f0a5630837c4a53db54d`.
-> Verified VPS (deployed): `7dbd0001959f398635467bedbd7d151c54676599`
-> (drift vs main is the test-only #444 merge).
-> [Issue register](V1_ISSUE_REGISTER.json): 150 issues, 51 open / 99 closed;
-> historical closure is not independent acceptance of every original criterion.
-> Dated checkpoints below are history; accepted domain and release criteria remain.
-> `ORDER_EXPIRY_ENABLED=false` remains fail-closed pending explicit owner instruction.
+## Current branch integration — 2026-10-31
 
-## Current delivered state — 2026-10-20
+The pending `feat/v1-completion` PR includes access-management implementation
+`301bdf3` (API/Admin/audit/idempotency), storefront navigation and the category
+index. It preserves the newer mainline Next/discovery, rich-text and dependency
+fixes. Fresh GitHub checks, review, merge and exact-SHA publication are still
+required. This source integration changes no recorded VPS/provider acceptance.
 
-Main is `f4476d83e9791b8f58b7f0a5630837c4a53db54d`; verified API/Admin/Web/
-media-worker on the VPS run `7dbd0001959f398635467bedbd7d151c54676599`.
-Official exact-SHA publication, restored PostgreSQL backup, migration completion,
-container digests, nginx and HTTPS were verified. Main CI: 3093 application units,
-418 PostgreSQL cases, 10 separate database security cases and 136 browser passes;
-5 existing opposite-viewport browser skips are not passes. No final browser failures.
+> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
+> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
+> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
+> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
+> Older dates/status rows below are historical; accepted domain requirements remain.
 
-- Deployed: #452 shipment-test synchronization, #456 root-category drill-down,
-  #445 genuine-token auth-boundary tests, #447 cross-tab protected-request recovery.
-- Merged to main after the deployed SHA: #444 stocktake two-location upward+downward
-  reconciliation test (test-only; VPS deploy not required).
-- Source/runtime present: catalog/Jodit/images, suppliers/receiving/stocktake,
-  server-priced checkout, staff credit/receipts/credit returns, operational reports,
-  store-invoice policies/drafts/numbered immutable issuance/customer publication.
-- #351 is closed against its original automated ledger/receipt test criteria and
-  current desktop/mobile CI; this does not accept physical warehouse operations.
-- Still open: #400 real authenticated idle/mutation acceptance; #450 durable
-  payment-aware expiry; #393 signature freshness; broader #388/#389/#403 acceptance;
-  #347/#352 automated criteria covered but operator physical-count acceptance pending.
-- Missing/partial: private PDF jobs/download (#419, open PRs #439/#449 not merged),
-  corrections (#421), general returns (#348), articles (#125), public rendering/discovery (#126 pending SSR, #127 feeds/schema partial). Completed: exports (#423 CSV/XLSX), role administration (#359).
-  Cost valuation (#422) stays inactive by owner decision (ADR-0031); configured
-  policy is not a cost ledger.
+## Current delivered state — 2026-10-28
 
-See the central matrix for precise API/UI/database/test references and open PRs.
-The paragraphs below preserve the earlier integration checkpoint, not current absence.
+- Deployed: durable expiry #464, Jodit/product save and recovery #473/#475/#480, private Persian invoice PDF #449/#479, durable CSV/XLSX/PDF report snapshots #476, public Next rendering and dynamic discovery #481/#482, compatible dependencies #470/#478.
+- Not delivered on main: runtime role administration #359 (local candidate `301bdf3` only), general paid-order returns #348, linked invoice correction/cancellation documents #421, governed article management #125. Merchant feeds and IndexNow/content invalidation remain partial.
+- Automated stocktake test criteria #352 are accepted; live physical-count acceptance remains #347/#8. ADR-0023 satisfies the bounded architecture task #338; credit return/refund acceptance stays #431.
+- Full real Admin/customer/invoice/provider/operations acceptance remains explicit. Valuation stays inactive; staging remains noindex. Detailed per-issue/per-PR actions and exact release evidence are in the reconciliation.
+- Current `main`/VPS parity covers committed source only. Local/unmerged branches and uncommitted files are preserved separately.
 
 ## Historical status — through 2026-09-30
 
@@ -320,7 +304,7 @@ G6–G10 have not reached integrated completion.
 | Staff UI              | Partial             | Real password/TOTP login and session management exist; complete privileged-user/role administration does not                            |
 | SMS provider          | Implemented adapter | Vendor-neutral port, SMS.ir adapter and fail-closed configuration exist                                                                 |
 | Production acceptance | Blocked             | #114 needs controlled real account/line/template/credential evidence; no production-ready claim is made                                 |
-| Runtime RBAC Admin    | Implemented         | Access module/API/Admin UI for roles/permissions/members/audit/idempotency (#359) |
+| Runtime RBAC Admin    | Not implemented     | Canonical baseline roles/permissions and guards exist (ADR-0022); staff/role assignment/revocation UI/runtime is absent                                    |
 
 ### Observability foundation
 

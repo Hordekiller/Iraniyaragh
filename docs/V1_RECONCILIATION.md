@@ -1,6 +1,137 @@
 # V1 source, deployment and acceptance reconciliation
 
-Evidence checkpoint: **2026-10-28 UTC**. Release decision: **NOT READY — BLOCKERS REMAIN**.
+## Current branch integration — 2026-10-31
+
+The pending `feat/v1-completion` PR includes access-management implementation
+`301bdf3` (API/Admin/audit/idempotency), storefront navigation and the category
+index. It preserves the newer mainline Next/discovery, rich-text and dependency
+fixes. Fresh GitHub checks, review, merge and exact-SHA publication are still
+required. This source integration changes no recorded VPS/provider acceptance.
+
+Evidence checkpoint: **2026-10-28 UTC**. Release decision: **PARTIAL — mandatory engineering and acceptance remain**.
+
+## Current source and runtime
+
+- Source and independently verified VPS release: `92b23a43aa095a563d798712d24d1ffdf8020f14`; all six application services match the published digests and runtime version. [Combined main CI](https://github.com/Hordekiller/Iraniyaragh/actions/runs/40690896740), [official image publication](https://github.com/Hordekiller/Iraniyaragh/actions/runs/40690896810), [deployment/restore/smoke evidence](https://github.com/Hordekiller/Iraniyaragh/pull/470#issuecomment-6471511791).
+- Fresh private database backup restored in an isolated container (109 tables, 67 completed migrations); media manifest sizes/checksums verified. Official deploy performed its mandatory pre-migration backup. No schema migration was added by dependency PRs #470/#478.
+- Public HTTPS, API readiness, Admin and actual server-readable Persian catalog/product/policy HTML, canonicals, sitemap, 308/404 and mobile labels passed. The served Admin bundle contains the #480 Jodit save fix.
+- Staging/provider modes are unchanged. Global `noindex`/robots Disallow remain active. No live payment/SMS, financial/stock mutation or new operator acceptance was fabricated. No V1 tag was created.
+- Rollback: `./scripts/deploy/rollback.sh 1da785d5e0cd8afe624cd2c0d78a114c6b80f0d5`. Current and rollback images plus verified private backups were preserved.
+- Post-deploy disk cleanup removed four obsolete PDF image tags and unused build cache older than 24 hours. BuildKit reported 6.165 GB reclaimed; host free space rose from about 2.2 GiB (95% used) to about 11 GiB (74% used). No volume, sales record or backup was deleted. Docker image/cache sizes contain shared layers and cannot be added blindly.
+
+## Scope and evidence rules
+
+`ACCEPTED` applies to the original bounded issue criteria, not blanket real-world V1 acceptance. `DEPLOYED_NOT_ACCEPTED` identifies delivered code with remaining operator/provider evidence. `PARTIAL` records specific missing behavior; `MISSING` identifies a main-branch runtime gap, including implementations present only on unmerged branches. `BLOCKED` requires an external decision/action. `OUT_OF_SCOPE` is explicitly post-V1. No new `BROKEN` or `MERGED_NOT_DEPLOYED` state was established for this checkpoint.
+
+All 48 previously open issues were reconciled against their bodies and current source. Test-only #352 and architecture-decision #338 meet their bounded criteria and were closed with evidence; physical warehouse acceptance remains #347/#8 and credit returns/refund acceptance remains #431. The remaining 46 issues have a current disposition, evidence link and next action on GitHub. The previously omitted closed #458 carousel issue was added, giving 151 total issues (46 open / 105 closed). Historical closed issues retain their state; closure alone does not establish acceptance.
+
+### Required engineering and remaining acceptance
+
+1. Release-critical operations: approved ClamAV route/loaded-signature freshness #393 (reuse #468), payment-aware worker and real commerce/session/SMS acceptance #450/#81/#400/#403; preserve uncertainty and inactive modes.
+2. Missing mandatory product scope: role administration #359, general paid-order returns #348, invoice corrections #421 and governed articles #125. Reuse current services and the access candidate `301bdf3`; do not duplicate them.
+3. Complete applicable guide/content rendering #126, Merchant feed #127, remaining IndexNow/content invalidation #129 and field/operational acceptance #123/#130/#136. Existing SSR, robots/sitemaps and structured data must not be rebuilt.
+4. Reconcile Admin/customer/invoice/report/warehouse acceptance through existing parent gates. Inventory valuation #422 stays intentionally inactive pending approved evidence; it is not permission to invent costs or delay unrelated delivery. AI retrieval #128, multi-provider #141 and broad breaking dependency upgrades #77 are post-V1.
+
+### Issue dispositions
+
+| Issue | Current state | Source evidence and next action |
+| --- | --- | --- |
+| [#2](https://github.com/Hordekiller/Iraniyaragh/issues/2) | PARTIAL | [auth.guard.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/auth/auth.guard.ts). Foundation/auth/session/permissions/audit delivered. Runtime access management #359 and remaining operational acceptance prevent blanket foundation/release completion. |
+| [#4](https://github.com/Hordekiller/Iraniyaragh/issues/4) | DEPLOYED_NOT_ACCEPTED | [inventory.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/inventory/inventory.service.ts). Ledger/reservation/transfer implementations and concurrency tests delivered; controlled worker and full warehouse operator acceptance remain #450/#347. |
+| [#5](https://github.com/Hordekiller/Iraniyaragh/issues/5) | DEPLOYED_NOT_ACCEPTED | [order-command.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/orders/order-command.service.ts). Real cart, checkout, immutable order snapshots and Admin commands implemented; final customer/operator lifecycle acceptance remains #389/#401/#450. |
+| [#6](https://github.com/Hordekiller/Iraniyaragh/issues/6) | DEPLOYED_NOT_ACCEPTED | [OPERATIONS.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/OPERATIONS.md). Verified callback/payment/fulfillment/shipment/notification implementations exist and controlled historical evidence is bounded. Provider, uncertainty/refund and full dispatch/delivery acceptance remain. |
+| [#7](https://github.com/Hordekiller/Iraniyaragh/issues/7) | PARTIAL | [stocktake.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/stocktake/stocktake.service.ts). Purchasing/receiving/stocktake and operational reports deployed; general paid-order returns #348, final warehouse UAT and applicable financial gates remain. |
+| [#8](https://github.com/Hordekiller/Iraniyaragh/issues/8) | PARTIAL | [Deployment/restore/smoke evidence](https://github.com/Hordekiller/Iraniyaragh/pull/470#issuecomment-6471511791). Release `92b23a4` is deployed with exact image digests, restored backup and public smoke. V1 tag remains withheld: access, general returns, corrections, articles and operational acceptance remain. |
+| [#77](https://github.com/Hordekiller/Iraniyaragh/issues/77) | OUT_OF_SCOPE | [dependabot.yml](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/.github/dependabot.yml). Owner deferred the broad breaking framework/tool train for V1. Compatible patch/minor updates #470/#478 landed. Prisma 7, Nest Swagger 12 and other breaking candidates need a separate post-V1 decision, not automatic merge. |
+| [#81](https://github.com/Hordekiller/Iraniyaragh/issues/81) | DEPLOYED_NOT_ACCEPTED | [inventory-expiry.integration-spec.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/inventory/inventory-expiry.integration-spec.ts). Grouped bounded reservation expiry and PostgreSQL query/concurrency evidence merged through #464. Keep runtime enablement and controlled live reconciliation linked to #450. |
+| [#122](https://github.com/Hordekiller/Iraniyaragh/issues/122) | PARTIAL | [SEO_GEO_AI_DISCOVERY_PLAN.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/SEO_GEO_AI_DISCOVERY_PLAN.md). Accepted rendering migration and lifecycle-safe catalog discovery deployed. Articles, Merchant feed, IndexNow and field acceptance remain; AI retrieval #128 is post-V1. |
+| [#123](https://github.com/Hordekiller/Iraniyaragh/issues/123) | PARTIAL | [discovery-audit.yml](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/.github/workflows/discovery-audit.yml). Discovery contracts, no-JS/browser and route/provenance checks exist. Production audit origin, field budgets/RUM/alert owners and 30-day evidence remain; no test pass substitutes for field acceptance. |
+| [#125](https://github.com/Hordekiller/Iraniyaragh/issues/125) | MISSING | [content](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/content). No governed article/revision/scheduling/media-ownership API/Admin lifecycle. Product Jodit and sanitizer are reusable dependencies, not article management. |
+| [#126](https://github.com/Hordekiller/Iraniyaragh/issues/126) | PARTIAL | [page.tsx](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/web/src/app/page.tsx). Server-readable home/catalog/category/brand/product/policy HTML, canonicals and real 308/404 deployed via #481. Guide/article templates await #125; global staging noindex remains deliberately active. |
+| [#127](https://github.com/Hordekiller/Iraniyaragh/issues/127) | PARTIAL | [structured-data.tsx](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/web/src/server/structured-data.tsx). Public projection-backed Product/Offer and Breadcrumb structured data deployed. Merchant feed/parity and unsupported policy/schema branches remain; never fabricate ratings/GTIN/stock/price. |
+| [#128](https://github.com/Hordekiller/Iraniyaragh/issues/128) | OUT_OF_SCOPE | [SEO_GEO_AI_DISCOVERY_PLAN.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/SEO_GEO_AI_DISCOVERY_PLAN.md). AI retrieval is explicitly post-V1 and must not block commerce. Requires separate provider/data-retention policy and safety/evaluation evidence. |
+| [#129](https://github.com/Hordekiller/Iraniyaragh/issues/129) | PARTIAL | [discovery.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/discovery/discovery.service.ts). Dynamic gzip sitemap index/shards, canonical robots, ETag/freshness/rate bounds deployed via #481. Content shards await #125 and IndexNow worker/DLQ/outbox invalidation are not delivered; keep issue open. |
+| [#130](https://github.com/Hordekiller/Iraniyaragh/issues/130) | PARTIAL | [discovery.policy.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/discovery/discovery.policy.ts). Robots policy and rate/capacity controls exist. Verified-bot governance, reviewed training/search policy, citation baseline and optional experiment acceptance remain; no AI citation promise. |
+| [#136](https://github.com/Hordekiller/Iraniyaragh/issues/136) | PARTIAL | [OPERATIONS.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/OPERATIONS.md). Structured/redacted diagnostics, readiness and worker reliability exist; alert delivery/ownership/recovery acceptance still requires evidence. Host disk was cleaned after verified deployment. |
+| [#140](https://github.com/Hordekiller/Iraniyaragh/issues/140) | PARTIAL | [catalog.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/web/src/server/catalog.ts). Dynamic catalog/public rendering delivered; governed articles/content lifecycle #125 and full customer UAT remain. |
+| [#141](https://github.com/Hordekiller/Iraniyaragh/issues/141) | OUT_OF_SCOPE | [PRODUCT_SPEC.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/PRODUCT_SPEC.md). Explicit V1.1+ scope: multi-provider orchestration. V1 retains one selected SMS/payment provider and uncertain-result reconciliation. |
+| [#213](https://github.com/Hordekiller/Iraniyaragh/issues/213) | BLOCKED | [REPOSITORY_WORKFLOW.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/REPOSITORY_WORKFLOW.md). Exact-head and main Sonar scans/quality gates now pass. Only organization administrator confirmation of account/suspension state can close the original external account issue. |
+| [#252](https://github.com/Hordekiller/Iraniyaragh/issues/252) | PARTIAL | [navigation.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/admin/src/config/navigation.ts). Vuexy-inspired project-owned Admin surfaces exist. Runtime access management #359 and complete approved workflow acceptance remain. Never copy the licensed reference wholesale. |
+| [#258](https://github.com/Hordekiller/Iraniyaragh/issues/258) | DEPLOYED_NOT_ACCEPTED | [layout.tsx](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/web/src/app/layout.tsx). Shared UI, real customer commerce APIs and accepted Next public rendering deployed with asset/fixture guards; final route-by-route real responsive UAT remains. |
+| [#338](https://github.com/Hordekiller/Iraniyaragh/issues/338) | ACCEPTED | [0023-customer-credit-and-receivable-ledger.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/adr/0023-customer-credit-and-receivable-ledger.md). Bounded architecture decision delivered in ADR-0023 and reviewed through dedicated credit implementation #427/#428; staff-only channel, receivables/allocations and inventory coupling exist. Separate returns/operator gate #431 remains open. |
+| [#347](https://github.com/Hordekiller/Iraniyaragh/issues/347) | DEPLOYED_NOT_ACCEPTED | [stocktake.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/stocktake/stocktake.service.ts). Stocktake session/review/ledger reconciliation and full two-location browser coverage deployed (#411/#444). Retain live physical-count operator acceptance; test scope separately closed in #352. |
+| [#348](https://github.com/Hordekiller/Iraniyaragh/issues/348) | MISSING | [credit-return.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/credit/credit-return.service.ts). No general paid-order return workflow. Inventory RETURN_IN primitives and the credit-sale-only return command do not satisfy paid-order returns/refund linkage. Reuse their invariants, not their eligibility assumptions. |
+| [#352](https://github.com/Hordekiller/Iraniyaragh/issues/352) | ACCEPTED | [admin-stocktake.spec.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/e2e/tests/admin-stocktake.spec.ts). Bounded test-only task satisfied: PostgreSQL invariants/concurrency/blind reads, HTTP permissions/DTO bounds, Admin uncertainty/permissions, and real desktop/mobile two-location up/down E2E. #444 merged and combined main CI passed. Live physical-count acceptance remains #347/#8. |
+| [#353](https://github.com/Hordekiller/Iraniyaragh/issues/353) | PARTIAL | [navigation.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/admin/src/config/navigation.ts). Audit/shipments/customers/reports surfaces delivered; runtime role/permission administration #359 and final Admin acceptance remain. |
+| [#358](https://github.com/Hordekiller/Iraniyaragh/issues/358) | PARTIAL | [report-export-job.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/reports/report-export-job.service.ts). Operational reports and owned durable CSV/XLSX/PDF exports #476 deployed. Correction-document reporting #421 and integrated acceptance remain; valuation #422 intentionally inactive. |
+| [#359](https://github.com/Hordekiller/Iraniyaragh/issues/359) | MISSING | [navigation.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/admin/src/config/navigation.ts). No access module or /access page on main. Local candidate commit 301bdf3 exists on feat/v1-completion; preserve it, integrate/review security and pass fresh CI before claiming delivery. |
+| [#363](https://github.com/Hordekiller/Iraniyaragh/issues/363) | PARTIAL | [V1_RECONCILIATION.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/V1_RECONCILIATION.md). Use the current release reconciliation and live issue dispositions. Old lane allocation is historical. V1 remains incomplete because mandatory engineering and operator gates remain. |
+| [#388](https://github.com/Hordekiller/Iraniyaragh/issues/388) | PARTIAL | [catalog](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/admin/src/components/catalog). Product save/Jodit fixes #473/#475/#480 deployed and tested, including long Persian HTML/reload/replay. Broader master-data/media/publish/operator acceptance and scanner freshness remain. |
+| [#389](https://github.com/Hordekiller/Iraniyaragh/issues/389) | DEPLOYED_NOT_ACCEPTED | [AccountPage.tsx](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/web/src/views/AccountPage.tsx). Owned profile/addresses/security/orders/cart UI and APIs exist. Complete fixture-disabled customer lifecycle, reload and ownership/session acceptance; do not infer verified identity changes. |
+| [#393](https://github.com/Hordekiller/Iraniyaragh/issues/393) | PARTIAL | [compose.staging.yml](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/infrastructure/docker/compose.staging.yml). Pinned scanner process health does not prove current signatures. Existing PR #468 is the reusable route/freshness candidate; approved updater route and daemon-loaded freshness/real scan acceptance remain. |
+| [#400](https://github.com/Hordekiller/Iraniyaragh/issues/400) | DEPLOYED_NOT_ACCEPTED | [auth](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/admin/src/lib/auth). Protected replay/session refresh fixes #445/#447 and Jodit save recovery #480 are deployed. Real authenticated idle/reload/mutation acceptance is still distinct from CI. |
+| [#401](https://github.com/Hordekiller/Iraniyaragh/issues/401) | DEPLOYED_NOT_ACCEPTED | [MobileBottomNav.tsx](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/web/src/components/layout/MobileBottomNav.tsx). Hero slider, mobile order tracking and account UI deployed; #470 mobile labels fixed. Complete real responsive session/reload/error/customer ownership acceptance with #389/#403. |
+| [#403](https://github.com/Hordekiller/Iraniyaragh/issues/403) | DEPLOYED_NOT_ACCEPTED | [SMS_IR_TEMPLATE_COPY.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/SMS_IR_TEMPLATE_COPY.md). Historical operator-attested OTP/order-paid receipt is not full SMS acceptance. Dispatch/delivery handset, failure/replay and full session evidence remain; no new message was sent. |
+| [#413](https://github.com/Hordekiller/Iraniyaragh/issues/413) | PARTIAL | [invoices.module.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/invoices/invoices.module.ts). Policy, drafts, issuance, publication, private PDF and CSV/XLSX/PDF report snapshots deployed. Corrections and integrated operator acceptance remain; do not rebuild delivered services. |
+| [#414](https://github.com/Hordekiller/Iraniyaragh/issues/414) | PARTIAL | [0024-store-invoice-policy.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/adr/0024-store-invoice-policy.md). Store-invoice policy/draft/issuance/PDF ADRs and contracts exist; reconcile pending correction/credit-document lifecycle decisions and explicit external fiscal boundaries. |
+| [#415](https://github.com/Hordekiller/Iraniyaragh/issues/415) | DEPLOYED_NOT_ACCEPTED | [invoice-quote.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/invoices/invoice-quote.ts). Versioned seller/tax/discount policy and exact IRR arithmetic deployed via #429/#430; operator must supply/accept real policy, never infer rates. |
+| [#416](https://github.com/Hordekiller/Iraniyaragh/issues/416) | DEPLOYED_NOT_ACCEPTED | [invoice-draft.integration-spec.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/invoices/invoice-draft.integration-spec.ts). Versioned independent drafts and real customer/SKU quote workflow deployed via #430; complete controlled operator draft/reload/conflict/issue acceptance under #424. |
+| [#417](https://github.com/Hordekiller/Iraniyaragh/issues/417) | DEPLOYED_NOT_ACCEPTED | [invoice-document.integration-spec.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/invoices/invoice-document.integration-spec.ts). Atomic numbering and immutable issued snapshots/SQL guards deployed via #433; collect controlled invoice financial acceptance without rewriting originals. |
+| [#418](https://github.com/Hordekiller/Iraniyaragh/issues/418) | DEPLOYED_NOT_ACCEPTED | [invoice-publication.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/invoices/invoice-publication.service.ts). Publication/revocation and current-owner private reads deployed via #434/#449; remaining integrated two-customer operator acceptance belongs to #424. |
+| [#420](https://github.com/Hordekiller/Iraniyaragh/issues/420) | DEPLOYED_NOT_ACCEPTED | [InvoicePdfActions.tsx](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/admin/src/components/invoices/InvoicePdfActions.tsx). Admin drafts/issuance/publication and owned customer PDF interfaces exist, including #449; controlled draft-edit-issue-publish-owner-download-revoke operator journey remains. |
+| [#421](https://github.com/Hordekiller/Iraniyaragh/issues/421) | MISSING | [invoice-document.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/invoices/invoice-document.service.ts). Implement append-only linked correction/cancellation documents and signed deltas through existing authoritative financial commands; issued originals must remain immutable. |
+| [#422](https://github.com/Hordekiller/Iraniyaragh/issues/422) | BLOCKED | [inventory-cost-policy.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/inventory/inventory-cost-policy.service.ts). Owner explicitly keeps valuation inactive. Cost evidence and approved attribution/opening/return policies are prerequisites; the configuration selector is not a cost ledger. |
+| [#424](https://github.com/Hordekiller/Iraniyaragh/issues/424) | PARTIAL | [REPORTING_AND_INVOICE_AUDIT.md](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/docs/REPORTING_AND_INVOICE_AUDIT.md). Integrated release gate remains open for corrections #421, general returns #348 where applicable, and real invoice/report operator acceptance. Cost valuation #422 stays inactive by owner decision. |
+| [#431](https://github.com/Hordekiller/Iraniyaragh/issues/431) | DEPLOYED_NOT_ACCEPTED | [credit-return.service.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/credit/credit-return.service.ts). Credit-sale cancellation/returns/refund-liability commands deployed via #432; operator goods/refund evidence acceptance remains. General paid-order returns stay #348. |
+| [#450](https://github.com/Hordekiller/Iraniyaragh/issues/450) | DEPLOYED_NOT_ACCEPTED | [order-expiry-runtime.ts](https://github.com/Hordekiller/Iraniyaragh/blob/92b23a43aa095a563d798712d24d1ffdf8020f14/apps/api/src/modules/orders/order-expiry-runtime.ts). Durable payment-aware worker and checkout deadline recovery merged in #464; controlled live expiry/restart/reservation reconciliation remains required. Keep ORDER_EXPIRY_ENABLED unchanged. |
+
+### Disposition of the ten previously open PRs
+
+| PR | Disposition | Action |
+| --- | --- | --- |
+| [#439](https://github.com/Hordekiller/Iraniyaragh/pull/439) | CLOSED_SUPERSEDED | Template implementation and both test files are byte-identical on main via #449; ADR-0030 on main is a superset. Closed as implemented elsewhere. |
+| [#386](https://github.com/Hordekiller/Iraniyaragh/pull/386) | CLOSED_SUPERSEDED | Routing harness is on main; current Next routing and TLS tests supersede the older candidate. Historical status notes are transferred to #487; the older duplicate is closed. |
+| [#468](https://github.com/Hordekiller/Iraniyaragh/pull/468) | NEEDS_SYNC | Reusable #393 ClamAV route/freshness candidate; rebase and pass all exact-head checks, then approved live updater acceptance. No automatic mirror/provider change. |
+| [#471](https://github.com/Hordekiller/Iraniyaragh/pull/471) | NEEDS_SYNC | Preserve catalog-axis candidate. Reconcile its migration/contracts/Admin and the new Next public templates on latest main before fresh CI; no claim it is deployed. |
+| [#460](https://github.com/Hordekiller/Iraniyaragh/pull/460) | DEFERRED | All-products homepage carousel extension remains outside the current V1 critical path; preserve candidate for explicit post-V1 prioritization. |
+| [#477](https://github.com/Hordekiller/Iraniyaragh/pull/477) | NEEDS_SYNC | Current workflow bump candidate lacks required successful Analyze/CodeQL contexts (CodeQL skipped). Sync with current main and obtain every required check; no merge bypass. |
+| [#483](https://github.com/Hordekiller/Iraniyaragh/pull/483) | CLOSED_DEFERRED | Prisma 7 is a breaking migration under #77. Keep current CLI/client paired at 6.19.3; do not merge during the V1 freeze. |
+| [#484](https://github.com/Hordekiller/Iraniyaragh/pull/484) | CLOSED_DEFERRED | class-validator 0.15 and API Playwright 1.64 require compatibility work; PDF Playwright/browser image must move together. Retain working runtime while reviewed separately. |
+| [#485](https://github.com/Hordekiller/Iraniyaragh/pull/485) | CLOSED_DEFERRED | eslint-plugin-react-refresh 0.4 to 0.5 is a potentially breaking 0.x family change; review separately after V1. |
+| [#486](https://github.com/Hordekiller/Iraniyaragh/pull/486) | CLOSED_DEFERRED | Nest Swagger 12 is a breaking upgrade under #77, separate from supported Nest/API/OpenAPI release work. |
+
+Current open PRs are #460 (deferred), #468 and #471 (source conflicts, needs sync), #477 (required checks incomplete, needs sync), and #487 (this documentation review). Closing a superseded/deferred PR is not a merge or a feature-acceptance claim.
+
+### Dependency alert and branch hygiene
+
+- One low-severity `deepmerge` advisory remains open, with no upstream patched version reported at this checkpoint. The lockfile reverse edge is `fork-ts-checker-webpack-plugin` → `deepmerge`, reached by `@nestjs/cli`; traversal from production importer dependency roots does not reach it. GitHub labels the advisory runtime, so this scoped source result is not an alert dismissal. Follow-up remains #77; no advisory or security control was suppressed.
+- All 34 remote branches were inventoried. Only `chore/repository-workflow`, proven an ancestor of main and not bound to a worktree/open PR, was removed. Its exact commit was retained in a local archive ref before the guarded remote deletion. The remaining 33 branches include main, active PR/worktree heads, explicit archives and historical squashed/unmerged heads; those were retained because non-ancestry alone cannot establish safe deletion. No local branch/worktree or uncommitted file was deleted.
+
+No candidate is merged merely for tidiness. Current exact-head protection remains mandatory; skipped/missing CodeQL is not a pass. Local worktrees, untracked files and the original workspace's uncommitted documentation edits remain untouched.
+
+### Historical delivered notes reconciled from #386
+
+- #382 delivered the permission-based Admin baseline; this is not runtime role administration #359.
+- #384 corrected deployment execution/path handling; current official deploy completed at the exact selected SHA.
+- #385 corrected the Admin canonical routing loop. Main includes the routing harness and evolved Next/TLS regression checks in `e2e/tests/nginx-routing.spec.ts`; current public Admin HTTPS and full CI passed.
+
+### Final metadata verification — 2026-10-29 UTC
+
+All 151 issue IDs/states still match GitHub (46 open / 105 closed); every open
+issue has a current disposition and next action. Linked PR head/merge/state
+metadata matches the live inventory. Source evidence groups now point to the
+Next migration's retained `src/views` files. The structured dependency gates
+record #440/#441/#442/#446/#448 and #444 as delivered, with physical stocktake
+acceptance kept separate. Current branch protection was read back unchanged;
+PR #487 has no unresolved review threads. This is documentation verification,
+not a new runtime/provider acceptance or a repeat deployment. The final amended
+head must pass all nine required checks before normal merge.
+
+## Historical reconciliation snapshots — through 2026-10-20
+
+The following dated snapshots preserve their original evidence. Their source SHAs, open PR lists, missing-feature claims and queues are historical, superseded by the current checkpoint above. They are not current deployment or acceptance assertions.
+
+Evidence checkpoint: **2026-10-20 UTC**. Release decision: **NOT READY — BLOCKERS REMAIN**.
 This document supersedes dated execution/status checkpoints, not accepted domain
 invariants or historical engineering evidence. It is a working evidence register;
 it does not declare the full audit or V1 implementation finished.
@@ -14,8 +145,8 @@ it does not declare the full audit or V1 implementation finished.
 
 | Baseline | Observed fact | Limitation |
 | --- | --- | --- |
-| SOURCE_BASELINE | Fetched `origin/main`: `dfb70e30c26f3dfb377fff06fb7d65e49026b9ea` | Merged source is not independent business acceptance of every feature |
-| DEPLOYED_BASELINE | VPS checkout and API/Admin/Web/media-worker run `7dbd0001959f398635467bedbd7d151c54676599`; `IMAGE_TAG`/`APP_VERSION` bind that SHA; containers healthy | Deployment reflects latest main state including #444; public smoke and service health do not prove authenticated Admin/customer/financial acceptance |
+| SOURCE_BASELINE | Fetched `origin/main`: `f4476d83e9791b8f58b7f0a5630837c4a53db54d` | Merged source is not independent business acceptance of every feature |
+| DEPLOYED_BASELINE | VPS checkout and API/Admin/Web/media-worker run `7dbd0001959f398635467bedbd7d151c54676599`; `IMAGE_TAG`/`APP_VERSION` bind that SHA; containers healthy | Deployment lags main only by the #444 test-only merge; public smoke and service health do not prove authenticated Admin/customer/financial acceptance |
 | RELEASE_REQUIREMENTS | Current owner directive, accepted V1 outcome/exit gates and ADRs, original issue criteria, later approved staff-credit/store-invoice scope | Old staffing/sprint schedules are history; approved safety/domain criteria remain |
 
 `ORDER_EXPIRY_ENABLED=false` remains the fail-closed setting on the deployed
@@ -29,10 +160,10 @@ financial record was changed by this checkpoint.
 
 | Fact | Observed value |
 | --- | --- |
-| `origin/main` | `dfb70e30c26f3dfb377fff06fb7d65e49026b9ea` |
-| main required checks | CI, SonarCloud, Publish Images, Production Dependency Audit, Push on main — all success on `dfb70e3` |
+| `origin/main` | `f4476d83e9791b8f58b7f0a5630837c4a53db54d` |
+| main required checks | CI, SonarCloud, Publish Images, Production Dependency Audit, Push on main — all success on `f4476d83` |
 | Deployed/verified VPS HEAD | `7dbd0001959f398635467bedbd7d151c54676599` |
-| VPS drift vs main | none (aligned) |
+| VPS drift vs main | one commit: test-only merge #444 (`stocktake two-location reconciliation`) |
 | VPS containers | api/admin/web/media-worker healthy; `IMAGE_TAG=7dbd0001…` |
 | `ORDER_EXPIRY_ENABLED` | `false` (fail-closed) |
 | Runtime provenance | #440 merged 2026-10-19; `compose.staging.yml` binds `APP_VERSION: ${IMAGE_TAG:?…}` per service |
@@ -45,20 +176,18 @@ are green.
 
 Source classification against **current** `origin/main` (code evidence, not the
 older register): #389 customer account **partial**; #388 admin product workflow
-**partial (mostly built)**; #359 role/permission write path **implemented**
-(API + Admin UI merged); #419 invoice PDF **missing on main** (PRs
-#439/#449 not ancestors); #421 invoice corrections **partial**; #423 report
-exports **implemented** (CSV/XLSX snapshots); #422 valuation **partial**
-(inactive by ADR-0031); #348 general returns **partial**; #129 discovery
-**implemented** (sitemap/robots); #126 SSR **not implemented** (SPA); #127
-structured data/merchant feed **partial**; #393 ClamAV freshness **partial**.
-Details and file:line evidence in the tracker comment on #363.
+**partial (mostly built)**; #359 role/permission write path **missing**;
+#419 invoice PDF **missing on main** (PRs #439/#449 not ancestors); #421 invoice
+corrections **partial**; #423 report exports **missing**; #422 valuation
+**partial** (inactive by ADR-0031); #348 general returns **partial**; #129/#126/
+#127 discovery **partial** (no sitemap/robots/SSR); #393 ClamAV freshness
+**partial**. Details and file:line evidence in the tracker comment on #363.
 
 #347 and #352 remain OPEN. Their bounded acceptance criteria are matched by
-merged source (#444 to main) plus `e2e/tests/admin-stocktake.spec.ts:14` and
+merged source plus `e2e/tests/admin-stocktake.spec.ts:14` and
 `stocktake.integration-spec.ts`, executed as a real staff password+TOTP login in
 the CI `e2e` job (`.github/workflows/ci.yml:151-280`) that passed on PR #444
-exact head. This is automated evidence, **not** operator physical-count
+exact head `6e7e652`. This is automated evidence, **not** operator physical-count
 acceptance; both stay open pending a staging operator run.
 
 Open PRs are unchanged in classification: #460 (carousel, out of scope — not to
@@ -171,7 +300,7 @@ remain separate. This controlled sale is not V1-wide approval or PR review.
 
 ## 2. Repository and issue inventory
 
-Current enumeration: **150 issues (48 open / 102 closed)** and **306 PRs
+Current enumeration: **150 issues (51 open / 99 closed)** and **306 PRs
 (17 open / 245 merged / 44 closed)**. All issue requirement bodies were inventoried
 and read. Earlier retrieval included 359 comments/history references; it is not a
 claim that every historical comment or criterion is independently accepted.
@@ -257,7 +386,7 @@ implicit green status is assigned to unperformed acceptance.
 | Staff password/MFA, refresh/CSRF, current RBAC #47/#49/#74/#400 | `modules/auth`; Admin `lib/api/client.ts`, `auth` and fresh-MFA dialog | Auth session/principal/staff integration, guard HTTP, `admin-fresh-auth`, `admin-sessions`; merged #445/#447 | Deployed; demonstrated cross-tab replay fix and genuine-token idle/MFA tests included. Main two-tab desktop/mobile regression passes. Real authenticated operator idle/mutation acceptance remains open #400; no TTL guessing |
 | Customer OTP #48/#403 | `customer-otp.service.ts`; Web `AuthProvider`/`LoginDialog` | Challenge/session/rate-limit DB tests, OTP HTTP/browser tests | Present; operator confirms handset/login; remaining real lifecycle/failure evidence open |
 | SMS adapter/settings/outbox #114/#115/#314/#403 | `modules/notifications`, `modules/outbox`; `/settings/sms` | Template settings/operator claim/outbox integration and redaction tests | Configured; OTP operator-attested and one controlled order-paid send/provider report/handset accepted. Dispatch/delivery, uncertainty/replay and complete session evidence remain open |
-| Runtime roles/permission administration #359 | Access module/API/Admin UI with roles/permissions/members/audit/idempotency | Role/permission/grant schema + API tests; ADR-0014 remains Proposed | Implemented. Last-admin/self-escalation/privilege ceilings and live permission invalidation require continued review per release gates |
+| Runtime roles/permission administration #359 | Schema and current effective-permission reader exist; no `/access` write module/page | Role/permission/grant schema; ADR-0014 still Proposed | Not implemented. Review bounded RBAC contract/last-admin/privilege-escalation controls before writes |
 | Audit log #354 | `modules/audit`; Admin `/audit` | Audit HTTP/integration/redaction tests | Present; operational audit/privacy UAT remains a release gate |
 | Products/variants/IRR/brands/categories/attributes #388/#178 | `modules/catalog`, catalog shared contracts; Admin catalog/brands/categories/attributes | Catalog authoring/idempotency/identifier integration; `admin-279-journey` | Present; full exact live operator create/reload/publish journey remains separate |
 | Excel catalog import #178/#189 | Catalog import parser/service; Admin imports | Bounded import parser/service tests, variant migrations | Present; imported data is not production seeded by this task |
@@ -267,7 +396,7 @@ implicit green status is assigned to unperformed acceptance.
 | Warehouses/balances/ledger/reservations/transfers #4/#261 | `modules/inventory`; Admin warehouse/inventory/reservations/transfers | Immutable movements and locked balances; PostgreSQL and two-warehouse ledger E2E | Present; operator stock reconciliation acceptance remains |
 | Suppliers/PO/receiving #329/#339/#343/#345 | `modules/suppliers`, `modules/purchasing`; Admin suppliers/PO | Immutable receipt-to-movement links; purchasing concurrency; real partial/final receipt E2E | Present; no supplier payment or fabricated cost history added |
 | Reservation expiry #81/#450 | Existing inventory/order commands; automatic order runtime absent | #451 adds measured batching; #453 payment deadline; #454 lock-time recheck; #455 system identity | Four unmerged candidates; #455 stacked on #454. Durable scheduled worker/restart/fencing, live stock recovery and stale-payment acceptance still missing |
-| Stocktake #347/#352 | `modules/stocktake`; Admin stocktake list/detail/history | Stocktake migration/constraints and integration; `admin-stocktake` | Present. #444 merged to main; adds exact two-location upward/downward browser reconciliation. Live physical count/approval unverified |
+| Stocktake #347/#352 | `modules/stocktake`; Admin stocktake list/detail/history | Stocktake migration/constraints and integration; `admin-stocktake` | Present. Candidate #444 adds exact two-location upward/downward browser reconciliation and passes CI; not merged/deployed. Live physical count/approval unverified |
 | Inventory costing/valuation #422 | Versioned `inventory-cost-policy.service.ts`; Admin settings | Cost-policy migration and concurrency tests | Configuration present and intentionally inactive; cost ledger/attribution/valuation missing. Do not activate or infer opening costs |
 | Catalog discovery/home/mobile #258/#401 | Web Home/Product/Category/Search, HeroSlider, MobileBottomNav; public catalog | Web component/a11y and desktop/mobile tests | Deployed #456 root-only navigation/drill-down; real public smoke verifies 13 roots / 88 total nodes. Remaining responsive/authenticated UAT is separate |
 | Guest/auth cart and merge #236/#250/#269 | `modules/orders` cart/guest/merge controllers; Web CartProvider/CartPage | Opaque guest token, cart versions/idempotency; real PostgreSQL/cart browser tests | Present; one controlled sale accepted below; merge/reload/conflict/recovery and full customer UAT not blanket-accepted |
@@ -286,10 +415,10 @@ implicit green status is assigned to unperformed acceptance.
 | Private PDF artifact service #419 | #439 template; #449 private internal PostgreSQL artifact persistence candidate | 24 template units/real PDF; #449 targeted PG 28 and full PG 423 pass, no schema drift | Neither candidate deployed; durable job claims, worker, authorized download and UI remain missing. Private capacity starts inactive |
 | Corrections/cancellation/credit documents #421 | Original immutable invoice persists; no corrective document lifecycle | Existing credit entries do not replace invoice correction references/deltas | Not implemented; preserve originals, serialize linked corrections, separate visibility/refund/stock effects |
 | Operational reports #358 | `operational-report.service.ts`, shared operational-reports contract; Admin `/reports` | Real day/week/month order/settlement/refund/top-SKU/debtor queries; HTTP/PG/UI/browser | Present subset; valuation/corrective document/private export scopes remain open |
-| Private CSV/Excel exports #423 | Durable snapshot jobs with artifacts, storage capacity, cleanup and RBAC; CSV/XLSX implemented | Migrations/tests and pipeline (PR #476); PDF export adapter separate scope | Implemented for CSV/XLSX snapshots per accepted scope. PDF export not in current implementation scope without separate acceptance |
+| Private CSV/Excel/PDF exports #423 | No bounded owned snapshot job/download surface | Existing ExcelJS catalog import is not a report export service | Not implemented; immutable filter/snapshot, formula prevention, current permission/expiry/resource limits required |
 | Articles/tags/revisions/editorial workflow #125 | `modules/content` contains only sanitizer + test; no article model/controller/Admin page | Product Jodit cannot evidence article lifecycle/revisions/media ownership | Not implemented; reuse editor/sanitizer with separate content media contract |
 | Public SSR/metadata/canonicals #124/#126 | Web remains React/Vite SPA; accepted ADR-0012 specifies route-by-route Next App Router | Existing client metadata does not prove useful initial HTML/parity | Not implemented; no custom Vite SSR, duplicate business engine or hidden-content workaround |
-| Dynamic sitemap/robots/feed/schema #127/#129 | Discovery module with dynamic sitemap/robots implemented (API + public files); feeds/schema partial | Existing discovery checks and routes implemented | Implemented for sitemap/robots; feeds/schema/merchant feed and full projection acceptance remain partial/open |
+| Dynamic sitemap/robots/feed/schema #127/#129 | Discovery contracts/plans exist; commerce/content event-driven projections incomplete | Existing discovery checks are not backend/public route acceptance | Partial/not implemented; lifecycle freshness, no draft/private leakage, full-graph parity required |
 | Discovery budgets/crawler governance #123/#130 | Existing audit tooling and policy docs | CI contract checks and explicit live production checks | Partial; verify real crawl/performance and opt-in scope. AI retrieval #128 is deferred |
 | Deployment/backup/rollback #8 | Official compose/deploy/backup/restore and SHA image workflows | Previously restored fresh release backup/media checks; release script tests | Exact baseline verified; fresh future restore and current rollback/monitoring acceptance still required |
 | Telemetry/alerts #136 | Structured logger/request IDs, health/readiness, queue/outbox state | Logger redaction tests; readiness/worker tests | Partial; current release-critical alert delivery/load/recovery evidence not established; runtime provenance fix #440 pending |

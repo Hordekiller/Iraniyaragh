@@ -1,6 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
 
 /**
  * Routing tests for the real nginx vhost, run against the harness in
@@ -45,14 +43,6 @@ const redirectPath = (response: { headers(): Record<string, string> }): string =
   const location = response.headers()['location'];
   if (!location) return '';
   return new URL(location, HTTP_ORIGIN).pathname + new URL(location, HTTP_ORIGIN).search;
-};
-
-const firstStorefrontAsset = (): string => {
-  const assets = readdirSync(join(process.cwd(), '../apps/web/dist/assets')).filter(name =>
-    name.endsWith('.js'),
-  );
-  expect(assets.length, 'the storefront build produced no hashed JS asset').toBeGreaterThan(0);
-  return `/assets/${assets.sort()[0]!}`;
 };
 
 test.describe('nginx: admin basePath routing', () => {
@@ -145,19 +135,18 @@ test.describe('nginx: storefront and API do not regress', () => {
     expect(response.status()).toBe(200);
   });
 
-  test('a hashed storefront asset is still served from disk', async ({ request }) => {
-    // The routing file serves /assets off the filesystem with a long immutable
-    // cache. If a routing change swallowed that, the SPA would render unstyled.
-    const response = await request.get(`${HTTP_ORIGIN}${firstStorefrontAsset()}`, { maxRedirects: 0 });
+  test('a Next storefront asset is proxied with its immutable policy', async ({ request }) => {
+    const page = await request.get(`${HTTP_ORIGIN}/`);
+    const asset = (await page.text()).match(/(?:src|href)="([^" ]*\/_next\/static\/[^" ]+\.js)"/);
+    expect(asset, 'initial HTML must reference a Next browser chunk').not.toBeNull();
+    const response = await request.get(new URL(asset![1]!, HTTP_ORIGIN).href, { maxRedirects: 0 });
 
     expect(response.status()).toBe(200);
     expect(response.headers()['cache-control']).toContain('immutable');
   });
 
-  test('an unknown /assets path is a 404 from the filesystem, not the SPA', async ({ request }) => {
-    // try_files $uri =404 has to win over the index.html fallback, otherwise a
-    // mistyped asset URL returns HTML and fails as a MIME error in the browser.
-    const response = await request.get(`${HTTP_ORIGIN}/assets/not-a-real-file.js`, { maxRedirects: 0 });
+  test('an unknown Next asset returns a real 404', async ({ request }) => {
+    const response = await request.get(`${HTTP_ORIGIN}/_next/static/not-a-real-file.js`, { maxRedirects: 0 });
 
     expect(response.status()).toBe(404);
   });

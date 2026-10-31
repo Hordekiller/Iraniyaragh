@@ -1,6 +1,6 @@
 # Canonical PR, Review and Merge Workflow
 
-Protection read back: **2026-10-18**. Applies to contributors and agents.
+Protection read back: **2026-10-29**. Applies to contributors and agents.
 Current source/runtime and release gates: [V1 reconciliation](V1_RECONCILIATION.md).
 
 ## Current main protection
@@ -48,7 +48,8 @@ current cadence is one completed slice, start fresh tests/CI, then pause for rev
 ## Release boundary
 
 Merge is not deployment proof. Use official Publish Images for the exact merge
-SHA, resolve all four image tags to digests, restore-verify a fresh backup before
+SHA, resolve all six published image tags to digests (the media worker shares the
+API image), restore-verify a fresh backup before
 relying on it, and use the authorized official deployment path. A migration failure
 must abort. No latest tag, VPS build, source copy or running-container patch.
 Record runtime image/digest/migration/health evidence and actual Admin/customer/
@@ -62,7 +63,8 @@ Never lower coverage or alter application behavior to hide infrastructure failur
 #213 remains open until an organization administrator confirms the historic
 suspension banner/account state. Green scans alone do not prove that state.
 Production audit passing does not imply that all default-branch advisory alerts
-are resolved; the scoped #441/#442 candidates remain distinct until integrated.
+are resolved. Scoped fixes #441/#442 are merged and deployed; remaining advisory
+triage stays tracked under #77 without suppressing security controls.
 
 ## Final merge checklist
 
@@ -79,5 +81,6 @@ The owner authorized solo delivery on 2026-09-25. Protection subsequently requir
 one independent account approval and last-push separation at the Oct 15 checkpoint.
 The explicit Oct 17 owner decision supersedes those two settings; other safeguards
 remain enforced. Older review requirements in dated plans are historical, not a
-reason to demand another account under today's policy. #12 tracks documentation
-synchronization; its final documentation criterion completes only when #443 merges.
+reason to demand another account under today's policy. Historical documentation
+synchronization #12 was delivered through #443; current
+source/deployment/issue evidence is recorded in V1_RECONCILIATION.md.

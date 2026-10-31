@@ -140,6 +140,7 @@ export type ProductUpdateRequest = Partial<Omit<ProductPayload, 'variants'>> & {
  * `data-media-id`; the server rewrites embedded image nodes authoritatively.
  */
 export type ProductDescriptionUpdateRequest = {
+  /** At most 100,000 UTF-16 code units, including HTML markup. */
   description: string | null;
   expectedVersion: number;
 };

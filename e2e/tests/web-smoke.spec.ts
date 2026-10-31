@@ -1,3 +1,4 @@
+import type { Route } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 import {
   createExternalRequestsTracker,
@@ -26,7 +27,24 @@ test.describe('web: storefront shell', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('banner')).toBeVisible();
     await page.getByRole('img', { name: 'نماد اعتماد الکترونیکی ایرانی یراق' }).scrollIntoViewIfNeeded();
-    await network.assertNone();
+    // A new document's application requests must still block readiness even
+    // when the preceding document's abandoned prefetches have been retired.
+    let hold!: (route: Route) => void;
+    const held = new Promise<Route>(resolve => { hold = resolve; });
+    await page.route('**/__e2e/readiness.js', route => hold(route));
+    await page.evaluate(() => {
+      const script = document.createElement('script');
+      script.src = '/__e2e/readiness.js'; document.head.append(script);
+    });
+    const route = await held;
+    const verification = network.assertNone();
+    const finishedEarly = await Promise.race([
+      verification.then(() => true),
+      new Promise<false>(resolve => setTimeout(() => resolve(false), 150)),
+    ]);
+    expect(finishedEarly, 'Current document application requests must remain tracked').toBe(false);
+    await route.fulfill({ contentType: 'application/javascript', body: '' });
+    await verification;
   });
 
   test('renders the RTL storefront with landmarks and core content', async ({ page }) => {
@@ -77,7 +95,7 @@ test.describe('web: storefront shell', () => {
     await page.goto('/');
 
     await tap(page.locator('section#categories').getByRole('link', { name: 'ابزار برقی' }));
-    await expect(page).toHaveURL(/\/category\/power-tools$/);
+    await expect(page).toHaveURL(/\/categories\/power-tools$/);
     await expect(page.getByRole('heading', { name: 'ابزار برقی' })).toBeVisible();
 
     await network.assertNone();
@@ -90,7 +108,7 @@ test.describe('web: storefront shell', () => {
 
     await tap(page.getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ }).first());
 
-    await expect(page).toHaveURL(/\/product\//);
+    await expect(page).toHaveURL(/\/products\//);
     await expect(page.getByRole('button', { name: 'افزودن به سبد خرید' })).toBeVisible();
     await expect(page.getByText('موجود در انبار')).toBeVisible();
 
@@ -113,7 +131,7 @@ test.describe('web: storefront shell', () => {
     expect(productCount).toBeLessThanOrEqual(8);
 
     expect(await categoryCarousels.count()).toBeLessThanOrEqual(3);
-    await expect(categoryCarousels.first().getByRole('link', { name: 'مشاهده همه' })).toHaveAttribute('href', /\/category\//);
+    await expect(categoryCarousels.first().getByRole('link', { name: 'مشاهده همه' })).toHaveAttribute('href', /\/categories\//);
 
     await network.assertNone();
   });

@@ -9,8 +9,9 @@ const documents: Record<string, { title: string; description: string }> = {
 }
 
 /** The shell owns metadata so private-route robots/canonical state cannot leak to the next route. */
-export function useRouteMetadata(pathname: string) {
+export function useRouteMetadata(pathname: string, serverMetadata = false) {
   useEffect(() => {
+    if (serverMetadata) return
     const info = documents[pathname]
     const privateRoute = /^\/(?:account|cart|checkout|orders|payment|payment-return)(?:\/|$)/u.test(pathname)
     document.title = info ? `${info.title} | ${SITE_NAME}` : SITE_NAME
@@ -27,7 +28,7 @@ export function useRouteMetadata(pathname: string) {
       if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.append(canonical) }
       canonical.href = `${window.location.origin}${pathname}`
     } else canonical?.remove()
-  }, [pathname])
+  }, [pathname, serverMetadata])
 }
 
 

@@ -5,6 +5,7 @@ export type JoditProfile = {
   height?: number | string;
   placeholder?: string;
   readonly?: boolean;
+  toolbarSticky?: boolean;
   disablePlugins?: string[];
   uploader?: { url?: string; insertImageAsBase64URI?: boolean };
   buttons?: string[];
@@ -106,7 +107,7 @@ export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfi
     extraButtons.push({
       name: 'image',
       icon: 'image',
-      tooltip: 'Insert image from the IranYaragh product library',
+      tooltip: 'درج تصویر از کتابخانهٔ محصولات ایرانی یراق',
       exec: (editor) => {
         options.onInsertMedia?.(editor);
       },
@@ -118,6 +119,9 @@ export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfi
     height: typeof options.height === 'number' ? `${options.height}px` : options.height,
     placeholder: options.placeholder,
     readonly: options.readonly,
+    // Admin already owns the sticky page header. Keep this toolbar in normal
+    // flow so source/save controls remain reachable on narrow touch screens.
+    toolbarSticky: false,
     disablePlugins: [...RICH_TEXT_DISABLED_PLUGINS],
     uploader: { url: '', insertImageAsBase64URI: false },
     buttons: [...RICH_TEXT_TOOLBAR],

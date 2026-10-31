@@ -42,6 +42,7 @@ describe('buildJoditProfile', () => {
     expect(profile.disablePlugins).not.toContain('source');
     expect(profile.buttons).toContain('source');
     expect(profile.sourceEditor).toBe('area');
+    expect(profile.toolbarSticky).toBe(false);
     expect(profile.beautifyHTML).toBe(false);
   });
 
@@ -85,7 +86,7 @@ describe('buildJoditProfile', () => {
     picker?.exec?.(editor);
     expect(onInsertMedia).toHaveBeenCalledWith(editor);
     expect(picker?.icon).toBe('image');
-    expect(picker?.tooltip).toContain('IranYaragh');
+    expect(picker?.tooltip).toContain('ایرانی یراق');
   });
 
   it('keeps the image control as a plain exec action with no popup or sub-commands', () => {

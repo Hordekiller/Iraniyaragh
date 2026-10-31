@@ -6,9 +6,10 @@ Build a startup-ready commerce platform that can launch cheaply as a modular mon
 
 ## Applications
 
-- `apps/web`: customer storefront. Current React/Vite UI is preserved as the visual
-  baseline and migrates route-by-route to Next.js under ADR-0012; the API remains the
-  commerce source of truth.
+- `apps/web`: React storefront with Next.js public rendering deployed under
+  ADR-0012. Existing responsive UI and shared customer/auth/cart providers are
+  preserved; the Nest API remains the sole catalog and commerce authority.
+  Governed article/guide lifecycle and templates remain separate work under #125/#126.
 - `apps/admin`: operational backoffice for catalog, warehouse, orders, accounting, support, content and reports.
 - `apps/api`: NestJS modular monolith. One source of business truth for web, app and admin.
 - Mobile app is planned as React Native + Expo after API contracts stabilize.

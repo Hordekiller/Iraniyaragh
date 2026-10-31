@@ -21,12 +21,13 @@ type SiteHeaderProps = {
 export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSearch, onOpenLogin }: SiteHeaderProps) {
   const navigate = useNavigate()
   const location = useLocation()
+  const locationIdentity = `${location.pathname}${location.search}${location.hash}`
   const reduceMotion = useReducedMotion()
-  const [menu, setMenu] = useState({ locationKey: location.key, open: false })
-  if (menu.locationKey !== location.key) setMenu({ locationKey: location.key, open: false })
-  const menuOpen = menu.locationKey === location.key && menu.open
+  const [menu, setMenu] = useState({ locationKey: locationIdentity, open: false })
+  if (menu.locationKey !== locationIdentity) setMenu({ locationKey: locationIdentity, open: false })
+  const menuOpen = menu.locationKey === locationIdentity && menu.open
   const closeMenu = useCallback(() => setMenu(current => ({ ...current, open: false })), [])
-  const openMenu = () => setMenu({ locationKey: location.key, open: true })
+  const openMenu = () => setMenu({ locationKey: locationIdentity, open: true })
   const { state } = useCart()
   const itemCount = state.cart.lines.reduce((sum, line) => sum + line.quantity, 0)
 

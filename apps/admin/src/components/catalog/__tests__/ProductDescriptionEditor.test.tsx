@@ -5,6 +5,7 @@ import type { ProductDetail } from '@iranyaragh/contracts';
 import { ApiAbortError, ApiClientError, ApiNetworkError } from '@/lib/api/client';
 import { getProduct, updateProductDescription } from '@/lib/catalog/catalog-api';
 import { ProductDescriptionEditor } from '../ProductDescriptionEditor';
+import { readProductDescriptionDraft } from '@/lib/catalog/product-description-draft';
 
 vi.mock('@/lib/catalog/catalog-api', () => ({
   updateProductDescription: vi.fn(),
@@ -75,6 +76,7 @@ function typeContent(html: string) {
 
 describe('ProductDescriptionEditor', () => {
   beforeEach(() => {
+    sessionStorage.clear();
     vi.mocked(updateProductDescription).mockReset();
     vi.mocked(getProduct).mockReset();
     vi.mocked(updateProductDescription).mockResolvedValue({
@@ -161,7 +163,7 @@ describe('ProductDescriptionEditor', () => {
     expect(calls[1][1]).toEqual({ description: '<p>متن ذخیره‌شده</p>', expectedVersion: 3 });
   });
 
-  it('keeps the draft on a stale-version conflict and loads the fresh version on demand', async () => {
+  it('refreshes a conflicting server version without discarding the draft, then saves after review', async () => {
     const onServerProduct = vi.fn();
     vi.mocked(updateProductDescription).mockRejectedValueOnce(
       new ApiClientError({
@@ -187,12 +189,18 @@ describe('ProductDescriptionEditor', () => {
 
     fireEvent.click(screen.getByTestId('description-reload'));
     await waitFor(() => expect(getProduct).toHaveBeenCalledWith('p1'));
-    expect(await screen.findByTestId('rte')).toHaveValue('<p>پاسخ تازهٔ سرویس</p>');
+    await waitFor(() => expect(screen.queryByTestId('description-stale')).not.toBeInTheDocument());
+    expect(screen.getByTestId('rte')).toHaveValue('<p>نوشتهٔ کاربر</p>');
     expect(onServerProduct).toHaveBeenCalledWith(
       expect.objectContaining({ description: '<p>پاسخ تازهٔ سرویس</p>', version: 5 }),
     );
     expect(screen.queryByTestId('description-stale')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('description-unsaved')).not.toBeInTheDocument();
+    expect(screen.getByTestId('description-unsaved')).toBeInTheDocument();
+    expect(screen.getByTestId('description-server-review')).toHaveTextContent('پاسخ تازهٔ سرویس');
+    vi.mocked(updateProductDescription).mockResolvedValueOnce({ product: productDetail({ description: '<p>نوشتهٔ کاربر</p>', version: 6 }) } as never);
+    fireEvent.click(screen.getByTestId('description-save'));
+    expect(await screen.findByTestId('description-saved')).toBeInTheDocument();
+    expect(vi.mocked(updateProductDescription).mock.calls[1][1]).toEqual({ description: '<p>نوشتهٔ کاربر</p>', expectedVersion: 5 });
   });
 
   it('reports a denied save without clobbering the draft', async () => {
@@ -310,5 +318,98 @@ describe('ProductDescriptionEditor', () => {
     resolve({ product: productDetail({ version: 4 }) } as never);
     await Promise.resolve();
     expect(onServerProduct).not.toHaveBeenCalled();
+  });
+
+  it('offers tab-scoped recovery after a refresh and clears the draft only after confirmed saving', async () => {
+    const first = renderEditor({ draftOwnerId: 'staff-1', description: '<p>سرور</p>' });
+    typeContent('<h2>راهنمای تازه</h2><p>نوشتهٔ من</p>');
+    expect(readProductDescriptionDraft('staff-1', 'p1')).toMatchObject({ baseVersion: 3, draft: '<h2>راهنمای تازه</h2><p>نوشتهٔ من</p>', pending: null });
+    first.unmount();
+    renderEditor({ draftOwnerId: 'staff-1', description: '<p>سرور</p>' });
+    expect(await screen.findByTestId('description-recovery')).toBeInTheDocument();
+    expect(screen.getByTestId('rte')).toHaveValue('<p>سرور</p>');
+    expect(screen.getByTestId('rte')).toBeDisabled();
+    fireEvent.click(screen.getByText('بازیابی نوشتهٔ من'));
+    expect(screen.getByTestId('rte')).toHaveValue('<h2>راهنمای تازه</h2><p>نوشتهٔ من</p>');
+    vi.mocked(updateProductDescription).mockResolvedValueOnce({ product: productDetail({ description: '<h2>راهنمای تازه</h2><p>نوشتهٔ من</p>', version: 4 }) } as never);
+    fireEvent.click(screen.getByTestId('description-save'));
+    expect(await screen.findByTestId('description-saved')).toBeInTheDocument();
+    expect(readProductDescriptionDraft('staff-1', 'p1')).toBeNull();
+  });
+
+  it('retains the original uncertain command across a refresh and preserves subsequent edits', async () => {
+    vi.mocked(updateProductDescription).mockRejectedValueOnce(new ApiNetworkError('نتیجه نامشخص'));
+    const first = renderEditor({ draftOwnerId: 'staff-1' });
+    typeContent('<p>درخواست اول</p>');
+    fireEvent.click(screen.getByTestId('description-save'));
+    expect(await screen.findByTestId('description-error')).toBeInTheDocument();
+    typeContent('<p>ادامهٔ نوشته</p>');
+    const original = vi.mocked(updateProductDescription).mock.calls[0];
+    expect(readProductDescriptionDraft('staff-1', 'p1')).toMatchObject({ draft: '<p>ادامهٔ نوشته</p>', pending: { description: '<p>درخواست اول</p>', expectedVersion: 3, key: original[2] } });
+    first.unmount();
+    renderEditor({ draftOwnerId: 'staff-1', description: '<p>درخواست اول</p>', version: 4 });
+    fireEvent.click(await screen.findByText('بازیابی نوشتهٔ من'));
+    vi.mocked(updateProductDescription).mockResolvedValueOnce({ product: productDetail({ description: '<p>درخواست اول</p>', version: 4 }) } as never);
+    fireEvent.click(screen.getByTestId('description-retry'));
+    await waitFor(() => expect(vi.mocked(updateProductDescription).mock.calls).toHaveLength(2));
+    await waitFor(() => expect(screen.queryByTestId('description-error')).not.toBeInTheDocument());
+    expect(vi.mocked(updateProductDescription).mock.calls[1]).toEqual(original);
+    expect(screen.getByTestId('rte')).toHaveValue('<p>ادامهٔ نوشته</p>');
+    expect(screen.queryByTestId('description-saved')).not.toBeInTheDocument();
+    expect(readProductDescriptionDraft('staff-1', 'p1')).toMatchObject({ baseVersion: 4, draft: '<p>ادامهٔ نوشته</p>', pending: null });
+  });
+
+  it('does not expose another staff member’s draft and allows explicitly discarding recovery', async () => {
+    const first = renderEditor({ draftOwnerId: 'staff-1' }); typeContent('<p>پیش‌نویس خصوصی</p>'); first.unmount();
+    const second = renderEditor({ draftOwnerId: 'staff-2' });
+    expect(screen.queryByTestId('description-recovery')).not.toBeInTheDocument();
+    expect(screen.getByTestId('rte')).toHaveValue(''); second.unmount();
+    renderEditor({ draftOwnerId: 'staff-1' });
+    fireEvent.click(await screen.findByText('کنار گذاشتن پیش‌نویس'));
+    expect(screen.queryByTestId('description-recovery')).not.toBeInTheDocument();
+    expect(readProductDescriptionDraft('staff-1', 'p1')).toBeNull();
+  });
+
+  it('shows the HTML limit before submission and preserves overlong input intact', () => {
+    renderEditor({ draftOwnerId: 'staff-1' });
+    const overlong = 'ی'.repeat(100001); typeContent(overlong);
+    expect(screen.getByTestId('description-save')).toBeDisabled();
+    expect(screen.getByText(/از سقف ۱۰۰٬۰۰۰ نویسه بیشتر/)).toBeInTheDocument();
+    expect(screen.getByTestId('rte')).toHaveValue(overlong);
+    expect(updateProductDescription).not.toHaveBeenCalled();
+    expect(readProductDescriptionDraft('staff-1', 'p1')?.draft).toBe(overlong);
+  });
+
+  it('keeps a contention conflict retryable with the identical command', async () => {
+    vi.mocked(updateProductDescription).mockRejectedValueOnce(new ApiClientError({ code: 'CONFLICT', message: 'retry safely', requestId: 'r', statusCode: 409 }));
+    renderEditor(); typeContent('<p>ویرایش هم‌زمان</p>'); fireEvent.click(screen.getByTestId('description-save'));
+    expect(await screen.findByTestId('description-retry')).toBeInTheDocument();
+    expect(screen.queryByTestId('description-stale')).not.toBeInTheDocument();
+    vi.mocked(updateProductDescription).mockResolvedValueOnce({ product: productDetail({ description: '<p>ویرایش هم‌زمان</p>', version: 4 }) } as never);
+    fireEvent.click(screen.getByTestId('description-retry'));
+    expect(await screen.findByTestId('description-saved')).toBeInTheDocument();
+    expect(vi.mocked(updateProductDescription).mock.calls[1]).toEqual(vi.mocked(updateProductDescription).mock.calls[0]);
+  });
+
+  it('rejects an unconfirmed/stale save response without success or losing the pending command', async () => {
+    vi.mocked(updateProductDescription).mockResolvedValueOnce({ product: productDetail({ description: '<p>قدیمی</p>', version: 3 }) } as never);
+    renderEditor({ draftOwnerId: 'staff-1' }); typeContent('<p>جدید</p>'); fireEvent.click(screen.getByTestId('description-save'));
+    expect(await screen.findByText(/تأیید معتبر ذخیره دریافت نشد/)).toBeInTheDocument();
+    expect(screen.queryByTestId('description-saved')).not.toBeInTheDocument();
+    expect(readProductDescriptionDraft('staff-1', 'p1')?.pending?.description).toBe('<p>جدید</p>');
+  });
+
+  it('never downgrades a known newer product when an old uncertain command is acknowledged', async () => {
+    vi.mocked(updateProductDescription).mockRejectedValueOnce(new ApiNetworkError('نتیجه نامشخص'));
+    const { rerender, onServerProduct } = renderEditor(); typeContent('<p>نوشتهٔ من</p>'); fireEvent.click(screen.getByTestId('description-save'));
+    expect(await screen.findByTestId('description-error')).toBeInTheDocument();
+    rerender(<ProductDescriptionEditor productId="p1" description="<p>ویرایش جدیدتر روی سرور</p>" version={5} canWrite onServerProduct={onServerProduct} />);
+    expect(screen.getByTestId('description-reload')).toBeDisabled();
+    vi.mocked(updateProductDescription).mockResolvedValueOnce({ product: productDetail({ description: '<p>نوشتهٔ من</p>', version: 4 }) } as never);
+    fireEvent.click(screen.getByTestId('description-retry'));
+    expect(await screen.findByText(/محصول دوباره تغییر کرده است/)).toBeInTheDocument();
+    expect(screen.getByTestId('rte')).toHaveValue('<p>نوشتهٔ من</p>');
+    expect(onServerProduct).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('description-saved')).not.toBeInTheDocument();
   });
 });

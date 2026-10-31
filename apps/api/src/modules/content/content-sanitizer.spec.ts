@@ -7,6 +7,14 @@ import {
 } from './content-sanitizer';
 
 describe('sanitizeDescriptionFragment', () => {
+  it('keeps safe links when dropping images on product create/import without throwing', () => {
+    const result = sanitizeDescriptionFragment('<h2>راهنمای نصب</h2><p><a href="https://example.test/guide" target="_blank">راهنما</a><img src="https://example.test/image.png"></p>', { images: 'drop' });
+    expect(result.html).toBe('<h2>راهنمای نصب</h2><p><a href="https://example.test/guide" target="_blank" rel="noopener noreferrer">راهنما</a></p>');
+    expect(result.imageIds).toEqual([]);
+  });
+  it.each(['javascript:alert(1)', 'vbscript:msgbox(1)', 'data:text/html,test', '//untrusted.example/path'])('still rejects unsafe link schemes in create/import mode: %s', href => {
+    expect(sanitizeDescriptionFragment(`<p><a href="${href}">پیوند</a></p>`, { images: 'drop' }).html).toBe('<p><a>پیوند</a></p>');
+  });
   it('returns null html for null, undefined and empty input', () => {
     expect(sanitizeDescriptionFragment(null)).toEqual({ html: null, imageIds: [] });
     expect(sanitizeDescriptionFragment(undefined)).toEqual({ html: null, imageIds: [] });
@@ -41,7 +49,7 @@ describe('sanitizeDescriptionFragment', () => {
     const input =
       '<span style="background-image:url(https://evil.example/x.png);color:expression(alert(1));width:100%">x</span>';
     const result = sanitizeDescriptionFragment(input);
-    expect(result.html).toBe('<span>x</span>');
+    expect(result.html).toBe('<span style="width:100%">x</span>');
     expect(result.html).not.toMatch(/url\(|expression|background/i);
   });
 
@@ -53,10 +61,11 @@ describe('sanitizeDescriptionFragment', () => {
     expect(result.html).toContain('<em>italic</em>');
   });
 
-  it('rejects non-allowed styles', () => {
+  it('rejects fixed positioning while retaining bounded layout styles', () => {
     const input = '<span style="position:fixed;top:0;display:block">x</span>';
     const result = sanitizeDescriptionFragment(input);
-    expect(result.html).toBe('<span>x</span>');
+    expect(result.html).toBe('<span style="top:0;display:block">x</span>');
+    expect(result.html).not.toContain('fixed');
   });
 
   it('rewrites mailto links and adds rel noopener/noreferrer only for blank targets', () => {

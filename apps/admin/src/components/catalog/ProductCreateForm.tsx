@@ -20,7 +20,8 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowRight, Lock, Plus, Trash2 } from 'lucide-react';
-import type { BrandSummary, CategorySummary } from '@iranyaragh/contracts';
+import type { BrandSummary, CategorySummary, ProductCreateRequest } from '@iranyaragh/contracts';
+import { PRODUCT_DESCRIPTION_HTML_LIMIT } from '@/lib/catalog/product-description-draft';
 import { ApiAbortError, ApiClientError, ApiNetworkError } from '@/lib/api/client';
 import {
   createIdempotencyKey,
@@ -36,6 +37,7 @@ import { useFeedback } from '@/components/ui/FeedbackProvider';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { canWriteCatalog, canWriteCatalogMedia } from '@/lib/catalog/catalog-permissions';
 import { RichTextEditor } from '@/components/editor/RichTextEditor';
+import type { RichTextEditorHandle } from '@/components/editor/RichTextEditor';
 import { BrandDialog } from './BrandDialog';
 import { CategoryDialog } from './CategoryDialog';
 import { ProductMediaManager } from './ProductMediaManager';
@@ -63,7 +65,7 @@ function validateDraft(draft: ProductDraft): { fields: FieldErrors; variants: Va
   else if (draft.name.trim().length > 250) fields.name = 'نام کالا حداکثر ۲۵۰ کاراکتر.';
   if (!draft.slug.trim()) fields.slug = 'شناسه (Slug) الزامی است.';
   else if (!SLUG_PATTERN.test(draft.slug)) fields.slug = 'شناسه فقط شامل a-z، عدد و خط تیره (-) باشد.';
-  if (draft.description.trim().length > 10000) fields.description = 'توضیحات حداکثر ۱۰۰۰۰ کاراکتر.';
+  if (draft.description.length > PRODUCT_DESCRIPTION_HTML_LIMIT) fields.description = 'توضیحات همراه با کد HTML حداکثر ۱۰۰٬۰۰۰ نویسه است.';
   const variants: VariantErrors = {};
   if (!draft.variants.length) variants[0] = { sku: 'حداقل یک تنوع (SKU) لازم است.' };
   draft.variants.forEach((variant, index) => {
@@ -103,11 +105,15 @@ export function ProductCreateForm() {
   const [variantErrors, setVariantErrors] = useState<VariantErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uncertain, setUncertain] = useState(false);
   const [savedProductId, setSavedProductId] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [referenceAttempt, setReferenceAttempt] = useState(0);
   const idempotencyKey = useRef<string | null>(null);
+  const pendingCreate = useRef<{ input: ProductCreateRequest; key: string } | null>(null);
+  const submittingRef = useRef(false);
+  const editorRef = useRef<RichTextEditorHandle>(null);
 
   useEffect(() => {
     const urls = files.map(file => URL.createObjectURL(file));
@@ -132,12 +138,14 @@ export function ProductCreateForm() {
   }, [canWrite, referenceAttempt]);
 
   const setField = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => {
+    if (pendingCreate.current || submittingRef.current) return;
     idempotencyKey.current = null;
     setDraft((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [String(key)]: undefined }));
   };
 
   const setVariantField = (index: number, key: keyof VariantDraft, value: VariantDraft[keyof VariantDraft]) => {
+    if (pendingCreate.current || submittingRef.current) return;
     idempotencyKey.current = null;
     setDraft((current) => ({ ...current, variants: current.variants.map((variant, i) => i === index ? { ...variant, [key]: value } : variant) }));
     setVariantErrors((current) => {
@@ -152,26 +160,28 @@ export function ProductCreateForm() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (submitting || savedProductId) return;
-    const { fields, variants } = validateDraft(draft);
+    if (submittingRef.current || savedProductId) return;
+    const snapshot = { ...draft, description: editorRef.current?.getValue() ?? draft.description };
+    setDraft(snapshot);
+    const { fields, variants } = validateDraft(snapshot);
     setVariantErrors(variants);
     if (Object.keys(fields).length > 0 || Object.keys(variants).length > 0) {
       setErrors(fields);
       return;
     }
+    submittingRef.current = true;
     setSubmitting(true);
     setFormError(null);
     try {
       idempotencyKey.current ??= createIdempotencyKey('product-create');
-      const result = await createProduct(
-        {
-          name: draft.name.trim(),
-          slug: draft.slug.trim(),
-          description: draft.description.trim() ? draft.description : undefined,
-          brandId: draft.brandId || undefined,
-          categoryId: draft.categoryId || undefined,
-          status: draft.status,
-          variants: draft.variants.map((variant) => ({
+      pendingCreate.current ??= { key: idempotencyKey.current, input: {
+          name: snapshot.name.trim(),
+          slug: snapshot.slug.trim(),
+          description: snapshot.description.trim() ? snapshot.description : undefined,
+          brandId: snapshot.brandId || undefined,
+          categoryId: snapshot.categoryId || undefined,
+          status: snapshot.status,
+          variants: snapshot.variants.map((variant) => ({
             sku: variant.sku.trim(),
             ...(variant.barcode.trim() ? { barcode: variant.barcode.trim() } : {}),
             ...(variant.title.trim() ? { title: variant.title.trim() } : {}),
@@ -180,22 +190,25 @@ export function ProductCreateForm() {
             ...(variant.weightGrams.trim() ? { weightGrams: Number.parseInt(variant.weightGrams.trim(), 10) } : {}),
             isActive: variant.isActive,
           })),
-        },
-        idempotencyKey.current,
-      );
+        } };
+      const result = await createProduct(pendingCreate.current.input, pendingCreate.current.key);
+      if (!result.product?.id || result.product.slug !== pendingCreate.current.input.slug) throw new ApiNetworkError('تأیید ثبت کالا دریافت نشد.');
       idempotencyKey.current = null;
+      pendingCreate.current = null;
+      setUncertain(false);
       feedback.success(`کالای «${result.product.name}» با موفقیت ثبت شد.`);
       if (files.length) setSavedProductId(result.product.id);
       else router.replace(`/catalog/products/${result.product.id}`);
     } catch (error) {
-      if (error instanceof ApiClientError) {
+      if (error instanceof ApiClientError && error.statusCode < 500) {
+        pendingCreate.current = null; idempotencyKey.current = null; setUncertain(false);
         setFormError(error.message);
-      } else if (error instanceof ApiNetworkError) {
-        setFormError('امکان برقراری ارتباط با سامانه وجود ندارد.');
       } else {
-        setFormError('ثبت کالا ناموفق بود؛ دوباره تلاش کنید.');
+        setUncertain(true);
+        setFormError('نتیجهٔ ثبت مشخص نیست. اطلاعات حفظ شده است؛ برای پیگیری، همان درخواست ثبت را دوباره ارسال کنید.');
       }
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -241,7 +254,7 @@ export function ProductCreateForm() {
         <Stack spacing={3} sx={{ maxWidth: 860 }}>
           {referenceError ? <Alert severity="warning" action={<Button onClick={() => setReferenceAttempt(current => current + 1)}>تلاش دوباره</Button>}>{referenceError}</Alert> : null}
           {formError ? <Alert severity="error">{formError}</Alert> : null}
-
+          <Box component="fieldset" disabled={submitting || uncertain} sx={{ border: 0, p: 0, m: 0, minWidth: 0 }}><Stack spacing={3}>
           <Card variant="outlined">
             <CardContent>
               <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 2 }}>
@@ -325,8 +338,9 @@ export function ProductCreateForm() {
                 <FormField label="وضعیت آغازین" htmlFor="product-initial-status" helperText="کالا به‌صورت پیش‌نویس ذخیره می‌شود؛ انتشار فقط از مسیر بررسی و اقدام مجاز در جزئیات کالا انجام می‌شود.">
                   <TextField id="product-initial-status" size="small" value="پیش‌نویس" InputProps={{ readOnly: true }} />
                 </FormField>
-                <FormField label="توضیحات" htmlFor="product-description" helperText="اختیاری — حداکثر ۱۰۰۰۰ کاراکتر" error={Boolean(errors.description)} errorText={errors.description}>
+                <FormField label="توضیحات" htmlFor="product-description" helperText="اختیاری — حداکثر ۱۰۰٬۰۰۰ نویسه همراه با کد HTML" disabled={submitting || uncertain} error={Boolean(errors.description)} errorText={errors.description}>
                   <RichTextEditor
+                    ref={editorRef}
                     value={draft.description}
                     onChange={(html) => setField('description', html)}
                     placeholder="توضیحات محصول را وارد کنید..."
@@ -394,6 +408,7 @@ export function ProductCreateForm() {
             <Typography variant="body2">تا ۱۲ تصویر JPEG، PNG یا WebP، هرکدام حداکثر ۲۰ مگابایت. ارسال پس از ذخیرهٔ پیش‌نویس آغاز می‌شود.</Typography>
             <Button component="label" disabled={submitting}>انتخاب تصاویر
               <input hidden type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="تصاویر کالا" onChange={event => {
+                if (pendingCreate.current || submittingRef.current) return;
                 const selected = Array.from(event.target.files ?? []);
                 event.target.value = '';
                 if (files.length + selected.length > 12 || selected.some(file => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || !file.size || file.size > 20 * 1024 * 1024)) {
@@ -410,9 +425,10 @@ export function ProductCreateForm() {
               <IconButton aria-label={`حذف تصویر ${index + 1}`} disabled={submitting} onClick={() => setFiles(current => current.filter((_, i) => i !== index))}><Trash2 size={17} /></IconButton>
             </Stack>)}
           </Stack></CardContent></Card>}
+          </Stack></Box>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1 }}>
             <Button type="submit" variant="contained" size="large" disabled={submitting} startIcon={<ArrowRight size={18} />}>
-              {submitting ? 'در حال ثبت…' : 'ثبت کالا'}
+              {submitting ? 'در حال ثبت…' : uncertain ? 'پیگیری ثبت کالا' : 'ثبت کالا'}
             </Button>
           </Box>
         </Stack>

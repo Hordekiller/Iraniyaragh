@@ -67,6 +67,6 @@ test.describe('web: a11y baseline (#82)', () => {
   test('storefront product cards are exposed as navigable links', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ }).first()).toHaveAttribute('href', /\/product\//);
+    await expect(page.getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ }).first()).toHaveAttribute('href', /\/products\//);
   });
 });

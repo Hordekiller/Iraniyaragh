@@ -149,7 +149,7 @@ async function insertHtmlInEditor(page: Page, chunks: string[]) {
 async function clickImageToolbarButton(page: Page) {
   const button = page
     .locator('[data-rich-text-editor]')
-    .getByRole('button', { name: 'Insert image from the IranYaragh product library' });
+    .getByRole('button', { name: 'درج تصویر از کتابخانهٔ محصولات ایرانی یراق' });
   try {
     await button.first().waitFor({ state: 'visible', timeout: 5_000 });
   } catch {
@@ -367,6 +367,7 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
       element.focus();
       const paragraph = document.createElement('p');
       paragraph.textContent = 'آخرین ویرایش پیش از ثبت';
+      paragraph.style.cssText = 'font-size:18px;line-height:2;padding:8px';
       element.append(paragraph);
       element.dispatchEvent(new Event('input', { bubbles: true }));
       document.querySelector<HTMLButtonElement>('[data-testid="description-save"]')!.click();
@@ -374,6 +375,10 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     const saved = await saveResponse;
     expect(saved.status()).toBe(200);
     expect(saved.request().postDataJSON().description).toContain('آخرین ویرایش پیش از ثبت');
+    const savedDescription = (await saved.json()).data.product.description as string;
+    expect(savedDescription).toContain('font-size:18px');
+    expect(savedDescription).toContain('line-height:2');
+    expect(savedDescription).toContain('padding:8px');
     await expect(page.getByTestId('description-error')).toHaveCount(0);
     await expect(page.getByTestId('description-stale')).toHaveCount(0);
   });
@@ -385,6 +390,8 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
 
     const html = (await richEditorBody(page).innerHTML()) ?? '';
     expect(html).toContain('آخرین ویرایش پیش از ثبت');
+    await expect(richEditorBody(page).getByText('آخرین ویرایش پیش از ثبت', { exact: true })).toHaveCSS('font-size', '18px');
+    await expect(richEditorBody(page).getByText('آخرین ویرایش پیش از ثبت', { exact: true })).toHaveCSS('line-height', '36px');
     expect(html).toContain('دربارهٔ این قفل');
     expect(html).toContain('<h2');
     expect(html).toContain('<table');
@@ -415,8 +422,8 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     // workflow before asserting that the newly published product is featured.
     const realStorefront = process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174';
     const target = realStorefront
-      ? `${realStorefront}/product/${productSlug}`
-      : `${storefrontUrl}/product/bosch-gws-750-grinder`;
+      ? `${realStorefront}/products/${productSlug}`
+      : `${storefrontUrl}/products/bosch-gws-750-grinder`;
 
     await page.goto('/settings/homepage');
     await expect(page.getByRole('heading', { name: 'چیدمان کاروسل صفحهٔ اصلی' })).toBeVisible();
@@ -441,27 +448,27 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     const homepageCategories = page.getByRole('region', { name: 'دسته‌بندی کالاها' });
     await expect(homepageCategories.getByRole('link', { name: childName, exact: true })).toHaveCount(0);
     await tap(homepageCategories.getByRole('link', { name: rootName, exact: true }));
-    await expect(page).toHaveURL(`${realStorefront}/category/${rootSlug}`);
+    await expect(page).toHaveURL(`${realStorefront}/categories/${rootSlug}`);
     const subcategories = page.getByRole('region', { name: `زیردسته‌های ${rootName}` });
     await expect(subcategories.getByRole('link')).toHaveCount(1);
     // A parent projection includes the real product assigned to its child.
     await expect(page.getByRole('link', { name: new RegExp(productName) }).first()).toBeVisible();
     await tap(subcategories.getByRole('link', { name: childName, exact: true }));
-    await expect(page).toHaveURL(`${realStorefront}/category/${childSlug}`);
+    await expect(page).toHaveURL(`${realStorefront}/categories/${childSlug}`);
     await page.reload();
     await expect(page.getByRole('heading', { name: childName, exact: true })).toBeVisible();
-    const breadcrumb = page.getByRole('navigation', { name: 'مسیر دسته‌بندی' });
-    await expect(breadcrumb.getByRole('link', { name: rootName, exact: true })).toHaveAttribute('href', `/category/${rootSlug}`);
+    const breadcrumb = page.getByRole('navigation', { name: 'مسیر صفحه' });
+    await expect(breadcrumb.getByRole('link', { name: rootName, exact: true })).toHaveAttribute('href', `/categories/${rootSlug}`);
     await tap(page.getByRole('link', { name: new RegExp(productName) }).first());
 
     await expect(page).toHaveURL(target);
-    await expect(page).toHaveURL(new RegExp(`/product/[^/]+$`));
+    await expect(page).toHaveURL(new RegExp(`/products/[^/]+$`));
 
     const rich = page.locator('[data-rich-text="true"]');
     await expect(rich).toBeVisible({ timeout: 20_000 });
 
     if (realStorefront) {
-      expect(await page.url()).toContain(`/product/${productSlug}`);
+      expect(await page.url()).toContain(`/products/${productSlug}`);
       await expect(page.getByTestId('product-attributes').getByText(attributeName, { exact: true })).toBeVisible();
       await expect(page.getByTestId('product-attributes').getByText('قرمز E2E', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'آبی E2E', exact: true })).toBeVisible();
@@ -474,6 +481,8 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
       expect(html).toContain('<h2');
       expect(html).toContain('<table');
       expect(html).toContain('href="https://iranyaragh.test/docs"');
+      await expect(rich.getByText('آخرین ویرایش پیش از ثبت', { exact: true })).toHaveCSS('font-size', '18px');
+      await expect(rich.getByText('آخرین ویرایش پیش از ثبت', { exact: true })).toHaveCSS('line-height', '36px');
       expect(html).toMatch(/<img[^>]+src="[^"]+"/u);
 
       const mediaSrcs = await rich

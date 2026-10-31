@@ -68,6 +68,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
     setError(null);
     Promise.all([getProduct(productId, controller.signal), listAttributes(controller.signal)])
       .then(([detail, attributeItems]) => {
+        if (controller.signal.aborted || detail.product.id !== productId) return;
         setProduct((current) => current?.id === detail.product.id &&
           (current.version ?? 0) > (detail.product.version ?? 0) ? current : detail.product);
         setAttributes(attributeItems.items);
@@ -186,11 +187,12 @@ export function ProductDetailView({ productId }: { productId: string }) {
               </Box>
               {canWrite ? (
                 <ProductDescriptionEditor
-                  key={productId}
+                  key={`${user?.userId}:${productId}`}
                   productId={productId}
                   description={product.description}
                   version={product.version ?? 0}
                   canWrite={canWrite}
+                  draftOwnerId={user?.userId}
                   onServerProduct={setProduct}
                 />
               ) : (

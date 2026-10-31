@@ -62,7 +62,7 @@ export class InvoicePdfRenderProcessor {
       throw new InvoicePdfInputError();
     }
     const projection = customerInvoice(document.snapshot as never);
-    const { html } = buildInvoicePdfHtml(projection, this.assets.load());
+    const { html } = buildInvoicePdfHtml(projection, this.assets.load(), identity.templateRevision);
     // No file:// or network navigation: trusted stored bytes only.
     return renderPdfWithChromium(html, this.renderTimeoutMs);
   }

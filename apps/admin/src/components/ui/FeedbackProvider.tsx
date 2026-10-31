@@ -89,12 +89,13 @@ export function FeedbackProvider({ children }: Readonly<{ children: ReactNode }>
         autoHideDuration={active?.duration}
         onClose={() => dismiss()}
         anchorOrigin={{ vertical: active?.placement ?? 'bottom', horizontal: 'center' }}
+        sx={{ maxWidth: 'calc(100vw - 32px)' }}
       >
         <Alert
           onClose={() => setQueue((q) => q.slice(1))}
           severity={active?.kind ?? 'info'}
           role="status"
-          sx={{ width: '100%', minWidth: 280, '& .MuiAlert-message': { textAlign: 'start' } }}
+          sx={{ width: '100%', minWidth: { xs: 0, sm: 280 }, maxWidth: '100%', '& .MuiAlert-message': { minWidth: 0, overflowWrap: 'anywhere', textAlign: 'start' } }}
         >
           {active?.message}
         </Alert>
