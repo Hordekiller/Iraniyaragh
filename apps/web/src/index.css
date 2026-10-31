@@ -1,5 +1,20 @@
 @import 'tailwindcss';
 
+.product-dock-menu { display: none; }
+@media (width < 64rem) {
+  .product-dock-price[data-active='false'] { display: none; }
+  .product-dock-menu[data-active='true'] { display: flex; }
+}
+@media (width < 64rem) and (prefers-reduced-motion: no-preference) {
+  .product-dock-price[data-active='true'], .product-dock-menu[data-active='true'] {
+    animation: product-dock-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+@keyframes product-dock-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Self-hosted variable Vazirmatn (OFL-1.1) — replaces the Google Fonts CSS
    reference so the storefront routes zero external asset requests. */
 @font-face {
