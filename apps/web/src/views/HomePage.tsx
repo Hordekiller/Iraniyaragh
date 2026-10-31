@@ -138,7 +138,6 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
             ) : products.length === 0 ? null : (
               <ProductCarousel key={category.id} id={`home-category-${category.slug}`} title={sortBy === 'BESTSELLING' ? `پرفروش‌های ${category.name}` : `جدیدترین ${category.name}`} description={sortBy === 'BESTSELLING' ? 'بر پایهٔ فروش ثبت‌شده و منهای مرجوعی‌های ثبت‌شده' : 'جدیدترین کالاهای منتشرشده در این دسته'} products={products} moreHref={ROUTES.category(category.slug)} />
             ))}
-            {catalog.categoryCollections.length === 0 && <p className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-600">کاروسل‌های دسته‌بندی از پنل مدیریت تنظیم می‌شوند.</p>}
           </div>
         </>
       )}

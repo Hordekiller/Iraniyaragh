@@ -10,7 +10,7 @@ describe('static sitemap destinations', () => {
     const shard = await service.shard('pages-home.xml.gz');
     const xml = gunzipSync(shard.body).toString('utf8');
     const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/gu)].map(match => match[1]);
-    expect(urls).toEqual(['https://iraniyaragh.com/', 'https://iraniyaragh.com/catalog']);
+    expect(urls).toEqual(['https://iraniyaragh.com/', 'https://iraniyaragh.com/catalog', 'https://iraniyaragh.com/categories']);
     expect(urls.join('\n')).not.toMatch(/policies|privacy|terms|account|checkout|\?|#/u);
   });
 });

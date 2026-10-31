@@ -1,0 +1,19 @@
+# Keep local dependencies, build output and private configuration out of image contexts.
+.git
+**/node_modules
+.pnpm-store
+**/.turbo
+**/.next
+**/dist
+**/dist-real
+**/coverage
+**/test-results
+**/playwright-report
+**/blob-report
+**/.env
+**/.env.*
+!**/.env.example
+**/backups
+**/*.log
+**/*.tsbuildinfo
+.DS_Store

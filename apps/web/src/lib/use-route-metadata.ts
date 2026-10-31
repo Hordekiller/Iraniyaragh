@@ -3,6 +3,7 @@ import { SITE_NAME } from './site-config'
 import { ROUTES } from './routes'
 
 const documents: Record<string, { title: string; description: string }> = {
+  [ROUTES.categories]: { title: 'دسته‌بندی کالاها', description: 'دسته‌بندی ابزار و یراق‌آلات ایرانی یراق؛ جستجو میان دسته‌ها و زیر‌دسته‌ها.' },
   [ROUTES.privacy]: { title: 'حریم خصوصی', description: 'نحوهٔ استفاده از اطلاعات حساب، سبد خرید، نشانی و سفارش در ایرانی یراق.' },
   [ROUTES.terms]: { title: 'قوانین و شرایط فروش', description: 'اطلاعات خرید، پرداخت، ارسال و شرایط اعلام‌شدهٔ فروشنده در ایرانی یراق.' },
 }

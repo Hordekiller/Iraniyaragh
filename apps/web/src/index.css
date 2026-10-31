@@ -34,6 +34,58 @@ main:focus {
   outline: none;
 }
 
+/* Native modal keeps the storefront inert and keyboard focus inside the drawer. */
+.store-navigation-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.store-navigation-dialog[open] {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.store-navigation-dialog::backdrop {
+  background: rgb(2 6 23 / 60%);
+  backdrop-filter: blur(5px);
+  animation: navigation-backdrop-in 220ms ease-out both;
+}
+
+.store-navigation-panel {
+  animation: navigation-panel-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  padding-top: env(safe-area-inset-top);
+}
+
+@keyframes navigation-panel-in {
+  from { transform: translateX(100%); opacity: 0.6; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes navigation-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-navigation-panel,
+  .store-navigation-dialog::backdrop {
+    animation: none;
+  }
+
+  .store-navigation-panel * {
+    transition: none !important;
+  }
+}
+
 @layer utilities {
   .scrollbar-none {
     scrollbar-width: none;
