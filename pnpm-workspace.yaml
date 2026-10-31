@@ -32,3 +32,9 @@ overrides:
 
   # Patched collection bounds in the existing Zod 4 tooling dependency.
   zod@4: 4.6.6
+
+  # GHSA-g3hv-75wg-m249: upgrade glob together with its matcher API.
+  # Keep ExcelJS's archive major: newer stream normalization breaks StreamBuf.
+  'archiver-utils>glob': 14.0.3
+  'readdir-glob@1>minimatch': 11.0.2
+  'exceljs>unzipper': 0.12.5

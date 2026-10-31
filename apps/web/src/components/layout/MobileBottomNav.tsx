@@ -4,15 +4,17 @@ import { ROUTES } from '../../lib/routes'
 import { SECTION_IDS } from '../../lib/site-config'
 import { useAuth } from '../../state/auth-context'
 
-type MobileBottomNavProps = { onOpenSearch: () => void; onOpenLogin: () => void }
+type MobileBottomNavProps = { onOpenSearch: () => void; onOpenLogin: () => void; embedded?: boolean }
 
-export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavProps) {
+export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }: MobileBottomNavProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { state: authState } = useAuth()
 
   // Product pages provide their own persistent purchase controls.
-  if (pathname.startsWith('/product/')) return null
+  if (!embedded && (pathname.startsWith('/products/') || pathname.startsWith('/product/'))) {
+    return <div aria-hidden="true" data-testid="product-dock-spacer" className="h-[var(--product-dock-height,14rem)] lg:h-0" />
+  }
 
   function openCategories() {
     if (pathname === ROUTES.home) {
@@ -30,9 +32,9 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavPr
   ]
 
   return <>
-    <nav aria-label="ناوبری پایین" className="pointer-events-none fixed inset-x-0 bottom-0 z-50 lg:hidden">
-      <div className="mx-auto max-w-[480px] px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="pointer-events-auto grid grid-cols-6 rounded-3xl border border-slate-200 bg-white px-1 py-2 shadow-xl">
+    <nav aria-label="ناوبری پایین" className={embedded ? 'w-full lg:hidden' : 'pointer-events-none fixed inset-x-0 bottom-0 z-50 lg:hidden'}>
+      <div className={embedded ? 'mx-auto w-full max-w-[480px]' : 'mx-auto max-w-[480px] px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]'}>
+        <div className={`pointer-events-auto grid grid-cols-6 bg-white px-1 py-2 ${embedded ? 'rounded-2xl' : 'rounded-3xl border border-slate-200 shadow-xl'}`}>
           {items.map(({ label, short, icon: Icon, active, action }) => <button type="button" key={label} onClick={action} aria-label={short && !label.includes(short) ? `${short} (${label})` : label} aria-current={active ? 'page' : undefined}
             className={`flex min-h-12 min-w-11 flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-2 text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-700 ${active ? 'bg-orange-50 text-orange-800' : 'text-slate-600 hover:bg-slate-100'}`}>
             <Icon size={21} strokeWidth={active ? 2.3 : 1.9} aria-hidden="true" />
@@ -41,6 +43,6 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin }: MobileBottomNavPr
         </div>
       </div>
     </nav>
-    <div aria-hidden="true" className="h-[calc(6rem+env(safe-area-inset-bottom))] lg:h-0" />
+    {!embedded && <div aria-hidden="true" className="h-[calc(6rem+env(safe-area-inset-bottom))] lg:h-0" />}
   </>
 }

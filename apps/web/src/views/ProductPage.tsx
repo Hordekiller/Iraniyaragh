@@ -16,6 +16,7 @@ import { useToast } from '../components/feedback/toast-context'
 import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { MediaGallery } from '../components/product/MediaGallery'
+import { ProductPurchaseDock } from '../components/product/ProductPurchaseDock'
 import { RichText } from '../components/product/RichText'
 import { serializeJsonLd } from '../lib/json-ld'
 import { richTextToPlainText } from '../lib/rich-text'
@@ -164,7 +165,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
   }
 
   return (
-    <div className="max-w-[1280px] mx-auto px-4 pt-5 pb-[calc(11rem+env(safe-area-inset-bottom))] lg:px-6 lg:py-8">
+    <div className="max-w-[1280px] mx-auto px-4 pt-5 pb-8 lg:px-6 lg:py-8">
       {!serverStructuredData && structuredData.length > 0 && (
         <script
           type="application/ld+json"
@@ -283,11 +284,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
             </fieldset>
           )}
 
-          <section
-            id="product-purchase"
-            aria-label="قیمت و خرید محصول"
-            className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgb(15_23_42_/_0.08)] lg:static lg:mt-5 lg:rounded-2xl lg:border lg:p-5 lg:shadow-none"
-          >
+          <ProductPurchaseDock key={product.id}>
             <div
               className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
               aria-live="polite"
@@ -371,7 +368,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
                 مشاهده سبد
               </button>
             </div>
-          </section>
+          </ProductPurchaseDock>
 
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-slate-50 p-3 text-xs leading-6 text-slate-600">
             <span className="flex items-center gap-1.5">

@@ -101,4 +101,10 @@ describe('MobileBottomNav', () => {
 
     expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.home)
   })
+  it('lets the product dock own the canonical product route without a second fixed menu', () => {
+    render(<MemoryRouter initialEntries={['/products/test-product']}><Harness /></MemoryRouter>)
+    expect(screen.queryByRole('navigation', { name: 'ناوبری پایین' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('product-dock-spacer')).toBeInTheDocument()
+  })
+
 })

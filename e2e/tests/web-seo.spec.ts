@@ -99,3 +99,51 @@ test('web: legacy URLs redirect once and unknown or unpublished products return 
   expect(response.status()).toBe(200);
   expect(await response.text()).toContain(`href="${canonical}/products/${slug}"`);
 });
+
+test('web: product mobile dock defaults to purchase and switches one surface without overlap', async ({ page }) => {
+  const hydrated = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/guest-cart' && response.request().method() === 'GET' && response.ok());
+  await page.goto(`${realWeb}/products/${slug}`, { waitUntil: 'domcontentloaded' });
+  await hydrated;
+  const price = page.getByRole('region', { name: 'قیمت و خرید محصول', exact: true });
+  const menu = page.getByRole('navigation', { name: 'ناوبری پایین', exact: true });
+  const choices = page.getByRole('group', { name: 'نمایش نوار پایین محصول' });
+  await expect(price).toBeVisible();
+  await expect(menu).not.toBeVisible();
+  await expect(page.locator('#product-purchase')).toHaveCount(1);
+  if (page.viewportSize()!.width >= 1024) {
+    await expect(choices).not.toBeVisible();
+    return;
+  }
+  const purchaseNode = await page.locator('#product-price-panel').elementHandle();
+  for (const width of [320, 390, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    const priceChoice = page.getByRole('button', { name: 'قیمت و خرید', exact: true });
+    const menuChoice = page.getByRole('button', { name: 'منوی سایت', exact: true });
+    await expect(priceChoice).toHaveAttribute('aria-pressed', 'true');
+    await menuChoice.focus();
+    await page.keyboard.press('Enter');
+    await expect(menuChoice).toHaveAttribute('aria-pressed', 'true');
+    await expect(menu).toBeVisible();
+    await expect(price).not.toBeVisible();
+    expect(await menuChoice.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+    await expect(page.locator('nav[aria-label="ناوبری پایین"]:visible')).toHaveCount(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await priceChoice.click();
+    await expect(price).toBeVisible();
+    await expect(menu).not.toBeVisible();
+    expect(await purchaseNode!.evaluate(node => node === document.getElementById('product-price-panel'))).toBe(true);
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('button', { name: 'منوی سایت', exact: true }).click();
+  await expect(menu).toBeVisible();
+  await expect(page.locator('#product-menu-panel')).toHaveCSS('animation-name', 'none');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(price).toBeVisible();
+  await expect(menu).not.toBeVisible();
+  await expect(choices).not.toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('button', { name: 'قیمت و خرید', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(price).toBeVisible();
+  await expect(menu).not.toBeVisible();
+});

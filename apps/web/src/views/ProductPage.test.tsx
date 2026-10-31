@@ -174,6 +174,27 @@ describe('ProductPage structured offer parity', () => {
   })
 })
 
+describe('Product mobile purchase/menu selection', () => {
+  it('defaults to price and keeps the same purchase controls while changing panels', async () => {
+    renderPageWithProduct(drillWithDescription('<p>راهنما</p>'))
+    const price = await screen.findByRole('button', { name: 'قیمت و خرید' })
+    const menu = screen.getByRole('button', { name: 'منوی سایت' })
+    expect(price).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('navigation', { name: 'ناوبری پایین' })).not.toBeInTheDocument()
+    const purchase = screen.getByRole('region', { name: 'قیمت و خرید محصول' })
+    const add = screen.getByRole('button', { name: 'افزودن به سبد خرید' })
+    fireEvent.click(menu)
+    expect(menu).toHaveAttribute('aria-pressed', 'true')
+    expect(price).toHaveAttribute('aria-pressed', 'false')
+    expect(purchase).toHaveAttribute('data-active', 'false')
+    expect(screen.getAllByRole('navigation', { name: 'ناوبری پایین' })).toHaveLength(1)
+    fireEvent.click(price)
+    expect(price).toHaveAttribute('aria-pressed', 'true')
+    expect(purchase).toHaveAttribute('data-active', 'true')
+    expect(screen.getByRole('button', { name: 'افزودن به سبد خرید' })).toBe(add)
+  })
+})
+
 describe('ProductPage rich description', () => {
   it('keeps the purchase controls ahead of the long description', async () => {
     renderPageWithProduct(drillWithDescription('<p>راهنمای بلند محصول</p>'))
