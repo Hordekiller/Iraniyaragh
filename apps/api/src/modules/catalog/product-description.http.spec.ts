@@ -4,6 +4,7 @@ import { APP_GUARD, NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiFoundationModule } from '../../common/api-foundation.module';
+import { diagnosticValidationFactory } from '../../common/validation-diagnostics';
 import { configureRequestBody, JSON_BODY_LIMIT_BYTES } from '../../common/request-body';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -41,7 +42,7 @@ describe('Persian product description HTTP transport', () => {
     app = await NestFactory.create<NestExpressApplication>(DescriptionHttpModule, { logger: false });
     configureRequestBody(app);
     app.setGlobalPrefix('api'); app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, exceptionFactory: diagnosticValidationFactory() }));
     await app.listen(0, '127.0.0.1'); origin = await app.getUrl();
   });
   beforeEach(() => vi.clearAllMocks()); afterAll(async () => app.close());
@@ -77,4 +78,27 @@ describe('Persian product description HTTP transport', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(domain.updateProductDescription).not.toHaveBeenCalled();
   });
+  it('correlates real product validation, malformed JSON and oversized requests without logging input', async () => {
+    const lines: string[] = [];
+    const out = vi.spyOn(process.stdout, 'write').mockImplementation(line => { lines.push(String(line)); return true; });
+    const err = vi.spyOn(process.stderr, 'write').mockImplementation(line => { lines.push(String(line)); return true; });
+    try {
+      for (const [id, body, status] of [
+        ['diagnostic-validation', JSON.stringify({ name: 42, slug: 'private customer@example.com' }), 400],
+        ['diagnostic-malformed', '{private', 400],
+        ['diagnostic-oversized', JSON.stringify({ description: 'x'.repeat(JSON_BODY_LIMIT_BYTES + 1) }), 413],
+      ] as const) {
+        const response = await fetch(`${origin}/api/v1/catalog/admin/products`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer staff', 'Idempotency-Key': 'diagnostic-http-key', 'X-Request-ID': id }, body });
+        expect(response.status).toBe(status);
+        expect(response.headers.get('x-request-id')).toBe(id);
+        expect((await response.json()).requestId).toBe(id);
+        expect(lines.map(line => JSON.parse(line)).some(entry => entry.requestId === id && entry.data?.statusCode === status)).toBe(true);
+      }
+      const invalid = lines.map(line => JSON.parse(line)).find(entry => entry.requestId === 'diagnostic-validation');
+      expect(invalid.data.validation).toEqual(expect.arrayContaining([expect.objectContaining({ field: 'name', rules: expect.arrayContaining(['isString']) })]));
+      expect(lines.join('')).not.toMatch(/customer@example.com|Bearer staff|diagnostic-http-key/u);
+      expect(domain.createProduct).not.toHaveBeenCalled();
+    } finally { out.mockRestore(); err.mockRestore(); }
+  });
+
 });

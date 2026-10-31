@@ -1,6 +1,7 @@
 export type Money = { amount: string; currency: 'IRR' };
 
 export * from './api';
+export * from './diagnostics';
 export * from './auth';
 export * from './catalog';
 export * from './customers';

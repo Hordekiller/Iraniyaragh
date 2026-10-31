@@ -28,9 +28,10 @@ export default defineConfig({
     // raised instead of padding individual tests with timeouts.
     testTimeout: 20_000,
     coverage: {
+      allowExternal: true,
       enabled: process.env.CI === 'true',
       provider: 'v8',
-      reporter: ['text', 'json-summary', 'lcov'],
+      reporter: ['text', 'json-summary', ['lcov', { projectRoot: fileURLToPath(new URL('../..', import.meta.url)) }]],
       exclude: ['**/*.test.{ts,tsx}'],
       thresholds: {
         lines: 80,

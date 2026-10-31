@@ -19,6 +19,12 @@
 name: iranyaragh
 
 x-restart: &restart unless-stopped
+x-logging: &logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "5"
+    compress: "true"
 
 services:
   # --- data tier --------------------------------------------------------------
@@ -26,6 +32,7 @@ services:
   postgres:
     image: postgres:18-alpine
     restart: *restart
+    logging: *logging
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -49,6 +56,7 @@ services:
   redis:
     image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     restart: *restart
+    logging: *logging
     # appendonly keeps queue/outbox state across restarts. `requirepass` is set
     # from the env file so the cache is not an open service on the network.
     command:
@@ -78,6 +86,7 @@ services:
     # against.
     image: rustfs/rustfs:1.0.0
     restart: *restart
+    logging: *logging
     # Serves the S3 API on :9000. The console is left disabled (the default) so
     # no admin UI is reachable; enable it on a loopback address only if an
     # operator needs it, and never publish it.
@@ -110,6 +119,7 @@ services:
   # image: `prisma migrate deploy` needs the Prisma CLI, which is a devDependency
   # and is deliberately absent from the long-running runtime image.
   migrate:
+    logging: *logging
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/api-migrate:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: 'no'
     command: ['pnpm', 'exec', 'prisma', 'migrate', 'deploy']
@@ -133,6 +143,7 @@ services:
   # safe to run on every deploy; it is a dependency of the media worker so the
   # bucket always exists before any upload is processed.
   media-bucket:
+    logging: *logging
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/api:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: 'no'
     command: ['node', 'scripts/provision-media-bucket.mjs']
@@ -156,6 +167,7 @@ services:
   malware-scanner:
     image: clamav/clamav:1.5.4-debian13-slim@sha256:9bb8712a50f0e75166e936c452cd82dd5e5be0b85586598930b5bbb84a99a578
     restart: *restart
+    logging: *logging
     mem_limit: 3g
     environment:
       # The 4 GiB staging host cannot hold two ClamD engines during reload.
@@ -182,8 +194,10 @@ services:
   api:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/api:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
+    logging: *logging
     env_file: [.env.staging]
     environment:
+      SERVICE_NAME: iranyaragh-api
       # deploy.sh records IMAGE_TAG only after success. Override env_file's prior
       # release here using the same interpolation value as the selected image.
       IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
@@ -215,9 +229,11 @@ services:
   media-worker:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/api:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
+    logging: *logging
     command: ['node', 'dist/src/media-worker.js']
     env_file: [.env.staging]
     environment:
+      SERVICE_NAME: iranyaragh-media-worker
       IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       PRODUCT_MEDIA_SCANNER_HOST: malware-scanner
@@ -281,8 +297,10 @@ services:
   pdf-render-worker:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/pdf-render-worker:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
+    logging: *logging
     env_file: [.env.staging]
     environment:
+      SERVICE_NAME: iranyaragh-pdf-render-worker
       IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       NODE_ENV: ${APP_ENVIRONMENT:-staging}
@@ -312,8 +330,10 @@ services:
   admin:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/admin:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
+    logging: *logging
     env_file: [.env.staging]
     environment:
+      SERVICE_NAME: iranyaragh-admin
       IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       NODE_ENV: production
@@ -328,7 +348,9 @@ services:
   storefront:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/storefront:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
+    logging: *logging
     environment:
+      SERVICE_NAME: iranyaragh-storefront
       IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       NODE_ENV: production
@@ -345,7 +367,9 @@ services:
   web:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/web:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
+    logging: *logging
     environment:
+      SERVICE_NAME: iranyaragh-web
       IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
       APP_VERSION: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     ports:

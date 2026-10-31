@@ -44,6 +44,8 @@ test(
             method: req.method,
             cookie: req.headers.cookie,
             host: req.headers.host,
+            requestId: req.headers["x-request-id"],
+            correlationId: req.headers["x-correlation-id"],
           });
           res.setHeader("X-Test-Upstream", name);
           res.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -163,7 +165,7 @@ test(
         if (ready) break;
         await pause(100);
       }
-      assert.ok(ready, "Nginx must start with the real shipped configuration");
+      if (!ready) assert.fail(`Nginx must start with the real shipped configuration: ${docker(["logs", container]).slice(-2000)}`);
       for (const [path, upstream, target] of [
         ["/", "storefront", "/"],
         [
@@ -272,6 +274,20 @@ test(
         undefined,
         "object storage never receives customer cookies",
       );
+      const safeCode = 'diagnostic-proxy-test';
+      const correlated = await get('/api/v1/products/unavailable?token=synthetic-private', { 'X-Request-ID': safeCode, 'X-Correlation-ID': 'diagnostic-parent-test' });
+      assert.equal(correlated.status, 503);
+      assert.equal(correlated.headers['x-request-id'], safeCode);
+      assert.equal(correlated.headers['x-correlation-id'], 'diagnostic-parent-test');
+      assert.equal(hits.at(-1).requestId, safeCode);
+      assert.equal(hits.at(-1).correlationId, 'diagnostic-parent-test');
+      const logs = docker(['logs', container]);
+      const entries = logs.split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+      assert.ok(entries.some(entry => entry.surface === 'media-upload' && entry.statusCode === 200));
+      assert.ok(entries.some(entry => entry.requestId === safeCode && entry.statusCode === 503 && entry.surface === 'api'));
+      assert.ok(!entries.some(entry => JSON.stringify(entry).includes('synthetic-private') || JSON.stringify(entry).includes('X-Amz-Signature') || 'uri' in entry || 'remote_addr' in entry));
+
+
     } finally {
       try {
         docker(["rm", "-f", container]);

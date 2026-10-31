@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -23,9 +24,10 @@ export default defineConfig({
       OBJECT_STORAGE_BUCKET: 'test-assets',
     },
     coverage: {
+      allowExternal: true,
       enabled: process.env.CI === 'true',
       provider: 'v8',
-      reporter: ['text', 'json-summary', 'lcov'],
+      reporter: ['text', 'json-summary', ['lcov', { projectRoot: resolve(__dirname, '../..') }]],
       exclude: [
         '**/__tests__/**',
         '**/*.spec.ts',

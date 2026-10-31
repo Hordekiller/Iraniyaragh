@@ -22,7 +22,7 @@ describe('apiFetch', () => {
     await apiFetch<{ ok: boolean }>('/health');
     expect(fetch).toHaveBeenCalledWith(`${getApiBaseUrl()}/api/v1/health`, expect.objectContaining({
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Request-ID': expect.any(String), 'X-Correlation-ID': expect.any(String) },
       body: undefined,
       credentials: 'include',
       cache: 'no-store',
@@ -34,7 +34,7 @@ describe('apiFetch', () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
     await apiFetch<Record<string, never>>('/auth/me', { token: 'at-1' });
     const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
-    expect(init.headers).toEqual({ 'Content-Type': 'application/json', Authorization: 'Bearer at-1' });
+    expect(init.headers).toEqual({ 'Content-Type': 'application/json', Authorization: 'Bearer at-1', 'X-Request-ID': expect.any(String), 'X-Correlation-ID': expect.any(String) });
   });
 
   it('serializes the request body for POST', async () => {
@@ -417,4 +417,27 @@ describe('apiFetch', () => {
       expect(fetch).toHaveBeenCalledTimes(1);
     } finally { releaseRotation(); unregister(); }
   });
+  it('keeps a trackable reference for offline failures without logging the request or cause', async () => {
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let sentId = '';
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => { sentId = new Headers(init.headers).get('x-request-id')!; throw new Error('password=synthetic-private'); }));
+    await expect(apiFetch('/catalog/admin/products', { method: 'POST', body: { name: 'synthetic-private' } })).rejects.toMatchObject({ requestId: expect.any(String), kind: 'network' });
+    expect(sentId).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(JSON.parse(String(log.mock.calls[0][0]))).toMatchObject({ requestId: sentId, kind: 'network' });
+    expect(JSON.stringify(log.mock.calls)).not.toContain('synthetic-private');
+  });
+  it('retains proxy rejection status and header ID when an HTML error has no API envelope', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>private</html>', { status: 413, headers: { 'X-Request-ID': 'proxy-rejection' } })));
+    await expect(apiFetch('/catalog/admin/products', { method: 'POST' })).rejects.toMatchObject({ name: 'ApiClientError', requestId: 'proxy-rejection', statusCode: 413 });
+  });
+  it('treats malformed successful responses as uncertain, with a support reference', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{broken', { status: 200, headers: { 'X-Request-ID': 'response-parse' } })));
+    await expect(apiFetch('/catalog/admin/products', { method: 'POST' })).rejects.toMatchObject({ name: 'ApiNetworkError', kind: 'parse', requestId: 'response-parse' });
+  });
+
+  it('rejects a successful response with a missing envelope as uncertain', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200, headers: { 'X-Request-ID': 'missing-envelope' } })));
+    await expect(apiFetch('/catalog/admin/products', { method: 'POST' })).rejects.toMatchObject({ name: 'ApiNetworkError', kind: 'parse', requestId: 'missing-envelope' });
+  });
+
 });

@@ -1,5 +1,7 @@
 'use client';
 
+import { diagnosticReference } from '@iranyaragh/contracts';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -56,6 +58,7 @@ export function ProductDescriptionEditor({
   const [draft, setDraft] = useState(description ?? '');
   const [savedContent, setSavedContent] = useState(description ?? '');
   const [status, setStatus] = useState<DescriptionSaveStatus>('idle');
+  const [requestReference, setRequestReference] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
   const [reloading, setReloading] = useState(false);
@@ -108,6 +111,7 @@ export function ProductDescriptionEditor({
       setIdempotencyKey(null);
       pendingSaveRef.current = null;
       setErrorMessage(null);
+    setRequestReference('');
       setStale(false);
       setStatus(nextStatus);
     },
@@ -196,6 +200,7 @@ export function ProductDescriptionEditor({
     savingRef.current = true;
     setStatus('saving');
     setErrorMessage(null);
+    setRequestReference('');
     setStale(false);
     updateProductDescription(
       productId,
@@ -230,6 +235,7 @@ export function ProductDescriptionEditor({
       })
       .catch((err: unknown) => {
         if (generation !== requestGenerationRef.current) return;
+        setRequestReference(diagnosticReference(err));
         if (err instanceof ApiClientError && err.statusCode === 409) {
           const retryableConflict = err.code === 'CONFLICT';
           if (!retryableConflict) { pendingSaveRef.current = null; setIdempotencyKey(null); }
@@ -354,7 +360,7 @@ export function ProductDescriptionEditor({
             </Stack>
           }
         >
-          {errorMessage ?? 'نسخهٔ محصول بهروز نیست.'}
+          {errorMessage ?? 'نسخهٔ محصول بهروز نیست.'}{requestReference ? <Box component="span" display="block" dir="ltr">{requestReference}</Box> : null}
         </Alert>
       ) : status === 'error' ? (
         <Alert
@@ -368,7 +374,7 @@ export function ProductDescriptionEditor({
             ) : undefined
           }
         >
-          {errorMessage}
+          {errorMessage}{requestReference ? <Box component="span" display="block" dir="ltr">{requestReference}</Box> : null}
         </Alert>
       ) : null}
       {dirty ? (

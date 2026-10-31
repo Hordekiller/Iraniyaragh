@@ -1,5 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
+import { headers } from 'next/headers'
+import { diagnosticId, createDiagnosticId } from '@iranyaragh/contracts'
 import { notFound, permanentRedirect } from 'next/navigation'
 import type { BrandListResponse } from '@iranyaragh/contracts'
 import { CatalogFixtureClient } from '../services/catalog/fixtures'
@@ -15,7 +17,12 @@ function apiOrigin() {
   return url.origin
 }
 /** Public requests never forward cookies, session tokens or identity. No stale commerce HTML is cached. */
-const publicFetch: typeof fetch = (input, init) => fetch(input, { ...init, cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(8_000) })
+const publicFetch: typeof fetch = async (input, init) => {
+  const incoming = await headers()
+  const outgoing = new Headers(init?.headers)
+  outgoing.set('X-Request-ID', diagnosticId(incoming.get('x-request-id')) ?? createDiagnosticId())
+  return fetch(input, { ...init, headers: outgoing, cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(8_000) })
+}
 function isolatedFixture() { return process.env.APP_ENVIRONMENT === 'test' && process.env.NEXT_PUBLIC_FIXTURE_CATALOG === 'true' }
 export function catalogApi(): CatalogApi { return isolatedFixture() ? new CatalogFixtureClient({ delayMs: 0 }) : new CatalogHttpClient({ baseUrl: apiOrigin(), fetch: publicFetch }) }
 export const categories = cache(() => catalogApi().listCategories())

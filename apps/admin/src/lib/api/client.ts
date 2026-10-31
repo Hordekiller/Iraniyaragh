@@ -1,3 +1,4 @@
+import { createDiagnosticId, diagnosticId, logClientFailure } from '@iranyaragh/contracts';
 import { getAccessToken, getSessionRevision } from '@/lib/auth/token-store';
 
 const API_PREFIX = '/api/v1';
@@ -57,9 +58,13 @@ export class ApiClientError extends Error {
 }
 
 export class ApiNetworkError extends Error {
-  constructor(message: string) {
+  readonly requestId: string;
+  readonly kind: 'network' | 'timeout' | 'parse';
+  constructor(message: string, requestId = '', kind: 'network' | 'timeout' | 'parse' = 'network') {
     super(message);
     this.name = 'ApiNetworkError';
+    this.requestId = requestId;
+    this.kind = kind;
   }
 }
 
@@ -203,6 +208,12 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   if (!isFormData && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
   const method = options.method ?? 'GET';
+  const requestId = diagnosticId(new Headers(headers).get('x-request-id')) ?? createDiagnosticId();
+  for (const key of Object.keys(headers)) if (key.toLowerCase() === 'x-request-id') delete headers[key];
+  headers['X-Request-ID'] = requestId;
+  const correlationId = diagnosticId(new Headers(headers).get('x-correlation-id')) ?? requestId;
+  for (const key of Object.keys(headers)) if (key.toLowerCase() === 'x-correlation-id') delete headers[key];
+  headers['X-Correlation-ID'] = correlationId;
   if (method !== 'GET' && !headers['X-CSRF-Token']) {
     const csrfToken = readCsrfToken(globalThis.document);
     if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
@@ -210,6 +221,8 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   let response: Response;
   let payload: unknown;
+  let phase: 'network' | 'parse' = 'network';
+  let responseRequestId = requestId;
   const controller = new AbortController();
   const requestedTimeoutMs = options.timeoutMs;
   const timeoutMs = Number.isFinite(requestedTimeoutMs)
@@ -234,32 +247,39 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     });
     // The fetch signal also bounds body consumption. Headers alone do not
     // complete a request, and an interrupted/malformed body is not success.
+    responseRequestId = diagnosticId(response.headers?.get('x-request-id')) ?? requestId;
     const text = await response.text();
-    payload = text ? (JSON.parse(text) as unknown) : undefined;
+    phase = 'parse';
+    try { payload = text ? (JSON.parse(text) as unknown) : undefined; }
+    catch (error) { if (response.ok) throw error; payload = undefined; }
   } catch {
     if (options.signal?.aborted) {
       throw new ApiAbortError();
     }
-    if (controller.signal.aborted) throw new ApiNetworkError('زمان دریافت پاسخ به پایان رسید. دوباره تلاش کنید.');
-    throw new ApiNetworkError('امکان برقراری ارتباط با سامانه وجود ندارد.');
+    const kind = controller.signal.aborted ? 'timeout' : phase;
+    logClientFailure('admin', responseRequestId, kind);
+    if (kind === 'timeout') throw new ApiNetworkError('زمان دریافت پاسخ به پایان رسید. دوباره تلاش کنید.', responseRequestId, kind);
+    throw new ApiNetworkError(kind === 'parse' ? 'پاسخ معتبر از سامانه دریافت نشد؛ نتیجهٔ ثبت را پیگیری کنید.' : 'امکان برقراری ارتباط با سامانه وجود ندارد.', responseRequestId, kind);
   } finally {
     clearTimeout(timeoutId);
   }
 
   if (!response.ok) {
-    const failure = (payload as ApiErrorEnvelope | undefined) ?? {
-      code: 'INTERNAL_ERROR',
-      message: 'خطای غیرمنتظره سامانه.',
-      requestId: '',
+    const candidate = payload && typeof payload === 'object' ? payload as Partial<ApiErrorEnvelope> : {};
+    const failure: ApiErrorEnvelope = {
+      code: typeof candidate.code === 'string' ? candidate.code : 'INTERNAL_ERROR',
+      message: typeof candidate.message === 'string' ? candidate.message : 'خطای غیرمنتظره سامانه.',
+      requestId: diagnosticId(candidate.requestId) ?? responseRequestId,
       statusCode: response.status,
     };
+    logClientFailure('admin', failure.requestId, 'http', response.status);
     if (response.status === 401 && failure.code === 'AUTH_SESSION_INVALID' && options.token && options.recoverSession !== false && sessionRecovery) {
       if (getSessionRevision() !== sessionRevision) throw new ApiAbortError();
       return replayWithRecoveredSession(freshToken => {
         if (options.signal?.aborted || getSessionRevision() !== sessionRevision) throw new ApiAbortError();
         // Another tab may have revoked even a locally newer token. Recover
         // under the shared lock and retain it through the single exact replay.
-        return apiFetch<T>(path, { ...options, token: freshToken, recoverSession: false });
+        return apiFetch<T>(path, { ...options, headers: { ...options.headers, 'X-Correlation-ID': correlationId }, token: freshToken, recoverSession: false });
       });
     }
     const error = new ApiClientError(failure, response.headers);
@@ -272,5 +292,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   if (options.responseShape === 'raw') return payload as T;
+  if (!payload || typeof payload !== 'object' || !('data' in payload)) {
+    logClientFailure('admin', responseRequestId, 'parse', response.status);
+    throw new ApiNetworkError('پاسخ معتبر از سامانه دریافت نشد؛ نتیجهٔ ثبت را پیگیری کنید.', responseRequestId, 'parse');
+  }
   return payload as ApiSuccess<T>;
 }
