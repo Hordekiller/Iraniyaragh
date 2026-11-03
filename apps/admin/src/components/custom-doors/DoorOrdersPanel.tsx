@@ -361,7 +361,7 @@ function DoorOrdersContent({ id, report }: { id?: string; report: boolean }) {
               <Box key={index} sx={{ py: 2 }}>
                 <Typography fontWeight={800}>
                   {index + 1}.{" "}
-                  {line.model.type === "FORMLEX" ? "فرملکس" : "دکوفیکس"} —{" "}
+                  {line.model.type === "FORMLEX" ? "فریم‌لس" : "دکوفیکس"} —{" "}
                   {line.title}
                 </Typography>
                 <Typography variant="body2">

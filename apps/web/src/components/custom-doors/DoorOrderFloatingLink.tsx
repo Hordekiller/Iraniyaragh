@@ -42,7 +42,7 @@ export function DoorOrderFloatingLink() {
       className={`custom-door-floating ${product ? "custom-door-floating-product" : ""}`}
     >
       <DoorOpen size={21} aria-hidden="true" />
-      <span>سفارش ساخت درب</span>
+      <span>سفارش درب فریم‌لس و دکوفیکس</span>
     </Link>
   );
 }

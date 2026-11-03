@@ -29,7 +29,7 @@ export function DoorSummary({
             <div className="flex flex-wrap justify-between gap-2">
               <h3 className="font-black">
                 {index + 1}.{" "}
-                {line.model.type === "FORMLEX" ? "فرملکس" : "دکوفیکس"} —{" "}
+                {line.model.type === "FORMLEX" ? "فریم‌لس" : "دکوفیکس"} —{" "}
                 {line.title}
               </h3>
               <span>{line.quantity.toLocaleString("fa-IR")} عدد</span>

@@ -71,7 +71,7 @@ test("floating link clears site navigation and the live product purchase/menu do
   page,
 }, testInfo) => {
   await page.goto("/");
-  const link = page.getByRole("link", { name: "سفارش ساخت درب" });
+  const link = page.getByRole("link", { name: "سفارش درب فریم‌لس و دکوفیکس" });
   await expect(link).toBeVisible();
   const mobile = (page.viewportSize()?.width ?? 1440) < 1024;
   if (mobile) {
@@ -106,7 +106,7 @@ test("floating link clears site navigation and the live product purchase/menu do
   });
   await link.click();
   await expect(
-    page.getByRole("heading", { name: "سفارش آنلاین درب فرملکس و دکوفیکس" }),
+    page.getByRole("heading", { name: "سفارش آنلاین درب فریم‌لس و دکوفیکس" }),
   ).toBeVisible();
   await expect(link).toHaveCount(0);
   expect(

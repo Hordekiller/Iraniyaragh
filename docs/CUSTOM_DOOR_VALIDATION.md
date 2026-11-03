@@ -1,7 +1,7 @@
 # شواهد تحویل سفارش ساخت درب
 
-تاریخ بررسی نهایی: ۲۰۲۶-۱۱-۰۳. شاخه مبنا `main`؛ تغییرات به‌صورت working tree
-قابل بازبینی هستند و در این مأموریت commit یا انتشار production انجام نشده است.
+تاریخ بررسی نهایی: ۲۰۲۶-۱۱-۰۳. شاخه مبنا `main`؛ کد در درخواست تغییرات [#497](https://github.com/Hordekiller/Iraniyaragh/pull/497)
+ثبت شده است؛ شواهد انتشار VPS جداگانه در ادامه ثبت می‌شوند.
 
 ## نتیجه قابلیت‌ها
 
@@ -24,9 +24,9 @@
 
 | کنترل | دستور / محیط | نتیجه |
 | --- | --- | --- |
-| Unit / HTTP / OpenAPI API | Vitest از `pnpm test` | ۱۸۷۸ تست موفق |
+| Unit / HTTP / OpenAPI API | Vitest از `pnpm test` | ۱۹۰۳ تست موفق |
 | Unit پنل مدیریت | Vitest از `pnpm test` | ۹۹۴ تست موفق |
-| Unit سایت | Vitest از `pnpm test` | ۴۷۴ تست موفق |
+| Unit سایت | Vitest از `pnpm test` | ۴۷۹ تست موفق |
 | Node / Prisma / RBAC | `node --test prisma/*.test.mjs` با `RBAC_BASELINE_INTEGRATION=true` و DB تست جدا | ۵۹ تست موفق؛ بدون skip در اجرای opt-in |
 | Integration کل API | `pnpm --filter @iranyaragh/api test:integration`، PostgreSQL واقعی UTC و Redis جدا | ۴۹ فایل و ۵۰۵ تست موفق |
 | E2E و a11y جدید | `playwright.custom-doors.config.ts` | ۶ تست موفق؛ سه اندازه، عدم overflow و صفر violation در بررسی axe صفحه پیکربندی |
@@ -55,6 +55,12 @@ integration انجام شده است. کل suite قدیمی E2E که به nginx/
 در DB تست، timezone=UTC دیتابیس تست و timeout انبارگردانی تحت بار هم‌زمان. برای
 سبز شدن تست، منطق مالی یا کنترل دسترسی ضعیف نشد و کد نامرتبط انبارگردانی/گزارش
 تغییر نکرد. اجرای کامل integration نهایی موفق بود.
+
+کنترل پوشش اجباری CI نیز با `CI=true` اجرا شد: API شامل ۱۹۰۳ تست با پوشش
+توابع ۷۰٫۱۳٪ و شاخه‌ها ۶۱٫۱۳٪؛ سایت شامل ۴۷۹ تست با پوشش شاخه‌ها ۷۶٫۶۳٪.
+آستانه‌های موجود مخزن تغییر نکرده‌اند. تست‌های اضافه، retry ثابت پس از reload،
+پاسخ نامطمئن، رد قطعی ثبت، نسخه تعرفه، مجوزهای ترکیبی و کنترل مالکیت پیش از
+آغاز پرداخت را پوشش می‌دهند.
 
 ## وابستگی‌های داده و پذیرش واقعی
 

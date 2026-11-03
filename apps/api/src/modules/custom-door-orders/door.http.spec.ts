@@ -1,5 +1,11 @@
 import "reflect-metadata";
-import { Module, ValidationPipe, VersioningType } from "@nestjs/common";
+import {
+  Module,
+  ValidationPipe,
+  VersioningType,
+  StreamableFile,
+  NotFoundException,
+} from "@nestjs/common";
 import { APP_GUARD, NestFactory, type INestApplication } from "@nestjs/core";
 import {
   beforeAll,
@@ -49,6 +55,8 @@ const principals = {
     "orders.read",
     "orders.manage",
     "pricing.write",
+    "pricing.read",
+    "reports.read",
     "inventory.adjust",
     "catalog.read",
     "catalog.write",
@@ -74,9 +82,44 @@ const orders = {
   approveQuote: vi.fn(async () => ({ id: "test-order" })),
   reserve: vi.fn(async () => ({ id: "test-order" })),
   preview: vi.fn(async () => ({ total: null })),
-  detail: vi.fn(),
+  detail: vi.fn(async () => ({ id: "test-order" })),
   list: vi.fn(async () => ({ items: [], count: 0 })),
   message: vi.fn(),
+  submitDraft: vi.fn(),
+  accept: vi.fn(),
+  transition: vi.fn(),
+  technical: vi.fn(),
+  materialAction: vi.fn(),
+  report: vi.fn(async () => ({ count: 0 })),
+  invoiceAddresses: vi.fn(async () => []),
+  prepareInvoiceSource: vi.fn(async () => ({ commerceVersion: 7 })),
+};
+const catalogPort = {
+  catalog: vi.fn(async () => ({ models: [], materials: [] })),
+  floatingVisibility: vi.fn(async () => ({ enabled: true })),
+  writeModel: vi.fn(async () => "test-model"),
+  writeMaterial: vi.fn(async () => "test-material"),
+  visibility: vi.fn(),
+  stockUnit: vi.fn(),
+  notification: vi.fn(),
+  notificationSettings: vi.fn(async () => ({ version: 1, templateId: null })),
+  history: vi.fn(async () => []),
+};
+const filePort = {
+  upload: vi.fn(async () => ({ id: "test-file" })),
+  download: vi.fn(
+    async () =>
+      new StreamableFile(Buffer.from("TEST ONLY reference"), {
+        type: "application/pdf",
+        disposition: 'attachment; filename="test.pdf"',
+      }),
+  ),
+};
+const paymentPort = {
+  initiate: vi.fn(async () => ({ data: { payment: { status: "PENDING" } } })),
+};
+const invoicePort = {
+  fromOrder: vi.fn(async () => ({ draft: { id: "test-draft" } })),
 };
 const limits = { enforce: vi.fn(async () => ({ allowed: true })) };
 @Module({
@@ -90,14 +133,11 @@ const limits = { enforce: vi.fn(async () => ({ allowed: true })) };
     { provide: DoorOrdersService, useValue: orders },
     {
       provide: DoorCatalogService,
-      useValue: {
-        catalog: vi.fn(async () => ({ models: [], materials: [] })),
-        floatingVisibility: vi.fn(async () => ({ enabled: true })),
-      },
+      useValue: catalogPort,
     },
-    { provide: DoorFilesService, useValue: {} },
-    { provide: PaymentInitiationService, useValue: {} },
-    { provide: InvoiceDraftService, useValue: {} },
+    { provide: DoorFilesService, useValue: filePort },
+    { provide: PaymentInitiationService, useValue: paymentPort },
+    { provide: InvoiceDraftService, useValue: invoicePort },
     { provide: RateLimitService, useValue: limits },
     {
       provide: APP_GUARD,
@@ -270,5 +310,291 @@ describe("Custom door HTTP authorization and input boundary", () => {
         context: "ip",
       }),
     );
+  });
+  const send = (path: string, token: string, method = "GET", body?: unknown) =>
+    fetch(`${base}/api/v1/${path}`, {
+      method,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+        "idempotency-key": "test-http-command",
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  it("passes customer identity and versions through all customer commands and checks ownership before payment", async () => {
+    for (const path of [
+      "custom-door-orders?offset=2&limit=5",
+      "custom-door-orders/test-order",
+    ])
+      expect((await send(path, "customer")).status).toBe(200);
+    expect(orders.list).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "test-user", staff: false }),
+      expect.objectContaining({ offset: 2, limit: 5 }),
+    );
+    expect((await post("custom-door-orders/drafts", "customer")).status).toBe(
+      200,
+    );
+    expect(orders.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ staff: false }),
+      expect.anything(),
+      "test-key-123",
+      true,
+    );
+    for (const action of ["submit", "accept"])
+      expect(
+        (
+          await post(`custom-door-orders/test-order/${action}`, "customer", {
+            expectedVersion: 3,
+          })
+        ).status,
+      ).toBe(200);
+    expect(orders.accept).toHaveBeenCalledWith(
+      expect.objectContaining({ staff: false }),
+      "test-order",
+      3,
+      "test-key-123",
+    );
+    expect(
+      (
+        await post("custom-door-orders/test-order/messages", "customer", {
+          message: "اطلاعات تکمیلی آزمون",
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await post("custom-door-orders/test-order/cancel", "customer", {
+          expectedVersion: 3,
+          status: "IN_PRODUCTION",
+          reason: "انصراف آزمون",
+        })
+      ).status,
+    ).toBe(200);
+    expect(orders.transition).toHaveBeenCalledWith(
+      expect.anything(),
+      "test-order",
+      expect.objectContaining({ status: "CANCELLED" }),
+      "test-key-123",
+    );
+    orders.detail.mockRejectedValueOnce(
+      new NotFoundException("TEST ONLY not owned"),
+    );
+    expect(
+      (
+        await post(
+          "custom-door-orders/test-order/payment",
+          "customer",
+          undefined,
+        )
+      ).status,
+    ).toBe(404);
+    expect(paymentPort.initiate).not.toHaveBeenCalled();
+    expect(
+      (
+        await post(
+          "custom-door-orders/test-order/payment",
+          "customer",
+          undefined,
+        )
+      ).status,
+    ).toBe(200);
+    expect(paymentPort.initiate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "test-user",
+        orderId: "test-order",
+        idempotencyKey: "test-key-123",
+      }),
+    );
+  });
+  it("validates nested catalog configurations and protects settings against customers and read-only staff", async () => {
+    const f = pricingFixture();
+    const model = {
+      code: f.model.code,
+      title: f.model.title,
+      type: f.model.type,
+      active: true,
+      expectedVersion: 0,
+      imageMediaId: null,
+      configuration: {
+        ...f.cfg,
+        incompatible: [
+          { materialIds: ["glass", "profile"], reason: "TEST ONLY" },
+        ],
+        additional: [{ title: "TEST ONLY", amount: "10" }],
+      },
+    };
+    const material = {
+      code: f.materials[0].code,
+      title: f.materials[0].title,
+      category: "GLASS",
+      active: true,
+      expectedVersion: 0,
+      variantId: null,
+      configuration: f.materials[0].configuration,
+    };
+    for (const [path, body] of [
+      ["models", model],
+      ["materials", material],
+      ["visibility", { expectedVersion: 0, enabled: false }],
+      ["stock-unit", { variantId: "test-sku", unit: "MM2" }],
+      ["notification", { expectedVersion: 0, templateId: 123 }],
+    ] as const) {
+      for (const token of ["customer", "reader"])
+        expect(
+          (await send(`custom-doors/admin/${path}`, token, "PUT", body)).status,
+        ).toBe(403);
+      expect(
+        (await send(`custom-doors/admin/${path}`, "staff", "PUT", body)).status,
+      ).toBe(200);
+    }
+    expect(catalogPort.writeModel).toHaveBeenCalledWith(
+      "test-user",
+      expect.any(String),
+      expect.objectContaining({
+        configuration: expect.objectContaining({ deposit: f.cfg.deposit }),
+      }),
+    );
+    expect(
+      (
+        await send("custom-doors/admin/models", "staff", "PUT", {
+          ...model,
+          configuration: {
+            ...model.configuration,
+            labor: { fixed: 0.1, perSquareMeter: "0" },
+          },
+        })
+      ).status,
+    ).toBe(400);
+    for (const path of [
+      "catalog",
+      "notification",
+      "history/MODEL/test-model",
+      "report",
+      "orders?limit=10",
+      "orders/test-order",
+      "orders/test-order/invoice-addresses",
+    ])
+      expect((await send(`custom-doors/admin/${path}`, "staff")).status).toBe(
+        200,
+      );
+    expect((await fetch(`${base}/api/v1/custom-doors/visibility`)).status).toBe(
+      200,
+    );
+  });
+  it("protects production consumption, release and invoice bridging with combined permissions", async () => {
+    const transition = {
+      expectedVersion: 4,
+      status: "COMPLETED",
+      reason: "TEST ONLY تأیید",
+      delivery: {
+        recipient: "TEST ONLY",
+        address: "نشانی ساختگی آزمون",
+        tracking: "TEST",
+      },
+    };
+    for (const action of [
+      "technical",
+      "status",
+      "messages",
+      "invoice-source",
+      "materials/test-bom/consume",
+      "materials/test-bom/release",
+    ]) {
+      const body =
+        action === "messages"
+          ? { message: "پیام آزمون" }
+          : action === "invoice-source"
+            ? { expectedVersion: 4, addressId: "test-address" }
+            : transition;
+      expect(
+        (
+          await post(
+            `custom-doors/admin/orders/test-order/${action}`,
+            "customer",
+            body,
+          )
+        ).status,
+      ).toBe(403);
+      expect(
+        (
+          await post(
+            `custom-doors/admin/orders/test-order/${action}`,
+            "staff",
+            body,
+          )
+        ).status,
+      ).toBe(200);
+    }
+    for (const action of [
+      "invoice-source",
+      "materials/test-bom/consume",
+      "materials/test-bom/release",
+    ]) {
+      const body =
+        action === "invoice-source"
+          ? { expectedVersion: 4, addressId: "test-address" }
+          : transition;
+      expect(
+        (
+          await post(
+            `custom-doors/admin/orders/test-order/${action}`,
+            "manager",
+            body,
+          )
+        ).status,
+      ).toBe(403);
+    }
+    expect(invoicePort.fromOrder).toHaveBeenCalledWith(
+      "test-user",
+      expect.any(String),
+      "test-order",
+      { expectedOrderVersion: 7, note: null },
+      "test-key-123",
+    );
+    expect(orders.materialAction).toHaveBeenCalledWith(
+      expect.objectContaining({ staff: true }),
+      "test-order",
+      "test-bom",
+      "consume",
+      4,
+      transition.reason,
+      "test-key-123",
+    );
+  });
+  it("serves private references through authenticated endpoints with no-store", async () => {
+    const form = new FormData();
+    form.append(
+      "file",
+      new Blob(["TEST ONLY reference"], { type: "application/pdf" }),
+      "test.pdf",
+    );
+    const uploaded = await fetch(
+      `${base}/api/v1/custom-door-orders/test-order/files`,
+      {
+        method: "POST",
+        headers: { authorization: "Bearer customer" },
+        body: form,
+      },
+    );
+    expect(uploaded.status).toBe(200);
+    expect(filePort.upload).toHaveBeenCalledWith(
+      expect.objectContaining({ staff: false }),
+      "test-order",
+      expect.objectContaining({ originalname: "test.pdf" }),
+    );
+    for (const [prefix, token] of [
+      ["custom-door-orders", "customer"],
+      ["custom-doors/admin/orders", "staff"],
+    ]) {
+      const response = await send(
+        `${prefix}/test-order/files/test-file`,
+        token,
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get("cache-control")).toContain("no-store");
+      expect(response.headers.get("content-disposition")).toContain(
+        "attachment",
+      );
+    }
   });
 });

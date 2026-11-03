@@ -367,7 +367,7 @@ function Configurator() {
           >
             سفارش آنلاین درب
             <br />
-            فرملکس و دکوفیکس
+            فریم‌لس و دکوفیکس
           </h1>
           <p className="mt-5 max-w-xl text-sm leading-8 text-slate-300">
             مدل و متریال ثبت‌شده را انتخاب کنید، ابعاد دلخواه را وارد کنید و چند
@@ -392,7 +392,7 @@ function Configurator() {
             تصویر هر مدل پس از تأیید ایرانی یراق نمایش داده می‌شود.
           </p>
           <p className="text-xs text-slate-400">
-            فرملکس · دکوفیکس · ساخت با ابعاد سفارشی
+            فریم‌لس · دکوفیکس · ساخت با ابعاد سفارشی
           </p>
         </div>
       </section>
@@ -497,7 +497,7 @@ function Configurator() {
                         onClick={() => setType(t)}
                         className={`${doorButton} ${type === t ? "border-orange-600 bg-orange-50 text-orange-900" : ""}`}
                       >
-                        {t === "FORMLEX" ? "فرملکس" : "دکوفیکس"}
+                        {t === "FORMLEX" ? "فریم‌لس" : "دکوفیکس"}
                       </button>
                     ))}
                   </div>
@@ -545,7 +545,7 @@ function Configurator() {
                       className="mt-5 rounded-xl bg-slate-50 p-5 text-sm leading-8 text-slate-600"
                     >
                       مدل تأییدشده‌ای برای{" "}
-                      {type === "FORMLEX" ? "فرملکس" : "دکوفیکس"} منتشر نشده
+                      {type === "FORMLEX" ? "فریم‌لس" : "دکوفیکس"} منتشر نشده
                       است. پس از ثبت اطلاعات فنی و تعرفه توسط ایرانی یراق،
                       مدل‌ها در این بخش در دسترس خواهند بود.
                     </p>

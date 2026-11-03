@@ -480,7 +480,7 @@ function DoorModelEditor({
               }
               fullWidth
             >
-              <MenuItem value="FORMLEX">فرملکس</MenuItem>
+              <MenuItem value="FORMLEX">فریم‌لس</MenuItem>
               <MenuItem value="DECOFIX">دکوفیکس</MenuItem>
             </TextField>
           </Stack>
