@@ -29,7 +29,7 @@ const quoteLabels = { CURRENT: 'قیمت‌گذاری ثبت‌شده', POLICY_R
 const line = () => ({ key: randomUuid(), variant: null as StaffOrderOption | null, quantity: '1', discount: '0' });
 type Form = { customer: StaffOrderOption | null; address: CheckoutAddress; lines: ReturnType<typeof line>[]; globalDiscount: string; shippingMethodCode: string; note: string };
 function form(draft?: InvoiceDraft): Form { return draft ? { customer: { id: draft.customerId, label: draft.buyerLabel, detail: null }, address: draft.address,
-  lines: draft.lines.map(item => ({ key: randomUuid(), variant: { id: item.variantId, label: item.title, detail: item.sku }, quantity: String(item.quantity), discount: item.discount.amount })),
+  lines: draft.lines.map(item => ({ key: randomUuid(), variant: { id: item.variantId ?? 'door-production-service', label: item.title, detail: item.sku }, quantity: String(item.quantity), discount: item.discount.amount })),
   globalDiscount: draft.globalDiscount.amount, shippingMethodCode: draft.shipping.code, note: draft.note ?? '' } :
   { customer: null, address: { ...emptyAddress }, lines: [line()], globalDiscount: '0', shippingMethodCode: '', note: '' }; }
 export function InvoiceDraftPage({ id }: { id?: string }) {
@@ -130,8 +130,9 @@ function DraftWorkspace({ id, manage }: { id?: string; manage: boolean }) {
       {draft.quoteExpiresAt && <Typography>انقضای قیمت‌گذاری: {new Date(draft.quoteExpiresAt).toLocaleString('fa-IR')}</Typography>}
       {manage && draft.state === 'DRAFT' && <Button disabled={locked || serverChanged} onClick={() => void run({ kind: 'requote', id: draft.id, body: { expectedVersion: draft.version } })}>تأیید بازقیمت‌گذاری با قیمت و سیاست فعلی</Button>}
     </Stack></Paper>}
+    {draft?.doorQuoteId && <Alert severity="info">این پیش‌فاکتور از نسخه قطعی سفارش ساخت درب تهیه شده است؛ اصلاح مبلغ از مسیر سفارش ساخت انجام می‌شود.</Alert>}
     {draft && <InvoiceIssue draft={draft} locked={busy || loading || !readReady || uncertain} onLockChange={setIssuing} onIssued={() => load(true)} />}
-    {(manage || draft) && <Paper component="form" onSubmit={submit} sx={{ p: 3 }}><Stack spacing={2}>
+    {(manage || draft) && !draft?.doorQuoteId && <Paper component="form" onSubmit={submit} sx={{ p: 3 }}><Stack spacing={2}>
       <Typography variant="h6">{draft ? 'ویرایش پیش‌نویس' : 'پیش‌فاکتور جدید'}</Typography>
       <StaffOrderOptionPicker searchOptions={searchInvoiceOptions} kind="customer" label="مشتری" value={fields.customer} onChange={value => patch('customer', value)} disabled={locked || Boolean(draft)} required />
       {fields.lines.map((item, index) => <Stack key={item.key} spacing={1}><StaffOrderOptionPicker searchOptions={searchInvoiceOptions} kind="variant" label={`کالای ${index + 1}`} value={item.variant}

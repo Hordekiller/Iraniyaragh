@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Outlet, useLocation, useSearchParams } from 'react-router-dom'
+import { DoorOrderFloatingLink } from '../custom-doors/DoorOrderFloatingLink'
 import { TopBar } from './TopBar'
 import { SiteHeader } from './SiteHeader'
 import { MobileBottomNav } from './MobileBottomNav'
@@ -67,6 +68,7 @@ export function AppLayout({ children, serverMetadata = false }: { children?: Rea
         onOpenSearch={() => setShowSearch(true)}
         onOpenLogin={auth.open}
       />
+      <DoorOrderFloatingLink />
       <LoginDialog open={loginOpen} onClose={auth.close} />
     </>
   )

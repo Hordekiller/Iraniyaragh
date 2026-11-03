@@ -14,7 +14,7 @@ const summary = { id: text, version: integer, state: { type: 'string', enum: ['D
   source: { type: 'string', enum: ['CATALOG', 'ORDER'] } as SchemaObject, customerId: text, buyerLabel: text, sourceOrderId: nullableText, createdAt: date, updatedAt: date };
 const address = object({ provinceCode: text, city: text, address: text, postalCode: text, recipient: text, mobile: text });
 const draft = object({ ...summary, sourceOrderVersion: { ...integer, nullable: true }, sourceTermsMatch: { type: 'boolean', nullable: true }, address, note: nullableText,
-  lines: { type: 'array', minItems: 1, maxItems: 50, items: object({ variantId: text, sku: text, title: text, quantity: { type: 'integer', minimum: 1, maximum: 1000 }, unitPrice: money, discount: money, subtotal: money }) },
+  lines: { type: 'array', minItems: 1, maxItems: 50, items: object({ variantId: { ...text, nullable: true }, sku: text, title: text, quantity: { type: 'integer', minimum: 1, maximum: 1000 }, unitPrice: money, discount: money, subtotal: money }) },
   globalDiscount: money, shipping: object({ code: text, title: text, amount: money, policyRevision: text }), pricePolicyRevision: text,
   quoteExpiresAt: { ...date, nullable: true }, policyVersion: { type: 'integer', minimum: 1, nullable: true }, quote: { ...quote, nullable: true },
   quotationStatus: { type: 'string', enum: ['CURRENT', 'POLICY_REQUIRED', 'POLICY_CHANGED', 'PRICE_EXPIRED', 'SOURCE_CHANGED'] } });

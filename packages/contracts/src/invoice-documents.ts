@@ -9,7 +9,7 @@ export type InvoiceDocument = {
   buyerLabel: string; address: CheckoutAddress; note: string | null;
   shipping: { code: string; title: string; amount: Money; policyRevision: string };
   pricePolicyRevision: string; quote: InvoiceQuote;
-  lines: { orderItemId: string; variantId: string; sku: string; title: string; quantity: number; unitPrice: Money;
+  lines: { orderItemId: string | null; variantId: string | null; sku: string; title: string; quantity: number; unitPrice: Money;
     discount: Money; netAmount: Money; tax: Money; total: Money }[];
 };
 export type InvoiceDocumentSummary = Pick<InvoiceDocument, 'id' | 'number' | 'orderId' | 'customerId' | 'buyerLabel' | 'issuedAt'> & { total: Money };

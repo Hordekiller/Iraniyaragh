@@ -12,6 +12,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { ORDER_STATE_CONFLICT_ERROR, recordTransition } from '../../common/state-machine';
 import { isPrismaSerializableContention, withSerializableRetry } from '../../common/serializable-retry';
+import { settleDoorPaymentIn } from '../custom-door-orders/door-payment-settlement';
 import { AuditLogService } from '../audit/audit-log.service';
 import { InventoryService } from '../inventory/inventory.service';
 import {
@@ -47,6 +48,7 @@ type PaymentWithOrder = {
     id: string;
     status: string;
     grandTotal: bigint;
+    customDoorOrder?: { id: string } | null;
   };
 };
 
@@ -98,7 +100,7 @@ export class PaymentVerificationService {
 
     const payment = await this.prisma.payment.findFirst({
       where: { authority },
-      include: { order: { select: { id: true, status: true, grandTotal: true } } },
+      include: { order: { select: { id: true, status: true, grandTotal: true, customDoorOrder: { select: { id: true } } } } },
     });
     if (!payment) {
       throw new NotFoundException({
@@ -111,7 +113,7 @@ export class PaymentVerificationService {
     if (payment.status !== 'PENDING') {
       // Already settled (PAID -> idempotent replay) or terminal (FAILED/CANCELLED
       // -> stale callback replayed as-is, never resurrected).
-      return { data: { verification: this.asResponse(this.replayOutcome(payment)) } };
+      return { data: { verification: this.asResponse(this.replayOutcome(payment), !!payment.order.customDoorOrder) } };
     }
 
     if (input.status === 'NOK') {
@@ -119,7 +121,7 @@ export class PaymentVerificationService {
       // authority was not paid, nor suppress a later authoritative OK callback.
       // Reconciliation may verify server-side; the browser return alone may not.
       const outcome = await this.recordUnconfirmed(payment, input.requestId);
-      return { data: { verification: this.asResponse(outcome) } };
+      return { data: { verification: this.asResponse(outcome, !!payment.order.customDoorOrder) } };
     }
 
     // Provider call strictly outside any database transaction.
@@ -132,11 +134,11 @@ export class PaymentVerificationService {
 
     if (verifyResult.status === 'verified') {
       const outcome = await this.applyVerified(payment, verifyResult.referenceId, input.requestId);
-      return { data: { verification: this.asResponse(outcome) } };
+      return { data: { verification: this.asResponse(outcome, !!payment.order.customDoorOrder) } };
     }
     if (verifyResult.status === 'failed') {
       const outcome = await this.markNotPaid(payment, input.requestId);
-      return { data: { verification: this.asResponse(outcome) } };
+      return { data: { verification: this.asResponse(outcome, !!payment.order.customDoorOrder) } };
     }
     if (verifyResult.status === 'unavailable') {
       // Nothing is persisted; the gateway may retry the callback and the payment
@@ -161,7 +163,7 @@ export class PaymentVerificationService {
     // money, so it must NOT become a definitive FAILED. The payment stays PENDING
     // and a reconciliation record is emitted instead.
     const outcome = await this.recordUnconfirmed(payment, input.requestId);
-    return { data: { verification: this.asResponse(outcome) } };
+    return { data: { verification: this.asResponse(outcome, !!payment.order.customDoorOrder) } };
   }
 
   private assertPaymentBelongsToGateway(payment: PaymentWithOrder): void {
@@ -224,7 +226,7 @@ export class PaymentVerificationService {
 
             const settled = await tx.payment.findUnique({
               where: { id: payment.id },
-              include: { order: { select: { id: true, status: true, grandTotal: true } } },
+              include: { order: { select: { id: true, status: true, grandTotal: true, customDoorOrder: { select: { id: true } } } } },
             });
             if (!settled) {
               throw new NotFoundException({
@@ -240,6 +242,15 @@ export class PaymentVerificationService {
                 code: 'PAYMENT_STATE_CONFLICT',
                 message: 'Payment already has a terminal outcome.',
               });
+            }
+            if (settled.order.customDoorOrder) {
+              const result = await settleDoorPaymentIn(tx, settled, referenceId, requestId, this.auditLog);
+              return {
+                paymentId: settled.id, paymentStatus: 'PAID' as const, amount: settled.amount,
+                authority: settled.authority ?? '', referenceId,
+                outcome: result.cancelled ? 'VERIFIED_AFTER_CANCELLED' as const : 'VERIFIED' as const,
+                orderId, orderStatus: this.orderStatusOf(result.orderStatus), consumedReservations: 0, fulfillmentId: null,
+              };
             }
             if (settled.amount !== settled.order.grandTotal) {
               throw new ConflictException({
@@ -441,7 +452,7 @@ export class PaymentVerificationService {
             await this.acquireOrderLock(tx, orderId);
             const current = await tx.payment.findUnique({
               where: { id: payment.id },
-              include: { order: { select: { id: true, status: true, grandTotal: true } } },
+              include: { order: { select: { id: true, status: true, grandTotal: true, customDoorOrder: { select: { id: true } } } } },
             });
             if (!current) {
               throw new NotFoundException({
@@ -516,7 +527,7 @@ export class PaymentVerificationService {
           async (tx) => {
             const current = await tx.payment.findUnique({
               where: { id: payment.id },
-              include: { order: { select: { id: true, status: true, grandTotal: true } } },
+              include: { order: { select: { id: true, status: true, grandTotal: true, customDoorOrder: { select: { id: true } } } } },
             });
             if (!current) {
               throw new NotFoundException({
@@ -594,8 +605,9 @@ export class PaymentVerificationService {
     return 'PENDING_PAYMENT';
   }
 
-  private asResponse(outcome: VerificationOutcome): PaymentVerificationResponse['data']['verification'] {
+  private asResponse(outcome: VerificationOutcome, customDoor = false): PaymentVerificationResponse['data']['verification'] {
     return {
+      ...(customDoor ? { orderKind: 'CUSTOM_DOOR' as const } : {}),
       paymentId: outcome.paymentId,
       status: outcome.paymentStatus,
       provider: this.gateway.providerName,

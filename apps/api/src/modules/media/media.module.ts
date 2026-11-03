@@ -35,6 +35,6 @@ import { PRODUCT_MEDIA_STORAGE } from './storage.port';
       useFactory: (config: ConfigService<EnvironmentVariables, true>) => new S3ProductMediaStorage(config),
     },
   ],
-  exports: [MediaService, ProductMediaImageProcessor, ProductMediaCleanupService, PRODUCT_MEDIA_PROCESSING_QUEUE, PRODUCT_MEDIA_STORAGE],
+  exports: [PRODUCT_MEDIA_MALWARE_SCANNER, MediaService, ProductMediaImageProcessor, ProductMediaCleanupService, PRODUCT_MEDIA_PROCESSING_QUEUE, PRODUCT_MEDIA_STORAGE],
 })
 export class MediaModule {}

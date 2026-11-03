@@ -11,6 +11,8 @@ import { ROUTE_PATHS } from './lib/routes'
 const CategoriesPage = lazy(() => import('./views/CategoriesPage').then(module => ({ default: module.CategoriesPage })))
 const CategoryPage = lazy(() => import('./views/CategoryPage').then(module => ({ default: module.CategoryPage })))
 const ProductPage = lazy(() => import('./views/ProductPage').then(module => ({ default: module.ProductPage })))
+const CustomDoorsPage = lazy(() => import('./views/CustomDoorsPage').then(module => ({ default: module.CustomDoorsPage })))
+const AccountCustomDoorsPage = lazy(() => import('./views/AccountCustomDoorsPage').then(module => ({ default: module.AccountCustomDoorsPage })))
 const SearchPage = lazy(() => import('./views/SearchPage').then(module => ({ default: module.SearchPage })))
 const BestsellersPage = lazy(() => import('./views/BestsellersPage').then(module => ({ default: module.BestsellersPage })))
 const CartPage = lazy(() => import('./views/CartPage').then(module => ({ default: module.CartPage })))
@@ -50,6 +52,9 @@ export default function App() {
                       <Route path={ROUTE_PATHS.categories} element={<CategoriesPage />} />
                       <Route path={ROUTE_PATHS.category} element={<CategoryPage />} />
                       <Route path={ROUTE_PATHS.product} element={<ProductPage />} />
+                      <Route path={ROUTE_PATHS.customDoors} element={<CustomDoorsPage />} />
+                      <Route path={ROUTE_PATHS.myCustomDoors} element={<AccountCustomDoorsPage />} />
+                      <Route path={ROUTE_PATHS.customDoorOrder} element={<AccountCustomDoorsPage />} />
                       <Route path={ROUTE_PATHS.search} element={<SearchPage />} />
                       <Route path={ROUTE_PATHS.bestsellers} element={<BestsellersPage />} />
                       <Route path={ROUTE_PATHS.cart} element={<CartPage />} />

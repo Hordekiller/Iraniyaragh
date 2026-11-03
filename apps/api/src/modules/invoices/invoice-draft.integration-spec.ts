@@ -22,7 +22,7 @@ describe.sequential('Independent invoice draft PostgreSQL financial/security acc
   const input = (): InvoiceDraftCreate => ({ customerId, address, lines: [{ variantId, quantity: 2, discount: '0' }], globalDiscount: '0', shippingMethodCode: 'PICKUP', note: null });
   const code = (value: string) => expect.objectContaining({ response: expect.objectContaining({ code: value }) });
   const create = (body = input(), commandKey = key()) => service.create(actorId, requestId, body, commandKey);
-  const editInput = (draft: Awaited<ReturnType<typeof create>>['draft']) => ({ address: draft.address, lines: draft.lines.map(line => ({ variantId: line.variantId, quantity: line.quantity, discount: line.discount.amount })),
+  const editInput = (draft: Awaited<ReturnType<typeof create>>['draft']) => ({ address: draft.address, lines: draft.lines.map(line => ({ variantId: line.variantId ?? (() => { throw new Error('This fixture is a catalog SKU line'); })(), quantity: line.quantity, discount: line.discount.amount })),
     globalDiscount: draft.globalDiscount.amount, shippingMethodCode: draft.shipping.code, note: draft.note, expectedVersion: draft.version });
   async function clear() {
     assertIsolatedTestDatabase({ databaseUrl: process.env.DATABASE_URL, nodeEnvironment: process.env.NODE_ENV });

@@ -90,7 +90,7 @@ export class InvoiceDocumentService {
           buyerLabel: row.buyerLabel, address: draft.address, note: row.note, shipping: draft.shipping, pricePolicyRevision: row.pricePolicyRevision,
           quote: draft.quote, lines: draft.lines.map((line, index) => {
             const original = order.items[index]; const parts = draft.quote!.lines[index];
-            return { orderItemId: original.id, variantId: line.variantId, sku: line.sku, title: line.title, quantity: line.quantity,
+            return { orderItemId: row.doorQuoteId ? null : original.id, variantId: line.variantId, sku: line.sku, title: line.title, quantity: line.quantity,
               unitPrice: line.unitPrice, discount: parts.discount, netAmount: parts.netAmount, tax: parts.tax, total: parts.total };
           }) };
         const stored = await tx.invoiceDocument.create({ data: { id, draftId, draftVersion: document.draftVersion, orderId: order.id, orderVersion: order.version,

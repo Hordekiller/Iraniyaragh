@@ -9,6 +9,7 @@ export type RequestOptions = {
   baseUrl?: string;
   accessToken?: string;
   json?: unknown;
+  formData?: FormData;
   method?: 'DELETE' | 'GET' | 'PATCH' | 'POST' | 'PUT';
   timeoutMs?: number;
   /** Send credentialed (cookies) so refresh/CSRF cookies and CORS apply. */
@@ -37,6 +38,7 @@ export async function jsonRequest<T>(
     baseUrl = '',
     accessToken,
     json,
+    formData,
     method = json === undefined ? 'GET' : 'POST',
     timeoutMs = DEFAULT_TIMEOUT_MS,
     credentials = 'same-origin',
@@ -58,7 +60,7 @@ export async function jsonRequest<T>(
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         ...headers,
       },
-      ...(json !== undefined ? { body: JSON.stringify(json) } : {}),
+      ...(formData ? { body: formData } : json !== undefined ? { body: JSON.stringify(json) } : {}),
     });
   } catch (cause) {
     clearTimeout(timer);

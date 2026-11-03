@@ -39,3 +39,5 @@ export * from './invoice-documents';
 export * from './operational-reports';
 export * from './invoice-publication';
 export * from './report-exports';
+
+export * from './custom-doors';

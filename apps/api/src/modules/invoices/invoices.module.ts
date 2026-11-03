@@ -26,6 +26,6 @@ import { INVOICE_PDF_QUEUE } from './invoice-pdf-queue.port';
     { provide: INVOICE_PDF_QUEUE, useExisting: BullMqInvoicePdfQueue },
     InvoicePdfJobService,
   ],
-  exports: [InvoicePolicyService],
+  exports: [InvoicePolicyService, InvoiceDraftService],
 })
 export class InvoicesModule {}

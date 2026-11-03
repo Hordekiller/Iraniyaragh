@@ -17,7 +17,7 @@ import { invoiceAmount, quoteInvoice } from './invoice-quote';
 
 const include = { lines: { orderBy: { ordinal: 'asc' as const } }, policyRevision: true };
 type Row = Prisma.InvoiceDraftGetPayload<{ include: typeof include }>;
-const orderInclude = { items: { orderBy: { ordinal: 'asc' as const } }, customer: true };
+const orderInclude = { customDoorOrder: { include: { quotes: true } }, items: { orderBy: { ordinal: 'asc' as const } }, customer: true };
 type SourceOrder = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
 const money = (amount: bigint) => ({ amount: invoiceAmount(amount.toString()).toString(), currency: 'IRR' as const });
@@ -29,6 +29,7 @@ const priceRevision = 'catalog-sale-price-v1';
 /** Canonical private evidence, also checked by the database deferred draft guard. Never log it. */
 export function invoiceDraftStorage(row: Row) {
   return {
+    ...(row.doorQuoteId ? { doorQuoteId: row.doorQuoteId } : {}),
     id: row.id, version: row.version, state: row.state, source: row.source, customerId: row.customerId, buyerLabel: row.buyerLabel,
     sourceOrderId: row.sourceOrderId, sourceOrderVersion: row.sourceOrderVersion, sourceOrderHash: row.sourceOrderHash,
     address: row.addressSnapshot, note: row.note, globalDiscount: row.globalDiscount.toString(),
@@ -59,13 +60,13 @@ function bounds(row: { lines: { quantity: number; unitPrice: bigint; discount: b
   if (row.globalDiscount > remaining) throw invoiceInvalid('Global discount exceeds the remaining amount.');
   invoiceAmount((remaining - row.globalDiscount + row.shippingAmount).toString());
 }
-function validateAmounts(lines: { variantId: string; quantity: number; unitPrice: bigint; discount: bigint }[], globalDiscount: bigint, shippingAmount: bigint, policy: InvoicePolicyRevision | null) {
+function validateAmounts(lines: { variantId: string | null; quantity: number; unitPrice: bigint; discount: bigint }[], globalDiscount: bigint, shippingAmount: bigint, policy: InvoicePolicyRevision | null) {
   bounds({ lines, globalDiscount, shippingAmount });
-  if (policy) quoteInvoice(policy, { lines: lines.map(line => ({ id: line.variantId, quantity: line.quantity, unitPrice: line.unitPrice.toString(), discount: line.discount.toString() })), globalDiscount: globalDiscount.toString(), shipping: shippingAmount.toString() });
+  if (policy) quoteInvoice(policy, { lines: lines.map(line => ({ id: line.variantId ?? 'door-production-service', quantity: line.quantity, unitPrice: line.unitPrice.toString(), discount: line.discount.toString() })), globalDiscount: globalDiscount.toString(), shipping: shippingAmount.toString() });
 }
 function quotation(row: Row) {
   bounds(row);
-  return row.policyRevision ? quoteInvoice(row.policyRevision, { lines: row.lines.map(line => ({ id: line.variantId, quantity: line.quantity,
+  return row.policyRevision ? quoteInvoice(row.policyRevision, { lines: row.lines.map(line => ({ id: line.variantId ?? 'door-production-service', quantity: line.quantity,
     unitPrice: line.unitPrice.toString(), discount: line.discount.toString() })), globalDiscount: row.globalDiscount.toString(), shipping: row.shippingAmount.toString() }) : null;
 }
 
@@ -135,6 +136,22 @@ export class InvoiceDraftService {
       if (!order) throw new NotFoundException({ code: 'ORDER_NOT_FOUND', message: 'Order does not exist.' });
       if (order.version !== input.expectedOrderVersion) throw conflict('STALE_VERSION', 'Review the current source order.');
       if (order.customer.status !== 'ACTIVE' || ['CANCELLED', 'REFUNDED', 'RETURNED'].includes(order.status)) throw conflict('INVOICE_SOURCE_UNAVAILABLE', 'The source order/customer is not eligible.');
+      if (order.customDoorOrder) {
+        const door = order.customDoorOrder;
+        const q = door.quotes.find(q => q.version === door.currentQuoteVersion);
+        if (!q?.approved || q.total === null || door.customerAcceptedQuoteVersion !== q.version || ['DRAFT','CANCELLED','PENDING_QUOTE_APPROVAL'].includes(door.status)) throw conflict('INVOICE_SOURCE_UNAVAILABLE', 'A final customer-accepted door quote is required.');
+        if (await tx.invoiceDraft.findFirst({ where: { sourceOrderId: orderId, state: 'DRAFT' } })) throw conflict('INVOICE_DRAFT_EXISTS', 'An active draft already exists for this order.');
+        const policy = await this.activePolicy(tx);
+        const address = normalizeCheckoutAddress(order.addressSnapshot as unknown as CheckoutAddress);
+        const row = await tx.invoiceDraft.create({ data: { source: 'ORDER', doorQuoteId: q.id, customerId: order.customerId, buyerLabel: buyerLabel(order.customer),
+          sourceOrderId: orderId, sourceOrderVersion: order.version, sourceOrderHash: sourceHash(order), addressSnapshot: address as unknown as Prisma.InputJsonObject,
+          note: input.note, globalDiscount: 0n, shippingCode: order.shippingMethod, shippingTitle: order.shippingMethodTitle, shippingAmount: 0n,
+          shippingPolicyRevision: order.shippingPolicyRevision, pricePolicyRevision: order.pricePolicyRevision, policyRevisionId: policy?.id ?? null,
+          lines: { create: [{ ordinal: 0, variantId: null, sku: order.number, title: `خدمت ساخت درب — سفارش ${order.number} — پیش‌فاکتور نسخه ${q.version}`, quantity: 1, unitPrice: q.total, discount: 0n }] } }, include });
+        const parts = quotation(row);
+        if (parts && parts.total.amount !== q.total.toString()) throw conflict('INVOICE_REQUOTE_REQUIRED', 'Invoice policy must represent the approved tax-inclusive total without increasing the customer obligation.');
+        return { row, action: 'CREATED' as const, reason: null };
+      }
       if (order.items.length < 1 || order.items.length > 50 || new Set(order.items.map(line => line.variantId)).size !== order.items.length ||
         order.items.some(line => line.quantity < 1 || line.quantity > 1000 || line.total !== line.unitPrice * BigInt(line.quantity)) ||
         order.items.reduce((sum, line) => sum + line.total, 0n) !== order.subtotal || order.subtotal - order.discount + order.shipping !== order.grandTotal)
@@ -159,6 +176,7 @@ export class InvoiceDraftService {
     invoiceDraftId(id); const input = invoiceDraftEdit(raw);
     return this.command(actorId, requestId, `edit:${id}`, input, key, async tx => {
       const current = await this.editable(tx, id, input.expectedVersion);
+      if (current.doorQuoteId) throw conflict('INVOICE_SOURCE_UNSUPPORTED', 'Door invoice terms are changed through the versioned door quotation, never the catalog editor.');
       const currentPolicy = await this.activePolicy(tx);
       if ((currentPolicy?.id ?? null) !== current.policyRevisionId) throw conflict('INVOICE_REQUOTE_REQUIRED', 'Review and explicitly refresh the changed invoice policy.');
       let lines;
@@ -202,7 +220,7 @@ export class InvoiceDraftService {
         sourceOrderVersion = source.version;
       }
       const shipping = current.source === 'CATALOG' ? await this.shipping.quoteForDraft(tx, current.shippingCode, current.addressSnapshot as unknown as CheckoutAddress) : null;
-      const lines = current.source === 'CATALOG' ? await this.catalogLines(tx, current.lines.map(line => ({ variantId: line.variantId, quantity: line.quantity, discount: line.discount.toString() }))) : null;
+      const lines = current.source === 'CATALOG' ? await this.catalogLines(tx, current.lines.map(line => ({ variantId: line.variantId ?? (() => { throw invoiceInvalid('Catalog draft requires a SKU.'); })(), quantity: line.quantity, discount: line.discount.toString() }))) : null;
       validateAmounts(lines ?? current.lines, current.globalDiscount, shipping?.amount ?? current.shippingAmount, policy);
       await tx.invoiceDraft.update({ where: { id }, data: { version: { increment: 1 }, policyRevisionId: policy?.id ?? null, sourceOrderVersion,
         ...(shipping ? { shippingTitle: shipping.title, shippingAmount: shipping.amount, shippingPolicyRevision: shipping.policyRevision } : {}),
@@ -267,12 +285,12 @@ export class InvoiceDraftService {
     const sourceCurrent = source !== null && source.version === row.sourceOrderVersion && sourceHash(source) === row.sourceOrderHash && !['CANCELLED', 'REFUNDED', 'RETURNED'].includes(source.status);
     const sourceTermsMatch = row.source === 'ORDER' ? sourceCurrent && quote !== null && quote.total.amount === source!.grandTotal.toString() &&
       row.globalDiscount === source!.discount && row.shippingAmount === source!.shipping && row.shippingCode === source!.shippingMethod &&
-      row.lines.length === source!.items.length && row.lines.every((line, index) => {
+      (row.doorQuoteId ? !!source!.customDoorOrder?.quotes.some(q => q.id === row.doorQuoteId && q.version === source!.customDoorOrder!.currentQuoteVersion && q.approved && q.total === source!.grandTotal) && source!.customDoorOrder.status !== 'CANCELLED' && row.lines.length === 1 && row.lines[0].variantId === null && row.lines[0].quantity === 1 && row.lines[0].unitPrice === source!.grandTotal : row.lines.length === source!.items.length && row.lines.every((line, index) => {
         const original = source!.items[index]; return line.variantId === original.variantId && line.quantity === original.quantity && line.unitPrice === original.unitPrice && line.discount === 0n;
-      }) : null;
+      })) : null;
     const quotationStatus = !policy || !row.policyRevisionId ? 'POLICY_REQUIRED' : policy.id !== row.policyRevisionId ? 'POLICY_CHANGED' :
       row.source === 'ORDER' && !sourceCurrent ? 'SOURCE_CHANGED' : row.source === 'CATALOG' && (!row.quoteExpiresAt || row.quoteExpiresAt <= new Date()) ? 'PRICE_EXPIRED' : 'CURRENT';
-    return { id: row.id, version: row.version, state: row.state, source: row.source, customerId: row.customerId, buyerLabel: row.buyerLabel,
+    return { ...(row.doorQuoteId ? { doorQuoteId: row.doorQuoteId } : {}), id: row.id, version: row.version, state: row.state, source: row.source, customerId: row.customerId, buyerLabel: row.buyerLabel,
       sourceOrderId: row.sourceOrderId, sourceOrderVersion: row.sourceOrderVersion, sourceTermsMatch,
       address: row.addressSnapshot as unknown as CheckoutAddress, note: row.note,
       lines: row.lines.map(line => ({ variantId: line.variantId, sku: line.sku, title: line.title, quantity: line.quantity,

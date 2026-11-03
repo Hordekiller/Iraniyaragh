@@ -5,10 +5,11 @@ export type InvoiceDraftCreate = { customerId: string; address: CheckoutAddress;
 export type InvoiceDraftEdit = Omit<InvoiceDraftCreate, 'customerId'> & { expectedVersion: number };
 export type InvoiceDraftFromOrder = { expectedOrderVersion: number; note: string | null };
 export type InvoiceDraft = {
+  doorQuoteId?: string | null;
   id: string; version: number; state: InvoiceDraftState; source: 'CATALOG' | 'ORDER';
   customerId: string; buyerLabel: string; sourceOrderId: string | null; sourceOrderVersion: number | null;
   sourceTermsMatch: boolean | null; address: CheckoutAddress; note: string | null;
-  lines: { variantId: string; sku: string; title: string; quantity: number; unitPrice: Money; discount: Money; subtotal: Money }[];
+  lines: { variantId: string | null; sku: string; title: string; quantity: number; unitPrice: Money; discount: Money; subtotal: Money }[];
   globalDiscount: Money; shipping: { code: string; title: string; amount: Money; policyRevision: string };
   pricePolicyRevision: string; quoteExpiresAt: string | null; policyVersion: number | null;
   quote: InvoiceQuote | null; quotationStatus: 'CURRENT' | 'POLICY_REQUIRED' | 'POLICY_CHANGED' | 'PRICE_EXPIRED' | 'SOURCE_CHANGED';
