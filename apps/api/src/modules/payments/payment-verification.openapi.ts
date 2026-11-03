@@ -23,6 +23,7 @@ const verification: SchemaObject = {
     'orderStatus',
   ],
   properties: {
+    orderKind: { type: 'string', enum: ['CUSTOM_DOOR'] },
     paymentId: { type: 'string' },
     status: { type: 'string', enum: ['PAID', 'PENDING', 'FAILED'] },
     provider: { type: 'string', enum: ['zarinpal'] },

@@ -221,6 +221,9 @@ enum StocktakeScopeType {
 }
 
 model User {
+  doorCatalogRevisions        DoorCatalogRevision[]
+  doorProductionRecords       DoorProductionRecord[]
+  doorQuoteApprovals          DoorQuotation[]
   invoicePublicationEvents    InvoicePublicationEvent[]
   invoicePublicationCommands  InvoicePublicationCommand[]
   issuedInvoiceDocuments      InvoiceDocument[]
@@ -228,24 +231,24 @@ model User {
   invoiceIssueCommands        InvoiceIssueCommand[]
   creditReturns               CreditSaleReturn[]
   creditRefundPayouts         CreditRefundPayout[]
-  id                          String                       @id @default(cuid())
-  mobile                      String?                      @unique @db.VarChar(13)
-  email                       String?                      @unique @db.VarChar(320)
-  passwordHash                String?                      @db.Text
-  firstName                   String?                      @db.VarChar(100)
-  lastName                    String?                      @db.VarChar(100)
-  status                      UserStatus                   @default(PENDING)
-  isMobileVerified            Boolean                      @default(false)
+  id                          String                        @id @default(cuid())
+  mobile                      String?                       @unique @db.VarChar(13)
+  email                       String?                       @unique @db.VarChar(320)
+  passwordHash                String?                       @db.Text
+  firstName                   String?                       @db.VarChar(100)
+  lastName                    String?                       @db.VarChar(100)
+  status                      UserStatus                    @default(PENDING)
+  isMobileVerified            Boolean                       @default(false)
   mobileVerifiedAt            DateTime?
-  isEmailVerified             Boolean                      @default(false)
+  isEmailVerified             Boolean                       @default(false)
   emailVerifiedAt             DateTime?
   passwordChangedAt           DateTime?
-  failedLoginCount            Int                          @default(0)
+  failedLoginCount            Int                           @default(0)
   lockedUntil                 DateTime?
   lastLoginAt                 DateTime?
   deletedAt                   DateTime?
-  createdAt                   DateTime                     @default(now())
-  updatedAt                   DateTime                     @updatedAt
+  createdAt                   DateTime                      @default(now())
+  updatedAt                   DateTime                      @updatedAt
   creditEntries               CreditLedgerEntry[]
   creditDocuments             ReceivableDocument[]
   creditReceipts              CreditReceipt[]
@@ -259,21 +262,21 @@ model User {
   sessions                    Session[]
   otpCodes                    OtpCode[]
   loginAttempts               LoginAttempt[]
-  auditLogs                   AuditLog[]                   @relation("AuditActor")
-  orderTransitions            OrderTransition[]            @relation("OrderActor")
-  paymentTransitions          PaymentTransition[]          @relation("PaymentActor")
-  refunds                     Refund[]                     @relation("RefundActor")
-  fulfillmentTransitions      FulfillmentTransition[]      @relation("FulfillmentActor")
-  fulfillmentPicks            FulfillmentPick[]            @relation("FulfillmentPickActor")
-  dispatchedShipments         Shipment[]                   @relation("ShipmentDispatcher")
-  customerNotesAuthored       CustomerNote[]               @relation("CustomerNoteAuthor")
-  customerCommandRecords      CustomerCommandRecord[]      @relation("CustomerCommandActor")
-  staffOrderCommandRecords    StaffOrderCommandRecord[]    @relation("StaffOrderCommandActor")
-  roleAssignments             UserRole[]                   @relation("UserRoleSubject")
-  roleAssignmentsGranted      UserRole[]                   @relation("UserRoleAssigner")
-  roleAssignmentsRevoked      UserRole[]                   @relation("UserRoleRevoker")
-  permissionGrants            RolePermission[]             @relation("RolePermissionGrantor")
-  permissionRevocations       RolePermission[]             @relation("RolePermissionRevoker")
+  auditLogs                   AuditLog[]                    @relation("AuditActor")
+  orderTransitions            OrderTransition[]             @relation("OrderActor")
+  paymentTransitions          PaymentTransition[]           @relation("PaymentActor")
+  refunds                     Refund[]                      @relation("RefundActor")
+  fulfillmentTransitions      FulfillmentTransition[]       @relation("FulfillmentActor")
+  fulfillmentPicks            FulfillmentPick[]             @relation("FulfillmentPickActor")
+  dispatchedShipments         Shipment[]                    @relation("ShipmentDispatcher")
+  customerNotesAuthored       CustomerNote[]                @relation("CustomerNoteAuthor")
+  customerCommandRecords      CustomerCommandRecord[]       @relation("CustomerCommandActor")
+  staffOrderCommandRecords    StaffOrderCommandRecord[]     @relation("StaffOrderCommandActor")
+  roleAssignments             UserRole[]                    @relation("UserRoleSubject")
+  roleAssignmentsGranted      UserRole[]                    @relation("UserRoleAssigner")
+  roleAssignmentsRevoked      UserRole[]                    @relation("UserRoleRevoker")
+  permissionGrants            RolePermission[]              @relation("RolePermissionGrantor")
+  permissionRevocations       RolePermission[]              @relation("RolePermissionRevoker")
   mfaChallenges               MfaChallenge[]
   totpCredential              TotpCredential?
   catalogIdempotencyRecords   CatalogIdempotencyRecord[]
@@ -283,11 +286,11 @@ model User {
   purchaseReceipts            PurchaseReceipt[]
   variantPriceRecords         VariantPriceRecord[]
   catalogImportRecords        CatalogImportRecord[]
-  createdProductMedia         ProductMedia[]               @relation("ProductMediaCreator")
-  stocktakesCreated           Stocktake[]                  @relation("StocktakeCreator")
-  stocktakesCounted           Stocktake[]                  @relation("StocktakeCounter")
-  stocktakesApproved          Stocktake[]                  @relation("StocktakeApprover")
-  stocktakeLinesCounted       StocktakeItem[]              @relation("StocktakeLineCounter")
+  createdProductMedia         ProductMedia[]                @relation("ProductMediaCreator")
+  stocktakesCreated           Stocktake[]                   @relation("StocktakeCreator")
+  stocktakesCounted           Stocktake[]                   @relation("StocktakeCounter")
+  stocktakesApproved          Stocktake[]                   @relation("StocktakeApprover")
+  stocktakeLinesCounted       StocktakeItem[]               @relation("StocktakeLineCounter")
   stocktakeCommandRecords     StocktakeCommandRecord[]
   homepageCollectionCommands  HomepageCollectionCommand[]
   customer                    Customer?
@@ -524,6 +527,7 @@ model Product {
 }
 
 model ProductMedia {
+  doorModels       DoorModel[]
   id               String                  @id @default(cuid())
   productId        String
   product          Product                 @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -584,6 +588,9 @@ model ProductMediaRendition {
 }
 
 model ProductVariant {
+  inventoryUnit        String                         @default("PIECE") @db.VarChar(8)
+  doorMaterials        DoorMaterial[]
+  doorRequirements     DoorMaterialRequirement[]
   id                   String                         @id @default(cuid())
   productId            String
   product              Product                        @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -802,21 +809,22 @@ model InventoryMovement {
 }
 
 model StockReservation {
-  id             String            @id @default(cuid())
-  warehouseId    String
-  locationId     String
-  variantId      String
-  orderId        String?
-  quantity       Int
-  status         ReservationStatus @default(ACTIVE)
-  expiresAt      DateTime
-  idempotencyKey String?           @unique
-  warehouse      Warehouse         @relation(fields: [warehouseId], references: [id])
-  location       WarehouseLocation @relation(fields: [locationId], references: [id])
-  variant        ProductVariant    @relation(fields: [variantId], references: [id])
-  order          Order?            @relation(fields: [orderId], references: [id])
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  doorRequirement DoorMaterialRequirement?
+  id              String                   @id @default(cuid())
+  warehouseId     String
+  locationId      String
+  variantId       String
+  orderId         String?
+  quantity        Int
+  status          ReservationStatus        @default(ACTIVE)
+  expiresAt       DateTime
+  idempotencyKey  String?                  @unique
+  warehouse       Warehouse                @relation(fields: [warehouseId], references: [id])
+  location        WarehouseLocation        @relation(fields: [locationId], references: [id])
+  variant         ProductVariant           @relation(fields: [variantId], references: [id])
+  order           Order?                   @relation(fields: [orderId], references: [id])
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
 
   @@index([warehouseId, variantId, status, expiresAt])
   @@index([status])
@@ -1209,6 +1217,7 @@ model GuestCartMutation {
 }
 
 model Order {
+  customDoorOrder            DoorOrder?
   invoiceDocument            InvoiceDocument?
   creditReturns              CreditSaleReturn[]
   id                         String                          @id @default(cuid())
@@ -1421,6 +1430,7 @@ model OutboxEvent {
 }
 
 enum OutboxEffectKind {
+  CUSTOMER_DOOR_QUOTE_APPROVED
   CUSTOMER_ORDER_CREATED
   CUSTOMER_ORDER_CANCELLED
   CUSTOMER_ORDER_EXPIRED
@@ -1458,28 +1468,28 @@ model OutboxEffect {
 }
 
 model Payment {
-  id                     String              @id @default(cuid())
+  doorAllocation         DoorPaymentAllocation?
+  id                     String                 @id @default(cuid())
   orderId                String
   provider               String
   amount                 BigInt
-  status                 PaymentStatus       @default(PENDING)
+  status                 PaymentStatus          @default(PENDING)
   authority              String?
   referenceId            String?
-  refundedAmount         BigInt              @default(0)
-  idempotencyKey         String              @unique
-  idempotencyFingerprint String              @db.Char(64)
-  correlationId          String?             @db.VarChar(128)
-  gatewayEnvironment     String              @default("sandbox") @db.VarChar(20)
-  order                  Order               @relation(fields: [orderId], references: [id])
+  refundedAmount         BigInt                 @default(0)
+  idempotencyKey         String                 @unique
+  idempotencyFingerprint String                 @db.Char(64)
+  correlationId          String?                @db.VarChar(128)
+  gatewayEnvironment     String                 @default("sandbox") @db.VarChar(20)
+  order                  Order                  @relation(fields: [orderId], references: [id])
   transitions            PaymentTransition[]
   refunds                Refund[]
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
 
   @@index([orderId, status])
   @@index([status])
   @@index([createdAt])
-
 }
 
 /// Append-only record of a refund that staff performed in the gateway panel.
@@ -1508,7 +1518,6 @@ model Refund {
   @@index([paymentId, createdAt])
   @@index([actorId, createdAt])
   @@index([createdAt])
-
 }
 
 model OrderTransition {
@@ -1804,7 +1813,6 @@ model CreditLedgerEntry {
   @@index([accountId, createdAt, id])
   @@index([documentId])
   @@index([effectiveAt])
-
 }
 
 model CreditCommandRecord {
@@ -1878,7 +1886,6 @@ model CreditRefundPayout {
 
   @@index([returnId])
   @@index([effectiveAt])
-
 }
 
 enum InvoiceTaxTreatment {
@@ -1964,6 +1971,8 @@ enum InvoiceDraftSource {
 }
 
 model InvoiceDraft {
+  doorQuoteId            String?
+  doorQuote              DoorQuotation?         @relation(fields: [doorQuoteId], references: [id], onDelete: Restrict)
   document               InvoiceDocument?
   id                     String                 @id @default(cuid())
   version                Int                    @default(0)
@@ -1999,17 +2008,17 @@ model InvoiceDraft {
 }
 
 model InvoiceDraftLine {
-  id        String         @id @default(cuid())
+  id        String          @id @default(cuid())
   draftId   String
-  variantId String
+  variantId String?
   ordinal   Int
-  sku       String         @db.VarChar(64)
-  title     String         @db.VarChar(250)
+  sku       String          @db.VarChar(64)
+  title     String          @db.VarChar(250)
   quantity  Int
   unitPrice BigInt
-  discount  BigInt         @default(0)
-  draft     InvoiceDraft   @relation(fields: [draftId], references: [id], onDelete: Restrict)
-  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  discount  BigInt          @default(0)
+  draft     InvoiceDraft    @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
 
   @@unique([draftId, ordinal])
   @@unique([draftId, variantId])
@@ -2064,17 +2073,17 @@ model InvoiceDocument {
   publication         InvoicePublication?
   publicationEvents   InvoicePublicationEvent[]
   publicationCommands InvoicePublicationCommand[]
-  id                  String                      @id @default(cuid())
-  draftId             String                      @unique
+  id                  String                       @id @default(cuid())
+  draftId             String                       @unique
   draftVersion        Int
-  orderId             String                      @unique
+  orderId             String                       @unique
   orderVersion        Int
   customerId          String
   policyRevisionId    String
-  series              String                      @db.VarChar(16)
+  series              String                       @db.VarChar(16)
   period              Int
   sequence            Int
-  number              String                      @unique @db.VarChar(40)
+  number              String                       @unique @db.VarChar(40)
   subtotal            BigInt
   discount            BigInt
   shipping            BigInt
@@ -2082,15 +2091,15 @@ model InvoiceDocument {
   tax                 BigInt
   grandTotal          BigInt
   snapshot            Json
-  payloadHash         String                      @db.Char(64)
+  payloadHash         String                       @db.Char(64)
   issuedById          String
-  issuedAt            DateTime                    @default(now())
-  draft               InvoiceDraft                @relation(fields: [draftId], references: [id], onDelete: Restrict)
-  order               Order                       @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  customer            Customer                    @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  policyRevision      InvoicePolicyRevision       @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
-  counter             InvoiceSeriesCounter        @relation(fields: [series, period], references: [series, period], onDelete: Restrict)
-  issuedBy            User                        @relation(fields: [issuedById], references: [id], onDelete: Restrict)
+  issuedAt            DateTime                     @default(now())
+  draft               InvoiceDraft                 @relation(fields: [draftId], references: [id], onDelete: Restrict)
+  order               Order                        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer            Customer                     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  policyRevision      InvoicePolicyRevision        @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
+  counter             InvoiceSeriesCounter         @relation(fields: [series, period], references: [series, period], onDelete: Restrict)
+  issuedBy            User                         @relation(fields: [issuedById], references: [id], onDelete: Restrict)
   lines               InvoiceDocumentLine[]
   events              InvoiceDocumentEvent[]
   commands            InvoiceIssueCommand[]
@@ -2099,7 +2108,6 @@ model InvoiceDocument {
   @@index([customerId, issuedAt, id])
   @@index([issuedAt, id])
   @@index([issuedAt])
-
 }
 
 // Private issued-document evidence. No public media relation or URL.
@@ -2123,41 +2131,41 @@ model InvoicePdfArtifact {
 
 // Absent until an operator approves a budget. Migration never enables rendering.
 model InvoicePdfStorageCapacity {
-  id             String  @id @db.VarChar(32)
-  budgetBytes    BigInt
-  maxArtifacts   Int
-  storedBytes    BigInt  @default(0)
-  artifactCount  Int     @default(0)
-  pendingJobCount Int    @default(0)
-  maxPendingJobs Int    @default(0)
-  isEnabled      Boolean @default(false)
-  version        Int     @default(1)
+  id              String  @id @db.VarChar(32)
+  budgetBytes     BigInt
+  maxArtifacts    Int
+  storedBytes     BigInt  @default(0)
+  artifactCount   Int     @default(0)
+  pendingJobCount Int     @default(0)
+  maxPendingJobs  Int     @default(0)
+  isEnabled       Boolean @default(false)
+  version         Int     @default(1)
 }
 
 // Durable render request. Eligibility and authorization are reread on the API;
 // the renderer claims a database lease and never trusts the queue for accuracy.
 model InvoicePdfRenderJob {
-  id                  String   @id @default(cuid())
+  id                  String                       @id @default(cuid())
   documentId          String
-  documentPayloadHash String   @db.Char(64)
-  renderInputHash     String   @db.Char(64)
-  rendererRevision    String   @db.VarChar(100)
-  templateRevision    String   @db.VarChar(100)
-  fontSha256          String   @db.Char(64)
-  status              String   @db.VarChar(20)
-  failureReason       String?  @db.VarChar(100)
-  attempts            Int      @default(0)
-  leaseVersion        Int      @default(0)
-  leaseOwner          String?  @db.VarChar(64)
+  documentPayloadHash String                       @db.Char(64)
+  renderInputHash     String                       @db.Char(64)
+  rendererRevision    String                       @db.VarChar(100)
+  templateRevision    String                       @db.VarChar(100)
+  fontSha256          String                       @db.Char(64)
+  status              String                       @db.VarChar(20)
+  failureReason       String?                      @db.VarChar(100)
+  attempts            Int                          @default(0)
+  leaseVersion        Int                          @default(0)
+  leaseOwner          String?                      @db.VarChar(64)
   leaseIssuedAt       DateTime?
   leaseExpireAt       DateTime?
   requestedByUserId   String
-  requestedByScope    String   @db.VarChar(20)
-  requestKeyHash      String   @db.Char(64)
-  payloadHash         String   @db.Char(64)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  document            InvoiceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  requestedByScope    String                       @db.VarChar(20)
+  requestKeyHash      String                       @db.Char(64)
+  payloadHash         String                       @db.Char(64)
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  document            InvoiceDocument              @relation(fields: [documentId], references: [id], onDelete: Restrict)
   commands            InvoicePdfRenderJobCommand[]
 
   @@index([status, createdAt, id])
@@ -2166,15 +2174,15 @@ model InvoicePdfRenderJob {
 
 // Exactly-once request identity: one accepted HTTP request per actor/scope/key.
 model InvoicePdfRenderJobCommand {
-  id          String   @id @default(cuid())
+  id          String              @id @default(cuid())
   documentId  String
   actorId     String
-  scope       String   @db.VarChar(20)
-  keyHash     String   @db.Char(64)
-  payloadHash String   @db.Char(64)
+  scope       String              @db.VarChar(20)
+  keyHash     String              @db.Char(64)
+  payloadHash String              @db.Char(64)
   jobId       String
-  outcome     String   @db.VarChar(20)
-  createdAt   DateTime @default(now())
+  outcome     String              @db.VarChar(20)
+  createdAt   DateTime            @default(now())
   job         InvoicePdfRenderJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
   document    InvoiceDocument     @relation(fields: [documentId], references: [id], onDelete: Restrict)
 
@@ -2188,7 +2196,7 @@ model ReportExportStorageCapacity {
   id              String  @id @db.VarChar(32)
   budgetBytes     BigInt
   maxArtifacts    Int
-  snapshotBytes BigInt @default(0)
+  snapshotBytes   BigInt  @default(0)
   storedBytes     BigInt  @default(0)
   artifactCount   Int     @default(0)
   pendingJobCount Int     @default(0)
@@ -2199,28 +2207,28 @@ model ReportExportStorageCapacity {
 }
 
 model ReportExportJob {
-  id                  String      @id @default(cuid())
-  reportKind          String      @db.VarChar(30)
-  outputFormat        String      @db.VarChar(10)
-  definitionHash      String      @db.Char(64)
-  definition          Json
-  rendererRevision    String      @db.VarChar(100)
-  status              String      @db.VarChar(20)
-  failureReason       String?     @db.VarChar(100)
-  attempts            Int         @default(0)
-  leaseVersion        Int         @default(0)
-  leaseOwner          String?     @db.VarChar(64)
-  leaseIssuedAt       DateTime?
-  leaseExpireAt       DateTime?
-  requestedByUserId   String
-  requestedByScope    String      @db.VarChar(20)
-  requestKeyHash      String      @db.Char(64)
-  payloadHash         String      @db.Char(64)
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-  snapshot            ReportExportSnapshot?
-  artifacts           ReportExportArtifact[]
-  commands            ReportExportCommand[]
+  id                String                 @id @default(cuid())
+  reportKind        String                 @db.VarChar(30)
+  outputFormat      String                 @db.VarChar(10)
+  definitionHash    String                 @db.Char(64)
+  definition        Json
+  rendererRevision  String                 @db.VarChar(100)
+  status            String                 @db.VarChar(20)
+  failureReason     String?                @db.VarChar(100)
+  attempts          Int                    @default(0)
+  leaseVersion      Int                    @default(0)
+  leaseOwner        String?                @db.VarChar(64)
+  leaseIssuedAt     DateTime?
+  leaseExpireAt     DateTime?
+  requestedByUserId String
+  requestedByScope  String                 @db.VarChar(20)
+  requestKeyHash    String                 @db.Char(64)
+  payloadHash       String                 @db.Char(64)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  snapshot          ReportExportSnapshot?
+  artifacts         ReportExportArtifact[]
+  commands          ReportExportCommand[]
 
   @@index([status, createdAt, id])
   @@index([requestedByUserId, createdAt, id])
@@ -2228,16 +2236,16 @@ model ReportExportJob {
 
 // Exactly-once request identity for one actor/kind/definition/format/key.
 model ReportExportCommand {
-  id             String  @id @default(cuid())
+  id             String          @id @default(cuid())
   actorId        String
-  reportKind     String  @db.VarChar(30)
-  outputFormat   String  @db.VarChar(10)
-  definitionHash String  @db.Char(64)
-  keyHash        String  @db.Char(64)
-  payloadHash    String  @db.Char(64)
+  reportKind     String          @db.VarChar(30)
+  outputFormat   String          @db.VarChar(10)
+  definitionHash String          @db.Char(64)
+  keyHash        String          @db.Char(64)
+  payloadHash    String          @db.Char(64)
   jobId          String
-  outcome        String  @db.VarChar(20)
-  createdAt      DateTime @default(now())
+  outcome        String          @db.VarChar(20)
+  createdAt      DateTime        @default(now())
   job            ReportExportJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
 
   @@unique([actorId, reportKind, outputFormat, definitionHash, keyHash], map: "ReportExportCommand_request_key")
@@ -2247,20 +2255,20 @@ model ReportExportCommand {
 // Private exported byte evidence living only until its retention moment;
 // the database keeps the audit trail, never the file, after expiry.
 model ReportExportArtifact {
-  id               String   @id @default(cuid())
-  jobId            String
-  jobRequestKeyHash String  @db.Char(64)
-  reportKind       String   @db.VarChar(30)
-  outputFormat     String   @db.VarChar(10)
-  definitionHash   String   @db.Char(64)
-  snapshotSha256   String?  @db.Char(64)
-  rendererRevision String   @db.VarChar(100)
-  contentSha256    String   @db.Char(64)
-  byteCount        Int
-  bytes            Bytes
-  expiresAt        DateTime
-  createdAt        DateTime @default(now())
-  job              ReportExportJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  id                String          @id @default(cuid())
+  jobId             String
+  jobRequestKeyHash String          @db.Char(64)
+  reportKind        String          @db.VarChar(30)
+  outputFormat      String          @db.VarChar(10)
+  definitionHash    String          @db.Char(64)
+  snapshotSha256    String?         @db.Char(64)
+  rendererRevision  String          @db.VarChar(100)
+  contentSha256     String          @db.Char(64)
+  byteCount         Int
+  bytes             Bytes
+  expiresAt         DateTime
+  createdAt         DateTime        @default(now())
+  job               ReportExportJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
 
   @@unique([jobId])
   @@index([expiresAt])
@@ -2269,9 +2277,9 @@ model ReportExportArtifact {
 model InvoiceDocumentLine {
   id          String          @id @default(cuid())
   documentId  String
-  orderItemId String
+  orderItemId String?
   ordinal     Int
-  variantId   String
+  variantId   String?
   sku         String          @db.VarChar(128)
   title       String          @db.VarChar(500)
   quantity    Int
@@ -2281,7 +2289,7 @@ model InvoiceDocumentLine {
   tax         BigInt
   total       BigInt
   document    InvoiceDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
-  orderItem   OrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  orderItem   OrderItem?      @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
 
   @@unique([documentId, ordinal])
   @@unique([documentId, orderItemId])
@@ -2357,15 +2365,206 @@ model InvoicePublicationCommand {
 
 // Bounded, immutable materialization shared by display and every render retry.
 model ReportExportSnapshot {
-  jobId String @id
-  bytes Bytes
-  sha256 String @db.Char(64)
-  byteCount Int
-  rowCount Int
+  jobId       String          @id
+  bytes       Bytes
+  sha256      String          @db.Char(64)
+  byteCount   Int
+  rowCount    Int
   generatedAt DateTime
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  job ReportExportJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  expiresAt   DateTime
+  createdAt   DateTime        @default(now())
+  job         ReportExportJob @relation(fields: [jobId], references: [id], onDelete: Restrict)
 
   @@index([expiresAt])
+}
+
+/// Custom production aggregate extends the existing commercial Order; all money
+/// still belongs to Payment/Refund. No fixture catalog is installed by migration.
+enum DoorProductionStatus {
+  DRAFT
+  PENDING_QUOTE_APPROVAL
+  AWAITING_DEPOSIT
+  DEPOSIT_PAID
+  AWAITING_TECHNICAL_APPROVAL
+  APPROVED_FOR_PRODUCTION
+  IN_PRODUCTION
+  QUALITY_CONTROL
+  READY_FOR_DELIVERY
+  AWAITING_SETTLEMENT
+  COMPLETED
+  CANCELLED
+}
+
+model DoorModel {
+  id            String          @id @default(cuid())
+  code          String          @unique @db.VarChar(64)
+  title         String          @db.VarChar(150)
+  type          String          @db.VarChar(16)
+  active        Boolean         @default(false)
+  version       Int             @default(1)
+  configuration Json
+  imageMediaId  String?
+  imageMedia    ProductMedia?   @relation(fields: [imageMediaId], references: [id], onDelete: Restrict)
+  items         DoorOrderItem[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([active, type])
+}
+
+model DoorMaterial {
+  id            String                    @id @default(cuid())
+  code          String                    @unique @db.VarChar(64)
+  title         String                    @db.VarChar(150)
+  category      String                    @db.VarChar(24)
+  active        Boolean                   @default(false)
+  version       Int                       @default(1)
+  configuration Json
+  variantId     String?
+  variant       ProductVariant?           @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  requirements  DoorMaterialRequirement[]
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  @@index([active, category])
+}
+
+/// Immutable, actor-attributed catalog and visibility policy revisions.
+model DoorCatalogRevision {
+  id         String   @id @default(cuid())
+  entityType String   @db.VarChar(24)
+  entityId   String   @db.VarChar(128)
+  version    Int
+  snapshot   Json
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now())
+
+  @@unique([entityType, entityId, version])
+}
+
+model DoorOrder {
+  id                           String                    @id
+  order                        Order                     @relation(fields: [id], references: [id], onDelete: Restrict)
+  status                       DoorProductionStatus      @default(DRAFT)
+  version                      Int                       @default(1)
+  currentQuoteVersion          Int                       @default(1)
+  technicalApproved            Boolean                   @default(false)
+  customerAcceptedQuoteVersion Int?
+  delivery                     Json?
+  items                        DoorOrderItem[]
+  quotes                       DoorQuotation[]
+  records                      DoorProductionRecord[]
+  requirements                 DoorMaterialRequirement[]
+  attachments                  DoorAttachment[]
+  createdAt                    DateTime                  @default(now())
+  updatedAt                    DateTime                  @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model DoorOrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         DoorOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  modelId       String
+  model         DoorModel @relation(fields: [modelId], references: [id], onDelete: Restrict)
+  ordinal       Int
+  widthMm       Int
+  heightMm      Int
+  quantity      Int
+  configuration Json
+  notes         String    @default("") @db.VarChar(1000)
+
+  @@unique([orderId, ordinal])
+}
+
+/// Append-only quote terms, including complete model/material/BOM snapshots.
+model DoorQuotation {
+  invoiceDrafts InvoiceDraft[]
+  id            String                    @id @default(cuid())
+  orderId       String
+  order         DoorOrder                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  version       Int
+  approved      Boolean                   @default(false)
+  total         BigInt?
+  deposit       BigInt?
+  snapshot      Json
+  approvedById  String?
+  approvedBy    User?                     @relation(fields: [approvedById], references: [id], onDelete: Restrict)
+  createdAt     DateTime                  @default(now())
+  allocations   DoorPaymentAllocation[]
+  requirements  DoorMaterialRequirement[]
+
+  @@unique([orderId, version])
+  @@unique([id, orderId])
+}
+
+model DoorPaymentAllocation {
+  paymentId String        @id
+  payment   Payment       @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  quoteId   String
+  quote     DoorQuotation @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  purpose   String        @db.VarChar(16)
+  createdAt DateTime      @default(now())
+
+  @@index([quoteId])
+}
+
+model DoorProductionRecord {
+  id        String    @id @default(cuid())
+  orderId   String
+  order     DoorOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  action    String    @db.VarChar(64)
+  message   String    @db.VarChar(1000)
+  payload   Json
+  actorId   String?
+  actor     User?     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  createdAt DateTime  @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model DoorMaterialRequirement {
+  id                  String            @id @default(cuid())
+  orderId             String
+  order               DoorOrder         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  quoteId             String
+  quote               DoorQuotation     @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  ordinal             Int
+  materialId          String
+  material            DoorMaterial      @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  variantId           String?
+  variant             ProductVariant?   @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  snapshot            Json
+  actualStockQuantity Int?
+  reservationId       String?           @unique
+  reservation         StockReservation? @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  consumedAt          DateTime?
+
+  @@unique([quoteId, ordinal])
+  @@index([orderId])
+}
+
+model DoorAttachment {
+  checksumSha256 String    @db.Char(64)
+  id             String    @id @default(cuid())
+  orderId        String
+  order          DoorOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  filename       String    @db.VarChar(150)
+  mime           String    @db.VarChar(64)
+  bytes          Int
+  objectKey      String    @unique
+  createdAt      DateTime  @default(now())
+
+  @@unique([orderId, checksumSha256])
+  @@index([orderId])
+}
+
+/// Permanent replay protection; payload contains hashes and safe result IDs only.
+model DoorCommand {
+  key         String   @id @db.Char(64)
+  fingerprint String   @db.Char(64)
+  resultId    String   @db.VarChar(128)
+  createdAt   DateTime @default(now())
 }

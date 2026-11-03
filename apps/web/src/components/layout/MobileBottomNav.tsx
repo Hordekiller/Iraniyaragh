@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Home, LayoutGrid, ShoppingBag, Search, User, PackageSearch } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
@@ -6,8 +7,21 @@ import { useAuth } from '../../state/auth-context'
 type MobileBottomNavProps = { onOpenSearch: () => void; onOpenLogin: () => void; embedded?: boolean }
 
 export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }: MobileBottomNavProps) {
-  const navigate = useNavigate()
   const { pathname } = useLocation()
+  const navRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const node = navRef.current
+    if (!node || embedded) return
+    const measure = () => {
+      const height = Math.ceil(node.getBoundingClientRect().height)
+      if (height > 0) document.documentElement.style.setProperty('--mobile-nav-height', `${height}px`)
+    }
+    measure()
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure)
+    observer?.observe(node)
+    return () => { observer?.disconnect(); document.documentElement.style.removeProperty('--mobile-nav-height') }
+  }, [embedded, pathname])
+  const navigate = useNavigate()
   const { state: authState } = useAuth()
 
   // Product pages provide their own persistent purchase controls.
@@ -25,7 +39,7 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }:
   ]
 
   return <>
-    <nav aria-label="ناوبری پایین" className={embedded ? 'w-full lg:hidden' : 'pointer-events-none fixed inset-x-0 bottom-0 z-50 lg:hidden'}>
+    <nav ref={navRef} aria-label="ناوبری پایین" className={embedded ? 'w-full lg:hidden' : 'pointer-events-none fixed inset-x-0 bottom-0 z-50 lg:hidden'}>
       <div className={embedded ? 'mx-auto w-full max-w-[480px]' : 'mx-auto max-w-[480px] px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]'}>
         <div className={`pointer-events-auto grid grid-cols-6 bg-white px-1 py-2 ${embedded ? 'rounded-2xl' : 'rounded-3xl border border-slate-200 shadow-xl'}`}>
           {items.map(({ label, short, icon: Icon, active, action }) => <button type="button" key={label} onClick={action} aria-label={short && !label.includes(short) ? `${short} (${label})` : label} aria-current={active ? 'page' : undefined}

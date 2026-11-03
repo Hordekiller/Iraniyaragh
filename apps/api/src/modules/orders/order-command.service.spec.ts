@@ -406,7 +406,7 @@ describe('OrderCommandService', () => {
       { now: pendingOrder.reservationExpiresAt, batchSize: 3 },
     );
     expect(ctx.prisma.order.findMany).toHaveBeenCalledWith({
-      where: { status: 'PENDING_PAYMENT', reservationExpiresAt: { lte: pendingOrder.reservationExpiresAt }, payments: { none: {} } },
+      where: { status: 'PENDING_PAYMENT', customDoorOrder: null, reservationExpiresAt: { lte: pendingOrder.reservationExpiresAt }, payments: { none: {} } },
       orderBy: [{ reservationExpiresAt: 'asc' }, { id: 'asc' }], select: { id: true }, take: 3,
     });
   });

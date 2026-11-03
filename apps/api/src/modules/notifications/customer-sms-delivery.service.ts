@@ -6,6 +6,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { SMS_PROVIDER, SMS_TEMPLATE_RESOLVER, type SmsProvider, type SmsSendResult, type SmsTemplateResolver } from './sms-provider';
 
 const KINDS = [
+  OutboxEffectKind.CUSTOMER_DOOR_QUOTE_APPROVED,
   OutboxEffectKind.CUSTOMER_ORDER_PAID,
   OutboxEffectKind.CUSTOMER_SHIPMENT_DISPATCHED,
   OutboxEffectKind.CUSTOMER_SHIPMENT_DELIVERED,
@@ -75,13 +76,15 @@ export class CustomerSmsDeliveryService {
   }
 
   private async templateId(kind: OutboxEffectKind): Promise<number | undefined> {
+    if (kind === OutboxEffectKind.CUSTOMER_DOOR_QUOTE_APPROVED) return this.templates?.resolve('door_quote_approved');
     if (this.templates) return this.templates.resolve(this.purpose(kind));
     if (kind === OutboxEffectKind.CUSTOMER_ORDER_PAID) return this.config.get('SMS_IR_ORDER_PAID_TEMPLATE_ID', { infer: true });
     if (kind === OutboxEffectKind.CUSTOMER_SHIPMENT_DISPATCHED) return this.config.get('SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID', { infer: true });
     return this.config.get('SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID', { infer: true });
   }
 
-  private purpose(kind: OutboxEffectKind): 'order_paid' | 'shipment_dispatched' | 'shipment_delivered' {
+  private purpose(kind: OutboxEffectKind): 'door_quote_approved' | 'order_paid' | 'shipment_dispatched' | 'shipment_delivered' {
+    if (kind === OutboxEffectKind.CUSTOMER_DOOR_QUOTE_APPROVED) return 'door_quote_approved';
     if (kind === OutboxEffectKind.CUSTOMER_ORDER_PAID) return 'order_paid';
     if (kind === OutboxEffectKind.CUSTOMER_SHIPMENT_DISPATCHED) return 'shipment_dispatched';
     return 'shipment_delivered';

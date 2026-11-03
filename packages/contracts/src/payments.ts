@@ -40,6 +40,7 @@ export type PaymentVerificationOutcome =
   | 'ACCEPTED_UNCONFIRMED';
 
 export type PaymentVerification = {
+  orderKind?: 'CUSTOM_DOOR';
   paymentId: string;
   status: PaymentVerificationStatus;
   provider: PaymentProviderName;

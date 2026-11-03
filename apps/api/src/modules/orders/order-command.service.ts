@@ -158,6 +158,7 @@ export class OrderCommandService {
     const candidates = await this.prisma.order.findMany({
       where: {
         status: "PENDING_PAYMENT",
+        customDoorOrder: null,
         reservationExpiresAt: { lte: now },
         // Attempted payments require reconciliation, not deadline inference.
         payments: { none: {} },
@@ -245,6 +246,7 @@ export class OrderCommandService {
                 number: true,
                 customerId: true,
                 status: true,
+                customDoorOrder: { select: { id: true } },
               },
             });
             if (!order) {
@@ -263,6 +265,7 @@ export class OrderCommandService {
                 message: "Order not found.",
               });
             }
+            if (order.customDoorOrder) throw new ConflictException({ code: ORDER_STATE_CONFLICT_ERROR, message: "Use the custom door order cancellation workflow." });
             if (order.status !== "PENDING_PAYMENT") {
               throw new ConflictException({
                 code: ORDER_STATE_CONFLICT_ERROR,
@@ -366,12 +369,14 @@ export class OrderCommandService {
                 number: true,
                 customerId: true,
                 status: true,
+                customDoorOrder: { select: { id: true } },
                 reservationExpiresAt: true,
                 payments: { select: { id: true }, take: 1 },
               },
             });
             if (
               order?.status !== "PENDING_PAYMENT" ||
+              !!order.customDoorOrder ||
               order.reservationExpiresAt > now ||
               order.payments.length > 0
             ) return false;

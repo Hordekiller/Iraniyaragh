@@ -66,7 +66,7 @@ export class ZarinpalCallbackController {
       response.json(verification);
       return;
     }
-    this.redirectBrowser(response, `/payment/${encodeURIComponent(verification.data.verification.orderId)}/result`);
+    this.redirectBrowser(response, verification.data.verification.orderKind === 'CUSTOM_DOOR' ? `/account/custom-doors/${encodeURIComponent(verification.data.verification.orderId)}` : `/payment/${encodeURIComponent(verification.data.verification.orderId)}/result`);
   }
 
   private redirectBrowser(response: Response, path: string): void {

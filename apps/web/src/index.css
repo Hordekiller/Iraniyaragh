@@ -94,3 +94,37 @@ main:focus {
     display: none;
   }
 }
+
+/* Shared measured clearance: product purchase/menu panel and mobile site nav
+   own their heights. Safe-area padding is already included in measurements. */
+.custom-door-floating {
+  position: fixed;
+  z-index: 40;
+  inset-inline-start: 1rem;
+  bottom: calc(var(--mobile-nav-height, calc(6rem + env(safe-area-inset-bottom))) + 0.75rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  background: #9a3412;
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  box-shadow: 0 5px 20px rgb(15 23 42 / 15%);
+}
+.custom-door-floating:hover { background: #7c2d12; }
+.custom-door-floating-product { bottom: calc(var(--product-dock-height, 14rem) + 0.75rem); }
+@media (width >= 64rem) {
+  .custom-door-floating, .custom-door-floating-product { bottom: 1.5rem; inset-inline-start: 1.5rem; }
+}
+@media (width < 64rem) {
+  body:has(input:focus, textarea:focus, select:focus) .custom-door-floating { display: none; }
+}
+@media print {
+  .custom-door-floating, #product-purchase, nav, header, footer, .door-no-print { display: none !important; }
+  .door-print { color: #000; background: #fff; }
+}

@@ -53,3 +53,6 @@ Older sprint, ownership and parallel-agent plans are historical context.
 
 The current user instruction decides scope and order. Never silently bypass a
 security, money, inventory or payment invariant because a roadmap is stale.
+
+- [سفارش ساخت درب](CUSTOM_DOOR_ORDERS.md) — معماری پیاده‌شده، قیمت، بیعانه، انبار، مدیریت، API و استقرار.
+- [شواهد اعتبارسنجی سفارش ساخت](CUSTOM_DOOR_VALIDATION.md) — نتایج واقعی تست و مرز پذیرش production.

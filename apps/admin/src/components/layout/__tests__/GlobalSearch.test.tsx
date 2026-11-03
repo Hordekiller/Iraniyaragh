@@ -55,7 +55,8 @@ describe('GlobalSearch', () => {
     fireEvent.click(screen.getByRole('button', { name: 'جستجوی سریع در پنل' }));
 
     expect(screen.getByRole('button', { name: /داشبورد عملیات/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /سفارش‌ها/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^سفارش‌ها(?:\s|$)/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /سفارش‌های ساخت درب/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: /کالا و SKU/ })).toBeEnabled();
     expect(screen.getByText('تنظیمات', { exact: true }).closest('[role="button"]')).toBeEnabled();
     expect(screen.getByRole('button', { name: /تنظیمات فاکتور/ })).toBeEnabled();

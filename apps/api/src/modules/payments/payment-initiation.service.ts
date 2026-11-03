@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { doorPaid } from '../custom-door-orders/door-pricing';
 import {
   ConflictException,
   Inject,
@@ -54,6 +55,7 @@ type PaymentRow = {
   idempotencyFingerprint: string;
   orderId: string;
   gatewayEnvironment: string;
+  amount: bigint;
 };
 
 @Injectable()
@@ -136,7 +138,7 @@ export class PaymentInitiationService {
           async (tx) => {
             const customer = await tx.customer.findUnique({
               where: { userId },
-              select: { id: true },
+              select: { id: true, status: true },
             });
             if (!customer) {
               throw new ConflictException({
@@ -149,7 +151,10 @@ export class PaymentInitiationService {
 
             const order = await tx.order.findUnique({
               where: { id: orderId },
-              select: { id: true, number: true, customerId: true, status: true, grandTotal: true, reservationExpiresAt: true },
+              select: { id: true, number: true, customerId: true, status: true, grandTotal: true, reservationExpiresAt: true,
+                customDoorOrder: { include: { quotes: { orderBy: { version: 'desc' }, take: 1 } } },
+                payments: { select: { status: true, amount: true, refundedAmount: true } },
+              },
             });
             if (!order || order.customerId !== customer.id) {
               throw new NotFoundException({
@@ -157,7 +162,19 @@ export class PaymentInitiationService {
                 message: 'Order not found.',
               });
             }
-            if (order.status !== 'PENDING_PAYMENT' || order.reservationExpiresAt <= new Date()) {
+            const door = order.customDoorOrder;
+            const quote = door?.quotes[0];
+            let amount = order.grandTotal;
+            if (door) {
+              if (customer.status !== 'ACTIVE') throw new ConflictException({ code: 'DOOR_STATE_CONFLICT', message: 'An active customer profile is required for production payments.' });
+              if (!quote?.approved || quote.version !== door.currentQuoteVersion || quote.total === null || quote.deposit === null || door.customerAcceptedQuoteVersion !== quote.version || ['DRAFT','PENDING_QUOTE_APPROVAL','CANCELLED','COMPLETED'].includes(door.status)) {
+                throw new ConflictException({ code: 'DOOR_STATE_CONFLICT', message: 'A final accepted door quotation is required before payment.' });
+              }
+              const paid = doorPaid(order.payments);
+              amount = paid < quote.deposit ? quote.deposit - paid : quote.total - paid;
+              if (amount <= 0n) throw new ConflictException({ code: 'PAYMENT_STATE_CONFLICT', message: 'No payable balance remains.' });
+            }
+            if (!door && (order.status !== 'PENDING_PAYMENT' || order.reservationExpiresAt <= new Date())) {
               throw new ConflictException({
                 code: ORDER_STATE_CONFLICT_ERROR,
                 message: 'Order is no longer payable or its stock reservation expired.',
@@ -191,7 +208,8 @@ export class PaymentInitiationService {
               data: {
                 orderId,
                 provider: this.gateway.providerName,
-                amount: order.grandTotal,
+                amount: amount,
+                ...(quote ? { doorAllocation: { create: { quoteId: quote.id, purpose: doorPaid(order.payments) < quote.deposit! ? 'DEPOSIT' : 'SETTLEMENT' } } } : {}),
                 status: 'PENDING',
                 idempotencyKey: keyHash,
                 idempotencyFingerprint: fingerprint,
@@ -203,7 +221,7 @@ export class PaymentInitiationService {
               kind: 'authorize',
               paymentId: payment.id,
               orderNumber: order.number,
-              amount: order.grandTotal,
+              amount,
             } satisfies RegisteredAttempt;
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -250,7 +268,7 @@ export class PaymentInitiationService {
       payment: {
         paymentId: payment.id,
         authority: payment.authority,
-        amount: order.grandTotal,
+        amount: payment.amount,
         gatewayEnvironment: payment.gatewayEnvironment,
       },
     };
@@ -262,14 +280,14 @@ export class PaymentInitiationService {
       conflictMessage: 'Payment changed concurrently; reconcile the recorded attempt.',
       operation: () => this.prisma.$transaction(async (tx) => {
         await this.acquireOrderLock(tx, orderId);
-        const order = await tx.order.findUnique({ where: { id: orderId }, select: { status: true, reservationExpiresAt: true } });
+        const order = await tx.order.findUnique({ where: { id: orderId }, select: { status: true, reservationExpiresAt: true, customDoorOrder: { select: { status: true } } } });
         // Retain the received authority even if cancellation released stock:
         // a later real callback must remain matchable for compensation.
         const claimed = await tx.payment.updateMany({ where: { id: paymentId, status: 'PENDING', authority: null }, data: { authority } });
         const payment = claimed.count === 1
           ? { status: 'PENDING', authority, gatewayEnvironment: this.gateway.mode }
           : await tx.payment.findUnique({ where: { id: paymentId }, select: { status: true, authority: true, gatewayEnvironment: true } });
-        const payable = order?.status === 'PENDING_PAYMENT' && order.reservationExpiresAt > new Date() && payment?.status === 'PENDING' && payment.authority !== null;
+        const payable = (order?.customDoorOrder ? !['CANCELLED','COMPLETED'].includes(order.customDoorOrder.status) : order?.status === 'PENDING_PAYMENT' && order.reservationExpiresAt > new Date()) && payment?.status === 'PENDING' && payment.authority !== null;
         return payable && payment ? this.asOutcome({ paymentId, amount, authority: payment.authority!, gatewayEnvironment: payment.gatewayEnvironment }) : null;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
     });

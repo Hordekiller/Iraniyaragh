@@ -13,6 +13,8 @@ export type RateLimitKind =
  * identifiers/IPs, the caller must pass a keyed hash (via AuthHashService).
  */
 export const RATE_LIMIT_DEFINITIONS = Object.freeze({
+  'custom-doors:preview': Object.freeze({ limit: 30, windowSeconds: 60 }),
+  'custom-doors:customer': Object.freeze({ limit: 30, windowSeconds: 60 }),
   /** Customer SMS request — per canonical destination. */
   'otp-request:destination': Object.freeze({ limit: 1, windowSeconds: 60 }),
   /** Customer SMS request — per canonical destination, 15-minute window. */

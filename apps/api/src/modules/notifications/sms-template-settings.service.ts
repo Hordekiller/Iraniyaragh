@@ -31,7 +31,7 @@ const ENVIRONMENT_FIELDS = [
   "SMS_IR_SHIPMENT_DISPATCHED_TEMPLATE_ID",
   "SMS_IR_SHIPMENT_DELIVERED_TEMPLATE_ID",
 ] as const;
-const PURPOSE_FIELD: Record<SmsPurpose, (typeof FIELDS)[number]> = {
+const PURPOSE_FIELD: Record<Exclude<SmsPurpose, "door_quote_approved">, (typeof FIELDS)[number]> = {
   customer_login: "otpTemplateId",
   order_paid: "orderPaidTemplateId",
   shipment_dispatched: "shipmentDispatchedTemplateId",
@@ -114,6 +114,10 @@ export class SmsTemplateSettingsService
   }
 
   async resolve(purpose: SmsPurpose): Promise<number | undefined> {
+    if (purpose === 'door_quote_approved') {
+      const row = await this.prisma.doorCatalogRevision.findFirst({ where: { entityType: 'NOTIFICATION', entityId: 'quote-approved' }, orderBy: { version: 'desc' } });
+      return (row?.snapshot as { templateId?: number | null } | undefined)?.templateId ?? undefined;
+    }
     return (await this.read())[PURPOSE_FIELD[purpose]] ?? undefined;
   }
 

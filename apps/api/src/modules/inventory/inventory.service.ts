@@ -384,92 +384,101 @@ export class InventoryService {
 
   async reserve(command: ReserveStockCommand) {
     this.assertTracked(command);
-    if (!Number.isInteger(command.quantity) || command.quantity <= 0) {
-      throw new BadRequestException(
-        "Reservation quantity must be a positive integer.",
-      );
+    if (!Number.isSafeInteger(command.quantity) || command.quantity <= 0 || command.quantity > 2147483647) throw new BadRequestException('Reservation quantity must be a positive integer.');
+    const reservation = await this.withSerializableRetry(() => this.prisma.$transaction(
+      tx => this.reserveIn(tx, command), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ));
+    return this.toReservationDto(reservation);
+  }
+
+  /** Shared transaction port for production cut plans; quantities stay integer SKU units. */
+  async reserveIn(tx: Prisma.TransactionClient, command: ReserveStockCommand) {
+    this.assertTracked(command);
+    if (!Number.isSafeInteger(command.quantity) || command.quantity <= 0 || command.quantity > 2147483647) {
+      throw new BadRequestException('A positive integer quantity is required.');
+    }
+    await this.acquireBalanceLock(tx, command);
+
+    if (command.idempotencyKey) {
+      const existing = await tx.stockReservation.findUnique({
+        where: { idempotencyKey: command.idempotencyKey },
+      });
+      if (existing) {
+        if (this.reservationMatches(existing, command)) return existing;
+        throw new ConflictException(
+          `Idempotency conflict: key '${command.idempotencyKey}' was already used with a different payload.`,
+        );
+      }
     }
 
-    const reservation = await this.withSerializableRetry(() =>
-      this.prisma.$transaction(
-        async (tx) => {
-          await this.acquireBalanceLock(tx, command);
+    await this.assertStockIdentity(tx, command);
+    const key = this.balanceKey(command);
+    const balance = await tx.inventoryBalance.findUnique({ where: key });
+    const version = balance?.version ?? 0;
+    this.assertVersion(command.expectedVersion, version);
 
-          if (command.idempotencyKey) {
-            const existing = await tx.stockReservation.findUnique({
-              where: { idempotencyKey: command.idempotencyKey },
-            });
-            if (existing) {
-              if (this.reservationMatches(existing, command)) return existing;
-              throw new ConflictException(
-                `Idempotency conflict: key '${command.idempotencyKey}' was already used with a different payload.`,
-              );
-            }
-          }
+    if (!balance || balance.available < command.quantity) {
+      throw new ConflictException({
+        code: "INSUFFICIENT_STOCK",
+        message: "Insufficient available stock.",
+      });
+    }
 
-          await this.assertStockIdentity(tx, command);
-          const key = this.balanceKey(command);
-          const balance = await tx.inventoryBalance.findUnique({ where: key });
-          const version = balance?.version ?? 0;
-          this.assertVersion(command.expectedVersion, version);
+    await tx.inventoryBalance.update({
+      where: key,
+      data: {
+        reserved: { increment: command.quantity },
+        available: { decrement: command.quantity },
+        version: { increment: 1 },
+      },
+    });
 
-          if (!balance || balance.available < command.quantity) {
-            throw new ConflictException({
-              code: "INSUFFICIENT_STOCK",
-              message: "Insufficient available stock.",
-            });
-          }
+    const reservation = await tx.stockReservation.create({
+      data: {
+        warehouseId: command.warehouseId,
+        locationId: command.locationId,
+        variantId: command.variantId,
+        orderId: command.orderId ?? null,
+        quantity: command.quantity,
+        expiresAt: command.expiresAt,
+        idempotencyKey: command.idempotencyKey,
+      },
+    });
 
-          await tx.inventoryBalance.update({
-            where: key,
-            data: {
-              reserved: { increment: command.quantity },
-              available: { decrement: command.quantity },
-              version: { increment: 1 },
-            },
-          });
-
-          const reservation = await tx.stockReservation.create({
-            data: {
-              warehouseId: command.warehouseId,
-              locationId: command.locationId,
-              variantId: command.variantId,
-              orderId: command.orderId ?? null,
-              quantity: command.quantity,
-              expiresAt: command.expiresAt,
-              idempotencyKey: command.idempotencyKey,
-            },
-          });
-
-          await this.auditLog.record(
-            {
-              action: "inventory.reservation.created",
-              entityType: "stock-reservation",
-              entityId: reservation.id,
-              before: {
-                reserved: balance.reserved,
-                available: balance.available,
-              },
-              after: {
-                reserved: balance.reserved + command.quantity,
-                available: balance.available - command.quantity,
-              },
-              metadata: {
-                warehouseId: command.warehouseId,
-                locationId: command.locationId,
-              },
-              actorId: command.actorId,
-              requestId: command.requestId,
-            },
-            tx,
-          );
-
-          return reservation;
+    await this.auditLog.record(
+      {
+        action: "inventory.reservation.created",
+        entityType: "stock-reservation",
+        entityId: reservation.id,
+        before: {
+          reserved: balance.reserved,
+          available: balance.available,
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      ),
+        after: {
+          reserved: balance.reserved + command.quantity,
+          available: balance.available - command.quantity,
+        },
+        metadata: {
+          warehouseId: command.warehouseId,
+          locationId: command.locationId,
+        },
+        actorId: command.actorId,
+        requestId: command.requestId,
+      },
+      tx,
     );
-    return this.toReservationDto(reservation);
+
+    return reservation;
+  }
+
+  /** The owning production aggregate holds its order lock and audits its command. */
+  async transitionProductionReservationIn(tx: Prisma.TransactionClient, reservationId: string, action: 'consume' | 'release', context: ActorContext) {
+    this.assertTracked(context);
+    const reservation = await tx.stockReservation.findUnique({ where: { id: reservationId } });
+    if (!reservation || reservation.orderId) throw new ConflictException('Invalid production reservation.');
+    if (reservation.status !== 'ACTIVE') throw new ConflictException('Production reservation is no longer active.');
+    if (action === 'consume' && reservation.expiresAt <= new Date()) throw new ConflictException('Production reservation expired; reserve again before consumption.');
+    return action === 'consume' ? this.consumeSingleReservation(tx, reservation, context) : this.releaseSingleReservation(tx, reservation, context);
   }
 
   async releaseReservation(
@@ -593,6 +602,9 @@ export class InventoryService {
   ): Promise<R | StockReservationRow> {
     this.assertTracked(context);
     const reservation = await this.requireActiveReservation(reservationId);
+    if (await this.prisma.doorMaterialRequirement.findUnique({ where: { reservationId }, select: { id: true } })) {
+      throw new ConflictException('Production-linked reservations are managed by the door order workflow.');
+    }
     if (reservation.orderId) {
       throw new ConflictException({
         code: "RESERVATION_STATE_CONFLICT",

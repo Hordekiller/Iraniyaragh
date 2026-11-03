@@ -1,4 +1,5 @@
 import {
+  DoorOpen,
   Boxes,
   Building2,
   ClipboardCheck,
@@ -18,6 +19,7 @@ import {
   Truck,
   Users,
   Warehouse,
+  Wrench,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -73,6 +75,21 @@ export const navigation: NavigationGroup[] = [
       { label: 'پیش‌فاکتورها', href: '/invoices', icon: ReceiptText, permission: 'invoices.read' },
       { label: 'مشتریان', href: '/customers', icon: Users, permission: 'customers.read' },
       { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'shipments.read' },
+    ],
+  },
+  {
+    label: 'مدیریت ساخت درب',
+    items: [
+      { label: 'سفارش‌های ساخت درب', href: '/custom-doors/orders', icon: DoorOpen, permission: 'orders.read' },
+      { label: 'مدل‌های درب', href: '/custom-doors/models', icon: DoorOpen, permission: 'catalog.read' },
+      { label: 'انواع شیشه', href: '/custom-doors/glass', icon: Boxes, permission: 'catalog.read' },
+      { label: 'پروفیل‌ها', href: '/custom-doors/profiles', icon: Boxes, permission: 'catalog.read' },
+      { label: 'یراق‌آلات و قطعات', href: '/custom-doors/hardware', icon: Wrench, permission: 'catalog.read' },
+      { label: 'تعرفه ساخت و مونتاژ', href: '/custom-doors/labor', icon: Settings2, permission: 'catalog.read' },
+      { label: 'قوانین قیمت‌گذاری', href: '/custom-doors/rules', icon: Settings2, permission: 'catalog.read' },
+      { label: 'قوانین بیعانه', href: '/custom-doors/deposits', icon: CreditCard, permission: 'catalog.read' },
+      { label: 'وضعیت تولید', href: '/custom-doors/production', icon: ClipboardCheck, permission: 'orders.read' },
+      { label: 'گزارش‌های ساخت درب', href: '/custom-doors/reports', icon: ChartNoAxesCombined, permission: 'reports.read' },
     ],
   },
   {

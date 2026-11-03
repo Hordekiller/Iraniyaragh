@@ -1,3 +1,4 @@
+import { CustomDoorOrdersModule } from './modules/custom-door-orders/custom-door-orders.module';
 import { DiscoveryModule } from './modules/discovery/discovery.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -41,6 +42,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     MediaModule,
     InventoryModule,
     OrdersModule,
+    CustomDoorOrdersModule,
     PaymentsModule,
     CustomersModule,
     CreditModule,

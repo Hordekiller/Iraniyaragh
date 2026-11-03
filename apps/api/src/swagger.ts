@@ -1,3 +1,4 @@
+import { doorOpenApiSchemas } from './modules/custom-door-orders/door.openapi';
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 
@@ -26,5 +27,8 @@ export function createApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('reports', 'Permissioned operational reports and dashboard summaries')
     .build();
 
-  return SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config);
+  document.components ??= {};
+  document.components.schemas = { ...document.components.schemas, ...doorOpenApiSchemas };
+  return document;
 }

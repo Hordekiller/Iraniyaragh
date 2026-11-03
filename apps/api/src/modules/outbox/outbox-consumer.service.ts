@@ -3,6 +3,8 @@ import { OutboxEffectKind, OutboxEffectStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 
 const TOPIC_KIND: Readonly<Record<string, OutboxEffectKind>> = {
+  DOOR_QUOTE_APPROVED: OutboxEffectKind.CUSTOMER_DOOR_QUOTE_APPROVED,
+  DOOR_PAYMENT_VERIFIED: OutboxEffectKind.PAYMENT_RECONCILIATION,
   ORDER_CREATED: OutboxEffectKind.CUSTOMER_ORDER_CREATED,
   ORDER_CANCELLED: OutboxEffectKind.CUSTOMER_ORDER_CANCELLED,
   ORDER_EXPIRED: OutboxEffectKind.CUSTOMER_ORDER_EXPIRED,
@@ -22,6 +24,7 @@ const TOPIC_KIND: Readonly<Record<string, OutboxEffectKind>> = {
  */
 const SETTLED_PAYMENT_TOPICS: ReadonlySet<string> = new Set([
   'PAYMENT_VERIFIED',
+  'DOOR_PAYMENT_VERIFIED',
   'PAYMENT_VERIFIED_AFTER_CANCELLED',
   'PAYMENT_VERIFICATION_FAILED',
 ]);
@@ -44,7 +47,7 @@ export class OutboxConsumerService {
       if (event.consumedAt) return;
 
       const kind = TOPIC_KIND[event.topic];
-      const expectedAggregate = event.topic.startsWith('ORDER_') || event.topic.startsWith('SHIPMENT_') ? 'order' : 'payment';
+      const expectedAggregate = event.topic === 'DOOR_QUOTE_APPROVED' || event.topic.startsWith('ORDER_') || event.topic.startsWith('SHIPMENT_') ? 'order' : 'payment';
       if (!kind || event.aggregateType !== expectedAggregate) {
         throw new UnsupportedOutboxTopicError('Unsupported outbox event topic or aggregate.');
       }

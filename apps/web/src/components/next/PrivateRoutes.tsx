@@ -3,6 +3,8 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { ROUTE_PATHS } from '../../lib/routes'
 
+const CustomDoorsPage = lazy(() => import('../../views/CustomDoorsPage').then(module => ({ default: module.CustomDoorsPage })))
+const AccountCustomDoorsPage = lazy(() => import('../../views/AccountCustomDoorsPage').then(module => ({ default: module.AccountCustomDoorsPage })))
 const SearchPage = lazy(() => import('../../views/SearchPage').then(module => ({ default: module.SearchPage })))
 const BestsellersPage = lazy(() => import('../../views/BestsellersPage').then(module => ({ default: module.BestsellersPage })))
 const CartPage = lazy(() => import('../../views/CartPage').then(module => ({ default: module.CartPage })))
@@ -22,6 +24,9 @@ const NotFoundPage = lazy(() => import('../../views/NotFoundPage').then(module =
 
 export default function PrivateRoutes() {
  return <Suspense fallback={<p role="status" className="p-8 text-center">در حال بارگذاری…</p>}><Routes>
+                      <Route path={ROUTE_PATHS.customDoors} element={<CustomDoorsPage />} />
+                      <Route path={ROUTE_PATHS.myCustomDoors} element={<AccountCustomDoorsPage />} />
+                      <Route path={ROUTE_PATHS.customDoorOrder} element={<AccountCustomDoorsPage />} />
                       <Route path={ROUTE_PATHS.search} element={<SearchPage />} />
                       <Route path={ROUTE_PATHS.bestsellers} element={<BestsellersPage />} />
                       <Route path={ROUTE_PATHS.cart} element={<CartPage />} />

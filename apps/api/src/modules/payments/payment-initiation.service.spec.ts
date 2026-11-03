@@ -35,11 +35,13 @@ type PaymentRow = {
   idempotencyFingerprint: string;
   orderId: string;
   gatewayEnvironment: string;
+  amount: bigint;
 };
 
 function paymentRow(overrides: Partial<PaymentRow> = {}): PaymentRow {
   return {
     id: 'payment-1',
+    amount: orderRow.grandTotal,
     status: 'PENDING',
     authority: null,
     idempotencyFingerprint: initiationFingerprint('order-1'),

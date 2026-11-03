@@ -78,6 +78,7 @@ function buildService() {
   const client = createFakeClient();
   const tx = createFakeClient();
   const prisma = {
+    doorMaterialRequirement: { findUnique: vi.fn().mockResolvedValue(null) },
     inventoryBalance: {
       findMany: vi.fn(),
       count: vi.fn(),

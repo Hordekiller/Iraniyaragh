@@ -1,6 +1,7 @@
 import type { SmsValidation } from "@iranyaragh/contracts";
 
 export type SmsPurpose =
+  | "door_quote_approved"
   | "customer_login"
   | "order_paid"
   | "shipment_dispatched"

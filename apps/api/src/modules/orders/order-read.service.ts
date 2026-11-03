@@ -154,6 +154,7 @@ export class OrderReadService {
     const page = query.page;
     const perPage = query.perPage;
     const where: Prisma.OrderWhereInput = {
+      customDoorOrder: null,
       customer: { userId },
       ...(query.status ? { status: query.status } : {}),
     };
@@ -185,7 +186,7 @@ export class OrderReadService {
     orderId: string,
   ): Promise<CustomerOrderDetailResponse> {
     const order = await this.prisma.order.findFirst({
-      where: { id: orderId, customer: { userId } },
+      where: { id: orderId, customer: { userId }, customDoorOrder: null },
       select: customerDetailSelect,
     });
     if (!order) throw orderNotFound();
