@@ -19,7 +19,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from "class-validator";
-import { DOOR_STATUSES } from "@iranyaragh/contracts";
+import { DOOR_STATUSES } from "./door-state";
 import type {
   DoorBasis,
   DoorDepositPolicy,

@@ -1,5 +1,5 @@
 import type { SchemaObject } from "@nestjs/swagger/dist/interfaces/open-api-spec.interface";
-import { DOOR_STATUSES } from "@iranyaragh/contracts";
+import { DOOR_STATUSES } from "./door-state";
 const text: SchemaObject = { type: "string" };
 const int: SchemaObject = { type: "integer" };
 const bool: SchemaObject = { type: "boolean" };

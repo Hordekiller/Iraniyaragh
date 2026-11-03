@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { depositFor, doorPaid, priceDoors } from "./door-pricing";
-import { assertDoorTransition } from "./door-state";
+import { assertDoorTransition, DOOR_STATUSES } from "./door-state";
+import { DOOR_STATUSES as CONTRACT_DOOR_STATUSES } from "@iranyaragh/contracts";
 import { DoorOrderDto, normalizeDoorDigits } from "./door.dto";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
@@ -189,6 +190,9 @@ describe("Custom door pricing (integer IRR / rational measurement)", () => {
   });
 });
 describe("Production/financial separation", () => {
+  it("keeps the generated runtime enum identical to the shared API contract", () => {
+    expect(DOOR_STATUSES).toEqual(CONTRACT_DOOR_STATUSES);
+  });
   const context = {
     approved: true,
     accepted: true,

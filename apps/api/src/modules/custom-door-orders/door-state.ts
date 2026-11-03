@@ -1,6 +1,13 @@
 import { ConflictException } from "@nestjs/common";
+import { DoorProductionStatus } from "@prisma/client";
 import type { DoorStatus } from "@iranyaragh/contracts";
 import { assertTransition } from "../../common/state-machine";
+
+// Contracts ship TypeScript types for consumers, not executable Node modules.
+// Runtime validation uses the generated database enum; the contract checks its values.
+export const DOOR_STATUSES = Object.values(
+  DoorProductionStatus,
+) satisfies DoorStatus[];
 
 export const DOOR_TRANSITIONS: Record<DoorStatus, ReadonlySet<DoorStatus>> = {
   DRAFT: new Set(["PENDING_QUOTE_APPROVAL", "AWAITING_DEPOSIT", "CANCELLED"]),
