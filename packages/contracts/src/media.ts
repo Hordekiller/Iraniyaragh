@@ -103,6 +103,9 @@ export type PublicProductMediaImage = {
 };
 
 export type AdminProductMediaPickerItem = {
+  /** Original upload dimensions; width/height below describe the served rendition. */
+  originalWidth?: number | null;
+  originalHeight?: number | null;
   id: string;
   url: string;
   alt: string;

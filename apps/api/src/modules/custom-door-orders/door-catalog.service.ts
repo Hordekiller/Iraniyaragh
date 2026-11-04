@@ -68,22 +68,19 @@ export class DoorCatalogService {
       }),
     ]);
     const images = new Map<string, string>();
+    const originalSizes = new Map<string, { width: number | null; height: number | null }>();
     // MediaService is the existing READY-only public projection; private keys are never returned.
     const imageIds = [
       ...new Set(
-        models
-          .map((m) => m.imageMediaId)
-          .filter((id): id is string => id !== null),
+        [...models.map(m => m.imageMediaId), ...materials.map(m => (m.configuration as unknown as DoorMaterial["configuration"]).imageMediaId)]
+          .filter((id): id is string => typeof id === "string" && id.length > 0),
       ),
     ];
     if (imageIds.length) {
-      const rows = await tx.productMedia.findMany({
-        where: { id: { in: imageIds }, state: "READY", kind: "IMAGE" },
-        select: { id: true, productId: true },
-      });
-      for (const productId of [...new Set(rows.map((row) => row.productId))]) {
-        const picker = await this.media.listPicker(productId);
-        for (const image of picker.data.items) images.set(image.id, image.url);
+      const rows = await this.media.publicImageReferences(imageIds, tx);
+      for (const image of rows) {
+        images.set(image.id, image.url);
+        originalSizes.set(image.id, { width: image.originalWidth ?? null, height: image.originalHeight ?? null });
       }
     }
     return {
@@ -92,8 +89,13 @@ export class DoorCatalogService {
         configuration: m.configuration as unknown as DoorModel["configuration"],
         type: m.type as DoorModel["type"],
         imageUrl: images.get(m.imageMediaId ?? "") ?? null,
+        imageOriginalWidth: originalSizes.get(m.imageMediaId ?? "")?.width ?? null,
+        imageOriginalHeight: originalSizes.get(m.imageMediaId ?? "")?.height ?? null,
       })),
       materials: materials.map((m) => ({
+        imageUrl: images.get((m.configuration as unknown as DoorMaterial["configuration"]).imageMediaId ?? "") ?? null,
+        imageOriginalWidth: originalSizes.get((m.configuration as unknown as DoorMaterial["configuration"]).imageMediaId ?? "")?.width ?? null,
+        imageOriginalHeight: originalSizes.get((m.configuration as unknown as DoorMaterial["configuration"]).imageMediaId ?? "")?.height ?? null,
         ...m,
         category: m.category as DoorMaterial["category"],
         configuration:
@@ -220,6 +222,10 @@ export class DoorCatalogService {
         "برای اتصال موجودی، واحد واقعی مصرف را مشخص کنید؛ خدمت به SKU متصل نمی‌شود.",
       );
     return this.transaction(async (tx) => {
+      if (cfg.imageMediaId) {
+        const image = await tx.productMedia.findFirst({ where: { id: cfg.imageMediaId, state: "READY", kind: "IMAGE" }, select: { id: true } });
+        if (!image) throw new BadRequestException("تصویر شیشه باید از رسانه‌های آماده و تأییدشده انتخاب شود.");
+      }
       if (input.variantId) {
         const variant = await tx.productVariant.findUnique({
           where: { id: input.variantId },

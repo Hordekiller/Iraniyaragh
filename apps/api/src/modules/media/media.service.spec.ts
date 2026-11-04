@@ -539,6 +539,17 @@ describe("MediaService listPicker", () => {
     return { service, prisma };
   }
 
+  it("batch projects only selected READY references, preserving source dimensions with one query", async () => {
+    const { service, prisma } = pickerSetup([readyImage, notFound]);
+    const images = await service.publicImageReferences(["media-image", "media-no-rendition", "media-image"]);
+    expect(prisma.productMedia.findMany).toHaveBeenCalledOnce();
+    expect(prisma.productMedia.findMany).toHaveBeenCalledWith({ where: { id: { in: ["media-image", "media-no-rendition"] }, state: "READY", kind: "IMAGE" }, include: { renditions: true } });
+    expect(images).toHaveLength(1);
+    expect(images[0]).toMatchObject({ id: "media-image", width: 800, height: 600, originalWidth: 1200, originalHeight: 900 });
+    expect(images[0]).not.toHaveProperty("objectKey");
+    await expect(service.publicImageReferences([])).resolves.toEqual([]);
+    expect(prisma.productMedia.findMany).toHaveBeenCalledOnce();
+  });
   it("exposes pickable ready images from the widest rendition with matching url and dimensions", async () => {
     const { service, prisma } = pickerSetup([readyImage, notFound, withoutIntrinsic]);
 
@@ -557,6 +568,8 @@ describe("MediaService listPicker", () => {
         caption: "عنوان",
         width: 800,
         height: 600,
+        originalWidth: 1200,
+        originalHeight: 900,
       },
       {
         id: "media-no-intrinsic",
@@ -565,6 +578,8 @@ describe("MediaService listPicker", () => {
         caption: "عنوان",
         width: 800,
         height: 600,
+        originalWidth: null,
+        originalHeight: null,
       },
     ]);
   });

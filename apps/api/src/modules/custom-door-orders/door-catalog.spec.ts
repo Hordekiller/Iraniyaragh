@@ -66,13 +66,7 @@ function setup() {
   );
   const audit = { record: vi.fn().mockResolvedValue(undefined) };
   const media = {
-    listPicker: vi.fn().mockResolvedValue({
-      data: {
-        items: [
-          { id: "ready-image", url: "https://example.test/approved.webp" },
-        ],
-      },
-    }),
+    publicImageReferences: vi.fn().mockResolvedValue([{ id: "ready-image", url: "https://example.test/approved.webp", originalWidth: 1200, originalHeight: 1200 }]),
   };
   const service = new DoorCatalogService(
     db as unknown as PrismaService,
@@ -85,6 +79,24 @@ describe("Door catalog safeguards and revision evidence", () => {
   let s: ReturnType<typeof setup>;
   beforeEach(() => {
     s = setup();
+  });
+  it("only accepts READY glass photos and records their catalog revision", async () => {
+    const f = fixture();
+    f.materialInput.configuration.imageMediaId = "glass-image";
+    await expect(s.service.writeMaterial("staff", "request", f.materialInput)).rejects.toThrow();
+    expect(s.db.doorMaterial.upsert).not.toHaveBeenCalled();
+    s.db.productMedia.findFirst.mockResolvedValue({ id: "glass-image" });
+    await expect(s.service.writeMaterial("staff", "request", f.materialInput)).resolves.toBe("test-material");
+    expect(s.db.productMedia.findFirst).toHaveBeenCalledWith({ where: { id: "glass-image", state: "READY", kind: "IMAGE" }, select: { id: true } });
+    expect(s.db.doorCatalogRevision.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ entityType: "MATERIAL", actorId: "staff" }) }));
+  });
+  it("projects glass photos and original dimensions only through the ready-media projection", async () => {
+    const f = fixture();
+    s.db.doorMaterial.findMany.mockResolvedValue([{ ...f.materials[0], configuration: { ...f.materials[0].configuration, imageMediaId: "ready-image" } }]);
+    s.db.productMedia.findMany.mockResolvedValue([{ id: "ready-image", productId: "test-product", width: 1200, height: 1200 }]);
+    const catalog = await s.service.catalog();
+    expect(catalog.materials[0]).toMatchObject({ imageUrl: "https://example.test/approved.webp", imageOriginalWidth: 1200, imageOriginalHeight: 1200 });
+    expect(s.media.publicImageReferences).toHaveBeenCalledOnce();
   });
   it("projects only active public models with READY media and keeps the admin projection separate", async () => {
     const f = fixture();
@@ -101,11 +113,7 @@ describe("Door catalog safeguards and revision evidence", () => {
       "https://example.test/approved.webp",
     );
     expect(result.models[1].imageUrl).toBeNull();
-    expect(s.db.productMedia.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ state: "READY", kind: "IMAGE" }),
-      }),
-    );
+    expect(s.media.publicImageReferences).toHaveBeenCalledWith(["ready-image"], s.db);
     expect(s.db.doorModel.findMany).toHaveBeenLastCalledWith(
       expect.objectContaining({ where: { active: true } }),
     );
