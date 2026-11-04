@@ -1,51 +1,68 @@
 {
-  "revision": "operator-2026-10-14",
+  "revision": "operator-2026-11-04",
   "sources": {
-    "mark": "5feb1586d82bd803224f26896c7254976d21d5521acebbb0629f6e3fc9da079a",
-    "wordmark": "7095dd0c10a4576905a0e890fcde2edd89c1dee637829563d7b5c5ad33034c6a"
+    "mark": "bbfdfb081e97c9b3726598fbd85fb3eee9695add19ebd595136d12808bab0da2",
+    "wordmark": "c1529d26ab4fdfb0b0e38bccb14534317e894a29aba9581c992613c489923f69",
+    "favicon": "79884b6f229e0c48384c8e7c6ff0e1217cc34278961bb2b7b974498c3a5a8a0d"
   },
   "files": {
-    "mark-64.webp": {
-      "sha256": "e5c13b585943d99eb61c5866fc2730fd210c334af4c5c0a89c9f7dd2d7bef8f8",
-      "bytes": 5492,
-      "width": 64,
-      "height": 64
+    "favicon.ico": {
+      "sha256": "79884b6f229e0c48384c8e7c6ff0e1217cc34278961bb2b7b974498c3a5a8a0d",
+      "bytes": 137049
     },
-    "mark-128.webp": {
-      "sha256": "d621123e0faf87f1e02a3f88bf5c5e96acb4893bf1307a5edc2b399d8b5031c9",
-      "bytes": 12320,
-      "width": 128,
-      "height": 128
-    },
-    "wordmark-432.webp": {
-      "sha256": "736fe98284aa8ca9e2285d7f68a581b475561f06d47dc568a904eafb737983ff",
-      "bytes": 52804,
-      "width": 432,
-      "height": 144
-    },
-    "wordmark-864.webp": {
-      "sha256": "e14cb292fae525b0aafb6b995408adbb01440f73353e54d70927794d38f10db5",
-      "bytes": 167896,
-      "width": 864,
-      "height": 288
-    },
-    "favicon-32.png": {
-      "sha256": "e5b984c3ffe61e75fe66317df62c8aad9dd411cf072d04227f81d8cd8e96af36",
-      "bytes": 2255,
-      "width": 32,
-      "height": 32
-    },
-    "apple-touch-icon.png": {
-      "sha256": "b338c418cd6a0b7b9adc6a88869481144fe663b252038ce1714bd94a49b08623",
-      "bytes": 39770,
-      "width": 180,
-      "height": 180
-    },
-    "wordmark-print.png": {
+    "wordmark-print-v2.png": {
       "sha256": "457401b43c2c484ced56e1858da9c84a0998d86099ab0935e82bad90f69cbcc4",
       "bytes": 459686,
       "width": 1086,
       "height": 362
+    },
+    "mark-64.webp": {
+      "sha256": "769669fd93105f00f4a6d57546b6bf7470ab9970ae250d1f09187b6de8c7bdef",
+      "bytes": 6698,
+      "width": 64,
+      "height": 64
+    },
+    "mark-128.webp": {
+      "sha256": "edeaf21fcfbc2e1daf93530ad82478cde27dd746f394c88dabba3c0231c5baae",
+      "bytes": 19450,
+      "width": 128,
+      "height": 128
+    },
+    "wordmark-432.webp": {
+      "sha256": "c6389f6b20ae3d5af99736a5af2be1c0589ad07665569414f30f756453b559ec",
+      "bytes": 50084,
+      "width": 432,
+      "height": 147
+    },
+    "wordmark-864.webp": {
+      "sha256": "a7779148f21d72b94158e2dc9e91198ab292cfef2ed4ecead818b5d314662078",
+      "bytes": 157064,
+      "width": 864,
+      "height": 294
+    },
+    "favicon-32.png": {
+      "sha256": "3c0c4c2ce7be62cd525495b8295a3460fab0024bf61500a7dfc3901a11b41020",
+      "bytes": 3248,
+      "width": 32,
+      "height": 32
+    },
+    "favicon-192.png": {
+      "sha256": "9f99ee82a1a3512f7067fd1bfd7fefd4c5a0b7a90354facea145c95bef268c49",
+      "bytes": 76077,
+      "width": 192,
+      "height": 192
+    },
+    "apple-touch-icon.png": {
+      "sha256": "e28720e364d65cd555a4216429db5ff428a47e5fa0b7c8b1753a5ea894d4fe7a",
+      "bytes": 67580,
+      "width": 180,
+      "height": 180
+    },
+    "wordmark-print.png": {
+      "sha256": "11721abcea4c1366971cee1124d88cc4226ea4d14d4fd9af55ecbec08e4c1cf1",
+      "bytes": 427408,
+      "width": 1086,
+      "height": 370
     }
   }
 }

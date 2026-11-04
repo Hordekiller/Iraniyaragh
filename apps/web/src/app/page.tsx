@@ -1,6 +1,7 @@
+import { JsonLd } from '../server/structured-data'
 import { HomePage } from '../views/HomePage'
 import { homeCatalog } from '../server/catalog'
-import { metadataFor, hasNonPageQuery, type SearchParams } from '../server/policy'
+import { absolute, STORE_NAME, metadataFor, hasNonPageQuery, type SearchParams } from '../server/policy'
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) {
   // Resolve public data before headers: an API outage cannot become an indexable 200 shell.
@@ -9,5 +10,5 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 }
 export default async function Page() {
   const catalog = await homeCatalog()
-  return <><h1 className="sr-only">فروشگاه ابزار و یراق‌آلات ایرانی یراق</h1><HomePage initialCatalog={catalog} /></>
+  return <><JsonLd data={{ '@context': 'https://schema.org', '@type': 'Organization', '@id': absolute('/#organization'), name: STORE_NAME, url: absolute('/'), logo: { '@type': 'ImageObject', url: absolute('/brand/wordmark-print.png?v=20261104'), width: 1086, height: 370 } }} /><h1 className="sr-only">فروشگاه ابزار و یراق‌آلات ایرانی یراق</h1><HomePage initialCatalog={catalog} /></>
 }

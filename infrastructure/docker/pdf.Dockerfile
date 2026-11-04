@@ -53,7 +53,7 @@ RUN pnpm --filter @iranyaragh/api build
 # this front-end has no backslash escape for them, so the whole fonts dir is
 # copied instead of the single variable-font file (it also brings OFL.txt).
 COPY apps/web/public/fonts /tmp/pdf-assets/fonts
-COPY apps/web/public/brand/wordmark-print.png /tmp/pdf-assets/brand/wordmark-print.png
+COPY apps/web/public/brand/wordmark-print*.png /tmp/pdf-assets/brand/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm --filter @iranyaragh/api deploy --legacy --prod /out
@@ -88,7 +88,7 @@ COPY --from=build --chown=pwuser:pwuser /repo/apps/api/package.json ./package.js
 # The same hash-verified font and wordmark the template binds. Copied as a flat
 # tree at runtime assets location, owned by the worker user, read-only in use.
 COPY --from=build --chown=pwuser:pwuser /tmp/pdf-assets/fonts ./assets/fonts
-COPY --from=build --chown=pwuser:pwuser /tmp/pdf-assets/brand/wordmark-print.png ./assets/brand/wordmark-print.png
+COPY --from=build --chown=pwuser:pwuser /tmp/pdf-assets/brand/ ./assets/brand/
 
 # Chromium sandbox stays ON. The base image ships the helper binary (this
 # Chromium build names it chrome_sandbox) without its documented SUID mode, so

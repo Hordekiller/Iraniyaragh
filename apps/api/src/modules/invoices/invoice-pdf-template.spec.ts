@@ -18,6 +18,7 @@ const assets = {
     resolve(__dirname, "../../../../web/public/brand/wordmark-print.png"),
   ),
 };
+const legacyAssets = { ...assets, wordmarkPng: readFileSync(resolve(__dirname, '../../../../web/public/brand/wordmark-print-v2.png')) };
 const money = (amount: string): Money => ({ amount, currency: "IRR" });
 function invoice(): CustomerInvoice {
   return {
@@ -72,11 +73,18 @@ function invoice(): CustomerInvoice {
 describe("Private invoice PDF fixed template boundary", () => {
   it("uses the corrected display brand for new PDFs and preserves the legacy render revision", () => {
     const current = buildInvoicePdfHtml(invoice(), assets);
-    expect(current.templateRevision).toBe("store-invoice-a4-v2");
-    expect(current.html).toContain("فاکتور فروشگاهی ایرانی یراق");
-    const legacy = buildInvoicePdfHtml(invoice(), assets, "store-invoice-a4-v1");
+    expect(current.templateRevision).toBe("store-invoice-a4-v3");
+    expect(current.html).toContain('alt="ایرانی یراق"');
+    const legacy = buildInvoicePdfHtml(invoice(), legacyAssets, "store-invoice-a4-v1");
     expect(legacy.templateRevision).toBe("store-invoice-a4-v1");
+    expect(legacy.htmlSha256).toBe("f2643cac3d89dbc839906f2a84ee6fe5707a4ee9d343dfe3b52da9530003822b");
     expect(legacy.html).toContain("فاکتور فروشگاهی ایران یراق");
+    const previous = buildInvoicePdfHtml(invoice(), legacyAssets, "store-invoice-a4-v2");
+    expect(previous.html).toContain("فاکتور فروشگاهی ایرانی یراق");
+    expect(previous.htmlSha256).toBe("610955445437d09e9a1ecc3b324f83b785e6aca8ea3ea61d04d70d549db6c50d");
+    expect(previous.brandSha256).not.toBe(current.brandSha256);
+    expect(() => buildInvoicePdfHtml(invoice(), assets, "store-invoice-a4-v2")).toThrow(InvoicePdfInputError);
+    expect(() => buildInvoicePdfHtml(invoice(), legacyAssets)).toThrow(InvoicePdfInputError);
     expect(() => buildInvoicePdfHtml(invoice(), assets, "unknown-template")).toThrow(InvoicePdfInputError);
   });
   it("preserves stored IRR and document number without rounding, recalculation or input mutation", () => {
@@ -274,9 +282,9 @@ describe("Private invoice PDF fixed template boundary", () => {
   });
   it("rejects HTML expansion beyond its independent budget rather than truncating escaped text", () => {
     const input = invoice();
-    input.lines = Array.from({ length: 100 }, (_, i) => ({
+    input.lines = Array.from({ length: 100 }, () => ({
       ...input.lines[0],
-      sku: `SYNTHETIC-${i}`,
+      sku: "'".repeat(120),
       title: "'".repeat(500),
     }));
     expect(Buffer.byteLength(JSON.stringify(input))).toBeLessThan(

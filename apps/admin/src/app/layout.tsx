@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   },
   description: 'مدیریت یکپارچه فروش، انبار و عملیات ایرانی یراق',
   robots: { index: false, follow: false },
-  icons: { icon: [{ url: brandAsset('favicon-32.png'), sizes: '32x32', type: 'image/png' }],
+  icons: { icon: [{ url: brandAsset('favicon.ico'), sizes: 'any', type: 'image/x-icon' }, { url: brandAsset('favicon-192.png'), sizes: '192x192', type: 'image/png' }],
     apple: [{ url: brandAsset('apple-touch-icon.png'), sizes: '180x180', type: 'image/png' }] },
 };
 

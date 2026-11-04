@@ -3,7 +3,6 @@ import { MapPin, Phone, ShoppingBag, UserRound } from 'lucide-react'
 import {
   HAS_SITE_PHONE,
   SITE_ADDRESS_LINE,
-  SITE_NAME,
   SITE_MOBILE,
   SITE_PHONE,
   SITE_PHONE_PERSIAN,
@@ -90,7 +89,7 @@ export function SiteFooter() {
           </div>
         </div>
         <div className="border-t border-slate-100 py-5 text-xs text-slate-500">
-          © {toPersianDigits(currentJalaliYear())} {SITE_NAME} — کلیه حقوق محفوظ است.
+          © {toPersianDigits(currentJalaliYear())} <StoreBrandLogo variant="inline" /> — کلیه حقوق محفوظ است.
         </div>
       </div>
     </footer>
