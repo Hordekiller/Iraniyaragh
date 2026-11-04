@@ -10,6 +10,7 @@ import { PageHelper } from '../help/PageHelper'
 import { LoginDialog } from '../auth/LoginDialog'
 import { SECTION_IDS } from '../../lib/site-config'
 import { useRouteMetadata } from '../../lib/use-route-metadata'
+import { useHelperSwitchSync } from '../../lib/use-helper-enabled'
 import { useAuth } from '../../state/auth-context'
 
 /**
@@ -24,6 +25,7 @@ export function AppLayout({ children, serverMetadata = false }: { children?: Rea
   const [searchParams] = useSearchParams()
   const location = useLocation()
   useRouteMetadata(location.pathname, serverMetadata)
+  useHelperSwitchSync()
   const urlQuery = searchParams.get('q') ?? ''
 
   const [resolvedUrlQuery, setResolvedUrlQuery] = useState(urlQuery)

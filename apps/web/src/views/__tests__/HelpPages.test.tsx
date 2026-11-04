@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { HELP_TOPICS, helpTopic } from '../../lib/help-content'
 import { tourById } from '../../lib/help-tours'
+import { setHelperEnabled } from '../../lib/help-tour-state'
 import { HelpPage, HelpTopicPage } from '../HelpPage'
 
 describe('customer help center', () => {
@@ -38,10 +39,20 @@ describe('customer help center', () => {
     expect(screen.getAllByText(/در انتظار اعلام فروشنده/).length).toBeGreaterThan(0)
   })
 
+  it('hides the on-page tour button when the admin switch is off but keeps the written guide', () => {
+    setHelperEnabled(false)
+    render(<MemoryRouter><HelpTopicPage slug="checkout" /></MemoryRouter>)
+    expect(screen.getByRole('heading', { level: 1, name: 'تکمیل سفارش: نشانی و ارسال' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /نمایش روی صفحه/ })).toBeNull()
+    setHelperEnabled(null)
+  })
+
   it('links every interactive tour to a topic and offers to start it on the real page', () => {
     for (const topic of HELP_TOPICS.filter(item => item.tour)) expect(tourById(topic.tour!), topic.slug).toBeDefined()
+    setHelperEnabled(true)
     render(<MemoryRouter initialEntries={['/help/checkout']}><Routes><Route path="/help/:slug" element={<HelpTopicPage />} /></Routes></MemoryRouter>)
     expect(screen.getByRole('button', { name: /نمایش روی صفحه/ })).toBeInTheDocument()
+    setHelperEnabled(null)
   })
 
   it('renders a topic without any router <Route> (as the Next server pages do)', () => {

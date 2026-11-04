@@ -8,6 +8,8 @@ import { HomepageCollectionsController } from './homepage-collections.controller
 import { HomepageCollectionsService } from './homepage-collections.service';
 import { HomepageBannersController } from './homepage-banners.controller';
 import { HomepageBannersService } from './homepage-banners.service';
+import { StorefrontHelperController } from './storefront-helper.controller';
+import { StorefrontHelperService } from './storefront-helper.service';
 
-@Module({ imports: [AuditModule], controllers: [CatalogController, HomepageCollectionsController, HomepageBannersController], providers: [CatalogService, CatalogIdempotencyService, CatalogImportService, HomepageCollectionsService, HomepageBannersService], exports: [CatalogService, CatalogImportService, CatalogIdempotencyService] })
+@Module({ imports: [AuditModule], controllers: [CatalogController, HomepageCollectionsController, HomepageBannersController, StorefrontHelperController], providers: [CatalogService, CatalogIdempotencyService, CatalogImportService, HomepageCollectionsService, HomepageBannersService, StorefrontHelperService], exports: [CatalogService, CatalogImportService, CatalogIdempotencyService] })
 export class CatalogModule {}

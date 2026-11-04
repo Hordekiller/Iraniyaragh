@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext, type AuthContextValue } from '../../state/auth-context'
-import { startTour, stopTour } from '../../lib/help-tour-state'
+import { setHelperEnabled, startTour, stopTour } from '../../lib/help-tour-state'
 import { TOURS } from '../../lib/help-tours'
 import { GuidedTour } from './GuidedTour'
 
@@ -24,8 +24,8 @@ function visibleButton(name: string, attr = 'data-help') {
   return button
 }
 
-beforeEach(() => { window.sessionStorage.clear(); Element.prototype.scrollIntoView = vi.fn() })
-afterEach(() => { act(() => stopTour()); document.body.innerHTML = '' })
+beforeEach(() => { setHelperEnabled(true); window.sessionStorage.clear(); Element.prototype.scrollIntoView = vi.fn() })
+afterEach(() => { act(() => { setHelperEnabled(null); stopTour() }); document.body.innerHTML = '' })
 
 describe('GuidedTour', () => {
   it('renders nothing until a tour is started', () => {

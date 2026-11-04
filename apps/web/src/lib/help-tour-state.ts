@@ -101,3 +101,21 @@ export function subscribeRequest(listener: () => void) {
   requestListeners.add(listener)
   return () => { requestListeners.delete(listener) }
 }
+
+/**
+ * Admin kill-switch for the interactive helper (Admin → settings → راهنمای تعاملی مشتری).
+ * `null` = not known yet; it fails CLOSED: nothing interactive is shown until the API says enabled.
+ */
+let helperEnabled: boolean | null = null
+const enabledListeners = new Set<() => void>()
+export const getHelperEnabled = () => helperEnabled
+export const getServerHelperEnabled = (): boolean | null => null
+export function setHelperEnabled(value: boolean | null) {
+  if (helperEnabled === value) return
+  helperEnabled = value
+  enabledListeners.forEach(listener => listener())
+}
+export function subscribeEnabled(listener: () => void) {
+  enabledListeners.add(listener)
+  return () => { enabledListeners.delete(listener) }
+}

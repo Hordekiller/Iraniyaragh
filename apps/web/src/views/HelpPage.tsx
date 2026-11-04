@@ -7,6 +7,7 @@ import { HELP_TOPICS, helpTopic, type HelpNoteKind, type HelpSection, type HelpT
 import { ROUTES } from '../lib/routes'
 import { startTour } from '../lib/help-tour-state'
 import { tourById } from '../lib/help-tours'
+import { useHelperEnabled } from '../lib/use-helper-enabled'
 import { NotFoundPage } from './NotFoundPage'
 
 const noteStyle: Record<HelpNoteKind, { label: string; className: string }> = {
@@ -78,10 +79,11 @@ export function HelpTopicPage({ slug: slugProp }: { slug?: string } = {}) {
   const params = useParams<{ slug: string }>()
   const slug = slugProp ?? params.slug ?? ''
   const navigate = useNavigate()
+  const helperEnabled = useHelperEnabled()
   const topic = helpTopic(slug)
   if (!topic) return <NotFoundPage />
   const index = HELP_TOPICS.findIndex(item => item.slug === topic.slug)
-  const tour = topic.tour ? tourById(topic.tour) : undefined
+  const tour = helperEnabled && topic.tour ? tourById(topic.tour) : undefined
   const related = topic.related.map(helpTopic).filter((item): item is HelpTopic => item !== undefined)
   return <article className="mx-auto max-w-[860px] px-4 py-12 lg:px-6 lg:py-16">
     <nav aria-label="مسیر صفحه" className="text-xs text-slate-500">
