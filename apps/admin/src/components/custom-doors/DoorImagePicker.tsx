@@ -9,7 +9,7 @@ import { doorAdminError } from '@/lib/custom-doors/api';
 
 type Props = { value: string | null; onChange: (id: string | null) => void; label: string; square?: boolean; imageUrl?: string | null; initialValue?: string | null; originalWidth?: number | null; originalHeight?: number | null };
 
-export function DoorImagePicker({ value, onChange, label, square = false, imageUrl, initialValue, originalWidth, originalHeight }: Props) {
+export function DoorImagePicker({ value, onChange, label, square = false, imageUrl, initialValue, originalWidth, originalHeight }: Readonly<Props>) {
   const [search, setSearch] = useState('');
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [productId, setProductId] = useState('');

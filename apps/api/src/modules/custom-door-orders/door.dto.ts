@@ -19,10 +19,10 @@ import {
   ValidateIf,
   ValidateNested,
 } from "class-validator";
-import type { DoorGlassSampleKey } from "@iranyaragh/contracts";
 import { DOOR_GLASS_SAMPLE_ENUM, DOOR_GLASS_SAMPLE_KEYS } from "./door-glass-samples";
 import { DOOR_STATUSES } from "./door-state";
 import type {
+  DoorGlassSampleKey,
   DoorBasis,
   DoorDepositPolicy,
   DoorMaterialConfiguration,

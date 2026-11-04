@@ -1,6 +1,5 @@
 "use client";
 import { DoorImagePicker } from "./DoorImagePicker";
-import { DOOR_GLASS_SAMPLES, doorGlassSample, type DoorGlassSampleKey } from "@iranyaragh/contracts";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -17,12 +16,13 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import type {
-  DoorCatalog,
-  DoorDepositPolicy,
-  DoorMaterial,
-  DoorModel,
-  DoorModelConfiguration,
+import {
+  DOOR_GLASS_SAMPLES, doorGlassSample, type DoorGlassSampleKey,
+  type DoorCatalog,
+  type DoorDepositPolicy,
+  type DoorMaterial,
+  type DoorModel,
+  type DoorModelConfiguration,
 } from "@iranyaragh/contracts";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/lib/auth/AuthProvider";
