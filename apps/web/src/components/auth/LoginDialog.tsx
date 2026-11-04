@@ -372,7 +372,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
               </div>
 
               <p className="mt-5 text-[11px] text-slate-400 text-center leading-5">
-                با ورود، قوانین و مقررات <StoreBrandLogo variant="inline" /> را می‌پذیرید.
+                با ورود، قوانین و مقررات ایرانی یراق را می‌پذیرید.
               </p>
             </div>
           </motion.div>
