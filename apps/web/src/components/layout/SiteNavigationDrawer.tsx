@@ -129,7 +129,7 @@ export function SiteNavigationDrawer({ onClose }: { onClose: () => void }) {
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50"><StoreBrandLogo variant="mark" /></span>
             <div>
               <h2 id="store-navigation-title" className="text-base font-black">منوی فروشگاه</h2>
-              <p className="mt-1 text-xs text-slate-500">ایرانی یراق؛ همراهِ پروژه‌های شما</p>
+              <p className="mt-1 text-xs text-slate-500"><StoreBrandLogo variant="inline" />؛ همراهِ پروژه‌های شما</p>
             </div>
           </div>
           <button type="button" autoFocus onClick={onClose} aria-label="بستن منوی فروشگاه" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-800"><X size={20} aria-hidden="true" /></button>

@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
-import { SITE_NAME, SITE_TAGLINE } from '../../lib/site-config'
+import { SITE_TAGLINE } from '../../lib/site-config'
+
+import { StoreBrandLogo } from '../brand/StoreBrandLogo'
 
 // Reuse the archived storefront artwork with truthful discovery copy.
 const slides = [
@@ -56,7 +58,7 @@ export function HeroSlider() {
       className="absolute inset-0 size-full object-cover" onError={() => setFailedImages(current => new Set([...current, slide.image]))} />}
     <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-l from-slate-950/95 via-slate-950/85 to-slate-950/50" />
     <div aria-live={rotating ? 'off' : 'polite'} aria-atomic="true" className="relative px-6 pb-28 pt-12 sm:px-12 lg:px-16 lg:pt-20">
-      <p className="inline-flex rounded-full border border-white/30 bg-slate-950/60 px-4 py-2 text-sm font-bold">{SITE_NAME}</p>
+      <p className="inline-flex rounded-full border border-white/30 bg-white px-4 py-2 text-sm font-bold"><StoreBrandLogo variant="responsive" /></p>
       <h1 className="mt-6 max-w-2xl text-3xl font-black leading-snug sm:text-4xl lg:text-5xl">{slide.title}</h1>
       <p className="mt-5 max-w-lg text-base leading-8 text-white">{slide.description}</p>
       <Link to={slide.to} className="mt-7 inline-flex min-h-12 items-center gap-3 rounded-xl bg-orange-700 px-6 py-3 font-bold text-white hover:bg-orange-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">{slide.cta}<ArrowLeft size={18} aria-hidden="true" /></Link>

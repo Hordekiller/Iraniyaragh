@@ -1,3 +1,4 @@
+import { StoreBrandLogo } from '../brand/StoreBrandLogo'
 import { useRef } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -53,7 +54,7 @@ export function ProductCarousel({
           <p
             className={`text-xs font-bold ${offer ? "text-orange-100" : "text-[#C2410C]"}`}
           >
-            ایرانی یراق
+            <StoreBrandLogo variant="inline" />
           </p>
           <h2
             id={`${id}-title`}

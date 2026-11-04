@@ -343,7 +343,7 @@ test('staff records a server-priced pending walk-in order then explicitly approv
     const publicationReason = page.getByRole('textbox', { name: 'دلیل تغییر دسترسی فاکتور' });
     await expect(publicationReason).toBeVisible();
     const printedSheet = page.getByRole('article', { name: /^سند فاکتور IRY-/ });
-    await expect.poll(() => printedSheet.locator('img').evaluate(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)).toBe(true);
+    await expect.poll(() => printedSheet.locator('img').evaluateAll(images => images.length > 0 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
     await page.evaluate(async () => { await document.fonts.load('400 12px "Iraniyaragh Sans"', 'ایرانی یراق'); });
     await page.emulateMedia({ media: 'print' });
     await expect(printedSheet).toBeVisible();

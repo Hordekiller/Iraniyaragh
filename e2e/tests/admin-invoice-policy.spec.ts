@@ -16,7 +16,10 @@ test('operator versions store invoice settings through the real protected API an
   await page.getByRole('textbox', { name: /سقف تخفیف \(واحد پایه\)/ }).fill('۲۰۰۰');
   await page.getByRole('combobox', { name: /مالیات هزینهٔ ارسال/ }).dispatchEvent('mousedown');
   await tap(page.getByRole('option', { name: 'بدون مالیات ارسال' }));
-  await expect(page.getByRole('switch', { name: 'فعال برای صدور فاکتور پس از تأیید سیاست' })).not.toBeChecked();
+  // Each project shares the isolated API; earlier journeys may have enabled issuance.
+  const issuance = page.getByRole('switch', { name: 'فعال برای صدور فاکتور پس از تأیید سیاست' });
+  await issuance.setChecked(false);
+  await expect(issuance).not.toBeChecked();
   await page.getByRole('textbox', { name: /دلیل ثبت نسخهٔ جدید/ }).fill('تصویب تنظیمات در آزمون مرورگر ایزوله');
   const save = page.waitForResponse(response => response.url().endsWith('/api/v1/settings/admin/invoice-policy') && response.request().method() === 'PUT');
   await tap(page.getByRole('button', { name: 'ثبت نسخهٔ مصوب' }));
