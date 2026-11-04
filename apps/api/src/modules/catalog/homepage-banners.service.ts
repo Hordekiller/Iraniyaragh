@@ -2,10 +2,9 @@ import { BadRequestException, ConflictException, Inject, Injectable, Optional } 
 import { ConfigService } from '@nestjs/config';
 import { Prisma, type HomepageBannerConfig } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import {
-  HOMEPAGE_BANNER_SLOTS,
-  type HomepageBannerAdmin, type HomepageBannerImage, type HomepageBannerInput, type HomepageBannerMediaOption,
-  type HomepageBannersAdminConfig, type HomepageBannersPublicConfig, type HomepageBannersUpdate,
+import type {
+  HomepageBannerAdmin, HomepageBannerImage, HomepageBannerInput, HomepageBannerMediaOption,
+  HomepageBannersAdminConfig, HomepageBannersPublicConfig, HomepageBannersUpdate,
 } from '@iranyaragh/contracts';
 import type { EnvironmentVariables } from '../../config/environment';
 import { PrismaService } from '../../database/prisma.service';
@@ -13,6 +12,8 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { widestRenditionProjection } from '../media/media-url';
 
 const CONFIG_ID = 'storefront';
+// Value imports from the unbuilt contracts package crash compiled Node; keep in sync with HOMEPAGE_BANNER_SLOTS.
+const HOMEPAGE_BANNER_SLOTS = 4;
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const ID = /^[A-Za-z0-9_-]{1,64}$/u;
 const MEDIA_ID = /^[A-Za-z0-9_-]{1,128}$/u;
