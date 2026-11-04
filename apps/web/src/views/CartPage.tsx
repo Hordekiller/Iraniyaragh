@@ -185,7 +185,7 @@ export function CartPage() {
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <ul className="space-y-3" aria-label="اقلام سبد خرید">
+        <ul className="space-y-3" aria-label="اقلام سبد خرید" data-help="cart-items">
           {lines.map((line) => {
             const pending = state.pendingVariantIds.includes(line.variantId)
             return (
@@ -291,6 +291,7 @@ export function CartPage() {
             {state.owner === 'customer' ? (
               <Link
                 to={ROUTES.checkout}
+                data-help="cart-continue"
                 className="mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
                 ادامه فرایند خرید
@@ -298,6 +299,7 @@ export function CartPage() {
             ) : auth.state.phase === 'authenticated' ? (
               <button
                 type="button"
+                data-help="cart-continue"
                 onClick={() => void reload()}
                 disabled={state.phase === 'merging'}
                 className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
@@ -308,6 +310,7 @@ export function CartPage() {
             ) : (
               <button
                 type="button"
+                data-help="cart-continue"
                 onClick={auth.open}
                 className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
