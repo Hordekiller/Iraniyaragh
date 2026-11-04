@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { InvoicePdfInputError } from './invoice-pdf-template';
+import { INVOICE_PDF_ASSETS, INVOICE_PDF_LEGACY_BRAND_SHA256, INVOICE_PDF_TEMPLATE_REVISION, InvoicePdfInputError } from './invoice-pdf-template';
 
 const FONT_RELATIVE = join('fonts', 'Vazirmatn[wght].woff2');
 const WORDMARK_RELATIVE = join('brand', 'wordmark-print.png');
@@ -13,7 +13,7 @@ const REPO_FALLBACK_DIR = resolve(__dirname, '../../../../../web/public');
 export type InvoicePdfAssets = { fontWoff2: Buffer; wordmarkPng: Buffer };
 export const invoicePdfAssetHashes = {
   font: '4e3fa217d38fdafc1fea4414ceb58ca5e662cf0ab5fa735a8c8c20e8b42cad92',
-  brand: '457401b43c2c484ced56e1858da9c84a0998d86099ab0935e82bad90f69cbcc4',
+  brand: INVOICE_PDF_ASSETS.brandSha256,
 } as const;
 
 function hash(bytes: Buffer): string {
@@ -27,19 +27,25 @@ function readAsset(dir: string, relative: string): Buffer {
 }
 
 export class InvoicePdfAssetsProvider {
-  private cached?: InvoicePdfAssets;
+  private readonly cached = new Map<string, InvoicePdfAssets>();
   constructor(private readonly assetsDir?: string) {}
 
-  load(): InvoicePdfAssets {
-    this.cached ??= this.read();
-    return this.cached;
+  load(templateRevision: string = INVOICE_PDF_TEMPLATE_REVISION): InvoicePdfAssets {
+    if (!['store-invoice-a4-v1', 'store-invoice-a4-v2', INVOICE_PDF_TEMPLATE_REVISION].includes(templateRevision)) throw new InvoicePdfInputError();
+    let assets = this.cached.get(templateRevision);
+    if (!assets) {
+      assets = this.read(templateRevision);
+      this.cached.set(templateRevision, assets);
+    }
+    return assets;
   }
 
-  private read(): InvoicePdfAssets {
+  private read(templateRevision: string): InvoicePdfAssets {
     const baseDir = this.assetsDir ?? REPO_FALLBACK_DIR;
     const fontWoff2 = readAsset(baseDir, FONT_RELATIVE);
-    const wordmarkPng = readAsset(baseDir, WORDMARK_RELATIVE);
-    if (hash(fontWoff2) !== invoicePdfAssetHashes.font || hash(wordmarkPng) !== invoicePdfAssetHashes.brand) {
+    const legacy = templateRevision !== INVOICE_PDF_TEMPLATE_REVISION;
+    const wordmarkPng = readAsset(baseDir, legacy ? join('brand', 'wordmark-print-v2.png') : WORDMARK_RELATIVE);
+    if (hash(fontWoff2) !== invoicePdfAssetHashes.font || hash(wordmarkPng) !== (legacy ? INVOICE_PDF_LEGACY_BRAND_SHA256 : invoicePdfAssetHashes.brand)) {
       throw new InvoicePdfInputError();
     }
     return { fontWoff2, wordmarkPng };

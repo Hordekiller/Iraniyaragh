@@ -127,7 +127,7 @@ describe('Customer invoice ownership UI and session lifetime', () => {
     ).toHaveTextContent('۹٬۰۰۷٬۱۹۹٬۲۵۴٬۷۴۰٬۹۹۳')
     expect(screen.getByText('<img onerror="unsafe()">')).toBeVisible()
     expect(screen.getByRole('img', { name: SITE_NAME })).toBeVisible()
-    expect(view.container.querySelector('img:not([src="/brand/wordmark-432.webp"])')).toBeNull()
+    expect(view.container.querySelector('img:not([src="/brand/wordmark-432.webp?v=20261104"])')).toBeNull()
     expect(auth.request).toHaveBeenCalledWith(
       '/api/v1/customers/me/invoices/doc-a',
     )

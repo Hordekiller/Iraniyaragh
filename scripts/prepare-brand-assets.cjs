@@ -8,7 +8,8 @@ const root = path.resolve(__dirname, "..");
 (async () => {
   const mark = path.join(root, "assets/brand/source/mark.png"),
     word = path.join(root, "assets/brand/source/wordmark.png");
-  const outputs = {};
+  const icon = await fs.readFile(path.join(root, "assets/brand/source/favicon.ico"));
+  const outputs = { "favicon.ico": icon, "wordmark-print-v2.png": await fs.readFile(path.join(root, "assets/brand/legacy/wordmark-print-v2.png")) };
   for (const size of [64, 128])
     outputs[`mark-${size}.webp`] = await sharp(mark)
       .resize(size, size)
@@ -23,6 +24,7 @@ const root = path.resolve(__dirname, "..");
     .resize(32, 32)
     .png({ compressionLevel: 9 })
     .toBuffer();
+  outputs["favicon-192.png"] = await sharp(mark).resize(192, 192).png({ compressionLevel: 9 }).toBuffer();
   outputs["apple-touch-icon.png"] = await sharp(mark)
     .resize(180, 180)
     .png({ compressionLevel: 9 })
@@ -31,14 +33,14 @@ const root = path.resolve(__dirname, "..");
     .resize({ width: 1086 })
     .png({ compressionLevel: 9 })
     .toBuffer();
-  const manifest = { revision: "operator-2026-10-14", sources: {}, files: {} };
-  for (const [name, p] of Object.entries({ mark, wordmark: word }))
+  const manifest = { revision: "operator-2026-11-04", sources: {}, files: {} };
+  for (const [name, p] of Object.entries({ mark, wordmark: word, favicon: path.join(root, "assets/brand/source/favicon.ico") }))
     manifest.sources[name] = crypto
       .createHash("sha256")
       .update(await fs.readFile(p))
       .digest("hex");
   for (const [name, bytes] of Object.entries(outputs)) {
-    const m = await sharp(bytes).metadata();
+    const m = name.endsWith(".ico") ? {} : await sharp(bytes).metadata();
     manifest.files[name] = {
       sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
       bytes: bytes.length,
@@ -56,6 +58,10 @@ const root = path.resolve(__dirname, "..");
           throw new Error("Generated brand asset differs.");
       } else await fs.writeFile(target, bytes);
     }
+    const rootIcon = path.join(root, `apps/${app}/public/favicon.ico`);
+    if (process.argv.includes("--check")) {
+      if (!icon.equals(await fs.readFile(rootIcon))) throw new Error("Root favicon differs.");
+    } else await fs.writeFile(rootIcon, icon);
   }
   const manifestPath = path.join(root, "assets/brand/manifest.json");
   const manifestText = JSON.stringify(manifest, null, 2) + "\n";

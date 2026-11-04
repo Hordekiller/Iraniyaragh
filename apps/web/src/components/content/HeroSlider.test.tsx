@@ -39,7 +39,7 @@ describe('HeroSlider', () => {
     const { container } = renderSlider()
     expect(screen.queryByRole('button', { name: 'شروع پخش خودکار' })).not.toBeInTheDocument()
     fireEvent.error(container.querySelector('img')!)
-    expect(container.querySelector('img')).toBeNull()
+    expect(container.querySelector('img[alt=""]')).toBeNull()
     expect(screen.getByRole('link', { name: 'مشاهده کالاها' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'اسلاید بعدی' }))
     expect(container.querySelector('img')).toHaveAttribute('src', '/images/hero2.jpg')

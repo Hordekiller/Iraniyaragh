@@ -51,7 +51,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
             <Menu size={22} strokeWidth={1.8} aria-hidden="true" />
           </button>
           {/* Logo */}
-          <Link to={ROUTES.home} aria-label="ایرانی یراق؛ صفحهٔ اصلی" className="flex shrink-0 items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]">
+          <Link to={ROUTES.home} aria-label="ایرانی یراق؛ صفحهٔ اصلی" className="flex min-w-0 items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]">
             <StoreBrandLogo />
           </Link>
 

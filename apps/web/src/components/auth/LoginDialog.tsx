@@ -208,8 +208,8 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
               >
                 <X size={17} />
               </button>
-              <span className="text-[11px] font-bold text-slate-400">ورود به ایرانی یراق</span>
-              <StoreBrandLogo variant="mark" />
+              <span className="sr-only">ورود به ایرانی یراق</span>
+              <StoreBrandLogo variant="responsive" />
             </div>
 
             <div className="px-6 pb-7 pt-3">
@@ -372,7 +372,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
               </div>
 
               <p className="mt-5 text-[11px] text-slate-400 text-center leading-5">
-                با ورود، قوانین و مقررات ایرانی یراق را می‌پذیرید.
+                با ورود، قوانین و مقررات <StoreBrandLogo variant="inline" /> را می‌پذیرید.
               </p>
             </div>
           </motion.div>
