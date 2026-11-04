@@ -1,4 +1,4 @@
-import { DOOR_GLASS_SAMPLES } from "@iranyaragh/contracts";
+import { DOOR_GLASS_SAMPLE_KEYS } from "./door-glass-samples";
 import type { SchemaObject } from "@nestjs/swagger/dist/interfaces/open-api-spec.interface";
 import { DOOR_STATUSES } from "./door-state";
 const text: SchemaObject = { type: "string" };
@@ -86,7 +86,7 @@ const materialConfiguration = obj({
   processingFee: money,
   stockUnit: nullable({ type: "string", enum: ["PIECE", "MM", "MM2"] }),
 });
-materialConfiguration.properties!.sampleKey = { type: "string", nullable: true, enum: DOOR_GLASS_SAMPLES.map(sample => sample.key) };
+materialConfiguration.properties!.sampleKey = { type: "string", nullable: true, enum: DOOR_GLASS_SAMPLE_KEYS };
 materialConfiguration.properties!.imageMediaId = { type: "string", nullable: true };
 const material = obj({
   id: text,
