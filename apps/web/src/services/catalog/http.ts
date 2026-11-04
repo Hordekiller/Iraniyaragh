@@ -197,7 +197,7 @@ export class CatalogHttpClient implements CatalogApi {
       oldPrice: null,
       rating: null,
       reviews: 0,
-      stockStatus: 'UNKNOWN',
+      stockStatus: product.stockStatus ?? 'UNKNOWN',
       badge: null,
     }
   }

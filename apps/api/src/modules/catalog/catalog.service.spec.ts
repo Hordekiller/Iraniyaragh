@@ -138,6 +138,22 @@ describe('CatalogService', () => {
   });
 
   describe('product list projections', () => {
+    it('projects actual availability without exposing quantities or querying per product', async () => {
+      (ctx.prisma.product.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { ...productRow, variants: [{ ...variant, inventory: [{ available: 2 }] }] },
+        { ...productRow, id: 'empty', variants: [{ ...variant, inventory: [] }] },
+      ]);
+      (ctx.prisma.product.count as ReturnType<typeof vi.fn>).mockResolvedValue(2);
+      const result = await ctx.service.listPublicProducts({});
+      expect(result.data.items.map(item => item.stockStatus)).toEqual(['LOW_STOCK', 'OUT_OF_STOCK']);
+      expect(ctx.prisma.product.findMany).toHaveBeenCalledOnce();
+      expect(ctx.prisma.product.findMany).toHaveBeenCalledWith(expect.objectContaining({ include: expect.objectContaining({
+        variants: { where: { isActive: true, status: 'ACTIVE' }, select: { salePrice: true, inventory: { select: { available: true } } } },
+      }) }));
+      expect(JSON.stringify(result)).not.toContain('available');
+      expect(JSON.stringify(result)).not.toContain('inventory');
+    });
+
     it('lists only active products for public queries and omits variants and description', async () => {
       (ctx.prisma.product.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([{ ...productRow, media: [readyPrimaryMedia] }]);
       (ctx.prisma.product.count as ReturnType<typeof vi.fn>).mockResolvedValue(1);

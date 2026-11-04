@@ -157,6 +157,8 @@ export type ProductListItem = {
   primaryMedia?: PublicProductMediaImage | null;
   /** Lowest active-variant sale price, in IRR. Public catalog read model. */
   startingPrice?: Money | null;
+  /** Public status only; warehouse quantities are never exposed. */
+  stockStatus?: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'UNKNOWN';
 };
 
 export type ProductListQuery = {
