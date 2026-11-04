@@ -38,3 +38,42 @@ describe('InAppNotificationsService authorization', () => {
     await expect(service.list('u', 'STAFF', { cursor: 'garbage' })).rejects.toMatchObject({ status: 400 });
   });
 });
+
+import { CustomerNotificationsController, StaffNotificationsController } from './in-app-notifications.controller';
+
+const row = (id: string, readAt: Date | null = null) => ({ id, kind: 'K', title: 't', body: 'b', href: '/orders/1', readAt, createdAt: new Date('2026-11-04T08:00:00Z') });
+
+describe('InAppNotificationsService behaviour', () => {
+  it('paginates newest first with a cursor and unread count', async () => {
+    const rows = Array.from({ length: 21 }, (_, i) => row(`n${i}`));
+    const prisma = { inAppNotification: { findMany: vi.fn(async () => rows), count: vi.fn(async () => 5) } };
+    const page = await new InAppNotificationsService(prisma as never).list('u', 'CUSTOMER', { unreadOnly: true, cursor: '2026-11-05T00:00:00.000Z|zz' });
+    expect(page.items).toHaveLength(20);
+    expect(page.nextCursor).toBe('2026-11-04T08:00:00.000Z|n19');
+    expect(page.unreadCount).toBe(5);
+    expect(prisma.inAppNotification.findMany.mock.calls[0]![0].where).toMatchObject({ userId: 'u', audience: 'CUSTOMER', readAt: null });
+  });
+  it('toggles read state and marks all read within the audience', async () => {
+    const prisma = { inAppNotification: { updateMany: vi.fn(async () => ({ count: 1 })), findFirstOrThrow: vi.fn(async () => row('n1', new Date())), count: vi.fn(async () => 0) } };
+    const service = new InAppNotificationsService(prisma as never);
+    expect((await service.setRead('u', 'STAFF', 'n1', true)).read).toBe(true);
+    expect(await service.markAllRead('u', 'STAFF')).toBe(0);
+    expect(prisma.inAppNotification.updateMany.mock.calls[1]![0].where).toEqual({ userId: 'u', audience: 'STAFF', readAt: null });
+  });
+});
+
+describe('notification controllers', () => {
+  const service = { list: vi.fn(async () => ({ items: [], unreadCount: 0, nextCursor: null })), unread: vi.fn(async () => 3), markAllRead: vi.fn(async () => 0), setRead: vi.fn(async () => ({ id: 'n1' })) };
+  it.each([[CustomerNotificationsController, 'CUSTOMER'], [StaffNotificationsController, 'STAFF']] as const)('%o scopes to its audience and ignores array-typed query values', async (Controller, audience) => {
+    const c = new Controller(service as never);
+    const p = { userId: 'u' } as never;
+    await c.list(p, ['a', 'b'], 'true');
+    expect(service.list).toHaveBeenLastCalledWith('u', audience, { cursor: undefined, unreadOnly: true });
+    expect(await c.unreadCount(p)).toEqual({ data: { unreadCount: 3 } });
+    await c.readAll(p);
+    await c.read(p, 'n1');
+    await c.unread(p, 'bad id!');
+    expect(service.setRead).toHaveBeenCalledWith('u', audience, 'n1', true);
+    expect(service.setRead).toHaveBeenLastCalledWith('u', audience, '__invalid__', false);
+  });
+});

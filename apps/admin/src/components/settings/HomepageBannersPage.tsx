@@ -19,7 +19,7 @@ function errorText(error: unknown) {
     if (error.code === 'AUTH_REAUTHENTICATION_REQUIRED') return 'برای ذخیره، تأیید تازهٔ رمز عبور و کد دومرحله‌ای لازم است.';
     if (error.code === 'FORBIDDEN') return 'دسترسی مدیریت تنظیمات لازم است.';
     if (error.code === 'INVALID_MEDIA') return 'تصویر انتخاب‌شده آماده یا معتبر نیست.';
-    if (error.code === 'INVALID_REQUEST') return 'فیلدها ناقص‌اند، پیوند باید با «/» یا https:// شروع شود و بازهٔ انتشار باید معتبر باشد.';
+    if (error.code === 'INVALID_REQUEST') return 'فیلدها ناقص‌اند، پیوند باید مسیر داخلی (با «/») یا نشانی امن (https) باشد و بازهٔ انتشار باید معتبر باشد.';
   }
   return 'تنظیمات تأیید نشد؛ اتصال را بررسی و دوباره تلاش کنید.';
 }

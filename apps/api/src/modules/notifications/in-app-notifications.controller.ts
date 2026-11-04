@@ -14,8 +14,8 @@ abstract class BaseController {
   constructor(protected readonly service: InAppNotificationsService) {}
 
   @Get()
-  async list(@CurrentPrincipal() p: AuthPrincipalContext, @Query('cursor') cursor?: string, @Query('unread') unread?: string): Promise<InAppNotificationListResponse> {
-    return { data: await this.service.list(p.userId, this.audience, { cursor: cursor?.slice(0, 80), unreadOnly: unread === 'true' }) };
+  async list(@CurrentPrincipal() p: AuthPrincipalContext, @Query('cursor') cursor?: unknown, @Query('unread') unread?: unknown): Promise<InAppNotificationListResponse> {
+    return { data: await this.service.list(p.userId, this.audience, { cursor: typeof cursor === 'string' ? cursor.slice(0, 80) : undefined, unreadOnly: unread === 'true' }) };
   }
 
   @Get('unread-count')
