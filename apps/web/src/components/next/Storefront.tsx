@@ -10,6 +10,7 @@ import { CartProvider } from '../../state/CartProvider'
 import { AppLayout } from '../layout/AppLayout'
 import { ProductPage } from '../../views/ProductPage'
 import type { CatalogProduct } from '../../services/catalog/types'
+import { NavigationScrollReset } from './NavigationScrollReset'
 
 /** Next owns navigation and server data; the existing customer islands keep their router contract. */
 export function Storefront({ children }: { children: ReactNode }) {
@@ -23,6 +24,7 @@ export function Storefront({ children }: { children: ReactNode }) {
     replace: to => router.replace(typeof to === 'string' ? to : createPath(to)),
   }), [router])
   return <Router location={{ pathname, search: search ? `?${search}` : '', hash: '' }} navigator={navigator}>
+    <NavigationScrollReset />
     <ToastProvider><AuthProvider><CatalogProvider><CartProvider>
       <AppLayout serverMetadata>{children}</AppLayout>
     </CartProvider></CatalogProvider></AuthProvider></ToastProvider>

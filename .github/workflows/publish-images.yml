@@ -162,6 +162,13 @@ jobs:
           context: .
           file: infrastructure/docker/storefront.Dockerfile
           push: true
+          build-args: |
+            NEXT_PUBLIC_SITE_PHONE=${{ vars.SITE_PHONE }}
+            NEXT_PUBLIC_SITE_MOBILE=${{ vars.SITE_MOBILE }}
+            NEXT_PUBLIC_SITE_ADDRESS=${{ vars.SITE_ADDRESS }}
+            NEXT_PUBLIC_SITE_POSTAL_CODE=${{ vars.SITE_POSTAL_CODE }}
+            NEXT_PUBLIC_SITE_EMAIL=${{ vars.SITE_EMAIL }}
+            NEXT_PUBLIC_INSTAGRAM_HANDLE=${{ vars.INSTAGRAM_HANDLE }}
           tags: ${{ env.IMAGE_REGISTRY }}/iranyaragh/storefront:${{ env.IMAGE_TAG }}
           cache-from: type=gha,scope=storefront
           cache-to: type=gha,mode=max,scope=storefront

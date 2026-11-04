@@ -8,7 +8,7 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود',
   LOW_STOCK: 'فقط چند عدد باقی مانده',
   OUT_OF_STOCK: 'ناموجود',
-  UNKNOWN: 'موجودی در حال بررسی',
+  UNKNOWN: 'وضعیت موجودی در دسترس نیست',
 }
 
 const STOCK_CLASS: Record<CatalogProduct['stockStatus'], string> = {

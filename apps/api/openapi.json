@@ -730,6 +730,15 @@
                                 },
                                 "nullable": true
                               },
+                              "stockStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "IN_STOCK",
+                                  "LOW_STOCK",
+                                  "OUT_OF_STOCK",
+                                  "UNKNOWN"
+                                ]
+                              },
                               "startingPrice": {
                                 "type": "object",
                                 "nullable": true,
@@ -937,6 +946,15 @@
                                 }
                               },
                               "nullable": true
+                            },
+                            "stockStatus": {
+                              "type": "string",
+                              "enum": [
+                                "IN_STOCK",
+                                "LOW_STOCK",
+                                "OUT_OF_STOCK",
+                                "UNKNOWN"
+                              ]
                             },
                             "startingPrice": {
                               "type": "object",

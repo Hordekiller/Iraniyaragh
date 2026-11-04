@@ -4,6 +4,7 @@ import {
   HAS_SITE_PHONE,
   SITE_ADDRESS_LINE,
   SITE_NAME,
+  SITE_MOBILE,
   SITE_PHONE,
   SITE_PHONE_PERSIAN,
   SITE_POSTAL_CODE,
@@ -18,7 +19,7 @@ function currentJalaliYear(): number {
   return gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate()).year
 }
 
-const hasContactBlock = HAS_SITE_PHONE || SITE_ADDRESS_LINE !== null || SITE_POSTAL_CODE !== null
+const hasContactBlock = HAS_SITE_PHONE || SITE_MOBILE !== null || SITE_ADDRESS_LINE !== null || SITE_POSTAL_CODE !== null
 
 export function SiteFooter() {
   return (
@@ -47,13 +48,18 @@ export function SiteFooter() {
             {hasContactBlock ? (
               <address className="mt-4 not-italic text-[13px] leading-7 text-slate-600">
                 {SITE_ADDRESS_LINE !== null && (
-                  <div className="flex items-start gap-2"><MapPin size={16} aria-hidden="true" className="mt-1 shrink-0 text-[#C2410C]" /> {SITE_ADDRESS_LINE}</div>
+                  <div className="flex items-start gap-2"><MapPin size={16} aria-hidden="true" className="mt-1 shrink-0 text-[#C2410C]" /> <span>نشانی تحویل حضوری: {SITE_ADDRESS_LINE}</span></div>
                 )}
                 {SITE_POSTAL_CODE !== null && <div>کد پستی: {toPersianDigits(SITE_POSTAL_CODE)}</div>}
                 {SITE_PHONE !== null && (
                   <a href={`tel:${SITE_PHONE}`} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline" dir="ltr">
                     <Phone size={15} aria-hidden="true" /> {SITE_PHONE_PERSIAN}
                   </a>
+                )}
+                {SITE_MOBILE !== null && (
+                  <div><a href={`tel:${SITE_MOBILE}`} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline" dir="ltr">
+                    <Phone size={15} aria-hidden="true" /> {toPersianDigits(SITE_MOBILE)} <span dir="rtl">(موبایل)</span>
+                  </a></div>
                 )}
               </address>
             ) : (
