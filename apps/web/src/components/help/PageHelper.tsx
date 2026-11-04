@@ -95,7 +95,7 @@ export function PageHelper() {
       <div className="flex items-start justify-between gap-3">
         <ol aria-label="مراحل خرید" className="flex min-w-0 flex-1 flex-wrap gap-1 text-[10px] font-bold">
           {STAGES.map((stage, i) => <li key={stage.id} aria-current={i === stageIndex ? 'step' : undefined}
-            className={`rounded-full px-2 py-1 ${i === stageIndex ? 'bg-orange-700 text-white' : i < stageIndex ? 'bg-emerald-100 text-emerald-900' : 'bg-slate-100 text-slate-500'}`}>{stage.label}</li>)}
+            className={`rounded-full px-2 py-1 ${i === stageIndex ? 'bg-orange-700 text-white' : i < stageIndex ? 'bg-emerald-100 text-emerald-900' : 'bg-slate-100 text-slate-700'}`}>{stage.label}</li>)}
         </ol>
         <button type="button" onClick={() => setHelperCompact(true)} aria-label="کوچک کردن راهنما" className="-m-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"><Minimize2 size={17} aria-hidden="true" /></button>
         <button type="button" onClick={() => setHelperOpen(false)} aria-label="بستن راهنما" className="-m-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"><X size={18} aria-hidden="true" /></button>
