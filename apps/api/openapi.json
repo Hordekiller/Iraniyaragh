@@ -5317,6 +5317,57 @@
         ]
       }
     },
+    "/catalog/storefront-helper": {
+      "get": {
+        "operationId": "StorefrontHelperController_publicConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Whether the interactive customer helper is shown on the storefront",
+        "tags": [
+          "StorefrontHelper"
+        ]
+      }
+    },
+    "/catalog/storefront-helper/admin": {
+      "get": {
+        "operationId": "StorefrontHelperController_adminConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "StorefrontHelper"
+        ]
+      },
+      "put": {
+        "operationId": "StorefrontHelperController_update",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "StorefrontHelper"
+        ]
+      }
+    },
     "/catalog/admin/products/{productId}/media": {
       "get": {
         "operationId": "MediaController_list",

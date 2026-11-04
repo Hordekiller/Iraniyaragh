@@ -7,6 +7,7 @@ import { guideForPath, LOGIN_GUIDES, STAGES, type GuideItem, type HelpContext, t
 import { getHelpRequest, getHelperCompact, getHelperOpen, getServerHelpRequest, getServerHelperCompact, getServerHelperOpen, getServerTourState, getTourState, setHelperCompact, setHelperOpen, subscribeCompact, subscribeHelper, subscribeRequest, subscribeTour } from '../../lib/help-tour-state'
 import { firstVisible, useTargetBox } from '../../lib/use-target-box'
 import { ROUTES } from '../../lib/routes'
+import { useHelperEnabled } from '../../lib/use-helper-enabled'
 import { useAuth } from '../../state/auth-context'
 import { useCart } from '../../state/cart-context'
 
@@ -37,6 +38,7 @@ export function PageHelper() {
   const helpRequest = useSyncExternalStore(subscribeRequest, getHelpRequest, getServerHelpRequest)
   const [handledRequest, setHandledRequest] = useState(0)
   const tourActive = useSyncExternalStore(subscribeTour, getTourState, getServerTourState) !== null
+  const enabled = useHelperEnabled()
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const auth = useAuth()
@@ -57,7 +59,7 @@ export function PageHelper() {
   const selector = open && !tourActive ? item?.target : undefined
   const { box } = useTargetBox(selector, guide.id)
 
-  if (tourActive) return null
+  if (tourActive || !enabled) return null
   if (!open) {
     return <button type="button" onClick={() => setHelperOpen(true)} aria-label="راهنمای این صفحه" aria-expanded={false}
       className={`page-helper-fab ${/^\/products?\//u.test(pathname) ? 'page-helper-fab-product' : ''}`}>

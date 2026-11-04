@@ -6,12 +6,14 @@ import { X } from 'lucide-react'
 import { tourById, type TourStep } from '../../lib/help-tours'
 import { getServerTourState, getTourState, setTourState, stopTour, subscribeTour } from '../../lib/help-tour-state'
 import { useTargetBox } from '../../lib/use-target-box'
+import { useHelperEnabled } from '../../lib/use-helper-enabled'
 import { useAuth } from '../../state/auth-context'
 
 /** On-page guide: highlights the real button of the current step and never acts for the customer. */
 export function GuidedTour() {
   const tourState = useSyncExternalStore(subscribeTour, getTourState, getServerTourState)
   const auth = useAuth()
+  const enabled = useHelperEnabled()
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const tour = tourState ? tourById(tourState.id) : undefined
@@ -51,7 +53,7 @@ export function GuidedTour() {
     return () => document.removeEventListener('click', onClick, true)
   }, [step, element, go])
 
-  if (!tour || !step || !current) return null
+  if (!enabled || !tour || !step || !current) return null
 
   const total = applicable.length
   const last = position === total - 1

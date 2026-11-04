@@ -5,7 +5,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext, type AuthContextValue } from '../../state/auth-context'
 import { CartContext, type CartContextValue } from '../../state/cart-context'
-import { setHelperCompact, setHelperOpen, stopTour } from '../../lib/help-tour-state'
+import { setHelperCompact, setHelperEnabled, setHelperOpen, startTour, stopTour } from '../../lib/help-tour-state'
 import { guideForPath, LOGIN_GUIDES, PAGE_GUIDES } from '../../lib/help-pages'
 import { ROUTES, ROUTE_PATHS } from '../../lib/routes'
 import { HelpHint } from './HelpHint'
@@ -29,8 +29,8 @@ function visible(attr: string, value: string, tag = 'button') {
   return el
 }
 
-beforeEach(() => { window.sessionStorage.clear(); Element.prototype.scrollIntoView = vi.fn(); act(() => { setHelperOpen(false); setHelperCompact(false) }) })
-afterEach(() => { act(() => { setHelperOpen(false); setHelperCompact(false); stopTour() }); document.body.innerHTML = '' })
+beforeEach(() => { setHelperEnabled(true); window.sessionStorage.clear(); Element.prototype.scrollIntoView = vi.fn(); act(() => { setHelperOpen(false); setHelperCompact(false) }) })
+afterEach(() => { act(() => { setHelperEnabled(null); setHelperOpen(false); setHelperCompact(false); stopTour() }); document.body.innerHTML = '' })
 
 describe('PageHelper', () => {
   it('offers a floating button on every page and opens the panel for the current page', () => {
@@ -83,6 +83,26 @@ describe('PageHelper', () => {
     fireEvent.click(screen.getByRole('button', { name: 'بستن راهنما' }))
     expect(screen.queryByRole('region', { name: 'راهنمای این صفحه' })).toBeNull()
     expect(screen.getByRole('button', { name: 'راهنمای این صفحه' })).toBeInTheDocument()
+  })
+})
+
+describe('admin switch', () => {
+  it.each<boolean | null>([false, null])('shows nothing interactive when the switch is %s (off / unknown fails closed)', (value) => {
+    act(() => setHelperEnabled(value))
+    render(<AuthContext.Provider value={auth('anonymous')}><CartContext.Provider value={cart(0)}><MemoryRouter initialEntries={['/cart']}><PageHelper /><HelpHint target="door-height" label="ارتفاع" /></MemoryRouter></CartContext.Provider></AuthContext.Provider>)
+    expect(screen.queryByRole('button', { name: 'راهنمای این صفحه' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'راهنما: ارتفاع' })).toBeNull()
+  })
+
+  it('hides a panel that is already open and any running tour as soon as the switch turns off', () => {
+    mount('/cart')
+    fireEvent.click(screen.getByRole('button', { name: 'راهنمای این صفحه' }))
+    expect(screen.getByRole('region', { name: 'راهنمای این صفحه' })).toBeInTheDocument()
+    act(() => setHelperEnabled(false))
+    expect(screen.queryByRole('region', { name: 'راهنمای این صفحه' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'راهنمای این صفحه' })).toBeNull()
+    act(() => startTour('login'))
+    expect(screen.queryByRole('region', { name: 'راهنمای تعاملی' })).toBeNull()
   })
 })
 
