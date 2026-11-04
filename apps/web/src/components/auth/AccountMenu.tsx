@@ -61,6 +61,7 @@ export function AccountMenu({ onOpenLogin }: AccountMenuProps) {
     <div ref={rootRef} className="relative">
       <button
         ref={triggerRef}
+        data-help="account-button"
         onClick={() => (authenticated ? setMenuOpen(o => !o) : onOpenLogin())}
         onKeyDown={handleTriggerKeyDown}
         aria-label={authenticated ? 'حساب کاربری' : 'ورود به حساب کاربری'}
