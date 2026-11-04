@@ -1,17 +1,18 @@
 import type { ReactNode } from 'react'
 import { toPersianDigits } from '../../lib/format'
-import { SITE_ADDRESS_LINE, SITE_EMAIL, SITE_NAME, SITE_PHONE, SITE_POSTAL_CODE } from '../../lib/site-config'
+import { SITE_ADDRESS_LINE, SITE_EMAIL, SITE_MOBILE, SITE_NAME, SITE_PHONE, SITE_POSTAL_CODE } from '../../lib/site-config'
 
 // Reuses the historical storefront legal layout, without its synthetic contact data.
 export function SupplierContactCard() {
-  const configured = SITE_PHONE !== null || SITE_EMAIL !== null || SITE_ADDRESS_LINE !== null || SITE_POSTAL_CODE !== null
+  const configured = SITE_PHONE !== null || SITE_MOBILE !== null || SITE_EMAIL !== null || SITE_ADDRESS_LINE !== null || SITE_POSTAL_CODE !== null
   return <section aria-labelledby="supplier-contact-heading" className="rounded-3xl border border-slate-200 bg-slate-50 p-5 lg:p-6">
     <h2 id="supplier-contact-heading" className="text-base font-black text-slate-900">اطلاعات فروشنده</h2>
     <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
       <div><dt className="text-slate-500">نام تجاری</dt><dd className="mt-1 font-bold text-slate-900">{SITE_NAME}</dd></div>
       {SITE_PHONE !== null && <div><dt>شماره تماس</dt><dd><a href={`tel:${SITE_PHONE}`} className="font-bold underline" dir="ltr">{toPersianDigits(SITE_PHONE)}</a></dd></div>}
+      {SITE_MOBILE !== null && <div><dt>موبایل</dt><dd><a href={`tel:${SITE_MOBILE}`} className="font-bold underline" dir="ltr">{toPersianDigits(SITE_MOBILE)}</a></dd></div>}
       {SITE_EMAIL !== null && <div><dt>ایمیل</dt><dd><a href={`mailto:${SITE_EMAIL}`} className="font-bold underline" dir="ltr">{SITE_EMAIL}</a></dd></div>}
-      {SITE_ADDRESS_LINE !== null && <div><dt>نشانی</dt><dd>{SITE_ADDRESS_LINE}</dd></div>}
+      {SITE_ADDRESS_LINE !== null && <div><dt>نشانی تحویل حضوری</dt><dd>{SITE_ADDRESS_LINE}</dd></div>}
       {SITE_POSTAL_CODE !== null && <div><dt>کد پستی</dt><dd>{toPersianDigits(SITE_POSTAL_CODE)}</dd></div>}
     </dl>
     {!configured && <p className="mt-4 text-sm leading-7 text-slate-600">اطلاعات تماس تأییدشدهٔ فروشگاه هنوز منتشر نشده است.</p>}

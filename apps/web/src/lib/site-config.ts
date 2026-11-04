@@ -6,7 +6,7 @@
  * Nothing here is a placeholder number or address: a storefront that has not been
  * told its real phone number, postal code, address, email or Instagram handle
  * must render no contact block at all rather than publish a plausible-looking but
- * unverified one. Each value is read from a `VITE_SITE_*` variable and is `null`
+ * unverified one. Each value is read from a `NEXT_PUBLIC_SITE_*` variable and is `null`
  * when the deployment does not set it, so the omission is explicit and testable.
  */
 
@@ -26,6 +26,7 @@ function optionalSetting(value: string | undefined): string | null {
 
 /** Verified storefront phone number, or `null` when the deployment has none. */
 export const SITE_PHONE = optionalSetting(process.env.NEXT_PUBLIC_SITE_PHONE)
+export const SITE_MOBILE = optionalSetting(process.env.NEXT_PUBLIC_SITE_MOBILE)
 /** Verified storefront postal code, or `null`. */
 export const SITE_POSTAL_CODE = optionalSetting(process.env.NEXT_PUBLIC_SITE_POSTAL_CODE)
 /** Verified storefront address, or `null`. */
