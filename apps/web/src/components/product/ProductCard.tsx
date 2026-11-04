@@ -3,6 +3,7 @@ import { Star } from 'lucide-react'
 import type { CatalogProduct } from '../../services/catalog/types'
 import { formatToman, toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
+import { verifiedDiscountPercent } from '../../lib/discount'
 
 const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود',
@@ -18,21 +19,31 @@ const STOCK_CLASS: Record<CatalogProduct['stockStatus'], string> = {
   UNKNOWN: 'bg-slate-100 text-slate-700 border-slate-200',
 }
 
-export function ProductCard({ product }: { product: CatalogProduct }) {
-  const oldToman = product.oldPrice ? product.oldPrice.amount : null
+export function ProductCard({ product, variant = 'default' }: { product: CatalogProduct; variant?: 'default' | 'offer' }) {
+  const discount = verifiedDiscountPercent(product)
+  const oldToman = discount !== null && product.oldPrice ? product.oldPrice.amount : null
+  const soldOut = product.stockStatus === 'OUT_OF_STOCK'
 
   return (
     <Link
       to={ROUTES.product(product.slug)}
-      className="group flex flex-col rounded-[20px] border border-slate-100 bg-white overflow-hidden hover:shadow-lg hover:border-slate-200 transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
+      className={`group flex h-full flex-col overflow-hidden rounded-[20px] border bg-white transition hover:shadow-lg motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 ${variant === 'offer' ? 'border-orange-200 hover:border-orange-300' : 'border-slate-100 hover:border-slate-200'}`}
     >
-      <div className="relative aspect-[4/3] bg-slate-50 overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden bg-white">
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition duration-500 motion-reduce:transition-none"
+          width={400}
+          height={300}
+          decoding="async"
+          className={`h-full w-full object-contain p-2 transition duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${soldOut ? 'opacity-60' : ''}`}
           loading="lazy"
         />
+        {discount !== null && (
+          <span className="absolute top-2 left-2 rounded-full bg-[#C2410C] px-2.5 py-1 text-[11px] font-black text-white">
+            {toPersianDigits(discount)}٪ تخفیف
+          </span>
+        )}
         {product.badge && (
           <span className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-[#C2410C] text-white text-[11px] font-black">
             {product.badge}
@@ -41,22 +52,20 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
       </div>
 
       <div className="flex flex-col flex-1 p-4">
-        {product.brand && (
-          <div className="text-xs font-bold text-slate-500">{product.brand}</div>
-        )}
+        <div className="min-h-4 text-xs font-bold text-slate-500">{product.brand}</div>
         <h3 className="text-[13px] font-bold leading-5 text-slate-900 line-clamp-2 min-h-[40px]">
           {product.name}
         </h3>
 
-        <div className="flex items-center gap-1 mt-1.5 text-xs" aria-hidden="true">
-          <Star size={12} className="fill-amber-400 text-amber-400" />
-          <span className="font-bold text-slate-900">
-            {product.rating != null ? toPersianDigits(product.rating) : '—'}
-          </span>
-          <span className="text-slate-500">({toPersianDigits(product.reviews)})</span>
-        </div>
+        {product.rating != null && product.reviews > 0 && (
+          <div className="flex items-center gap-1 mt-1.5 text-xs">
+            <Star size={12} aria-hidden="true" className="fill-amber-400 text-amber-400" />
+            <span className="font-bold text-slate-900">{toPersianDigits(product.rating)}</span>
+            <span className="text-slate-600">({toPersianDigits(product.reviews)})</span>
+          </div>
+        )}
 
-        <div className="mt-3 flex items-baseline gap-1.5">
+        <div className="mt-3 mb-3 flex items-baseline gap-1.5">
           <span className="font-black text-[15px] text-slate-900">
             {product.priceAvailable === false ? 'قیمت در دسترس نیست' : formatToman(product.price.amount)}
           </span>
@@ -65,7 +74,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
           <div className="text-xs text-slate-600 line-through">{formatToman(oldToman)}</div>
         )}
 
-        <div className={`mt-3 inline-flex self-start px-2.5 py-1 rounded-full text-[11px] font-bold border ${STOCK_CLASS[product.stockStatus]}`}>
+        <div className={`mt-auto inline-flex self-start px-2.5 py-1 rounded-full text-[11px] font-bold border ${STOCK_CLASS[product.stockStatus]}`}>
           {STOCK_LABEL[product.stockStatus]}
         </div>
       </div>

@@ -12,7 +12,9 @@ function setup(topic = 'ORDER_CREATED', aggregateType = 'order') {
       findUnique: vi.fn(async () => event),
       updateMany: vi.fn(async () => ({ count: 1 })),
     },
-    order: { findUnique: vi.fn(async () => ({ id: 'aggregate-1' })) },
+    order: { findUnique: vi.fn(async () => ({ id: 'aggregate-1', number: 'A-1', customer: { userId: 'user-1' } })) },
+    user: { findMany: vi.fn(async () => [{ id: 'staff-1' }]) },
+    inAppNotification: { createMany: vi.fn(async () => ({ count: 1 })) },
     payment: { findUnique: vi.fn(async () => ({ id: 'aggregate-1', orderId: 'order-1', status: 'PENDING' })) },
     outboxEffect: {
       createMany: vi.fn(async () => ({ count: 1 })),
@@ -28,6 +30,14 @@ function setup(topic = 'ORDER_CREATED', aggregateType = 'order') {
 }
 
 describe('OutboxConsumerService', () => {
+  it('projects in-app notifications in the same transaction, keyed by event id', async () => {
+    const { tx, consumer } = setup('PAYMENT_VERIFIED', 'payment');
+    await consumer.consume('event-1');
+    expect(tx.order.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'order-1' } }));
+    const rows = tx.inAppNotification.createMany.mock.calls[0]![0].data;
+    expect(rows.map((row: { dedupKey: string }) => row.dedupKey)).toEqual(['event-1:CUSTOMER', 'event-1:STAFF']);
+  });
+
   it.each([
     ['ORDER_CREATED', 'order', OutboxEffectKind.CUSTOMER_ORDER_CREATED, 'aggregate-1'],
     ['ORDER_CANCELLED', 'order', OutboxEffectKind.CUSTOMER_ORDER_CANCELLED, 'aggregate-1'],

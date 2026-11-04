@@ -293,6 +293,8 @@ model User {
   stocktakeLinesCounted       StocktakeItem[]               @relation("StocktakeLineCounter")
   stocktakeCommandRecords     StocktakeCommandRecord[]
   homepageCollectionCommands  HomepageCollectionCommand[]
+  homepageBannerCommands      HomepageBannerCommand[]
+  inAppNotifications          InAppNotification[]
   customer                    Customer?
 
   @@index([status, createdAt])
@@ -1331,6 +1333,51 @@ model HomepageCollectionCommand {
   actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
 
   @@unique([actorId, keyHash])
+}
+
+model HomepageBannerConfig {
+  id        String   @id @default("storefront") @db.VarChar(32)
+  version   Int      @default(0)
+  banners   Json     @default("[]")
+  updatedAt DateTime @updatedAt
+}
+
+/// Idempotency evidence for settings.manage banner writes; no customer data.
+model HomepageBannerCommand {
+  id          String   @id @default(cuid())
+  actorId     String
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
+}
+
+enum InAppNotificationAudience {
+  CUSTOMER
+  STAFF
+}
+
+/// Per-user inbox row projected from a consumed OutboxEvent. `dedupKey`
+/// (outbox event id + audience) makes projection idempotent under redelivery.
+model InAppNotification {
+  id        String                    @id @default(cuid())
+  userId    String
+  audience  InAppNotificationAudience
+  kind      String                    @db.VarChar(64)
+  title     String                    @db.VarChar(160)
+  body      String                    @db.VarChar(400)
+  href      String?                   @db.VarChar(200)
+  dedupKey  String                    @db.VarChar(200)
+  readAt    DateTime?
+  createdAt DateTime                  @default(now())
+  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupKey])
+  @@index([userId, createdAt(sort: Desc), id])
+  @@index([userId, readAt])
 }
 
 model ShippingQuote {

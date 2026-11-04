@@ -5,6 +5,7 @@ import { ChevronDown, Menu, Phone, Search, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '../../state/cart-context'
 import { toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
+import { NotificationBell } from '../notifications/NotificationBell'
 import { AccountMenu } from '../auth/AccountMenu'
 import { HAS_SITE_PHONE, SITE_PHONE } from '../../lib/site-config'
 import { StoreBrandLogo } from '../brand/StoreBrandLogo'
@@ -94,6 +95,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
                 </span>
               )}
             </Link>
+            <NotificationBell />
             <AccountMenu onOpenLogin={onOpenLogin} />
           </div>
         </div>

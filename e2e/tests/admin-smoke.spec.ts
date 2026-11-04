@@ -70,15 +70,25 @@ test.describe('admin: authenticated shell', () => {
     }
   });
 
-  test('shows the active profile, version and an honest disconnected notifications state', async ({ page }) => {
+  test('shows the active profile, version and a live notifications menu', async ({ page }) => {
     await signInDiAsAdmin(page);
 
-    // The bell remains actionable but never presents synthetic notifications.
+    // The bell is backed by the real notification API and this is a real staff
+    // session, so the list request must succeed. The shared e2e database may
+    // already hold projected notifications from other specs, so the list may be
+    // empty or populated, but an error or a perpetual spinner is a failure.
     const bell = page.getByRole('button', { name: /اعلان‌ها/ });
     await expect(bell).toBeVisible();
+    const listResponse = page.waitForResponse(
+      response => response.url().includes('/notifications/admin') && !response.url().includes('/unread-count') && response.request().method() === 'GET',
+    );
     await bell.click();
-    await expect(page.getByText('جریان اعلان متصل نیست')).toBeVisible();
-    await expect(page.getByText(/هیچ ردیف نمونه‌ای نمایش داده نمی‌شود/)).toBeVisible();
+    expect((await listResponse).status()).toBe(200);
+    const menu = page.getByRole('menu');
+    await expect(menu.getByText('اعلان‌ها', { exact: true })).toBeVisible();
+    await expect(menu.getByRole('alert')).toHaveCount(0);
+    await expect(menu.getByRole('status')).toHaveCount(0);
+    await expect(menu.getByText('اعلانی وجود ندارد.').or(menu.getByRole('listitem').first())).toBeVisible();
     await page.keyboard.press('Escape');
 
     if (isMobile(page)) {

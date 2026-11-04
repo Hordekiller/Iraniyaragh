@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { OutboxEffectKind, OutboxEffectStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { InAppNotificationProjector } from '../notifications/in-app-notification.projector';
 
 const TOPIC_KIND: Readonly<Record<string, OutboxEffectKind>> = {
   DOOR_QUOTE_APPROVED: OutboxEffectKind.CUSTOMER_DOOR_QUOTE_APPROVED,
@@ -34,6 +35,8 @@ class OutboxSubjectNotFoundError extends Error {}
 
 @Injectable()
 export class OutboxConsumerService {
+  private readonly notifications = new InAppNotificationProjector();
+
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Atomically records an actionable intent and acknowledges one queued event. */
@@ -55,6 +58,7 @@ export class OutboxConsumerService {
       let subjectId = event.aggregateId;
       let status: OutboxEffectStatus = OutboxEffectStatus.PENDING;
       let paymentId: string | null = null;
+      let orderId = event.aggregateId;
       if (expectedAggregate === 'order') {
         const order = await tx.order.findUnique({ where: { id: event.aggregateId }, select: { id: true } });
         if (!order) throw new OutboxSubjectNotFoundError('Order subject not found.');
@@ -65,6 +69,7 @@ export class OutboxConsumerService {
         });
         if (!payment) throw new OutboxSubjectNotFoundError('Payment subject not found.');
         paymentId = payment.id;
+        orderId = payment.orderId;
         if (kind === OutboxEffectKind.CUSTOMER_ORDER_PAID) subjectId = payment.orderId;
         if (kind === OutboxEffectKind.PAYMENT_RECONCILIATION && payment.status !== 'PENDING') {
           status = OutboxEffectStatus.COMPLETED;
@@ -78,6 +83,8 @@ export class OutboxConsumerService {
         data: [{ eventId: event.id, kind, subjectId, status }],
         skipDuplicates: true,
       });
+
+      await this.notifications.project(tx, event, orderId);
 
       // ReadCommitted does not hold one snapshot across the transaction, so an
       // ambiguous payment resolved by a concurrent settlement transaction would
