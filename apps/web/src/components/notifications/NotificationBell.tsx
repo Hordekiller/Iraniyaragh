@@ -5,7 +5,7 @@ import type { InAppNotification } from '@iranyaragh/contracts'
 import { useAuth } from '../../state/auth-context'
 import { toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
-import { createNotificationsApi } from '../../lib/notifications/api'
+import { createNotificationsApi, NOTIFICATIONS_AVAILABLE } from '../../lib/notifications/api'
 import { NotificationList } from './NotificationList'
 
 const POLL_MS = 60_000
@@ -14,7 +14,7 @@ const POLL_MS = 60_000
 export function NotificationBell() {
   const auth = useAuth()
   // Keyed by identity so a logout/login never shows another customer's state.
-  return auth.state.phase === 'authenticated' ? <AuthenticatedBell key={auth.identityVersion} /> : null
+  return NOTIFICATIONS_AVAILABLE && auth.state.phase === 'authenticated' ? <AuthenticatedBell key={auth.identityVersion} /> : null
 }
 
 function AuthenticatedBell() {
@@ -66,7 +66,7 @@ function AuthenticatedBell() {
         className="relative flex size-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition hover:border-[#FF4D00]/30 hover:bg-white hover:text-[#FF4D00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
       >
         <Bell size={18} aria-hidden="true" />
-        {unread > 0 && <span aria-hidden="true" className="absolute -top-1 -left-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF4D00] px-1 text-[10px] font-black text-white">{unread > 99 ? '+۹۹' : toPersianDigits(unread)}</span>}
+        {unread > 0 && <span aria-hidden="true" className="absolute -top-1 -left-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#C2410C] px-1 text-[10px] font-black text-white">{unread > 99 ? '+۹۹' : toPersianDigits(unread)}</span>}
       </button>
       {open && (
         <div id="customer-notifications-panel" role="region" aria-label="اعلان‌ها" className="fixed inset-x-3 top-[76px] z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:left-0 sm:top-full sm:mt-2 sm:w-[360px]">

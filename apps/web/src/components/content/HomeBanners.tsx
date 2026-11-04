@@ -42,7 +42,7 @@ export function HomeBanners({ banners, loading = false }: { banners: HomepageBan
               <span className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/75 via-black/40 to-transparent p-4 pt-12 text-white">
                 <span className="text-base font-black sm:text-lg">{banner.title}</span>
                 {banner.subtitle && <span className="text-xs text-slate-100 sm:text-sm">{banner.subtitle}</span>}
-                <span className="mt-1 inline-flex self-start rounded-full bg-[#FF4D00] px-3 py-1 text-xs font-bold">{banner.ctaLabel}</span>
+                <span className="mt-1 inline-flex self-start rounded-full bg-[#C2410C] px-3 py-1 text-xs font-bold">{banner.ctaLabel}</span>
               </span>
             </BannerLink>
           </li>

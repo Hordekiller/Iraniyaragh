@@ -40,7 +40,7 @@ export function ProductCard({ product, variant = 'default' }: { product: Catalog
           loading="lazy"
         />
         {discount !== null && (
-          <span className="absolute top-2 left-2 rounded-full bg-[#FF4D00] px-2.5 py-1 text-[11px] font-black text-white">
+          <span className="absolute top-2 left-2 rounded-full bg-[#C2410C] px-2.5 py-1 text-[11px] font-black text-white">
             {toPersianDigits(discount)}٪ تخفیف
           </span>
         )}

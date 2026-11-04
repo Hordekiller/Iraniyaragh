@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type { InAppNotification } from '@iranyaragh/contracts'
 import { AccountNavigation, SessionRestoring } from '../components/account/AccountNavigation'
 import { NotificationList } from '../components/notifications/NotificationList'
-import { createNotificationsApi } from '../lib/notifications/api'
+import { createNotificationsApi, NOTIFICATIONS_AVAILABLE } from '../lib/notifications/api'
 import { toPersianDigits } from '../lib/format'
 import { useAuth } from '../state/auth-context'
 
@@ -23,7 +23,7 @@ export function NotificationsPage() {
       setError(false)
     }, () => setError(true))
   }, [api])
-  useEffect(() => { if (authenticated) load() }, [authenticated, auth.identityVersion, load])
+  useEffect(() => { if (authenticated && NOTIFICATIONS_AVAILABLE) load() }, [authenticated, auth.identityVersion, load])
 
   if (!authenticated && (!auth.restored || auth.state.restoring)) return <SessionRestoring />
   if (!authenticated) return (
@@ -32,6 +32,8 @@ export function NotificationsPage() {
       <button type="button" onClick={auth.open} className="mt-4 rounded-xl bg-[#C2410C] px-5 py-3 font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2">ورود</button>
     </main>
   )
+
+  if (!NOTIFICATIONS_AVAILABLE) return <main className="mx-auto max-w-3xl px-4 py-16 text-center text-slate-700">اعلان‌ها در نسخهٔ نمایشی در دسترس نیستند.</main>
 
   const toggle = (item: InAppNotification) => api.setRead(item.id, !item.read).then(next => {
     setItems(current => current?.map(row => row.id === next.id ? next : row) ?? current)

@@ -25,3 +25,6 @@ export type NotificationsApi = ReturnType<typeof createNotificationsApi>
 
 /** Only same-site paths are followed; anything else is dropped. */
 export const safeNotificationHref = (href: string | null) => (href && href.startsWith('/') && !href.startsWith('//') ? href : null)
+
+/** Demo/fixture sessions have no real notification source; never call the API for them. */
+export const NOTIFICATIONS_AVAILABLE = process.env.NEXT_PUBLIC_FIXTURE_AUTH !== 'true'
