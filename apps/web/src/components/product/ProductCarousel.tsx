@@ -80,7 +80,7 @@ export function ProductCarousel({
             type="button"
             onClick={() => scroll("previous")}
             aria-label={`کالاهای قبلی در ${title}`}
-            className="hidden size-9 items-center justify-center rounded-full md:flex border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:border-orange-300 hover:text-[#C2410C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] lg:size-10"
+            className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:border-orange-300 hover:text-[#C2410C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] lg:size-10"
           >
             <ArrowRight size={18} aria-hidden="true" />
           </button>
@@ -88,7 +88,7 @@ export function ProductCarousel({
             type="button"
             onClick={() => scroll("next")}
             aria-label={`کالاهای بعدی در ${title}`}
-            className="hidden size-9 items-center justify-center rounded-full md:flex border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:border-orange-300 hover:text-[#C2410C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] lg:size-10"
+            className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:border-orange-300 hover:text-[#C2410C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] lg:size-10"
           >
             <ArrowLeft size={18} aria-hidden="true" />
           </button>

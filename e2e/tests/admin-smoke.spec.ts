@@ -73,12 +73,15 @@ test.describe('admin: authenticated shell', () => {
   test('shows the active profile, version and an honest disconnected notifications state', async ({ page }) => {
     await signInDiAsAdmin(page);
 
-    // The bell remains actionable but never presents synthetic notifications.
+    // The bell is backed by the real notification API; the fixture session has
+    // no server identity, so it must never present synthetic notifications.
     const bell = page.getByRole('button', { name: /اعلان‌ها/ });
     await expect(bell).toBeVisible();
     await bell.click();
-    await expect(page.getByText('جریان اعلان متصل نیست')).toBeVisible();
-    await expect(page.getByText(/هیچ ردیف نمونه‌ای نمایش داده نمی‌شود/)).toBeVisible();
+    await expect(page.getByText('اعلان‌ها', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('اعلان‌ها دریافت نشدند.').or(page.getByText('اعلانی وجود ندارد.')),
+    ).toBeVisible();
     await page.keyboard.press('Escape');
 
     if (isMobile(page)) {
