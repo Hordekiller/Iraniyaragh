@@ -216,6 +216,7 @@ export function SiteNavigationDrawer({ onClose }: { onClose: () => void }) {
         <nav aria-label="راهنمای فروشگاه" className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-[11px] text-slate-500 sm:px-7">
           <span className="font-bold text-slate-700">با خیال راحت انتخاب کنید.</span>
           <div className="flex items-center gap-4">
+            <Link to={ROUTES.help} onClick={onClose} className="inline-flex min-h-11 items-center hover:text-orange-800">راهنمای مشتری</Link>
             <Link to={ROUTES.terms} onClick={onClose} className="inline-flex min-h-11 items-center hover:text-orange-800">شرایط خرید</Link>
             <Link to={ROUTES.privacy} onClick={onClose} className="inline-flex min-h-11 items-center hover:text-orange-800">حریم خصوصی</Link>
           </div>

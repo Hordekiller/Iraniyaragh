@@ -119,7 +119,7 @@ export function OrdersPage() {
         />
       )}
       {items && items.length > 0 && (
-        <ul className="mt-6 space-y-4">
+        <ul className="mt-6 space-y-4" data-help="orders-list">
           {items.map((order) => (
             <li key={order.id}>
               <Link

@@ -284,6 +284,7 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
           {!returnMode && order.status === 'PENDING_PAYMENT' && !uncertain && (
             <button
               type="button"
+              data-help="pay-button"
               disabled={busy}
               onClick={() => void handlePayment()}
               className={primaryButton}
@@ -294,6 +295,7 @@ function PaymentContents({ returnMode }: { returnMode: boolean }) {
           )}
           <button
             type="button"
+            data-help="payment-recheck"
             onClick={() => setReload((value) => value + 1)}
             className={primaryButton}
           >

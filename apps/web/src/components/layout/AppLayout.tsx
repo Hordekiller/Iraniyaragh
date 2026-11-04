@@ -5,6 +5,8 @@ import { TopBar } from './TopBar'
 import { SiteHeader } from './SiteHeader'
 import { MobileBottomNav } from './MobileBottomNav'
 import { SiteFooter } from './SiteFooter'
+import { GuidedTour } from '../help/GuidedTour'
+import { PageHelper } from '../help/PageHelper'
 import { LoginDialog } from '../auth/LoginDialog'
 import { SECTION_IDS } from '../../lib/site-config'
 import { useRouteMetadata } from '../../lib/use-route-metadata'
@@ -70,6 +72,8 @@ export function AppLayout({ children, serverMetadata = false }: { children?: Rea
       />
       <DoorOrderFloatingLink />
       <LoginDialog open={loginOpen} onClose={auth.close} />
+      <GuidedTour />
+      <PageHelper />
     </>
   )
 }
@@ -78,6 +82,8 @@ function routeAnnouncement(pathname: string): string {
   if (pathname === '/') return 'صفحه خانه'
   if (pathname === '/categories') return 'صفحه دسته‌بندی کالاها'
   if (pathname === '/policies/privacy') return 'صفحه حریم خصوصی'
+  if (pathname === '/help') return 'مرکز راهنمای مشتری'
+  if (pathname.startsWith('/help/')) return 'صفحه راهنما'
   if (pathname === '/policies/terms') return 'صفحه قوانین و شرایط فروش'
   if (pathname === '/account/addresses') return 'صفحه دفتر نشانی‌ها'
   if (pathname === '/account/notifications') return 'صفحه اعلان‌ها'

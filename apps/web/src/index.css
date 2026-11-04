@@ -128,3 +128,37 @@ main:focus {
   .custom-door-floating, #product-purchase, nav, header, footer, .door-no-print { display: none !important; }
   .door-print { color: #000; background: #fff; }
 }
+
+/* Always-available page helper: opposite corner to the custom-door link, above mobile nav / product dock. */
+.page-helper-fab {
+  position: fixed;
+  z-index: 80;
+  inset-inline-end: 1rem;
+  bottom: calc(var(--mobile-nav-height, calc(6rem + env(safe-area-inset-bottom))) + 0.75rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  border: 1px solid #0f172a;
+  background: #0f172a;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.28);
+}
+.page-helper-fab:hover { background: #9a3412; }
+/* Quiet by default: icon-only round button on small screens, label only on desktop. */
+@media (width < 64rem) {
+  .page-helper-fab { padding: 0; width: 48px; height: 48px; justify-content: center; opacity: 0.92; }
+  .page-helper-fab span { display: none; }
+}
+.page-helper-fab:focus-visible { outline: 3px solid #ea580c; outline-offset: 2px; }
+.page-helper-fab-product { bottom: calc(var(--product-dock-height, 14rem) + 0.75rem); }
+@media (min-width: 1024px) {
+  .page-helper-fab, .page-helper-fab-product { bottom: 1.5rem; inset-inline-end: 1.5rem; }
+}
+@media (width < 64rem) {
+  body:has(input:focus, textarea:focus, select:focus) .page-helper-fab { display: none; }
+}

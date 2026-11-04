@@ -24,6 +24,7 @@ import { productStructuredData } from '../lib/product-json-ld'
 import { defaultCatalogVariant } from '../services/catalog/variants'
 import type { CatalogProduct } from '../services/catalog/types'
 import { commerceErrorMessage } from '../services/commerce/errors'
+import { HelpHint } from '../components/help/HelpHint'
 
 const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود در انبار',
@@ -252,9 +253,9 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
           )}
 
           {product.variants.length > 1 && (
-            <fieldset className="mt-5">
+            <fieldset className="mt-5" data-help="product-variants">
               <legend className="text-sm font-black text-slate-900">
-                انتخاب تنوع
+                <span className="me-2"><HelpHint target="product-variants" label="انتخاب تنوع" /></span>انتخاب تنوع
               </legend>
               <div className="mt-2 flex flex-wrap gap-2">
                 {product.variants.map((variant) => {
@@ -343,6 +344,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
               ) : (
                 <button
                   type="button"
+                  data-help="add-to-cart"
                   onClick={() => void handleAdd()}
                   disabled={!available || cartBusy}
                   className="flex-1 h-12 rounded-full bg-[#FF4D00] text-white font-black hover:bg-[#E54400] disabled:bg-slate-300 disabled:cursor-not-allowed transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
@@ -362,6 +364,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
 
               <button
                 type="button"
+                data-help="view-cart"
                 onClick={() => navigate(ROUTES.cart)}
                 className="h-12 shrink-0 px-4 sm:px-6 rounded-full border-2 border-slate-900 font-black hover:bg-slate-900 hover:text-white transition"
               >
@@ -411,6 +414,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
               className="mb-4 text-lg font-black text-slate-900"
             >
               توضیحات و راهنمای محصول
+              <span className="ms-2"><HelpHint target="add-to-cart" label="خرید این کالا" /></span>
             </h2>
             <RichText
               html={product.description}

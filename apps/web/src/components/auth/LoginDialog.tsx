@@ -292,6 +292,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                     </div>
                     <button
                       type="submit"
+                      data-help="login-send-code"
                       disabled={!canSubmitMobile || state.busy}
                       className="mt-4 w-full h-12 rounded-2xl bg-[#C2410C] text-white font-black text-[15px] flex items-center justify-center gap-2 hover:bg-[#A83509] disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
@@ -333,6 +334,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                     />
                     <button
                       type="submit"
+                      data-help="login-verify"
                       disabled={!canSubmitCode || state.busy}
                       className="mt-4 w-full h-12 rounded-2xl bg-[#C2410C] text-white font-black text-[15px] flex items-center justify-center gap-2 hover:bg-[#A83509] disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
@@ -358,6 +360,7 @@ export function LoginDialog({ open, onClose }: LoginDialogProps) {
                       </button>
                       <button
                         type="button"
+                        data-help="login-resend"
                         onClick={() => void controller.resend()}
                         disabled={resendLocked || rateLimitLocked || state.busy}
                         className="text-[12.5px] font-bold text-[#C2410C] hover:underline disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed transition"
