@@ -3,6 +3,7 @@ import type {
   ProductListMeta,
   CategorySummary,
   HomepageCollectionsConfig,
+  HomepageBannerPublic,
   PublicProductMedia,
   VariantAttributeValue,
 } from '@iranyaragh/contracts'
@@ -86,6 +87,8 @@ export type CatalogListResult = {
 export interface CatalogApi {
   listCategories(): Promise<CatalogCategory[]>
   getHomepageCollections(): Promise<HomepageCollectionsConfig>
+  /** Live admin-managed banners; absent in adapters that have no banner source. */
+  getHomepageBanners?(): Promise<HomepageBannerPublic[]>
   listProducts(query?: CatalogQuery): Promise<CatalogListResult>
   getProductBySlug(slug: string): Promise<CatalogProduct>
 }

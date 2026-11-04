@@ -16,6 +16,7 @@ const AccountInvoicesPage = lazy(() => import('../../views/AccountInvoicesPage')
 const AccountPage = lazy(() => import('../../views/AccountPage').then(module => ({ default: module.AccountPage })))
 const AccountAddressesPage = lazy(() => import('../../views/AccountAddressesPage').then(module => ({ default: module.AccountAddressesPage })))
 const AccountSecurityPage = lazy(() => import('../../views/AccountSecurityPage').then(module => ({ default: module.AccountSecurityPage })))
+const NotificationsPage = lazy(() => import('../../views/NotificationsPage').then(module => ({ default: module.NotificationsPage })))
 const OrdersPage = lazy(() => import('../../views/OrdersPage').then(module => ({ default: module.OrdersPage })))
 const OrderDetailPage = lazy(() => import('../../views/OrderDetailPage').then(module => ({ default: module.OrderDetailPage })))
 const PrivacyPage = lazy(() => import('../../views/PrivacyPage').then(module => ({ default: module.PrivacyPage })))
@@ -40,6 +41,7 @@ export default function PrivateRoutes() {
                       <Route path={ROUTE_PATHS.account} element={<AccountPage />} />
                       <Route path={ROUTE_PATHS.addresses} element={<AccountAddressesPage />} />
                       <Route path={ROUTE_PATHS.sessions} element={<AccountSecurityPage />} />
+                      <Route path={ROUTE_PATHS.notifications} element={<NotificationsPage />} />
                       <Route path={ROUTE_PATHS.orders} element={<OrdersPage />} />
                       <Route path={ROUTE_PATHS.order} element={<OrderDetailPage />} />
                       <Route path={ROUTE_PATHS.privacy} element={<PrivacyPage />} />

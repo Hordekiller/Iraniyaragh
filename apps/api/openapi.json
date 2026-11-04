@@ -5238,6 +5238,85 @@
         ]
       }
     },
+    "/catalog/homepage-banners": {
+      "get": {
+        "operationId": "HomepageBannersController_publicConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Read live promotional banners for the storefront homepage",
+        "tags": [
+          "HomepageBanners"
+        ]
+      }
+    },
+    "/catalog/homepage-banners/admin": {
+      "get": {
+        "operationId": "HomepageBannersController_adminConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "HomepageBanners"
+        ]
+      },
+      "put": {
+        "operationId": "HomepageBannersController_update",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "HomepageBanners"
+        ]
+      }
+    },
+    "/catalog/homepage-banners/admin/media-options": {
+      "get": {
+        "operationId": "HomepageBannersController_mediaOptions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "HomepageBanners"
+        ]
+      }
+    },
     "/catalog/admin/products/{productId}/media": {
       "get": {
         "operationId": "MediaController_list",
@@ -46309,6 +46388,196 @@
         "summary": "Read provider health, circuit state and last successful send time.",
         "tags": [
           "notifications"
+        ]
+      }
+    },
+    "/notifications/me": {
+      "get": {
+        "operationId": "CustomerNotificationsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "CustomerNotifications"
+        ]
+      }
+    },
+    "/notifications/me/unread-count": {
+      "get": {
+        "operationId": "CustomerNotificationsController_unreadCount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "CustomerNotifications"
+        ]
+      }
+    },
+    "/notifications/me/read-all": {
+      "post": {
+        "operationId": "CustomerNotificationsController_readAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "CustomerNotifications"
+        ]
+      }
+    },
+    "/notifications/me/{id}/read": {
+      "post": {
+        "operationId": "CustomerNotificationsController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "CustomerNotifications"
+        ]
+      }
+    },
+    "/notifications/me/{id}/unread": {
+      "post": {
+        "operationId": "CustomerNotificationsController_unread",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "CustomerNotifications"
+        ]
+      }
+    },
+    "/notifications/admin": {
+      "get": {
+        "operationId": "StaffNotificationsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "StaffNotifications"
+        ]
+      }
+    },
+    "/notifications/admin/unread-count": {
+      "get": {
+        "operationId": "StaffNotificationsController_unreadCount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "StaffNotifications"
+        ]
+      }
+    },
+    "/notifications/admin/read-all": {
+      "post": {
+        "operationId": "StaffNotificationsController_readAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "StaffNotifications"
+        ]
+      }
+    },
+    "/notifications/admin/{id}/read": {
+      "post": {
+        "operationId": "StaffNotificationsController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "StaffNotifications"
+        ]
+      }
+    },
+    "/notifications/admin/{id}/unread": {
+      "post": {
+        "operationId": "StaffNotificationsController_unread",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "StaffNotifications"
         ]
       }
     },

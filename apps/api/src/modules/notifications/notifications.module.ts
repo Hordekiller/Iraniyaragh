@@ -10,12 +10,15 @@ import { SMS_SETTINGS_STORE } from './sms-settings.port';
 import { SmsSettingsService } from './sms-settings.service';
 import { SmsTemplateSettingsService } from './sms-template-settings.service';
 import { SmsTransportModule } from './sms-transport.module';
+import { CustomerNotificationsController, StaffNotificationsController } from './in-app-notifications.controller';
+import { InAppNotificationsService } from './in-app-notifications.service';
 
 @Module({
   imports: [AuditModule, ConfigModule, SmsTransportModule, DatabaseModule],
-  controllers: [NotificationsAdminController],
+  controllers: [NotificationsAdminController, CustomerNotificationsController, StaffNotificationsController],
   providers: [
     SmsSettingsService,
+    InAppNotificationsService,
     SmsOperatorTestService,
     {
       provide: SMS_SETTINGS_STORE,

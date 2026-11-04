@@ -6,6 +6,7 @@ import type {
   ProductDetailPublicResponse,
   ProductListResponse,
   HomepageCollectionsResponse,
+  HomepageBannersPublicResponse,
   PublicProductMediaImage,
 } from '@iranyaragh/contracts'
 import type { PublicAvailabilityResponse } from '@iranyaragh/contracts'
@@ -62,6 +63,11 @@ export class CatalogHttpClient implements CatalogApi {
   async getHomepageCollections() {
     const response = await this.request<HomepageCollectionsResponse>('/api/v1/catalog/homepage-collections')
     return response.data.config
+  }
+
+  async getHomepageBanners() {
+    const response = await this.request<HomepageBannersPublicResponse>('/api/v1/catalog/homepage-banners')
+    return response.data.banners
   }
 
   async listProducts(query: CatalogQuery = {}): Promise<CatalogListResult> {

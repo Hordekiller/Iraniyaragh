@@ -80,6 +80,7 @@ function routeAnnouncement(pathname: string): string {
   if (pathname === '/policies/privacy') return 'صفحه حریم خصوصی'
   if (pathname === '/policies/terms') return 'صفحه قوانین و شرایط فروش'
   if (pathname === '/account/addresses') return 'صفحه دفتر نشانی‌ها'
+  if (pathname === '/account/notifications') return 'صفحه اعلان‌ها'
   if (pathname === '/account/security') return 'صفحه امنیت و نشست‌ها'
   if (pathname === '/account') return 'صفحه حساب کاربری'
   if (pathname === '/cart') return 'صفحه سبد خرید'

@@ -61,6 +61,14 @@ function renderShell(
   );
 }
 
+vi.mock('@/lib/notifications/api', () => ({
+  listNotifications: vi.fn(async () => ({ items: [], unreadCount: 0, nextCursor: null })),
+  readUnreadCount: vi.fn(async () => 0),
+  setNotificationRead: vi.fn(),
+  markAllNotificationsRead: vi.fn(),
+  safeHref: (href: string | null) => href,
+}));
+
 describe('AdminShell', () => {
   afterEach(() => {
     mocks.replace.mockReset();
@@ -127,13 +135,11 @@ describe('AdminShell', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens an honest empty notifications state without runtime fixtures', () => {
+  it('opens an honest empty notifications state without runtime fixtures', async () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: /اعلان‌ها/ }));
-    expect(
-      screen.getByText('جریان اعلان متصل نیست').closest('[role="status"]'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('اعلانی وجود ندارد.')).toBeInTheDocument();
     expect(screen.queryByText(/مشتری نمونه/)).not.toBeInTheDocument();
   });
 

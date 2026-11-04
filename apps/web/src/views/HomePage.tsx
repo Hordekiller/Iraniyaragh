@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CategoryGrid } from '../components/catalog/CategoryGrid'
+import { HomeBanners } from '../components/content/HomeBanners'
 import { HeroSlider } from '../components/content/HeroSlider'
 import { NewsletterStatus } from '../components/content/NewsletterStatus'
 import { ProductCarousel } from '../components/product/ProductCarousel'
+import { verifiedDiscountPercent } from '../lib/discount'
+import type { HomepageBannerPublic } from '@iranyaragh/contracts'
 import { ROUTES } from '../lib/routes'
 import { SECTION_IDS } from '../lib/site-config'
 import type { CatalogCategory, CatalogProduct } from '../services/catalog/types'
@@ -29,6 +32,17 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(!initialCatalog)
   const [attempt, setAttempt] = useState(0)
+  const [banners, setBanners] = useState<HomepageBannerPublic[] | null>(api.getHomepageBanners ? null : [])
+
+  useEffect(() => {
+    if (!api.getHomepageBanners) return
+    let cancelled = false
+    api.getHomepageBanners().then(
+      items => { if (!cancelled) setBanners(items) },
+      () => { if (!cancelled) setBanners([]) }, // decorative content: fail closed, never show placeholders
+    )
+    return () => { cancelled = true }
+  }, [api, attempt])
 
   useEffect(() => {
     const state = location.state as HomePageLocationState | null
@@ -92,6 +106,13 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
   }
 
   const rootCategories = catalog?.categories ?? []
+  // Genuine promotions only: products whose catalog price is verifiably below their recorded previous price.
+  const offerProducts = [...new Map((catalog?.categoryCollections ?? []).flatMap(item => item.products ?? [])
+    .filter(product => verifiedDiscountPercent(product) !== null).map(product => [product.id, product])).values()]
+  const bannerBlock = <HomeBanners key="home-banners" banners={banners ?? []} loading={banners === null} />
+  const offersBlock = offerProducts.length > 0 ? (
+    <ProductCarousel key="home-offers" id="home-offers" variant="offer" title="پیشنهادهای ویژه" description="کالاهایی که قیمت فعلی‌شان از قیمت قبلی ثبت‌شده کمتر است" products={offerProducts} moreHref={ROUTES.search} />
+  ) : null
 
   return (
     <div>
@@ -130,14 +151,15 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
           </section>
 
           <div className="max-w-[1280px] mx-auto px-4 lg:px-6 pb-10 lg:pb-16">
-            {catalog.categoryCollections.map(({ category, sortBy, products }) => products === null ? (
+            {catalog.categoryCollections.flatMap(({ category, sortBy, products }, index) => [products === null ? (
               <section key={category.id} className="mt-10 rounded-2xl border border-slate-200 bg-white p-5" aria-label={`محصولات ${category.name}`}>
                 <h2 className="font-black text-slate-900">محصولات {category.name}</h2>
                 <p className="mt-2 text-sm text-slate-600">کالاهای این دسته فعلاً دریافت نشدند.</p>
               </section>
             ) : products.length === 0 ? null : (
               <ProductCarousel key={category.id} id={`home-category-${category.slug}`} title={sortBy === 'BESTSELLING' ? `پرفروش‌های ${category.name}` : `جدیدترین ${category.name}`} description={sortBy === 'BESTSELLING' ? 'بر پایهٔ فروش ثبت‌شده و منهای مرجوعی‌های ثبت‌شده' : 'جدیدترین کالاهای منتشرشده در این دسته'} products={products} moreHref={ROUTES.category(category.slug)} />
-            ))}
+            ), ...(index === 0 ? [bannerBlock, offersBlock] : [])])}
+            {catalog.categoryCollections.length === 0 && <>{bannerBlock}{offersBlock}</>}
           </div>
         </>
       )}
