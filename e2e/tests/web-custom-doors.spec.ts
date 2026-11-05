@@ -161,10 +161,10 @@ test("configures several doors in Persian, reviews unpriced terms and remains ac
   await page.getByLabel("عرض (میلی‌متر)", { exact: true }).fill("۵۰۰");
   await page.getByLabel("ارتفاع (میلی‌متر)", { exact: true }).fill("۱۰۰۰");
   await page.getByLabel("تعداد", { exact: true }).fill("۲");
-  await page.getByLabel("رنگ پروفیل", { exact: true }).selectOption("BRONZE");
-  await page.getByLabel("سمت دستگیره", { exact: true }).selectOption("LEFT");
-  await page.getByLabel("محل گازور / لولا", { exact: true }).selectOption("RIGHT");
-  await page.getByLabel("حالت سوراخ‌کاری", { exact: true }).selectOption("CUSTOM");
+  await page.getByRole("combobox", { name: "رنگ پروفیل", exact: true }).selectOption("BRONZE");
+  await page.getByRole("combobox", { name: "سمت دستگیره", exact: true }).selectOption("LEFT");
+  await page.getByRole("combobox", { name: "محل گازور / لولا", exact: true }).selectOption("RIGHT");
+  await page.getByRole("combobox", { name: "حالت سوراخ‌کاری", exact: true }).selectOption("CUSTOM");
   const positions = ["۱۲", "۳۵", "۶۵", "۸۸"];
   for (let index = 0; index < positions.length; index++) {
     await page.getByLabel(`فاصلهٔ سوراخ ${(index + 1).toLocaleString("fa-IR")} (سانت)`, { exact: true }).fill(positions[index]);
@@ -172,7 +172,7 @@ test("configures several doors in Persian, reviews unpriced terms and remains ac
   await expect(page.getByText("حداکثر ۱۰۰ سانت (بیشتر از ارتفاع درب مجاز نیست)")).toHaveCount(4);
   await page.getByLabel("فاصلهٔ سوراخ ۱ (سانت)", { exact: true }).fill("۱۰۱");
   await page.getByRole("button", { name: "افزودن این درب" }).click();
-  await expect(page.getByRole("alert")).toContainText("حداکثر برابر ارتفاع درب");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("حداکثر برابر ارتفاع درب");
   await page.getByLabel("فاصلهٔ سوراخ ۱ (سانت)", { exact: true }).fill("۱۲");
   await page.screenshot({ path: testInfo.outputPath("manufacturing-fields.png"), fullPage: true });
   await page.getByRole("button", { name: "افزودن این درب" }).click();
