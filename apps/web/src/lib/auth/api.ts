@@ -1,3 +1,4 @@
+import { clearRefreshAttempt, runRefreshAttempt } from './refresh-attempt';
 import { jsonRequest } from './request';
 import { AuthApiError } from './errors';
 import { MemorySessionStore } from './session-store';
@@ -73,18 +74,25 @@ export class AuthHttpClient implements AuthApi {
       `${AUTH_BASE}/customer/otp/verify`,
       { baseUrl: this.baseUrl, credentials: 'include', json: payload },
     );
+    clearRefreshAttempt();
     this.store.setAuthenticated(data);
     return data;
   }
 
   async refresh(): Promise<AccessTokenData> {
     const csrfToken = this.requireCsrfToken();
-    const { data } = await jsonRequest<AccessTokenData>(`${AUTH_BASE}/refresh`, {
-      baseUrl: this.baseUrl,
-      credentials: 'include',
-      headers: { 'X-CSRF-Token': csrfToken },
-      method: 'POST',
-    });
+    // Same attempt id across a reload/network drop lets the server return the
+    // already-committed rotation instead of treating the retry as replay.
+    const { data } = await runRefreshAttempt(
+      attemptId =>
+        jsonRequest<AccessTokenData>(`${AUTH_BASE}/refresh`, {
+          baseUrl: this.baseUrl,
+          credentials: 'include',
+          headers: { 'X-CSRF-Token': csrfToken, 'X-Refresh-Attempt': attemptId },
+          method: 'POST',
+        }),
+      error => !(error instanceof AuthApiError) || error.statusCode === undefined || error.statusCode >= 500,
+    );
     this.store.setAuthenticated(data);
     return data;
   }
@@ -115,6 +123,7 @@ export class AuthHttpClient implements AuthApi {
       headers: { 'X-CSRF-Token': csrfToken },
       method: 'POST',
     });
+    clearRefreshAttempt();
     this.store.clear();
   }
 

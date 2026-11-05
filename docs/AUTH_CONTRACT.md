@@ -158,7 +158,7 @@ browser clients above.
 | `POST /customer/otp/verify`       | Public challenge                  | `200` access + cookies           | Atomic single-use, five attempts maximum          |
 | `POST /staff/password`            | Public                            | `200` MFA challenge              | Dummy-hash non-enumeration, no session yet        |
 | `POST /staff/totp/verify`         | Public challenge                  | `200` access + cookies           | One-time challenge and TOTP time-step             |
-| `POST /refresh`                   | Refresh cookie + CSRF             | `200` rotated access + cookies   | Transactional rotation/replay-family revocation   |
+| `POST /refresh`                   | Refresh cookie + CSRF (+ optional `X-Refresh-Attempt`) | `200` rotated access + cookies | Transactional rotation/replay-family revocation; same-attempt recovery 8.1 |
 | `GET /me`                         | Bearer                            | `200` principal                  | Live session/user/permission evaluation           |
 | `POST /activity`                  | Bearer                            | `204` no body                    | Touches only the guard-validated live session; never revives an idle/revoked/expired one |
 | `GET /sessions`                   | Bearer                            | `200` safe device list           | Own sessions only, no hashes/user-agent/IP        |
@@ -388,7 +388,8 @@ Within one database transaction, a valid refresh:
 4. revokes the old row as `ROTATED` and links `replacedBySessionId`;
 5. commits before returning the new cookie/access token.
 
-If the supplied row is already rotated, the service revokes all still-active rows
+If the supplied row is already rotated and the request is **not** a valid recovery
+of the same attempt (section 8.1), the service revokes all still-active rows
 with its `tokenFamilyId`, emits `auth.session.replay_detected`, clears cookies and
 returns `AUTH_SESSION_REPLAYED`. In two simultaneous refreshes exactly one CAS wins;
 the loser follows this replay path, so the resulting family is revoked. UI clients
@@ -405,6 +406,49 @@ most one replay, with its original body and idempotency key, and late work from
 a different login generation is cancelled. Logout waits for the complete batch;
 network, cancellation and lock-acquisition failures release the lease without
 claiming the protected operation succeeded. No token is broadcast or persisted.
+
+### 8.1 Idempotent refresh recovery (lost responses)
+
+A rotation commits on receipt, so a response lost to reload, cancellation or a
+network drop leaves the browser on the previous cookie. Unconditional reuse grace
+is NOT allowed. Instead the same attempt may be retried:
+
+1. The client generates a random 128-bit **refresh-attempt ID** (base64url,
+   22-64 chars) and sends it as `X-Refresh-Attempt`. It is kept in `localStorage`
+   (`iranyaragh:refresh-attempt:customer|staff`, nothing else) and reused only
+   while younger than 12 s; success or any 4xx clears it, transport failure/5xx
+   keeps it, logout/login clear it, and a retry after 12 s gets a fresh ID.
+2. In the **same transaction** as the rotation the server stores one
+   `RefreshRecovery` row: SHA-256 of the attempt ID, `expiresAt = now + 15 s`, and
+   the successor refresh token + CSRF value sealed with AES-256-GCM under
+   `HKDF(previous refresh token, salt = attempt ID)` with AAD
+   `previousSessionId>successorSessionId`. No plaintext credential is stored and
+   neither a database reader nor a holder of only the old token or only the ID can
+   open it. If the insert fails the rotation rolls back and the old token stays
+   usable.
+3. A request presenting an already-rotated token is served the stored outcome
+   (fresh access token, same successor cookies, audit `auth.session.refresh_recovered`)
+   only if ALL hold: Origin/CSRF/realm checks pass; the previous token matches;
+   the attempt hash matches in constant time; now < `expiresAt`; the successor
+   is the unrevoked, unrotated head of the same family and level; and it is not
+   expired or past inactivity. No new session is created, so retries (also
+   concurrent, also from several tabs) never branch the family.
+4. Anything else - other/missing/malformed ID, window elapsed, successor revoked or
+   rotated again, tampered record - is a replay: the family is revoked and
+   `auth.session.replay_detected` is emitted exactly as before.
+5. Logout presenting a rotated token revokes the whole live family, so a lost
+   response cannot leave an orphaned live successor. Logout-all, credential change,
+   revocation, expiry and inactivity make recovery impossible by condition 3.
+
+The attempt ID is an idempotency key, never authentication proof. IP and
+User-Agent are not used. Expired rows are purged opportunistically after each
+attempt-bearing rotation (`purgeExpiredRecoveries`) and are cascade-deleted with
+their sessions. Remaining risk: a party holding the old refresh token AND the
+attempt ID inside the 15 s window can obtain the same successor the legitimate
+client would; that requires both values from the client (TLS, HttpOnly cookie,
+ID never in a URL or cookie) and the window is bounded. Retries after the
+window, or if the browser lost the ID (storage cleared), still end in replay
+revocation and a re-login.
 
 Session limits:
 
@@ -708,12 +752,9 @@ revocation, absolute expiry and the inactivity deadline before writing, throttle
 writes to one per minute per session, and never extends `expiresAt`, so absolute
 lifetime, logout, revocation and credential change are unaffected.
 
-**Known residual risk (decision for the owner).** A refresh whose response never
-reaches the browser (reload or network drop after the server committed the
-rotation) leaves the browser holding the already-rotated token. The next refresh is
-then classified as replay and the whole family is revoked, as section 8 specifies.
-The client lock removes this between tabs but cannot cover a request cancelled by
-unload. A short reuse leeway (rotate from the live head when the rotated token is
-presented within a few seconds of rotation) would close it, at the cost of a
-deliberate, bounded relaxation of replay detection. It is not implemented here.
+**Lost refresh responses** are resolved by the idempotent recovery protocol in
+section 8.1 (15 s server window, 12 s client window). Deployment: forward migration
+`20261105120000_refresh_recovery` adds the `RefreshRecovery` table; deploy the API
+before the web/admin bundles so the `X-Refresh-Attempt` header is understood (an
+older API simply ignores it, and older clients simply never send it).
 

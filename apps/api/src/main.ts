@@ -43,7 +43,7 @@ async function bootstrap() {
       'X-Request-ID',
       'X-Correlation-ID',
       'X-CSRF-Token',
-      'X-Auth-Realm',
+      'X-Auth-Realm', 'X-Refresh-Attempt',
     ],
     exposedHeaders: ['X-Request-ID', 'X-Correlation-ID'],
   });

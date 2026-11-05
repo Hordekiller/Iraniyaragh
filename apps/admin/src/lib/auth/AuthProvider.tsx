@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { AccessTokenData, CurrentPrincipalResponse } from '@iranyaragh/contracts';
 import { ApiAbortError, ApiClientError, apiFetch, readCsrfToken, recoverApiSession, registerSessionRecovery, settleSessionRecovery, registerAuthenticationFailure, notifyFreshAuthentication } from '@/lib/api/client';
 import { startActivityKeepAlive } from './activity-keepalive';
+import { clearRefreshAttempt, runRefreshAttempt } from './refresh-attempt';
 import { getAccessToken, getSessionRevision, setAccessToken } from './token-store';
 
 export type AuthUser = {
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const loggingOut = useRef(false);
 
   const establishSession = useCallback((input: { accessToken: string; principal: AuthUser }): void => {
+    clearRefreshAttempt();
     generation.current += 1;
     setAccessToken(input.accessToken);
     userRef.current = input.principal;
@@ -74,7 +76,12 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     const expectedUserId = userRef.current?.userId;
     const rotate = async () => {
       if (loggingOut.current || generation.current !== attemptGeneration) throw new ApiAbortError();
-      const refreshed = await apiFetch<AccessTokenData>('/auth/refresh', { method: 'POST', recoverSession: false });
+      // Same attempt id across a reload/network drop lets the server return the
+      // already-committed rotation instead of treating the retry as replay.
+      const refreshed = await runRefreshAttempt(
+        attemptId => apiFetch<AccessTokenData>('/auth/refresh', { method: 'POST', recoverSession: false, headers: { 'X-Refresh-Attempt': attemptId } }),
+        error => !(error instanceof ApiClientError) || error.statusCode >= 500,
+      );
       const token = refreshed.data.accessToken;
       if (!token) throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
       const verified = await apiFetch<CurrentPrincipalResponse['data']>('/auth/me', { token, recoverSession: false });
@@ -190,6 +197,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
       });
       if (generation.current === logoutGeneration) {
+        clearRefreshAttempt();
         setAccessToken(null);
         userRef.current = null;
         setUser(null);

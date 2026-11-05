@@ -243,9 +243,22 @@ describe('StaffAuthController (me / logout)', () => {
 
     const result = await controller.refresh(mockRequest() as never, response);
 
-    expect(rotateSession).toHaveBeenCalledWith('refresh-token', 'CUSTOMER_OTP');
+    expect(rotateSession).toHaveBeenCalledWith('refresh-token', 'CUSTOMER_OTP', undefined);
     expect(result.data.accessToken).toBe('refreshed-at-1');
     expect(response.calls.map(call => call.name)).toEqual(['iranyaragh_customer_refresh', 'iranyaragh_customer_csrf']);
+  });
+
+  it('forwards only a well-formed refresh-attempt id, never trusting it as proof', async () => {
+    const rotateSession = vi.fn(async () => ({
+      accessToken: 'at', csrfToken: 'csrf', expiresAt: new Date(Date.now() + 600_000),
+      refreshToken: 'rt', sessionId: 's', tokenFamilyId: 'tf',
+    }));
+    const controller = createController({ sessions: { createSession: vi.fn(), revokeByRefreshToken: vi.fn(), rotateSession } });
+    const base = { cookie: 'iranyaragh_customer_refresh=refresh-token; iranyaragh_customer_csrf=c1', origin: 'http://localhost:3001', 'x-csrf-token': 'c1' };
+    await controller.refresh({ ip: '127.0.0.1', headers: { ...base, 'x-refresh-attempt': 'AbCdEfGhIjKlMnOpQrStUv' } } as never, mockResponse());
+    expect(rotateSession).toHaveBeenLastCalledWith('refresh-token', 'CUSTOMER_OTP', 'AbCdEfGhIjKlMnOpQrStUv');
+    await controller.refresh({ ip: '127.0.0.1', headers: { ...base, 'x-refresh-attempt': 'bad value!' } } as never, mockResponse());
+    expect(rotateSession).toHaveBeenLastCalledWith('refresh-token', 'CUSTOMER_OTP', undefined);
   });
 
   it('rotates staff sessions only from the staff cookie pair and the staff level', async () => {
@@ -271,7 +284,7 @@ describe('StaffAuthController (me / logout)', () => {
 
     await controller.refresh(request as never, response);
 
-    expect(rotateSession).toHaveBeenCalledWith('staff-old', 'STAFF_MFA');
+    expect(rotateSession).toHaveBeenCalledWith('staff-old', 'STAFF_MFA', undefined);
     expect(response.calls.map(call => call.name)).toEqual(['iranyaragh_staff_refresh', 'iranyaragh_staff_csrf']);
   });
 
@@ -295,7 +308,7 @@ describe('StaffAuthController (me / logout)', () => {
     // Without the realm header the same request is a customer-realm refresh of the customer cookie.
     const customerRequest = { ...staffRequest, headers: { ...staffRequest.headers, 'x-auth-realm': undefined } };
     await expect(controller.refresh(customerRequest as never, mockResponse())).rejects.toBeInstanceOf(AuthSessionException);
-    expect(rotateSession).toHaveBeenLastCalledWith('customer-rt', 'CUSTOMER_OTP');
+    expect(rotateSession).toHaveBeenLastCalledWith('customer-rt', 'CUSTOMER_OTP', undefined);
   });
 
   it('rejects missing origin or CSRF proof before rotating or revoking', async () => {

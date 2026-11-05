@@ -32,6 +32,7 @@ import { AuthTokenService } from './auth-token.service';
 import { StaffAuthService } from './staff-auth.service';
 import { StaffMfaService } from './staff-mfa.service';
 import { RateLimitService } from './rate-limit.service';
+import { REFRESH_ATTEMPT_HEADER, parseRefreshAttemptId } from './refresh-recovery';
 
 const STAFF_LEVEL: AuthenticationLevel = 'STAFF_MFA';
 const ACCESS_TOKEN_TYPE = 'Bearer';
@@ -204,7 +205,11 @@ export class StaffAuthController {
     try {
       // A realm only ever rotates its own sessions: a staff cookie can never be
       // exchanged through the customer realm, nor the reverse.
-      const issued = await this.sessions.rotateSession(refreshToken, realm === 'staff' ? STAFF_LEVEL : 'CUSTOMER_OTP');
+      const issued = await this.sessions.rotateSession(
+        refreshToken,
+        realm === 'staff' ? STAFF_LEVEL : 'CUSTOMER_OTP',
+        parseRefreshAttemptId(request.headers?.[REFRESH_ATTEMPT_HEADER]),
+      );
       setAuthCookies(response, cookieSpec, issued.refreshToken, issued.csrfToken, issued.expiresAt);
       const principal = await this.principals.resolveBearerToken(`${ACCESS_TOKEN_TYPE} ${issued.accessToken}`);
       return {
