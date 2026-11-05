@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { attemptHashMatches, hashAttemptId, openRecovery, parseRefreshAttemptId, sealRecovery } from './refresh-recovery';
 
-const credentials = { refreshToken: 'next-refresh-token', csrfToken: 'next-csrf' };
+const tokenPair = { refreshToken: 'next-refresh-token', csrfToken: 'next-csrf' };
 const attempt = 'AbCdEfGhIjKlMnOpQrStUv';
 
 describe('refresh recovery sealing', () => {
   it('round-trips only with the same previous token, attempt and binding', () => {
-    const sealed = sealRecovery(credentials, 'old-token', attempt, 'a>b');
-    expect(openRecovery(sealed, 'old-token', attempt, 'a>b')).toEqual(credentials);
+    const sealed = sealRecovery(tokenPair, 'old-token', attempt, 'a>b');
+    expect(openRecovery(sealed, 'old-token', attempt, 'a>b')).toEqual(tokenPair);
     expect(openRecovery(sealed, 'other-token', attempt, 'a>b')).toBeUndefined();
     expect(openRecovery(sealed, 'old-token', `${attempt}x`, 'a>b')).toBeUndefined();
     expect(openRecovery(sealed, 'old-token', attempt, 'a>c')).toBeUndefined();
   });
-  it('never contains the plaintext credentials and rejects tampering/garbage', () => {
-    const sealed = sealRecovery(credentials, 'old-token', attempt, 'a>b');
+  it('never contains the plaintext tokenPair and rejects tampering/garbage', () => {
+    const sealed = sealRecovery(tokenPair, 'old-token', attempt, 'a>b');
     expect(sealed).not.toContain('next-refresh-token');
     expect(sealed).not.toContain('next-csrf');
     const parts = sealed.split('.');

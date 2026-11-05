@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes, ti
 /**
  * Idempotent refresh recovery material.
  *
- * When a browser supplies a refresh-attempt ID, the successor credentials of
+ * When a browser supplies a refresh-attempt ID, the successor tokenPair of
  * that rotation are sealed (AES-256-GCM) under a key derived from the *previous*
  * refresh token and the attempt ID. The database therefore holds nothing that
  * can be opened without BOTH values: a database/backup reader cannot recover the
@@ -17,7 +17,7 @@ export const REFRESH_ATTEMPT_HEADER = 'x-refresh-attempt';
 const ATTEMPT_PATTERN = /^[A-Za-z0-9_-]{22,64}$/;
 const INFO = Buffer.from('iranyaragh:refresh-recovery:v1');
 
-export type RecoveredCredentials = { readonly refreshToken: string; readonly csrfToken: string };
+export type RecoveredTokenPair = { readonly refreshToken: string; readonly csrfToken: string };
 
 /** Returns a well-formed attempt ID or undefined (malformed values are ignored, never trusted). */
 export function parseRefreshAttemptId(value: unknown): string | undefined {
@@ -39,7 +39,7 @@ function key(previousRefreshToken: string, attemptId: string): Buffer {
 }
 
 export function sealRecovery(
-  credentials: RecoveredCredentials,
+  tokenPair: RecoveredTokenPair,
   previousRefreshToken: string,
   attemptId: string,
   aad: string,
@@ -47,7 +47,7 @@ export function sealRecovery(
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key(previousRefreshToken, attemptId), iv);
   cipher.setAAD(Buffer.from(aad));
-  const body = Buffer.concat([cipher.update(JSON.stringify(credentials), 'utf8'), cipher.final()]);
+  const body = Buffer.concat([cipher.update(JSON.stringify(tokenPair), 'utf8'), cipher.final()]);
   return ['v1', iv.toString('base64url'), cipher.getAuthTag().toString('base64url'), body.toString('base64url')].join('.');
 }
 
@@ -57,7 +57,7 @@ export function openRecovery(
   previousRefreshToken: string,
   attemptId: string,
   aad: string,
-): RecoveredCredentials | undefined {
+): RecoveredTokenPair | undefined {
   try {
     const [version, iv, tag, body] = sealed.split('.');
     if (version !== 'v1' || !iv || !tag || !body) return undefined;
@@ -65,7 +65,7 @@ export function openRecovery(
     decipher.setAAD(Buffer.from(aad));
     decipher.setAuthTag(Buffer.from(tag, 'base64url'));
     const plain = Buffer.concat([decipher.update(Buffer.from(body, 'base64url')), decipher.final()]).toString('utf8');
-    const parsed = JSON.parse(plain) as Partial<RecoveredCredentials>;
+    const parsed = JSON.parse(plain) as Partial<RecoveredTokenPair>;
     return typeof parsed.refreshToken === 'string' && typeof parsed.csrfToken === 'string'
       ? { refreshToken: parsed.refreshToken, csrfToken: parsed.csrfToken }
       : undefined;
