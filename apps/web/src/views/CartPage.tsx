@@ -185,7 +185,7 @@ export function CartPage() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <ul className="space-y-3" aria-label="اقلام سبد خرید" data-help="cart-items">
           {lines.map((line) => {
             const pending = state.pendingVariantIds.includes(line.variantId)
