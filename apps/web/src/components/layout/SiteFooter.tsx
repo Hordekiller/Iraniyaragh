@@ -4,6 +4,7 @@ import {
   HAS_SITE_PHONE,
   SITE_ADDRESS_LINE,
   SITE_MOBILE,
+  SITE_NAME,
   SITE_PHONE,
   SITE_PHONE_PERSIAN,
   SITE_POSTAL_CODE,
@@ -90,7 +91,7 @@ export function SiteFooter() {
           </div>
         </div>
         <div className="border-t border-slate-100 py-5 text-xs text-slate-500">
-          © {toPersianDigits(currentJalaliYear())} <StoreBrandLogo variant="inline" /> — کلیه حقوق محفوظ است.
+          © {toPersianDigits(currentJalaliYear())} {SITE_NAME} — کلیه حقوق محفوظ است.
         </div>
       </div>
     </footer>

@@ -1,5 +1,6 @@
+import { DoorManufacturingFields } from "../components/custom-doors/DoorManufacturingFields";
+import { emptyManufacturing, manufacturingEntry, readManufacturing } from "../components/custom-doors/manufacturing-entry";
 import { DoorGlassChoices } from "../components/custom-doors/DoorGlassChoices";
-import { StoreBrandLogo } from '../components/brand/StoreBrandLogo';
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -48,6 +49,7 @@ const emptyEntry = {
   quantity: "1",
   selections: [] as DoorItemInput["selections"],
   notes: "",
+  manufacturing: emptyManufacturing(),
 };
 type Entry = typeof emptyEntry;
 export function CustomDoorsPage() {
@@ -194,7 +196,11 @@ function Configurator() {
       setError("گزینه‌های ضروری مدل را تکمیل کنید.");
       return;
     }
+    let manufacturing;
+    try { manufacturing = readManufacturing(entry.manufacturing, heightMm); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "مشخصات سوراخ‌کاری معتبر نیست."); return; }
     const item: DoorItemInput = {
+      manufacturing,
       modelId: model.id,
       widthMm,
       heightMm,
@@ -232,6 +238,7 @@ function Configurator() {
       quantity: String(item.quantity),
       selections: item.selections,
       notes: item.notes,
+      manufacturing: manufacturingEntry(item.manufacturing),
     });
     setType(m.type);
     setEditing(index);
@@ -363,7 +370,7 @@ function Configurator() {
       >
         <div className="p-6 md:p-10">
           <p className="text-sm font-bold text-orange-300">
-            اندازه شما، ساخت <StoreBrandLogo variant="inline" />
+            اندازه شما، ساخت ایرانی یراق
           </p>
           <h1
             id="custom-door-title"
@@ -393,7 +400,7 @@ function Configurator() {
             aria-hidden="true"
           />
           <p className="text-sm text-slate-300">
-            تصویر هر مدل پس از تأیید <StoreBrandLogo variant="inline" /> نمایش داده می‌شود.
+            تصویر هر مدل پس از تأیید ایرانی یراق نمایش داده می‌شود.
           </p>
           <p className="text-xs text-slate-400">
             فریم‌لس · دکوفیکس · ساخت با ابعاد سفارشی
@@ -551,7 +558,7 @@ function Configurator() {
                     >
                       مدل تأییدشده‌ای برای{" "}
                       {type === "FORMLEX" ? "فریم‌لس" : "دکوفیکس"} منتشر نشده
-                      است. پس از ثبت اطلاعات فنی و تعرفه توسط <StoreBrandLogo variant="inline" />،
+                      است. پس از ثبت اطلاعات فنی و تعرفه توسط ایرانی یراق،
                       مدل‌ها در این بخش در دسترس خواهند بود.
                     </p>
                   )}
@@ -662,6 +669,7 @@ function Configurator() {
                       ? `محدوده ثبت‌شده: عرض ${model.configuration.technical.minWidthMm} تا ${model.configuration.technical.maxWidthMm} و ارتفاع ${model.configuration.technical.minHeightMm} تا ${model.configuration.technical.maxHeightMm} میلی‌متر؛ تلرانس ثبت‌شده ${model.configuration.technical.toleranceMm} میلی‌متر. ابعاد خارج از محدوده برای بررسی مدیر ارسال می‌شوند.`
                       : "قواعد فنی مدل هنوز تکمیل نشده است؛ سفارش برای بررسی مدیر ارسال می‌شود."}
                   </p>
+                  <DoorManufacturingFields value={entry.manufacturing} heightMm={Number(doorDigits(entry.height))} onChange={manufacturing => setEntry(current => ({ ...current, manufacturing }))} />
                   <label className="mt-5 block text-sm font-bold">
                     توضیحات اختصاصی
                     <textarea

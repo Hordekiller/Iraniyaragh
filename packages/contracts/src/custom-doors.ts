@@ -87,16 +87,26 @@ export type DoorCatalog = {
   floatingEnabled: boolean;
   settingsVersion: number;
 };
+/** Manufacturing dimensions are integer mm; the customer form displays cm. */
+export type DoorManufacturing = {
+  profileColor: "BLACK" | "WHITE" | "GOLD" | "BRONZE";
+  handleSide: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
+  hingeSide: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
+  drillingMode: "STANDARD" | "CUSTOM";
+  holes: { distanceMm: number; reference: "TOP" | "BOTTOM" }[];
+};
 export type DoorItemInput = {
   modelId: string;
   widthMm: number;
   heightMm: number;
   quantity: number;
   selections: { slot: string; materialId: string }[];
+  manufacturing?: DoorManufacturing;
   notes: string;
 };
 export type DoorOrderInput = { items: DoorItemInput[] };
 export type DoorPricingLine = {
+  manufacturing?: DoorManufacturing;
   item: number;
   title: string;
   quantity: number;

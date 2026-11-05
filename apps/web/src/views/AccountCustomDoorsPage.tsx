@@ -1,4 +1,3 @@
-import { StoreBrandLogo } from '../components/brand/StoreBrandLogo';
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -339,7 +338,7 @@ function CustomerDoorOrders({ id }: { id?: string }) {
         <>
           <div className="mb-6 rounded-3xl bg-slate-950 p-6 text-white">
             <p className="text-xs text-orange-300">
-              <StoreBrandLogo variant="inline" /> · سفارش ساخت درب
+              سفارش ساخت درب
             </p>
             <h2 className="mt-3 text-xl font-black">{order.number}</h2>
             <p className="mt-3">{DOOR_STATUS_LABELS[order.status]}</p>

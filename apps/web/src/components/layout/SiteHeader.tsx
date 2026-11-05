@@ -79,8 +79,8 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
           <div className="flex shrink-0 items-center gap-2 mr-auto lg:mr-0">
             <button onClick={onToggleSearch} aria-label="جستجو" aria-expanded={showSearch} aria-controls="mobile-header-search" className="lg:hidden w-11 h-11 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center"><Search size={18} aria-hidden="true" /></button>
             {HAS_SITE_PHONE && (
-              <a href={`tel:${SITE_PHONE}`} className="hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-[#0F172A] text-white text-[13px] font-bold hover:bg-black transition">
-                <Phone size={16} aria-hidden="true" /> تماس با فروشگاه
+              <a href={`tel:${SITE_PHONE}`} className="hidden h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-orange-200 bg-orange-50 px-4 text-[13px] font-bold text-orange-800 transition-colors hover:border-orange-300 hover:bg-orange-100 hover:text-orange-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-700 focus-visible:ring-offset-2 lg:inline-flex">
+                <Phone size={16} className="shrink-0" aria-hidden="true" /> <span>تماس با فروشگاه</span>
               </a>
             )}
             <Link
