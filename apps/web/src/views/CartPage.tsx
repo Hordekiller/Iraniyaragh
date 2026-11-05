@@ -14,6 +14,7 @@ import { useAuth } from '../state/auth-context'
 import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { commerceErrorMessage } from '../services/commerce/errors'
+import { CouponBox } from '../components/cart/CouponBox'
 
 export function CartPage() {
   const { state, setQuantity, remove, clear, reload } = useCart()
@@ -279,11 +280,26 @@ export function CartPage() {
                   {formatToman(state.cart.quote.subtotal.amount)}
                 </dd>
               </div>
+              {state.cart.promotion?.applied.map((item) => (
+                <div key={item.promotionId} className="flex justify-between gap-4 text-emerald-300">
+                  <dt>{item.name}</dt>
+                  <dd className="font-black">
+                    {BigInt(item.discount.amount) > 0n ? `− ${formatToman(item.discount.amount)}` : 'ارسال رایگان'}
+                  </dd>
+                </div>
+              ))}
               <div className="flex justify-between gap-4 text-slate-300">
                 <dt>ارسال</dt>
                 <dd>پس از ثبت آدرس</dd>
               </div>
+              {state.cart.promotion && BigInt(state.cart.promotion.itemDiscount.amount) > 0n && (
+                <div className="flex justify-between gap-4 border-t border-white/10 pt-3 text-slate-300">
+                  <dt>مبلغ کالاها پس از تخفیف</dt>
+                  <dd className="font-black text-white">{formatToman(state.cart.promotion.payable.amount)}</dd>
+                </div>
+              )}
             </dl>
+            <CouponBox authenticated={state.owner === 'customer'} promotion={state.cart.promotion} />
             <p className="mt-4 border-t border-white/10 pt-4 text-xs leading-6 text-slate-400">
               قیمت، موجودی و هزینه ارسال در مرحله بعد دوباره توسط سرور بررسی
               می‌شود.

@@ -43,6 +43,19 @@ export class CommerceFixtureClient implements CommerceApi {
     )
   }
 
+  /** Fixture mode has no promotion engine; a coupon is never fabricated as accepted. */
+  async applyCoupon(): Promise<CartView> {
+    throw new AuthApiError({ code: 'COUPON_NOT_FOUND', message: 'Coupons are unavailable in fixture mode.', statusCode: 422 })
+  }
+
+  async removeCoupon() {
+    return structuredClone(this.cart)
+  }
+
+  async getPublicPromotions() {
+    return []
+  }
+
   async mergeGuestCart() {
     return { cart: structuredClone(this.cart), warnings: [] }
   }
