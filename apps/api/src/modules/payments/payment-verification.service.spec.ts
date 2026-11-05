@@ -180,6 +180,10 @@ describe('PaymentVerificationService', () => {
       ([record]) => (record as { action: string }).action,
     );
     expect(actions).toEqual(['payment.paid', 'order.paid']);
+    // Verified settlement (and only it) confirms reserved promotion usage, idempotently.
+    expect(ctx.tx.promotionRedemption.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { orderId: 'order-1', status: 'RESERVED' } }),
+    );
   });
 
   it('replays an already-settled payment without calling the gateway again', async () => {
