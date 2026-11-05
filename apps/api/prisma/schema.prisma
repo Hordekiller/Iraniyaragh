@@ -2540,6 +2540,7 @@ model DoorOrderItem {
   heightMm      Int
   quantity      Int
   configuration Json
+  manufacturing Json?
   notes         String    @default("") @db.VarChar(1000)
 
   @@unique([orderId, ordinal])

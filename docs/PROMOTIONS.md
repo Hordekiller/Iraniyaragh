@@ -52,7 +52,7 @@ Dedicated canonical permissions (group `promotions`) are in `apps/api/prisma/rba
 3. Then grant `promotions.read` (+ `promotions.manage` for editors, `reports.read` for analysts) to the intended roles through the access administration screen or an audited operator change. An editor needs `promotions.read` as well, because the list is read-gated.
 
 ## Deployment
-1. Deploy migrations `20261105090000_promotions_and_coupons` and `20261105091000_promotion_commands` (forward-only, additive; existing rows unaffected, `ShippingQuote.promotionDiscount` defaults to 0).
+1. Deploy migrations `20261105130000_promotions_and_coupons` and `20261105131000_promotion_commands` (forward-only, additive; existing rows unaffected, `ShippingQuote.promotionDiscount` defaults to 0).
 2. Deploy API, then Admin and Web. Nothing is active until an administrator creates and enables a campaign.
 3. Take a database backup and verify it restores before applying migrations in production (project rule).
 3a. Apply the RBAC baseline (see above). The reservation-expiry worker (durable order-expiry jobs) must be running: it is what returns capacity for abandoned unpaid checkouts.
