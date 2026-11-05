@@ -92,6 +92,9 @@ class SessionRotationRaceError extends Error {
   }
 }
 
+/** Minimum spacing between persisted activity writes for one session. */
+export const ACTIVITY_TOUCH_MIN_INTERVAL_MS = 60_000;
+
 @Injectable()
 export class AuthSessionService {
   constructor(
@@ -289,6 +292,32 @@ export class AuthSessionService {
       sessionId: result.session.id,
       tokenFamilyId: result.session.tokenFamilyId,
     });
+  }
+
+  /**
+   * Record genuine user activity for the already-validated live session. The
+   * caller's guard has enforced revocation, absolute expiry and the current
+   * inactivity deadline, so an idle session can never be revived here. Writes
+   * are throttled and never move lastUsedAt backwards.
+   */
+  async touchActivity(sessionId: string, now: Date = new Date()): Promise<boolean> {
+    const current = await this.prisma.session.findFirst({
+      where: { id: sessionId, revokedAt: null },
+      select: { authenticatedAt: true, authenticationLevel: true, createdAt: true, expiresAt: true, lastUsedAt: true, user: { select: { status: true } } },
+    });
+    // Defence in depth: never revive a session already past its deadlines.
+    if (!current || this.invalidReason(current, current.user.status, now)) return false;
+    const threshold = new Date(now.getTime() - ACTIVITY_TOUCH_MIN_INTERVAL_MS);
+    const result = await this.prisma.session.updateMany({
+      where: {
+        id: sessionId,
+        revokedAt: null,
+        expiresAt: { gt: now },
+        OR: [{ lastUsedAt: null }, { lastUsedAt: { lt: threshold } }],
+      },
+      data: { lastUsedAt: now },
+    });
+    return result.count > 0;
   }
 
   async listSessions(userId: string, currentSessionId: string): Promise<readonly AuthSessionSummary[]> {

@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AccessTokenData, CurrentPrincipalResponse } from '@iranyaragh/contracts';
 import { ApiAbortError, ApiClientError, apiFetch, readCsrfToken, recoverApiSession, registerSessionRecovery, settleSessionRecovery, registerAuthenticationFailure, notifyFreshAuthentication } from '@/lib/api/client';
+import { startActivityKeepAlive } from './activity-keepalive';
 import { getAccessToken, getSessionRevision, setAccessToken } from './token-store';
 
 export type AuthUser = {
@@ -125,6 +126,11 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     } else setIsRestoring(false);
     return () => { active = false; unregister(); unregisterFailure(); };
   }, [recoverSession]);
+
+  // Genuine input keeps the 30-minute server inactivity window alive while an
+  // operator works without issuing API calls; idle tabs send nothing.
+  const authenticated = user !== null;
+  useEffect(() => (authenticated ? startActivityKeepAlive() : undefined), [authenticated]);
 
   const reauthenticate = useCallback(async (operation: () => Promise<{ accessToken: string; principal: AuthUser }>): Promise<void> => {
     const expectedUserId = userRef.current?.userId;

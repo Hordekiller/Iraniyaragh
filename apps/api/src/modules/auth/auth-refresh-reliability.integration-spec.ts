@@ -121,6 +121,38 @@ describe.sequential('refresh reliability database integration', () => {
     await sessions.revokeAllSessions(staffId);
   });
 
+  it('records activity for a live staff session without reviving an idle, revoked or expired one', async () => {
+    const minutes = (n: number) => new Date(Date.now() - n * 60_000);
+    // The table enforces authenticatedAt <= createdAt <= lastUsedAt, so age all three.
+    const idleFor = (sessionId: string, n: number) =>
+      prisma.session.update({ where: { id: sessionId }, data: { authenticatedAt: minutes(n + 2), createdAt: minutes(n + 1), lastUsedAt: minutes(n) } });
+    const live = await login(staffId, AuthenticationLevel.STAFF_MFA);
+    await idleFor(live.sessionId, 25);
+    expect(await sessions.touchActivity(live.sessionId)).toBe(true);
+    const row = await prisma.session.findUniqueOrThrow({ where: { id: live.sessionId } });
+    expect(Date.now() - row.lastUsedAt!.getTime()).toBeLessThan(5_000);
+    // Throttled: an immediate second signal performs no write.
+    expect(await sessions.touchActivity(live.sessionId)).toBe(false);
+    // 25 minutes later the same session is still inside the 30-minute window.
+    await idleFor(live.sessionId, 29);
+    // (aging authenticatedAt invalidates the old bearer by design; the refresh cookie still works)
+    await expect(sessions.rotateSession(live.refreshToken, AuthenticationLevel.STAFF_MFA)).resolves.toMatchObject({ tokenFamilyId: live.tokenFamilyId });
+
+    const idle = await login(staffId, AuthenticationLevel.STAFF_MFA);
+    await idleFor(idle.sessionId, 31);
+    expect(await sessions.touchActivity(idle.sessionId)).toBe(false);
+    await expect(sessions.rotateSession(idle.refreshToken, AuthenticationLevel.STAFF_MFA)).rejects.toMatchObject({ authCode: 'AUTH_SESSION_INVALID' });
+
+    const revoked = await login(staffId, AuthenticationLevel.STAFF_MFA);
+    await sessions.revokeByRefreshToken(revoked.refreshToken);
+    expect(await sessions.touchActivity(revoked.sessionId)).toBe(false);
+
+    const expired = await login(staffId, AuthenticationLevel.STAFF_MFA);
+    await prisma.session.update({ where: { id: expired.sessionId }, data: { authenticatedAt: minutes(11), createdAt: minutes(10), lastUsedAt: minutes(10), expiresAt: minutes(1) } });
+    expect(await sessions.touchActivity(expired.sessionId)).toBe(false);
+    await sessions.revokeAllSessions(staffId);
+  });
+
   it('rotates only within the requesting realm and never revokes the other realm session', async () => {
     const staff = await login(staffId, AuthenticationLevel.STAFF_MFA);
     const customer = await login(customerId, AuthenticationLevel.CUSTOMER_OTP);

@@ -303,6 +303,20 @@
         ]
       }
     },
+    "/auth/activity": {
+      "post": {
+        "operationId": "SessionManagementController_activity",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SessionManagement"
+        ]
+      }
+    },
     "/auth/sessions/{sessionId}": {
       "delete": {
         "operationId": "SessionManagementController_remove",

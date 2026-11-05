@@ -160,6 +160,7 @@ browser clients above.
 | `POST /staff/totp/verify`         | Public challenge                  | `200` access + cookies           | One-time challenge and TOTP time-step             |
 | `POST /refresh`                   | Refresh cookie + CSRF             | `200` rotated access + cookies   | Transactional rotation/replay-family revocation   |
 | `GET /me`                         | Bearer                            | `200` principal                  | Live session/user/permission evaluation           |
+| `POST /activity`                  | Bearer                            | `204` no body                    | Touches only the guard-validated live session; never revives an idle/revoked/expired one |
 | `GET /sessions`                   | Bearer                            | `200` safe device list           | Own sessions only, no hashes/user-agent/IP        |
 | `DELETE /sessions/:sessionId`     | Bearer                            | `200 {data:{}}`                  | Own session only; current deletion clears cookies |
 | `POST /logout`                    | Refresh cookie + CSRF             | `200 {data:{}}`                  | Idempotent revoke/clear; generic if already gone  |
@@ -685,3 +686,34 @@ Rollout order:
 3. implement shared session/permission/audit core;
 4. implement OTP and staff flows while clients use accepted mocks;
 5. run integrated abuse/revocation E2E before enabling Auth routes in staging.
+
+### 17.1 Staff cookie-split rollout and inactivity keep-alive
+
+**One-time staff re-login.** Before this change staff sessions lived in the shared
+customer cookie pair. After deploy the Admin reads only the staff pair, which no
+browser holds yet, so every operator signs in once more (password + TOTP). Customers
+are unaffected. Old sessions need no data migration: no schema change is shipped.
+The legacy shared cookie may linger in a browser; the customer realm ignores a
+`STAFF_MFA` session presented there (level mismatch returns invalid *without*
+revoking) and the row expires through the normal 30-minute inactivity / 12-hour
+absolute policy. Staff sessions that predate the deploy remain in `Session` until
+they expire; operators may revoke them from the sessions page.
+
+**Inactivity.** Staff inactivity stays 30 minutes, measured from `lastUsedAt`
+(set at create/rotate). A user typing in a long form makes no API call, so the
+Admin sends `POST /auth/activity` only when genuine input (key, pointer, touch,
+wheel) occurred since the last signal and at least 5 minutes passed, shared across
+tabs through `localStorage`; an idle tab sends nothing. The server re-checks
+revocation, absolute expiry and the inactivity deadline before writing, throttles
+writes to one per minute per session, and never extends `expiresAt`, so absolute
+lifetime, logout, revocation and credential change are unaffected.
+
+**Known residual risk (decision for the owner).** A refresh whose response never
+reaches the browser (reload or network drop after the server committed the
+rotation) leaves the browser holding the already-rotated token. The next refresh is
+then classified as replay and the whole family is revoked, as section 8 specifies.
+The client lock removes this between tabs but cannot cover a request cancelled by
+unload. A short reuse leeway (rotate from the live head when the rotated token is
+presented within a few seconds of rotation) would close it, at the cost of a
+deliberate, bounded relaxation of replay detection. It is not implemented here.
+

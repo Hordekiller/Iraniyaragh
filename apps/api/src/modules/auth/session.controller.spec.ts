@@ -32,6 +32,7 @@ function createController(
     listSessions: ReturnType<typeof vi.fn>;
     revokeUserSession: ReturnType<typeof vi.fn>;
     revokeAllSessions: ReturnType<typeof vi.fn>;
+    touchActivity: ReturnType<typeof vi.fn>;
   };
 } {
   const now = Date.now();
@@ -61,6 +62,7 @@ function createController(
     ),
     revokeUserSession: vi.fn(overrides.revokeUserSession ?? (async () => 'revoked' as const)),
     revokeAllSessions: vi.fn(overrides.revokeAllSessions ?? (async () => 3)),
+    touchActivity: vi.fn(async () => true),
   };
   const config: AuthRuntimeConfig = Object.freeze({
     accessSigningSecret: 'x',
@@ -98,6 +100,12 @@ function mockResponse() {
 describe('SessionManagementController (own session list)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('records activity only for the guard-validated principal session', async () => {
+    const { controller, sessions } = createController();
+    await expect(controller.activity(currentPrincipal)).resolves.toBeUndefined();
+    expect(sessions.touchActivity).toHaveBeenCalledExactlyOnceWith('session-current');
   });
 
   it('lists the caller\'s sessions with the current one flagged, using the live principal', async () => {

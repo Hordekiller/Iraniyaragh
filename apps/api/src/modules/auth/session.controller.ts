@@ -25,6 +25,20 @@ export class SessionManagementController {
     return { data: { sessions: sessions.map(session => this.toSessionSummary(session)) } };
   }
 
+  /**
+   * Authenticated activity signal for long-running work that makes no other
+   * API calls (e.g. editing a form). Only the guard-validated live session is
+   * touched; it cannot extend expiry or revive an inactive/revoked session.
+   */
+  @Post('activity')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  @RequireLiveSession()
+  async activity(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<void> {
+    await this.sessions.touchActivity(principal.sessionId);
+  }
+
   @Delete('sessions/:sessionId')
   @Header('Cache-Control', 'no-store')
   @Header('Pragma', 'no-cache')
