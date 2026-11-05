@@ -19,8 +19,10 @@ import {
   ValidateIf,
   ValidateNested,
 } from "class-validator";
+import { DOOR_GLASS_SAMPLE_ENUM, DOOR_GLASS_SAMPLE_KEYS } from "./door-glass-samples";
 import { DOOR_STATUSES } from "./door-state";
 import type {
+  DoorGlassSampleKey,
   DoorBasis,
   DoorDepositPolicy,
   DoorMaterialConfiguration,
@@ -230,6 +232,15 @@ export class DoorModelWriteDto {
   configuration!: DoorModelConfigurationDto;
 }
 export class DoorMaterialConfigurationDto implements DoorMaterialConfiguration {
+  @ApiPropertyOptional({ type: String, nullable: true, enum: DOOR_GLASS_SAMPLE_KEYS })
+  @IsOptional()
+  @IsEnum(DOOR_GLASS_SAMPLE_ENUM)
+  sampleKey?: DoorGlassSampleKey | null;
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  imageMediaId?: string | null;
   @ApiProperty({ type: String, enum: ["M2", "M", "EACH"] })
   @IsEnum(["M2", "M", "EACH"])
   unit!: "M2" | "M" | "EACH";

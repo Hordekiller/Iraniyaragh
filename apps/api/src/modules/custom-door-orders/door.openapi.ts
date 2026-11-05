@@ -1,3 +1,4 @@
+import { DOOR_GLASS_SAMPLE_KEYS } from "./door-glass-samples";
 import type { SchemaObject } from "@nestjs/swagger/dist/interfaces/open-api-spec.interface";
 import { DOOR_STATUSES } from "./door-state";
 const text: SchemaObject = { type: "string" };
@@ -73,6 +74,8 @@ const model = obj({
   imageMediaId: nullable(text),
   imageUrl: nullable(text),
 });
+model.properties!.imageOriginalWidth = nullable(int);
+model.properties!.imageOriginalHeight = nullable(int);
 const materialConfiguration = obj({
   unit: { type: "string", enum: ["M2", "M", "EACH"] },
   rate: nullable(money),
@@ -83,6 +86,8 @@ const materialConfiguration = obj({
   processingFee: money,
   stockUnit: nullable({ type: "string", enum: ["PIECE", "MM", "MM2"] }),
 });
+materialConfiguration.properties!.sampleKey = { type: "string", nullable: true, enum: DOOR_GLASS_SAMPLE_KEYS };
+materialConfiguration.properties!.imageMediaId = { type: "string", nullable: true };
 const material = obj({
   id: text,
   code: text,
@@ -96,6 +101,9 @@ const material = obj({
   variantId: nullable(text),
   configuration: materialConfiguration,
 });
+material.properties!.imageUrl = nullable(text);
+material.properties!.imageOriginalWidth = nullable(int);
+material.properties!.imageOriginalHeight = nullable(int);
 const part = obj({
   title: text,
   amount: nullable(money),

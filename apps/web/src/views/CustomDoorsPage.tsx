@@ -1,3 +1,4 @@
+import { DoorGlassChoices } from "../components/custom-doors/DoorGlassChoices";
 import { StoreBrandLogo } from '../components/brand/StoreBrandLogo';
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -116,6 +117,7 @@ function Configurator() {
       .then((value) => {
         if (active) {
           setCatalog(value);
+          setType(current => value.models.some(model => model.type === current) ? current : value.models[0]?.type ?? current);
           setLoadError("");
         }
       })
@@ -490,7 +492,7 @@ function Configurator() {
                     role="group"
                     aria-label="نوع درب"
                   >
-                    {(["FORMLEX", "DECOFIX"] as const).map((t) => (
+                    {(["FORMLEX", "DECOFIX"] as const).filter(doorType => catalog.models.some(model => model.type === doorType)).map((t) => (
                       <button
                         type="button"
                         key={t}
@@ -607,6 +609,7 @@ function Configurator() {
                       </label>
                     ))}
                   </div>
+                  {model.configuration.slots.map(slot => <DoorGlassChoices key={slot.key} title={slot.title} materials={catalog.materials.filter(material => material.active && slot.materialIds.includes(material.id))} selected={entry.selections.find(item => item.slot === slot.key)?.materialId ?? ''} onChange={id => selection(slot.key, id)} unavailable={id => incompatible(slot.key, id)} />)}
                   <div className="my-6 rounded-2xl bg-slate-50 p-4">
                     <div
                       className="mx-auto grid w-44 grid-cols-[1fr_2rem] gap-2 text-center text-xs text-slate-600"

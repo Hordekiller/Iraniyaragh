@@ -1,7 +1,7 @@
 import { ConflictException, Inject, Injectable, NotFoundException, Optional, UnprocessableEntityException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "node:crypto";
-import type { AdminProductMedia, AdminProductMediaPickerResponse, ProductMediaConfirmResponse, ProductMediaUploadResponse } from "@iranyaragh/contracts";
+import type { AdminProductMedia, AdminProductMediaPickerItem, AdminProductMediaPickerResponse, ProductMediaConfirmResponse, ProductMediaUploadResponse } from "@iranyaragh/contracts";
 import { Prisma, type ProductMedia } from "@prisma/client";
 import type { EnvironmentVariables } from "../../config/environment";
 import { getRequestId } from "../../common/request-context";
@@ -23,6 +23,12 @@ function sanitizedFilename(value: string): string {
     .slice(0, 255)
     .join("");
   return cleaned || "upload";
+}
+
+function pickerImage(item: Prisma.ProductMediaGetPayload<{ include: { renditions: true } }>, origin: string): AdminProductMediaPickerItem | null {
+  const projection = widestRenditionProjection(origin, item.renditions);
+  if (projection === null) return null;
+  return { id: item.id, url: projection.url, alt: item.altText ?? "", caption: item.caption, originalWidth: item.width, originalHeight: item.height, width: projection.width, height: projection.height };
 }
 
 function adminMedia(row: ProductMedia): AdminProductMedia {
@@ -90,20 +96,17 @@ export class MediaService {
       "http://localhost:9000/products";
     return {
       data: {
-        items: items.flatMap((item) => {
-          const projection = widestRenditionProjection(origin, item.renditions);
-          if (projection === null) return [];
-          return [{
-            id: item.id,
-            url: projection.url,
-            alt: item.altText ?? "",
-            caption: item.caption,
-            width: projection.width,
-            height: projection.height,
-          }];
-        }),
+        items: items.flatMap(item => { const image = pickerImage(item, origin); return image ? [image] : []; }),
       },
     };
+  }
+
+  /** Batch only explicitly selected READY image references; never expose source keys. */
+  async publicImageReferences(ids: readonly string[], tx: Prisma.TransactionClient = this.prisma): Promise<AdminProductMediaPickerItem[]> {
+    if (!ids.length) return [];
+    const rows = await tx.productMedia.findMany({ where: { id: { in: [...new Set(ids)] }, state: "READY", kind: "IMAGE" }, include: { renditions: true } });
+    const origin = this.config?.get("PUBLIC_MEDIA_ORIGIN", { infer: true }) ?? "http://localhost:9000/products";
+    return rows.flatMap(row => { const image = pickerImage(row, origin); return image ? [image] : []; });
   }
 
   async listAdmin(productId: string): Promise<{ data: { items: AdminProductMedia[] } }> {

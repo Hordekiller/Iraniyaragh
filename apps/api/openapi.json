@@ -54879,6 +54879,32 @@
       "DoorMaterialConfigurationDto": {
         "type": "object",
         "properties": {
+          "sampleKey": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "clear",
+              "frosted",
+              "white",
+              "cream",
+              "light-smoke",
+              "dark-smoke",
+              "black",
+              "bronze",
+              "amber",
+              "brown",
+              "light-green",
+              "green",
+              "light-blue",
+              "navy",
+              "red",
+              "pink"
+            ]
+          },
+          "imageMediaId": {
+            "type": "string",
+            "nullable": true
+          },
           "unit": {
             "type": "string",
             "enum": [
@@ -55529,6 +55555,14 @@
           "imageUrl": {
             "type": "string",
             "nullable": true
+          },
+          "imageOriginalWidth": {
+            "type": "integer",
+            "nullable": true
+          },
+          "imageOriginalHeight": {
+            "type": "integer",
+            "nullable": true
           }
         }
       },
@@ -55627,8 +55661,46 @@
                   "MM2"
                 ],
                 "nullable": true
+              },
+              "sampleKey": {
+                "type": "string",
+                "nullable": true,
+                "enum": [
+                  "clear",
+                  "frosted",
+                  "white",
+                  "cream",
+                  "light-smoke",
+                  "dark-smoke",
+                  "black",
+                  "bronze",
+                  "amber",
+                  "brown",
+                  "light-green",
+                  "green",
+                  "light-blue",
+                  "navy",
+                  "red",
+                  "pink"
+                ]
+              },
+              "imageMediaId": {
+                "type": "string",
+                "nullable": true
               }
             }
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageOriginalWidth": {
+            "type": "integer",
+            "nullable": true
+          },
+          "imageOriginalHeight": {
+            "type": "integer",
+            "nullable": true
           }
         }
       },
