@@ -1,3 +1,4 @@
+import type { DoorGlassSampleKey } from "./door-glass-samples";
 /** All persisted monetary values are integer IRR strings. Dimensions are mm. */
 export type DoorType = "FORMLEX" | "DECOFIX";
 export type DoorBasis = "AREA" | "PERIMETER" | "WIDTH" | "HEIGHT" | "FIXED";
@@ -41,6 +42,10 @@ export type DoorModelConfiguration = {
   deposit: DoorDepositPolicy | null;
 };
 export type DoorMaterialConfiguration = {
+  /** Optional synthetic illustration, never proof of actual material/color availability. */
+  sampleKey?: DoorGlassSampleKey | null;
+  /** READY image selected through the existing media library. */
+  imageMediaId?: string | null;
   unit: "M2" | "M" | "EACH";
   rate: string | null;
   validUntil: string | null;
@@ -60,8 +65,13 @@ export type DoorModel = {
   configuration: DoorModelConfiguration;
   imageMediaId: string | null;
   imageUrl: string | null;
+  imageOriginalWidth?: number | null;
+  imageOriginalHeight?: number | null;
 };
 export type DoorMaterial = {
+  imageUrl?: string | null;
+  imageOriginalWidth?: number | null;
+  imageOriginalHeight?: number | null;
   id: string;
   code: string;
   title: string;
