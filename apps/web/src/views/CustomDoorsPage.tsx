@@ -1,3 +1,5 @@
+import { DoorManufacturingFields } from "../components/custom-doors/DoorManufacturingFields";
+import { emptyManufacturing, manufacturingEntry, readManufacturing } from "../components/custom-doors/manufacturing-entry";
 import { DoorGlassChoices } from "../components/custom-doors/DoorGlassChoices";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -47,6 +49,7 @@ const emptyEntry = {
   quantity: "1",
   selections: [] as DoorItemInput["selections"],
   notes: "",
+  manufacturing: emptyManufacturing(),
 };
 type Entry = typeof emptyEntry;
 export function CustomDoorsPage() {
@@ -193,7 +196,11 @@ function Configurator() {
       setError("گزینه‌های ضروری مدل را تکمیل کنید.");
       return;
     }
+    let manufacturing;
+    try { manufacturing = readManufacturing(entry.manufacturing, heightMm); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "مشخصات سوراخ‌کاری معتبر نیست."); return; }
     const item: DoorItemInput = {
+      manufacturing,
       modelId: model.id,
       widthMm,
       heightMm,
@@ -231,6 +238,7 @@ function Configurator() {
       quantity: String(item.quantity),
       selections: item.selections,
       notes: item.notes,
+      manufacturing: manufacturingEntry(item.manufacturing),
     });
     setType(m.type);
     setEditing(index);
@@ -661,6 +669,7 @@ function Configurator() {
                       ? `محدوده ثبت‌شده: عرض ${model.configuration.technical.minWidthMm} تا ${model.configuration.technical.maxWidthMm} و ارتفاع ${model.configuration.technical.minHeightMm} تا ${model.configuration.technical.maxHeightMm} میلی‌متر؛ تلرانس ثبت‌شده ${model.configuration.technical.toleranceMm} میلی‌متر. ابعاد خارج از محدوده برای بررسی مدیر ارسال می‌شوند.`
                       : "قواعد فنی مدل هنوز تکمیل نشده است؛ سفارش برای بررسی مدیر ارسال می‌شود."}
                   </p>
+                  <DoorManufacturingFields value={entry.manufacturing} heightMm={Number(doorDigits(entry.height))} onChange={manufacturing => setEntry(current => ({ ...current, manufacturing }))} />
                   <label className="mt-5 block text-sm font-bold">
                     توضیحات اختصاصی
                     <textarea

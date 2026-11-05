@@ -315,6 +315,22 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
     await prisma.$disconnect();
   });
 
+  it("persists manufacturing through create, detail and draft replacement while keeping old quote positions", async () => {
+    const manufacturing = { profileColor: "GOLD", handleSide: "LEFT", hingeSide: "RIGHT", drillingMode: "CUSTOM", holes: [120, 350, 650, 880].map(distanceMm => ({ distanceMm, reference: "TOP" as const })) } as const;
+    const firstInput = { items: [{ ...inputs().items[0], manufacturing }] };
+    let order = await service.create(commandActor(actor), firstInput, key(), true);
+    expect(order.items[0].manufacturing).toEqual(manufacturing);
+    expect(order.quote.snapshot.lines[0].manufacturing).toEqual(manufacturing);
+    expect((await service.detail(actor, order.id)).items[0].manufacturing).toEqual(manufacturing);
+    const next = { ...manufacturing, profileColor: "WHITE" as const, holes: manufacturing.holes.map(hole => ({ ...hole, reference: "BOTTOM" as const })) };
+    order = await service.replaceDraft(commandActor(actor), order.id, { items: [{ ...inputs().items[0], manufacturing: next }] }, order.version, key());
+    expect(order.items[0].manufacturing).toEqual(next);
+    expect(order.quote.snapshot.lines[0].manufacturing).toEqual(next);
+    expect(order.quotes.find(quote => quote.version === 1)?.snapshot.lines[0].manufacturing).toEqual(manufacturing);
+    await expect(service.replaceDraft(commandActor(actor), order.id, { items: [{ ...inputs().items[0], manufacturing: { ...next, holes: next.holes.map(hole => ({ ...hole, distanceMm: 1001 })) } }] }, order.version, key())).rejects.toMatchObject({ status: 400 });
+    expect((await service.detail(actor, order.id)).items[0].manufacturing).toEqual(next);
+  });
+
   it("creates several doors exactly once under concurrent retries and blocks IDOR", async () => {
     const input = inputs();
     input.items.push({ ...input.items[0], widthMm: 1000, quantity: 2 });

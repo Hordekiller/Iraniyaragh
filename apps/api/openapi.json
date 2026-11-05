@@ -54572,6 +54572,79 @@
           "expectedVersion"
         ]
       },
+      "DoorHingeHoleDto": {
+        "type": "object",
+        "properties": {
+          "distanceMm": {
+            "type": "number",
+            "description": "Integer millimetres from the selected reference edge."
+          },
+          "reference": {
+            "type": "string",
+            "enum": [
+              "TOP",
+              "BOTTOM"
+            ]
+          }
+        },
+        "required": [
+          "distanceMm",
+          "reference"
+        ]
+      },
+      "DoorManufacturingDto": {
+        "type": "object",
+        "properties": {
+          "profileColor": {
+            "type": "string",
+            "enum": [
+              "BLACK",
+              "WHITE",
+              "GOLD",
+              "BRONZE"
+            ]
+          },
+          "handleSide": {
+            "type": "string",
+            "enum": [
+              "RIGHT",
+              "LEFT",
+              "TOP",
+              "BOTTOM"
+            ]
+          },
+          "hingeSide": {
+            "type": "string",
+            "enum": [
+              "RIGHT",
+              "LEFT",
+              "TOP",
+              "BOTTOM"
+            ]
+          },
+          "drillingMode": {
+            "type": "string",
+            "enum": [
+              "STANDARD",
+              "CUSTOM"
+            ]
+          },
+          "holes": {
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DoorHingeHoleDto"
+            }
+          }
+        },
+        "required": [
+          "profileColor",
+          "handleSide",
+          "hingeSide",
+          "drillingMode",
+          "holes"
+        ]
+      },
       "DoorSelectionDto": {
         "type": "object",
         "properties": {
@@ -54590,6 +54663,9 @@
       "DoorItemDto": {
         "type": "object",
         "properties": {
+          "manufacturing": {
+            "$ref": "#/components/schemas/DoorManufacturingDto"
+          },
           "modelId": {
             "type": "string"
           },
@@ -55884,6 +55960,77 @@
                       }
                     ]
                   }
+                },
+                "manufacturing": {
+                  "type": "object",
+                  "required": [
+                    "profileColor",
+                    "handleSide",
+                    "hingeSide",
+                    "drillingMode",
+                    "holes"
+                  ],
+                  "properties": {
+                    "profileColor": {
+                      "type": "string",
+                      "enum": [
+                        "BLACK",
+                        "WHITE",
+                        "GOLD",
+                        "BRONZE"
+                      ]
+                    },
+                    "handleSide": {
+                      "type": "string",
+                      "enum": [
+                        "RIGHT",
+                        "LEFT",
+                        "TOP",
+                        "BOTTOM"
+                      ]
+                    },
+                    "hingeSide": {
+                      "type": "string",
+                      "enum": [
+                        "RIGHT",
+                        "LEFT",
+                        "TOP",
+                        "BOTTOM"
+                      ]
+                    },
+                    "drillingMode": {
+                      "type": "string",
+                      "enum": [
+                        "STANDARD",
+                        "CUSTOM"
+                      ]
+                    },
+                    "holes": {
+                      "type": "array",
+                      "maxItems": 4,
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "distanceMm",
+                          "reference"
+                        ],
+                        "properties": {
+                          "distanceMm": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "Maximum equals this door heightMm; CUSTOM requires four distinct positions, STANDARD requires no holes."
+                          },
+                          "reference": {
+                            "type": "string",
+                            "enum": [
+                              "TOP",
+                              "BOTTOM"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -56080,6 +56227,77 @@
                 },
                 "notes": {
                   "type": "string"
+                },
+                "manufacturing": {
+                  "type": "object",
+                  "required": [
+                    "profileColor",
+                    "handleSide",
+                    "hingeSide",
+                    "drillingMode",
+                    "holes"
+                  ],
+                  "properties": {
+                    "profileColor": {
+                      "type": "string",
+                      "enum": [
+                        "BLACK",
+                        "WHITE",
+                        "GOLD",
+                        "BRONZE"
+                      ]
+                    },
+                    "handleSide": {
+                      "type": "string",
+                      "enum": [
+                        "RIGHT",
+                        "LEFT",
+                        "TOP",
+                        "BOTTOM"
+                      ]
+                    },
+                    "hingeSide": {
+                      "type": "string",
+                      "enum": [
+                        "RIGHT",
+                        "LEFT",
+                        "TOP",
+                        "BOTTOM"
+                      ]
+                    },
+                    "drillingMode": {
+                      "type": "string",
+                      "enum": [
+                        "STANDARD",
+                        "CUSTOM"
+                      ]
+                    },
+                    "holes": {
+                      "type": "array",
+                      "maxItems": 4,
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "distanceMm",
+                          "reference"
+                        ],
+                        "properties": {
+                          "distanceMm": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "Maximum equals this door heightMm; CUSTOM requires four distinct positions, STANDARD requires no holes."
+                          },
+                          "reference": {
+                            "type": "string",
+                            "enum": [
+                              "TOP",
+                              "BOTTOM"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }

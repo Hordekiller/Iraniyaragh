@@ -93,6 +93,7 @@ function itemView(i: Row["items"][number]): DoorItemInput {
     heightMm: i.heightMm,
     quantity: i.quantity,
     selections: i.configuration as unknown as DoorItemInput["selections"],
+    ...(i.manufacturing ? { manufacturing: i.manufacturing as unknown as NonNullable<DoorItemInput["manufacturing"]> } : {}),
     notes: i.notes,
   };
 }
@@ -304,6 +305,7 @@ export class DoorOrdersService {
                       heightMm: i.heightMm,
                       quantity: i.quantity,
                       configuration: asDoorJson(i.selections),
+                      ...(i.manufacturing ? { manufacturing: asDoorJson(i.manufacturing) } : {}),
                       notes: i.notes,
                     })),
                   },
@@ -392,6 +394,7 @@ export class DoorOrdersService {
             heightMm: i.heightMm,
             quantity: i.quantity,
             configuration: asDoorJson(i.selections),
+            ...(i.manufacturing ? { manufacturing: asDoorJson(i.manufacturing) } : {}),
             notes: i.notes,
           })),
         });
