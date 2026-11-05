@@ -92,7 +92,7 @@ export class PromotionAdminService {
       }));
   }
 
-  create(actorId: string, requestId: string, input: PromotionInput, key: string): Promise<PromotionAdmin> {
+  async create(actorId: string, requestId: string, input: PromotionInput, key: string): Promise<PromotionAdmin> {
     const valid = validatePromotionInput(input);
     return this.command(actorId, 'create', key, JSON.stringify(input), async (tx) => {
       await this.assertReferences(tx, valid);
@@ -104,7 +104,7 @@ export class PromotionAdminService {
     });
   }
 
-  update(actorId: string, requestId: string, id: string, input: PromotionInput, expectedVersion: number, key: string): Promise<PromotionAdmin> {
+  async update(actorId: string, requestId: string, id: string, input: PromotionInput, expectedVersion: number, key: string): Promise<PromotionAdmin> {
     const valid = validatePromotionInput(input);
     if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'expectedVersion is required.' });
     return this.command(actorId, `update:${id}`, key, JSON.stringify([input, expectedVersion]), async (tx) => {
@@ -124,7 +124,7 @@ export class PromotionAdminService {
     });
   }
 
-  setActive(actorId: string, requestId: string, id: string, isActive: boolean, expectedVersion: number, key: string): Promise<PromotionAdmin> {
+  async setActive(actorId: string, requestId: string, id: string, isActive: boolean, expectedVersion: number, key: string): Promise<PromotionAdmin> {
     if (typeof isActive !== 'boolean' || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'isActive and expectedVersion are required.' });
     return this.command(actorId, `active:${id}`, key, JSON.stringify([isActive, expectedVersion]), async (tx) => {
       const current = await this.lock(tx, id);
@@ -143,7 +143,7 @@ export class PromotionAdminService {
     return { items: items.map(couponView), total };
   }
 
-  generateCoupons(actorId: string, requestId: string, promotionId: string, input: CouponGenerateRequest, key: string): Promise<CouponAdmin[]> {
+  async generateCoupons(actorId: string, requestId: string, promotionId: string, input: CouponGenerateRequest, key: string): Promise<CouponAdmin[]> {
     const explicit = input.code === undefined ? null : normalizeCouponCode(String(input.code));
     if (explicit !== null && !COUPON_CODE_PATTERN.test(explicit)) throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'Coupon code must be 4–40 letters or digits.' });
     const count = explicit ? 1 : input.count;
@@ -168,7 +168,7 @@ export class PromotionAdminService {
     });
   }
 
-  setCouponActive(actorId: string, requestId: string, couponId: string, isActive: boolean, key: string): Promise<CouponAdmin> {
+  async setCouponActive(actorId: string, requestId: string, couponId: string, isActive: boolean, key: string): Promise<CouponAdmin> {
     if (typeof isActive !== 'boolean') throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'isActive is required.' });
     return this.command(actorId, `coupon:${couponId}`, key, JSON.stringify(isActive), async (tx) => {
       const before = await tx.coupon.findUnique({ where: { id: couponId } });

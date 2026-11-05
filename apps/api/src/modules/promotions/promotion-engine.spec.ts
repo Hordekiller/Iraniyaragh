@@ -29,7 +29,7 @@ describe('promotion engine', () => {
   });
   it('category/brand/product targets and excludes', () => {
     const l = [line('v1', 1000, 1, { categoryIds: ['c1'] }), line('v2', 1000, 1, { categoryIds: ['c2'], brandId: 'b2' })];
-    const t = (type: any, targetId: string, exclude = false) => promo({ targets: [{ type, targetId, exclude }] });
+    const t = (type: "PRODUCT" | "VARIANT" | "CATEGORY" | "BRAND", targetId: string, exclude = false) => promo({ targets: [{ type, targetId, exclude }] });
     expect(evaluatePromotions({ lines: l, shipping: 0n, candidates: [t('CATEGORY', 'c1')] }).totalDiscount).toBe(100n);
     expect(evaluatePromotions({ lines: l, shipping: 0n, candidates: [t('BRAND', 'b2')] }).totalDiscount).toBe(100n);
     expect(evaluatePromotions({ lines: l, shipping: 0n, candidates: [t('PRODUCT', 'p-v2', true)] }).totalDiscount).toBe(100n);

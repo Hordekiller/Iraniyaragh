@@ -43,6 +43,7 @@ export class CartService {
       customerId: customer.id,
       lines: pricingLines(cart),
       shipping: 0n,
+      shippingKnown: false,
       couponCode: cart.couponIntent?.code ?? null,
       now,
     });

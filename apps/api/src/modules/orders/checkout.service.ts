@@ -14,7 +14,10 @@ import { createHash, randomUUID } from "node:crypto";
 import { PrismaService } from "../../database/prisma.service";
 import { recordTransition } from "../../common/state-machine";
 import { AuditLogService } from "../audit/audit-log.service";
-import { withSerializableRetry } from "../../common/serializable-retry";
+import {
+  isPrismaTransactionConflict,
+  withSerializableRetry,
+} from "../../common/serializable-retry";
 import { cartInclude, pricingLines } from "./cart-view";
 import {
   CouponRejection,
@@ -70,7 +73,9 @@ export class CheckoutService {
     );
 
     return withSerializableRetry({
-      isContention: (error) => error instanceof CheckoutContentionError,
+      isContention: (error) =>
+        error instanceof CheckoutContentionError ||
+        isPrismaTransactionConflict(error),
       conflictMessage:
         "Checkout changed concurrently; retry with the same idempotency key.",
       operation: () =>

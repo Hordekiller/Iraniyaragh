@@ -28,7 +28,8 @@ export class CartCouponService {
       const cart = await tx.cart.findUnique({ where: { customerId: customer.id }, include: cartInclude() });
       if (!cart || cart.items.length === 0) throw new ConflictException({ code: 'CART_EMPTY', message: 'Cart is empty.' });
       const outcome = await promotionsService.price(tx, {
-        customerId: customer.id, lines: pricingLines(cart), shipping: 0n, couponCode: code, now: new Date(),
+        customerId: customer.id, lines: pricingLines(cart), shipping: 0n,
+      shippingKnown: false, couponCode: code, now: new Date(),
       });
       if (outcome.couponError) {
         throw new UnprocessableEntityException({ code: outcome.couponError.code, message: outcome.couponError.message });

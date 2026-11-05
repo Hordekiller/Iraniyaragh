@@ -75,6 +75,8 @@ export class PromotionsService {
       shipping: bigint;
       couponCode: string | null;
       now: Date;
+      /** False in the cart, where the shipping method (and its discount) is not chosen yet. */
+      shippingKnown?: boolean;
       /** Order being (re)priced; excluded from first-purchase / usage checks. */
       excludeOrderId?: string;
     },
@@ -145,7 +147,8 @@ export class PromotionsService {
           throw new CouponRejection('COUPON_NOT_ELIGIBLE');
         }
         const probe = evaluatePromotions({ lines, shipping: input.shipping, candidates: [toEngine(p, coupon.id)] });
-        if (probe.totalDiscount === 0n) throw new CouponRejection('COUPON_NOT_APPLICABLE');
+        const deferred = input.shippingKnown === false && p.kind === 'FREE_SHIPPING';
+        if (probe.totalDiscount === 0n && !deferred) throw new CouponRejection('COUPON_NOT_APPLICABLE');
         candidates.push(toEngine(p, coupon.id));
       } catch (error) {
         if (!(error instanceof CouponRejection)) throw error;
@@ -155,7 +158,8 @@ export class PromotionsService {
 
     const result = evaluatePromotions({ lines, shipping: input.shipping, candidates });
     // A valid coupon that loses to a better exclusive promotion is not applied.
-    if (couponCode && !couponError && !result.applied.some((a) => a.couponId)) {
+    const deferredCoupon = input.shippingKnown === false && result.applied.length === 0 && candidates.some((c) => c.couponId && c.kind === 'FREE_SHIPPING');
+    if (couponCode && !couponError && !deferredCoupon && !result.applied.some((a) => a.couponId)) {
       couponError = { code: 'COUPON_NOT_APPLICABLE', message: COUPON_MESSAGES.COUPON_NOT_APPLICABLE };
     }
     return { result, couponCode, couponError, subtotal };
