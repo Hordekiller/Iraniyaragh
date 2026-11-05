@@ -20,6 +20,8 @@ const page = (offset?: string, limit?: string) => ({
   offset: Math.max(0, Math.min(Number.parseInt(offset ?? '0', 10) || 0, 100_000)),
   limit: Math.max(1, Math.min(Number.parseInt(limit ?? '25', 10) || 25, 100)),
 });
+/** Query values can arrive as arrays or objects; only a bounded string is ever forwarded. */
+const str = (value: unknown, max: number): string | undefined => (typeof value === 'string' ? value.slice(0, max) : undefined);
 const idem = () => ApiHeader({ name: 'Idempotency-Key', required: true });
 
 @ApiTags('promotions')
@@ -34,7 +36,7 @@ export class PromotionAdminController {
   @ApiOperation({ summary: 'List promotions with state and persisted statistics' })
   @ApiOkResponse({ description: 'Promotion page.' })
   async list(@Query('q') q?: string, @Query('state') state?: string, @Query('mode') mode?: string, @Query('offset') offset?: string, @Query('limit') limit?: string): Promise<PromotionListResponse> {
-    return { data: await this.promotions.list({ q: q?.slice(0, 80), state, mode, ...page(offset, limit) }) };
+    return { data: await this.promotions.list({ q: str(q, 80), state: str(state, 32), mode: str(mode, 32), ...page(offset, limit) }) };
   }
 
   @Get('report')
@@ -50,7 +52,7 @@ export class PromotionAdminController {
   @ApiOperation({ summary: 'Redemption history, filterable by campaign, customer and status' })
   @ApiOkResponse({ description: 'Redemption page.' })
   async redemptions(@Query('promotionId') promotionId?: string, @Query('customerId') customerId?: string, @Query('status') status?: string, @Query('offset') offset?: string, @Query('limit') limit?: string): Promise<PromotionRedemptionListResponse> {
-    return { data: await this.promotions.redemptions({ promotionId: promotionId?.slice(0, 64), customerId: customerId?.slice(0, 64), status, ...page(offset, limit) }) };
+    return { data: await this.promotions.redemptions({ promotionId: str(promotionId, 64), customerId: str(customerId, 64), status: str(status, 32), ...page(offset, limit) }) };
   }
 
   @Get('coupons/by-promotion/:id')
