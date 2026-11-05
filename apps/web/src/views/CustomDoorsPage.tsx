@@ -1,5 +1,4 @@
 import { DoorGlassChoices } from "../components/custom-doors/DoorGlassChoices";
-import { StoreBrandLogo } from '../components/brand/StoreBrandLogo';
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -363,7 +362,7 @@ function Configurator() {
       >
         <div className="p-6 md:p-10">
           <p className="text-sm font-bold text-orange-300">
-            اندازه شما، ساخت <StoreBrandLogo variant="inline" />
+            اندازه شما، ساخت ایرانی یراق
           </p>
           <h1
             id="custom-door-title"
@@ -393,7 +392,7 @@ function Configurator() {
             aria-hidden="true"
           />
           <p className="text-sm text-slate-300">
-            تصویر هر مدل پس از تأیید <StoreBrandLogo variant="inline" /> نمایش داده می‌شود.
+            تصویر هر مدل پس از تأیید ایرانی یراق نمایش داده می‌شود.
           </p>
           <p className="text-xs text-slate-400">
             فریم‌لس · دکوفیکس · ساخت با ابعاد سفارشی
@@ -551,7 +550,7 @@ function Configurator() {
                     >
                       مدل تأییدشده‌ای برای{" "}
                       {type === "FORMLEX" ? "فریم‌لس" : "دکوفیکس"} منتشر نشده
-                      است. پس از ثبت اطلاعات فنی و تعرفه توسط <StoreBrandLogo variant="inline" />،
+                      است. پس از ثبت اطلاعات فنی و تعرفه توسط ایرانی یراق،
                       مدل‌ها در این بخش در دسترس خواهند بود.
                     </p>
                   )}

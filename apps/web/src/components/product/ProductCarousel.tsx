@@ -1,4 +1,3 @@
-import { StoreBrandLogo } from '../brand/StoreBrandLogo'
 import { useRef } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -51,14 +50,9 @@ export function ProductCarousel({
     >
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
-          <p
-            className={`text-xs font-bold ${offer ? "text-orange-100" : "text-[#C2410C]"}`}
-          >
-            <StoreBrandLogo variant="inline" />
-          </p>
           <h2
             id={`${id}-title`}
-            className={`mt-1 text-xl font-black lg:text-2xl ${offer ? "text-white" : "text-slate-900"}`}
+            className={`text-xl font-black lg:text-2xl ${offer ? "text-white" : "text-slate-900"}`}
           >
             {title}
           </h2>

@@ -66,7 +66,7 @@ function Documents({id}:{id?:string}) {
         <Typography>سیاست مالی نسخهٔ {document.policyVersion}؛ {document.taxPolicy.treatment === 'EXEMPT' ? `معاف: ${document.taxPolicy.exemptionReason}` : document.taxPolicy.treatment === 'INCLUSIVE' ? 'مالیات در مبلغ منظور شده است' : 'مالیات جدا از مبلغ پایه'}.</Typography>
       </Stack></Paper>
       <Alert severity="info">این سند از اطلاعات ثبت‌شدهٔ زمان صدور نمایش داده می‌شود. برای وضعیت پرداخت و وصول، جزئیات سفارش و دفترکل را بررسی کنید.</Alert>
-      <Typography className={printStyles.pageFooter}>{document.number} — فاکتور فروشگاهی <Image src={brandAsset('wordmark-print.png')} alt="ایرانی یراق" width={90} height={31} style={{ display: 'inline-block', verticalAlign: 'middle' }} unoptimized /> — واحد مبالغ: ریال</Typography>
+      <Typography className={printStyles.pageFooter}>{document.number} — فاکتور فروشگاهی ایرانی یراق — واحد مبالغ: ریال</Typography>
       </Stack>
       <InvoicePublication id={document.id}/>
       <InvoicePdfActions id={document.id} number={document.number}/>
