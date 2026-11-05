@@ -31,7 +31,7 @@ async function rotateCookieSession(page: Page) {
   const csrf = (await page.context().cookies(origin)).find(cookie => cookie.name.endsWith('csrf'))?.value;
   expect(csrf).toBeTruthy();
   const rotated = await page.context().request.post(`${origin}/api/v1/auth/refresh`, {
-    headers: { Origin: new URL(page.url()).origin, 'X-CSRF-Token': csrf! },
+    headers: { Origin: new URL(page.url()).origin, 'X-CSRF-Token': csrf!, 'X-Auth-Realm': 'staff' },
   });
   expect(rotated.status()).toBe(200);
 }
