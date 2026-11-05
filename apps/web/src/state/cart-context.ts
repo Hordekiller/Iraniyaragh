@@ -9,6 +9,14 @@ export type CartContextValue = {
   setQuantity: (variantId: string, quantity: number) => Promise<void>
   remove: (variantId: string) => Promise<void>
   clear: () => Promise<void>
+  /** Resolves on success; rejects with the server's COUPON_* error. */
+  applyCoupon: (code: string) => Promise<void>
+  removeCoupon: () => Promise<void>
+  /** Coupon the guest typed before signing in; applied after login/merge. */
+  pendingCoupon: string | null
+  setPendingCoupon: (code: string | null) => void
+  couponNotice: string | null
+  dismissCouponNotice: () => void
   isInCart: (variantId: string) => boolean
   quantityOf: (variantId: string) => number
 }

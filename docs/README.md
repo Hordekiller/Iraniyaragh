@@ -56,3 +56,5 @@ security, money, inventory or payment invariant because a roadmap is stale.
 
 - [سفارش ساخت درب](CUSTOM_DOOR_ORDERS.md) — معماری پیاده‌شده، قیمت، بیعانه، انبار، مدیریت، API و استقرار.
 - [شواهد اعتبارسنجی سفارش ساخت](CUSTOM_DOOR_VALIDATION.md) — نتایج واقعی تست و مرز پذیرش production.
+
+- `PROMOTIONS.md` — coupons/campaigns: model, redemption lifecycle, deployment and rollback.

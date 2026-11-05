@@ -42,6 +42,22 @@ export function commerceErrorMessage(error: unknown): string {
       return 'وضعیت سفارش یا مهلت رزرو موجودی تغییر کرده است. وضعیت سفارش را دوباره بررسی کنید.'
     case 'INSUFFICIENT_STOCK':
       return 'موجودی برای ثبت این سفارش کافی نیست. سبد خرید را دوباره بررسی کنید.'
+    case 'COUPON_NOT_FOUND':
+      return 'کد تخفیف معتبر نیست.'
+    case 'COUPON_INACTIVE':
+      return 'این کد تخفیف غیرفعال است.'
+    case 'COUPON_NOT_STARTED':
+      return 'زمان استفاده از این کد تخفیف هنوز شروع نشده است.'
+    case 'COUPON_EXPIRED':
+      return 'مهلت استفاده از این کد تخفیف به پایان رسیده است.'
+    case 'COUPON_EXHAUSTED':
+      return 'ظرفیت استفاده از این کد تخفیف تکمیل شده است.'
+    case 'COUPON_CUSTOMER_LIMIT':
+      return 'سقف دفعات استفادهٔ شما از این کد تخفیف تکمیل شده است.'
+    case 'COUPON_NOT_ELIGIBLE':
+      return 'این کد تخفیف برای حساب شما قابل استفاده نیست.'
+    case 'COUPON_NOT_APPLICABLE':
+      return 'این کد تخفیف برای سبد فعلی شما قابل اعمال نیست.'
     case 'NETWORK_ERROR':
       return 'ارتباط با سرور برقرار نشد. اینترنت را بررسی کنید.'
     case 'TIMEOUT':

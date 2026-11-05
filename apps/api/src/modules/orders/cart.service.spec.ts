@@ -62,6 +62,8 @@ function setup() {
         .mockResolvedValue({ id: 'customer-1', userId: 'user-1' }),
     },
     cart: { findUnique: vi.fn().mockResolvedValue(persistedCart) },
+    category: { findMany: vi.fn().mockResolvedValue([]) },
+    promotion: { findMany: vi.fn().mockResolvedValue([]) },
     $transaction: vi.fn(async (callback: (transaction: typeof tx) => unknown) =>
       callback(tx),
     ),

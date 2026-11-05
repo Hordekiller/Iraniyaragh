@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DoorSummary } from "./DoorSummary";
 import { DoorOrderFloatingLink } from "./DoorOrderFloatingLink";
 import { CustomDoorsPage } from "../../views/CustomDoorsPage";
 import { AuthContext, type AuthContextValue } from "../../state/auth-context";
@@ -386,4 +387,18 @@ describe("Door configurator", () => {
     );
     expect(screen.getByRole("button", { name: "دریافت دوباره" })).toBeVisible();
   });
+});
+
+
+it("shows final payment guidance without exposing historical deposit installments", () => {
+  const quote: DoorQuoteSnapshot = {
+    currency: "IRR", lines: [], reasons: [], calculatedTotal: "1000000",
+    total: "1000000", deposit: "300000",
+    depositPolicy: { kind: "PERCENT", value: "3000", minimum: "0" },
+    adjustments: [], approvalReason: null,
+  };
+  const { container } = render(<DoorSummary quote={quote} approved />);
+  expect(screen.getByText("مبلغ قطعی")).toBeInTheDocument();
+  expect(screen.getByText(/مبلغ نهایی یکجا پرداخت می‌شود/)).toBeInTheDocument();
+  expect(container.textContent).not.toContain("بیعانه");
 });

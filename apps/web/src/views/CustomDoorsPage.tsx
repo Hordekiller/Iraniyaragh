@@ -345,7 +345,7 @@ function Configurator() {
           </h1>
           <p className="mt-3">شماره سفارش: {created.number}</p>
           <p className="mt-3 text-sm leading-7">
-            وضعیت قیمت، تأیید مشخصات، بیعانه و مراحل تولید در حساب کاربری شما
+            وضعیت قیمت، تأیید مشخصات، مبلغ نهایی و مراحل تولید در حساب کاربری شما
             نمایش داده می‌شود.
           </p>
           <Link
@@ -382,7 +382,7 @@ function Configurator() {
           </h1>
           <p className="mt-5 max-w-xl text-sm leading-8 text-slate-300">
             مدل و متریال ثبت‌شده را انتخاب کنید، ابعاد دلخواه را وارد کنید و چند
-            درب را در یک سفارش بسازید. مشخصات و قیمت، پیش از پرداخت بیعانه تأیید
+            درب را در یک سفارش بسازید. مشخصات و قیمت، پیش از پرداخت مبلغ نهایی تأیید
             می‌شوند.
           </p>
           <a
@@ -410,7 +410,7 @@ function Configurator() {
       <ol className="my-7 grid gap-3 sm:grid-cols-3">
         {[
           [Ruler, "انتخاب مدل و ابعاد"],
-          [ShieldCheck, "تأیید قیمت و بیعانه"],
+          [ShieldCheck, "تأیید قیمت و مبلغ نهایی"],
           [Wrench, "تولید و تحویل"],
         ].map(([Icon, title], i) => {
           const StepIcon = Icon as typeof Ruler;
@@ -769,7 +769,7 @@ function Configurator() {
                     </div>
                     <p className="mt-3 text-xs leading-7 text-slate-600">
                       ثبت سفارش، پرداخت محسوب نمی‌شود. پذیرش نسخه قطعی مشخصات و
-                      پرداخت بیعانه در جزئیات سفارش انجام می‌شود.
+                      پرداخت مبلغ نهایی در جزئیات سفارش انجام می‌شود.
                     </p>
                   </div>
                 </>

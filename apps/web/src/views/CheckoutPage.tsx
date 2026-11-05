@@ -494,12 +494,32 @@ function CheckoutContents() {
                   )}
                 </dd>
               </div>
+              {quote?.promotionDiscount && BigInt(quote.promotionDiscount.amount) > 0n && (
+                <div className="flex justify-between text-emerald-300">
+                  <dt>تخفیف ({preview?.cart.promotion?.applied.map((a) => a.name).join('، ') || 'کمپین'})</dt>
+                  <dd className="font-bold">− {formatToman(quote.promotionDiscount.amount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between text-slate-300">
                 <dt>ارسال انتخابی</dt>
                 <dd className="font-bold text-white">
                   {quote ? formatToman(quote.amount.amount) : 'محاسبه نشده'}
                 </dd>
               </div>
+              {quote && (
+                <div className="flex justify-between border-t border-white/10 pt-3 text-slate-300">
+                  <dt>مبلغ قابل پرداخت (پیش‌نمایش)</dt>
+                  <dd className="font-black text-white">
+                    {formatToman(
+                      (
+                        BigInt((preview?.cart ?? state.cart).quote.subtotal.amount) +
+                        BigInt(quote.amount.amount) -
+                        BigInt(quote.promotionDiscount?.amount ?? '0')
+                      ).toString(),
+                    )}
+                  </dd>
+                </div>
+              )}
             </dl>
             <p className="mt-3 border-t border-white/10 pt-3 text-xs leading-6 text-slate-400">
               مبلغ نهایی پس از ثبت سفارش، مستقیماً از پاسخ سرور نمایش داده

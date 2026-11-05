@@ -1,4 +1,5 @@
 import type { ApiSuccess, Money } from './index';
+import type { CartPromotionView } from './promotions';
 
 export type CartLine = {
   variantId: string;
@@ -24,6 +25,8 @@ export type CartView = {
   version: number;
   lines: CartLine[];
   quote: CartQuote;
+  /** Present on authenticated cart reads; amounts are computed by the server. */
+  promotion?: CartPromotionView;
   updatedAt: string | null;
 };
 
@@ -65,6 +68,8 @@ export type ShippingQuote = {
   method: string;
   title: string;
   amount: Money;
+  /** Promotion discount (items + shipping) priced into this quote; <= subtotal + amount. */
+  promotionDiscount?: Money;
   policyRevision: string;
   pricePolicyRevision: string;
   cartVersion: number;
@@ -75,6 +80,14 @@ export type CheckoutPreviewResponse = ApiSuccess<{
   cart: CartView;
   shipping: ShippingQuote[];
 }>;
+
+export type CheckoutPromotionSnapshot = {
+  promotionId: string;
+  name: string;
+  couponCode: string | null;
+  discount: Money;
+  shippingDiscount: Money;
+};
 
 export type CheckoutOrderLineSnapshot = {
   variantId: string;
@@ -102,6 +115,7 @@ export type CheckoutOrder = {
   discount: Money;
   shipping: Money;
   total: Money;
+  promotions?: CheckoutPromotionSnapshot[];
   address: CheckoutAddress;
   shippingQuote: ShippingQuote;
   pricePolicyRevision: string;

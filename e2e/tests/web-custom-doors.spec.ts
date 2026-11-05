@@ -182,7 +182,7 @@ test("configures several doors in Persian, reviews unpriced terms and remains ac
   await expect(
     page.getByText("این داده صرفاً آزمون است؛ تعرفه تعیین نشده"),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "پرداخت بیعانه" })).toHaveCount(
+  await expect(page.getByRole("button", { name: "پرداخت مبلغ نهایی" })).toHaveCount(
     0,
   );
   expect(

@@ -4,6 +4,8 @@ import type { CatalogProduct } from '../../services/catalog/types'
 import { formatToman, toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
 import { verifiedDiscountPercent } from '../../lib/discount'
+import { campaignBadgeFor } from '../../lib/campaign'
+import { useCampaigns } from '../../state/use-campaigns'
 
 const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود',
@@ -21,6 +23,7 @@ const STOCK_CLASS: Record<CatalogProduct['stockStatus'], string> = {
 
 export function ProductCard({ product, variant = 'default' }: { product: CatalogProduct; variant?: 'default' | 'offer' }) {
   const discount = verifiedDiscountPercent(product)
+  const campaign = campaignBadgeFor(product, useCampaigns())
   const oldToman = discount !== null && product.oldPrice ? product.oldPrice.amount : null
   const soldOut = product.stockStatus === 'OUT_OF_STOCK'
 
@@ -42,6 +45,11 @@ export function ProductCard({ product, variant = 'default' }: { product: Catalog
         {discount !== null && (
           <span className="absolute top-2 left-2 rounded-full bg-[#C2410C] px-2.5 py-1 text-[11px] font-black text-white">
             {toPersianDigits(discount)}٪ تخفیف
+          </span>
+        )}
+        {campaign && (
+          <span className={`absolute bottom-2 right-2 rounded-full px-2.5 py-1 text-[11px] font-black text-white ${campaign.scheduled ? 'bg-slate-700' : 'bg-emerald-700'}`}>
+            {campaign.label}
           </span>
         )}
         {product.badge && (

@@ -5,6 +5,7 @@ import {
   ClipboardCheck,
   CreditCard,
   FileClock,
+  BadgePercent,
   Gauge,
   Handshake,
   MonitorSmartphone,
@@ -78,6 +79,12 @@ export const navigation: NavigationGroup[] = [
     ],
   },
   {
+    label: 'بازاریابی',
+    items: [
+      { label: 'تخفیف‌ها و کمپین‌ها', href: '/marketing/promotions', icon: BadgePercent, permission: 'promotions.read' },
+    ],
+  },
+  {
     label: 'مدیریت ساخت درب',
     items: [
       { label: 'سفارش‌های ساخت درب', href: '/custom-doors/orders', icon: DoorOpen, permission: 'orders.read' },
@@ -87,7 +94,6 @@ export const navigation: NavigationGroup[] = [
       { label: 'یراق‌آلات و قطعات', href: '/custom-doors/hardware', icon: Wrench, permission: 'catalog.read' },
       { label: 'تعرفه ساخت و مونتاژ', href: '/custom-doors/labor', icon: Settings2, permission: 'catalog.read' },
       { label: 'قوانین قیمت‌گذاری', href: '/custom-doors/rules', icon: Settings2, permission: 'catalog.read' },
-      { label: 'قوانین بیعانه', href: '/custom-doors/deposits', icon: CreditCard, permission: 'catalog.read' },
       { label: 'وضعیت تولید', href: '/custom-doors/production', icon: ClipboardCheck, permission: 'orders.read' },
       { label: 'گزارش‌های ساخت درب', href: '/custom-doors/reports', icon: ChartNoAxesCombined, permission: 'reports.read' },
     ],

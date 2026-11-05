@@ -14,8 +14,16 @@ import { createHash, randomUUID } from "node:crypto";
 import { PrismaService } from "../../database/prisma.service";
 import { recordTransition } from "../../common/state-machine";
 import { AuditLogService } from "../audit/audit-log.service";
-import { withSerializableRetry } from "../../common/serializable-retry";
-import { cartInclude } from "./cart-view";
+import {
+  isPrismaTransactionConflict,
+  withSerializableRetry,
+} from "../../common/serializable-retry";
+import { cartInclude, pricingLines } from "./cart-view";
+import {
+  CouponRejection,
+  conflictFromRejection,
+  promotionsService,
+} from "../promotions/promotions.service";
 import { normalizeCheckoutAddress } from "./checkout-address";
 import {
   SHIPPING_QUOTE_PORT,
@@ -65,7 +73,9 @@ export class CheckoutService {
     );
 
     return withSerializableRetry({
-      isContention: (error) => error instanceof CheckoutContentionError,
+      isContention: (error) =>
+        error instanceof CheckoutContentionError ||
+        isPrismaTransactionConflict(error),
       conflictMessage:
         "Checkout changed concurrently; retry with the same idempotency key.",
       operation: () =>
@@ -117,7 +127,7 @@ export class CheckoutService {
 
             const cart = await tx.cart.findUnique({
               where: { customerId: customer.id },
-              include: cartInclude(),
+              include: { ...cartInclude(), couponIntent: true },
             });
             if (!cart || cart.items.length === 0) {
               throw new ConflictException({
@@ -182,6 +192,24 @@ export class CheckoutService {
               });
             }
 
+            // Never trust the preview: reprice from current rules, and reject the
+            // quote when the discount it was built with no longer holds.
+            const priced = await promotionsService.price(tx, {
+              customerId: customer.id,
+              lines: pricingLines(cart),
+              shipping: shippingQuote.amount,
+              couponCode: cart.couponIntent?.code ?? null,
+              now,
+            });
+            const discount = priced.result.totalDiscount;
+            if (discount !== shippingQuote.promotionDiscount) {
+              throw new ConflictException({
+                code: "QUOTE_CHANGED",
+                message: "Promotions changed and the cart must be reviewed.",
+              });
+            }
+            const grandTotal = subtotal + shippingQuote.amount - discount;
+
             const reservationExpiresAt = new Date(
               now.getTime() + RESERVATION_TTL_MS,
             );
@@ -191,9 +219,9 @@ export class CheckoutService {
                 customerId: customer.id,
                 status: "DRAFT",
                 subtotal,
-                discount: 0n,
+                discount,
                 shipping: shippingQuote.amount,
-                grandTotal: subtotal + shippingQuote.amount,
+                grandTotal,
                 addressSnapshot: address as Prisma.InputJsonObject,
                 shippingMethod: shippingQuote.methodCode,
                 shippingMethodTitle: shippingQuote.methodTitle,
@@ -215,6 +243,20 @@ export class CheckoutService {
                 },
               },
             });
+
+            try {
+              await promotionsService.reserve(tx, {
+                orderId: order.id,
+                customerId: customer.id,
+                result: priced.result,
+                now,
+              });
+            } catch (error) {
+              if (error instanceof CouponRejection) {
+                throw conflictFromRejection(error);
+              }
+              throw error;
+            }
 
             await recordTransition(
               tx,
@@ -351,6 +393,7 @@ export class CheckoutService {
             });
 
             await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+            await tx.cartCouponIntent.deleteMany({ where: { cartId: cart.id } });
             await tx.cart.update({
               where: { id: cart.id },
               data: { version: { increment: 1 } },
@@ -364,13 +407,26 @@ export class CheckoutService {
                   status: "PENDING_PAYMENT",
                   items: orderLines,
                   subtotal: { amount: subtotal.toString(), currency: "IRR" },
-                  discount: { amount: "0", currency: "IRR" },
+                  discount: { amount: discount.toString(), currency: "IRR" },
+                  promotions: priced.result.applied.map((a) => ({
+                    promotionId: a.promotionId,
+                    name: a.name,
+                    couponCode: priced.couponCode,
+                    discount: {
+                      amount: a.itemDiscount.toString(),
+                      currency: "IRR" as const,
+                    },
+                    shippingDiscount: {
+                      amount: a.shippingDiscount.toString(),
+                      currency: "IRR" as const,
+                    },
+                  })),
                   shipping: {
                     amount: shippingQuote.amount.toString(),
                     currency: "IRR",
                   },
                   total: {
-                    amount: (subtotal + shippingQuote.amount).toString(),
+                    amount: grandTotal.toString(),
                     currency: "IRR",
                   },
                   address,
@@ -404,7 +460,8 @@ export class CheckoutService {
                   status: "PENDING_PAYMENT",
                   subtotal: subtotal.toString(),
                   shipping: shippingQuote.amount.toString(),
-                  grandTotal: (subtotal + shippingQuote.amount).toString(),
+                  discount: discount.toString(),
+                  grandTotal: grandTotal.toString(),
                 },
                 metadata: {
                   itemCount: orderLines.length,
