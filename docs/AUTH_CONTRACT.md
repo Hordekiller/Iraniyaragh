@@ -413,8 +413,8 @@ A rotation commits on receipt, so a response lost to reload, cancellation or a
 network drop leaves the browser on the previous cookie. Unconditional reuse grace
 is NOT allowed. Instead the same attempt may be retried:
 
-1. The client generates a random 128-bit **refresh-attempt ID** (base64url,
-   22-64 chars) and sends it as `X-Refresh-Attempt`. It is kept in `localStorage`
+1. The client generates a random **refresh-attempt ID** (base64url,
+   22-64 chars; a UUID v4 in the clients) and sends it as `X-Refresh-Attempt`. It is kept in `localStorage`
    (`iranyaragh:refresh-attempt:customer|staff`, nothing else) and reused only
    while younger than 12 s; success or any 4xx clears it, transport failure/5xx
    keeps it, logout/login clear it, and a retry after 12 s gets a fresh ID.

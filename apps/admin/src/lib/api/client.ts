@@ -202,7 +202,7 @@ export function apiFetch<T>(path: string, options?: RequestOptions): Promise<Api
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T | ApiSuccess<T>> {
   const sessionRevision = getSessionRevision();
   const isFormData = options.body instanceof FormData;
-  const headers: Record<string, string> = { 'X-Auth-Realm': 'staff', ...(options.headers ?? {}) };
+  const headers: Record<string, string> = { 'X-Auth-Realm': 'staff', ...options.headers };
   if (!isFormData && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
   const method = options.method ?? 'GET';

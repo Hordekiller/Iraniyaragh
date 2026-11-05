@@ -4,8 +4,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { AccessTokenData, CurrentPrincipalResponse } from '@iranyaragh/contracts';
 import { ApiAbortError, ApiClientError, apiFetch, readCsrfToken, recoverApiSession, registerSessionRecovery, settleSessionRecovery, registerAuthenticationFailure, notifyFreshAuthentication } from '@/lib/api/client';
 import { startActivityKeepAlive } from './activity-keepalive';
-import { clearRefreshAttempt, runRefreshAttempt } from './refresh-attempt';
+import { createRefreshAttemptStore, REFRESH_ATTEMPT_HEADER_NAME } from '@iranyaragh/contracts';
 import { getAccessToken, getSessionRevision, setAccessToken } from './token-store';
+
+const refreshAttempts = createRefreshAttemptStore('staff');
 
 export type AuthUser = {
   userId: string;
@@ -55,7 +57,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const loggingOut = useRef(false);
 
   const establishSession = useCallback((input: { accessToken: string; principal: AuthUser }): void => {
-    clearRefreshAttempt();
+    refreshAttempts.clear();
     generation.current += 1;
     setAccessToken(input.accessToken);
     userRef.current = input.principal;
@@ -78,8 +80,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (loggingOut.current || generation.current !== attemptGeneration) throw new ApiAbortError();
       // Same attempt id across a reload/network drop lets the server return the
       // already-committed rotation instead of treating the retry as replay.
-      const refreshed = await runRefreshAttempt(
-        attemptId => apiFetch<AccessTokenData>('/auth/refresh', { method: 'POST', recoverSession: false, headers: { 'X-Refresh-Attempt': attemptId } }),
+      const refreshed = await refreshAttempts.run(
+        attemptId => apiFetch<AccessTokenData>('/auth/refresh', { method: 'POST', recoverSession: false, headers: { [REFRESH_ATTEMPT_HEADER_NAME]: attemptId } }),
         error => !(error instanceof ApiClientError) || error.statusCode >= 500,
       );
       const token = refreshed.data.accessToken;
@@ -197,7 +199,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
       });
       if (generation.current === logoutGeneration) {
-        clearRefreshAttempt();
+        refreshAttempts.clear();
         setAccessToken(null);
         userRef.current = null;
         setUser(null);
