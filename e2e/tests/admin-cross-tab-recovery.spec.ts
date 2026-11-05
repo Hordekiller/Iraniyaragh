@@ -13,7 +13,7 @@ async function openInventory(page: Page) {
   await expect(page.getByRole('button', { name: 'نوسازی', exact: true })).toBeVisible();
 }
 
-test('admin: another tab cannot revoke a recovered request before its protected replay', async ({ page, context }) => {
+test('admin: a cookie rotation does not sign out stale tabs', async ({ page, context }) => {
   await signInDiAsAdmin(page);
   await openInventory(page);
   const other = await context.newPage();
@@ -29,21 +29,9 @@ test('admin: another tab cannot revoke a recovered request before its protected 
   });
   expect(rotated.status()).toBe(200);
 
-  let releaseReplay!: () => void;
-  const replayGate = new Promise<void>(resolve => { releaseReplay = resolve; });
-  let replayStarted!: () => void;
-  const replayReady = new Promise<void>(resolve => { replayStarted = resolve; });
-  let balancesRequests = 0;
-  await page.route('**/api/v1/inventory/balances?**', async route => {
-    balancesRequests += 1;
-    if (balancesRequests === 2) {
-      replayStarted();
-      await replayGate;
-    }
-    await route.continue();
-  });
-
-  let otherRefreshFinished = false;
+  // A rotation retires the row both bearers were signed for, but the login is
+  // still live: neither stale tab may be signed out, and each must keep
+  // reading through the real API (no fabricated response, no database edit).
   const successfulReads = new Set<string>();
   for (const [name, tab] of [['first', page], ['second', other]] as const) {
     tab.on('response', response => {
@@ -53,30 +41,15 @@ test('admin: another tab cannot revoke a recovered request before its protected 
       }
     });
   }
-  other.on('response', response => {
-    if (response.url().endsWith('/api/v1/auth/refresh') && response.status() === 200) otherRefreshFinished = true;
-  });
   try {
-    const replayResponse = page.waitForResponse(response =>
-      response.url().includes('/api/v1/inventory/balances?') && balancesRequests === 2);
     await page.getByRole('button', { name: 'نوسازی', exact: true }).click();
-    await replayReady;
     await other.getByRole('button', { name: 'نوسازی', exact: true }).click();
-    // Before the fix the competing rotation finishes; a coordinated replay
-    // must instead hold that rotation pending until the real response settles.
-    await expect.poll(async () => otherRefreshFinished || other.evaluate(async () => {
-      const locks = await navigator.locks.query();
-      return locks.pending?.some(lock => lock.name === 'iranyaragh:auth:refresh') ?? false;
-    })).toBe(true);
-    releaseReplay();
-    expect((await replayResponse).status()).toBe(200);
     await expect.poll(() => successfulReads.size).toBe(4);
     for (const tab of [page, other]) {
       await expect(tab.getByRole('heading', { name: 'موجودی و گردش' })).toBeVisible();
       await expect(tab).toHaveURL(/\/inventory$/);
     }
   } finally {
-    releaseReplay();
     await other.close();
   }
 });

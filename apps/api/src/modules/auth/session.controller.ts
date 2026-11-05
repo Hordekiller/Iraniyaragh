@@ -52,12 +52,13 @@ export class SessionManagementController {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found.' });
     }
 
-    const outcome = await this.sessions.revokeUserSession(principal.userId, sessionId);
+    const targetId = await this.sessions.resolveLiveSessionId(principal.userId, sessionId);
+    const outcome = await this.sessions.revokeUserSession(principal.userId, targetId);
     if (outcome === 'notFound') {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found.' });
     }
 
-    if (sessionId === principal.sessionId) {
+    if (targetId === principal.sessionId) {
       this.clearAuthCookies(response, principal);
     }
     return { data: {} };

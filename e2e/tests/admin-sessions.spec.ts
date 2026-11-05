@@ -70,15 +70,13 @@ test.describe('admin: session and device management', () => {
     await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
   });
 
-  test('refreshes devices when the selected current session has already rotated', async ({ page }) => {
+  test('revoking this device after an external rotation still ends the live login', async ({ page }) => {
     await openSessionsPage(page);
     await rotateCookieSession(page);
+    // The list still names the pre-rotation row; the server must resolve it to
+    // the live head of the same family and end that login.
     await tap(currentSessionRow(page).getByRole('button', { name: /خروج از دستگاه/ }));
     await tap(page.getByTestId('session-confirm-button'));
-    await expect(page.getByText('نشست شما تغییر کرده است؛ فهرست دستگاه‌ها به‌روز شد.')).toBeVisible();
-    await expect(page.getByRole('listitem').filter({ hasText: 'این دستگاه' })).toHaveCount(1);
-    await expect(page).toHaveURL(/\/settings\/sessions$/);
-    await page.reload();
-    await expect(page.getByRole('heading', { name: 'نشست‌ها و دستگاه‌ها' })).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
   });
 });

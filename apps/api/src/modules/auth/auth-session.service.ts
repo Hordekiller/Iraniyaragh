@@ -520,6 +520,27 @@ export class AuthSessionService {
     });
   }
 
+  /**
+   * A client may still name the row its access token was signed for after a
+   * refresh rotated it. Ending "this device" must then end the live head of
+   * the same family (and only that family), never report success while the
+   * login keeps working.
+   */
+  async resolveLiveSessionId(userId: string, sessionId: string): Promise<string> {
+    const row = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      select: { userId: true, revokedAt: true, revokeReason: true, tokenFamilyId: true },
+    });
+    if (!row || row.userId !== userId || row.revokedAt === null || row.revokeReason !== AUTH_SESSION_REVOKE_REASON.rotated) {
+      return sessionId;
+    }
+    const head = await this.prisma.session.findFirst({
+      where: { tokenFamilyId: row.tokenFamilyId, userId, revokedAt: null },
+      select: { id: true },
+    });
+    return head?.id ?? sessionId;
+  }
+
   async revokeUserSession(
     userId: string,
     sessionId: string,
