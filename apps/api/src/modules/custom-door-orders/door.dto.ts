@@ -394,11 +394,11 @@ export class DoorQuoteApprovalDto extends DoorVersionDto {
   @Type(() => DoorApprovedLineDto)
   lineTotals!: DoorApprovedLineDto[];
   @ApiProperty({ type: String }) @Matches(amountPattern) total!: string;
-  @ApiProperty({ type: DoorDepositDto })
-  @IsDefined()
+  @ApiPropertyOptional({ type: DoorDepositDto, deprecated: true })
+  @IsOptional()
   @ValidateNested()
   @Type(() => DoorDepositDto)
-  depositPolicy!: DoorDepositDto;
+  depositPolicy?: DoorDepositDto;
   @ApiProperty({ type: [DoorAmountLineDto] })
   @IsArray()
   @ArrayMaxSize(30)

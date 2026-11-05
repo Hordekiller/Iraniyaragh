@@ -30,7 +30,7 @@ export async function settleDoorPaymentIn(
       "The payment has no valid approved quotation allocation.",
     );
   const quote = row.quotes.find((q) => q.version === row.currentQuoteVersion);
-  if (!quote?.approved || quote.total === null || quote.deposit === null)
+  if (!quote?.approved || quote.total === null)
     throw new ConflictException("A final quotation is missing.");
   await recordTransition(tx, "payment", payment.id, "PENDING", "PAID", {
     requestId,
@@ -60,7 +60,7 @@ export async function settleDoorPaymentIn(
   }
   if (
     !needsReview &&
-    paid >= quote.deposit &&
+    paid >= quote.total &&
     row.status === "AWAITING_DEPOSIT" &&
     row.customerAcceptedQuoteVersion === quote.version
   ) {

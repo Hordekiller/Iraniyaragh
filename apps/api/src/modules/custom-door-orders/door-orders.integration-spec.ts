@@ -119,6 +119,20 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
       );
     return order;
   }
+  async function historicalDeposit(order: DoorOrderView, amount: bigint) {
+    // Synthetic TEST ONLY attempt already open under the previous release.
+    const payment = await prisma.payment.create({
+      data: {
+        orderId: order.id, provider: "zarinpal", amount,
+        status: "PENDING", authority: `TEST-${randomUUID()}`,
+        idempotencyKey: key(), idempotencyFingerprint: "0".repeat(64),
+        gatewayEnvironment: "sandbox",
+        doorAllocation: { create: { quoteId: order.quote.id, purpose: "DEPOSIT" } },
+      },
+    });
+    await verification.verify({ authority: payment.authority!, status: "OK", requestId: key() });
+    return service.detail(actor, order.id);
+  }
   async function pay(order: DoorOrderView) {
     const attempt = await initiation.initiate({
       userId: actor.userId,
@@ -431,7 +445,8 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
       order.version,
       key(),
     );
-    order = await pay(order);
+    expect(order.quote.snapshot.deposit).toBe("100000");
+    order = await historicalDeposit(order, 30000n);
     expect(order.paid).toBe("30000");
     order = await service.approveQuote(
       commandActor(staff),
@@ -440,7 +455,6 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
         expectedVersion: order.version,
         total: "120000",
         lineTotals: [{ total: "120000", reason: "TEST ONLY amended line" }],
-        depositPolicy: { kind: "FIXED", value: "40000", minimum: "0" },
         adjustments: [],
         reason: "TEST ONLY controlled amendment",
       },
@@ -492,9 +506,9 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
       key(),
     );
     order = await pay(order);
-    expect(order.paid).toBe("40000");
+    expect(order.paid).toBe("120000");
   });
-  it("serializes concurrent payment initiations, verifies repeated callbacks once, then settles the remainder", async () => {
+  it("charges the full final amount once, serializes initiations and verifies repeated callbacks once", async () => {
     let order = await create(true);
     const args = { userId: actor.userId, orderId: order.id, requestId: key() };
     const attempts = await Promise.allSettled([
@@ -509,12 +523,14 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
     expect(accepted?.status).toBe("fulfilled");
     const authority = rows[0].authority!;
     expect(authority).toBeTruthy();
+    expect(rows[0].amount.toString()).toBe("19001");
+    expect((await prisma.doorPaymentAllocation.findUniqueOrThrow({ where: { paymentId: rows[0].id } })).purpose).toBe("SETTLEMENT");
     await Promise.all([
       verification.verify({ authority, status: "OK", requestId: key() }),
       verification.verify({ authority, status: "OK", requestId: key() }),
     ]);
     order = await service.detail(actor, order.id);
-    expect(order.paid).toBe("5701");
+    expect(order.paid).toBe("19001");
     expect(order.status).toBe("DEPOSIT_PAID");
     expect(
       await prisma.paymentTransition.count({
@@ -524,7 +540,6 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
     expect(
       await prisma.fulfillment.count({ where: { orderId: order.id } }),
     ).toBe(0);
-    order = await pay(order);
     expect(order.paid).toBe("19001");
     expect(order.remaining).toBe("0");
     expect(
@@ -534,6 +549,41 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
     await expect(
       initiation.initiate({ ...args, idempotencyKey: key() }),
     ).rejects.toMatchObject({ status: 409 });
+  });
+  it("preserves a historical deposit, charges only the remaining total and blocks early production", async () => {
+    let order = await create(true);
+    const originalSnapshot = structuredClone(order.quote.snapshot);
+    originalSnapshot.deposit = "5701";
+    originalSnapshot.depositPolicy = { kind: "PERCENT", value: "3000", minimum: "0" };
+    // Isolated TEST ONLY representation of an attempt opened before this release.
+    await prisma.$transaction(async tx => {
+    const historicalQuote = await tx.doorQuotation.create({
+      data: {
+        orderId: order.id, version: order.quote.version + 1, approved: true,
+        total: 19001n, deposit: 5701n,
+        snapshot: JSON.parse(JSON.stringify(originalSnapshot)),
+      },
+    });
+    await tx.doorOrder.update({
+      where: { id: order.id },
+      data: { currentQuoteVersion: historicalQuote.version, customerAcceptedQuoteVersion: historicalQuote.version },
+    });
+    });
+    order = await service.detail(actor, order.id);
+    order = await historicalDeposit(order, 5701n);
+    expect(order.paid).toBe("5701");
+    expect(order.remaining).toBe("13300");
+    expect(order.status).toBe("AWAITING_DEPOSIT");
+    await expect(service.technical(commandActor(staff), order.id, order.version, "TEST ONLY", key()))
+      .rejects.toMatchObject({ status: 409 });
+    order = await pay(order);
+    expect(order.paid).toBe("19001");
+    expect(order.remaining).toBe("0");
+    const payments = await prisma.payment.findMany({ where: { orderId: order.id } });
+    expect(payments.map(p => p.amount.toString()).sort()).toEqual(["13300", "5701"]);
+    const historical = await prisma.doorQuotation.findUniqueOrThrow({ where: { id: order.quote.id } });
+    expect(historical.deposit).toBe(5701n);
+    expect(historical.snapshot).toEqual(originalSnapshot);
   });
   it("never fabricates disabled, failed, forged or uncertain provider outcomes", async () => {
     const order = await create(true);
@@ -787,7 +837,6 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
         key(),
       ),
     ).rejects.toMatchObject({ status: 409 });
-    order = await pay(order);
     order = await service.transition(
       commandActor(staff),
       order.id,

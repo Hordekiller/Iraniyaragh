@@ -340,8 +340,7 @@ function DoorOrdersContent({ id, report }: { id?: string; report: boolean }) {
               پرونده مشتری
             </Button>
             <Typography>
-              قیمت قطعی: {doorMoneyLabel(order.quote.snapshot.total)} · بیعانه:{" "}
-              {doorMoneyLabel(order.quote.snapshot.deposit)}
+              قیمت قطعی: {doorMoneyLabel(order.quote.snapshot.total)}
             </Typography>
             <Typography>
               پرداخت خالص: {doorMoneyLabel(order.paid)} · مانده:{" "}
@@ -373,7 +372,11 @@ function DoorOrdersContent({ id, report }: { id?: string; report: boolean }) {
                 <Typography variant="body2">
                   توضیح مشتری: {order.items[index]?.notes || "ندارد"}
                 </Typography>
-                {doorManufacturingSummary(line.manufacturing).map(text => <Typography key={text} variant="body2">{text}</Typography>)}
+                {doorManufacturingSummary(line.manufacturing).map((text) => (
+                  <Typography key={text} variant="body2">
+                    {text}
+                  </Typography>
+                ))}
                 {line.parts.map((part, i) => (
                   <Typography key={i} variant="body2">
                     {part.title} — مقدار محاسباتی {part.quantityNumerator}/
@@ -440,7 +443,7 @@ function DoorOrdersContent({ id, report }: { id?: string; report: boolean }) {
                     order.status,
                   ) && (
                     <Button
-                      disabled={!reason.trim()}
+                      disabled={!reason.trim() || order.remaining === null || BigInt(order.remaining) > 0n}
                       onClick={() =>
                         void command(`/orders/${order.id}/technical`, {
                           expectedVersion: order.version,
@@ -600,8 +603,7 @@ function DoorOrdersContent({ id, report }: { id?: string; report: boolean }) {
                   {doorMoneyLabel(q.snapshot.total)}
                 </summary>
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  بیعانه: {doorMoneyLabel(q.snapshot.deposit)} · توضیح تأیید:{" "}
-                  {q.snapshot.approvalReason ?? "محاسبه اولیه"}
+                  توضیح تأیید: {q.snapshot.approvalReason ?? "محاسبه اولیه"}
                 </Typography>
                 {q.snapshot.adjustments.map((a, i) => (
                   <Typography key={i} variant="body2">
@@ -686,9 +688,6 @@ function QuoteApprovalEditor({
       reason: "",
     })),
   );
-  const [kind, setKind] = useState<"PERCENT" | "FIXED">("PERCENT");
-  const [value, setValue] = useState("");
-  const [minimum, setMinimum] = useState("0");
   const [reason, setReason] = useState("");
   const [extras, setExtras] = useState<{ title: string; amount: string }[]>([]);
   return (
@@ -700,7 +699,6 @@ function QuoteApprovalEditor({
           expectedVersion: order.version,
           total,
           lineTotals,
-          depositPolicy: { kind, value, minimum },
           adjustments: extras,
           reason,
         });
@@ -711,7 +709,7 @@ function QuoteApprovalEditor({
         <Stack gap={2}>
           <Typography variant="h6">تأیید یا اصلاح نسخه قیمت</Typography>
           <Alert severity="warning">
-            قیمت قطعی شامل تمام هزینه‌ها و مالیات است. تغییر پس از بیعانه به
+            قیمت قطعی شامل تمام هزینه‌ها و مالیات است. تغییر پس از پرداخت به
             پذیرش دوباره مشتری نیاز دارد؛ پرداخت‌ها حفظ می‌شوند. پیش از اصلاح،
             پرداخت باز باید تطبیق و رزرو فعال آزاد شود.
           </Alert>
@@ -798,34 +796,6 @@ function QuoteApprovalEditor({
           >
             افزودن جزئیات هزینه جانبی
           </Button>
-          <Stack direction={{ xs: "column", md: "row" }} gap={2}>
-            <TextField
-              select
-              label="روش بیعانه"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as typeof kind)}
-              fullWidth
-            >
-              <MenuItem value="PERCENT">درصدی (واحد پایه)</MenuItem>
-              <MenuItem value="FIXED">مبلغ ثابت ریالی</MenuItem>
-            </TextField>
-            <TextField
-              required
-              label={
-                kind === "PERCENT" ? "درصد؛ ۱۰۰ = یک درصد" : "مبلغ ثابت ریالی"
-              }
-              value={value}
-              onChange={(e) => setValue(doorCanonicalNumber(e.target.value))}
-              fullWidth
-            />
-            <TextField
-              required
-              label="حداقل بیعانه ریالی"
-              value={minimum}
-              onChange={(e) => setMinimum(doorCanonicalNumber(e.target.value))}
-              fullWidth
-            />
-          </Stack>
           <TextField
             required
             label="دلیل تأیید یا اصلاح و جزئیات فنی"
