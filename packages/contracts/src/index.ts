@@ -47,3 +47,4 @@ export * from './in-app-notifications';
 
 export * from "./door-glass-samples";
 export * from './door-manufacturing';
+export * from './promotions';

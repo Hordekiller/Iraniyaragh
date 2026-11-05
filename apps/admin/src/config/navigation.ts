@@ -5,6 +5,7 @@ import {
   ClipboardCheck,
   CreditCard,
   FileClock,
+  BadgePercent,
   Gauge,
   Handshake,
   MonitorSmartphone,
@@ -75,6 +76,12 @@ export const navigation: NavigationGroup[] = [
       { label: 'پیش‌فاکتورها', href: '/invoices', icon: ReceiptText, permission: 'invoices.read' },
       { label: 'مشتریان', href: '/customers', icon: Users, permission: 'customers.read' },
       { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'shipments.read' },
+    ],
+  },
+  {
+    label: 'بازاریابی',
+    items: [
+      { label: 'تخفیف‌ها و کمپین‌ها', href: '/marketing/promotions', icon: BadgePercent, permission: 'promotions.read' },
     ],
   },
   {

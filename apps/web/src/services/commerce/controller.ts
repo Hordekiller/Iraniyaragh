@@ -99,6 +99,38 @@ export class CommerceCartController {
     )
   }
 
+  /** Authoritative server validation; throws the API error so the UI can show the exact reason. */
+  async applyCoupon(code: string): Promise<void> {
+    if (!this.authenticated) throw new Error('Coupon requires a signed-in customer cart.')
+    const epoch = this.authEpoch
+    const requestId = ++this.requestSequence
+    const cart = await this.api.applyCoupon(code)
+    this.applyCart(cart, requestId, epoch, 'customer')
+  }
+
+  async removeCoupon(): Promise<void> {
+    if (!this.authenticated) return
+    const epoch = this.authEpoch
+    const requestId = ++this.requestSequence
+    const cart = await this.api.removeCoupon()
+    this.applyCart(cart, requestId, epoch, 'customer')
+  }
+
+  /**
+   * Line mutations return an undiscounted view; re-read the trusted breakdown.
+   * Failure is non-fatal: the cart keeps its lines and the next read corrects it.
+   */
+  private async refreshPromotion(epoch: number): Promise<void> {
+    if (!this.isActive(epoch) || this.state.owner !== 'customer') return
+    const requestId = ++this.requestSequence
+    try {
+      const cart = await this.api.getCart('customer')
+      this.applyCart(cart, requestId, epoch, 'customer')
+    } catch {
+      /* keep current lines */
+    }
+  }
+
   async clear(): Promise<void> {
     for (const line of [...this.state.cart.lines])
       await this.remove(line.variantId)
@@ -128,6 +160,7 @@ export class CommerceCartController {
       const cart = await operation(key)
       if (this.isActive(epoch)) this.retryKeys.delete(fingerprint)
       this.applyCart(cart, requestId, epoch, owner)
+      if (owner === 'customer') await this.refreshPromotion(epoch)
       return true
     } catch (error) {
       if (this.isActive(epoch)) this.patch({ error, phase: 'error' })
@@ -194,6 +227,7 @@ export class CommerceCartController {
         error: null,
         mergeWarnings: result.warnings,
       })
+      await this.refreshPromotion(epoch)
     } catch (error) {
       if (this.isActive(epoch) && this.authenticated) {
         this.patch({ phase: 'error', error })

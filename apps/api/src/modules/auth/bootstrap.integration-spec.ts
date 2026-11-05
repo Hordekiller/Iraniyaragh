@@ -18,6 +18,7 @@ describe.sequential('First-administrator bootstrap database integration', () => 
   let systemAdminRoleId = '';
   const createdUserIds: string[] = [];
   const createdAuditIds: string[] = [];
+  const suspendedGrants: Array<{ id: string; revokedById: string | null; revokeReason: string | null }> = [];
 
   function fabricateInput(email: string) {
     return {
@@ -40,9 +41,20 @@ describe.sequential('First-administrator bootstrap database integration', () => 
     connected = true;
 
     const role = await prisma.role.findUnique({ where: { key: SYSTEM_ADMIN_ROLE_KEY }, select: { id: true } });
-    if (!role) throw new Error(`${SYSTEM_ADMIN_ROLE_KEY} role is missing; seed the test database first.`);
+    if (!role) throw new Error(
+        `${SYSTEM_ADMIN_ROLE_KEY} role is missing. Initialise the disposable test database with the canonical RBAC baseline ` +
+          '(`pnpm --filter @iranyaragh/api prisma:seed` with ALLOW_DATABASE_SEED=true) before pnpm test:integration; see docs/TESTING.md.',
+      );
     systemAdminRoleId = role.id;
 
+    // The first-administrator rule needs zero active grants. Remember them so the
+    // shared test database is left exactly as other suites found it.
+    suspendedGrants.push(
+      ...(await prisma.userRole.findMany({
+        where: { roleId: systemAdminRoleId, revokedAt: null },
+        select: { id: true, revokedById: true, revokeReason: true },
+      })),
+    );
     await prisma.userRole.updateMany({
       where: { roleId: systemAdminRoleId, revokedAt: null },
       data: { revokedAt: new Date(), revokeReason: 'bootstrap integration test reset' },
@@ -55,6 +67,12 @@ describe.sequential('First-administrator bootstrap database integration', () => 
     }
     if (createdUserIds.length) {
       await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
+    }
+    if (connected && suspendedGrants.length) {
+      await prisma.userRole.updateMany({
+        where: { id: { in: suspendedGrants.map(grant => grant.id) } },
+        data: { revokedAt: null, revokedById: null, revokeReason: null },
+      });
     }
     if (connected) await prisma.$disconnect();
   });

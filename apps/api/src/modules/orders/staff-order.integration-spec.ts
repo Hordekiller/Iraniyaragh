@@ -219,12 +219,12 @@ describe.sequential('StaffOrderService database integration', () => {
       ],
     });
     await prisma.warehouse.create({
-      data: { id: warehouseId, code: `STAFFORD-WH-${runId}`, name: 'Staff order warehouse' },
+      data: { id: warehouseId, code: `STAFFORD-${runId}-A`, name: 'Staff order warehouse' },
     });
     await prisma.warehouse.create({
       data: {
         id: secondWarehouseId,
-        code: `STAFFORD-WH2-${runId}`,
+        code: `STAFFORD-${runId}-B`,
         name: 'Staff order overflow warehouse',
       },
     });

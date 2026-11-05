@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { CommerceCartController } from '../services/commerce/controller'
 import { CommerceFixtureClient } from '../services/commerce/fixture'
@@ -6,6 +6,33 @@ import { CommerceHttpClient } from '../services/commerce/http'
 import type { CommerceApi } from '../services/commerce/types'
 import { CartContext } from './cart-context'
 import { useAuth } from './auth-context'
+import { commerceErrorMessage } from '../services/commerce/errors'
+
+const PENDING_COUPON_KEY = 'iranyaragh.pendingCoupon'
+const COUPON_PATTERN = /^[A-Za-z0-9\u06F0-\u06F9\u0660-\u0669 _-]{1,64}$/
+
+function readPending(): string | null {
+  try {
+    const v = globalThis.localStorage?.getItem(PENDING_COUPON_KEY)
+    return v && COUPON_PATTERN.test(v) ? v : null
+  } catch {
+    return null
+  }
+}
+const pendingListeners = new Set<() => void>()
+function subscribePending(listener: () => void): () => void {
+  pendingListeners.add(listener)
+  return () => pendingListeners.delete(listener)
+}
+function writePending(code: string | null): void {
+  try {
+    if (code) globalThis.localStorage?.setItem(PENDING_COUPON_KEY, code)
+    else globalThis.localStorage?.removeItem(PENDING_COUPON_KEY)
+  } catch {
+    /* storage unavailable: the intent simply is not carried over */
+  }
+  for (const listener of pendingListeners) listener()
+}
 
 
 export function CartProvider({
@@ -33,6 +60,15 @@ export function CartProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Server snapshot is null so hydration matches; the client reads storage.
+  const pendingCoupon = useSyncExternalStore(subscribePending, readPending, () => null)
+  const [couponNotice, setCouponNotice] = useState<string | null>(null)
+  const applying = useRef(false)
+  const setPendingCoupon = useCallback((code: string | null) => {
+    const clean = code && COUPON_PATTERN.test(code.trim()) ? code.trim() : null
+    writePending(clean)
+  }, [])
+
   const snapshot = useSyncExternalStore(
     value.controller.subscribe,
     value.controller.getState,
@@ -42,6 +78,21 @@ export function CartProvider({
   useEffect(() => {
     value.controller.setAuthenticated(auth.state.phase === 'authenticated', auth.identityVersion)
   }, [auth.state.phase, auth.identityVersion, value.controller])
+
+  // Carry a coupon typed as a guest into the signed-in cart once it is ready.
+  useEffect(() => {
+    if (!pendingCoupon || applying.current) return
+    if (snapshot.owner !== 'customer' || snapshot.phase !== 'ready' || snapshot.cart.lines.length === 0) return
+    applying.current = true
+    value.controller
+      .applyCoupon(pendingCoupon)
+      .then(() => setCouponNotice('کد تخفیف شما پس از ورود اعمال شد.'))
+      .catch((error) => setCouponNotice(`کد تخفیف اعمال نشد: ${commerceErrorMessage(error)}`))
+      .finally(() => {
+        writePending(null)
+        applying.current = false
+      })
+  }, [pendingCoupon, snapshot.owner, snapshot.phase, snapshot.cart.lines.length, value.controller])
 
   const contextValue = useMemo(
     () => ({
@@ -54,13 +105,19 @@ export function CartProvider({
         value.controller.setQuantity(variantId, quantity),
       remove: (variantId: string) => value.controller.remove(variantId),
       clear: () => value.controller.clear(),
+      applyCoupon: (code: string) => value.controller.applyCoupon(code),
+      removeCoupon: () => value.controller.removeCoupon(),
+      pendingCoupon,
+      setPendingCoupon,
+      couponNotice,
+      dismissCouponNotice: () => setCouponNotice(null),
       isInCart: (variantId: string) =>
         snapshot.cart.lines.some((line) => line.variantId === variantId),
       quantityOf: (variantId: string) =>
         snapshot.cart.lines.find((line) => line.variantId === variantId)
           ?.quantity ?? 0,
     }),
-    [snapshot, value],
+    [snapshot, value, pendingCoupon, setPendingCoupon, couponNotice],
   )
 
   return (

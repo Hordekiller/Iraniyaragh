@@ -65,6 +65,7 @@ function setup(overrides: { payment?: PaymentState | null; refunds?: unknown[] }
         );
       }),
     },
+    promotionRedemption: { findMany: vi.fn().mockResolvedValue([]), updateMany: vi.fn().mockResolvedValue({ count: 0 }), update: vi.fn(), count: vi.fn().mockResolvedValue(0) },
     paymentTransition: { create: vi.fn().mockResolvedValue({ id: 'transition-1' }) },
     outboxEvent: {
       create: vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {

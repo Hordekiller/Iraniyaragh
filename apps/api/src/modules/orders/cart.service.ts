@@ -16,7 +16,8 @@ import {
   runCartSerializable,
   validateCartQuantity,
 } from './cart-runtime';
-import { buildCartView, buildEmptyCartView, cartInclude } from './cart-view';
+import { buildCartView, buildEmptyCartView, cartInclude, pricingLines } from './cart-view';
+import { promotionsService } from '../promotions/promotions.service';
 
 type CartMutationResult = {
   cartId: string | null;
@@ -31,12 +32,22 @@ export class CartService {
     const customer = await this.customer(userId);
     const cart = await this.prisma.cart.findUnique({
       where: { customerId: customer.id },
-      include: cartInclude(),
+      include: { ...cartInclude(), couponIntent: true },
     });
+    if (!cart) return { data: { cart: buildEmptyCartView() } };
 
-    return {
-      data: { cart: cart ? buildCartView(cart) : buildEmptyCartView() },
-    };
+    const now = new Date();
+    const view = buildCartView(cart, now);
+    // Promotions are always recomputed from the current catalog price and rules.
+    const outcome = await promotionsService.price(this.prisma, {
+      customerId: customer.id,
+      lines: pricingLines(cart),
+      shipping: 0n,
+      shippingKnown: false,
+      couponCode: cart.couponIntent?.code ?? null,
+      now,
+    });
+    return { data: { cart: { ...view, promotion: promotionsService.cartView(outcome) } } };
   }
 
   async addForUser(
