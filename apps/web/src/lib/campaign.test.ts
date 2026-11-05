@@ -4,9 +4,9 @@ import { campaignBadgeFor } from './campaign'
 
 const promo = (o: Partial<PublicPromotion>): PublicPromotion => ({
   id: 'p', name: 'جشنواره', badgeText: null, kind: 'PERCENTAGE', percentBp: 1000, amount: null,
-  startsAt: null, endsAt: null, scheduled: false, targets: [], ...o,
+  startsAt: null, endsAt: null, scheduled: false, scope: { all: true, exceptProductIds: [] }, ...o,
 })
-const product = { id: 'prod-1', category: { id: 'cat-1', name: 'c', slug: 'c' } }
+const product = { id: 'prod-1' }
 
 describe('campaignBadgeFor', () => {
   it('returns nothing without campaigns', () => {
@@ -16,11 +16,11 @@ describe('campaignBadgeFor', () => {
     expect(campaignBadgeFor(product, [promo({ badgeText: 'پیشنهاد ویژه' })])).toEqual({ label: 'پیشنهاد ویژه', scheduled: false })
     expect(campaignBadgeFor(product, [promo({})])?.label).toBe('جشنواره')
   })
-  it('matches exact product and category scopes only', () => {
-    expect(campaignBadgeFor(product, [promo({ targets: [{ type: 'PRODUCT', targetId: 'prod-1' }] })])).not.toBeNull()
-    expect(campaignBadgeFor(product, [promo({ targets: [{ type: 'CATEGORY', targetId: 'cat-1' }] })])).not.toBeNull()
-    expect(campaignBadgeFor(product, [promo({ targets: [{ type: 'PRODUCT', targetId: 'other' }] })])).toBeNull()
-    expect(campaignBadgeFor(product, [promo({ targets: [{ type: 'BRAND', targetId: 'b' }] })])).toBeNull()
+  it('matches only products the server resolved into scope, and honours store-wide exclusions', () => {
+    expect(campaignBadgeFor(product, [promo({ scope: { all: false, productIds: ['prod-1', 'x'] } })])).not.toBeNull()
+    expect(campaignBadgeFor(product, [promo({ scope: { all: false, productIds: ['other'] } })])).toBeNull()
+    expect(campaignBadgeFor(product, [promo({ scope: { all: true, exceptProductIds: ['prod-1'] } })])).toBeNull()
+    expect(campaignBadgeFor(product, [promo({ scope: { all: true, exceptProductIds: ['other'] } })])).not.toBeNull()
   })
   it('prefers a live campaign over an upcoming one and labels scheduled ones', () => {
     expect(campaignBadgeFor(product, [promo({ id: 'a', scheduled: true, name: 'بعدی' }), promo({ id: 'b', name: 'اکنون' })])?.label).toBe('اکنون')

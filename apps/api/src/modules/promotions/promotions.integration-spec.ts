@@ -305,4 +305,37 @@ describe.sequential('Promotions database integration', () => {
     const history = await admin.redemptions({ promotionId: promotion.id, offset: 0, limit: 10 });
     expect(history.total).toBe(2);
   });
+
+  it('public projection resolves brand, subcategory, SKU and exclusion scope server-side and hides private campaigns', async () => {
+    const child = `pchild_${run}`; const childProduct = `ppc_${run}`; const childVariant = `pvc_${run}`;
+    await prisma.category.create({ data: { id: child, name: 'Child', slug: `child-${run}`, parentId: ids.category } });
+    await prisma.product.create({ data: { id: childProduct, name: 'PC', slug: `pc-${run}`, status: 'ACTIVE', categoryId: child } });
+    await prisma.productVariant.create({ data: { id: childVariant, productId: childProduct, sku: `PVC-${run}`, skuKey: canonicalizeSku(`PVC-${run}`), combinationSignature: EMPTY_AXIS_SIGNATURE, title: 'VC', salePrice: 5000n, costPrice: 1n } });
+    try {
+      const auto = (targets: PromotionInput['targets'], o: Partial<PromotionInput> = {}) => makePromo({ mode: 'AUTOMATIC', percentBp: 500, targets, ...o });
+      const byBrand = await auto([{ type: 'BRAND', targetId: ids.brand, exclude: false }]);
+      const byParentCategory = await auto([{ type: 'CATEGORY', targetId: ids.category, exclude: false }]);
+      const partialSku = await auto([{ type: 'VARIANT', targetId: ids.v1, exclude: false }]);
+      const storeWide = await auto([{ type: 'PRODUCT', targetId: childProduct, exclude: true }]);
+      await makePromo({ mode: 'COUPON' });
+      await makePromo({ mode: 'AUTOMATIC', customerId: ids.customers[0]! });
+      const items = await admin.publicCampaigns();
+      const scopeOf = (id: string) => items.find((i) => i.id === id)?.scope;
+      expect(scopeOf(byBrand.promotion.id)).toEqual({ all: false, productIds: [ids.product] });
+      // Subcategory products are covered by a parent-category campaign, exactly as in pricing.
+      expect(scopeOf(byParentCategory.promotion.id)).toMatchObject({ all: false });
+      expect((scopeOf(byParentCategory.promotion.id) as { productIds: string[] }).productIds.sort()).toEqual([ids.product, childProduct].sort());
+      // A SKU campaign covering only one of two sellable variants must not badge the whole product.
+      expect(scopeOf(partialSku.promotion.id)).toBeUndefined();
+      expect(scopeOf(storeWide.promotion.id)).toEqual({ all: true, exceptProductIds: [childProduct] });
+      // Coupon and customer-specific campaigns are never public.
+      expect(items).toHaveLength(3);
+      expect(JSON.stringify(items)).not.toContain(ids.customers[0]!);
+    } finally {
+      await clean();
+      await prisma.productVariant.deleteMany({ where: { id: childVariant } });
+      await prisma.product.deleteMany({ where: { id: childProduct } });
+      await prisma.category.deleteMany({ where: { id: child } });
+    }
+  });
 });

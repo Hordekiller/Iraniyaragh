@@ -5,7 +5,7 @@ import { PromotionsPage } from './PromotionsPage';
 import { ApiClientError } from '@/lib/api/client';
 import { createPromotion, listPromotions, setPromotionActive } from '@/lib/promotions/promotions-api';
 
-const auth = vi.hoisted(() => ({ user: { userId: 'op', permissions: ['settings.manage'] } as { userId: string; permissions: string[] }, isRestoring: false }));
+const auth = vi.hoisted(() => ({ user: { userId: 'op', permissions: ['promotions.read', 'promotions.manage', 'reports.read'] } as { userId: string; permissions: string[] }, isRestoring: false }));
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => auth }));
 vi.mock('@/lib/catalog/catalog-api', () => ({
   listBrands: vi.fn().mockResolvedValue([]), listCategories: vi.fn().mockResolvedValue([]),
@@ -27,17 +27,27 @@ const promo: PromotionAdmin = {
 
 describe('Admin promotions', () => {
   beforeEach(() => {
-    auth.user = { userId: 'op', permissions: ['settings.manage'] };
+    auth.user = { userId: 'op', permissions: ['promotions.read', 'promotions.manage', 'reports.read'] };
     vi.mocked(listPromotions).mockReset().mockResolvedValue({ items: [promo], total: 1 });
     vi.mocked(setPromotionActive).mockReset().mockResolvedValue({ ...promo, isActive: false, version: 5 });
     vi.mocked(createPromotion).mockReset().mockResolvedValue(promo);
   });
 
-  it('is unavailable without the settings permission and never calls the API', () => {
+  it('is unavailable without the promotions permission and never calls the API', () => {
     auth.user = { userId: 'x', permissions: ['orders.read'] };
     render(<PromotionsPage />);
     expect(screen.getByText(/دسترسی مدیریت تخفیف‌ها لازم است/)).toBeInTheDocument();
     expect(listPromotions).not.toHaveBeenCalled();
+  });
+
+  it('read-only operators see campaigns but get no create, edit or toggle controls', async () => {
+    auth.user = { userId: 'ro', permissions: ['promotions.read'] };
+    render(<PromotionsPage />);
+    expect(await screen.findByText('جشنوارهٔ پاییز')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'کمپین جدید' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'ویرایش' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: /غیرفعال‌سازی جشنوارهٔ پاییز/ })).toBeDisabled();
+    expect(screen.queryByRole('tab', { name: 'سابقهٔ استفاده' })).toBeNull();
   });
 
   it('shows persisted campaigns with state and usage, and asks confirmation before an immediate deactivation', async () => {

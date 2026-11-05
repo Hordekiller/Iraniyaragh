@@ -321,7 +321,7 @@ export class PromotionsService {
     return prior === 0;
   }
 
-  private async categoryAncestry(db: Db): Promise<Map<string, string[]>> {
+  async categoryAncestry(db: Db): Promise<Map<string, string[]>> {
     const rows = await db.category.findMany({ select: { id: true, parentId: true } });
     const parent = new Map(rows.map((r) => [r.id, r.parentId]));
     const out = new Map<string, string[]>();

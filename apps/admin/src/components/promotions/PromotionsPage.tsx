@@ -11,7 +11,7 @@ import { StatusChip } from '@/components/ui/StatusChip';
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { ApiAbortError, ApiClientError } from '@/lib/api/client';
-import { canManageSettings, hasPermission } from '@/lib/settings/settings-permissions';
+import { hasPermission } from '@/lib/settings/settings-permissions';
 import {
   createPromotion, generateCoupons, listCoupons, listPromotions, listRedemptions, readPromotionReport, setCouponActive, setPromotionActive, updatePromotion,
 } from '@/lib/promotions/promotions-api';
@@ -42,11 +42,11 @@ export function promotionErrorMessage(error: unknown): string {
 export function PromotionsPage() {
   const auth = useAuth();
   if (auth.isRestoring) return <Typography role="status">در حال بررسی نشست…</Typography>;
-  if (!canManageSettings(auth.user)) return <Alert severity="error">دسترسی مدیریت تخفیف‌ها لازم است.</Alert>;
-  return <PromotionsWorkspace canReport={hasPermission(auth.user, 'reports.read')} />;
+  if (!hasPermission(auth.user, 'promotions.read')) return <Alert severity="error">دسترسی مدیریت تخفیف‌ها لازم است.</Alert>;
+  return <PromotionsWorkspace canReport={hasPermission(auth.user, 'reports.read')} canManage={hasPermission(auth.user, 'promotions.manage')} />;
 }
 
-function PromotionsWorkspace({ canReport }: { canReport: boolean }) {
+function PromotionsWorkspace({ canReport, canManage }: { canReport: boolean; canManage: boolean }) {
   const [tab, setTab] = useState(0);
   return (
     <Box>
@@ -56,14 +56,14 @@ function PromotionsWorkspace({ canReport }: { canReport: boolean }) {
         {canReport && <Tab label="سابقهٔ استفاده" />}
         {canReport && <Tab label="گزارش عملکرد" />}
       </Tabs>
-      {tab === 0 && <CampaignList />}
+      {tab === 0 && <CampaignList canManage={canManage} />}
       {tab === 1 && canReport && <RedemptionHistory />}
       {tab === 2 && canReport && <PerformanceReport />}
     </Box>
   );
 }
 
-function CampaignList() {
+function CampaignList({ canManage }: { canManage: boolean }) {
   const [items, setItems] = useState<PromotionAdmin[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -136,7 +136,7 @@ function CampaignList() {
           {Object.entries(MODE_LABELS).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
         </TextField>
         <Box sx={{ flex: 1 }} />
-        <Button variant="contained" onClick={() => { setFormError(null); setEditing('new'); }}>کمپین جدید</Button>
+        {canManage && <Button variant="contained" onClick={() => { setFormError(null); setEditing('new'); }}>کمپین جدید</Button>}
       </Stack>
       {loading && <Typography role="status">در حال دریافت کمپین‌ها…</Typography>}
       {Boolean(loadError) && <Alert severity="error" action={<Button color="inherit" onClick={() => setRefresh((n) => n + 1)}>تلاش دوباره</Button>}>{promotionErrorMessage(loadError)}</Alert>}
@@ -159,9 +159,9 @@ function CampaignList() {
                   <TableCell><StatusChip label={STATE_LABELS[p.state]} tone={STATE_TONES[p.state]} size="small" /></TableCell>
                   <TableCell>{p.stats.confirmed.toLocaleString('fa-IR')} قطعی · {p.stats.reserved.toLocaleString('fa-IR')} رزرو{p.maxRedemptions !== null ? ` / سقف ${p.maxRedemptions.toLocaleString('fa-IR')}` : ''}</TableCell>
                   <TableCell>{formatIrr(p.stats.salesAttributed.amount)}</TableCell>
-                  <TableCell><Switch checked={p.isActive} onChange={() => setToggle(p)} slotProps={{ input: { 'aria-label': `${p.isActive ? 'غیرفعال‌سازی' : 'فعال‌سازی'} ${p.name}` } }} /></TableCell>
+                  <TableCell><Switch checked={p.isActive} disabled={!canManage} onChange={() => setToggle(p)} slotProps={{ input: { 'aria-label': `${p.isActive ? 'غیرفعال‌سازی' : 'فعال‌سازی'} ${p.name}` } }} /></TableCell>
                   <TableCell>
-                    <Button size="small" onClick={() => { setFormError(null); setEditing(p); }}>ویرایش</Button>
+                    {canManage && <Button size="small" onClick={() => { setFormError(null); setEditing(p); }}>ویرایش</Button>}
                     {p.mode === 'COUPON' && <Button size="small" onClick={() => setCouponsFor(p)}>کدها</Button>}
                   </TableCell>
                 </TableRow>
@@ -184,12 +184,12 @@ function CampaignList() {
         description={toggle?.isActive ? `«${toggle.name}» بلافاصله برای همهٔ مشتریان متوقف می‌شود. سفارش‌های ثبت‌شده تغییر نمی‌کنند.` : `«${toggle?.name ?? ''}» طبق زمان‌بندی خود برای مشتریان فعال می‌شود.`}
         confirmLabel={toggle?.isActive ? 'غیرفعال کن' : 'فعال کن'} loading={busy} onConfirm={() => confirmToggle()}
       />
-      {couponsFor && <CouponsDialog promotion={couponsFor} onClose={() => { setCouponsFor(null); setRefresh((n) => n + 1); }} />}
+      {couponsFor && <CouponsDialog canManage={canManage} promotion={couponsFor} onClose={() => { setCouponsFor(null); setRefresh((n) => n + 1); }} />}
     </Box>
   );
 }
 
-function CouponsDialog({ promotion, onClose }: { promotion: PromotionAdmin; onClose: () => void }) {
+function CouponsDialog({ promotion, onClose, canManage }: { promotion: PromotionAdmin; onClose: () => void; canManage: boolean }) {
   const [items, setItems] = useState<CouponAdmin[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -241,13 +241,13 @@ function CouponsDialog({ promotion, onClose }: { promotion: PromotionAdmin; onCl
       <DialogTitle id="coupons-title">کدهای تخفیف — {promotion.name}</DialogTitle>
       <DialogContent>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        <Stack component="form" onSubmit={(e) => void add(e)} direction={{ xs: 'column', sm: 'row' }} gap={1} sx={{ my: 2 }}>
+        {canManage && <Stack component="form" onSubmit={(e) => void add(e)} direction={{ xs: 'column', sm: 'row' }} gap={1} sx={{ my: 2 }}>
           <TextField size="small" label="کد دلخواه (لاتین/عدد)" value={code} onChange={(e) => setCode(e.target.value)} helperText="خالی = تولید خودکار" />
           <TextField size="small" label="تعداد کد تصادفی" value={count} disabled={Boolean(code.trim())} onChange={(e) => setCount(e.target.value)} />
           <TextField size="small" label="سقف استفادهٔ هر کد" value={maxRedemptions} onChange={(e) => setMaxRedemptions(e.target.value)} helperText="۱ = یک‌بار مصرف" />
           <TextField size="small" label="شناسهٔ مشتری (اختیاری)" value={customerId} onChange={(e) => setCustomerId(e.target.value)} />
           <Button type="submit" variant="contained" disabled={busy}>افزودن</Button>
-        </Stack>
+        </Stack>}
         {loading && <Typography role="status">در حال دریافت…</Typography>}
         {!loading && items.length === 0 && <Alert severity="info">هنوز کدی ثبت نشده است.</Alert>}
         {items.length > 0 && (
@@ -259,7 +259,7 @@ function CouponsDialog({ promotion, onClose }: { promotion: PromotionAdmin; onCl
                   <TableCell dir="ltr" sx={{ fontFamily: 'monospace' }}>{c.code}</TableCell>
                   <TableCell>{c.usedCount.toLocaleString('fa-IR')}{c.maxRedemptions !== null ? ` / ${c.maxRedemptions.toLocaleString('fa-IR')}` : ''}</TableCell>
                   <TableCell>{c.customerId ?? '—'}</TableCell>
-                  <TableCell><Switch checked={c.isActive} disabled={busy} onChange={() => void flip(c)} slotProps={{ input: { 'aria-label': `فعال بودن کد ${c.code}` } }} /></TableCell>
+                  <TableCell><Switch checked={c.isActive} disabled={busy || !canManage} onChange={() => void flip(c)} slotProps={{ input: { 'aria-label': `فعال بودن کد ${c.code}` } }} /></TableCell>
                 </TableRow>
               ))}
             </TableBody>

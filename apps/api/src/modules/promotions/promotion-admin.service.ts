@@ -15,7 +15,8 @@ import { PrismaService } from '../../database/prisma.service';
 import { advisoryLockIdKey } from '../../common/advisory-lock';
 import { withSerializableRetry } from '../../common/serializable-retry';
 import { AuditLogService } from '../audit/audit-log.service';
-import { COUPON_CODE_PATTERN, normalizeCouponCode } from './promotion-engine';
+import { COUPON_CODE_PATTERN, lineEligible, normalizeCouponCode } from './promotion-engine';
+import { promotionsService } from './promotions.service';
 import { promotionState, validatePromotionInput, type ValidPromotion } from './promotion-validation';
 
 const hash = (v: string) => createHash('sha256').update(v).digest('hex');
@@ -31,6 +32,12 @@ function couponView(c: Prisma.CouponGetPayload<object>): CouponAdmin {
     maxRedemptions: c.maxRedemptions, usedCount: c.usedCount, customerId: c.customerId, createdAt: c.createdAt.toISOString(),
   };
 }
+
+const PUBLIC_CACHE_MS = 15_000;
+const PUBLIC_SCOPE_LIMIT = 500;
+let publicCache: { at: number; value: PublicPromotion[] } | null = null;
+/** Test hook: campaign changes are visible to the public projection immediately. */
+export function resetPublicCampaignCache(): void { publicCache = null; }
 
 @Injectable()
 export class PromotionAdminService {
@@ -72,24 +79,56 @@ export class PromotionAdminService {
     return rows.map((r) => ({ promotionId: r.id, name: r.name, state: promotionState(r, now), stats: stats.get(r.id) ?? emptyStats() }));
   }
 
+  /**
+   * Public, display-only campaign projection. Scope is resolved here against the live catalog with the same
+   * eligibility rule the pricing engine uses, so a badge never claims more than checkout would honour.
+   * Customer-specific, coupon and first-purchase campaigns are never exposed. Cached briefly because this is
+   * an unauthenticated read; pricing and checkout always re-evaluate from the database.
+   */
   async publicCampaigns(): Promise<PublicPromotion[]> {
-    const now = new Date();
+    const nowMs = Date.now();
+    if (publicCache && nowMs - publicCache.at < PUBLIC_CACHE_MS) return publicCache.value;
+    const now = new Date(nowMs);
     const horizon = new Date(now.getTime() + 14 * 24 * 3_600_000);
-    const rows = await this.prisma.promotion.findMany({
+    const rows = (await this.prisma.promotion.findMany({
       where: {
         isActive: true, mode: 'AUTOMATIC', customerId: null, firstPurchaseOnly: false,
         AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: now } }] }, { OR: [{ startsAt: null }, { startsAt: { lte: horizon } }] }],
       },
       include: { targets: true }, orderBy: [{ priority: 'asc' }, { id: 'asc' }], take: 50,
-    });
-    return rows
-      .filter((r) => r.maxRedemptions === null || r.usedCount < r.maxRedemptions)
-      .map((r) => ({
-        id: r.id, name: r.name, badgeText: r.badgeText, kind: r.kind, percentBp: r.percentBp, amount: r.amount?.toString() ?? null,
-        startsAt: r.startsAt?.toISOString() ?? null, endsAt: r.endsAt?.toISOString() ?? null,
-        scheduled: !!r.startsAt && r.startsAt > now,
-        targets: r.targets.filter((t) => !t.exclude).map((t) => ({ type: t.type, targetId: t.targetId })),
-      }));
+    })).filter((r) => r.maxRedemptions === null || r.usedCount < r.maxRedemptions);
+    let value: PublicPromotion[] = [];
+    if (rows.length > 0) {
+      const sellable = { isActive: true, status: 'ACTIVE' as const };
+      const [products, ancestry] = await Promise.all([
+        this.prisma.product.findMany({
+          where: { status: 'ACTIVE', variants: { some: sellable } },
+          select: { id: true, brandId: true, categoryId: true, variants: { where: sellable, select: { id: true } } },
+        }),
+        promotionsService.categoryAncestry(this.prisma),
+      ]);
+      for (const r of rows) {
+        const targets = r.targets.map((t) => ({ type: t.type, targetId: t.targetId, exclude: t.exclude }));
+        const passing = (p: (typeof products)[number]) => p.variants.every((v) => lineEligible({
+          variantId: v.id, productId: p.id, categoryIds: p.categoryId ? (ancestry.get(p.categoryId) ?? [p.categoryId]) : [],
+          brandId: p.brandId, unitPrice: 0n, quantity: 1,
+        }, targets));
+        const storeWide = !targets.some((t) => !t.exclude);
+        const scope: PublicPromotion['scope'] = storeWide
+          ? { all: true, exceptProductIds: products.filter((p) => !passing(p)).map((p) => p.id) }
+          : { all: false, productIds: products.filter(passing).map((p) => p.id) };
+        const size = scope.all ? scope.exceptProductIds.length : scope.productIds.length;
+        // Nothing to show, or too large to ship to every visitor: omit rather than guess.
+        if (size > PUBLIC_SCOPE_LIMIT || (!scope.all && size === 0)) continue;
+        value.push({
+          id: r.id, name: r.name, badgeText: r.badgeText, kind: r.kind, percentBp: r.percentBp, amount: r.amount?.toString() ?? null,
+          startsAt: r.startsAt?.toISOString() ?? null, endsAt: r.endsAt?.toISOString() ?? null,
+          scheduled: !!r.startsAt && r.startsAt > now, scope,
+        });
+      }
+    }
+    publicCache = { at: nowMs, value };
+    return value;
   }
 
   async create(actorId: string, requestId: string, input: PromotionInput, key: string): Promise<PromotionAdmin> {
@@ -299,7 +338,7 @@ export class PromotionAdminService {
         await tx.promotionCommand.create({ data: { actorId, scope: scopeKey, keyHash, payloadHash, response: response as unknown as Prisma.InputJsonValue } });
         return response;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }),
-    });
+    }).finally(resetPublicCampaignCache);
   }
 }
 

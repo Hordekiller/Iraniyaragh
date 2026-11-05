@@ -145,7 +145,10 @@ export type PublicPromotion = {
   startsAt: string | null;
   endsAt: string | null;
   scheduled: boolean;
-  /** Include targets only; empty means the campaign applies store-wide. */
-  targets: { type: PromotionTargetType; targetId: string }[];
+  /**
+   * Server-resolved product scope (brand, category incl. subcategories, SKU and exclusions already applied;
+   * a product is listed only when every sellable variant of it is eligible). Internal rules are never exposed.
+   */
+  scope: { all: true; exceptProductIds: string[] } | { all: false; productIds: string[] };
 };
 export type PublicPromotionListResponse = ApiSuccess<{ items: PublicPromotion[] }>;

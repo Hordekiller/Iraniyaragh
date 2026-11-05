@@ -30,7 +30,7 @@ export class PromotionAdminController {
   constructor(@Inject(PromotionAdminService) private readonly promotions: PromotionAdminService) {}
 
   @Get()
-  @RequirePermission('settings.manage')
+  @RequirePermission('promotions.read')
   @ApiOperation({ summary: 'List promotions with state and persisted statistics' })
   @ApiOkResponse({ description: 'Promotion page.' })
   async list(@Query('q') q?: string, @Query('state') state?: string, @Query('mode') mode?: string, @Query('offset') offset?: string, @Query('limit') limit?: string): Promise<PromotionListResponse> {
@@ -54,7 +54,7 @@ export class PromotionAdminController {
   }
 
   @Get('coupons/by-promotion/:id')
-  @RequirePermission('settings.manage')
+  @RequirePermission('promotions.read')
   @ApiOperation({ summary: 'List coupon codes of a promotion' })
   @ApiOkResponse({ description: 'Coupon page.' })
   async coupons(@Param('id') id: string, @Query('offset') offset?: string, @Query('limit') limit?: string): Promise<CouponListResponse> {
@@ -63,7 +63,7 @@ export class PromotionAdminController {
   }
 
   @Get(':id')
-  @RequirePermission('settings.manage')
+  @RequirePermission('promotions.read')
   @ApiOperation({ summary: 'Read one promotion' })
   @ApiOkResponse({ description: 'Promotion.' })
   async get(@Param('id') id: string): Promise<PromotionResponse> {
@@ -71,7 +71,7 @@ export class PromotionAdminController {
   }
 
   @Post()
-  @RequirePermission('settings.manage')
+  @RequirePermission('promotions.manage')
   @RequireFreshAuthentication('STAFF_MFA')
   @idem()
   @ApiOperation({ summary: 'Create a promotion (idempotent, audited)' })
@@ -80,7 +80,7 @@ export class PromotionAdminController {
   }
 
   @Put(':id')
-  @RequirePermission('settings.manage')
+  @RequirePermission('promotions.manage')
   @RequireFreshAuthentication('STAFF_MFA')
   @idem()
   @ApiOperation({ summary: 'Update a promotion with optimistic versioning' })
@@ -89,7 +89,7 @@ export class PromotionAdminController {
   }
 
   @Put(':id/active')
-  @RequirePermission('settings.manage')
+  @RequirePermission('promotions.manage')
   @RequireFreshAuthentication('STAFF_MFA')
   @idem()
   @ApiOperation({ summary: 'Immediately enable or disable a promotion' })
@@ -98,7 +98,7 @@ export class PromotionAdminController {
   }
 
   @Post(':id/coupons')
-  @RequirePermission('settings.manage')
+  @RequirePermission('promotions.manage')
   @RequireFreshAuthentication('STAFF_MFA')
   @idem()
   @ApiOperation({ summary: 'Add an explicit coupon code or generate random codes' })
@@ -107,7 +107,7 @@ export class PromotionAdminController {
   }
 
   @Put('coupons/:couponId/active')
-  @RequirePermission('settings.manage')
+  @RequirePermission('promotions.manage')
   @RequireFreshAuthentication('STAFF_MFA')
   @idem()
   @ApiOperation({ summary: 'Enable or disable one coupon code' })

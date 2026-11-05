@@ -81,7 +81,7 @@ export const navigation: NavigationGroup[] = [
   {
     label: 'بازاریابی',
     items: [
-      { label: 'تخفیف‌ها و کمپین‌ها', href: '/marketing/promotions', icon: BadgePercent, permission: 'settings.manage' },
+      { label: 'تخفیف‌ها و کمپین‌ها', href: '/marketing/promotions', icon: BadgePercent, permission: 'promotions.read' },
     ],
   },
   {
