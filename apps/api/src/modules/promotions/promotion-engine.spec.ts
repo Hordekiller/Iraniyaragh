@@ -64,4 +64,26 @@ describe('promotion engine', () => {
   it('normalizes coupon codes', () => {
     expect(normalizeCouponCode(' ab-۱۲ cd_٣ ')).toBe('AB12CD3');
   });
+  it('handles zero-priced lines, a single unit and integer boundaries without negative or float amounts', () => {
+    const free = evaluatePromotions({ lines: [line('z', 0, 3)], shipping: 500n, candidates: [promo({ kind: 'PERCENTAGE', percentBp: 5000 })] });
+    expect(free.totalDiscount).toBe(0n);
+    const one = evaluatePromotions({ lines: [line('o', 1, 1)], shipping: 0n, candidates: [promo({ percentBp: 4999 })] });
+    expect(one.totalDiscount).toBe(0n); // 0.4999 rounds half-up to 0, never to a fractional rial
+    const half = evaluatePromotions({ lines: [line('o', 1, 1)], shipping: 0n, candidates: [promo({ percentBp: 5000 })] });
+    expect(half.totalDiscount).toBe(1n);
+    const huge = 9_000_000_000_000_000n;
+    const big = evaluatePromotions({ lines: [{ ...line('b', 1, 1), unitPrice: huge }], shipping: 0n, candidates: [promo({ percentBp: 10000 })] });
+    expect(big.totalDiscount).toBe(huge);
+    expect(typeof big.totalDiscount).toBe('bigint');
+  });
+  it('allocates rounding residue so per-line discounts always sum to the total', () => {
+    const three = [line('a', 333, 1), line('b', 333, 1), line('c', 334, 1)];
+    const r = evaluatePromotions({ lines: three, shipping: 0n, candidates: [promo({ kind: 'FIXED_CART', amount: 100n })] });
+    expect(r.totalDiscount).toBe(100n);
+    expect(r.applied[0]!.allocations.reduce((sum, a) => sum + a.amount, 0n)).toBe(100n);
+  });
+  it('treats lookalike Unicode separators and digits as the same code', () => {
+    expect(normalizeCouponCode('save\u200c١٠')).toBe(normalizeCouponCode('SAVE10'));
+    expect(normalizeCouponCode('SAVE-10')).toBe('SAVE10');
+  });
 });

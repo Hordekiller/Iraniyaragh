@@ -4,7 +4,8 @@ import type { CartPromotionView } from '@iranyaragh/contracts'
 import { useCart } from '../../state/cart-context'
 import { commerceErrorMessage } from '../../services/commerce/errors'
 
-const CODE_PATTERN = /^[A-Za-z0-9۰-۹٠-٩ _-]{1,64}$/
+// Shape check only; the server normalizes digits, case and invisible format characters and decides validity.
+const CODE_PATTERN = /^[\p{L}\p{N}\p{Cf} _-]{1,64}$/u
 
 /** Coupon entry; the server alone decides eligibility and the amounts shown. */
 export function CouponBox({ authenticated, promotion }: { authenticated: boolean; promotion?: CartPromotionView }) {

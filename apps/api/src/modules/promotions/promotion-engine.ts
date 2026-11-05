@@ -180,7 +180,8 @@ export function normalizeCouponCode(raw: string): string {
   const latin = raw
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
-  return latin.normalize('NFKC').toUpperCase().replace(/[\s\-_]/g, '');
+  // Format characters (ZWNJ, RTL/LTR marks, BOM) are routinely inserted by Persian keyboards and pasted text.
+  return latin.normalize('NFKC').toUpperCase().replace(/[\p{Cf}\s\-_]/gu, '');
 }
 
 export const COUPON_CODE_PATTERN = /^[A-Z0-9]{4,40}$/;
