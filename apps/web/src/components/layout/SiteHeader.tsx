@@ -85,6 +85,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
             )}
             <Link
               to={ROUTES.cart}
+              data-help="cart-link"
               aria-label={`سبد خرید، ${toPersianDigits(itemCount)} کالا`}
               className="relative w-11 h-11 rounded-full border border-slate-200 bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-white hover:border-[#FF4D00]/30 hover:text-[#FF4D00] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
             >

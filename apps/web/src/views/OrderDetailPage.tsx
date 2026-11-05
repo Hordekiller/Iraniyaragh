@@ -149,6 +149,7 @@ function OrderDetailContents() {
           {order.status === 'PENDING_PAYMENT' && (
             <Link
               to={ROUTES.payment(order.id)}
+              data-help="order-check-payment"
               className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-black text-slate-950"
             >
               بررسی وضعیت پرداخت
@@ -158,7 +159,7 @@ function OrderDetailContents() {
       </div>
 
       {order.status === 'PENDING_PAYMENT' && <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4" aria-label="لغو سفارش">
-        {!confirmCancel ? <button type="button" onClick={() => setConfirmCancel(true)} className="text-sm font-bold text-red-700 underline">لغو سفارش پرداخت‌نشده</button> : <div>
+        {!confirmCancel ? <button type="button" data-help="order-cancel" onClick={() => setConfirmCancel(true)} className="text-sm font-bold text-red-700 underline">لغو سفارش پرداخت‌نشده</button> : <div>
           <p className="text-sm leading-7 text-slate-700">این سفارش را لغو می‌کنید؟ موجودی رزروشده آزاد می‌شود. اگر پرداختی در درگاه انجام داده‌اید، پیش از لغو وضعیت پرداخت را بررسی کنید؛ لغو سفارش به معنی استرداد وجه نیست.</p>
           <div className="mt-3 flex gap-3">
             <button type="button" disabled={cancelling} onClick={() => void cancelOrder()} className="rounded-xl bg-red-700 px-4 py-2 text-sm font-bold text-white">{cancelling ? 'در حال بررسی لغو…' : 'تأیید لغو سفارش'}</button>

@@ -1342,6 +1342,15 @@ model HomepageBannerConfig {
   updatedAt DateTime @updatedAt
 }
 
+/// Admin on/off switches for optional storefront features (e.g. the customer help assistant).
+/// A missing row means the feature's documented default; no customer data is stored.
+model StorefrontFeatureFlag {
+  key       String   @id @db.VarChar(64)
+  enabled   Boolean
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+}
+
 /// Idempotency evidence for settings.manage banner writes; no customer data.
 model HomepageBannerCommand {
   id          String   @id @default(cuid())

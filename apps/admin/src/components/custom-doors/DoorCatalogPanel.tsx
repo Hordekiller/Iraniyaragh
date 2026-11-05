@@ -1,4 +1,5 @@
 "use client";
+import { DoorImagePicker } from "./DoorImagePicker";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -15,13 +16,13 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import type {
-  AdminProductMediaPickerItem,
-  DoorCatalog,
-  DoorDepositPolicy,
-  DoorMaterial,
-  DoorModel,
-  DoorModelConfiguration,
+import {
+  DOOR_GLASS_SAMPLES, doorGlassSample, type DoorGlassSampleKey,
+  type DoorCatalog,
+  type DoorDepositPolicy,
+  type DoorMaterial,
+  type DoorModel,
+  type DoorModelConfiguration,
 } from "@iranyaragh/contracts";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -30,10 +31,8 @@ import {
   doorAdminError,
   doorCanonicalNumber,
 } from "@/lib/custom-doors/api";
-import { listProductMediaPicker } from "@/lib/catalog/media-api";
 import { apiFetch } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/auth/token-store";
-import { listProducts } from "@/lib/catalog/catalog-api";
 
 const freshModel = (): Omit<DoorModel, "id" | "version" | "imageUrl"> => ({
   code: "",
@@ -384,35 +383,12 @@ function DoorModelEditor({
 }) {
   const [model, setModel] = useState(() => initial ?? freshModel());
   const [busy, setBusy] = useState(false);
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
-  const [media, setMedia] = useState<AdminProductMediaPickerItem[]>([]);
-  const [mediaError, setMediaError] = useState("");
-  const [productSearch, setProductSearch] = useState("");
-  const [productId, setProductId] = useState("");
   const cfg = model.configuration;
   const patch = (value: Partial<DoorModelConfiguration>) =>
     setModel((m) => ({
       ...m,
       configuration: { ...m.configuration, ...value },
     }));
-  async function searchMedia() {
-    try {
-      const result = await listProducts({ search: productSearch, perPage: 20 });
-      setProducts(result.items);
-      setMediaError("");
-    } catch (e) {
-      setMediaError(doorAdminError(e));
-    }
-  }
-  async function productMedia(id: string) {
-    setProductId(id);
-    try {
-      setMedia(await listProductMediaPicker(id));
-      setMediaError("");
-    } catch (e) {
-      setMediaError(doorAdminError(e));
-    }
-  }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
@@ -966,52 +942,7 @@ function DoorModelEditor({
             onChange={(deposit) => patch({ deposit })}
           />
           <Divider />
-          <Typography variant="h6">تصویر واقعی تأییدشده</Typography>
-          <TextField
-            label="جستجوی کالای دارای تصویر"
-            value={productSearch}
-            onChange={(e) => setProductSearch(e.target.value)}
-          />
-          <Button onClick={() => void searchMedia()}>
-            جستجو در رسانه‌های موجود
-          </Button>
-          <TextField
-            select
-            label="کالای مرجع تصویر"
-            value={productId}
-            onChange={(e) => void productMedia(e.target.value)}
-          >
-            {products.map((p) => (
-              <MenuItem key={p.id} value={p.id}>
-                {p.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          {mediaError && <Alert severity="error">{mediaError}</Alert>}
-          <TextField
-            select
-            label="تصویر مدل"
-            value={model.imageMediaId ?? ""}
-            onChange={(e) =>
-              setModel((m) => ({ ...m, imageMediaId: e.target.value || null }))
-            }
-          >
-            <MenuItem value="">بدون تصویر — نمایش جای‌نگهدار</MenuItem>
-            {model.imageMediaId &&
-              !media.some((m) => m.id === model.imageMediaId) && (
-                <MenuItem value={model.imageMediaId}>تصویر فعلی مدل</MenuItem>
-              )}
-            {media.map((m) => (
-              <MenuItem key={m.id} value={m.id}>
-                {m.alt || m.id}
-              </MenuItem>
-            ))}
-          </TextField>
-          {productId && (
-            <Button component={Link} href={`/catalog/${productId}`}>
-              بارگذاری یا مدیریت تصویر در بخش رسانه‌های کالا
-            </Button>
-          )}
+          <DoorImagePicker label="تصویر مدل درب" value={model.imageMediaId} onChange={id => setModel(current => ({ ...current, imageMediaId: id }))} imageUrl={initial?.imageUrl} initialValue={initial?.imageMediaId} originalWidth={initial?.imageOriginalWidth} originalHeight={initial?.imageOriginalHeight} />
           <Button
             type="submit"
             variant="contained"
@@ -1196,6 +1127,12 @@ function DoorMaterialEditor({
               onChange={(v) => patch({ thicknessMm: v ? Number(v) : null })}
             />
           </Stack>
+          <DoorImagePicker label="تصویر شیشه" square value={cfg.imageMediaId ?? null} onChange={id => patch({ imageMediaId: id })} imageUrl={initial?.imageUrl} initialValue={initial?.configuration.imageMediaId} originalWidth={initial?.imageOriginalWidth} originalHeight={initial?.imageOriginalHeight} />
+          <TextField select label="تصویر آزمایشی رنگ" value={cfg.sampleKey === null ? '' : cfg.sampleKey ?? doorGlassSample(material.code)?.key ?? ''} onChange={event => patch({ sampleKey: (event.target.value || null) as DoorGlassSampleKey | null })} helperText="نمونه‌های ساخته‌شده با ابعاد ۲۴۰ × ۲۴۰ پیکسل؛ عکس کالای واقعی نیستند. تصویر ثبت‌شده فروشگاه بر این نمونه اولویت دارد. انتخاب تصویر قیمت را تغییر نمی‌دهد.">
+            <MenuItem value="">بدون تصویر</MenuItem>
+            {DOOR_GLASS_SAMPLES.map(sample => <MenuItem key={sample.key} value={sample.key}>{sample.title}</MenuItem>)}
+          </TextField>
+          {doorGlassSample(material.code, cfg.sampleKey) && <Box component="img" src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/door-glass-samples/${doorGlassSample(material.code, cfg.sampleKey)!.key}.webp`} alt="نمونه آزمایشی رنگ شیشه" width={160} height={160} sx={{ objectFit: 'cover', borderRadius: 2, maxWidth: '100%' }} />}
           <TextField
             multiline
             rows={3}
