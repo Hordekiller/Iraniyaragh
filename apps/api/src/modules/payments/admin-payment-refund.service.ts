@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { promotionsService } from '../promotions/promotions.service';
 import {
   ConflictException,
   Inject,
@@ -169,6 +170,10 @@ export class AdminPaymentRefundService {
             await tx.payment.update({
               where: { id: payment.id },
               data: { refundedAmount: refundedTotal },
+            });
+            await promotionsService.applyRefund(tx, payment.orderId, {
+              paidTotal: payment.amount,
+              refundedTotal,
             });
             if (statusChanges) {
               await recordTransition(tx, 'payment', payment.id, payment.status, nextStatus, {

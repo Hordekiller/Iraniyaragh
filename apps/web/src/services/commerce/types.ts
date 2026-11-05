@@ -8,6 +8,7 @@ import type {
   OrderDetail,
   PaymentInitiation,
   OrderCommandResult,
+  PublicPromotion,
 } from '@iranyaragh/contracts'
 
 export type CheckoutPreview = CheckoutPreviewResponse['data']
@@ -35,6 +36,10 @@ export interface CommerceApi {
     idempotencyKey: string,
   ): Promise<CartView>
   mergeGuestCart(idempotencyKey: string): Promise<CartMergeResult>
+  /** Server validates eligibility; rejects with a precise COUPON_* error code. */
+  applyCoupon(code: string): Promise<CartView>
+  removeCoupon(): Promise<CartView>
+  getPublicPromotions(): Promise<PublicPromotion[]>
   previewCheckout(address: CheckoutAddress): Promise<CheckoutPreview>
   createCheckout(
     address: CheckoutAddress,

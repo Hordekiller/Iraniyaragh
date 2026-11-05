@@ -51,6 +51,7 @@ function setup(overrides: {
     orderTransition: {
       create: vi.fn().mockResolvedValue({ id: 'transition-1' }),
     },
+    promotionRedemption: { findMany: vi.fn().mockResolvedValue([]), updateMany: vi.fn().mockResolvedValue({ count: 0 }), update: vi.fn(), count: vi.fn().mockResolvedValue(0) },
     outboxEvent: { create: vi.fn().mockResolvedValue({ id: 'outbox-1' }) },
     auditLog: { create: vi.fn().mockResolvedValue({ id: 'audit-1' }) },
   };

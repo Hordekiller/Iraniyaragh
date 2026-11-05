@@ -22,6 +22,7 @@ import { validateEnvironment } from './config/environment';
 import { RedisModule } from './modules/redis/redis.module';
 import { MediaModule } from './modules/media/media.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { PromotionsModule } from './modules/promotions/promotions.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
 
 @Module({
@@ -42,6 +43,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     MediaModule,
     InventoryModule,
     OrdersModule,
+    PromotionsModule,
     CustomDoorOrdersModule,
     PaymentsModule,
     CustomersModule,

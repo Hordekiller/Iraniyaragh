@@ -8,6 +8,7 @@ import type {
   CustomerOrderDetailResponse,
   CustomerOrderListResponse,
   PaymentInitiationResponse,
+  PublicPromotionListResponse,
 } from '@iranyaragh/contracts'
 import { AuthApiError } from '../../lib/auth/errors'
 import { jsonRequest } from '../../lib/auth/request'
@@ -111,6 +112,27 @@ export class CommerceHttpClient implements CommerceApi {
       },
     )
     return response.data
+  }
+
+  async applyCoupon(code: string) {
+    const response = await this.customerRequest<CartResponse['data']>('/api/v1/cart/coupon', {
+      baseUrl: this.baseUrl, method: 'PUT', credentials: 'include', json: { code },
+    })
+    return response.data.cart
+  }
+
+  async removeCoupon() {
+    const response = await this.customerRequest<CartResponse['data']>('/api/v1/cart/coupon', {
+      baseUrl: this.baseUrl, method: 'DELETE', credentials: 'include',
+    })
+    return response.data.cart
+  }
+
+  async getPublicPromotions() {
+    const response = await this.publicRequest<PublicPromotionListResponse['data']>('/api/v1/promotions/public', {
+      baseUrl: this.baseUrl, credentials: 'omit',
+    })
+    return response.data.items
   }
 
   async previewCheckout(address: CheckoutAddress) {
