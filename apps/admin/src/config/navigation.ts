@@ -135,6 +135,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'روش هزینهٔ انبار', href: '/settings/inventory-cost', icon: Warehouse, permission: 'settings.manage' },
       { label: 'چیدمان صفحهٔ اصلی', href: '/settings/homepage', icon: Settings2, permission: 'settings.manage' },
       { label: 'بنرهای تبلیغاتی', href: '/settings/banners', icon: Settings2, permission: 'settings.manage' },
+      { label: 'راهنمای تعاملی مشتری', href: '/settings/customer-helper', icon: Settings2, permission: 'settings.manage' },
       { label: 'نشست‌ها و دستگاه‌ها', href: '/settings/sessions', icon: MonitorSmartphone },
       { label: 'تنظیمات', href: '/settings', icon: Settings2, permission: 'settings.manage' },
     ],

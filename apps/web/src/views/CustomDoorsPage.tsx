@@ -37,6 +37,7 @@ import {
   saveDoorSubmission,
 } from "../services/custom-doors/api";
 import { DoorSummary } from "../components/custom-doors/DoorSummary";
+import { HelpHint } from "../components/help/HelpHint";
 
 const inputStyle =
   "mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100";
@@ -486,11 +487,12 @@ function Configurator() {
             >
               {stage === 0 && (
                 <div className="rounded-3xl border border-slate-200 bg-white p-5 md:p-7">
-                  <h3 className="text-lg font-black">نوع درب را انتخاب کنید</h3>
+                  <h3 className="text-lg font-black">نوع درب را انتخاب کنید <HelpHint target="door-type" label="انتخاب نوع و مدل درب" /></h3>
                   <div
                     className="mt-4 grid grid-cols-2 gap-3"
                     role="group"
                     aria-label="نوع درب"
+                    data-help="door-type"
                   >
                     {(["FORMLEX", "DECOFIX"] as const).filter(doorType => catalog.models.some(model => model.type === doorType)).map((t) => (
                       <button
@@ -504,7 +506,7 @@ function Configurator() {
                       </button>
                     ))}
                   </div>
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2" data-help="door-models">
                     {catalog.models
                       .filter((m) => m.type === type)
                       .map((m) => (
@@ -635,10 +637,13 @@ function Configurator() {
                       ["height", "ارتفاع (میلی‌متر)"],
                       ["quantity", "تعداد"],
                     ].map(([key, title]) => (
-                      <label key={key} className="text-sm font-bold">
+                      <div key={key} className="relative">
+                      <span className="absolute end-0 top-0"><HelpHint target={`door-${key}`} label={title} /></span>
+                      <label className="text-sm font-bold">
                         {title}
                         <input
                           required
+                          data-help={`door-${key}`}
                           inputMode="numeric"
                           dir="ltr"
                           value={entry[key as "width" | "height" | "quantity"]}
@@ -649,6 +654,7 @@ function Configurator() {
                           maxLength={12}
                         />
                       </label>
+                      </div>
                     ))}
                   </div>
                   <p className="mt-3 text-xs leading-7 text-slate-600">
@@ -671,6 +677,7 @@ function Configurator() {
                   <div className="mt-5 flex flex-wrap gap-2">
                     <button
                       type="submit"
+                      data-help="door-add"
                       className={`${doorButton} bg-slate-950 text-white`}
                     >
                       <Plus size={17} aria-hidden="true" />
@@ -728,6 +735,7 @@ function Configurator() {
                     <div className="mt-5 flex flex-wrap gap-2">
                       <button
                         type="button"
+                        data-help="door-submit"
                         onClick={() => void submit(false)}
                         className={`${doorButton} bg-orange-700 text-white`}
                       >
@@ -737,6 +745,7 @@ function Configurator() {
                       </button>
                       <button
                         type="button"
+                        data-help="door-save-draft"
                         onClick={() => void submit(true)}
                         className={doorButton}
                       >
@@ -830,6 +839,7 @@ function Configurator() {
               </ol>
               <button
                 type="button"
+                data-help="door-review"
                 disabled={busy || uncertain || !items.length}
                 onClick={() => void review()}
                 className={`${doorButton} mt-5 w-full bg-slate-950 text-white`}
