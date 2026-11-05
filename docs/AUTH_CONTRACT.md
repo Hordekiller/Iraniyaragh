@@ -109,6 +109,25 @@ __Host-iranyaragh_csrf=<opaque 256-bit value>;
   Secure; SameSite=Strict; Path=/
 ```
 
+Staff sessions use a separate cookie pair, because Admin is served from the
+storefront origin (`/admin`) and one shared pair let either side overwrite or
+clear the other's session:
+
+```text
+__Host-iranyaragh_staff_refresh / __Host-iranyaragh_staff_csrf   (development: iranyaragh_staff_refresh / iranyaragh_staff_csrf)
+```
+
+The Admin client sends `X-Auth-Realm: staff` on every API call; `refresh` and
+`logout` then read, rotate and clear only the staff pair and only rotate
+`STAFF_MFA` sessions. Without the header the customer pair and `CUSTOMER_OTP`
+sessions are used. A wrong-realm refresh is rejected without revoking anything.
+
+Refresh rotation retires the previous `Session` row but an access token signed
+for it stays valid until its own expiry while its token family still has a live
+row (the principal resolves to that live row). Logout, replay detection,
+inactivity/expiry and credential change leave no live row, so those tokens stop
+working immediately.
+
 No `Domain` attribute is allowed. `Max-Age` cannot exceed the session's absolute
 expiry. Cookie clearing repeats the exact name/path/security attributes.
 

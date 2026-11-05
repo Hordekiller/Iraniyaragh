@@ -28,6 +28,16 @@ export function createAuthenticatedRequest(
     sharedRefresh.version = identity.version
     return pending
   }
+  /**
+   * A refresh that did not complete while the live session still stands (network
+   * failure, timeout, rate limit, busy cross-tab lock) is not proof the session
+   * ended, so it must not be reported as one. Only a refresh that actually ended
+   * the session (store expired/cleared) surfaces the original 401.
+   */
+  const unrecoveredFailure = (original: AuthApiError): AuthApiError =>
+    store.isAuthenticated()
+      ? new AuthApiError({ code: 'NETWORK_ERROR', statusCode: 0, message: 'The session could not be refreshed right now. Try again.' })
+      : original
   const request = async <T>(path: string, options: Omit<RequestOptions, 'accessToken'> = {}): Promise<ApiSuccess<T>> => {
     const identity = boundIdentity ?? currentIdentity()
     const assertIdentity = () => {
@@ -49,7 +59,7 @@ export function createAuthenticatedRequest(
     } catch (error) {
       if (!(error instanceof AuthApiError) || error.statusCode !== 401) throw error
       assertIdentity()
-      if (!(await refreshOnce(identity))) throw error
+      if (!(await refreshOnce(identity))) throw unrecoveredFailure(error)
       return send()
     }
   }
@@ -89,7 +99,7 @@ export function createAuthenticatedRequest(
     } catch (error) {
       if (!(error instanceof AuthApiError) || error.statusCode !== 401) throw error
       assertIdentity()
-      if (!(await refreshOnce(identity))) throw error
+      if (!(await refreshOnce(identity))) throw unrecoveredFailure(error)
       return send()
     }
   }

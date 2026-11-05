@@ -5,7 +5,7 @@ import { AUTH_RUNTIME_CONFIG, type AuthRuntimeConfig } from './auth.config';
 import { AuthSessionService, type AuthSessionSummary } from './auth-session.service';
 import { CurrentPrincipal, RequireFreshAuthentication, RequireLiveSession } from './auth.guard';
 import type { AuthPrincipalContext } from './auth-principal.service';
-import { clearAuthCookies } from './auth-http';
+import { clearAuthCookies, cookieSpecForRealm } from './auth-http';
 
 const MAX_SESSION_ID_LENGTH = 128;
 
@@ -44,7 +44,7 @@ export class SessionManagementController {
     }
 
     if (sessionId === principal.sessionId) {
-      this.clearAuthCookies(response);
+      this.clearAuthCookies(response, principal);
     }
     return { data: {} };
   }
@@ -59,7 +59,7 @@ export class SessionManagementController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<EmptyResponse> {
     await this.sessions.revokeAllSessions(principal.userId);
-    this.clearAuthCookies(response);
+    this.clearAuthCookies(response, principal);
     return { data: {} };
   }
 
@@ -75,7 +75,8 @@ export class SessionManagementController {
     };
   }
 
-  private clearAuthCookies(response: Response): void {
-    clearAuthCookies(response, this.config.cookies);
+  private clearAuthCookies(response: Response, principal: AuthPrincipalContext): void {
+    const realm = principal.authenticationLevel === 'STAFF_MFA' ? 'staff' : 'customer';
+    clearAuthCookies(response, cookieSpecForRealm(this.config, realm));
   }
 }

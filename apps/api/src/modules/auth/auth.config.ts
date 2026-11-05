@@ -29,6 +29,26 @@ const PRODUCTION_COOKIES: AuthCookieSpec = Object.freeze({
   path: '/',
 });
 
+// Staff sessions use their own cookie names. Admin is served from the same
+// origin as the storefront (/admin), so sharing one cookie pair let a customer
+// login overwrite a staff refresh cookie (and any failed refresh on one side
+// clear the other's cookies), which surfaced as "session is invalid".
+const PRODUCTION_STAFF_COOKIES: AuthCookieSpec = Object.freeze({
+  refreshName: '__Host-iranyaragh_staff_refresh',
+  csrfName: '__Host-iranyaragh_staff_csrf',
+  secure: true,
+  sameSite: 'strict',
+  path: '/',
+});
+
+const DEVELOPMENT_STAFF_COOKIES: AuthCookieSpec = Object.freeze({
+  refreshName: 'iranyaragh_staff_refresh',
+  csrfName: 'iranyaragh_staff_csrf',
+  secure: false,
+  sameSite: 'strict',
+  path: '/',
+});
+
 const DEVELOPMENT_COOKIES: AuthCookieSpec = Object.freeze({
   refreshName: 'iranyaragh_customer_refresh',
   csrfName: 'iranyaragh_customer_csrf',
@@ -47,8 +67,15 @@ export type AuthRuntimeConfig = Readonly<{
   previousHashKey?: AuthHashKey;
   totpEncryptionKey?: string;
   cookies: AuthCookieSpec;
+  /** Staff realm cookies; falls back to `cookies` only for legacy test configs. */
+  staffCookies?: AuthCookieSpec;
   corsOrigins?: readonly string[];
 }>;
+
+function staffCookieSpecFor(environment: 'development' | 'test' | 'staging' | 'production'): AuthCookieSpec {
+  if (environment === 'staging' || environment === 'production') return PRODUCTION_STAFF_COOKIES;
+  return DEVELOPMENT_STAFF_COOKIES;
+}
 
 function cookieSpecFor(environment: 'development' | 'test' | 'staging' | 'production'): AuthCookieSpec {
   if (environment === 'staging' || environment === 'production') return PRODUCTION_COOKIES;
@@ -87,6 +114,7 @@ export function createAuthRuntimeConfig(config: ConfigService<EnvironmentVariabl
         : Object.freeze({ version: previousVersion, secret: previousSecret }),
     totpEncryptionKey: config.get('AUTH_TOTP_ENCRYPTION_KEY', { infer: true }),
     cookies: cookieSpecFor(environment),
+    staffCookies: staffCookieSpecFor(environment),
     corsOrigins: Object.freeze(config.getOrThrow('CORS_ORIGINS', { infer: true }).split(',')),
   });
 }

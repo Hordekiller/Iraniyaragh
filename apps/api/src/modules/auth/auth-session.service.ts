@@ -168,7 +168,7 @@ export class AuthSessionService {
     return Object.freeze({ accessToken, csrfToken, expiresAt, refreshToken, sessionId, tokenFamilyId });
   }
 
-  async rotateSession(rawRefreshToken: string): Promise<IssuedAuthSession> {
+  async rotateSession(rawRefreshToken: string, expectedLevel?: AuthenticationLevel): Promise<IssuedAuthSession> {
     const candidateHashes = this.candidateRefreshHashes(rawRefreshToken);
     const replacementId = randomUUID();
     const replacementRefreshToken = this.tokens.generateRefreshToken();
@@ -183,6 +183,8 @@ export class AuthSessionService {
         include: { user: { select: { status: true } } },
       });
       if (!session) return { kind: 'invalid' };
+      // Wrong realm: reject without touching (or revoking) the other realm's session.
+      if (expectedLevel !== undefined && session.authenticationLevel !== expectedLevel) return { kind: 'invalid' };
 
       if (
         session.revokedAt !== null &&
@@ -589,7 +591,8 @@ export class AuthSessionService {
         data: {
           replacedBySessionId: replacement.id,
           revokedAt: now,
-          revokeReason: AUTH_SESSION_REVOKE_REASON.rotated,
+          // Not `rotated`: access tokens signed before a credential change must not survive it.
+          revokeReason: AUTH_SESSION_REVOKE_REASON.credentialChanged,
         },
       });
       if (rotated.count !== 1) throw new SessionRotationRaceError();

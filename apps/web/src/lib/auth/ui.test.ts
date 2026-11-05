@@ -472,6 +472,7 @@ describe('CustomerOtpController silent session restore (#50)', () => {
   it('single-flights concurrent restore calls when one is in flight', async () => {
     const store = new MemorySessionStore();
     const api = new AuthFixtureClient({ store });
+    const refresh = vi.spyOn(api, 'refresh');
     const controller = new CustomerOtpController(api, store, () => Date.now());
 
     controller.open();
@@ -486,8 +487,10 @@ describe('CustomerOtpController silent session restore (#50)', () => {
     const third = controller.restoreSession();
 
     const results = await Promise.all([first, second, third]);
-    // Only the first earns the right to refresh; the others collapse.
-    expect(results.filter(Boolean)).toHaveLength(1);
+    // One network refresh serves every caller, and every caller sees its real
+    // outcome (a joiner must never be told the refresh failed).
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(results).toEqual([true, true, true]);
   });
 
   it('latches after an AUTH_SESSION_REPLAYED refresh and forces re-auth with no further automatic restore', async () => {
@@ -709,4 +712,28 @@ describe('CustomerOtpController silent session restore (#50)', () => {
     expect(errorSpy.mock.calls.join(' ')).not.toContain(sentinel);
     errorSpy.mockRestore();
   });
+
+  it.each(['AUTH_CROSS_TAB_LOCK_TIMEOUT', 'AUTH_CROSS_TAB_LOCK_UNAVAILABLE'])(
+    'keeps a valid session and allows a later refresh when the cross-tab lock fails (%s)',
+    async code => {
+      const store = new MemorySessionStore();
+      let fail = true;
+      const controller = new CustomerOtpController(
+        new AuthFixtureClient({ store }),
+        store,
+        () => Date.now(),
+        undefined,
+        { runExclusive: async operation => { if (fail) throw new Error(code); return operation(); } },
+      );
+      await authenticate(controller);
+
+      await expect(controller.refreshSession()).resolves.toBe(false);
+      expect(controller.getState().phase).toBe('authenticated');
+      expect(store.isAuthenticated()).toBe(true);
+
+      fail = false;
+      await expect(controller.refreshSession()).resolves.toBe(true);
+      expect(controller.getState().phase).toBe('authenticated');
+    },
+  );
 });

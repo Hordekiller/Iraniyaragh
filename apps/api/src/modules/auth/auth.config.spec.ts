@@ -37,8 +37,20 @@ describe('createAuthRuntimeConfig', () => {
       'currentHashKey',
       'issuer',
       'previousHashKey',
+      'staffCookies',
       'totpEncryptionKey',
     ]);
   });
 });
 
+
+describe('auth cookie realms', () => {
+  it('gives staff and customer sessions disjoint refresh and CSRF cookie names', () => {
+    for (const NODE_ENV of ['development', 'production'] as const) {
+      const config = createAuthRuntimeConfig(fakeConfigService({ ...baseEnv, NODE_ENV }));
+      const names = [config.cookies.refreshName, config.cookies.csrfName, config.staffCookies?.refreshName, config.staffCookies?.csrfName];
+      expect(new Set(names).size).toBe(4);
+      expect(config.staffCookies?.secure).toBe(config.cookies.secure);
+    }
+  });
+});

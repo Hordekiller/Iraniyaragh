@@ -33,7 +33,7 @@ function AdoptPanel() {
         type="button"
         onClick={() => {
           // The real successful password/TOTP response issues this cookie.
-          if (!readCsrfToken(document)) document.cookie = 'iranyaragh_customer_csrf=test-csrf; path=/';
+          if (!readCsrfToken(document)) document.cookie = 'iranyaragh_staff_csrf=test-csrf; path=/';
           establishSession({ accessToken: 'staff-at-1', principal: staffPrincipal });
           revocationRevision.current = getSessionRevision();
         }}
@@ -53,7 +53,7 @@ function AdoptPanel() {
 describe('AuthProvider', () => {
   afterEach(() => {
     vi.useRealTimers();
-    for (const name of ['__Host-iranyaragh_csrf', 'iranyaragh_customer_csrf']) {
+    for (const name of ['__Host-iranyaragh_staff_csrf', 'iranyaragh_staff_csrf']) {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
     }
     vi.unstubAllGlobals();
@@ -70,7 +70,7 @@ describe('AuthProvider', () => {
   });
 
   it('restores a reloaded staff session from cookies after authoritative MFA and permission verification', async () => {
-    document.cookie = 'iranyaragh_customer_csrf=csrf-tok; path=/';
+    document.cookie = 'iranyaragh_staff_csrf=csrf-tok; path=/';
     const fetchMock = vi.fn(async (url: string) => jsonResponse({ data: url.endsWith('/refresh')
       ? { accessToken: 'restored' } : { principal: staffPrincipal } }));
     vi.stubGlobal('fetch', fetchMock);
@@ -83,7 +83,7 @@ describe('AuthProvider', () => {
   });
 
   it('never adopts a customer-level cookie into the staff panel', async () => {
-    document.cookie = 'iranyaragh_customer_csrf=csrf-tok; path=/';
+    document.cookie = 'iranyaragh_staff_csrf=csrf-tok; path=/';
     vi.stubGlobal('fetch', vi.fn(async (url: string) => jsonResponse({ data: url.endsWith('/refresh')
       ? { accessToken: 'customer' } : { principal: { ...staffPrincipal, authenticationLevel: 'CUSTOMER_OTP' } } })));
     render(<AuthProvider><AdoptPanel /></AuthProvider>);
@@ -95,7 +95,7 @@ describe('AuthProvider', () => {
   it('serializes refresh and logout with the same origin-wide lock used by the storefront', async () => {
     const request = vi.fn(async (_name: string, _options: LockOptions, operation: () => Promise<unknown>) => operation());
     vi.stubGlobal('navigator', Object.assign(Object.create(navigator), { locks: { request } }));
-    document.cookie = 'iranyaragh_customer_csrf=csrf-tok; path=/';
+    document.cookie = 'iranyaragh_staff_csrf=csrf-tok; path=/';
     vi.stubGlobal('fetch', vi.fn(async (url: string) => jsonResponse({ data: url.endsWith('/refresh')
       ? { accessToken: 'restored' } : url.endsWith('/me') ? { principal: staffPrincipal } : {} })));
     render(<AuthProvider><AdoptPanel /></AuthProvider>);
@@ -156,7 +156,7 @@ describe('AuthProvider', () => {
     vi.stubGlobal('fetch', mock);
     render(<AuthProvider><AdoptPanel /></AuthProvider>);
     fireEvent.click(screen.getByText('adopt'));
-    document.cookie = 'iranyaragh_customer_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    document.cookie = 'iranyaragh_staff_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     await act(async () => { await apiFetch('/protected', { token: getAccessToken() }).catch(() => undefined); });
     expect(screen.getByTestId('authed')).toHaveTextContent('no');
     expect(getAccessToken()).toBeNull();
@@ -270,7 +270,7 @@ describe('AuthProvider', () => {
   );
 
   it('sign-out sends /auth/logout with the double-submit CSRF proof so the server session is revoked', async () => {
-    document.cookie = 'iranyaragh_customer_csrf=csrf-tok; path=/';
+    document.cookie = 'iranyaragh_staff_csrf=csrf-tok; path=/';
     const fetchMock = vi.fn(async () => jsonResponse({ data: {} }));
     vi.stubGlobal('fetch', fetchMock);
     render(

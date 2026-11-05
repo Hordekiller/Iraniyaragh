@@ -1,6 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import type { AuthCookieSpec } from './auth.config';
+import type { AuthCookieSpec, AuthRuntimeConfig } from './auth.config';
 import { AuthTokenService } from './auth-token.service';
 
 export class AuthCsrfException extends ForbiddenException {
@@ -10,6 +10,26 @@ export class AuthCsrfException extends ForbiddenException {
       message: 'The authentication proof is invalid.',
     });
   }
+}
+
+export const AUTH_REALM_HEADER = 'x-auth-realm';
+export type AuthRealm = 'customer' | 'staff';
+
+/** The admin client declares the staff realm; everything else is the customer realm. */
+export function authRealmOf(request: Request): AuthRealm {
+  const value = request.headers?.[AUTH_REALM_HEADER];
+  return value === 'staff' ? 'staff' : 'customer';
+}
+
+export function staffCookieSpec(config: Pick<AuthRuntimeConfig, 'cookies' | 'staffCookies'>): AuthCookieSpec {
+  return config.staffCookies ?? config.cookies;
+}
+
+export function cookieSpecForRealm(
+  config: Pick<AuthRuntimeConfig, 'cookies' | 'staffCookies'>,
+  realm: AuthRealm,
+): AuthCookieSpec {
+  return realm === 'staff' ? staffCookieSpec(config) : config.cookies;
 }
 
 export function readCookie(request: Request, name: string): string | undefined {

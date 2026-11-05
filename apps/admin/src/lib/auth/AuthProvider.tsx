@@ -95,7 +95,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       // The API recovery batch owns the cookie lock through protected replays.
       return await rotate();
     } catch (error) {
-      if (generation.current === attemptGeneration && error instanceof ApiClientError && ['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED', 'FORBIDDEN'].includes(error.code)) {
+      if (generation.current === attemptGeneration && error instanceof ApiClientError && ['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED'].includes(error.code)) {
         setAccessToken(null);
         userRef.current = null;
         setUser(null);

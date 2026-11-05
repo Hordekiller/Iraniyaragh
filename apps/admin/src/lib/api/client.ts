@@ -172,13 +172,16 @@ function resolveUrl(path: string): string {
 /**
  * Script-readable double-submit CSRF cookie names the API issues
  * (AUTH_CONTRACT §4.2), one per runtime cookie spec in auth.config.ts:
- * - production/staging staff and customer: `__Host-iranyaragh_csrf`;
- * - development/test customer and staff: `iranyaragh_customer_csrf`.
+ * - production/staging staff: `__Host-iranyaragh_staff_csrf`;
+ * - development/test staff: `iranyaragh_staff_csrf`.
+ * Admin shares its origin with the storefront, so it must only ever read and
+ * rotate the staff cookie pair (declared with `X-Auth-Realm: staff`); the
+ * customer pair belongs to the storefront and is never touched from here.
  * The value is server-issued to the script context by design; cookie-authenticated
  * calls (refresh, logout) must echo it back as the `X-CSRF-Token` header or the
  * API rejects them (server session stays alive).
  */
-const CSRF_COOKIE_NAMES = ['__Host-iranyaragh_csrf', 'iranyaragh_customer_csrf'] as const;
+const CSRF_COOKIE_NAMES = ['__Host-iranyaragh_staff_csrf', 'iranyaragh_staff_csrf'] as const;
 
 export function readCsrfToken(document: Document): string | null {
   if (!document) return null;
@@ -199,7 +202,7 @@ export function apiFetch<T>(path: string, options?: RequestOptions): Promise<Api
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T | ApiSuccess<T>> {
   const sessionRevision = getSessionRevision();
   const isFormData = options.body instanceof FormData;
-  const headers: Record<string, string> = { ...(options.headers ?? {}) };
+  const headers: Record<string, string> = { 'X-Auth-Realm': 'staff', ...(options.headers ?? {}) };
   if (!isFormData && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
   const method = options.method ?? 'GET';
