@@ -1,4 +1,6 @@
 "use client";
+
+import { doorManufacturingSummary } from "@iranyaragh/contracts";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -371,6 +373,7 @@ function DoorOrdersContent({ id, report }: { id?: string; report: boolean }) {
                 <Typography variant="body2">
                   توضیح مشتری: {order.items[index]?.notes || "ندارد"}
                 </Typography>
+                {doorManufacturingSummary(line.manufacturing).map(text => <Typography key={text} variant="body2">{text}</Typography>)}
                 {line.parts.map((part, i) => (
                   <Typography key={i} variant="body2">
                     {part.title} — مقدار محاسباتی {part.quantityNumerator}/

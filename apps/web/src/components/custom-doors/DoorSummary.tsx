@@ -1,3 +1,4 @@
+import { doorManufacturingSummary } from "@iranyaragh/contracts";
 import type { DoorQuoteSnapshot } from "@iranyaragh/contracts";
 import { doorRial } from "../../services/custom-doors/api";
 
@@ -52,6 +53,7 @@ export function DoorSummary({
                 </li>
               ))}
             </ul>
+            {line.manufacturing && <ul className="mt-3 space-y-1 text-sm text-slate-700">{doorManufacturingSummary(line.manufacturing).map(text => <li key={text}>{text}</li>)}</ul>}
             <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="inline text-slate-500">واحد: </dt>

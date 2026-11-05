@@ -114,6 +114,13 @@ const part = obj({
   unit: text,
   stockUnit: nullable(text),
 });
+const manufacturing = obj({
+  profileColor: { type: "string", enum: ["BLACK", "WHITE", "GOLD", "BRONZE"] },
+  handleSide: { type: "string", enum: ["RIGHT", "LEFT", "TOP", "BOTTOM"] },
+  hingeSide: { type: "string", enum: ["RIGHT", "LEFT", "TOP", "BOTTOM"] },
+  drillingMode: { type: "string", enum: ["STANDARD", "CUSTOM"] },
+  holes: { type: "array", maxItems: 4, items: obj({ distanceMm: { type: "integer", minimum: 1, description: "Maximum equals this door heightMm; CUSTOM requires four distinct positions, STANDARD requires no holes." }, reference: { type: "string", enum: ["TOP", "BOTTOM"] } }) },
+});
 export const doorQuoteSnapshotSchema = obj({
   currency: { type: "string", enum: ["IRR"] },
   lines: arr(
@@ -153,6 +160,9 @@ const item = obj({
   selections: arr(obj({ slot: text, materialId: text })),
   notes: text,
 });
+item.properties!.manufacturing = manufacturing;
+const quoteLine = (doorQuoteSnapshotSchema.properties!.lines as SchemaObject).items as SchemaObject;
+quoteLine.properties!.manufacturing = manufacturing;
 export const doorOrderSchema = obj({
   id: text,
   commerceVersion: int,

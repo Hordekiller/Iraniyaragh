@@ -1,3 +1,4 @@
+import { validateDoorManufacturing } from "./door-manufacturing";
 import {
   BadRequestException,
   UnprocessableEntityException,
@@ -110,6 +111,7 @@ export function priceDoors(
   let complete = true;
   const policies: DoorDepositPolicy[] = [];
   const lines = items.map((item, index) => {
+    validateDoorManufacturing(item);
     for (const value of [item.widthMm, item.heightMm, item.quantity])
       if (!Number.isSafeInteger(value) || value <= 0 || value > 2147483647)
         throw new BadRequestException(
@@ -229,6 +231,7 @@ export function priceDoors(
     return {
       item: index,
       title: model.title,
+      ...(item.manufacturing ? { manufacturing: structuredClone(item.manufacturing) } : {}),
       quantity: item.quantity,
       widthMm: item.widthMm,
       heightMm: item.heightMm,

@@ -338,6 +338,9 @@ describe("Door configurator", () => {
     fireEvent.change(screen.getByLabelText("تعداد"), {
       target: { value: "۲" },
     });
+    fireEvent.change(screen.getByLabelText("رنگ پروفیل"), { target: { value: "BRONZE" } });
+    fireEvent.change(screen.getByLabelText("سمت دستگیره"), { target: { value: "LEFT" } });
+    fireEvent.change(screen.getByLabelText("محل گازور / لولا"), { target: { value: "RIGHT" } });
     fireEvent.click(screen.getByRole("button", { name: "افزودن این درب" }));
     fireEvent.click(screen.getByRole("button", { name: "تکثیر درب 1" }));
     expect(screen.getByText(/مجموع تعداد: ۴/)).toBeInTheDocument();
@@ -353,6 +356,7 @@ describe("Door configurator", () => {
           widthMm: 500,
           heightMm: 1000,
           quantity: 2,
+          manufacturing: { profileColor: "BRONZE", handleSide: "LEFT", hingeSide: "RIGHT", drillingMode: "STANDARD", holes: [] },
           selections: [{ slot: "glass", materialId: "test-glass" }],
         }),
       ],
@@ -362,6 +366,7 @@ describe("Door configurator", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "ویرایش" }));
     expect(screen.getByLabelText("عرض (میلی‌متر)")).toHaveValue("500");
+    expect(screen.getByLabelText("رنگ پروفیل")).toHaveValue("BRONZE");
   });
   it("publishes no invented models or prices when the catalog is empty", async () => {
     load.mockResolvedValue({ ...catalog, models: [], materials: [] });
