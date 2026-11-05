@@ -48,8 +48,7 @@ export function assertDoorTransition(
   if (to === "CANCELLED") return;
   if (!context.approved || !context.accepted)
     fail("قیمت قطعی و تأیید مشخصات توسط مشتری لازم است.");
-  if (context.paid < context.deposit)
-    fail("بیعانه معتبر سفارش دریافت نشده است.");
+  if (context.remaining > 0n) fail("پرداخت کامل مبلغ نهایی سفارش لازم است.");
   if (
     [
       "APPROVED_FOR_PRODUCTION",

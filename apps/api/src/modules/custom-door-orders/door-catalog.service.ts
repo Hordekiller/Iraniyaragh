@@ -19,7 +19,7 @@ import {
 import { AuditLogService } from "../audit/audit-log.service";
 import { MediaService } from "../media/media.service";
 import type { DoorMaterialWriteDto, DoorModelWriteDto } from "./door.dto";
-import { depositFor, doorMoney } from "./door-pricing";
+import { doorMoney } from "./door-pricing";
 
 export const asDoorJson = (value: unknown): Prisma.InputJsonValue =>
   JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -117,11 +117,10 @@ export class DoorCatalogService {
     if (
       !cfg ||
       cfg.technical === undefined ||
-      cfg.deposit === undefined ||
       cfg.labor === undefined
     )
       throw new BadRequestException(
-        "قواعد فنی، اجرت و بیعانه باید صریح تعیین یا نامشخص اعلام شوند.",
+        "قواعد فنی و اجرت باید صریح تعیین یا نامشخص اعلام شوند.",
       );
     if (
       cfg.technical &&
@@ -129,7 +128,7 @@ export class DoorCatalogService {
         cfg.technical.minHeightMm > cfg.technical.maxHeightMm)
     )
       throw new BadRequestException("دامنه ابعاد نامعتبر است.");
-    if (cfg.deposit) depositFor(100n, cfg.deposit);
+    cfg.deposit = null;
     doorMoney(cfg.discount);
     doorMoney(cfg.minimumTotal);
     if (cfg.labor) {

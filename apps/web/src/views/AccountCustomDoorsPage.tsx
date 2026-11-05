@@ -121,13 +121,12 @@ function CustomerDoorOrders({ id }: { id?: string }) {
       scoped = request.forCurrentPrincipal();
     try {
       if (command.action === "payment") {
-        if (!order?.quote.snapshot.total || !order.quote.snapshot.deposit)
+        if (!order?.quote.snapshot.total)
           throw new Error("A final quote is required");
         const payment = await doorPayment(scoped, id, command.key);
         const paid = BigInt(order.paid),
-          deposit = BigInt(order.quote.snapshot.deposit),
           total = BigInt(order.quote.snapshot.total);
-        const expected = paid < deposit ? deposit - paid : total - paid;
+        const expected = total - paid;
         const url = paymentRedirectUrl(payment, expected.toString());
         if (!url)
           throw new Error(
@@ -337,9 +336,7 @@ function CustomerDoorOrders({ id }: { id?: string }) {
       {order && quote && (
         <>
           <div className="mb-6 rounded-3xl bg-slate-950 p-6 text-white">
-            <p className="text-xs text-orange-300">
-              سفارش ساخت درب
-            </p>
+            <p className="text-xs text-orange-300">سفارش ساخت درب</p>
             <h2 className="mt-3 text-xl font-black">{order.number}</h2>
             <p className="mt-3">{DOOR_STATUS_LABELS[order.status]}</p>
             <p className="mt-2 text-xs text-slate-300">
@@ -420,10 +417,7 @@ function CustomerDoorOrders({ id }: { id?: string }) {
                     className={`${doorButton} bg-orange-700 text-white`}
                     onClick={() => void run("payment", undefined)}
                   >
-                    {BigInt(order.paid) <
-                    BigInt(order.quote.snapshot.deposit ?? "0")
-                      ? "پرداخت بیعانه"
-                      : "پرداخت مانده سفارش"}
+                    پرداخت مبلغ نهایی
                   </button>
                 )}
             </div>

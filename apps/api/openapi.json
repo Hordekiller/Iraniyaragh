@@ -55542,7 +55542,12 @@
             "type": "string"
           },
           "depositPolicy": {
-            "$ref": "#/components/schemas/DoorDepositDto"
+            "deprecated": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DoorDepositDto"
+              }
+            ]
           },
           "adjustments": {
             "type": "array",
@@ -55558,7 +55563,6 @@
           "expectedVersion",
           "lineTotals",
           "total",
-          "depositPolicy",
           "adjustments",
           "reason"
         ]

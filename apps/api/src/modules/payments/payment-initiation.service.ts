@@ -167,11 +167,11 @@ export class PaymentInitiationService {
             let amount = order.grandTotal;
             if (door) {
               if (customer.status !== 'ACTIVE') throw new ConflictException({ code: 'DOOR_STATE_CONFLICT', message: 'An active customer profile is required for production payments.' });
-              if (!quote?.approved || quote.version !== door.currentQuoteVersion || quote.total === null || quote.deposit === null || door.customerAcceptedQuoteVersion !== quote.version || ['DRAFT','PENDING_QUOTE_APPROVAL','CANCELLED','COMPLETED'].includes(door.status)) {
+              if (!quote?.approved || quote.version !== door.currentQuoteVersion || quote.total === null || door.customerAcceptedQuoteVersion !== quote.version || ['DRAFT','PENDING_QUOTE_APPROVAL','CANCELLED','COMPLETED'].includes(door.status)) {
                 throw new ConflictException({ code: 'DOOR_STATE_CONFLICT', message: 'A final accepted door quotation is required before payment.' });
               }
               const paid = doorPaid(order.payments);
-              amount = paid < quote.deposit ? quote.deposit - paid : quote.total - paid;
+              amount = quote.total - paid;
               if (amount <= 0n) throw new ConflictException({ code: 'PAYMENT_STATE_CONFLICT', message: 'No payable balance remains.' });
             }
             if (!door && (order.status !== 'PENDING_PAYMENT' || order.reservationExpiresAt <= new Date())) {
@@ -209,7 +209,7 @@ export class PaymentInitiationService {
                 orderId,
                 provider: this.gateway.providerName,
                 amount: amount,
-                ...(quote ? { doorAllocation: { create: { quoteId: quote.id, purpose: doorPaid(order.payments) < quote.deposit! ? 'DEPOSIT' : 'SETTLEMENT' } } } : {}),
+                ...(quote ? { doorAllocation: { create: { quoteId: quote.id, purpose: 'SETTLEMENT' } } } : {}),
                 status: 'PENDING',
                 idempotencyKey: keyHash,
                 idempotencyFingerprint: fingerprint,

@@ -1,2 +1,5 @@
-import { DoorCatalogPanel } from '@/components/custom-doors/DoorCatalogPanel';
-export default function Page() { return <DoorCatalogPanel section='deposits' />; }
+import { redirect } from "next/navigation";
+
+export default function Page() {
+  redirect("/custom-doors/rules");
+}
