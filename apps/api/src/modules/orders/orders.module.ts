@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { PromotionsModule } from '../promotions/promotions.module';
+import { CartCouponController } from './cart-coupon.controller';
+import { CartCouponService } from './cart-coupon.service';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { InventoryModule } from '../inventory/inventory.module';
@@ -32,7 +35,7 @@ import { ShippingSettingsController } from './shipping-settings.controller';
 import { ShippingSettingsService } from './shipping-settings.service';
 
 @Module({
-  imports: [AuditModule, AuthModule, InventoryModule],
+  imports: [AuditModule, AuthModule, InventoryModule, PromotionsModule],
   controllers: [
     // Static staff sub-routes (`orders/admin/options`) must be registered before
     // the parametric `orders/admin/:id` route in OrderReadController, otherwise
@@ -46,6 +49,7 @@ import { ShippingSettingsService } from './shipping-settings.service';
     ShipmentDeliveryController,
     ShipmentReadController,
     CartController,
+    CartCouponController,
     CartMergeController,
     GuestCartController,
     CheckoutController,
@@ -53,6 +57,7 @@ import { ShippingSettingsService } from './shipping-settings.service';
   ],
   providers: [
     CartService,
+    CartCouponService,
     GuestCartService,
     GuestCartHttpService,
     CheckoutService,

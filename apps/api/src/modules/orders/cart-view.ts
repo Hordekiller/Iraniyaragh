@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import type { CartView } from '@iranyaragh/contracts';
+import type { PricingLine } from '../promotions/promotions.service';
 
 export const cartInclude = () =>
   ({
@@ -83,4 +84,15 @@ export function buildEmptyCartView(quotedAt = new Date()): CartView {
     },
     updatedAt: null,
   };
+}
+
+export function pricingLines(cart: PricedCartRow): PricingLine[] {
+  return cart.items.map((item) => ({
+    variantId: item.variantId,
+    productId: item.variant.productId,
+    categoryId: item.variant.product.categoryId,
+    brandId: item.variant.product.brandId,
+    unitPrice: item.variant.salePrice,
+    quantity: item.quantity,
+  }));
 }

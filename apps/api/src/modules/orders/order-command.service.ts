@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { promotionsService } from '../promotions/promotions.service';
 import {
   BadRequestException,
   ConflictException,
@@ -291,6 +292,7 @@ export class OrderCommandService {
                 actorId: command.actorId,
                 requestId: command.requestId,
               });
+            await promotionsService.releaseForOrder(tx, order.id, command.reason);
 
             const cancelledAt = now.toISOString();
             const result: OrderCommandResult = {
@@ -399,6 +401,7 @@ export class OrderCommandService {
               ? await this.inventory.releaseReservationsForOrderFromExpiry(tx, order.id, requestId)
               : await this.inventory.releaseReservationsForOrder(tx, order.id, context);
 
+            await promotionsService.releaseForOrder(tx, order.id, RELEASE_REASON.expiry);
             const expiredAt = now.toISOString();
             await tx.outboxEvent.create({
               data: {

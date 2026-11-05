@@ -6,7 +6,8 @@ import type {
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { STAFF_PICKUP_POLICY } from './staff-pickup-policy';
-import { buildCartView, cartInclude } from './cart-view';
+import { buildCartView, cartInclude, pricingLines } from './cart-view';
+import { promotionsService } from '../promotions/promotions.service';
 import {
   checkoutAddressHash,
   normalizeCheckoutAddress,
@@ -50,7 +51,7 @@ export class ConfiguredShippingQuoteAdapter implements ShippingQuotePort {
     return this.prisma.$transaction(async (tx) => {
       const cart = await tx.cart.findUnique({
         where: { customerId: customer.id },
-        include: cartInclude(),
+        include: { ...cartInclude(), couponIntent: true },
       });
       if (!cart || cart.items.length === 0) {
         throw new ConflictException({
@@ -98,7 +99,18 @@ export class ConfiguredShippingQuoteAdapter implements ShippingQuotePort {
       });
 
       const shipping = [];
+      let promotion: ReturnType<typeof promotionsService.cartView> | undefined;
       for (const method of methods) {
+        // Free-shipping discounts depend on the method, so each quote is priced
+        // independently from current server-side rules.
+        const priced = await promotionsService.price(tx, {
+          customerId: customer.id,
+          lines: pricingLines(cart),
+          shipping: method.amount,
+          couponCode: cart.couponIntent?.code ?? null,
+          now,
+        });
+        promotion ??= promotionsService.cartView(priced);
         const quote = await tx.shippingQuote.create({
           data: {
             customerId: customer.id,
@@ -110,6 +122,7 @@ export class ConfiguredShippingQuoteAdapter implements ShippingQuotePort {
             addressHash,
             subtotal,
             amount: method.amount,
+            promotionDiscount: priced.result.totalDiscount,
             pricePolicyRevision: cartView.quote.pricePolicyRevision,
             policyRevision: method.policyRevision,
             expiresAt,
@@ -118,7 +131,7 @@ export class ConfiguredShippingQuoteAdapter implements ShippingQuotePort {
         shipping.push(shippingQuoteContract(quote));
       }
 
-      return { data: { cart: cartView, shipping } };
+      return { data: { cart: { ...cartView, ...(promotion ? { promotion } : {}) }, shipping } };
     });
   }
 

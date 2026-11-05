@@ -16369,6 +16369,71 @@
         ]
       }
     },
+    "/cart/coupon": {
+      "put": {
+        "operationId": "CartCouponController_apply",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cart with a trusted discount breakdown."
+          },
+          "422": {
+            "description": "Coupon rejected; `code` carries the precise COUPON_* reason."
+          },
+          "429": {
+            "description": "Too many coupon attempts."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Validate a coupon server-side and attach it to the customer cart",
+        "tags": [
+          "cart"
+        ]
+      },
+      "delete": {
+        "operationId": "CartCouponController_remove",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Cart without a coupon."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove the coupon from the customer cart",
+        "tags": [
+          "cart"
+        ]
+      }
+    },
     "/cart/merge-guest": {
       "post": {
         "operationId": "CartMergeController_merge",
@@ -20254,6 +20319,262 @@
         "summary": "Create or update an approved fixed shipping tariff with version and retry protection",
         "tags": [
           "shipping-settings"
+        ]
+      }
+    },
+    "/promotions/admin": {
+      "get": {
+        "operationId": "PromotionAdminController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Promotion page."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List promotions with state and persisted statistics",
+        "tags": [
+          "promotions"
+        ]
+      },
+      "post": {
+        "operationId": "PromotionAdminController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Create a promotion (idempotent, audited)",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/admin/report": {
+      "get": {
+        "operationId": "PromotionAdminController_report",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Campaign report."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Per-campaign reserved/paid/refunded/cancelled usage and attributed sales",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/admin/redemptions": {
+      "get": {
+        "operationId": "PromotionAdminController_redemptions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Redemption page."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Redemption history, filterable by campaign, customer and status",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/admin/coupons/by-promotion/{id}": {
+      "get": {
+        "operationId": "PromotionAdminController_coupons",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Coupon page."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List coupon codes of a promotion",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/admin/{id}": {
+      "get": {
+        "operationId": "PromotionAdminController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Promotion."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read one promotion",
+        "tags": [
+          "promotions"
+        ]
+      },
+      "put": {
+        "operationId": "PromotionAdminController_update",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Update a promotion with optimistic versioning",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/admin/{id}/active": {
+      "put": {
+        "operationId": "PromotionAdminController_setActive",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Immediately enable or disable a promotion",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/admin/{id}/coupons": {
+      "post": {
+        "operationId": "PromotionAdminController_generate",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Add an explicit coupon code or generate random codes",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/admin/coupons/{couponId}/active": {
+      "put": {
+        "operationId": "PromotionAdminController_setCouponActive",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Enable or disable one coupon code",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/public": {
+      "get": {
+        "operationId": "PromotionPublicController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Public campaigns."
+          }
+        },
+        "summary": "Active and upcoming automatic campaigns for storefront badges (no customer-specific data)",
+        "tags": [
+          "promotions"
         ]
       }
     },

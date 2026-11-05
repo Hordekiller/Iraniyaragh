@@ -39,6 +39,7 @@ function setup(overrides: {
       ),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
+    promotionRedemption: { findMany: vi.fn().mockResolvedValue([]), updateMany: vi.fn().mockResolvedValue({ count: 0 }), update: vi.fn(), count: vi.fn().mockResolvedValue(0) },
     paymentTransition: { create: vi.fn().mockResolvedValue({ id: 'transition-1' }) },
     orderTransition: { create: vi.fn().mockResolvedValue({ id: 'order-transition-1' }) },
     order: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
