@@ -97,7 +97,7 @@ export class PromotionAdminService {
       },
       include: { targets: true }, orderBy: [{ priority: 'asc' }, { id: 'asc' }], take: 50,
     })).filter((r) => r.maxRedemptions === null || r.usedCount < r.maxRedemptions);
-    let value: PublicPromotion[] = [];
+    const value: PublicPromotion[] = [];
     if (rows.length > 0) {
       const sellable = { isActive: true, status: 'ACTIVE' as const };
       const [products, ancestry] = await Promise.all([
