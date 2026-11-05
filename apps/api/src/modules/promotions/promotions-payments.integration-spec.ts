@@ -15,6 +15,10 @@ import { AdminPaymentRefundService } from '../payments/admin-payment-refund.serv
 import { PaymentInitiationService } from '../payments/payment-initiation.service';
 import type { PaymentGatewayConfig, PaymentProvider, PaymentVerifyResult } from '../payments/payment-provider.port';
 import { PaymentVerificationService } from '../payments/payment-verification.service';
+import { StaffOrderService } from '../orders/staff-order.service';
+import { InvoiceDocumentService } from '../invoices/invoice-document.service';
+import { InvoiceDraftService } from '../invoices/invoice-draft.service';
+import { InvoicePolicyService } from '../invoices/invoice-policy.service';
 import { PromotionAdminService } from './promotion-admin.service';
 
 /**
@@ -41,11 +45,14 @@ describe.sequential('Promotions x payment, cancellation and refund lifecycle', (
   const refunds = new AdminPaymentRefundService(prisma, audit);
   const orders = new OrderCommandService(prisma, audit, inventory);
   const admin = new PromotionAdminService(prisma, audit);
+  const policies = new InvoicePolicyService(prisma, audit);
+  const drafts = new InvoiceDraftService(prisma, audit, new StaffOrderService(prisma, audit), new ConfiguredShippingQuoteAdapter(prisma));
+  const invoices = new InvoiceDocumentService(prisma, audit, drafts, policies);
 
   const ids = {
     users: [0, 1, 2].map((i) => `xu_${run}_${i}`),
     customers: [0, 1, 2].map((i) => `xc_${run}_${i}`),
-    staff: `xstaff_${run}`, product: `xp_${run}`, v1: `xv1_${run}`, wh: `xw_${run}`, loc: `xl_${run}`, ship: `xs_${run}`,
+    staff: `xstaff_${run}`, product: `xp_${run}`, v1: `xv1_${run}`, v2: `xv2_${run}`, wh: `xw_${run}`, loc: `xl_${run}`, ship: `xs_${run}`,
   };
   const method = `payx${run.slice(0, 8)}`.toLowerCase();
   const address = { provinceCode: 'teh', city: 'تهران', address: 'خیابان آزادی، پلاک ۱۰', postalCode: '1234567890', recipient: 'گیرنده آزمون', mobile: '09123456789' };
@@ -62,18 +69,18 @@ describe.sequential('Promotions x payment, cancellation and refund lifecycle', (
     await admin.generateCoupons(ids.staff, 'req', promotion.id, { code, maxRedemptions: null, customerId: null }, key());
     return { promotion, code };
   }
-  async function seedCart(i: number, quantity = 2) {
+  async function seedCart(i: number, quantity = 2, variantId = ids.v1) {
     const cart = await prisma.cart.upsert({ where: { customerId: ids.customers[i]! }, create: { customerId: ids.customers[i]! }, update: { version: { increment: 1 } } });
     await prisma.cartCouponIntent.deleteMany({ where: { cartId: cart.id } });
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
-    await prisma.cartItem.create({ data: { cartId: cart.id, variantId: ids.v1, quantity } });
+    await prisma.cartItem.create({ data: { cartId: cart.id, variantId, quantity } });
   }
   async function preview(i: number) {
     const p = await checkout.previewForUser(ids.users[i]!, address);
     return p.data.shipping.find((s) => s.method === method)!.quoteId;
   }
-  async function place(i: number, code?: string, quantity = 2) {
-    await seedCart(i, quantity);
+  async function place(i: number, code?: string, quantity = 2, variantId = ids.v1) {
+    await seedCart(i, quantity, variantId);
     if (code) await coupons.apply(ids.users[i]!, code, 'req');
     const quoteId = await preview(i);
     return (await checkout.createForUser(ids.users[i]!, { address, shippingQuoteId: quoteId }, key(), `co-${seq++}`)).data.order;
@@ -98,13 +105,21 @@ describe.sequential('Promotions x payment, cancellation and refund lifecycle', (
     const tail = (Number.parseInt(run.slice(0, 7), 16) % 10_000_000).toString().padStart(7, '0');
     await prisma.customer.createMany({ data: ids.customers.map((id, i) => ({ id, userId: ids.users[i]!, mobile: `+9892${tail}${i}` })) });
     await prisma.product.create({ data: { id: ids.product, name: 'P', slug: `px-${run}`, status: 'ACTIVE' } });
-    await prisma.productVariant.create({
-      data: { id: ids.v1, productId: ids.product, sku: `PX1-${run}`, skuKey: canonicalizeSku(`PX1-${run}`), combinationSignature: EMPTY_AXIS_SIGNATURE, title: 'V1', salePrice: 100000n, costPrice: 1n },
+    await prisma.productVariant.createMany({
+      data: [
+        { id: ids.v1, productId: ids.product, sku: `PX1-${run}`, skuKey: canonicalizeSku(`PX1-${run}`), combinationSignature: EMPTY_AXIS_SIGNATURE, title: 'V1', salePrice: 100000n, costPrice: 1n },
+        { id: ids.v2, productId: ids.product, sku: `PX2-${run}`, skuKey: canonicalizeSku(`PX2-${run}`), combinationSignature: 'sig-x2', title: 'V2', salePrice: 30000n, costPrice: 1n },
+      ],
     });
     await prisma.warehouse.create({ data: { id: ids.wh, code: `PXW-${run}`, name: 'W' } });
     await prisma.warehouseLocation.create({ data: { id: ids.loc, warehouseId: ids.wh, code: 'A', name: 'A' } });
     await prisma.shippingMethod.create({ data: { id: ids.ship, code: method, title: 'Shipping', amount: 50000n, policyRevision: 'p-v1' } });
   });
+
+  async function clearInvoices() {
+    assertIsolatedTestDatabase({ databaseUrl: process.env.DATABASE_URL, nodeEnvironment: process.env.NODE_ENV });
+    await prisma.$executeRawUnsafe('TRUNCATE "InvoicePdfRenderJobCommand", "InvoicePdfRenderJob", "InvoicePdfArtifact", "InvoicePdfStorageCapacity", "InvoicePublicationCommand", "InvoicePublicationEvent", "InvoicePublication", "InvoiceIssueCommand", "InvoiceDocumentEvent", "InvoiceDocumentLine", "InvoiceDocument", "InvoiceSeriesCounter", "InvoiceDraftCommand", "InvoiceDraftRevision", "InvoiceDraftLine", "InvoiceDraft", "InvoicePolicyCommand", "InvoicePolicyRevision"');
+  }
 
   async function clean() {
     const promos = (await prisma.promotion.findMany({ where: { name: { startsWith: `payx-${run}` } }, select: { id: true } })).map((p) => p.id);
@@ -117,6 +132,7 @@ describe.sequential('Promotions x payment, cancellation and refund lifecycle', (
       await tx.paymentTransition.deleteMany({ where: { paymentId: { in: paymentIds } } });
       await tx.payment.deleteMany({ where: { id: { in: paymentIds } } });
     });
+    await clearInvoices();
     await prisma.promotionRedemption.deleteMany({ where: { OR: [{ promotionId: { in: promos } }, { orderId: { in: orderIds } }] } });
     await prisma.fulfillmentTransition.deleteMany({ where: { fulfillment: { orderId: { in: orderIds } } } });
     await prisma.fulfillment.deleteMany({ where: { orderId: { in: orderIds } } });
@@ -138,12 +154,15 @@ describe.sequential('Promotions x payment, cancellation and refund lifecycle', (
 
   beforeEach(async () => {
     await clean();
-    await prisma.inventoryBalance.create({ data: { warehouseId: ids.wh, locationId: ids.loc, variantId: ids.v1, onHand: 100, reserved: 0, available: 100, version: 1 } });
+    for (const variantId of [ids.v1, ids.v2]) {
+      await prisma.inventoryBalance.create({ data: { warehouseId: ids.wh, locationId: ids.loc, variantId, onHand: 100, reserved: 0, available: 100, version: 1 } });
+    }
     provider.verify.mockImplementation(async (r) => ({ status: 'verified', referenceId: `REF-${r.correlationId}` }));
   });
 
   afterAll(async () => {
     await clean();
+    await clearInvoices();
     await prisma.shippingMethod.deleteMany({ where: { id: ids.ship } });
     await prisma.warehouseLocation.deleteMany({ where: { warehouseId: ids.wh } });
     await prisma.warehouse.deleteMany({ where: { id: ids.wh } });
@@ -337,6 +356,45 @@ describe.sequential('Promotions x payment, cancellation and refund lifecycle', (
     await orders.cancelAsCustomer(ids.users[1]!, paid.id, { idempotencyKey: key(), requestId: `cx-${seq++}` }).catch(() => undefined);
     expect(await redemptionOf(paid.id)).toMatchObject({ status: 'CONFIRMED' });
     expect((await promoOf(promotion.id)).usedCount).toBe(1);
+  });
+
+  it('E: order, payment and issued invoice totals reconcile; an unrepresentable free-shipping invoice fails closed', async () => {
+    const previous = await policies.current();
+    await policies.update(ids.staff, 'req', { expectedVersion: previous?.version ?? null, sellerName: 'Isolated seller', sellerAddress: 'Isolated seller address', sellerContact: 'Public test contact',
+      taxTreatment: 'INCLUSIVE', taxRateBps: 1000, exemptionReason: null, discountCapBps: 10000, shippingTaxable: false, isActive: true, reason: 'Isolated accepted test policy' }, key());
+    const free = await makePromo({ kind: 'FREE_SHIPPING', percentBp: null, amount: null });
+    const pct = await makePromo({ percentBp: 1500 });
+    const cases = [
+      { label: 'percentage', order: await place(0, pct.code) },
+      // Goods (30000) are cheaper than the shipping discount (50000): discount exceeds subtotal.
+      { label: 'free-shipping', order: await place(1, free.code, 1, ids.v2) },
+    ];
+    {
+      const { order } = cases[0]!;
+      const row = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
+      expect(row.subtotal - row.discount + row.shipping).toBe(row.grandTotal);
+      const authority = await pay(0, order.id);
+      expect((await prisma.payment.findFirstOrThrow({ where: { orderId: order.id } })).amount).toBe(row.grandTotal);
+      const created = await drafts.fromOrder(ids.staff, 'req', order.id, { expectedOrderVersion: row.version, note: null }, key());
+      expect(created.draft.sourceTermsMatch).toBe(true);
+      expect(created.draft.quote!.total.amount).toBe(row.grandTotal.toString());
+      const issued = await invoices.issue(ids.staff, 'req', created.draft.id, { expectedVersion: created.draft.version, expectedOrderVersion: row.version }, key());
+      expect(issued.document.quote.total.amount).toBe(row.grandTotal.toString());
+      expect(issued.document.quote.discount.amount).toBe(row.discount.toString());
+      await verify(authority);
+    }
+    {
+      // Documented limitation: the immutable invoice evidence requires document discount == order discount and
+      // cannot express a free-shipping discount larger than the goods. Fail closed with a deterministic 4xx.
+      const { order } = cases[1]!;
+      const row = await prisma.order.findUniqueOrThrow({ where: { id: order.id } });
+      expect(row.discount).toBe(50000n);
+      expect(row.subtotal - row.discount + row.shipping).toBe(row.grandTotal);
+      const failure = await drafts.fromOrder(ids.staff, 'req', order.id, { expectedOrderVersion: row.version, note: null }, key()).then(() => null, (e) => e);
+      expect(failure?.getStatus?.()).toBeGreaterThanOrEqual(400);
+      expect(failure?.getStatus?.()).toBeLessThan(500);
+      expect(await prisma.invoiceDocument.count({ where: { orderId: order.id } })).toBe(0);
+    }
   });
 
   it('C5: concurrent checkouts on a one-use coupon leave exactly one reservation and non-negative capacity', async () => {
