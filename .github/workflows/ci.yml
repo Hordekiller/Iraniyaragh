@@ -152,7 +152,8 @@ jobs:
 
   e2e:
     needs: quality
-    runs-on: ubuntu-latest
+    # Pinned: Playwright has no Chromium build for the ubuntu-latest (26.04) image.
+    runs-on: ubuntu-24.04
     # The browser suite signs in as one real staff identity with a real TOTP
     # credential, and the API accepts each 30-second TOTP step only once. A full
     # run therefore spends real time waiting for unused code windows and takes
