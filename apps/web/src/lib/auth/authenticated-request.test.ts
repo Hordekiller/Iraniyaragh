@@ -137,4 +137,55 @@ describe('customer request identity boundaries', () => {
     await expect(createAuthenticatedRequest(new MemorySessionStore(), refresh)('/api/v1/customers/me')).rejects.toMatchObject({ code: 'AUTH_SESSION_INVALID' })
     expect(fetcher).not.toHaveBeenCalled(); expect(refresh).not.toHaveBeenCalled()
   })
+
+  it('coordinates concurrent expired-token requests into one refresh and retries each once', async () => {
+    const store = new MemorySessionStore()
+    store.setAuthenticated(login('customer-a', 'expired-token'))
+    const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const auth = (init?.headers as Record<string, string>).Authorization
+      return auth === 'Bearer fresh-token' ? response({ data: { ok: true } }) : rejected('AUTH_SESSION_INVALID', 401)
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const refresh = vi.fn(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10))
+      store.setAuthenticated(login('customer-a', 'fresh-token'))
+      return true
+    })
+    const request = createAuthenticatedRequest(store, refresh)
+    const results = await Promise.all([1, 2, 3, 4].map(n => request(`/api/v1/customers/me?n=${n}`)))
+    expect(results).toHaveLength(4)
+    expect(refresh).toHaveBeenCalledTimes(1)
+    // 4 rejected first attempts + exactly 4 replays: no request is sent a third time.
+    expect(fetcher).toHaveBeenCalledTimes(8)
+  })
+
+  it('does not refresh or end the session on 403 or on a network failure', async () => {
+    const store = new MemorySessionStore()
+    store.setAuthenticated(login('customer-a'))
+    const refresh = vi.fn(async () => true)
+    const request = createAuthenticatedRequest(store, refresh)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(rejected('FORBIDDEN', 403)))
+    await expect(request('/api/v1/customers/me')).rejects.toMatchObject({ statusCode: 403 })
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new TypeError('network down')))
+    await expect(request('/api/v1/customers/me')).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
+    expect(refresh).not.toHaveBeenCalled()
+    expect(store.isAuthenticated()).toBe(true)
+  })
+
+  it('does not report a session failure when the refresh could not complete but the session stands', async () => {
+    const store = new MemorySessionStore()
+    store.setAuthenticated(login('customer-a'))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(rejected('AUTH_SESSION_INVALID', 401)))
+    const request = createAuthenticatedRequest(store, vi.fn(async () => false))
+    await expect(request('/api/v1/customers/me')).rejects.toMatchObject({ code: 'NETWORK_ERROR', statusCode: 0 })
+    expect(store.isAuthenticated()).toBe(true)
+  })
+
+  it('still reports the 401 once the refresh ended the session', async () => {
+    const store = new MemorySessionStore()
+    store.setAuthenticated(login('customer-a'))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(rejected('AUTH_SESSION_INVALID', 401)))
+    const request = createAuthenticatedRequest(store, vi.fn(async () => { store.expire('invalid'); return false }))
+    await expect(request('/api/v1/customers/me')).rejects.toMatchObject({ code: 'AUTH_SESSION_INVALID' })
+  })
 })

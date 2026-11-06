@@ -3,7 +3,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AccessTokenData, CurrentPrincipalResponse } from '@iranyaragh/contracts';
 import { ApiAbortError, ApiClientError, apiFetch, readCsrfToken, recoverApiSession, registerSessionRecovery, settleSessionRecovery, registerAuthenticationFailure, notifyFreshAuthentication } from '@/lib/api/client';
+import { startActivityKeepAlive } from './activity-keepalive';
+import { createRefreshAttemptStore, REFRESH_ATTEMPT_HEADER_NAME } from '@iranyaragh/contracts';
 import { getAccessToken, getSessionRevision, setAccessToken } from './token-store';
+
+const refreshAttempts = createRefreshAttemptStore('staff');
 
 export type AuthUser = {
   userId: string;
@@ -53,6 +57,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const loggingOut = useRef(false);
 
   const establishSession = useCallback((input: { accessToken: string; principal: AuthUser }): void => {
+    refreshAttempts.clear();
     generation.current += 1;
     setAccessToken(input.accessToken);
     userRef.current = input.principal;
@@ -73,7 +78,12 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     const expectedUserId = userRef.current?.userId;
     const rotate = async () => {
       if (loggingOut.current || generation.current !== attemptGeneration) throw new ApiAbortError();
-      const refreshed = await apiFetch<AccessTokenData>('/auth/refresh', { method: 'POST', recoverSession: false });
+      // Same attempt id across a reload/network drop lets the server return the
+      // already-committed rotation instead of treating the retry as replay.
+      const refreshed = await refreshAttempts.run(
+        attemptId => apiFetch<AccessTokenData>('/auth/refresh', { method: 'POST', recoverSession: false, headers: { [REFRESH_ATTEMPT_HEADER_NAME]: attemptId } }),
+        error => !(error instanceof ApiClientError) || error.statusCode >= 500,
+      );
       const token = refreshed.data.accessToken;
       if (!token) throw new ApiClientError({ code: 'AUTH_SESSION_INVALID', message: '', requestId: '', statusCode: 401 });
       const verified = await apiFetch<CurrentPrincipalResponse['data']>('/auth/me', { token, recoverSession: false });
@@ -95,7 +105,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       // The API recovery batch owns the cookie lock through protected replays.
       return await rotate();
     } catch (error) {
-      if (generation.current === attemptGeneration && error instanceof ApiClientError && ['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED', 'FORBIDDEN'].includes(error.code)) {
+      if (generation.current === attemptGeneration && error instanceof ApiClientError && ['AUTH_SESSION_INVALID', 'AUTH_SESSION_REPLAYED'].includes(error.code)) {
         setAccessToken(null);
         userRef.current = null;
         setUser(null);
@@ -125,6 +135,11 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     } else setIsRestoring(false);
     return () => { active = false; unregister(); unregisterFailure(); };
   }, [recoverSession]);
+
+  // Genuine input keeps the 30-minute server inactivity window alive while an
+  // operator works without issuing API calls; idle tabs send nothing.
+  const authenticated = user !== null;
+  useEffect(() => (authenticated ? startActivityKeepAlive() : undefined), [authenticated]);
 
   const reauthenticate = useCallback(async (operation: () => Promise<{ accessToken: string; principal: AuthUser }>): Promise<void> => {
     const expectedUserId = userRef.current?.userId;
@@ -184,6 +199,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
       });
       if (generation.current === logoutGeneration) {
+        refreshAttempts.clear();
         setAccessToken(null);
         userRef.current = null;
         setUser(null);

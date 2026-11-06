@@ -56,7 +56,7 @@ test.describe('api: real session rotation, replay and revocation (AUTH_CONTRACT 
 
     // One refresh rotates and issues a fresh cookie pair.
     const rotated = await request.post('/api/v1/auth/refresh', {
-      headers: { Origin: TRUSTED_ORIGIN, 'x-csrf-token': session.csrf },
+      headers: { Origin: TRUSTED_ORIGIN, 'x-csrf-token': session.csrf, 'X-Auth-Realm': 'staff' },
     });
     expect(rotated.status()).toBe(200);
     const rotatedBody = (await rotated.json()) as {
@@ -78,7 +78,7 @@ test.describe('api: real session rotation, replay and revocation (AUTH_CONTRACT 
 
     // Rotate once, as a normal flow; capture the legitimately rotated pair.
     const first = await request.post('/api/v1/auth/refresh', {
-      headers: { Origin: TRUSTED_ORIGIN, 'x-csrf-token': session.csrf },
+      headers: { Origin: TRUSTED_ORIGIN, 'x-csrf-token': session.csrf, 'X-Auth-Realm': 'staff' },
     });
     expect(first.status()).toBe(200);
     const afterRotation = await storedCookies(request);
@@ -92,7 +92,7 @@ test.describe('api: real session rotation, replay and revocation (AUTH_CONTRACT 
     const replay = await request.post('/api/v1/auth/refresh', {
       headers: {
         Cookie: `${STAFF_REFRESH_COOKIE}=${session.refresh}; ${STAFF_CSRF_COOKIE}=${session.csrf}`,
-        Origin: TRUSTED_ORIGIN,
+        Origin: TRUSTED_ORIGIN, 'X-Auth-Realm': 'staff',
         'x-csrf-token': session.csrf,
       },
     });
@@ -106,7 +106,7 @@ test.describe('api: real session rotation, replay and revocation (AUTH_CONTRACT 
     const refreshAfterRevocation = await request.post('/api/v1/auth/refresh', {
       headers: {
         Cookie: `${STAFF_REFRESH_COOKIE}=${rotatedRefresh}; ${STAFF_CSRF_COOKIE}=${rotatedCsrf}`,
-        Origin: TRUSTED_ORIGIN,
+        Origin: TRUSTED_ORIGIN, 'X-Auth-Realm': 'staff',
         'x-csrf-token': rotatedCsrf,
       },
     });
@@ -137,7 +137,7 @@ test.describe('api: real session rotation, replay and revocation (AUTH_CONTRACT 
 
     // Cookies were cleared; a refresh without proof is rejected before any
     // rotation attempt (403 AUTH_CSRF_INVALID, distinct from an expired session).
-    const refresh = await request.post('/api/v1/auth/refresh', { headers: { Origin: TRUSTED_ORIGIN } });
+    const refresh = await request.post('/api/v1/auth/refresh', { headers: { Origin: TRUSTED_ORIGIN, 'X-Auth-Realm': 'staff' } });
     expect(refresh.status()).toBe(403);
     const body = (await refresh.json()) as { code: string };
     expect(body.code).toBe('AUTH_CSRF_INVALID');
@@ -153,7 +153,7 @@ test.describe('api: real session rotation, replay and revocation (AUTH_CONTRACT 
     const done = await request.post('/api/v1/auth/logout', {
       headers: {
         Cookie: `${STAFF_REFRESH_COOKIE}=${current.refresh}; ${STAFF_CSRF_COOKIE}=${current.csrf}`,
-        Origin: TRUSTED_ORIGIN,
+        Origin: TRUSTED_ORIGIN, 'X-Auth-Realm': 'staff',
         'x-csrf-token': current.csrf,
       },
     });

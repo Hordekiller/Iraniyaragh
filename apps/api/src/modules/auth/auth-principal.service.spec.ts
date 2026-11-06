@@ -8,7 +8,16 @@ import { AuthPrincipalService } from './auth-principal.service';
 
 type SessionRow = Pick<
   Session,
-  'authenticationLevel' | 'authenticatedAt' | 'createdAt' | 'expiresAt' | 'lastUsedAt' | 'revokedAt'
+  | 'id'
+  | 'userId'
+  | 'tokenFamilyId'
+  | 'revokeReason'
+  | 'authenticationLevel'
+  | 'authenticatedAt'
+  | 'createdAt'
+  | 'expiresAt'
+  | 'lastUsedAt'
+  | 'revokedAt'
 > & {
   user: { status: UserStatus };
 };
@@ -19,6 +28,10 @@ function nowIso(deltaMs: number): Date {
 
 function makeSession(overrides: Partial<SessionRow> = {}): SessionRow {
   return {
+    id: 'session-1',
+    userId: 'user-1',
+    tokenFamilyId: 'family-1',
+    revokeReason: null,
     authenticationLevel: 'STAFF_MFA',
     authenticatedAt: nowIso(-60_000),
     createdAt: nowIso(-60_000),
@@ -105,7 +118,7 @@ describe('AuthPrincipalService.resolveBearerToken', () => {
     await expectInvalid(service.resolveBearerToken('Bearer valid-token'));
     expect(findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'session-1', userId: 'user-1', revokedAt: null },
+        where: { id: 'session-1', userId: 'user-1' },
       }),
     );
 
@@ -120,6 +133,44 @@ describe('AuthPrincipalService.resolveBearerToken', () => {
       token: makeToken(),
     });
     await expectInvalid(revoked.service.resolveBearerToken('Bearer valid-token'));
+  });
+
+  it('keeps an access token valid after its session row was rotated while the family has a live head', async () => {
+    const head = makeSession({ id: 'session-2' });
+    const rotated = makeSession({ revokedAt: nowIso(-1_000), revokeReason: 'ROTATED' });
+    const findFirst = vi.fn().mockResolvedValueOnce(rotated).mockResolvedValueOnce(head);
+    const prisma = { session: { findFirst } } as unknown as PrismaService;
+    const tokens = { verifyAccessToken: vi.fn(() => makeToken()) } as unknown as AuthTokenService;
+    const permissions = { effectivePermissionKeys: vi.fn().mockResolvedValue(new Set<string>()) } as unknown as AuthPermissionService;
+    const service = new AuthPrincipalService(prisma, tokens, permissions);
+
+    const principal = await service.resolveBearerToken('Bearer valid-token');
+
+    expect(findFirst).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: { tokenFamilyId: 'family-1', userId: 'user-1', revokedAt: null },
+    }));
+    expect(principal.sessionId).toBe('session-2');
+  });
+
+  it.each(['LOGOUT', 'LOGOUT_ALL', 'REPLAY_DETECTED', 'CREDENTIAL_CHANGED', 'INACTIVITY', 'REVOKED'])(
+    'does not extend a token past a %s revocation',
+    async reason => {
+      const findFirst = vi.fn().mockResolvedValue(makeSession({ revokedAt: nowIso(-1_000), revokeReason: reason }));
+      const prisma = { session: { findFirst } } as unknown as PrismaService;
+      const tokens = { verifyAccessToken: vi.fn(() => makeToken()) } as unknown as AuthTokenService;
+      const permissions = { effectivePermissionKeys: vi.fn() } as unknown as AuthPermissionService;
+      await expectInvalid(new AuthPrincipalService(prisma, tokens, permissions).resolveBearerToken('Bearer valid-token'));
+      expect(findFirst).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('rejects a rotated token once the family head was revoked (logout, replay) or is gone', async () => {
+    const rotated = makeSession({ revokedAt: nowIso(-1_000), revokeReason: 'ROTATED' });
+    const findFirst = vi.fn().mockResolvedValueOnce(rotated).mockResolvedValueOnce(null);
+    const prisma = { session: { findFirst } } as unknown as PrismaService;
+    const tokens = { verifyAccessToken: vi.fn(() => makeToken()) } as unknown as AuthTokenService;
+    const permissions = { effectivePermissionKeys: vi.fn() } as unknown as AuthPermissionService;
+    await expectInvalid(new AuthPrincipalService(prisma, tokens, permissions).resolveBearerToken('Bearer valid-token'));
   });
 
   it('rejects sessions past absolute expiry or inactivity deadline', async () => {

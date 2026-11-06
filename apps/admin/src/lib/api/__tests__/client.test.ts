@@ -22,7 +22,8 @@ describe('apiFetch', () => {
     await apiFetch<{ ok: boolean }>('/health');
     expect(fetch).toHaveBeenCalledWith(`${getApiBaseUrl()}/api/v1/health`, expect.objectContaining({
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      // Admin always declares the staff cookie realm so it never rotates the storefront's cookies.
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Realm': 'staff' },
       body: undefined,
       credentials: 'include',
       cache: 'no-store',
@@ -34,7 +35,7 @@ describe('apiFetch', () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
     await apiFetch<Record<string, never>>('/auth/me', { token: 'at-1' });
     const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
-    expect(init.headers).toEqual({ 'Content-Type': 'application/json', Authorization: 'Bearer at-1' });
+    expect(init.headers).toEqual({ 'Content-Type': 'application/json', 'X-Auth-Realm': 'staff', Authorization: 'Bearer at-1' });
   });
 
   it('serializes the request body for POST', async () => {
@@ -45,13 +46,18 @@ describe('apiFetch', () => {
     expect(init.body).toBe('{"identifier":"x"}');
   });
 
+  it('never reads the storefront customer CSRF cookie (cookie realm isolation)', () => {
+    const document = { cookie: 'iranyaragh_customer_csrf=cust; __Host-iranyaragh_csrf=cust2' } as unknown as Document;
+    expect(readCsrfToken(document)).toBeNull();
+  });
+
   it('reads the double-submit CSRF cookie for cookie-authenticated calls', () => {
-    const document = { cookie: 'other=1; __Host-iranyaragh_csrf=csrftoken-abc' } as unknown as Document;
+    const document = { cookie: 'other=1; __Host-iranyaragh_staff_csrf=csrftoken-abc' } as unknown as Document;
     expect(readCsrfToken(document)).toBe('csrftoken-abc');
   });
 
   it('reads the development customer/staff CSRF cookie issued by real sign-in', () => {
-    const document = { cookie: 'other=1; iranyaragh_customer_csrf=customer-csrf-4' } as unknown as Document;
+    const document = { cookie: 'other=1; iranyaragh_staff_csrf=customer-csrf-4' } as unknown as Document;
     expect(readCsrfToken(document)).toBe('customer-csrf-4');
   });
 
@@ -61,7 +67,7 @@ describe('apiFetch', () => {
   });
 
   it('sends X-CSRF-Token on state-changing requests when a CSRF cookie exists', async () => {
-    vi.stubGlobal('document', { cookie: '__Host-iranyaragh_csrf=csrftoken-abc' });
+    vi.stubGlobal('document', { cookie: '__Host-iranyaragh_staff_csrf=csrftoken-abc' });
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ data: {} })));
     await apiFetch<Record<string, never>>('/auth/logout', { method: 'POST' });
     const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];

@@ -305,7 +305,7 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     const csrf = cookies.find(cookie => cookie.name.endsWith('csrf'))?.value;
     expect(csrf).toBeTruthy();
     const rotated = await page.context().request.post(`${apiOrigin}/api/v1/auth/refresh`, {
-      headers: { Origin: new URL(page.url()).origin, 'X-CSRF-Token': csrf! },
+      headers: { Origin: new URL(page.url()).origin, 'X-CSRF-Token': csrf!, 'X-Auth-Realm': 'staff' },
     });
     expect(rotated.status()).toBe(200);
 

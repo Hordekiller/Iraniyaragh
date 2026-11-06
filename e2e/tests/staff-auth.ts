@@ -22,8 +22,8 @@ import { waitForFreshTotpStep } from './totp-step';
  */
 const SECURE_COOKIE_ENVIRONMENTS = new Set(['staging', 'production']);
 const secureCookies = SECURE_COOKIE_ENVIRONMENTS.has(process.env.NODE_ENV ?? '');
-export const STAFF_REFRESH_COOKIE = secureCookies ? '__Host-iranyaragh_refresh' : 'iranyaragh_customer_refresh';
-export const STAFF_CSRF_COOKIE = secureCookies ? '__Host-iranyaragh_csrf' : 'iranyaragh_customer_csrf';
+export const STAFF_REFRESH_COOKIE = secureCookies ? '__Host-iranyaragh_staff_refresh' : 'iranyaragh_staff_refresh';
+export const STAFF_CSRF_COOKIE = secureCookies ? '__Host-iranyaragh_staff_csrf' : 'iranyaragh_staff_csrf';
 
 export function staffCredentials() {
   const identifier = process.env.E2E_STAFF_EMAIL;

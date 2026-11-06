@@ -5,6 +5,13 @@ import { getRequestId } from '../../common/request-context';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthHashService } from './auth-hash.service';
 import { AuthTokenService } from './auth-token.service';
+import {
+  REFRESH_RECOVERY_WINDOW_MS,
+  attemptHashMatches,
+  hashAttemptId,
+  openRecovery,
+  sealRecovery,
+} from './refresh-recovery';
 
 const CUSTOMER_ABSOLUTE_TTL_MS = 30 * 24 * 60 * 60 * 1_000;
 const CUSTOMER_INACTIVITY_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
@@ -83,6 +90,8 @@ type SessionTransactionResult =
       kind: 'success';
       accessToken: string;
       session: Pick<Session, 'expiresAt' | 'id' | 'tokenFamilyId'>;
+      /** Present only when the stored outcome of an earlier, identical attempt was replayed. */
+      recovered?: { refreshToken: string; csrfToken: string };
     };
 
 class SessionRotationRaceError extends Error {
@@ -91,6 +100,9 @@ class SessionRotationRaceError extends Error {
     this.name = 'SessionRotationRaceError';
   }
 }
+
+/** Minimum spacing between persisted activity writes for one session. */
+export const ACTIVITY_TOUCH_MIN_INTERVAL_MS = 60_000;
 
 @Injectable()
 export class AuthSessionService {
@@ -168,7 +180,11 @@ export class AuthSessionService {
     return Object.freeze({ accessToken, csrfToken, expiresAt, refreshToken, sessionId, tokenFamilyId });
   }
 
-  async rotateSession(rawRefreshToken: string): Promise<IssuedAuthSession> {
+  async rotateSession(
+    rawRefreshToken: string,
+    expectedLevel?: AuthenticationLevel,
+    attemptId?: string,
+  ): Promise<IssuedAuthSession> {
     const candidateHashes = this.candidateRefreshHashes(rawRefreshToken);
     const replacementId = randomUUID();
     const replacementRefreshToken = this.tokens.generateRefreshToken();
@@ -183,12 +199,18 @@ export class AuthSessionService {
         include: { user: { select: { status: true } } },
       });
       if (!session) return { kind: 'invalid' };
+      // Wrong realm: reject without touching (or revoking) the other realm's session.
+      if (expectedLevel !== undefined && session.authenticationLevel !== expectedLevel) return { kind: 'invalid' };
 
       if (
         session.revokedAt !== null &&
         session.revokeReason === AUTH_SESSION_REVOKE_REASON.rotated &&
         session.replacedBySessionId !== null
       ) {
+        // Idempotent recovery of the SAME attempt inside the bounded window. Every
+        // condition must hold; anything else is a genuine replay (family revoked).
+        const recovered = attemptId ? await this.recoverAttempt(tx, session, rawRefreshToken, attemptId, now) : undefined;
+        if (recovered) return recovered;
         const revoked = await tx.session.updateMany({
           where: { tokenFamilyId: session.tokenFamilyId, revokedAt: null },
           data: { revokedAt: now, revokeReason: AUTH_SESSION_REVOKE_REASON.replayDetected },
@@ -264,6 +286,25 @@ export class AuthSessionService {
       });
       if (rotated.count !== 1) throw new SessionRotationRaceError();
 
+      if (attemptId) {
+        // Same transaction as the rotation: either both commit or neither does.
+        await tx.refreshRecovery.create({
+          data: {
+            previousSessionId: session.id,
+            successorSessionId: replacement.id,
+            attemptHash: hashAttemptId(attemptId),
+            sealed: sealRecovery(
+              { refreshToken: replacementRefreshToken, csrfToken },
+              rawRefreshToken,
+              attemptId,
+              `${session.id}>${replacement.id}`,
+            ),
+            createdAt: now,
+            expiresAt: new Date(now.getTime() + REFRESH_RECOVERY_WINDOW_MS),
+          },
+        });
+      }
+
       await tx.auditLog.create({
         data: {
           actorId: session.userId,
@@ -279,14 +320,98 @@ export class AuthSessionService {
 
     if (result.kind === 'replayed') throw new AuthSessionException('AUTH_SESSION_REPLAYED');
     if (result.kind === 'invalid') throw new AuthSessionException('AUTH_SESSION_INVALID');
+    if (attemptId) void this.purgeExpiredRecoveries();
     return Object.freeze({
       accessToken: result.accessToken,
-      csrfToken,
+      csrfToken: result.recovered?.csrfToken ?? csrfToken,
       expiresAt: result.session.expiresAt,
-      refreshToken: replacementRefreshToken,
+      refreshToken: result.recovered?.refreshToken ?? replacementRefreshToken,
       sessionId: result.session.id,
       tokenFamilyId: result.session.tokenFamilyId,
     });
+  }
+
+  /** Best-effort cleanup of expired recovery rows; never affects a rotation. */
+  async purgeExpiredRecoveries(now: Date = new Date()): Promise<number> {
+    try {
+      const { count } = await this.prisma.refreshRecovery.deleteMany({ where: { expiresAt: { lte: now } } });
+      return count;
+    } catch {
+      return 0;
+    }
+  }
+
+  private async recoverAttempt(
+    tx: Prisma.TransactionClient,
+    previous: Session & { user: { status: UserStatus } },
+    rawRefreshToken: string,
+    attemptId: string,
+    now: Date,
+  ): Promise<SessionTransactionResult | undefined> {
+    const record = await tx.refreshRecovery.findUnique({ where: { previousSessionId: previous.id } });
+    if (!record || record.expiresAt <= now || !attemptHashMatches(record.attemptHash, attemptId)) return undefined;
+    // The successor must still be the live head of the SAME family and realm. A
+    // logout, revocation, credential change, expiry or a further rotation all
+    // make recovery impossible.
+    const successor = await tx.session.findFirst({
+      where: {
+        id: record.successorSessionId,
+        tokenFamilyId: previous.tokenFamilyId,
+        authenticationLevel: previous.authenticationLevel,
+        revokedAt: null,
+        replacedBySessionId: null,
+      },
+    });
+    if (!successor || this.invalidReason(successor, previous.user.status, now)) return undefined;
+    const opened = openRecovery(record.sealed, rawRefreshToken, attemptId, `${previous.id}>${successor.id}`);
+    if (!opened) return undefined;
+    await tx.auditLog.create({
+      data: {
+        actorId: previous.userId,
+        action: 'auth.session.refresh_recovered',
+        entityType: 'Session',
+        entityId: previous.id,
+        requestId: getRequestId(),
+        metadata: { sessionId: successor.id, tokenFamilyId: previous.tokenFamilyId },
+      },
+    });
+    return {
+      kind: 'success',
+      accessToken: this.tokens.signAccessToken({
+        userId: successor.userId,
+        sessionId: successor.id,
+        authenticationLevel: successor.authenticationLevel,
+        authenticatedAt: successor.authenticatedAt,
+      }),
+      session: { expiresAt: successor.expiresAt, id: successor.id, tokenFamilyId: successor.tokenFamilyId },
+      recovered: opened,
+    };
+  }
+
+  /**
+   * Record genuine user activity for the already-validated live session. The
+   * caller's guard has enforced revocation, absolute expiry and the current
+   * inactivity deadline, so an idle session can never be revived here. Writes
+   * are throttled and never move lastUsedAt backwards.
+   */
+  async touchActivity(sessionId: string, now: Date = new Date()): Promise<boolean> {
+    const current = await this.prisma.session.findFirst({
+      where: { id: sessionId, revokedAt: null },
+      select: { authenticatedAt: true, authenticationLevel: true, createdAt: true, expiresAt: true, lastUsedAt: true, user: { select: { status: true } } },
+    });
+    // Defence in depth: never revive a session already past its deadlines.
+    if (!current || this.invalidReason(current, current.user.status, now)) return false;
+    const threshold = new Date(now.getTime() - ACTIVITY_TOUCH_MIN_INTERVAL_MS);
+    const result = await this.prisma.session.updateMany({
+      where: {
+        id: sessionId,
+        revokedAt: null,
+        expiresAt: { gt: now },
+        OR: [{ lastUsedAt: null }, { lastUsedAt: { lt: threshold } }],
+      },
+      data: { lastUsedAt: now },
+    });
+    return result.count > 0;
   }
 
   async listSessions(userId: string, currentSessionId: string): Promise<readonly AuthSessionSummary[]> {
@@ -346,11 +471,34 @@ export class AuthSessionService {
     const candidateHashes = this.candidateRefreshHashes(rawRefreshToken);
     const requestId = getRequestId();
     return this.runSerializable(async tx => {
-      const session = await tx.session.findFirst({
-        where: { refreshTokenHash: { in: [...candidateHashes] }, revokedAt: null },
-        select: { id: true, userId: true },
+      const found = await tx.session.findFirst({
+        where: { refreshTokenHash: { in: [...candidateHashes] } },
+        select: { id: true, userId: true, revokedAt: true, revokeReason: true, tokenFamilyId: true },
       });
-      if (!session) return false;
+      if (!found) return false;
+      if (found.revokedAt !== null) {
+        // A rotated token whose response was lost can still be the only credential
+        // the browser holds. Logging out with it must end the whole login, never
+        // leave the unseen successor alive. (Revoking is always the safe direction.)
+        if (found.revokeReason !== AUTH_SESSION_REVOKE_REASON.rotated) return false;
+        const family = await tx.session.updateMany({
+          where: { tokenFamilyId: found.tokenFamilyId, revokedAt: null },
+          data: { revokedAt: new Date(), revokeReason: AUTH_SESSION_REVOKE_REASON.logout },
+        });
+        if (family.count === 0) return false;
+        await tx.auditLog.create({
+          data: {
+            actorId: found.userId,
+            action: 'auth.session.revoked',
+            entityType: 'Session',
+            entityId: found.id,
+            requestId,
+            metadata: { reason: AUTH_SESSION_REVOKE_REASON.logout, revokedSessionCount: family.count, viaRotatedToken: true },
+          },
+        });
+        return true;
+      }
+      const session = found;
 
       const revoked = await tx.session.updateMany({
         where: { id: session.id, revokedAt: null },
@@ -370,6 +518,27 @@ export class AuthSessionService {
       });
       return true;
     });
+  }
+
+  /**
+   * A client may still name the row its access token was signed for after a
+   * refresh rotated it. Ending "this device" must then end the live head of
+   * the same family (and only that family), never report success while the
+   * login keeps working.
+   */
+  async resolveLiveSessionId(userId: string, sessionId: string): Promise<string> {
+    const row = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      select: { userId: true, revokedAt: true, revokeReason: true, tokenFamilyId: true },
+    });
+    if (!row || row.userId !== userId || row.revokedAt === null || row.revokeReason !== AUTH_SESSION_REVOKE_REASON.rotated) {
+      return sessionId;
+    }
+    const head = await this.prisma.session.findFirst({
+      where: { tokenFamilyId: row.tokenFamilyId, userId, revokedAt: null },
+      select: { id: true },
+    });
+    return head?.id ?? sessionId;
   }
 
   async revokeUserSession(
@@ -589,7 +758,8 @@ export class AuthSessionService {
         data: {
           replacedBySessionId: replacement.id,
           revokedAt: now,
-          revokeReason: AUTH_SESSION_REVOKE_REASON.rotated,
+          // Not `rotated`: access tokens signed before a credential change must not survive it.
+          revokeReason: AUTH_SESSION_REVOKE_REASON.credentialChanged,
         },
       });
       if (rotated.count !== 1) throw new SessionRotationRaceError();

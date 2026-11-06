@@ -397,10 +397,28 @@ model Session {
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   replacedBy          Session?            @relation("SessionRotation", fields: [replacedBySessionId], references: [id], onDelete: SetNull)
   replaces            Session?            @relation("SessionRotation")
+  recoveryAsPrevious  RefreshRecovery?    @relation("RecoveryPrevious")
+  recoveryAsSuccessor RefreshRecovery?    @relation("RecoverySuccessor")
 
   @@index([userId, revokedAt, expiresAt])
   @@index([tokenFamilyId, createdAt])
   @@index([tokenFamilyId, revokedAt])
+  @@index([expiresAt])
+}
+
+/// Short-lived (<= 15 s) sealed successor credentials of one refresh rotation,
+/// so a retry of the SAME client attempt can recover a lost response. See
+/// docs/AUTH_CONTRACT.md 8.1. Contains no plaintext credential.
+model RefreshRecovery {
+  previousSessionId  String   @id
+  successorSessionId String   @unique
+  attemptHash        String   @db.VarChar(64)
+  sealed             String   @db.Text
+  expiresAt          DateTime
+  createdAt          DateTime @default(now())
+  previous           Session  @relation("RecoveryPrevious", fields: [previousSessionId], references: [id], onDelete: Cascade)
+  successor          Session  @relation("RecoverySuccessor", fields: [successorSessionId], references: [id], onDelete: Cascade)
+
   @@index([expiresAt])
 }
 

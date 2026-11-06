@@ -26,12 +26,13 @@ import { AuthSessionService } from './auth-session.service';
 import { AuthPrincipalService, type AuthPrincipalContext } from './auth-principal.service';
 import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication } from './auth.guard';
 import { StaffPasswordChangeDto, StaffPasswordDto, StaffRecoveryVerifyDto, StaffTotpConfirmDto, StaffTotpVerifyDto } from './staff-auth.dto';
-import { clearAuthCookies, requireCookieProof, setAuthCookies } from './auth-http';
+import { authRealmOf, clearAuthCookies, cookieSpecForRealm, requireCookieProof, setAuthCookies, staffCookieSpec } from './auth-http';
 import { AuthSessionException } from './auth-session.service';
 import { AuthTokenService } from './auth-token.service';
 import { StaffAuthService } from './staff-auth.service';
 import { StaffMfaService } from './staff-mfa.service';
 import { RateLimitService } from './rate-limit.service';
+import { REFRESH_ATTEMPT_HEADER, parseRefreshAttemptId } from './refresh-recovery';
 
 const STAFF_LEVEL: AuthenticationLevel = 'STAFF_MFA';
 const ACCESS_TOKEN_TYPE = 'Bearer';
@@ -79,7 +80,7 @@ export class StaffAuthController {
       ipAddress: typeof request.ip === 'string' ? request.ip : undefined,
       userAgent: typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : undefined,
     });
-    setAuthCookies(response, this.config.cookies, result.refreshToken, result.csrfToken, result.expiresAt);
+    setAuthCookies(response, staffCookieSpec(this.config), result.refreshToken, result.csrfToken, result.expiresAt);
     return result.response;
   }
 
@@ -98,7 +99,7 @@ export class StaffAuthController {
       ipAddress: typeof request.ip === 'string' ? request.ip : undefined,
       userAgent: typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : undefined,
     });
-    setAuthCookies(response, this.config.cookies, result.refreshToken, result.csrfToken, result.expiresAt);
+    setAuthCookies(response, staffCookieSpec(this.config), result.refreshToken, result.csrfToken, result.expiresAt);
     return result.response;
   }
 
@@ -148,7 +149,7 @@ export class StaffAuthController {
       currentPassword: body.currentPassword,
       newPassword: body.newPassword,
     });
-    setAuthCookies(response, this.config.cookies, issued.refreshToken, issued.csrfToken, issued.expiresAt);
+    setAuthCookies(response, staffCookieSpec(this.config), issued.refreshToken, issued.csrfToken, issued.expiresAt);
     return { data: {} };
   }
 
@@ -168,7 +169,7 @@ export class StaffAuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<EmptyResponse> {
-    const cookieSpec = this.config.cookies;
+    const cookieSpec = cookieSpecForRealm(this.config, authRealmOf(request));
     const refreshToken = requireCookieProof(
       request,
       this.tokens,
@@ -176,7 +177,7 @@ export class StaffAuthController {
       this.config.corsOrigins ?? [],
     );
     await this.sessions.revokeByRefreshToken(refreshToken);
-    clearAuthCookies(response, this.config.cookies);
+    clearAuthCookies(response, cookieSpec);
     return { data: {} };
   }
 
@@ -192,7 +193,8 @@ export class StaffAuthController {
     if (refreshIp !== undefined) {
       await this.limits.enforce({ dimension: 'refresh:ip', value: refreshIp, context: 'ip' });
     }
-    const cookieSpec = this.config.cookies;
+    const realm = authRealmOf(request);
+    const cookieSpec = cookieSpecForRealm(this.config, realm);
     const refreshToken = requireCookieProof(
       request,
       this.tokens,
@@ -201,7 +203,13 @@ export class StaffAuthController {
     );
 
     try {
-      const issued = await this.sessions.rotateSession(refreshToken);
+      // A realm only ever rotates its own sessions: a staff cookie can never be
+      // exchanged through the customer realm, nor the reverse.
+      const issued = await this.sessions.rotateSession(
+        refreshToken,
+        realm === 'staff' ? STAFF_LEVEL : 'CUSTOMER_OTP',
+        parseRefreshAttemptId(request.headers?.[REFRESH_ATTEMPT_HEADER]),
+      );
       setAuthCookies(response, cookieSpec, issued.refreshToken, issued.csrfToken, issued.expiresAt);
       const principal = await this.principals.resolveBearerToken(`${ACCESS_TOKEN_TYPE} ${issued.accessToken}`);
       return {
@@ -213,7 +221,7 @@ export class StaffAuthController {
         },
       };
     } catch (error) {
-      if (error instanceof AuthSessionException) clearAuthCookies(response, this.config.cookies);
+      if (error instanceof AuthSessionException) clearAuthCookies(response, cookieSpec);
       throw error;
     }
   }
