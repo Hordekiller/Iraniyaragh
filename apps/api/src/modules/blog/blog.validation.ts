@@ -15,9 +15,11 @@ const WORDS_PER_MINUTE = 200;
 const invalid = (message: string) => new BadRequestException({ code: 'INVALID_REQUEST', message });
 const within = (value: unknown, max: number, min = 0): value is string => typeof value === 'string' && value.trim().length >= min && value.length <= max;
 
+const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+/** Text content of sanitized HTML. Entities are decoded in a single pass so `&amp;lt;` stays `&lt;`. */
 export function plainText(html: string): string {
   return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {}, nonTextTags: ['style', 'script', 'textarea', 'option'] })
-    .replaceAll('&amp;', '&').replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"').replaceAll('&#39;', "'")
+    .replace(/&(?:amp|lt|gt|quot|#39);/gu, entity => ENTITIES[entity]!)
     .replace(/\s+/gu, ' ').trim();
 }
 export function readingMinutes(html: string): number {

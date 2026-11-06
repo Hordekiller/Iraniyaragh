@@ -11,7 +11,9 @@
  */
 const attrs = tag => Object.fromEntries([...tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/gu)].map(m => [m[1].toLowerCase(), m[2] ?? m[3]]));
 const tags = (html, name) => (html.match(new RegExp(`<${name}\\b[^>]*>`, 'giu')) ?? []).map(attrs);
-const decode = value => value.replaceAll('&amp;', '&').replaceAll('&quot;', '"').replaceAll('&#x27;', "'").replaceAll('&lt;', '<').replaceAll('&gt;', '>');
+const ENTITIES = { '&amp;': '&', '&quot;': '"', '&#x27;': "'", '&lt;': '<', '&gt;': '>' };
+// Single pass: decoding `&amp;` first and then the others would double-unescape `&amp;lt;`.
+const decode = value => value.replace(/&(?:amp|quot|#x27|lt|gt);/gu, entity => ENTITIES[entity]);
 const text = html => decode(html.replace(/<(script|style|noscript|template)\b[\s\S]*?<\/\1>/giu, ' ').replace(/<[^>]+>/gu, ' ')).replace(/\s+/gu, ' ').trim();
 
 export function jsonLdNodes(html, issues = []) {

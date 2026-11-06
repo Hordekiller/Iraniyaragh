@@ -48,6 +48,7 @@ describe('blog input validation', () => {
 describe('blog helpers', () => {
   it('extracts text, estimates reading time and demotes only h1', () => {
     expect(plainText('<style>p{}</style><p>الف <b>ب</b></p>')).toBe('الف ب');
+    expect(plainText('<p>a &amp;lt; b &amp; c &lt;i&gt;</p>')).toBe('a &lt; b & c <i>');
     expect(readingMinutes('<p>' + 'کلمه '.repeat(450) + '</p>')).toBe(3);
     expect(readingMinutes('')).toBe(1);
     expect(demoteH1('<h1 id="a">x</h1><h2>y</h2>')).toBe('<h2 id="a">x</h2><h2>y</h2>');

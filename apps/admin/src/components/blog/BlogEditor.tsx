@@ -156,13 +156,13 @@ function Editor({ postId }: { postId: string | null }) {
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
               <Typography variant="subtitle2">منابع (برای ادعاهای فنی، استاندارد و سازگاری)</Typography>
-              <Button size="small" startIcon={<Plus size={14} />} disabled={!editable || form.sources.length >= 10} onClick={() => change({ sources: [...form.sources, { title: '', url: 'https://', accessedAt: new Date().toISOString().slice(0, 10) }] })}>افزودن منبع</Button>
+              <Button size="small" startIcon={<Plus size={14} />} disabled={!editable || form.sources.length >= 10} onClick={() => change({ sources: [...form.sources, { title: '', url: '', accessedAt: new Date().toISOString().slice(0, 10) }] })}>افزودن منبع</Button>
             </Stack>
             <Stack gap={1.5}>
               {form.sources.map((source, index) => (
                 <Stack key={index} direction={{ xs: 'column', md: 'row' }} gap={1} alignItems="center">
                   <TextField size="small" fullWidth label="عنوان منبع" value={source.title} disabled={!editable} onChange={event => change({ sources: form.sources.map((item, i) => (i === index ? { ...item, title: event.target.value } : item)) })} />
-                  <TextField size="small" fullWidth label="نشانی (https)" value={source.url} disabled={!editable} inputProps={{ dir: 'ltr' }} onChange={event => change({ sources: form.sources.map((item, i) => (i === index ? { ...item, url: event.target.value } : item)) })} />
+                  <TextField size="small" fullWidth label="نشانی (https)" placeholder="نشانی کامل منبع با https" value={source.url} disabled={!editable} inputProps={{ dir: 'ltr' }} onChange={event => change({ sources: form.sources.map((item, i) => (i === index ? { ...item, url: event.target.value } : item)) })} />
                   <TextField size="small" label="تاریخ بازدید" type="date" value={source.accessedAt} disabled={!editable} InputLabelProps={{ shrink: true }} onChange={event => change({ sources: form.sources.map((item, i) => (i === index ? { ...item, accessedAt: event.target.value } : item)) })} />
                   <Button size="small" color="error" aria-label="حذف منبع" disabled={!editable} onClick={() => change({ sources: form.sources.filter((_item, i) => i !== index) })}><Trash2 size={16} /></Button>
                 </Stack>

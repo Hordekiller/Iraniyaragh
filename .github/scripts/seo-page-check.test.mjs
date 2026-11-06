@@ -80,3 +80,8 @@ test("article images need alt text; missing dimensions are advisory", () => {
   assert.ok(!issues('<img data-media-id="m1" src="https://c/a.webp" width="10" height="10" alt="لولا">').some(i => i.level === "error"));
   assert.ok(issues('<img src="https://c/a.webp" alt="لولا">').some(i => i.level === "warn" && /width\/height/u.test(i.message)));
 });
+
+test("entities are decoded once (no double-unescape) in titles", () => {
+  const issues = checkPage(page({ title: "A &amp;lt; B" }), { url, origin, kind: "product" });
+  assert.ok(!issues.some(i => /title/u.test(i.message) && i.level === "error"));
+});
