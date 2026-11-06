@@ -20,7 +20,12 @@ export const ORIGIN = process.env.SESSION_E2E_ORIGIN ?? 'http://127.0.0.1:8180';
 export const PG = process.env.SESSION_E2E_PG_CONTAINER ?? 'sessionfix-pg';
 export const STAFF = { id: process.env.E2E_STAFF_EMAIL!, password: process.env.E2E_STAFF_PASSWORD!, totp: process.env.E2E_STAFF_TOTP_SECRET! };
 export const JWT_SECRET = process.env.JWT_ACCESS_SECRET!;
-export const C = { cRefresh: 'iranyaragh_customer_refresh', cCsrf: 'iranyaragh_customer_csrf', sRefresh: 'iranyaragh_staff_refresh', sCsrf: 'iranyaragh_staff_csrf' };
+// SESSION_E2E_PRODUCTION_COOKIES=1 targets a NODE_ENV=staging|production API behind HTTPS:
+// the real __Host- names (Secure, Path=/, no Domain) instead of the development names.
+export const PRODUCTION_COOKIES = process.env.SESSION_E2E_PRODUCTION_COOKIES === '1';
+export const C = PRODUCTION_COOKIES
+  ? { cRefresh: '__Host-iranyaragh_refresh', cCsrf: '__Host-iranyaragh_csrf', sRefresh: '__Host-iranyaragh_staff_refresh', sCsrf: '__Host-iranyaragh_staff_csrf' }
+  : { cRefresh: 'iranyaragh_customer_refresh', cCsrf: 'iranyaragh_customer_csrf', sRefresh: 'iranyaragh_staff_refresh', sCsrf: 'iranyaragh_staff_csrf' };
 
 export function sql(statement: string): string {
   return execFileSync('docker', ['exec', PG, 'psql', '-U', 'app_test', '-d', 'sf_test', '-At', '-c', statement], { encoding: 'utf8' }).trim();
@@ -38,10 +43,10 @@ export function mintCustomer(): { refreshToken: string; csrfToken: string } {
 }
 export async function addCustomerCookies(context: BrowserContext) {
   const { refreshToken, csrfToken } = mintCustomer();
-  const host = new URL(ORIGIN).hostname;
+  // `url` (not domain/path) is what lets a __Host- cookie be set: it must carry no Domain attribute.
   await context.addCookies([
-    { name: C.cRefresh, value: refreshToken, domain: host, path: '/', httpOnly: true, sameSite: 'Strict' },
-    { name: C.cCsrf, value: csrfToken, domain: host, path: '/', httpOnly: false, sameSite: 'Strict' },
+    { name: C.cRefresh, value: refreshToken, url: ORIGIN, httpOnly: true, secure: PRODUCTION_COOKIES, sameSite: 'Strict' },
+    { name: C.cCsrf, value: csrfToken, url: ORIGIN, httpOnly: false, secure: PRODUCTION_COOKIES, sameSite: 'Strict' },
   ]);
 }
 export async function staffLogin(page: Page) {

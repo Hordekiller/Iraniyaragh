@@ -15,6 +15,10 @@ const refreshUrl = '**/api/v1/auth/refresh';
 /** Make the next `n` refreshes commit on the server and lose their responses. */
 async function loseRefreshResponses(page: Page, n = 1, mode: 'abort' | 'hang' = 'abort') {
   let remaining = n;
+  // Counts rotations that the SERVER has really committed. `remaining` drops when a
+  // refresh merely starts, so using it as "committed" let a test act (logout, a second
+  // click that joins the in-flight refresh) while the first rotation was still running.
+  let committed = 0;
   const attempts: string[] = [];
   // A SEPARATE request context: route.fetch() would store Set-Cookie in the
   // browser's own cookie jar and so quietly deliver the rotated cookie.
@@ -26,11 +30,12 @@ async function loseRefreshResponses(page: Page, n = 1, mode: 'abort' | 'hang' = 
     const original = route.request();
     const sent = await server.fetch(original.url(), { method: 'POST', headers: await original.allHeaders(), failOnStatusCode: false });
     expect(sent.status(), 'the server committed the rotation').toBe(200);
+    committed += 1;
     // ...and the browser never learns of it (no response, no Set-Cookie).
     if (mode === 'abort') return route.abort('connectionreset');
     return new Promise<void>(() => { /* never answered: page reload drops it */ });
   });
-  return { attempts, committed: () => n - remaining };
+  return { attempts, committed: () => committed };
 }
 const rememberAttempts = (page: Page) => {
   const seen: string[] = [];
