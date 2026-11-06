@@ -9,7 +9,7 @@ import { CatalogHttpClient } from '../services/catalog/http'
 import { CatalogError } from '../services/catalog/errors'
 import { entityPath, validSlug } from './policy'
 
-function apiOrigin() {
+export function apiOrigin() {
   const url = new URL(process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:4000')
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('API_INTERNAL_URL must be an HTTP origin')
   return url.origin

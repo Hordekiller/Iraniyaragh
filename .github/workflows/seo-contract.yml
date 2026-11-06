@@ -1,0 +1,75 @@
+name: SEO Contract
+
+# Builds the storefront against the isolated fixture catalog and checks the
+# server-rendered HTML of the key page types (language, title, description,
+# single h1, canonical, Open Graph, alt text, JSON-LD, 404 behaviour) and the
+# robots/sitemap contract. Non-production builds are noindex by design, so the
+# render check runs with --allow-noindex; the production audit enforces indexing.
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "apps/api/src/modules/discovery/**"
+      - "packages/contracts/**"
+      - ".github/scripts/seo-page-check*.mjs"
+      - ".github/scripts/discovery-audit*.mjs"
+      - ".github/workflows/seo-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seo-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+      - name: Unit-test the SEO checker
+        run: node --test .github/scripts/seo-page-check.test.mjs .github/scripts/discovery-audit.test.mjs
+
+  rendered:
+    needs: checker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_ENVIRONMENT: test
+      NEXT_PUBLIC_FIXTURE_CATALOG: "true"
+      NEXT_PUBLIC_FIXTURE_AUTH: "true"
+      PUBLIC_WEB_ORIGIN: https://seo-contract.example.com
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Web unit tests for metadata and structured data
+        run: pnpm --filter @iranyaragh/web exec vitest run src/server src/lib
+      - name: Build and start the fixture storefront
+        run: |
+          pnpm --filter @iranyaragh/web build
+          cd apps/web
+          (pnpm exec next start --port 3100 > ../../web.log 2>&1 &)
+          for i in $(seq 1 40); do curl -fsS http://127.0.0.1:3100/health >/dev/null 2>&1 && break; sleep 1; done
+      - name: Check rendered pages against the SEO contract
+        run: node .github/scripts/seo-page-check.mjs --base http://127.0.0.1:3100 --origin "$PUBLIC_WEB_ORIGIN" --allow-noindex | tee seo-contract.json
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: seo-contract
+          path: |
+            seo-contract.json
+            web.log
+          if-no-files-found: ignore
+          retention-days: 14

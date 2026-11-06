@@ -39,7 +39,12 @@ const escapeAttribute = (value: string): string =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-export function buildMediaImageHtml(item: MediaPickerItem): string {
+export function buildMediaImageHtml(item: MediaPickerItem, options: { figure?: boolean } = {}): string {
+  if (options.figure) {
+    // Articles: the visible caption is a real <figcaption>, which survives sanitization (a title attribute does not).
+    const caption = item.caption ? `<figcaption>${escapeAttribute(item.caption)}</figcaption>` : '';
+    return `<figure><img data-media-id="${escapeAttribute(item.id)}" src="${escapeAttribute(item.url)}" alt="${escapeAttribute(item.alt)}" width="${item.width}" height="${item.height}" />${caption}</figure>`;
+  }
   const id = escapeAttribute(item.id);
   const alt = escapeAttribute(item.alt);
   const url = escapeAttribute(item.url);

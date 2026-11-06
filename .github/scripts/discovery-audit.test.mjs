@@ -8,7 +8,11 @@ const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
 const loc = urls => urls.map(url => `<loc>${origin}${url}</loc>`).join("");
 function fixtures({ html, headers = {}, secondShard = false, responseStatus = 200 } = {}) {
-  const page = html ?? `<link href="${origin}/products/test" rel="canonical"><script type="application/ld+json">${JSON.stringify({ "@type": "Product", name: "Isolated test", offers: { price: "9007199254740993", priceCurrency: "IRR" } })}</script>`;
+  const url = `${origin}/products/test`;
+  const meta = (property, content) => `<meta property="${property}" content="${content}">`;
+  const crumbs = { "@type": "BreadcrumbList", itemListElement: [{ position: 1, name: "خانه", item: `${origin}/` }, { position: 2, name: "تست", item: url }] };
+  const product = { "@type": "Product", name: "Isolated test", image: ["https://example.com/a.webp"], offers: { price: "9007199254740993", priceCurrency: "IRR" } };
+  const page = html ?? `<!doctype html><html lang="fa" dir="rtl"><head><meta name="viewport" content="width=device-width"><title>تست | ایرانی یراق</title><meta name="description" content="توضیح کامل صفحهٔ آزمایشی برای بررسی قرارداد سئو در ایرانی یراق و ساختار داده."><link href="${url}" rel="canonical">${meta("og:title", "t")}${meta("og:description", "d")}${meta("og:url", url)}${meta("og:image", "https://example.com/a.png")}${meta("og:locale", "fa_IR")}${meta("og:site_name", "s")}${meta("og:type", "website")}<meta name="twitter:card" content="summary"><script type="application/ld+json">${JSON.stringify([product, crumbs])}</script></head><body><h1>تست</h1><p>${"متن آزمایشی صفحهٔ محصول برای بررسی. ".repeat(10)}</p></body></html>`;
   globalThis.fetch = async (url, options) => {
     assert.equal(options.redirect, "error");
     const path = new URL(url).pathname;

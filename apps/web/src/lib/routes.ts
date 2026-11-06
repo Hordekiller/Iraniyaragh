@@ -10,6 +10,8 @@ export const ROUTES = {
   categories: '/categories',
   privacy: '/policies/privacy',
   terms: '/policies/terms',
+  blog: '/blog',
+  blogPost: (slug: string) => `/blog/${encodeURIComponent(slug)}`,
   help: '/help',
   helpTopic: (slug: string) => `/help/${encodeURIComponent(slug)}`,
   category: (slug: string) => `/categories/${slug}`,
