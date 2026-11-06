@@ -37,6 +37,8 @@ export type JoditProfile = {
 };
 
 export type JoditProfileOptions = {
+  /** `article` adds a clear-formatting button and horizontal rule, and drops free colour styling. */
+  variant?: 'default' | 'article';
   placeholder?: string;
   height?: number | string;
   readonly?: boolean;
@@ -91,6 +93,27 @@ const RICH_TEXT_TOOLBAR = [
   'table',
 ] as const;
 
+// Articles keep a consistent house style: no colour picker, but clear-formatting and a divider.
+const ARTICLE_TOOLBAR = [
+  'source',
+  'undo',
+  'redo',
+  'paragraph',
+  'bold',
+  'italic',
+  'underline',
+  'strikethrough',
+  'eraser',
+  'ul',
+  'ol',
+  'outdent',
+  'indent',
+  'align',
+  'link',
+  'table',
+  'hr',
+] as const;
+
 export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfile {
   const extraButtons: NonNullable<JoditProfile['extraButtons']> = [
     {
@@ -124,7 +147,7 @@ export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfi
     toolbarSticky: false,
     disablePlugins: [...RICH_TEXT_DISABLED_PLUGINS],
     uploader: { url: '', insertImageAsBase64URI: false },
-    buttons: [...RICH_TEXT_TOOLBAR],
+    buttons: [...(options.variant === 'article' ? ARTICLE_TOOLBAR : RICH_TEXT_TOOLBAR)],
     extraButtons,
     events: options.onChange
       ? {

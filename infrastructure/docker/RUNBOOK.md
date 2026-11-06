@@ -599,3 +599,33 @@ editable in the separate **قالب‌های SMS.ir** section and persisted in P
 false; an approved private `SMS_IR_TEST_MOBILE` is required for a confirmed test.
 Deploy environment changes through the official exact-SHA release path. Keep
 payment mode unchanged. Missing approvals or handset evidence keep #114 open.
+
+## Search indexing switch (`APP_ENVIRONMENT`)
+
+`APP_ENVIRONMENT` is unset in `.env.staging` by default and then resolves to
+`staging`: all pages answer `noindex, nofollow`, `robots.txt` is `Disallow: /` and
+Search Console reports the sitemap as «Couldn't fetch». To allow indexing of a live
+store, set `APP_ENVIRONMENT=production` (this also sets the API/worker `NODE_ENV`).
+
+Preconditions: `PAYMENT_PROVIDER_MODE=live` and `SMS_PROVIDER_MODE=smsir` (production
+rejects `disabled`), `PUBLIC_WEB_ORIGIN` is the HTTPS apex, and the business has
+accepted that the store becomes discoverable.
+
+```sh
+cd /opt/iranyaragh/infrastructure/docker
+cp -p .env.staging .env.staging.bak-before-production-env
+printf '\nAPP_ENVIRONMENT=production\n' >> .env.staging
+docker compose --env-file .env.staging -f compose.staging.yml config --quiet
+docker compose --env-file .env.staging -f compose.staging.yml up -d --no-build
+```
+
+Verify, then submit the sitemap in Search Console:
+
+```sh
+curl -s https://<domain>/robots.txt                      # Allow: / and Sitemap: line
+curl -sI https://<domain>/ | grep -i x-robots-tag        # no noindex header
+curl -s https://<domain>/ | grep -o '<meta name="robots"[^>]*>'   # index, follow
+node .github/scripts/discovery-audit.mjs https://<domain>          # full contract audit
+```
+
+Rollback: restore the `.bak` file and re-run the same `up -d`.

@@ -1,5 +1,6 @@
 import { HelpPage } from '../../views/HelpPage'
 import { metadataFor } from '../../server/policy'
+import { JsonLd, breadcrumb } from '../../server/structured-data'
 
 export function generateMetadata() {
   return metadataFor({
@@ -8,4 +9,4 @@ export function generateMetadata() {
     path: '/help',
   })
 }
-export default function Page() { return <HelpPage /> }
+export default function Page() { return <><JsonLd data={breadcrumb([{ name: 'خانه', path: '/' }, { name: 'مرکز راهنمای مشتری', path: '/help' }])} /><HelpPage /></> }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { metadataFor, publicOrigin, pageNumber, hasNonPageQuery, validSlug, entityPath } from './policy'
-import { breadcrumb, plainDescription, productJsonLd, JsonLd } from './structured-data'
+import { breadcrumb, collectionJsonLd, organizationJsonLd, websiteJsonLd, plainDescription, productJsonLd, JsonLd } from './structured-data'
 import { categoryAncestors } from './category-ancestors'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { CatalogProduct, CatalogCategory } from '../services/catalog/types'
@@ -29,6 +29,31 @@ describe('public URL and indexing policy', () => {
     expect(entityPath('products', 'لولای-کابینت')).toBe('/products/'+encodeURIComponent('لولای-کابینت'))
     expect(validSlug('لولای-کابینت')).toBe(true); expect(validSlug('a'.repeat(250))).toBe(true)
     for (const value of ['a'.repeat(251), '', '../cart', '%2fadmin', 'a/b', 'a?b', '-a', 'a--b']) expect(validSlug(value)).toBe(false)
+  })
+})
+describe('share metadata and site structured data', () => {
+  it('falls back to the brand mark for og/twitter images and prefers a real page image', () => {
+    setup()
+    const plain = metadataFor({ title: 'ابزار', description: 'تست', path: '/catalog' })
+    expect(plain.openGraph).toMatchObject({ images: [{ url: origin + '/brand/wordmark-print.png?v=20261104', width: 1086, height: 370, alt: 'ایرانی یراق' }], locale: 'fa_IR' })
+    expect(plain.twitter).toMatchObject({ card: 'summary' })
+    const rich = metadataFor({ title: 'لولا', description: 'تست', path: '/products/x', image: { url: 'https://cdn.test/a.webp', width: 1200, height: 800, alt: 'لولای کابینت' } })
+    expect(rich.openGraph).toMatchObject({ images: [{ url: 'https://cdn.test/a.webp', width: 1200, height: 800, alt: 'لولای کابینت' }] })
+    expect(rich.twitter).toMatchObject({ card: 'summary_large_image' })
+  })
+  it('emits linked Organization/WebSite nodes without invented contact data or SearchAction', () => {
+    setup()
+    expect(organizationJsonLd()).toMatchObject({ '@type': 'Organization', '@id': origin + '/#organization' })
+    expect(organizationJsonLd()).not.toHaveProperty('contactPoint')
+    expect(websiteJsonLd()).toMatchObject({ '@type': 'WebSite', inLanguage: 'fa-IR', publisher: { '@id': origin + '/#organization' } })
+    expect(websiteJsonLd()).not.toHaveProperty('potentialAction')
+  })
+  it('lists the visible collection products with page-aware positions', () => {
+    setup()
+    const schema = collectionJsonLd({ name: 'لولا', path: '/categories/hinge?page=2', products: [{ slug: 'a', name: 'الف' }, { slug: 'b', name: 'ب' }], offset: 24 })
+    expect(schema.mainEntity?.itemListElement.map(entry => entry.position)).toEqual([25, 26])
+    expect(schema.mainEntity?.itemListElement[0]?.url).toBe(origin + '/products/a')
+    expect(collectionJsonLd({ name: 'خالی', path: '/catalog', products: [], offset: 0 })).not.toHaveProperty('mainEntity')
   })
 })
 describe('truthful server structured data', () => {

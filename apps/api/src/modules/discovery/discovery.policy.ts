@@ -33,3 +33,5 @@ export function isDiscoveryKind(kind: string): kind is DiscoveryKind {
 export const XML_HEADER = '<?xml version="1.0" encoding="UTF-8"?>';
 // Sitemaps protocol requires this exact XML vocabulary identifier; it is never fetched.
 export const SITEMAP_NAMESPACE = 'http://www.sitemaps.org/schemas/sitemap/0.9'; // NOSONAR S5332: namespace, not transport (https://www.sitemaps.org/protocol.html).
+// Google image sitemap vocabulary identifier; never fetched.
+export const IMAGE_NAMESPACE = 'http://www.google.com/schemas/sitemap-image/1.1'; // NOSONAR S5332: namespace, not transport.
