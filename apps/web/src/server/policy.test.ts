@@ -4,6 +4,7 @@ import { breadcrumb, collectionJsonLd, organizationJsonLd, websiteJsonLd, plainD
 import { categoryAncestors } from './category-ancestors'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { CatalogProduct, CatalogCategory } from '../services/catalog/types'
+import { checkPage } from '../../../../.github/scripts/seo-page-check.mjs'
 
 afterEach(() => vi.unstubAllEnvs())
 const origin = 'https://iraniyaragh.com'
@@ -57,6 +58,22 @@ describe('share metadata and site structured data', () => {
   })
 })
 describe('truthful server structured data', () => {
+  it('links the product seller to the configured store and passes the production SEO contract', () => {
+    setup()
+    const schema = productJsonLd(item)
+    expect(schema?.offers.seller).toMatchObject({ '@type': 'Organization', '@id': origin + '/#organization', name: 'ایرانی یراق', url: origin + '/' })
+    const url = origin + '/products/test-hinge'
+    const data = [schema, breadcrumb([{ name: 'خانه', path: '/' }, { name: item.name, path: '/products/test-hinge' }])]
+    const html = `<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+      <title>${item.name} | ایرانی یراق</title><meta name="description" content="مشخصات و قیمت لولای آزمایشی برای بررسی داده‌های ساختاریافتهٔ فروشگاه.">
+      <link rel="canonical" href="${url}"><meta property="og:title" content="${item.name}"><meta property="og:description" content="مشخصات کالا">
+      <meta property="og:url" content="${url}"><meta property="og:image" content="${origin}/brand/wordmark-print.png"><meta property="og:locale" content="fa_IR">
+      <meta property="og:site_name" content="ایرانی یراق"><meta property="og:type" content="website"><meta name="twitter:card" content="summary">
+      </head><body><h1>${item.name}</h1>${renderToStaticMarkup(JsonLd({ data }))}</body></html>`
+    expect(checkPage(html, { url, origin, kind: 'product', allowNoindex: false }).filter(issue => issue.level === 'error')).toEqual([])
+    vi.stubEnv('PUBLIC_WEB_ORIGIN', 'https://shop.example.org')
+    expect(productJsonLd(item)?.offers.seller).toMatchObject({ '@id': 'https://shop.example.org/#organization', url: 'https://shop.example.org/' })
+  })
   it('keeps integer IRR precision and omits unknown inventory and invented review evidence', () => {
     setup(); const schema = productJsonLd(item)
     if (!schema) throw new Error('Expected a priced product')

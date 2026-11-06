@@ -28,7 +28,9 @@ export function plainDescription(html: string | null) {
 
 export function productJsonLd(product: CatalogProduct) {
   const url = absolute(entityPath('products', product.slug))
-  return productStructuredData(product, url, plainDescription(product.description))
+  const schema = productStructuredData(product, url, plainDescription(product.description))
+  if (!schema) return null
+  return { ...schema, offers: { ...schema.offers, seller: { ...schema.offers.seller, '@id': absolute('/#organization'), url: absolute('/') } } }
 }
 
 /** Organization identity. Contact fields appear only when the deployment configured verified values. */
