@@ -19,14 +19,14 @@ export default async function Page({ params, searchParams }: Props) {
   const path = `/blog/${encodeURIComponent(post.slug)}`
   const words = plainDescription(post.bodyHtml).split(' ').filter(Boolean).length
   const structured = Object.keys(await searchParams).length === 0
-  return <article className="mx-auto max-w-[820px] px-4 py-8 lg:px-6" itemScope itemType="https://schema.org/BlogPosting">
+  return <article className="mx-auto max-w-[820px] px-4 py-8 lg:px-6">
     <nav aria-label="مسیر صفحه" className="mb-4 text-xs text-slate-500"><Link href="/">خانه</Link> / <Link href="/blog">مقالات</Link> / <span aria-current="page">{post.title}</span></nav>
     <header>
-      <h1 className="text-2xl font-black leading-[1.9] text-slate-900 lg:text-3xl" itemProp="headline">{post.title}</h1>
+      <h1 className="text-2xl font-black leading-[1.9] text-slate-900 lg:text-3xl">{post.title}</h1>
       <p className="mt-3 text-base leading-8 text-slate-700">{post.excerpt}</p>
       <p className="mt-4 text-xs text-slate-500">
-        انتشار: <time dateTime={post.publishedAt} itemProp="datePublished">{formatTimestamp(post.publishedAt)}</time>
-        {post.updatedAt.slice(0, 10) !== post.publishedAt.slice(0, 10) && <> · به‌روزرسانی: <time dateTime={post.updatedAt} itemProp="dateModified">{formatTimestamp(post.updatedAt)}</time></>}
+        انتشار: <time dateTime={post.publishedAt}>{formatTimestamp(post.publishedAt)}</time>
+        {post.updatedAt.slice(0, 10) !== post.publishedAt.slice(0, 10) && <> · به‌روزرسانی: <time dateTime={post.updatedAt}>{formatTimestamp(post.updatedAt)}</time></>}
         <span aria-hidden="true"> · </span>{toPersianDigits(post.readingMinutes)} دقیقه مطالعه
       </p>
     </header>

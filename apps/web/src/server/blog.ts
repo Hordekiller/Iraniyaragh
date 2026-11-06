@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import { notFound, permanentRedirect } from 'next/navigation'
 import type { BlogPublicList, BlogPublicListResponse, BlogPublicPost, BlogPublicPostResponse } from '@iranyaragh/contracts'
-import { publicJson } from './catalog'
+import { apiOrigin, publicJson } from './catalog'
 import { fixtureBlogList, fixtureBlogPost } from './blog-fixture'
 import { validSlug } from './policy'
 
@@ -27,8 +27,7 @@ export const blogPost = cache(async (slug: string): Promise<BlogPublicPost> => {
 export async function hasLiveBlog(): Promise<boolean> {
   if (isolatedFixture()) return true
   try {
-    const origin = new URL(process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:4000').origin
-    const response = await fetch(`${origin}/api/v1/blog/posts?page=1`, { credentials: 'omit', signal: AbortSignal.timeout(1_500), next: { revalidate: 60 } })
+    const response = await fetch(`${apiOrigin()}/api/v1/blog/posts?page=1`, { credentials: 'omit', signal: AbortSignal.timeout(1_500), next: { revalidate: 60 } })
     if (!response.ok) return false
     return ((await response.json()) as BlogPublicListResponse).data.meta.total > 0
   } catch { return false }

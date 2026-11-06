@@ -36,6 +36,8 @@ const ENAMAD_FOOTER_URLS = new Set([
 // not browser assets; every other URL in these files remains subject to policy.
 const SERVER_CONFIG_URLS = new Map([
   [fileURLToPath(new URL('../src/server/catalog.ts', import.meta.url)), new Set(['http://127.0.0.1:4000'])],
+  // Isolated test-environment article fixture: a citation link rendered as text, never loaded as an asset.
+  [fileURLToPath(new URL('../src/server/blog-fixture.ts', import.meta.url)), new Set(['https://example.com/source'])],
   [fileURLToPath(new URL('../src/server/policy.ts', import.meta.url)), new Set(['http://localhost:3000'])],
 ]);
 const ENAMAD_FOOTER_FILE = fileURLToPath(new URL('../src/components/layout/SiteFooter.tsx', import.meta.url));
