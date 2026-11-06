@@ -73,8 +73,10 @@ export function setAuthCookies(
   const base = { sameSite: cookieSpec.sameSite, path: cookieSpec.path, secure: cookieSpec.secure, maxAge };
   // The opaque refresh token is intentionally transported in an HttpOnly,
   // SameSite cookie; the password-changing service never returns a password.
+  // codeql[js/clear-text-storage-of-sensitive-data] -- the refresh token is an opaque random value delivered only in an HttpOnly, SameSite, Secure cookie; the database stores only its hash.
   response.cookie(cookieSpec.refreshName, refreshToken, { ...base, httpOnly: true });
   // The random CSRF proof is intentionally client-readable for double-submit.
+  // codeql[js/clear-text-storage-of-sensitive-data] -- double-submit CSRF proof must be readable by the client; it is random, bound to the session and grants no access by itself.
   response.cookie(cookieSpec.csrfName, csrfToken, { ...base, httpOnly: false });
 }
 
