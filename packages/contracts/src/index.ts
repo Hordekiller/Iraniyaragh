@@ -50,3 +50,4 @@ export * from './refresh-attempt';
 export * from './door-manufacturing';
 export * from './promotions';
 export * from './blog';
+export * from './reviews';

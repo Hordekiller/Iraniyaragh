@@ -9,6 +9,7 @@ import { CatalogProvider } from '../../state/CatalogProvider'
 import { CartProvider } from '../../state/CartProvider'
 import { AppLayout } from '../layout/AppLayout'
 import { ProductPage } from '../../views/ProductPage'
+import type { PublicReviewList } from '@iranyaragh/contracts'
 import type { CatalogProduct } from '../../services/catalog/types'
 import { NavigationScrollReset } from './NavigationScrollReset'
 import { BlogNavProvider } from '../../lib/blog-nav'
@@ -32,6 +33,6 @@ export function Storefront({ children, hasBlog = false }: { children: ReactNode;
   </Router>
 }
 
-export function ProductIsland({ product }: { product: CatalogProduct }) {
-  return <Routes><Route path="/products/:slug" element={<ProductPage initialProduct={product} serverStructuredData />} /></Routes>
+export function ProductIsland({ product, reviews = null }: { product: CatalogProduct; reviews?: PublicReviewList | null }) {
+  return <Routes><Route path="/products/:slug" element={<ProductPage initialProduct={product} initialReviews={reviews} serverStructuredData />} /></Routes>
 }

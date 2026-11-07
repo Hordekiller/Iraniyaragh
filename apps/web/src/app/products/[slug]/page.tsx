@@ -1,5 +1,6 @@
 import { ProductIsland } from '../../../components/next/Storefront'
 import { product, eligibility } from '../../../server/catalog'
+import { productReviews } from '../../../server/reviews'
 import { entityPath, metadataFor, type SearchParams } from '../../../server/policy'
 import { JsonLd, breadcrumb, productJsonLd, plainDescription } from '../../../server/structured-data'
 
@@ -17,8 +18,8 @@ export async function generateMetadata({ params, searchParams }: Props) {
 export default async function Page({ params, searchParams }: Props) {
   const { slug } = await params
   const item = await product(slug)
-  const [indexable, query] = await Promise.all([eligibility('products', item.slug), searchParams])
+  const [indexable, query, reviews] = await Promise.all([eligibility('products', item.slug), searchParams, productReviews(item.slug)])
   const crumbs = [{ name: 'خانه', path: '/' }, ...(item.category ? [{ name: item.category.name, path: entityPath('categories', item.category.slug) }] : []), { name: item.name, path: entityPath('products', item.slug) }]
-  const schema = productJsonLd(item)
-  return <>{indexable && Object.keys(query).length === 0 && <JsonLd data={[...(schema ? [schema] : []), breadcrumb(crumbs)]} />}<ProductIsland key={item.id} product={item} /></>
+  const schema = productJsonLd(item, reviews)
+  return <>{indexable && Object.keys(query).length === 0 && <JsonLd data={[...(schema ? [schema] : []), breadcrumb(crumbs)]} />}<ProductIsland key={item.id} product={item} reviews={reviews} /></>
 }
