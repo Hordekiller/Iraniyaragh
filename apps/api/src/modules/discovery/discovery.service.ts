@@ -15,6 +15,8 @@ const MAX_XML_BYTES = 50 * 1024 * 1024;
 // Same published lifecycle as public catalog, narrowed to sellable active variants.
 const productEligibility: Prisma.ProductWhereInput = { status: 'ACTIVE', variants: { some: { isActive: true, status: 'ACTIVE' } } };
 const landingEligibility = { products: { some: productEligibility } };
+/** Live = published and past its go-live time. */
+const liveBlog = (now: Date): Prisma.BlogPostWhereInput => ({ status: 'PUBLISHED', publishedAt: { lte: now } });
 type Range = { after: string; through: string };
 type Row = { id: string; slug: string };
 export type DiscoveryArtifact = { body: Buffer; etag: string; contentType: string };
@@ -45,7 +47,7 @@ export class DiscoveryService {
 
   robots(): DiscoveryArtifact {
     const text = this.production
-      ? `User-agent: *\nAllow: /\n\nSitemap: ${this.origin}/sitemap.xml\n`
+      ? `User-agent: *\nDisallow: /api/\nAllow: /\n\nSitemap: ${this.origin}/sitemap.xml\n`
       : 'User-agent: *\nDisallow: /\n';
     return this.artifact(Buffer.from(text), 'text/plain; charset=utf-8');
   }
@@ -70,6 +72,8 @@ export class DiscoveryService {
             if (rows.length < DISCOVERY_SHARD_TARGET) break;
           }
         }
+        // Blog articles are one bounded shard: an editorial site stays far below the 10,000 URL target.
+        if (await tx.blogPost.count({ where: liveBlog(new Date()), take: 1 })) shards.push('/sitemaps/blog-posts.xml.gz');
         return shards;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 15_000 });
       const xml = `${XML_HEADER}<sitemapindex xmlns="${SITEMAP_NAMESPACE}">${paths.map(path => `<sitemap><loc>${escapeXml(origin + path)}</loc></sitemap>`).join('')}</sitemapindex>`;
@@ -81,7 +85,20 @@ export class DiscoveryService {
     if (filename === 'pages-home.xml.gz') {
       // Policy text still awaits business approval and its HTML is noindex.
       // Only canonical, indexable public destinations belong in the sitemap.
-      return this.singleflight(filename, () => this.urlset(['/', '/catalog', '/categories'].map(path => ({ path }))));
+      return this.singleflight(filename, async () => {
+        const paths = ['/', '/catalog', '/categories', '/custom-doors', '/help'];
+        if (await this.prisma.blogPost.count({ where: liveBlog(new Date()), take: 1 })) paths.push('/blog');
+        return this.urlset(paths.map(path => ({ path })));
+      });
+    }
+    if (filename === 'blog-posts.xml.gz') {
+      return this.singleflight(filename, async () => {
+        const rows = await this.prisma.blogPost.findMany({ where: liveBlog(new Date()), select: { slug: true, contentUpdatedAt: true }, orderBy: { id: 'asc' }, take: MAX_SHARD_URLS + 1 });
+        if (rows.length > MAX_SHARD_URLS) throw new Error('Blog sitemap requires repartitioning.');
+        const urls = rows.filter(row => isCanonicalSlug(row.slug)).map(row => ({ path: `/blog/${encodeURIComponent(row.slug)}`, lastmod: row.contentUpdatedAt }));
+        if (!urls.length) throw new NotFoundException('Empty sitemap shard.');
+        return this.urlset(urls);
+      });
     }
     const match = /^(products|categories|brands)-([A-Za-z0-9_-]{1,320})\.xml\.gz$/u.exec(filename);
     if (!match || !isDiscoveryKind(match[1]!)) throw new NotFoundException('Unknown sitemap shard.');
@@ -143,11 +160,11 @@ export class DiscoveryService {
     return this.origin;
   }
 
-  private async urlset(urls: { path: string }[]): Promise<DiscoveryArtifact> {
+  private async urlset(urls: { path: string; lastmod?: Date }[]): Promise<DiscoveryArtifact> {
     const origin = this.requireOrigin();
-    // No lastmod until there is an authoritative significant-content timestamp:
-    // product.updatedAt alone misses variant/media changes; request time would lie.
-    const xml = `${XML_HEADER}<urlset xmlns="${SITEMAP_NAMESPACE}">${urls.map(url => `<url><loc>${escapeXml(origin + url.path)}</loc></url>`).join('')}</urlset>`;
+    // lastmod only where an authoritative significant-content timestamp exists (blog articles):
+    // product.updatedAt alone misses variant/media changes, and request time would lie.
+    const xml = `${XML_HEADER}<urlset xmlns="${SITEMAP_NAMESPACE}">${urls.map(url => `<url><loc>${escapeXml(origin + url.path)}</loc>${url.lastmod ? `<lastmod>${url.lastmod.toISOString()}</lastmod>` : ''}</url>`).join('')}</urlset>`;
     const buffer = Buffer.from(xml);
     if (buffer.length > MAX_XML_BYTES) throw new Error('Discovery XML size exceeded.');
     return this.artifact(await compress(buffer), 'application/gzip');

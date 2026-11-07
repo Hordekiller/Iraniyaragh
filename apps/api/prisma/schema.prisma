@@ -294,6 +294,13 @@ model User {
   stocktakeCommandRecords     StocktakeCommandRecord[]
   homepageCollectionCommands  HomepageCollectionCommand[]
   homepageBannerCommands      HomepageBannerCommand[]
+  blogPostsAuthored           BlogPost[]                    @relation("BlogPostAuthor")
+  blogPostsReviewed           BlogPost[]                    @relation("BlogPostReviewer")
+  reviewCommands              ProductReviewCommand[]
+  reviewsModerated            ProductReview[]               @relation("ReviewModerator")
+  reviewsReplied              ProductReview[]               @relation("ReviewReplier")
+  blogRevisions               BlogPostRevision[]
+  blogCommands                BlogCommand[]
   inAppNotifications          InAppNotification[]
   customer                    Customer?
 
@@ -524,12 +531,14 @@ model Product {
   variants    ProductVariant[]
   attributes  ProductAttributeConfiguration[]
   media       ProductMedia[]
+  reviews     ProductReview[]
   createdAt   DateTime                        @default(now())
   updatedAt   DateTime                        @updatedAt
 }
 
 model ProductMedia {
   doorModels       DoorModel[]
+  blogPostCovers   BlogPost[]
   id               String                  @id @default(cuid())
   productId        String
   product          Product                 @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -1101,6 +1110,7 @@ model Customer {
   cartMutations              CartMutation[]
   shippingQuotes             ShippingQuote[]
   checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
+  productReviews             ProductReview[]
 }
 
 /// A reusable staff-entered delivery address. Orders keep their own immutable
@@ -2623,4 +2633,139 @@ model DoorCommand {
   fingerprint String   @db.Char(64)
   resultId    String   @db.VarChar(128)
   createdAt   DateTime @default(now())
+}
+
+enum BlogPostStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Governed editorial article. `bodyHtml` is only ever written through the server
+/// sanitizer. `contentUpdatedAt` is the last significant public change (sitemap
+/// lastmod / Article dateModified); it is not touched by workflow-only edits.
+model BlogPost {
+  id               String             @id @default(cuid())
+  slug             String             @unique @db.VarChar(250)
+  title            String             @db.VarChar(160)
+  /// Concise answer summary shown in listings, meta fallback and answer engines.
+  excerpt          String             @db.VarChar(400)
+  bodyHtml         String
+  coverMediaId     String?
+  coverMedia       ProductMedia?      @relation(fields: [coverMediaId], references: [id], onDelete: SetNull)
+  coverAlt         String?            @db.VarChar(200)
+  tags             String[]
+  seoTitle         String?            @db.VarChar(70)
+  seoDescription   String?            @db.VarChar(200)
+  /// Primary sources: [{ title, url, accessedAt }].
+  sources          Json               @default("[]")
+  status           BlogPostStatus     @default(DRAFT)
+  version          Int                @default(1)
+  authorId         String
+  author           User               @relation("BlogPostAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  reviewerId       String?
+  reviewer         User?              @relation("BlogPostReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  /// Go-live time; a future value schedules publication.
+  publishedAt      DateTime?
+  contentUpdatedAt DateTime           @default(now())
+  archivedAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  revisions        BlogPostRevision[]
+  slugHistory      BlogPostSlug[]
+
+  @@index([status, publishedAt(sort: Desc), id])
+  @@index([updatedAt])
+}
+
+/// Previous slugs resolve with a permanent redirect to the current article.
+model BlogPostSlug {
+  slug      String   @id @db.VarChar(250)
+  postId    String
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+/// Immutable content snapshot per saved version.
+model BlogPostRevision {
+  id        String   @id @default(cuid())
+  postId    String
+  version   Int
+  snapshot  Json
+  actorId   String
+  createdAt DateTime @default(now())
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Restrict)
+  actor     User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([postId, version])
+}
+
+/// Idempotency evidence for blog write commands; no customer data.
+model BlogCommand {
+  id          String   @id @default(cuid())
+  actorId     String
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
+}
+
+enum ProductReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+/// Customer product review. Only a customer with a DELIVERED order containing the product can write
+/// one (`orderId` is that proof). Public only while APPROVED; any customer edit returns it to PENDING.
+model ProductReview {
+  id               String              @id @default(cuid())
+  productId        String
+  product          Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
+  customerId       String
+  customer         Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  /// Delivered order that proves purchase; kept as evidence, not a foreign key to a mutable row.
+  orderId          String
+  rating           Int
+  title            String?             @db.VarChar(100)
+  body             String              @db.VarChar(2000)
+  status           ProductReviewStatus @default(PENDING)
+  version          Int                 @default(1)
+  moderationNote   String?             @db.VarChar(300)
+  moderatedById    String?
+  moderatedBy      User?               @relation("ReviewModerator", fields: [moderatedById], references: [id], onDelete: Restrict)
+  moderatedAt      DateTime?
+  staffReply       String?             @db.VarChar(1000)
+  staffRepliedById String?
+  staffRepliedBy   User?               @relation("ReviewReplier", fields: [staffRepliedById], references: [id], onDelete: Restrict)
+  staffRepliedAt   DateTime?
+  /// First time the review became public; stable ordering and schema.org datePublished.
+  publishedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@unique([productId, customerId])
+  @@index([productId, status, publishedAt(sort: Desc), id])
+  @@index([status, createdAt])
+  @@index([customerId, createdAt])
+}
+
+/// Idempotency evidence for review commands; payload is hashed, never stored.
+model ProductReviewCommand {
+  id          String   @id @default(cuid())
+  actorId     String
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
 }

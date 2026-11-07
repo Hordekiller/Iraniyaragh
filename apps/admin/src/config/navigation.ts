@@ -8,6 +8,8 @@ import {
   Gauge,
   Handshake,
   MonitorSmartphone,
+  MessageSquareText,
+  Newspaper,
   PackageSearch,
   ChartNoAxesCombined,
   ReceiptText,
@@ -115,6 +117,13 @@ export const navigation: NavigationGroup[] = [
       { label: 'رزروها', href: '/reservations', icon: BookmarkCheck, permission: 'inventory.read' },
       { label: 'انتقال‌ها', href: '/transfers', icon: ReceiptText, permission: 'inventory.transfer' },
       { label: 'انبارگردانی', href: '/stocktakes', icon: ClipboardCheck, permission: 'stocktake.read' },
+    ],
+  },
+  {
+    label: 'محتوا',
+    items: [
+      { label: 'مقالات وبلاگ', href: '/blog', icon: Newspaper, permission: 'blog.read' },
+      { label: 'نظرات مشتریان', href: '/reviews', icon: MessageSquareText, permission: 'reviews.read' },
     ],
   },
   {

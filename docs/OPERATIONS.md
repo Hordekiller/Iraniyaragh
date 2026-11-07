@@ -4,6 +4,25 @@ Current read-only runtime/version/migration/health evidence and unresolved relea
 gates: [V1 reconciliation](V1_RECONCILIATION.md). This runbook is not proof that
 a fresh backup/restore, alert or provider acceptance has been performed.
 
+## Verified release checkpoint — 2026-11-04
+
+Custom door ordering release `88bb5832ffa012a76599a9298925097781f6471a` is running
+on the VPS. All six official image digests matched CI; API/Admin/storefront/proxy
+are healthy and both workers are running with zero restarts at acceptance.
+Production has 69 completed migrations and zero unfinished migrations.
+
+The fresh `20261104T060549Z` database backup was restored into an isolated scratch
+database; all 109 pre-migration public table row counts matched. All 10,738 media
+objects were restored and downloaded from a private scratch bucket with matching
+checksums and metadata. Both new migrations passed on the restored database
+before being applied to production. Scratch resources were removed afterward.
+
+The public configurator and floating control passed live browser checks at 1440,
+393 and 375 pixels, including clearance above product price/menu controls. The
+catalog remains unconfigured pending verified technical data and tariffs. This
+release adds no real payment/SMS acceptance claim or fixture customer data.
+Detailed evidence and remaining sales gates: [custom door deployment](CUSTOM_DOOR_DEPLOYMENT.md).
+
 ## Verified release checkpoint — 2026-10-18
 
 Source/selected/running SHA: `e2070948587b438dc5da55d8560ab870e23bf32d`. Official image publication

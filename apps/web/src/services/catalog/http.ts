@@ -8,6 +8,7 @@ import type {
   HomepageCollectionsResponse,
   HomepageBannersPublicResponse,
   PublicProductMediaImage,
+  ReviewSummariesResponse,
 } from '@iranyaragh/contracts'
 import type { PublicAvailabilityResponse } from '@iranyaragh/contracts'
 import { CatalogError } from './errors'
@@ -109,9 +110,32 @@ export class CatalogHttpClient implements CatalogApi {
     const response = await this.request<ProductListResponse>(
       `/api/v1/catalog/products?${params}`,
     )
-    return {
-      items: response.data.items.map((item) => this.mapProduct(item)),
-      meta: response.data.meta,
+    const items = response.data.items.map((item) => this.mapProduct(item))
+    return { items: await this.withRatings(items), meta: response.data.meta }
+  }
+
+  /**
+   * Attach approved-review aggregates to listing cards. Best effort and never fabricated: if the
+   * reviews service is unavailable the cards simply show no rating.
+   */
+  private async withRatings(items: CatalogProduct[]): Promise<CatalogProduct[]> {
+    if (items.length === 0) return items
+    try {
+      const response = await this.fetcher(
+        `${this.baseUrl}/api/v1/reviews/summaries?ids=${items.map((item) => encodeURIComponent(item.id)).join(',')}`,
+        { headers: { Accept: 'application/json' } },
+      )
+      if (!response.ok) return items
+      const body = (await response.json()) as Partial<ReviewSummariesResponse>
+      const rows = body.data?.items
+      if (!Array.isArray(rows)) return items
+      const byId = new Map(rows.map((row) => [row.productId, row]))
+      return items.map((item) => {
+        const row = byId.get(item.id)
+        return row && row.count > 0 ? { ...item, rating: row.average, reviews: row.count } : item
+      })
+    } catch {
+      return items
     }
   }
 

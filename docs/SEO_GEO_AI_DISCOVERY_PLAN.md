@@ -183,6 +183,32 @@ References: [Product snippet requirements](https://developers.google.com/search/
 [canonical consolidation](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls),
 [sitemap requirements](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap).
 
+### Page-level SEO contract in CI — 2026-11-06
+
+`.github/scripts/seo-page-check.mjs` checks rendered HTML and reports every
+violation: `lang="fa" dir="rtl"`, viewport, title, one description, one canonical
+(same origin, no query except `page`, matches the path), exactly one `h1` and a
+non-skipping outline, complete Open Graph/Twitter tags (`og:url` equals canonical),
+`alt` on every image, no empty/`#` links, valid JSON-LD (same-origin URLs, one
+Product with a complete Offer, sequential breadcrumbs ending at the canonical,
+Organization + WebSite on home, CollectionPage on collections) and an HTTP 404 for
+unknown URLs. Length/outline findings are warnings.
+
+- `SEO Contract` workflow (pull requests touching web/discovery): unit-tests the
+  checker, builds the fixture storefront and checks home, catalog, categories,
+  custom doors, help, one product and one category. Fixture builds are noindex and
+  have no discovery projection, so `--allow-noindex` also makes catalog-entity rich
+  data optional there; production never relaxes either.
+- The scheduled `Discovery Audit` applies the same checks (with indexing required)
+  to sampled sitemap pages on the production origin.
+
+### Blog delivered — 2026-11-06
+
+Governed articles (draft → review → publish, revisions, slug redirects, scheduled
+publication, sanitized body, sources, RSS, `BlogPosting`, sitemap shard with
+`lastmod`) are described in `docs/BLOG.md`. The SEO Contract workflow renders the
+blog index and an article from the fixture catalog and checks them.
+
 ## 7. AI answer and citation readiness (GEO/AEO)
 
 AI search agents must receive fast, stable, factual HTML—not a separate cloaked

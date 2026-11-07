@@ -5,7 +5,7 @@ import { ProductGrid } from '../components/product/ProductGrid'
 import { CategoryGrid } from '../components/catalog/CategoryGrid'
 import { brands, categories, eligibility, products } from './catalog'
 import { entityPath, hasNonPageQuery, metadataFor, pageNumber, type SearchParams, validSlug } from './policy'
-import { JsonLd, breadcrumb } from './structured-data'
+import { JsonLd, breadcrumb, collectionJsonLd } from './structured-data'
 import { categoryAncestors } from './category-ancestors'
 
 type Kind = 'categories' | 'brands' | 'catalog'
@@ -40,12 +40,12 @@ export async function CollectionPage({ kind, slug = '', query }: { kind: Kind; s
       <nav aria-label="مسیر صفحه" className="text-xs text-slate-500 mb-3"><Link href="/">خانه</Link>{kind === 'categories' && <><span className="mx-1" aria-hidden="true">/</span><Link href="/categories">همه دسته‌بندی‌ها</Link></>}{data.ancestors.map(ancestor => <span key={ancestor.id}> / <Link href={entityPath('categories', ancestor.slug)}>{ancestor.name}</Link></span>)} / <span aria-current="page">{data.title}</span></nav>
       <h1 className="font-black text-slate-900 text-xl">{data.title}{data.page > 1 ? ` — صفحهٔ ${data.page}` : ''}</h1>
       {data.children.length > 0 && <section className="mt-6" aria-labelledby="category-children-title"><h2 id="category-children-title" className="text-base font-bold text-slate-900">زیردسته‌های {data.title}</h2><CategoryGrid categories={data.children} /></section>}
-      <div className="mt-5">{data.result.items.length ? <ProductGrid products={data.result.items} /> : <p>هنوز کالای منتشرشده‌ای وجود ندارد.</p>}</div>
+      <section className="mt-5" aria-labelledby="collection-products-title"><h2 id="collection-products-title" className="sr-only">کالاهای {data.title}</h2>{data.result.items.length ? <ProductGrid products={data.result.items} /> : <p>هنوز کالای منتشرشده‌ای وجود ندارد.</p>}</section>
       <nav aria-label="صفحه‌بندی کالاها" className="mt-8 flex gap-6">
         {data.page > 1 && <Link rel="prev" href={data.page === 2 ? data.basePath : `${data.basePath}?page=${data.page - 1}`}>صفحهٔ قبل</Link>}
         {data.page < data.result.meta.pages && <Link rel="next" href={`${data.basePath}?page=${data.page + 1}`}>صفحهٔ بعد</Link>}
       </nav>
-      {data.indexable && <JsonLd data={breadcrumb([{ name: 'خانه', path: '/' }, ...data.ancestors.map(ancestor => ({ name: ancestor.name, path: entityPath('categories', ancestor.slug) })), { name: data.title, path: data.path }])} />}
+      {data.indexable && <JsonLd data={[collectionJsonLd({ name: data.title, path: data.path, products: data.result.items, offset: (data.page - 1) * 24 }), breadcrumb([{ name: 'خانه', path: '/' }, ...data.ancestors.map(ancestor => ({ name: ancestor.name, path: entityPath('categories', ancestor.slug) })), { name: data.title, path: data.path }])]} />}
     </div>
   </>
 }

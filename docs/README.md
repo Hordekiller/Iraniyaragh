@@ -56,3 +56,9 @@ security, money, inventory or payment invariant because a roadmap is stale.
 
 - [سفارش ساخت درب](CUSTOM_DOOR_ORDERS.md) — معماری پیاده‌شده، قیمت، بیعانه، انبار، مدیریت، API و استقرار.
 - [شواهد اعتبارسنجی سفارش ساخت](CUSTOM_DOOR_VALIDATION.md) — نتایج واقعی تست و مرز پذیرش production.
+
+- [Custom door VPS deployment](CUSTOM_DOOR_DEPLOYMENT.md) — released version, backup/restore and live acceptance evidence.
+
+- [مرکز راهنمای مشتری](../apps/web/src/lib/help-content.ts) — متن راهنمای مشتری در `/help`؛ فقط رفتار پیاده‌شده را شرح می‌دهد و شرایط اعلام‌نشدهٔ فروشنده را «در انتظار اعلام» نگه می‌دارد.
+- [BLOG.md](BLOG.md) — governed blog articles: workflow, permissions, SEO surface, deployment
+- [REVIEWS.md](REVIEWS.md) — verified-purchase product reviews: rules, moderation, surfaces, open items

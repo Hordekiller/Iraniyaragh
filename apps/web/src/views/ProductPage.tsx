@@ -25,6 +25,8 @@ import { defaultCatalogVariant } from '../services/catalog/variants'
 import type { CatalogProduct } from '../services/catalog/types'
 import { commerceErrorMessage } from '../services/commerce/errors'
 import { HelpHint } from '../components/help/HelpHint'
+import { ProductReviews } from '../components/product/ProductReviews'
+import type { PublicReviewList } from '@iranyaragh/contracts'
 
 const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود در انبار',
@@ -33,7 +35,7 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   UNKNOWN: 'موجودی در حال بررسی',
 }
 
-export function ProductPage({ initialProduct, serverStructuredData = false }: { initialProduct?: CatalogProduct; serverStructuredData?: boolean } = {}) {
+export function ProductPage({ initialProduct, initialReviews = null, serverStructuredData = false }: { initialProduct?: CatalogProduct; initialReviews?: PublicReviewList | null; serverStructuredData?: boolean } = {}) {
   const api = useCatalogApi()
   const { state: cartState, add, setQuantity, quantityOf, isInCart } = useCart()
   const { show } = useToast()
@@ -223,33 +225,16 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
             </span>
           </nav>
 
-          {product.rating != null && (
-            <div className="flex items-center gap-1.5 mt-2 text-sm">
-              <div
-                role="img"
-                aria-label={`${product.rating} از ۵ ستاره`}
-                className="flex"
-                aria-hidden="true"
-              >
+          {initialReviews && initialReviews.summary.count > 0 && initialReviews.summary.average !== null && (
+            <a href="#reviews" className="mt-2 flex items-center gap-1.5 text-sm">
+              <div role="img" aria-label={`${initialReviews.summary.average} از ۵ ستاره`} className="flex">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <Star
-                    key={n}
-                    size={14}
-                    className={
-                      n <= Math.round(product.rating!)
-                        ? 'fill-amber-400 text-amber-400'
-                        : 'fill-slate-200 text-slate-200'
-                    }
-                  />
+                  <Star key={n} size={14} aria-hidden="true" className={n <= Math.round(initialReviews.summary.average!) ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'} />
                 ))}
               </div>
-              <span className="font-bold text-slate-900">
-                {toPersianDigits(product.rating)}
-              </span>
-              <span className="text-slate-400">
-                ({toPersianDigits(product.reviews)} نظر)
-              </span>
-            </div>
+              <span className="font-bold text-slate-900">{toPersianDigits(initialReviews.summary.average)}</span>
+              <span className="text-slate-600">({toPersianDigits(initialReviews.summary.count)} نظر)</span>
+            </a>
           )}
 
           {product.variants.length > 1 && (
@@ -422,6 +407,8 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
             />
           </section>
         )}
+
+        <ProductReviews key={product.slug} slug={product.slug} initial={initialReviews} />
       </div>
     </div>
   )

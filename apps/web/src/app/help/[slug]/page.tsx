@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { HelpTopicPage } from '../../../views/HelpPage'
 import { helpTopic } from '../../../lib/help-content'
 import { metadataFor } from '../../../server/policy'
+import { JsonLd, breadcrumb } from '../../../server/structured-data'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -12,5 +13,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   if (!helpTopic(slug)) notFound()
-  return <HelpTopicPage slug={slug} />
+  const topic = helpTopic(slug)!
+  return <><JsonLd data={breadcrumb([{ name: 'خانه', path: '/' }, { name: 'مرکز راهنمای مشتری', path: '/help' }, { name: topic.title, path: `/help/${slug}` }])} /><HelpTopicPage slug={slug} /></>
 }

@@ -44,3 +44,5 @@ export * from './custom-doors';
 export * from './homepage-banners';
 export * from './storefront-helper';
 export * from './in-app-notifications';
+export * from './blog';
+export * from './reviews';
