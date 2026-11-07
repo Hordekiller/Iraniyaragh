@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Button, Checkbox, FormControlLabel, Paper, Stack, Typography } from '@mui/material';
+import { Alert, AlertTitle, Button, Checkbox, FormControlLabel, List, ListItem, ListItemText, Paper, Stack, Typography } from '@mui/material';
 import type { InvoiceDocument, InvoiceDraft, InvoiceIssueRequest } from '@iranyaragh/contracts';
 import { ApiAbortError, ApiClientError, onFreshAuthentication } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -84,7 +84,7 @@ function Issue({ draft, locked, onIssued, onLockChange, mayIssue }: { draft: Inv
   return <Paper sx={{p:2}}><Stack spacing={2}>
     <Typography variant="h6">صدور فاکتور فروشگاهی</Typography>
     <Alert severity="info">صدور فاکتور، وضعیت پرداخت و موجودی سفارش را تغییر نمی‌دهد. سند نهایی تغییرناپذیر است و صورتحساب مالیاتی محسوب نمی‌شود.</Alert>
-    {!document&&draft.state!=='ISSUED'&&issueBlockers(draft,mayIssue).length>0&&<Alert severity="warning" data-testid="issue-blockers"><strong>دلیل غیرفعال بودن صدور:</strong><ul>{issueBlockers(draft,mayIssue).map(reason=><li key={reason}>{reason}</li>)}</ul></Alert>}
+    {!document&&draft.state!=='ISSUED'&&issueBlockers(draft,mayIssue).length>0&&<Alert severity="warning" data-testid="issue-blockers"><AlertTitle>صدور فعلاً ممکن نیست</AlertTitle><List dense disablePadding sx={{listStyleType:'disc',pl:0,pr:2.5}}>{issueBlockers(draft,mayIssue).map(reason=><ListItem key={reason} disableGutters sx={{display:'list-item',py:0.25}}><ListItemText primary={reason} slotProps={{primary:{variant:'body2'}}}/></ListItem>)}</List></Alert>}
     {error!==undefined&&<Alert severity="error">{invoiceDocumentError(error)}</Alert>}
     {document?<Alert severity="success">فاکتور {document.number} با مبلغ {formatRial(document.quote.total)} ثبت شده است. <Link href={`/invoices/documents/${encodeURIComponent(document.id)}`}>مشاهدهٔ سند نهایی</Link></Alert>:draft.state==='ISSUED'?<Typography role="status">در حال دریافت سند صادرشده…</Typography>:null}
     {!document&&draft.state==='DRAFT'&&mayIssue?<>
