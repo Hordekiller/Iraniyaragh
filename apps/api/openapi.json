@@ -5568,6 +5568,206 @@
         ]
       }
     },
+    "/reviews/summaries": {
+      "get": {
+        "operationId": "ReviewsController_summaries",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Rating aggregates for up to 100 products (listing cards)",
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
+    "/reviews/products/{slug}": {
+      "get": {
+        "operationId": "ReviewsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Approved reviews and rating summary of one product",
+        "tags": [
+          "Reviews"
+        ]
+      },
+      "post": {
+        "operationId": "ReviewsController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Submit a verified-purchase review; it stays private until a moderator approves it",
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
+    "/reviews/products/{slug}/me": {
+      "get": {
+        "operationId": "ReviewsController_eligibility",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Whether the signed-in customer may review this product, and their own review",
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
+    "/reviews/mine/{id}": {
+      "put": {
+        "operationId": "ReviewsController_update",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Edit own review; it returns to moderation",
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
+    "/reviews/admin": {
+      "get": {
+        "operationId": "ReviewsController_adminList",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
+    "/reviews/admin/{id}": {
+      "get": {
+        "operationId": "ReviewsController_adminRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
+    "/reviews/admin/{id}/moderate": {
+      "post": {
+        "operationId": "ReviewsController_moderate",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
+    "/reviews/admin/{id}/reply": {
+      "post": {
+        "operationId": "ReviewsController_reply",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
     "/catalog/admin/products/{productId}/media": {
       "get": {
         "operationId": "MediaController_list",

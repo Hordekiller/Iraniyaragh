@@ -74,6 +74,18 @@ describe('truthful server structured data', () => {
     vi.stubEnv('PUBLIC_WEB_ORIGIN', 'https://shop.example.org')
     expect(productJsonLd(item)?.offers.seller).toMatchObject({ '@id': 'https://shop.example.org/#organization', url: 'https://shop.example.org/' })
   })
+  it('adds rating markup only from approved reviews, keeps the canonical seller and serializes hostile text safely', () => {
+    setup()
+    const reviews = {
+      summary: { count: 1, average: 5, counts: [0, 0, 0, 0, 1] as [number, number, number, number, number] },
+      items: [{ id: 'r', rating: 5, title: null, body: 'x</script><script>alert(1)</script>', authorName: 'احمد ر.', verifiedPurchase: true as const, publishedAt: '2026-11-01T10:00:00.000Z', staffReply: null, staffRepliedAt: null }],
+      meta: { page: 1, pages: 1, total: 1, perPage: 10 },
+    }
+    const schema = productJsonLd(item, reviews)
+    expect(schema).toMatchObject({ aggregateRating: { ratingValue: 5, reviewCount: 1 }, offers: { seller: { '@id': origin + '/#organization' } } })
+    expect(renderToStaticMarkup(JsonLd({ data: schema }))).not.toContain('</script><script>')
+    expect(productJsonLd(item, null)).not.toHaveProperty('aggregateRating')
+  })
   it('keeps integer IRR precision and omits unknown inventory and invented review evidence', () => {
     setup(); const schema = productJsonLd(item)
     if (!schema) throw new Error('Expected a priced product')

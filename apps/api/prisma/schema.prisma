@@ -299,6 +299,9 @@ model User {
   blogPostsAuthored           BlogPost[]                    @relation("BlogPostAuthor")
   blogPostsReviewed           BlogPost[]                    @relation("BlogPostReviewer")
   blogRevisions               BlogPostRevision[]
+  reviewCommands              ProductReviewCommand[]
+  reviewsModerated            ProductReview[]               @relation("ReviewModerator")
+  reviewsReplied              ProductReview[]               @relation("ReviewReplier")
   blogCommands                BlogCommand[]
   inAppNotifications          InAppNotification[]
   customer                    Customer?
@@ -548,6 +551,7 @@ model Product {
   variants    ProductVariant[]
   attributes  ProductAttributeConfiguration[]
   media       ProductMedia[]
+  reviews     ProductReview[]
   createdAt   DateTime                        @default(now())
   updatedAt   DateTime                        @updatedAt
 }
@@ -1129,6 +1133,7 @@ model Customer {
   promotions                 Promotion[]
   coupons                    Coupon[]
   promotionRedemptions       PromotionRedemption[]
+  productReviews             ProductReview[]
 }
 
 /// A reusable staff-entered delivery address. Orders keep their own immutable
@@ -2883,6 +2888,60 @@ model BlogPostRevision {
 
 /// Idempotency evidence for blog write commands; no customer data.
 model BlogCommand {
+  id          String   @id @default(cuid())
+  actorId     String
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
+}
+
+enum ProductReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+/// Customer product review. Only a customer with a DELIVERED order containing the product can write
+/// one (`orderId` is that proof). Public only while APPROVED; any customer edit returns it to PENDING.
+model ProductReview {
+  id               String              @id @default(cuid())
+  productId        String
+  product          Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
+  customerId       String
+  customer         Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  /// Delivered order that proves purchase; kept as evidence, not a foreign key to a mutable row.
+  orderId          String
+  rating           Int
+  title            String?             @db.VarChar(100)
+  body             String              @db.VarChar(2000)
+  status           ProductReviewStatus @default(PENDING)
+  version          Int                 @default(1)
+  moderationNote   String?             @db.VarChar(300)
+  moderatedById    String?
+  moderatedBy      User?               @relation("ReviewModerator", fields: [moderatedById], references: [id], onDelete: Restrict)
+  moderatedAt      DateTime?
+  staffReply       String?             @db.VarChar(1000)
+  staffRepliedById String?
+  staffRepliedBy   User?               @relation("ReviewReplier", fields: [staffRepliedById], references: [id], onDelete: Restrict)
+  staffRepliedAt   DateTime?
+  /// First time the review became public; stable ordering and schema.org datePublished.
+  publishedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@unique([productId, customerId])
+  @@index([productId, status, publishedAt(sort: Desc), id])
+  @@index([status, createdAt])
+  @@index([customerId, createdAt])
+}
+
+/// Idempotency evidence for review commands; payload is hashed, never stored.
+model ProductReviewCommand {
   id          String   @id @default(cuid())
   actorId     String
   keyHash     String   @db.Char(64)

@@ -1,5 +1,5 @@
 import { Parser } from 'htmlparser2'
-import type { BlogPublicPost, BlogPublicSummary } from '@iranyaragh/contracts'
+import type { BlogPublicPost, BlogPublicSummary, PublicReviewList } from '@iranyaragh/contracts'
 import type { CatalogProduct } from '../services/catalog/types'
 import { serializeJsonLd } from '../lib/json-ld'
 import { absolute, entityPath, STORE_NAME } from './policy'
@@ -26,9 +26,9 @@ export function plainDescription(html: string | null) {
   return text.join('').replace(/\s+/gu, ' ').trim()
 }
 
-export function productJsonLd(product: CatalogProduct) {
+export function productJsonLd(product: CatalogProduct, reviews: PublicReviewList | null = null) {
   const url = absolute(entityPath('products', product.slug))
-  const schema = productStructuredData(product, url, plainDescription(product.description))
+  const schema = productStructuredData(product, url, plainDescription(product.description), undefined, undefined, reviews)
   if (!schema) return null
   return { ...schema, offers: { ...schema.offers, seller: { ...schema.offers.seller, '@id': absolute('/#organization'), url: absolute('/') } } }
 }

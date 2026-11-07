@@ -40,12 +40,23 @@ describe('CatalogHttpClient', () => {
       const url = String(input)
       if (url.endsWith('/categories')) return response({ data: { items: [{ id: 'cat-1', parentId: null, name: 'ابزار', slug: 'tools', productCount: 2 }] } })
       if (url.includes('/products?')) return response({ data: { items: [{ id: 'p-1', name: 'دریل', slug: 'drill', status: 'PUBLISHED', brandId: null, categoryId: 'cat-1', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', primaryMedia: image, stockStatus: 'LOW_STOCK', startingPrice: { amount: '1250000', currency: 'IRR' } }], meta: { page: 1, perPage: 100, total: 1, pages: 1 } } })
+      if (url.includes('/reviews/summaries')) return response({ data: { items: [{ productId: 'p-1', average: 4.5, count: 6 }] } })
       throw new Error(`unexpected request: ${url}`)
     })
     const result = await new CatalogHttpClient({ baseUrl: '/backend', fetch: fetcher }).listProducts({ categorySlug: 'tools' })
-    expect(fetcher).toHaveBeenCalledTimes(2)
-    expect(result.items[0]).toMatchObject({ id: 'p-1', price: { amount: '1250000', currency: 'IRR' }, image: image.sources[0].url, stockStatus: 'LOW_STOCK' })
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(result.items[0]).toMatchObject({ id: 'p-1', price: { amount: '1250000', currency: 'IRR' }, image: image.sources[0].url, stockStatus: 'LOW_STOCK', rating: 4.5, reviews: 6 })
     expect(String(fetcher.mock.calls[1]?.[0])).toContain('categoryId=cat-1')
+  })
+
+  it('shows no rating when the reviews service fails, instead of inventing one', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/reviews/summaries')) throw new Error('down')
+      return response({ data: { items: [{ id: 'p-1', name: 'دریل', slug: 'drill', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', primaryMedia: image, stockStatus: 'IN_STOCK', startingPrice: { amount: '1', currency: 'IRR' } }], meta: { page: 1, perPage: 100, total: 1, pages: 1 } } })
+    })
+    const result = await new CatalogHttpClient({ fetch: fetcher }).listProducts()
+    expect(result.items[0]).toMatchObject({ rating: null, reviews: 0 })
   })
 
   it('bounds curated catalog reads to the requested page size', async () => {

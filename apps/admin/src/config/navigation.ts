@@ -8,6 +8,7 @@ import {
   BadgePercent,
   Gauge,
   Handshake,
+  MessageSquareText,
   MonitorSmartphone,
   Newspaper,
   PackageSearch,
@@ -128,6 +129,7 @@ export const navigation: NavigationGroup[] = [
     label: 'محتوا',
     items: [
       { label: 'مقالات وبلاگ', href: '/blog', icon: Newspaper, permission: 'blog.read' },
+      { label: 'نظرات مشتریان', href: '/reviews', icon: MessageSquareText, permission: 'reviews.read' },
     ],
   },
   {
