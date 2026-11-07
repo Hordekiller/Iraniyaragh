@@ -1,6 +1,8 @@
 # شواهد تحویل سفارش ساخت درب
 
-تاریخ بررسی نهایی: ۲۰۲۶-۱۱-۰۳. شاخه مبنا `main`؛ کد در درخواست تغییرات [#497](https://github.com/Hordekiller/Iraniyaragh/pull/497)
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
+تاریخ شواهد اولیهٔ این بخش: ۲۰۲۶-۱۱-۰۳؛ شواهد تاریخی #497، پیش از اصلاح پرداخت کامل #509. شاخه مبنا `main`؛ کد در درخواست تغییرات [#497](https://github.com/Hordekiller/Iraniyaragh/pull/497)
 ثبت شده است؛ شواهد انتشار VPS جداگانه در ادامه ثبت می‌شوند.
 
 ## نتیجه قابلیت‌ها
@@ -12,7 +14,7 @@
 | داده واقعی قابل مدیریت | `DoorCatalogPanel.tsx` و `door-catalog.service.ts`؛ کاتالوگ اولیه خالی، انتشار اختیاری، نسخه و تاریخچه ثبت‌کننده |
 | موتور ترکیبی | `door-pricing.ts` و تست محاسبات bigint / نسبت دقیق، پرت، حداقل، اجرت، مالیات، تخفیف و چند مدل |
 | بررسی و تأیید دستی | `approveQuote`، قیمت قطعی هر ردیف و هزینه جانبی با دلیل، تطبیق جمع‌ها و Quote append-only |
-| بیعانه و تسویه | تغییرات سرویس آغاز پرداخت و verifier موجود؛ Mock Provider با PostgreSQL واقعی |
+| بیعانه و تسویه در شواهد تاریخی #497؛ جایگزین‌شده با پرداخت کامل #509 | تغییرات سرویس آغاز پرداخت و verifier موجود؛ Mock Provider با PostgreSQL واقعی |
 | فاکتور و گزارش موجود | صدور واقعی `InvoiceDocument` در DB تست با همان شماره‌گذاری و قیود؛ خط خدمت بدون SKU مصنوعی؛ گزارش متصل به Order/Payment |
 | پیگیری مشتری و مجوزها | `AccountCustomDoorsPage.tsx`، تست IDOR سرویس و کنترل HTTP مشتری/مدیر و مجوزهای ترکیبی |
 | تولید و انبار | state machine، تأیید فنی، BOM Snapshot، رزرو مقدار واقعی، آزادسازی و یک مصرف immutable |
@@ -186,3 +188,15 @@ readiness، کاتالوگ و visibility پاسخ ۲۰۰ و مسیرهای مح�
 - `packages/contracts/src/invoice-documents.ts`
 - `packages/contracts/src/invoice-drafts.ts`
 - `packages/contracts/src/payments.ts`
+
+## الحاقیهٔ قرارداد جاری — ۲۰۲۶-۱۱-۰۷
+
+شواهد اولیهٔ بالاتر مربوط به #497 است؛ رفتار پرداخت آن با #509 جایگزین شده است.
+مبنای جاری پرداخت، کل ماندهٔ مبلغ نهایی است و سوابق قدیمی بیعانه/Quote/Payment
+حذف یا بازنویسی نمی‌شوند. نام stateها و فیلدهای سازگاری دلیل وجود بیعانهٔ جدید نیست.
+
+تغییرات بعدی شامل کاتالوگ قابل‌ویرایش دکوفیکس و راهنمای اندازهٔ تصویر (#503)،
+محل لولا/دستگیره/پروفیل و سوراخ‌های سفارشی با مرجع بالا/پایین (#508)، و پرداخت
+کامل (#509) است. تست خودکار یا smoke بدون ثبت سفارش، شواهد پرداخت واقعی نیست.
+برای پذیرش تولید/پرداخت، گردش کنترل‌شدهٔ واقعی و تطبیق مبلغ/انبار همچنان لازم است.
+هیچ موفقیت درگاه یا ارسال پیامک از شواهد fixture استنتاج نشود.

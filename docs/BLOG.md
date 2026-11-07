@@ -1,5 +1,7 @@
 # Blog / governed articles
 
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
 Status: implemented 2026-11-06 (delivers the article part of #125). No article is
 authored by the system: the blog stays hidden (`/blog` is a real 404, no footer link,
 no sitemap entry) until an operator publishes the first article.
@@ -56,3 +58,24 @@ Product sitemap URLs carry their first ready image as `image:image`. Share previ
    exist and are granted to the system administrator role; grant them to other roles
    deliberately.
 3. Production stays noindex while `APP_ENVIRONMENT`/`NODE_ENV` are `staging`.
+
+## Source, runtime and planned publication boundary
+
+The blog capability was delivered by #517; the source adds canonical product seller
+identity in #518 and the build-context dependency in #519. Current release evidence,
+not the presence of these source files, establishes the actual runtime version.
+An empty public blog remains intentionally hidden. A public test article and a
+per-article test indexing policy are [planning scope](NEWSLETTER_PLAN_FA.md).
+
+Use the guarded baseline path explicitly: `ALLOW_RBAC_BASELINE=true` plus production
+confirmation `RBAC_BASELINE_CONFIRM_PRODUCTION=apply-canonical-rbac-baseline`, then
+`node prisma/apply-rbac-baseline.mjs --apply` and `--check` in the selected release's
+API environment. Never use a development seed or test identity for this rollout.
+
+Verify public list/RSS, correct empty-blog 404/navigation behavior and anonymous Admin
+API denial after deployment. Verify editing/review/publication/scheduling/rename/archive
+with a real operator before asserting full live editorial acceptance. Self-reviewed
+publication is explicitly flagged; it is not independent review.
+
+Newsletter delivery and welcome-coupon issuance are not implemented by the blog's RSS
+or article publisher. Keep them in the separate newsletter plan.

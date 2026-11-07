@@ -1,6 +1,8 @@
 # Reporting and invoice management — source audit and implementation plan
 
-> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> Review note — 2026-11-07: use [CURRENT_STATE.md](CURRENT_STATE.md) for current capability/release boundaries. Dated implementation and allocation tables below preserve their original checkpoint.
+
+> **Historical evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
 > [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
 > distinguish implementation, deployed code, operator acceptance and post-V1 scope.
 > Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
