@@ -12,7 +12,7 @@ Verified-purchase star ratings and written reviews, moderated by staff.
 - Staff permissions: `reviews.read`, `reviews.moderate` (fresh MFA for writes). Grant them to the intended roles with the RBAC baseline.
 
 ## Surfaces
-- API: `GET /api/v1/reviews/products/:slug` (public), `GET|POST /reviews/products/:slug/me` / `POST`, `PUT /reviews/mine/:id` (customer), `/reviews/admin*` (staff).
+- API: `GET /api/v1/reviews/products/:slug` (public), `GET /reviews/products/:slug/me`, `POST /reviews/products/:slug`, `PUT /reviews/mine/:id` (customer), `/reviews/admin*` (staff).
 - Admin: *نظرات مشتریان* (`/reviews`) — moderation queue, approve / reject / hide, store reply.
 - Storefront: product page section with summary, sort, pagination, composer. `Product` JSON-LD gets `aggregateRating` and up to five `review` entries only when approved reviews exist.
 
@@ -28,6 +28,8 @@ Verified-purchase star ratings and written reviews, moderated by staff.
 - Public summaries (`/reviews/summaries`, list summary) count only `APPROVED` reviews of `ACTIVE` products; unknown or inactive product ids are simply absent.
 - Idempotency: the same key with the same payload replays the stored response (also when two identical requests race); the same key with another payload is `IDEMPOTENCY_CONFLICT`; a duplicate review is `ALREADY_REVIEWED`; serialization failures are `CONCURRENT_UPDATE` (retry). A failed write never returns a success body.
 - `reviews.http.spec.ts` covers anonymous / wrong-session-level / missing-permission / stale-MFA access, session-derived ownership and strict bodies for every route.
+
+- Admin moderation/reply keeps one `Idempotency-Key` per unchanged dialog (command, review id and version, note text) across failed or uncertain attempts, so a lost response retried verbatim replays safely; any change of dialog, text or review version generates a new key.
 
 ## Operational notes
 - Grant `reviews.read` / `reviews.moderate` to roles with `pnpm --filter api rbac:baseline` and the role-management UI.

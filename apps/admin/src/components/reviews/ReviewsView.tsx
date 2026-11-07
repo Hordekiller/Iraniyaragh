@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Pagination, Paper, Rating, Stack, TextField, Typography } from '@mui/material';
 import type { AdminReviewSummary, ProductReviewStatus, ReviewModerationAction } from '@iranyaragh/contracts';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -33,6 +33,9 @@ export function ReviewsView() {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // One retry key per unchanged command: a lost response retried with the same dialog, review version
+  // and text replays the stored result instead of tripping STALE_VERSION on an already-applied change.
+  const commandKey = useRef<{ fingerprint: string; key: string } | null>(null);
   const canRead = canReadReviews(user);
   const canModerate = canModerateReviews(user);
 
@@ -56,12 +59,15 @@ export function ReviewsView() {
   async function submit() {
     if (!dialogue) return;
     setBusy(true); setError(null);
+    const note = text.trim() || null;
+    const command = dialogue.kind === 'moderate' ? dialogue.action : 'reply';
+    const fingerprint = JSON.stringify([command, dialogue.review.id, dialogue.review.version, note]);
+    if (commandKey.current?.fingerprint !== fingerprint) commandKey.current = { fingerprint, key: newReviewCommandKey(command) };
+    const { key } = commandKey.current;
     try {
-      if (dialogue.kind === 'moderate') {
-        await moderateReview(dialogue.review.id, { action: dialogue.action, expectedVersion: dialogue.review.version, note: text.trim() || null }, newReviewCommandKey(dialogue.action));
-      } else {
-        await replyToReview(dialogue.review.id, { expectedVersion: dialogue.review.version, reply: text.trim() || null }, newReviewCommandKey('reply'));
-      }
+      if (dialogue.kind === 'moderate') await moderateReview(dialogue.review.id, { action: dialogue.action, expectedVersion: dialogue.review.version, note }, key);
+      else await replyToReview(dialogue.review.id, { expectedVersion: dialogue.review.version, reply: note }, key);
+      commandKey.current = null;
       setDialogue(null); setReload(n => n + 1);
     } catch (cause) { setError(reviewErrorText(cause)); } finally { setBusy(false); }
   }
