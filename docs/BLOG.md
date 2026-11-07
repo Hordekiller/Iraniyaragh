@@ -79,3 +79,16 @@ publication is explicitly flagged; it is not independent review.
 
 Newsletter delivery and welcome-coupon issuance are not implemented by the blog's RSS
 or article publisher. Keep them in the separate newsletter plan.
+
+## Conditional blog discovery links
+
+Header, navigation drawer, homepage content section and footer use the same
+server-resolved `hasLiveBlog` state through `BlogNavProvider`. They add no independent
+blog polling or per-surface API request. The public API counts only due published
+articles; draft, in-review, future-scheduled and archived content does not enable links.
+The existing public-state revalidation boundary is 60 seconds, so publication/archive
+visibility follows a page/data refresh rather than requiring a new image deployment.
+A browser that retains the previous shared layout may need a full page reload after
+publication or archive to receive the updated server-resolved state.
+An API failure hides these links. Homepage content is included in initial server HTML
+with an h2 and a normal blog link; no article count, summary or article body is invented.

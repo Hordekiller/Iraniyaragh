@@ -9,7 +9,7 @@
 | Public home/catalog/category/brand/product | Server HTML, canonicals, structured data, real image metadata and API-owned discovery | Check actual production sitemap URLs and seller identity; fixture rendering alone omits eligible product schema |
 | Help/custom doors | Public help and server-readable door introduction; interactive configurator and contextual helper | Real operator/order/provider acceptance remains explicit |
 | Account/cart/checkout/payment | Owned authenticated APIs, server prices and explicit payment states | Private pages stay noindex; no fixture authentication against live sales data |
-| `/blog`, `/blog/:slug`, `/blog/feed.xml` | Governed article publication, scheduling, revisions, redirects and RSS | Empty `/blog` is 404 and absent from footer/sitemap; no article is automatically authored |
+| `/blog`, `/blog/:slug`, `/blog/feed.xml` | Governed article publication, scheduling, revisions, redirects and RSS | Empty `/blog` is 404; header/drawer/home/footer links and sitemap entry appear only for a live blog; no article is automatically authored |
 | `/admin/blog` | Permissioned list/editor, image picker and fresh-MFA commands | Real staff login required; public route response alone does not verify editorial writes |
 | `/admin/custom-doors` | Editable catalog/rules, manufacturing review and full final-balance workflow | Legacy deposit records and states remain history; no new deposit policy |
 | `/admin/promotions` | Campaign/coupon controls, server eligibility and immutable redemption accounting | Real checkout/payment reconciliation and explicit role grants |
