@@ -42,7 +42,8 @@ export function ProductReviews({ slug, initial }: { slug: string; initial: Publi
 
   const fetchPage = useCallback(async (page: number, order: ReviewSort) => {
     const response = await fetch(`/api/v1/reviews/products/${encodeURIComponent(slug)}?page=${page}&sort=${order}`, { headers: { Accept: 'application/json' } })
-    if (!response.ok) throw new Error('reviews')
+    // Release the connection: an unread error body leaves the request open for the browser.
+    if (!response.ok) { await response.body?.cancel().catch(() => undefined); throw new Error('reviews') }
     return ((await response.json()) as { data: PublicReviewList }).data
   }, [slug])
 

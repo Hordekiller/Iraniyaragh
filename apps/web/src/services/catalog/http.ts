@@ -125,7 +125,10 @@ export class CatalogHttpClient implements CatalogApi {
         `${this.baseUrl}/api/v1/reviews/summaries?ids=${items.map((item) => encodeURIComponent(item.id)).join(',')}`,
         { headers: { Accept: 'application/json' } },
       )
-      if (!response.ok) return items
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => undefined)
+        return items
+      }
       const body = (await response.json()) as Partial<ReviewSummariesResponse>
       const rows = body.data?.items
       if (!Array.isArray(rows)) return items

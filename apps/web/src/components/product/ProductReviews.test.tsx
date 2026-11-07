@@ -62,4 +62,15 @@ describe('ProductReviews', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('تأیید نشد')
     expect(screen.queryByTestId('own-review')).not.toBeInTheDocument()
   })
+  it('releases the response body of a failed review list request so the connection settles', async () => {
+    mocks.state.phase = 'anonymous'
+    const cancel = vi.fn(async () => undefined)
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 404, body: { cancel } }))
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      render(<ProductReviews slug="p" initial={null} />)
+      await waitFor(() => expect(cancel).toHaveBeenCalledOnce())
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/reviews/products/p?page=1&sort=newest', expect.anything())
+    } finally { vi.unstubAllGlobals() }
+  })
 })
