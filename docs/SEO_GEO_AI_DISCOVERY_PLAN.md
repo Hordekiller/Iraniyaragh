@@ -1,5 +1,7 @@
 # SEO, GEO and AI Discovery Foundation
 
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
 Status: delivery baseline; reviewed 2026-09-08. Owner A is Platform/API and owner
 B is Web/Content. Every production change requires independent verification.
 
@@ -382,3 +384,22 @@ webmaster verification; on-site AI does not block MVP commerce.
 
 References were checked 2026-09-08. Official documentation is authoritative when
 eligibility, crawler tokens or protocol behavior changes.
+
+## November implementation and live-audit boundary
+
+The source includes governed articles, image metadata, collection/article/breadcrumb
+structured data, the SEO Contract workflow and the expanded discovery checker (#517).
+Eligible product seller identity is linked to the canonical store Organization (#518).
+The storefront build includes the checker imported by regression typechecking (#519).
+
+Production discovery depends on runtime `APP_ENVIRONMENT`, not the compose filename.
+An indexing switch must preserve private noindex/auth rules and existing provider
+settings. Full discovery acceptance must sample actual sitemap products; fixture
+catalog eligibility can omit the schema that a real eligible product emits.
+
+Configure `PRODUCTION_WEB_ORIGIN` for the existing scheduled audit only after a full
+successful deployed audit. An inactive/skipped job, reachable page or advertised
+sitemap is not proof of full discovery acceptance or actual Google indexing.
+The public test article/newsletter requests remain [planned](NEWSLETTER_PLAN_FA.md).
+Historical owner allocations and unchecked future capabilities in this plan do not
+assign current work or assert implementation.

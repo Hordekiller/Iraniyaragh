@@ -1,8 +1,11 @@
 # Iraniyaragh Documentation Index
 
-Current entry points (2026-10-28): [V1 reconciliation](V1_RECONCILIATION.md),
+Current entry points (2026-11-07): [current state](CURRENT_STATE.md),
+[documentation maintenance](DOCUMENTATION_MAINTENANCE.md), [V1 reconciliation](V1_RECONCILIATION.md),
 [project status](PROJECT_STATUS.md), [issue register](V1_ISSUE_REGISTER.json),
 [dependency gates](V1_DEPENDENCIES.json) and [repository workflow](REPOSITORY_WORKFLOW.md).
+The issue/branch/dependency JSON registers are dated reconciliation snapshots,
+not live GitHub or VPS status. Preserve their recorded history.
 [ADR-0034](adr/0034-v1-dependency-upgrade-freeze.md) records the current dependency
 freeze. SECURITY.md and FOUNDATION.md retain domain/data-safety invariants.
 Older sprint, ownership and parallel-agent plans are historical context.
@@ -54,7 +57,12 @@ Older sprint, ownership and parallel-agent plans are historical context.
 The current user instruction decides scope and order. Never silently bypass a
 security, money, inventory or payment invariant because a roadmap is stale.
 
-- [سفارش ساخت درب](CUSTOM_DOOR_ORDERS.md) — معماری پیاده‌شده، قیمت، بیعانه، انبار، مدیریت، API و استقرار.
+- [سفارش ساخت درب](CUSTOM_DOOR_ORDERS.md) — معماری پیاده‌شده، پرداخت کامل مبلغ نهایی، مشخصات ساخت، انبار، مدیریت، API و استقرار.
 - [شواهد اعتبارسنجی سفارش ساخت](CUSTOM_DOOR_VALIDATION.md) — نتایج واقعی تست و مرز پذیرش production.
 
 - `PROMOTIONS.md` — coupons/campaigns: model, redemption lifecycle, deployment and rollback.
+
+- [Governed blog](BLOG.md) — article lifecycle, permissions, images, RSS and rollout.
+- [Session recovery](ADMIN_SESSION_RECOVERY.md) — realm split, bounded recovery and reauthentication.
+- [Newsletter and public test-article plan](NEWSLETTER_PLAN_FA.md) — planned scope and activation gates.
+- [راهنمای فارسی MCP](../MCP_GUIDE_FA.md) — local Codex/Claude tools and shared handoff.

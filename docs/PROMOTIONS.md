@@ -1,5 +1,7 @@
 # Promotions, coupons and campaigns
 
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
 Server-side only: the storefront never sends or trusts prices, discounts, usage counts or eligibility.
 
 ## Model
@@ -62,9 +64,21 @@ Dedicated canonical permissions (group `promotions`) are in `apps/api/prisma/rba
 ## Rollback
 - Disable campaigns from Admin (immediate). Orders already created keep their discount and snapshot.
 - Rolling the application back to a build without promotions is safe: `Order.discount`/`grandTotal` are already authoritative and the new tables are only read by the new code. Do **not** drop the tables or delete `PromotionRedemption`/audit rows (financial history).
-- Reservations of in-flight pending orders are returned by cancel/expiry only when the new code is running; after a rollback, release them manually (`status = 'RESERVED'` rows of cancelled/expired orders) before re-enabling.
+- Reservations of in-flight pending orders are returned by the compatible cancel/expiry commands. After a rollback, restore a compatible application release and reconcile through the audited transactional domain path before re-enabling campaigns; do not edit redemption status or counters directly.
 
 ## Validation evidence
 - Real-service PostgreSQL integration (`promotions.integration-spec.ts`, `promotions-payments.integration-spec.ts`): checkout, concurrent one-use coupon (exactly one winner, no 500, no orphan reservation), verified/duplicate/uncertain/failed payment through the real `PaymentVerificationService`, cancel/expiry/late-payment, partial/full/replayed/concurrent refunds, refund after expiry, repricing conflicts, order↔payment↔invoice totals, public scope projection. The gateway is the only simulated component; this is **not** live Zarinpal acceptance.
 - Playwright: admin promotions journey (desktop and mobile, real API and staff MFA), storefront coupon box at 1440, 375 and 430 px, public/unauthenticated API checks. A real customer-session coupon journey in a browser is not automated: customer sign-in needs a real SMS OTP that tests cannot legitimately observe; that path is covered by the integration tests above.
 - Controlled external acceptance (real SMS, Zarinpal sandbox/live settlement, backup restore) remains a separate authorized step.
+
+## Newsletter and acceptance boundary
+
+The promotions module does not currently subscribe contacts, verify newsletter consent
+or deliver welcome messages/coupons. Reuse its eligibility and immutable redemption
+model if the [newsletter plan](NEWSLETTER_PLAN_FA.md) is implemented. A membership or
+send result must not be represented as a confirmed paid redemption.
+
+The canonical baseline requires `ALLOW_RBAC_BASELINE=true`; production additionally
+requires `RBAC_BASELINE_CONFIRM_PRODUCTION=apply-canonical-rbac-baseline`, for both
+`--apply` and `--check`. Use the selected release's protected operator environment.
+The existence of an access-management candidate is separate from its deployment.

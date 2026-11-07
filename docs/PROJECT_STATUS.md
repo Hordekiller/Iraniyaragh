@@ -1,19 +1,28 @@
 # Project Status
 
-> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
-> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
-> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
-> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
-> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
-> Older dates/status rows below are historical; accepted domain requirements remain.
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
 
-## Current delivered state — 2026-10-28
+## Implementation overview — 2026-11-07
 
-- Deployed: durable expiry #464, Jodit/product save and recovery #473/#475/#480, private Persian invoice PDF #449/#479, durable CSV/XLSX/PDF report snapshots #476, public Next rendering and dynamic discovery #481/#482, compatible dependencies #470/#478.
-- Not delivered on main: runtime role administration #359 (local candidate `301bdf3` only), general paid-order returns #348, linked invoice correction/cancellation documents #421, governed article management #125. Merchant feeds and IndexNow/content invalidation remain partial.
-- Automated stocktake test criteria #352 are accepted; live physical-count acceptance remains #347/#8. ADR-0023 satisfies the bounded architecture task #338; credit return/refund acceptance stays #431.
-- Full real Admin/customer/invoice/provider/operations acceptance remains explicit. Valuation stays inactive; staging remains noindex. Detailed per-issue/per-PR actions and exact release evidence are in the reconciliation.
-- Current `main`/VPS parity covers committed source only. Local/unmerged branches and uncommitted files are preserved separately.
+- Public Next rendering, canonical policy, product/media projections, Organization/WebSite,
+  collection data, breadcrumbs and dynamic discovery are implemented.
+- Governed blog articles, editor/image picker, permissions, revision history, scheduling,
+  slug redirects and RSS are implemented; an empty blog is deliberately hidden.
+- Custom doors support editable Decofix materials/colors, 4 mm catalog configuration,
+  profile/handle/hinge selections, custom hole references and full final-balance payment.
+- Campaigns/coupons and their reservation/payment/refund accounting are implemented.
+- Customer/staff cookies are separate; refresh recovery is bounded and encrypted;
+  staff activity does not revive revoked or expired sessions.
+- Help center, contextual page help, configured branding/contact surfaces and scroll
+  reset are delivered source capabilities.
+- Newsletter membership, consent verification, campaign delivery and a welcome-discount
+  workflow remain planned in [NEWSLETTER_PLAN_FA.md](NEWSLETTER_PLAN_FA.md).
+- Test article publication is planned, not evidence of a published production article.
+- General paid-order returns, linked invoice corrections, remaining feed/IndexNow work
+  and controlled operational/provider acceptance remain separate open boundaries.
+
+For exact deployment evidence and current indexing, use [CURRENT_STATE.md](CURRENT_STATE.md).
+No whole-V1 completion claim is inferred from automated checks or historical issue counts.
 
 ## Historical status — through 2026-09-30
 

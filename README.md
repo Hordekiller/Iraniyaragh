@@ -1,18 +1,18 @@
 # Iraniyaragh
 
-Pre-release commerce and warehouse platform for Iranian hardware/fittings retail.
+Persian commerce, warehouse and custom-door ordering platform.
 
-> Current evidence (2026-10-28): committed source and verified VPS release
-> `92b23a43aa095a563d798712d24d1ffdf8020f14` match. Combined CI, Sonar,
-> security audit, exact image digests, restored backup and HTTPS/public smoke passed.
-> Durable expiry, Jodit save recovery, private invoice PDF, report snapshots and
-> public Next rendering/discovery are deployed. **V1 remains partial:** runtime
-> access management, general paid-order returns, invoice corrections, articles,
-> remaining feed/discovery work and explicit operator/provider acceptance remain.
-> Staging remains noindex; current provider and inactive valuation modes are preserved.
-> [V1 reconciliation](docs/V1_RECONCILIATION.md) owns current evidence and every
-> open issue/PR disposition; [issue register](docs/V1_ISSUE_REGISTER.json) preserves
-> all 151 issue records. Unmerged/local work is distinct from delivered source.
+The source includes the public Next storefront, protected Admin, catalog/media,
+SKU inventory and order/payment foundations, campaigns/coupons, custom-door
+configuration with full final payment, isolated customer/staff sessions and governed
+blog publishing. Newsletter subscription/delivery remains a **plan**, with an honest
+unavailable state in the storefront.
+
+Start with [current state](docs/CURRENT_STATE.md), the [documentation index](docs/README.md),
+[operations](docs/OPERATIONS.md) and [testing](docs/TESTING.md). A merged change, a green
+CI run and a published image do not independently prove deployment or real provider
+acceptance. Read the actual runtime SHA and release evidence before making that claim.
+Historical issue/branch snapshots and sprint plans remain available for traceability.
 
 ## Workspace
 

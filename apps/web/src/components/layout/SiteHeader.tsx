@@ -5,6 +5,7 @@ import { ChevronDown, Menu, Phone, Search, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '../../state/cart-context'
 import { toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
+import { useHasBlog } from '../../lib/blog-nav-context'
 import { NotificationBell } from '../notifications/NotificationBell'
 import { AccountMenu } from '../auth/AccountMenu'
 import { HAS_SITE_PHONE, SITE_PHONE } from '../../lib/site-config'
@@ -20,6 +21,7 @@ type SiteHeaderProps = {
 }
 
 export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSearch, onOpenLogin }: SiteHeaderProps) {
+  const hasBlog = useHasBlog()
   const navigate = useNavigate()
   const location = useLocation()
   const locationIdentity = `${location.pathname}${location.search}${location.hash}`
@@ -103,7 +105,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
 
         <nav aria-label="ناوبری اصلی" className="hidden lg:flex min-h-12 items-center gap-7 border-t border-slate-100 text-[13px] font-medium text-slate-600">
           <button type="button" onClick={openMenu} aria-expanded={menuOpen} aria-controls="store-navigation" aria-haspopup="dialog" className="flex min-h-12 items-center gap-2 border-l border-slate-200 pl-6 font-bold text-orange-800 transition-colors hover:text-orange-950"><Menu size={18} aria-hidden="true" /> دسته‌بندی کالاها <ChevronDown size={14} aria-hidden="true" /></button>
-          {[{ to: ROUTES.home, label: 'خانه' }, { to: ROUTES.search, label: 'همه کالاها' }, { to: ROUTES.bestsellers, label: 'پرفروش‌ها' }, { to: ROUTES.orders, label: 'پیگیری سفارش' }].map(item => <NavLink key={item.to} to={item.to} end className={({ isActive }) => `inline-flex min-h-12 items-center border-b-2 transition-colors hover:text-orange-800 ${isActive ? 'border-orange-700 font-bold text-orange-800' : 'border-transparent'}`}>{item.label}</NavLink>)}
+          {[{ to: ROUTES.home, label: 'خانه' }, { to: ROUTES.search, label: 'همه کالاها' }, { to: ROUTES.bestsellers, label: 'پرفروش‌ها' }, { to: ROUTES.orders, label: 'پیگیری سفارش' }, ...(hasBlog ? [{ to: ROUTES.blog, label: 'مقالات و راهنماها' }] : [])].map(item => <NavLink key={item.to} to={item.to} end={item.to !== ROUTES.blog} className={({ isActive }) => `inline-flex min-h-12 items-center border-b-2 transition-colors hover:text-orange-800 ${isActive ? 'border-orange-700 font-bold text-orange-800' : 'border-transparent'}`}>{item.label}</NavLink>)}
           <span className="mr-auto text-[11px] text-slate-500">فروشگاه تخصصی ابزار و یراق‌آلات</span>
         </nav>
 

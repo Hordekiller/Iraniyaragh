@@ -1,5 +1,7 @@
 # Admin session recovery (#400)
 
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
 ## Supported outcomes
 
 The API keeps its five-minute fresh-authentication window for sensitive commands.
@@ -37,8 +39,10 @@ failures. Express automatic weak ETags are disabled. The public catalog's
 explicit strong ETags/conditional-revalidation interceptor is preserved.
 Headless application contexts (media worker) do not require an HTTP adapter.
 
-Cookie names/attributes, Origin validation, CSRF, inactivity limits, rate limits,
-RBAC and the freshness window are not changed.
+The original #400 recovery slice preserved cookie transport and security deadlines.
+The later #506 rollout splits staff/customer cookie namespaces and adds bounded
+refresh-attempt recovery; see the current section below and AUTH_CONTRACT.md.
+Origin, CSRF, revocation, inactivity/absolute deadlines and fresh-MFA rules remain enforced.
 
 Final review found that the Admin request timer was cleared after headers, before
 reading the response body. Three regression tests reproduced an unbounded stalled
@@ -91,3 +95,28 @@ changed.
 
 References: [Prisma error envelopes](https://docs.prisma.io/docs/orm/reference/error-reference),
 [PostgreSQL transaction retry rules](https://www.postgresql.org/docs/18/mvcc-serialization-failure-handling.html).
+
+## Current realm and recovery rollout
+
+PR #506 separates host-only customer and staff refresh/CSRF cookie pairs. Production
+staff names are `__Host-iranyaragh_staff_refresh` and `__Host-iranyaragh_staff_csrf`;
+customer names retain `__Host-iranyaragh_refresh` and `__Host-iranyaragh_csrf`.
+Refresh cookies are Secure/HttpOnly/SameSite=Strict; CSRF proofs are intentionally
+JavaScript-readable and require exact Origin plus double-submit validation.
+
+The forward `20261105120000_refresh_recovery` migration adds sealed short-lived
+successor credentials. The same refresh attempt can recover for 15 seconds server-side
+(client reuse is bounded to 12 seconds), with the live successor/family/realm and
+revocation checks intact. Normal rotation preserves still-valid access tokens only
+while the family has a live head. Logout, real replay, credential change, inactivity
+and expiry still terminate access; an old rotated token can log out its family.
+
+Genuine staff input permits a throttled activity signal (at least five minutes between
+client pings; persisted writes throttled per session). Idle tabs send no keep-alive;
+activity never revives a session or extends its absolute deadline. Non-secret attempt
+IDs/activity timestamps may be stored; raw refresh/access tokens must not be persisted.
+
+Deploy migration/API before browser bundles. Staff must sign in once when moving from the shared cookie namespace to the staff pair.
+A later SEO-only release does not itself change those cookie names. Actual `/admin/settings/sessions` acceptance still
+requires a real authorized operator; an anonymous redirect only verifies the gate.
+AUTH_CONTRACT.md remains the exact HTTP/security contract.

@@ -736,7 +736,9 @@ Rollout order:
 **One-time staff re-login.** Before this change staff sessions lived in the shared
 customer cookie pair. After deploy the Admin reads only the staff pair, which no
 browser holds yet, so every operator signs in once more (password + TOTP). Customers
-are unaffected. Old sessions need no data migration: no schema change is shipped.
+are unaffected. The cookie split does not rewrite existing Session rows. The
+forward migration `20261105120000_refresh_recovery` adds the bounded encrypted
+recovery table described in section 8.1; it is part of the same rollout.
 The legacy shared cookie may linger in a browser; the customer realm ignores a
 `STAFF_MFA` session presented there (level mismatch returns invalid *without*
 revoking) and the row expires through the normal 30-minute inactivity / 12-hour

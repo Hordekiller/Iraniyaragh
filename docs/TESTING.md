@@ -1,5 +1,7 @@
 # Testing Strategy
 
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
 ## Layers
 
 - Unit tests run without infrastructure through `pnpm test` and participate in the
@@ -7,7 +9,7 @@
 - Database integration tests run through `pnpm test:integration`. They use real
   PostgreSQL/Prisma transactions and are deliberately separate from fast unit tests.
 - Browser smoke tests run through `pnpm e2e` and cover the web/admin shells plus the
-  zero-external-asset network policy. The admin smoke drives the real dev sign-in UI
+  self-hosted asset policy with the exact approved Enamad image exception. The admin smoke drives the real password + TOTP sign-in UI
   against a live API (migrated and seeded in CI) into the authenticated shell on both
   desktop and mobile viewports.
 
@@ -205,3 +207,37 @@ publish/archive/slug invalidation, canonical/noindex consistency, structured-dat
 visible-data parity, production-origin safety and failure behavior. The repository's
 `Discovery Audit` workflow self-tests its auditor on relevant pull requests and runs
 against production only after `PRODUCTION_WEB_ORIGIN` is configured.
+
+## Container parity, SEO and recent domain regressions
+
+Next also type-checks tests included by the web tsconfig. Any cross-repository file
+imported by such a test must exist in the minimal storefront Docker build context.
+The build stage explicitly copies `.github/scripts/seo-page-check.mjs` for the
+production Product schema regression. Do not bypass Next typechecking to publish.
+
+A local container check (run on a development machine, not the VPS):
+
+```sh
+docker build --target build -f infrastructure/docker/storefront.Dockerfile .
+```
+
+CI's fixture renderer proves its isolated page contract; it is not a substitute for
+checking eligible production product schema. The seller regression in
+`apps/web/src/server/policy.test.ts` runs the actual generated Product/Offer through
+`checkPage`, including a changed canonical origin. Category navigation targets the
+exact level-1 heading; legitimate products-section h2s must not weaken strict locators.
+
+```sh
+node --test .github/scripts/seo-page-check.test.mjs .github/scripts/discovery-audit.test.mjs
+pnpm --filter @iranyaragh/web exec vitest run src/server src/lib
+```
+
+Door tests must retain integer prices/dimensions, full remaining-balance payment,
+legacy partial-payment reconciliation, custom-hole bounds/duplicates, ownership and
+transactional reservation/consumption. Promotion tests must reconcile reserved,
+confirmed, released and refunded capacity against real isolated PostgreSQL evidence.
+Session tests cover realm separation, bounded same-attempt recovery, replay/revocation,
+credential changes, wrong realm, inactivity and genuine-input throttling.
+
+No public test article or newsletter send is part of these fixture/unit checks. Those
+future scenarios need the separate controlled acceptance in NEWSLETTER_PLAN_FA.md.
