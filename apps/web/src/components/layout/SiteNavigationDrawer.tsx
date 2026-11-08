@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowLeft, ChevronLeft, Home, LayoutGrid, LoaderCircle, Package, PackageSearch, Search, ShoppingBag, TrendingUp, UserRound, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, ChevronLeft, Home, LayoutGrid, LoaderCircle, Package, PackageSearch, Search, ShoppingBag, TrendingUp, UserRound, X } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
+import { useHasBlog } from '../../lib/blog-nav-context'
 import { toPersianDigits } from '../../lib/format'
 import type { CatalogCategory } from '../../services/catalog/types'
 import { useCatalogApi } from '../../state/catalog-context'
@@ -44,6 +45,8 @@ function CategoryBranch({ category, childrenByParent, ancestors, onNavigate }: {
 }
 
 export function SiteNavigationDrawer({ onClose }: { onClose: () => void }) {
+  const hasBlog = useHasBlog()
+  const navigationLinks = hasBlog ? [...pageLinks, { to: ROUTES.blog, label: 'مقالات و راهنماها', detail: 'خواندن مطالب فروشگاه', icon: BookOpen }] : pageLinks
   const api = useCatalogApi()
   const { pathname } = useLocation()
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -205,7 +208,7 @@ export function SiteNavigationDrawer({ onClose }: { onClose: () => void }) {
           <nav aria-label="صفحه‌های فروشگاه" className="border-t border-slate-100 px-5 py-6 sm:px-7">
             <h3 className="text-sm font-black">دسترسی سریع</h3>
             <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              {pageLinks.map(({ to, label, detail, icon: Icon }) => <Link key={to} to={to} onClick={onClose} aria-current={pathname === to ? 'page' : undefined} className={`group flex items-center gap-3 rounded-2xl border p-3 transition-colors sm:p-4 ${pathname === to ? 'border-orange-200 bg-orange-50' : 'border-slate-200 hover:border-orange-200 hover:bg-orange-50/60'}`}>
+              {navigationLinks.map(({ to, label, detail, icon: Icon }) => <Link key={to} to={to} onClick={onClose} aria-current={pathname === to ? 'page' : undefined} className={`group flex items-center gap-3 rounded-2xl border p-3 transition-colors sm:p-4 ${pathname === to ? 'border-orange-200 bg-orange-50' : 'border-slate-200 hover:border-orange-200 hover:bg-orange-50/60'}`}>
                 <Icon size={20} strokeWidth={1.7} aria-hidden="true" className="shrink-0 text-orange-800" />
                 <span><span className="block text-xs font-bold sm:text-[13px]">{label}</span><span className="mt-1 block text-[10px] leading-5 text-slate-500 sm:text-[11px]">{detail}</span></span>
               </Link>)}

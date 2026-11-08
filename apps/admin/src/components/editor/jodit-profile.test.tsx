@@ -134,3 +134,15 @@ describe('buildJoditProfile', () => {
     expect(buildJoditProfile().events).toBeUndefined();
   });
 });
+
+describe('article profile', () => {
+  it('adds clear-formatting and a divider, drops free colours and keeps the media button', async () => {
+    const { buildJoditProfile } = await import('./jodit-profile');
+    const article = buildJoditProfile({ variant: 'article', onInsertMedia: () => undefined });
+    expect(article.buttons).toEqual(expect.arrayContaining(['eraser', 'hr', 'link', 'table']));
+    expect(article.buttons).not.toContain('brush');
+    expect(article.extraButtons?.some(button => button.name === 'image')).toBe(true);
+    expect(buildJoditProfile().buttons).toContain('brush');
+    expect(buildJoditProfile().buttons).not.toContain('hr');
+  });
+});

@@ -69,6 +69,11 @@ export const CANONICAL_PERMISSIONS = [
   ["promotions.read", "Read promotions and coupons", "promotions"],
   ["promotions.manage", "Manage promotions and coupons", "promotions"],
   ["settings.manage", "Manage settings", "settings"],
+  ["blog.read", "Read blog drafts and articles", "blog"],
+  ["blog.write", "Write and submit blog articles", "blog"],
+  ["blog.publish", "Publish and archive blog articles", "blog"],
+  ["reviews.read", "Read customer product reviews", "reviews"],
+  ["reviews.moderate", "Moderate and reply to customer reviews", "reviews"],
 ].map(([key, name, group]) => ({
   key,
   name,

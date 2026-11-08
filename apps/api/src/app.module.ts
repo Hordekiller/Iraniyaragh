@@ -1,4 +1,6 @@
 import { CustomDoorOrdersModule } from './modules/custom-door-orders/custom-door-orders.module';
+import { BlogModule } from './modules/blog/blog.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 import { DiscoveryModule } from './modules/discovery/discovery.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -40,6 +42,8 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     AuthModule,
     CatalogModule,
     DiscoveryModule,
+    BlogModule,
+    ReviewsModule,
     MediaModule,
     InventoryModule,
     OrdersModule,

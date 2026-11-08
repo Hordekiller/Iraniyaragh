@@ -136,3 +136,14 @@ or CI artifact.
 - Database backups stored separately from the application server.
 - Object storage recovery strategy documented.
 - Periodic restore tests are mandatory; an untested backup is not considered reliable.
+
+## Session rotation clarification — current contract
+
+The staff/customer realm split and bounded refresh recovery are specified in
+AUTH_CONTRACT.md section 8.1. PostgreSQL stores keyed token hashes and, for at most
+15 seconds of accepted recovery, an AES-GCM-sealed successor pair whose key requires
+the previous raw refresh token and the client-held attempt ID. That sealed record is
+not raw-token logging/storage and cannot be opened from a database copy alone.
+Only the same valid attempt with a still-live same-family/realm successor can recover;
+all other replay and revocation/deadline rules still apply. Cookies and exact-Origin
+CSRF proof remain mandatory. Protected actions recheck current permissions server-side.

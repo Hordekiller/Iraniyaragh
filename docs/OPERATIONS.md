@@ -1,10 +1,12 @@
 # Operations, Reliability & Delivery
 
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
 Current read-only runtime/version/migration/health evidence and unresolved release
 gates: [V1 reconciliation](V1_RECONCILIATION.md). This runbook is not proof that
 a fresh backup/restore, alert or provider acceptance has been performed.
 
-## Verified release checkpoint — 2026-10-18
+## Historical verified release checkpoint — 2026-10-18
 
 Source/selected/running SHA: `e2070948587b438dc5da55d8560ab870e23bf32d`. Official image publication
 [39084793958](https://github.com/Hordekiller/Iraniyaragh/actions/runs/39084793958)
@@ -533,3 +535,42 @@ reusing an actor/key with changed filters or format is rejected. Status, table
 and artifact endpoints require the current export permission, fresh staff MFA
 and matching owner; private table reads and downloads are audited. A recurring
 queue wake-up recovers lost deliveries without relying on an HTTP retry.
+
+## Current exact-SHA SEO/blog rollout
+
+Use the merged main commit's full SHA and successful Publish Images run. The VPS
+pulls CI images and does not build application artifacts. Its compose service is
+`migrate`; `api-migrate` is the image repository name, not a compose service.
+
+Before traffic changes, take fresh database and media backups, restore them into
+isolated scratch targets, verify content/checksums/metadata and remove those
+scratch targets. Preserve private configuration/release evidence and the previous
+compatible image tags. Serialize deployments with `/run/iranyaragh-deploy.lock`.
+Never restore over live financial history merely to undo an additive migration.
+
+Apply forward migrations before the API. For blog rollout, apply/check the canonical
+baseline using the guarded path, with `ALLOW_RBAC_BASELINE=true`; production also
+requires `RBAC_BASELINE_CONFIRM_PRODUCTION=apply-canonical-rbac-baseline`. This adds
+canonical permissions/grants with audit evidence, not users, credentials or demo data.
+Start the new API and wait for readiness before the new Admin/storefront/edge bundles.
+Verify all six application image tags/digests, workers, real TLS and public/private routes.
+
+`APP_ENVIRONMENT=production` selects public discovery and API/worker production mode;
+its `.staging` filename is not a runtime-state claim. Validate the full environment
+before changing it, preserve payment/SMS configuration, and verify that account,
+cart/payment and Admin pages retain noindex and protected APIs deny anonymous access.
+See the exact [indexing procedure](../infrastructure/docker/RUNBOOK.md#search-indexing-switch-app_environment).
+
+A page check of home/catalog/help alone is insufficient: run the full discovery audit
+against sitemap product/category/brand URLs. Eligible production products emit schema
+that fixture catalog eligibility can intentionally omit. Seller Organization identity
+must match the configured canonical store URL and homepage `#organization`.
+
+The GitHub `PRODUCTION_WEB_ORIGIN` variable activates the existing scheduled public
+Discovery Audit. An unset value intentionally skips real production auditing; only
+configure it after the deployed full audit passes. Search Console submission and
+actual search-engine indexing are separate from making URLs crawlable.
+
+The public blog remains hidden until the first due published article. Readiness,
+public GETs or a login redirect do not prove authenticated editorial writes, handset
+delivery or payment reconciliation. Keep those acceptance records separate.

@@ -1,0 +1,21 @@
+---
+description: User-authorized Codex coordination and Claude implementation for Iraniyaragh
+alwaysApply: true
+---
+
+# Codex and Claude workflow
+
+- For this project, the user asks Codex to coordinate work and Claude Code to implement it.
+- Codex owns scope, exact task prompts, isolated worktrees, independent review, GitHub checks and release verification.
+- Delegate to the actual installed Claude Code CLI; do not describe another model or a shared note as a running Claude session.
+- Exchange scoped, non-secret checkpoints using the configured `iraniyaragh-handoff` MCP.
+- A handoff file alone does not launch an agent. Record the actual worker session/process and state.
+- Give Claude a worktree based on current main. Preserve other worktrees and never reset or force-push shared work.
+- Claude reports changed files, commit SHA, actual checks, failures and remaining work; Codex checks those against Git and CI.
+- Codex handles PR publication/merge and VPS deployment after required checks and successful exact-SHA image publication.
+- Production deployment requires the existing lock, fresh restored database/media backups, API-first sequencing and runtime/public verification.
+- Never disable checks, dismiss security findings without investigation, or turn uncertain provider outcomes into success.
+- Follow AGENTS.md security/data/domain rules. No production secrets, fixture auth, demo seeds, customer exports or fake payments.
+- Keep all model sessions and browser artifacts isolated; run heavy checks serially when local resources are constrained.
+- Report a failed or unavailable Claude launch honestly; shared MCP access does not imply continuous background supervision.
+- This workflow changes when the user's current instruction changes it; it is not authority to expand product scope.

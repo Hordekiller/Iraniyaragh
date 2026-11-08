@@ -210,4 +210,31 @@ describe('Customer invoice ownership UI and session lifetime', () => {
       screen.queryByRole('link', { name: invoice.number }),
     ).not.toBeInTheDocument()
   })
+  it('shows tax lines and the policy sentence for a non-exempt invoice', async () => {
+    auth.request.mockResolvedValue({ data: { invoice } })
+    render(component('/account/invoices/doc-a'))
+    await screen.findByRole('heading', { name: `فاکتور ${invoice.number}` })
+    expect(screen.getByRole('columnheader', { name: 'مالیات (ریال)' })).toBeVisible()
+    expect(screen.getByText(/^مالیات:/)).toBeVisible()
+    expect(screen.getByText('مالیات در مبلغ منظور شده است.')).toBeVisible()
+  })
+  it('does not mention tax, the exemption or its reason to the customer of an exempt invoice', async () => {
+    const exempt = { ...invoice, taxPolicy: { treatment: 'EXEMPT', exemptionReason: 'دلیل داخلی معافیت' } }
+    auth.request.mockResolvedValue({ data: { invoice: exempt } })
+    const view = render(component('/account/invoices/doc-a'))
+    await screen.findByRole('heading', { name: `فاکتور ${invoice.number}` })
+    expect(screen.queryByRole('columnheader', { name: 'مالیات (ریال)' })).not.toBeInTheDocument()
+    expect(view.container).not.toHaveTextContent('مالیات')
+    expect(view.container).not.toHaveTextContent('معاف')
+    expect(view.container).not.toHaveTextContent('دلیل داخلی معافیت')
+    expect(screen.getByRole('table', { name: 'اقلام فاکتور' })).toHaveTextContent('۹٬۰۰۷٬۱۹۹٬۲۵۴٬۷۴۰٬۹۹۳')
+  })
+  it('still shows a non-zero tax amount even if the policy says exempt', async () => {
+    const odd = { ...invoice, taxPolicy: { treatment: 'EXEMPT', exemptionReason: 'x' }, quote: { ...invoice.quote, tax: money('5') } }
+    auth.request.mockResolvedValue({ data: { invoice: odd } })
+    render(component('/account/invoices/doc-a'))
+    await screen.findByRole('heading', { name: `فاکتور ${invoice.number}` })
+    expect(screen.getByText(/^مالیات:/)).toBeVisible()
+    expect(screen.queryByText(/جدا از مبلغ پایه/)).not.toBeInTheDocument()
+  })
 })

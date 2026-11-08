@@ -107,6 +107,9 @@ export function MediaGallery({
         <img
           src={fallbackImage ?? PLACEHOLDER_IMAGE}
           alt={productName}
+          width={800}
+          height={800}
+          fetchPriority="high"
           className="w-full aspect-square object-cover"
         />
       </div>

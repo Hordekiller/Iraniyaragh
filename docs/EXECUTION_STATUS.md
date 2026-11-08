@@ -1,15 +1,20 @@
 # Execution Status and Handoff
 
-> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
-> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
-> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
-> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
-> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
-> Older dates/status rows below are historical; accepted domain requirements remain.
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
 
-## Current execution state — 2026-10-28
+## Current handoff rules for release evidence
 
-Deployment and disk cleanup are verified. #470/#478 are merged and deployed. The old hardening and expiry candidate trains below have already been integrated; do not repeat them. Current issue/PR dispositions, external acceptance and the short remaining queue are in V1_RECONCILIATION.md. Runtime role administration exists only on an unmerged local candidate, not main. Preserve local work and current provider/valuation modes.
+Use [CURRENT_STATE.md](CURRENT_STATE.md) for implemented capabilities and open boundaries.
+For an active change record its PR, exact head SHA, required checks, published image
+SHA/digests and independently observed runtime. Refresh these values from GitHub/VPS
+rather than treating a dated markdown checkpoint as a live release pointer.
+
+Keep parallel implementation in separate worktrees. The local shared MCP handoff is
+an optional coordination aid documented in [MCP_GUIDE_FA.md](../MCP_GUIDE_FA.md); it is
+not a lock manager, automatic agent scheduler or authorization to deploy.
+
+Newsletter and test-article work are currently planning scope. Do not turn a successful
+UI, fixture or unit test into a claim that a real message, payment or publication occurred.
 
 ## Historical execution board
 

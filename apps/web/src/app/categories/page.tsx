@@ -1,5 +1,6 @@
 import { CategoriesPage } from '../../views/CategoriesPage'
 import { categories } from '../../server/catalog'
+import { JsonLd, breadcrumb } from '../../server/structured-data'
 import { hasNonPageQuery, metadataFor, type SearchParams } from '../../server/policy'
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -13,5 +14,5 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 }
 
 export default async function Page() {
-  return <CategoriesPage initialCategories={await categories()} />
+  return <><JsonLd data={breadcrumb([{ name: 'خانه', path: '/' }, { name: 'دسته‌بندی کالاها', path: '/categories' }])} /><CategoriesPage initialCategories={await categories()} /></>
 }

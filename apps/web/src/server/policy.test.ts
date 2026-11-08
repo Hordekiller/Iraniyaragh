@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { metadataFor, publicOrigin, pageNumber, hasNonPageQuery, validSlug, entityPath } from './policy'
-import { breadcrumb, plainDescription, productJsonLd, JsonLd } from './structured-data'
+import { breadcrumb, collectionJsonLd, organizationJsonLd, websiteJsonLd, plainDescription, productJsonLd, JsonLd } from './structured-data'
 import { categoryAncestors } from './category-ancestors'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { CatalogProduct, CatalogCategory } from '../services/catalog/types'
+import { checkPage } from '../../../../.github/scripts/seo-page-check.mjs'
 
 afterEach(() => vi.unstubAllEnvs())
 const origin = 'https://iraniyaragh.com'
@@ -31,7 +32,60 @@ describe('public URL and indexing policy', () => {
     for (const value of ['a'.repeat(251), '', '../cart', '%2fadmin', 'a/b', 'a?b', '-a', 'a--b']) expect(validSlug(value)).toBe(false)
   })
 })
+describe('share metadata and site structured data', () => {
+  it('falls back to the brand mark for og/twitter images and prefers a real page image', () => {
+    setup()
+    const plain = metadataFor({ title: 'ابزار', description: 'تست', path: '/catalog' })
+    expect(plain.openGraph).toMatchObject({ images: [{ url: origin + '/brand/wordmark-print.png?v=20261104', width: 1086, height: 370, alt: 'ایرانی یراق' }], locale: 'fa_IR' })
+    expect(plain.twitter).toMatchObject({ card: 'summary' })
+    const rich = metadataFor({ title: 'لولا', description: 'تست', path: '/products/x', image: { url: 'https://cdn.test/a.webp', width: 1200, height: 800, alt: 'لولای کابینت' } })
+    expect(rich.openGraph).toMatchObject({ images: [{ url: 'https://cdn.test/a.webp', width: 1200, height: 800, alt: 'لولای کابینت' }] })
+    expect(rich.twitter).toMatchObject({ card: 'summary_large_image' })
+  })
+  it('emits linked Organization/WebSite nodes without invented contact data or SearchAction', () => {
+    setup()
+    expect(organizationJsonLd()).toMatchObject({ '@type': 'Organization', '@id': origin + '/#organization' })
+    expect(organizationJsonLd()).not.toHaveProperty('contactPoint')
+    expect(websiteJsonLd()).toMatchObject({ '@type': 'WebSite', inLanguage: 'fa-IR', publisher: { '@id': origin + '/#organization' } })
+    expect(websiteJsonLd()).not.toHaveProperty('potentialAction')
+  })
+  it('lists the visible collection products with page-aware positions', () => {
+    setup()
+    const schema = collectionJsonLd({ name: 'لولا', path: '/categories/hinge?page=2', products: [{ slug: 'a', name: 'الف' }, { slug: 'b', name: 'ب' }], offset: 24 })
+    expect(schema.mainEntity?.itemListElement.map(entry => entry.position)).toEqual([25, 26])
+    expect(schema.mainEntity?.itemListElement[0]?.url).toBe(origin + '/products/a')
+    expect(collectionJsonLd({ name: 'خالی', path: '/catalog', products: [], offset: 0 })).not.toHaveProperty('mainEntity')
+  })
+})
 describe('truthful server structured data', () => {
+  it('links the product seller to the configured store and passes the production SEO contract', () => {
+    setup()
+    const schema = productJsonLd(item)
+    expect(schema?.offers.seller).toMatchObject({ '@type': 'Organization', '@id': origin + '/#organization', name: 'ایرانی یراق', url: origin + '/' })
+    const url = origin + '/products/test-hinge'
+    const data = [schema, breadcrumb([{ name: 'خانه', path: '/' }, { name: item.name, path: '/products/test-hinge' }])]
+    const html = `<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+      <title>${item.name} | ایرانی یراق</title><meta name="description" content="مشخصات و قیمت لولای آزمایشی برای بررسی داده‌های ساختاریافتهٔ فروشگاه.">
+      <link rel="canonical" href="${url}"><meta property="og:title" content="${item.name}"><meta property="og:description" content="مشخصات کالا">
+      <meta property="og:url" content="${url}"><meta property="og:image" content="${origin}/brand/wordmark-print.png"><meta property="og:locale" content="fa_IR">
+      <meta property="og:site_name" content="ایرانی یراق"><meta property="og:type" content="website"><meta name="twitter:card" content="summary">
+      </head><body><h1>${item.name}</h1>${renderToStaticMarkup(JsonLd({ data }))}</body></html>`
+    expect(checkPage(html, { url, origin, kind: 'product', allowNoindex: false }).filter(issue => issue.level === 'error')).toEqual([])
+    vi.stubEnv('PUBLIC_WEB_ORIGIN', 'https://shop.example.org')
+    expect(productJsonLd(item)?.offers.seller).toMatchObject({ '@id': 'https://shop.example.org/#organization', url: 'https://shop.example.org/' })
+  })
+  it('adds rating markup only from approved reviews, keeps the canonical seller and serializes hostile text safely', () => {
+    setup()
+    const reviews = {
+      summary: { count: 1, average: 5, counts: [0, 0, 0, 0, 1] as [number, number, number, number, number] },
+      items: [{ id: 'r', rating: 5, title: null, body: 'x</script><script>alert(1)</script>', authorName: 'احمد ر.', verifiedPurchase: true as const, publishedAt: '2026-11-01T10:00:00.000Z', staffReply: null, staffRepliedAt: null }],
+      meta: { page: 1, pages: 1, total: 1, perPage: 10 },
+    }
+    const schema = productJsonLd(item, reviews)
+    expect(schema).toMatchObject({ aggregateRating: { ratingValue: 5, reviewCount: 1 }, offers: { seller: { '@id': origin + '/#organization' } } })
+    expect(renderToStaticMarkup(JsonLd({ data: schema }))).not.toContain('</script><script>')
+    expect(productJsonLd(item, null)).not.toHaveProperty('aggregateRating')
+  })
   it('keeps integer IRR precision and omits unknown inventory and invented review evidence', () => {
     setup(); const schema = productJsonLd(item)
     if (!schema) throw new Error('Expected a priced product')

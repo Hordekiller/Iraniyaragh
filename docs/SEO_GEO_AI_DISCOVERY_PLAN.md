@@ -1,5 +1,7 @@
 # SEO, GEO and AI Discovery Foundation
 
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
 Status: delivery baseline; reviewed 2026-09-08. Owner A is Platform/API and owner
 B is Web/Content. Every production change requires independent verification.
 
@@ -183,6 +185,32 @@ References: [Product snippet requirements](https://developers.google.com/search/
 [canonical consolidation](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls),
 [sitemap requirements](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap).
 
+### Page-level SEO contract in CI — 2026-11-06
+
+`.github/scripts/seo-page-check.mjs` checks rendered HTML and reports every
+violation: `lang="fa" dir="rtl"`, viewport, title, one description, one canonical
+(same origin, no query except `page`, matches the path), exactly one `h1` and a
+non-skipping outline, complete Open Graph/Twitter tags (`og:url` equals canonical),
+`alt` on every image, no empty/`#` links, valid JSON-LD (same-origin URLs, one
+Product with a complete Offer, sequential breadcrumbs ending at the canonical,
+Organization + WebSite on home, CollectionPage on collections) and an HTTP 404 for
+unknown URLs. Length/outline findings are warnings.
+
+- `SEO Contract` workflow (pull requests touching web/discovery): unit-tests the
+  checker, builds the fixture storefront and checks home, catalog, categories,
+  custom doors, help, one product and one category. Fixture builds are noindex and
+  have no discovery projection, so `--allow-noindex` also makes catalog-entity rich
+  data optional there; production never relaxes either.
+- The scheduled `Discovery Audit` applies the same checks (with indexing required)
+  to sampled sitemap pages on the production origin.
+
+### Blog delivered — 2026-11-06
+
+Governed articles (draft → review → publish, revisions, slug redirects, scheduled
+publication, sanitized body, sources, RSS, `BlogPosting`, sitemap shard with
+`lastmod`, image sitemap entries) are described in `docs/BLOG.md`. The SEO Contract workflow renders the
+blog index and an article from the fixture catalog and checks them.
+
 ## 7. AI answer and citation readiness (GEO/AEO)
 
 AI search agents must receive fast, stable, factual HTML—not a separate cloaked
@@ -356,3 +384,22 @@ webmaster verification; on-site AI does not block MVP commerce.
 
 References were checked 2026-09-08. Official documentation is authoritative when
 eligibility, crawler tokens or protocol behavior changes.
+
+## November implementation and live-audit boundary
+
+The source includes governed articles, image metadata, collection/article/breadcrumb
+structured data, the SEO Contract workflow and the expanded discovery checker (#517).
+Eligible product seller identity is linked to the canonical store Organization (#518).
+The storefront build includes the checker imported by regression typechecking (#519).
+
+Production discovery depends on runtime `APP_ENVIRONMENT`, not the compose filename.
+An indexing switch must preserve private noindex/auth rules and existing provider
+settings. Full discovery acceptance must sample actual sitemap products; fixture
+catalog eligibility can omit the schema that a real eligible product emits.
+
+Configure `PRODUCTION_WEB_ORIGIN` for the existing scheduled audit only after a full
+successful deployed audit. An inactive/skipped job, reachable page or advertised
+sitemap is not proof of full discovery acceptance or actual Google indexing.
+The public test article/newsletter requests remain [planned](NEWSLETTER_PLAN_FA.md).
+Historical owner allocations and unchecked future capabilities in this plan do not
+assign current work or assert implementation.

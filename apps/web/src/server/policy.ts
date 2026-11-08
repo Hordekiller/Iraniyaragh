@@ -27,13 +27,19 @@ export function pageNumber(params: SearchParams): number | null {
   return typeof value === 'string' && /^[1-9]\d{0,5}$/u.test(value) ? Number(value) : null
 }
 export function hasNonPageQuery(params: SearchParams) { return Object.keys(params).some(key => key !== 'page') }
-export function metadataFor({ title, description, path, indexable = true, image }: { title: string; description: string; path: string; indexable?: boolean; image?: string }): Metadata {
+/** Brand mark used when a page has no approved image of its own, so shares never render imageless. */
+export const DEFAULT_SHARE_IMAGE_PATH = '/brand/wordmark-print.png?v=20261104'
+/** A share image with its real dimensions and alt text so previews size and describe it correctly. */
+export type ShareImage = { url: string; width?: number; height?: number; alt?: string }
+export type ArticleMeta = { publishedTime: string; modifiedTime: string; tags: string[] }
+export function metadataFor({ title, description, path, indexable = true, image, article, rss }: { title: string; description: string; path: string; indexable?: boolean; image?: string | ShareImage; article?: ArticleMeta; rss?: boolean }): Metadata {
   const url = absolute(path)
+  const shareImage: ShareImage = typeof image === 'string' ? { url: image } : image ?? { url: absolute(DEFAULT_SHARE_IMAGE_PATH), width: 1086, height: 370, alt: STORE_NAME }
   return {
     title: `${title} | ${STORE_NAME}`, description,
-    alternates: { canonical: url },
+    alternates: { canonical: url, ...(rss ? { types: { 'application/rss+xml': absolute('/blog/feed.xml') } } : {}) },
     robots: { index: isProductionDiscovery() && indexable, follow: isProductionDiscovery() },
-    openGraph: { type: 'website', locale: 'fa_IR', siteName: STORE_NAME, title, description, url, ...(image ? { images: [image] } : {}) },
-    twitter: { card: image ? 'summary_large_image' : 'summary', title, description, ...(image ? { images: [image] } : {}) },
+    openGraph: { type: article ? 'article' : 'website', ...(article ? { publishedTime: article.publishedTime, modifiedTime: article.modifiedTime, tags: article.tags } : {}), locale: 'fa_IR', siteName: STORE_NAME, title, description, url, images: [shareImage] },
+    twitter: { card: image ? 'summary_large_image' : 'summary', title, description, images: [shareImage] },
   }
 }

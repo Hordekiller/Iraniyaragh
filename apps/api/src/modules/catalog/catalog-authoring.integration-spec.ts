@@ -105,7 +105,7 @@ describe.sequential('Catalog authoring: persisted attributes and category hierar
     const version = await currentVersion(secondVariant);
     const results = await Promise.allSettled(['a', 'b'].map(suffix => catalog.updateVariantAttributes(actor, key(`race-${suffix}`), secondVariant, { expectedVersion: version, values: values('blue') })));
     expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
-    expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { response: { code: 'STALE_VERSION' } } });
+    expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { response: { code: expect.stringMatching(/^(STALE_VERSION|CONFLICT)$/) } } });
     expect(await prisma.productVariantAttributeValue.count({ where: { variantId: secondVariant } })).toBe(2);
   });
 

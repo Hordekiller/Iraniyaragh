@@ -8,7 +8,9 @@ import {
   BadgePercent,
   Gauge,
   Handshake,
+  MessageSquareText,
   MonitorSmartphone,
+  Newspaper,
   PackageSearch,
   ChartNoAxesCombined,
   ReceiptText,
@@ -70,6 +72,7 @@ export const navigation: NavigationGroup[] = [
   {
     label: 'فروش و مشتری',
     items: [
+      { label: 'فروش و فاکتور جدید', href: '/orders/new', icon: ShoppingBag, permission: 'orders.manage' },
       { label: 'سفارش‌ها', href: '/orders', icon: ShoppingBag, permission: 'orders.read' },
       { label: 'پرداخت‌ها', href: '/payments', icon: CreditCard, permission: 'payments.read' },
       { label: 'فاکتورهای صادرشده', href: '/invoices/documents', icon: ReceiptText, permission: 'invoices.read' },
@@ -121,6 +124,13 @@ export const navigation: NavigationGroup[] = [
       { label: 'رزروها', href: '/reservations', icon: BookmarkCheck, permission: 'inventory.read' },
       { label: 'انتقال‌ها', href: '/transfers', icon: ReceiptText, permission: 'inventory.transfer' },
       { label: 'انبارگردانی', href: '/stocktakes', icon: ClipboardCheck, permission: 'stocktake.read' },
+    ],
+  },
+  {
+    label: 'محتوا',
+    items: [
+      { label: 'مقالات وبلاگ', href: '/blog', icon: Newspaper, permission: 'blog.read' },
+      { label: 'نظرات مشتریان', href: '/reviews', icon: MessageSquareText, permission: 'reviews.read' },
     ],
   },
   {

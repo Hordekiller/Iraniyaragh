@@ -96,7 +96,7 @@ test.describe('web: storefront shell', () => {
 
     await tap(page.locator('section#categories').getByRole('link', { name: 'ابزار برقی' }));
     await expect(page).toHaveURL(/\/categories\/power-tools$/);
-    await expect(page.getByRole('heading', { name: 'ابزار برقی' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ابزار برقی', level: 1, exact: true })).toBeVisible();
 
     await network.assertNone();
   });

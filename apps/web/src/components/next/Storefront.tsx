@@ -9,11 +9,13 @@ import { CatalogProvider } from '../../state/CatalogProvider'
 import { CartProvider } from '../../state/CartProvider'
 import { AppLayout } from '../layout/AppLayout'
 import { ProductPage } from '../../views/ProductPage'
+import type { PublicReviewList } from '@iranyaragh/contracts'
 import type { CatalogProduct } from '../../services/catalog/types'
 import { NavigationScrollReset } from './NavigationScrollReset'
+import { BlogNavProvider } from '../../lib/blog-nav'
 
 /** Next owns navigation and server data; the existing customer islands keep their router contract. */
-export function Storefront({ children }: { children: ReactNode }) {
+export function Storefront({ children, hasBlog = false }: { children: ReactNode; hasBlog?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const search = useSearchParams().toString()
@@ -26,11 +28,11 @@ export function Storefront({ children }: { children: ReactNode }) {
   return <Router location={{ pathname, search: search ? `?${search}` : '', hash: '' }} navigator={navigator}>
     <NavigationScrollReset />
     <ToastProvider><AuthProvider><CatalogProvider><CartProvider>
-      <AppLayout serverMetadata>{children}</AppLayout>
+      <BlogNavProvider hasBlog={hasBlog}><AppLayout serverMetadata>{children}</AppLayout></BlogNavProvider>
     </CartProvider></CatalogProvider></AuthProvider></ToastProvider>
   </Router>
 }
 
-export function ProductIsland({ product }: { product: CatalogProduct }) {
-  return <Routes><Route path="/products/:slug" element={<ProductPage initialProduct={product} serverStructuredData />} /></Routes>
+export function ProductIsland({ product, reviews = null }: { product: CatalogProduct; reviews?: PublicReviewList | null }) {
+  return <Routes><Route path="/products/:slug" element={<ProductPage initialProduct={product} initialReviews={reviews} serverStructuredData />} /></Routes>
 }

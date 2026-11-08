@@ -1,8 +1,27 @@
 # V1 source, deployment and acceptance reconciliation
 
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
+## Post-October implementation and evidence boundary
+
+The source has advanced through the custom-door, session, promotion and governed-blog
+changes summarized in [CURRENT_STATE.md](CURRENT_STATE.md). PR #517 was independently
+observed on VPS at `d7f19c247cdb0b2d83a486f3b19f922f1a630b46` with restored database/media
+backups, 10 healthy infrastructure/application services, blog permissions and production
+indexing. Five public SEO pages and browser checks passed. Full discovery then found
+missing product seller Organization URLs; #518 contains the source fix, with container
+packaging tracked separately in #519. Check current release evidence for its deployment
+and full discovery acceptance; this dated checkpoint is not a live SHA pointer.
+
+Provider acceptance, financial reconciliation and a real authenticated editorial journey
+remain separate evidence. Newsletter/test-article work remains planning scope.
+
+## Historical reconciliation — 2026-10-28
+
+
 Evidence checkpoint: **2026-10-28 UTC**. Release decision: **PARTIAL — mandatory engineering and acceptance remain**.
 
-## Current source and runtime
+## Source and runtime at the October checkpoint
 
 - Source and independently verified VPS release: `92b23a43aa095a563d798712d24d1ffdf8020f14`; all six application services match the published digests and runtime version. [Combined main CI](https://github.com/Hordekiller/Iraniyaragh/actions/runs/40690896740), [official image publication](https://github.com/Hordekiller/Iraniyaragh/actions/runs/40690896810), [deployment/restore/smoke evidence](https://github.com/Hordekiller/Iraniyaragh/pull/470#issuecomment-6471511791).
 - Fresh private database backup restored in an isolated container (109 tables, 67 completed migrations); media manifest sizes/checksums verified. Official deploy performed its mandatory pre-migration backup. No schema migration was added by dependency PRs #470/#478.
