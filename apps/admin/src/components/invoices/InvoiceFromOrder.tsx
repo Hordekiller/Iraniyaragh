@@ -31,6 +31,9 @@ function FromOrder({ orderId, version }: { orderId: string; version: number }) {
       if (!ambiguous) pending.current = null;
       setMessage(cause instanceof ApiClientError && cause.code === 'INVOICE_DRAFT_EXISTS' ? 'پیش‌نویس فعال این سفارش قبلاً ساخته شده؛ فهرست پیش‌فاکتورها را بررسی کنید.' :
         cause instanceof ApiClientError && cause.code === 'STALE_VERSION' ? 'سفارش تغییر کرده؛ جزئیات سفارش را بازخوانی کنید.' :
+        cause instanceof ApiClientError && cause.code === 'INVOICE_POLICY_REQUIRED' ? 'سیاست فاکتور فعال نیست؛ ابتدا در تنظیمات › فاکتور آن را تأیید کنید.' :
+        cause instanceof ApiClientError && cause.code === 'INVOICE_SOURCE_UNAVAILABLE' ? 'سفارش یا مشتری مجاز نیست (لغو/مرجوعی، مشتری غیرفعال، یا ساخت درب هنوز تأیید و پذیرفته نشده است).' :
+        cause instanceof ApiClientError && cause.code === 'INVOICE_SOURCE_UNSUPPORTED' ? 'ترکیب مالی سفارش با قالب پیش‌فاکتور سازگار نیست.' :
         ambiguous ? 'نتیجهٔ ساخت پیش‌نویس نامشخص است؛ تلاش دوباره با همان درخواست انجام می‌شود.' : 'پیش‌نویس ساخته نشد؛ وضعیت سفارش، اطلاعات و دسترسی را بررسی کنید.');
     } finally { flight.current = false; if (alive.current) setBusy(false); }
   }
