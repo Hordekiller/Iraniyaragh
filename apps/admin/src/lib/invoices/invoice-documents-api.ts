@@ -7,6 +7,10 @@ const root = '/invoices/admin';
 export async function listInvoiceDocuments(offset = 0, signal?: AbortSignal) {
   return (await apiFetch<InvoiceDocumentListResponse['data']>(`${root}/documents?offset=${offset}&limit=25`, { token: getAccessToken(), signal })).data;
 }
+/** Invoices issued for one order (an order has at most one). */
+export async function listInvoiceDocumentsForOrder(orderId: string, signal?: AbortSignal) {
+  return (await apiFetch<InvoiceDocumentListResponse['data']>(`${root}/documents?offset=0&limit=25&orderId=${encodeURIComponent(orderId)}`, { token: getAccessToken(), signal })).data;
+}
 export async function readInvoiceDocument(id: string, signal?: AbortSignal) {
   return (await apiFetch<InvoiceDocumentResponse['data']>(`${root}/documents/${encodeURIComponent(id)}`, { token: getAccessToken(), signal })).data.document;
 }
