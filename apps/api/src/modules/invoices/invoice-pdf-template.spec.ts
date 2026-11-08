@@ -214,13 +214,35 @@ describe("Private invoice PDF fixed template boundary", () => {
       exemptionReason: "دلیل معافیت ساختگی",
       shippingTaxable: false,
     };
-    expect(buildInvoicePdfHtml(input, assets).html).toContain(
-      "دلیل معافیت ساختگی",
-    );
+    // The internal exemption reason and any tax wording are never printed for the customer.
+    const exempt = buildInvoicePdfHtml(input, assets).html;
+    expect(exempt).not.toContain("دلیل معافیت ساختگی");
+    expect(exempt).not.toContain("معاف");
+    expect(exempt).not.toContain("مالیات");
     input.taxPolicy.rateBps = 1;
     expect(() => buildInvoicePdfHtml(input, assets)).toThrow(
       InvoicePdfInputError,
     );
+  });
+  it("keeps tax visible for taxed invoices and never hides a non-zero tax amount", () => {
+    const taxed = invoice();
+    const html = buildInvoicePdfHtml(taxed, assets).html;
+    expect(html).toContain("مالیات");
+    expect(html).toContain('colspan="4"');
+    const odd = invoice();
+    odd.taxPolicy = { treatment: "EXEMPT", rateBps: 0, exemptionReason: "x", shippingTaxable: false };
+    odd.quote.tax = { amount: "5", currency: "IRR" };
+    const oddHtml = buildInvoicePdfHtml(odd, assets).html;
+    expect(oddHtml).toContain("<dt>مالیات</dt>");
+  });
+  it("prints a three-column table without tax for an exempt invoice", () => {
+    const input = invoice();
+    input.taxPolicy = { treatment: "EXEMPT", rateBps: 0, exemptionReason: "سبب", shippingTaxable: false };
+    const html = buildInvoicePdfHtml(input, assets).html;
+    expect(html).toContain('colspan="3"');
+    expect(html).not.toContain('colspan="4"');
+    expect(html).not.toContain("<dt>مالیات</dt>");
+    expect(html).toContain("مبلغ نهایی");
   });
   it("bounds rows, quantities, plain text and encoded input; never silently truncates an invoice", () => {
     const input = invoice();

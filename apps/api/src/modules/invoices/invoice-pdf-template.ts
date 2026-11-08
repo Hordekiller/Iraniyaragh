@@ -134,6 +134,15 @@ export function buildInvoicePdfHtml(
         timeStyle: "short",
       }).format(issuedAt),
     );
+    const policy = taxText(invoice.taxPolicy);
+    // An exempt invoice carries no tax to explain to the customer, so tax columns, rows, the
+    // policy sentence and the internal exemption reason are not printed. A non-zero stored
+    // tax amount is still shown (it must never be hidden).
+    const showTax =
+      invoice.taxPolicy.treatment !== "EXEMPT" ||
+      invoice.quote?.tax?.amount !== "0" ||
+      !Array.isArray(invoice.lines) ||
+      invoice.lines.some((line) => line?.tax?.amount !== "0");
     const rows = invoice.lines
       .map((line, index) => {
         if (
@@ -145,14 +154,14 @@ export function buildInvoicePdfHtml(
           invalid();
         // Validate stored net amounts too, without recomputing financial policy.
         amount(line.netAmount);
-        return `<tbody class="line"><tr><td colspan="4" class="item">ردیف ${index + 1} — <bdi dir="ltr">${text(line.sku, 128)}</bdi> — ${text(line.title, 500)} — تعداد: ${line.quantity}</td></tr><tr><td>${amount(line.unitPrice)}</td><td>${amount(line.discount)}</td><td>${amount(line.tax)}</td><td>${amount(line.total)}</td></tr></tbody>`;
+        return `<tbody class="line"><tr><td colspan="${showTax ? 4 : 3}" class="item">ردیف ${index + 1} — <bdi dir="ltr">${text(line.sku, 128)}</bdi> — ${text(line.title, 500)} — تعداد: ${line.quantity}</td></tr><tr><td>${amount(line.unitPrice)}</td><td>${amount(line.discount)}</td>${showTax ? `<td>${amount(line.tax)}</td>` : ""}<td>${amount(line.total)}</td></tr></tbody>`;
       })
       .join("");
     const totals = [
       ["جمع اقلام", invoice.quote.subtotal],
       ["تخفیف", invoice.quote.discount],
       ["ارسال", invoice.quote.shipping],
-      ["مالیات", invoice.quote.tax],
+      ...(showTax ? [["مالیات", invoice.quote.tax]] : []),
       ["مبلغ نهایی", invoice.quote.total],
     ]
       .map(
@@ -161,7 +170,9 @@ export function buildInvoicePdfHtml(
       )
       .join("");
     amount(invoice.quote.netAmount);
-    const policy = taxText(invoice.taxPolicy);
+    const taxNotes = showTax
+      ? `<p>${policy}</p><p>مالیات ارسال: ${invoice.taxPolicy.shippingTaxable ? "طبق سیاست ثبت‌شده منظور شده است" : "در پایهٔ مالیات منظور نشده است"}</p>`
+      : "";
     const html = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">
 <meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:">
 <title>فاکتور فروشگاهی ${number}</title><style>
@@ -174,8 +185,8 @@ table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px;line
 </style></head><body><header><img class="brand" width="1086" height="${legacy ? 362 : 370}" src="data:image/png;base64,${assets.wordmarkPng.toString("base64")}" alt="${brandName}"><h1>فاکتور فروشگاهی</h1><p>شمارهٔ سند: <bdi dir="ltr">${number}</bdi></p><p>زمان صدور: ${date}</p></header>
 <section class="parties" aria-label="فروشنده و خریدار"><section class="party"><h2>فروشنده</h2><p>${text(invoice.seller.name, 200)}</p><p>${text(invoice.seller.address, 1000)}</p><p>${text(invoice.seller.contact, 200)}</p></section>
 <section class="party"><h2>خریدار</h2><p>${text(invoice.buyerLabel, 300)}</p><p>${text(invoice.address.city, 100)}، ${text(invoice.address.address, 500)}</p><p>کد پستی: <bdi dir="ltr">${text(invoice.address.postalCode, 32)}</bdi></p><p>گیرنده: ${text(invoice.address.recipient, 120)}</p><p>تلفن: <bdi dir="ltr">${text(invoice.address.mobile, 32)}</bdi></p></section></section>
-<p>روش تحویل: ${text(invoice.shippingTitle, 200)}</p><table><caption>اقلام فاکتور — مبالغ به ریال</caption><thead><tr>${["قیمت واحد", "تخفیف", "مالیات", "جمع"].map((label) => `<th scope="col">${label}</th>`).join("")}</tr></thead>${rows}</table>
-<section class="summary"><dl class="totals">${totals}</dl><p>${policy}</p><p>مالیات ارسال: ${invoice.taxPolicy.shippingTaxable ? "طبق سیاست ثبت‌شده منظور شده است" : "در پایهٔ مالیات منظور نشده است"}</p><p class="notice">این سند از اطلاعات ثبت‌شدهٔ زمان صدور تهیه شده است و رسید پرداخت نیست. برای وضعیت پرداخت و وصول، جزئیات سفارش و دفترکل را بررسی کنید. این سند، صورتحساب سامانهٔ مؤدیان نیست.</p></section>
+<p>روش تحویل: ${text(invoice.shippingTitle, 200)}</p><table><caption>اقلام فاکتور — مبالغ به ریال</caption><thead><tr>${["قیمت واحد", "تخفیف", ...(showTax ? ["مالیات"] : []), "جمع"].map((label) => `<th scope="col">${label}</th>`).join("")}</tr></thead>${rows}</table>
+<section class="summary"><dl class="totals">${totals}</dl>${taxNotes}<p class="notice">این سند از اطلاعات ثبت‌شدهٔ زمان صدور تهیه شده است و رسید پرداخت نیست. برای وضعیت پرداخت و وصول، جزئیات سفارش و دفترکل را بررسی کنید. این سند، صورتحساب سامانهٔ مؤدیان نیست.</p></section>
 </body></html>`;
     if (Buffer.byteLength(html, "utf8") > INVOICE_PDF_LIMITS.htmlBytes)
       invalid();
