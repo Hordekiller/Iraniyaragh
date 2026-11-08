@@ -116,7 +116,7 @@ function InvoicePolicyEditor() {
     {current && <Paper component="section" aria-label="تنظیمات فعلی سرور" sx={{ p: 2, my: 2 }}>
       <Typography>نسخهٔ سرور: {current.version} — {current.isActive ? 'فعال' : 'غیرفعال'}</Typography>
       <Typography>{current.sellerName} — {current.sellerAddress} — {current.sellerContact}</Typography>
-      <Typography>مبنای مالیات: {current.taxTreatment} · نرخ: {current.taxRateBps} واحد پایه · سقف تخفیف: {current.discountCapBps} واحد پایه · مالیات ارسال: {current.shippingTaxable ? 'بله' : 'خیر'}</Typography>
+      <Typography>مبنای مالیات: {current.taxTreatment} · نرخ: {current.taxRateBps} واحد پایه ({current.taxRateBps / 100}٪) · سقف تخفیف: {current.discountCapBps} واحد پایه · مالیات ارسال: {current.shippingTaxable ? 'بله' : 'خیر'}</Typography>
       {current.exemptionReason && <Typography>دلیل معافیت: {current.exemptionReason}</Typography>}
     </Paper>}
     <Button disabled={busy || loading} onClick={() => void load().catch(() => undefined)}>بازخوانی تنظیمات سرور</Button>
@@ -134,6 +134,8 @@ function InvoicePolicyEditor() {
           <MenuItem value="EXCLUSIVE">مالیات افزوده به مبلغ پس از تخفیف</MenuItem><MenuItem value="INCLUSIVE">مالیات داخل مبلغ پس از تخفیف</MenuItem><MenuItem value="EXEMPT">معاف با دلیل مصوب</MenuItem>
         </TextField>
         <TextField label="نرخ مالیات (واحد پایه)" value={draft.taxRate} onChange={e => patch('taxRate', e.target.value)} required inputProps={{ inputMode: 'numeric' }} helperText="عدد صحیح بین ۰ و ۱۰۰۰۰؛ ۱۰۰ واحد پایه برابر ۱٪ است. نرخ را طبق سیاست مصوب خود وارد کنید؛ پیش‌فرضی وجود ندارد." />
+        {Number.isInteger(Number(draft.taxRate)) && draft.taxRate.trim() !== '' && <Alert severity="info">نرخ واردشده برابر {Number(draft.taxRate) / 100}٪ است (۳٪ = ۳۰۰ واحد پایه).</Alert>}
+        {draft.taxTreatment === 'EXCLUSIVE' && Number(draft.taxRate) > 0 && <Alert severity="warning">با «مالیات افزوده» مبلغ نهایی فاکتور از مبلغ پرداخت‌شدهٔ سفارش بیشتر می‌شود و صدور فاکتور برای سفارش‌هایی که مالیات جدا ندارند همیشه رد می‌شود. اگر قیمت‌های فروشگاه از قبل شامل مالیات است، «مالیات داخل مبلغ» را انتخاب کنید.</Alert>}
         {draft.taxTreatment === 'EXEMPT' && <TextField label="دلیل مصوب معافیت" value={draft.exemptionReason} onChange={e => patch('exemptionReason', e.target.value)} required inputProps={{ maxLength: 500 }} />}
         <TextField label="سقف تخفیف (واحد پایه)" value={draft.discountCap} onChange={e => patch('discountCap', e.target.value)} required inputProps={{ inputMode: 'numeric' }} helperText="عدد صحیح بین ۰ و ۱۰۰۰۰؛ ۰ یعنی تخفیف مجاز نیست. سقف مجموع تخفیف‌ها روی مبلغ اقلام پیش از مالیات است." />
         <TextField select label="مالیات هزینهٔ ارسال" value={draft.shippingTaxable} onChange={e => patch('shippingTaxable', e.target.value as Draft['shippingTaxable'])} required><MenuItem value="yes">مشمول همین مبنای مالیات</MenuItem><MenuItem value="no">بدون مالیات ارسال</MenuItem></TextField>
