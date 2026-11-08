@@ -72,6 +72,7 @@ export const navigation: NavigationGroup[] = [
   {
     label: 'فروش و مشتری',
     items: [
+      { label: 'فروش و فاکتور جدید', href: '/orders/new', icon: ShoppingBag, permission: 'orders.manage' },
       { label: 'سفارش‌ها', href: '/orders', icon: ShoppingBag, permission: 'orders.read' },
       { label: 'پرداخت‌ها', href: '/payments', icon: CreditCard, permission: 'payments.read' },
       { label: 'فاکتورهای صادرشده', href: '/invoices/documents', icon: ReceiptText, permission: 'invoices.read' },

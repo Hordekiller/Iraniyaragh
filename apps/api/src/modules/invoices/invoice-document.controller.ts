@@ -37,7 +37,7 @@ export class InvoiceDocumentController {
   constructor(@Inject(InvoiceDocumentService) private readonly service: InvoiceDocumentService,
     @Inject(InvoicePdfJobService) private readonly pdf: InvoicePdfJobService) {}
   @Get('documents') @Header('Cache-Control','no-store') @ApiOkResponse({ schema: invoiceDocumentOpenApi.list })
-  async list(@Query() query: Record<string, unknown>) { const page = pagination(query); return { data: await this.service.list(page.offset, page.limit) }; }
+  async list(@Query() query: Record<string, unknown>) { const { orderId, ...paging } = query; const page = pagination(paging); return { data: await this.service.list(page.offset, page.limit, orderId as string | undefined) }; }
   @Get('documents/:id') @Header('Cache-Control','no-store') @ApiOkResponse({ schema: invoiceDocumentOpenApi.read })
   async read(@Param('id') id: string, @Query() query: Record<string, unknown>) {
     if (Object.keys(query).length) throw invoiceInvalid('This resource accepts no owner or query override.');

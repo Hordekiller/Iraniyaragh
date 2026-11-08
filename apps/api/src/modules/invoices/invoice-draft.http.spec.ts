@@ -65,6 +65,12 @@ describe('Independent invoice draft HTTP RBAC and strict contract', () => {
     for (const route of routes.filter(route => route.method !== 'GET')) for (const key of ['', 'x'.repeat(129)]) expect((await call(route, 'staff', route.body, key)).status).toBe(400);
     for (const action of [service.create,service.edit,service.fromOrder,service.requote,service.cancel]) expect(action).not.toHaveBeenCalled();
   });
+  it('passes the optional source-order filter to the list and lists everything without it', async () => {
+    expect((await call({ ...routes[0], path: '?sourceOrderId=order-a' }, 'reader')).status).toBe(200);
+    expect(service.list).toHaveBeenLastCalledWith(0, 25, 'order-a');
+    expect((await call(routes[0], 'reader')).status).toBe(200);
+    expect(service.list).toHaveBeenLastCalledWith(0, 25, undefined);
+  });
   it('rejects malformed pagination/options before querying the database', async () => {
     expect((await call({ ...routes[0], path: '?offset=-1' }, 'staff')).status).toBe(400);
     expect((await call({ ...routes[3], path: '/options?kind=secret' }, 'staff')).status).toBe(400);

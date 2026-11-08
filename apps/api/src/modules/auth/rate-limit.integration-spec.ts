@@ -126,7 +126,10 @@ describe('RateLimitService live Redis integration', () => {
 
   it('enforces the refresh IP bucket at 30 attempts per minute', async context => {
     if (!available) return context.skip();
-    const refreshIp = `203.0.113.${Math.floor(Math.random() * 200)}`;
+    // Use a high-entropy RFC1918 address so parallel integration specs cannot
+    // share the same Redis bucket and shift the first expected remaining count.
+    const octet = () => Math.floor(Math.random() * 256);
+    const refreshIp = `10.${octet()}.${octet()}.${octet()}`;
     const dimension = 'refresh:ip';
 
     for (let attempt = 0; attempt < 30; attempt += 1) {
