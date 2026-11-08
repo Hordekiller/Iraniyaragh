@@ -6,6 +6,7 @@ import { CategoryGrid } from '../components/catalog/CategoryGrid'
 import { HomeBanners } from '../components/content/HomeBanners'
 import { HeroSlider } from '../components/content/HeroSlider'
 import { NewsletterStatus } from '../components/content/NewsletterStatus'
+import { HomeBlogSection } from '../components/content/HomeBlogSection'
 import { ProductCarousel } from '../components/product/ProductCarousel'
 import { verifiedDiscountPercent } from '../lib/discount'
 import type { HomepageBannerPublic } from '@iranyaragh/contracts'
@@ -163,6 +164,7 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
           </div>
         </>
       )}
+      <HomeBlogSection />
       <NewsletterStatus />
     </div>
   )

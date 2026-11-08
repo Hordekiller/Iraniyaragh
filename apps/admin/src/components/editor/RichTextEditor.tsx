@@ -24,6 +24,8 @@ export type RichTextEditorProps = {
   disabled?: boolean;
   className?: string;
   mediaPicker?: MediaPickerHandle;
+  /** Toolbar and image markup profile; articles use figures with captions. */
+  variant?: 'default' | 'article';
   onError?: (error: unknown) => void;
 };
 
@@ -43,6 +45,7 @@ export function RichTextEditor({
   disabled = false,
   className,
   mediaPicker,
+  variant = 'default',
   onError,
 }: RichTextEditorProps) {
   const hostRef = useRef<HTMLTextAreaElement | null>(null);
@@ -52,6 +55,7 @@ export function RichTextEditor({
 
   const onChangeRef = useRef(onChange);
   const mediaPickerRef = useRef(mediaPicker);
+  const variantRef = useRef(variant);
   const onErrorRef = useRef(onError);
   const valueRef = useRef(value);
   const disabledRef = useRef(disabled);
@@ -65,6 +69,7 @@ export function RichTextEditor({
   useEffect(() => {
     onChangeRef.current = onChange;
     mediaPickerRef.current = mediaPicker;
+    variantRef.current = variant;
     onErrorRef.current = onError;
     valueRef.current = value;
     disabledRef.current = disabled;
@@ -85,7 +90,7 @@ export function RichTextEditor({
       handle.open({
         onInsert: (item) => {
           snapshot.s.restore();
-          snapshot.s.insertHTML(buildMediaImageHtml(item));
+          snapshot.s.insertHTML(buildMediaImageHtml(item, { figure: variantRef.current === 'article' }));
           snapshot.focus();
           onChangeRef.current(snapshot.value);
         },
@@ -104,9 +109,11 @@ export function RichTextEditor({
           import('jodit/esm/plugins/justify/justify.js'),
           import('jodit/esm/plugins/source/source.js'),
           import('jodit/esm/plugins/clean-html/clean-html.js'),
+          import('jodit/esm/plugins/hr/hr.js'),
         ]);
         if (disposed) return;
         const profile = buildJoditProfile({
+          variant: variantRef.current,
           placeholder,
           height,
           readonly: disabled,

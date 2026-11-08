@@ -109,6 +109,25 @@ __Host-iranyaragh_csrf=<opaque 256-bit value>;
   Secure; SameSite=Strict; Path=/
 ```
 
+Staff sessions use a separate cookie pair, because Admin is served from the
+storefront origin (`/admin`) and one shared pair let either side overwrite or
+clear the other's session:
+
+```text
+__Host-iranyaragh_staff_refresh / __Host-iranyaragh_staff_csrf   (development: iranyaragh_staff_refresh / iranyaragh_staff_csrf)
+```
+
+The Admin client sends `X-Auth-Realm: staff` on every API call; `refresh` and
+`logout` then read, rotate and clear only the staff pair and only rotate
+`STAFF_MFA` sessions. Without the header the customer pair and `CUSTOMER_OTP`
+sessions are used. A wrong-realm refresh is rejected without revoking anything.
+
+Refresh rotation retires the previous `Session` row but an access token signed
+for it stays valid until its own expiry while its token family still has a live
+row (the principal resolves to that live row). Logout, replay detection,
+inactivity/expiry and credential change leave no live row, so those tokens stop
+working immediately.
+
 No `Domain` attribute is allowed. `Max-Age` cannot exceed the session's absolute
 expiry. Cookie clearing repeats the exact name/path/security attributes.
 
@@ -139,8 +158,9 @@ browser clients above.
 | `POST /customer/otp/verify`       | Public challenge                  | `200` access + cookies           | Atomic single-use, five attempts maximum          |
 | `POST /staff/password`            | Public                            | `200` MFA challenge              | Dummy-hash non-enumeration, no session yet        |
 | `POST /staff/totp/verify`         | Public challenge                  | `200` access + cookies           | One-time challenge and TOTP time-step             |
-| `POST /refresh`                   | Refresh cookie + CSRF             | `200` rotated access + cookies   | Transactional rotation/replay-family revocation   |
+| `POST /refresh`                   | Refresh cookie + CSRF (+ optional `X-Refresh-Attempt`) | `200` rotated access + cookies | Transactional rotation/replay-family revocation; same-attempt recovery 8.1 |
 | `GET /me`                         | Bearer                            | `200` principal                  | Live session/user/permission evaluation           |
+| `POST /activity`                  | Bearer                            | `204` no body                    | Touches only the guard-validated live session; never revives an idle/revoked/expired one |
 | `GET /sessions`                   | Bearer                            | `200` safe device list           | Own sessions only, no hashes/user-agent/IP        |
 | `DELETE /sessions/:sessionId`     | Bearer                            | `200 {data:{}}`                  | Own session only; current deletion clears cookies |
 | `POST /logout`                    | Refresh cookie + CSRF             | `200 {data:{}}`                  | Idempotent revoke/clear; generic if already gone  |
@@ -368,7 +388,8 @@ Within one database transaction, a valid refresh:
 4. revokes the old row as `ROTATED` and links `replacedBySessionId`;
 5. commits before returning the new cookie/access token.
 
-If the supplied row is already rotated, the service revokes all still-active rows
+If the supplied row is already rotated and the request is **not** a valid recovery
+of the same attempt (section 8.1), the service revokes all still-active rows
 with its `tokenFamilyId`, emits `auth.session.replay_detected`, clears cookies and
 returns `AUTH_SESSION_REPLAYED`. In two simultaneous refreshes exactly one CAS wins;
 the loser follows this replay path, so the resulting family is revoked. UI clients
@@ -385,6 +406,49 @@ most one replay, with its original body and idempotency key, and late work from
 a different login generation is cancelled. Logout waits for the complete batch;
 network, cancellation and lock-acquisition failures release the lease without
 claiming the protected operation succeeded. No token is broadcast or persisted.
+
+### 8.1 Idempotent refresh recovery (lost responses)
+
+A rotation commits on receipt, so a response lost to reload, cancellation or a
+network drop leaves the browser on the previous cookie. Unconditional reuse grace
+is NOT allowed. Instead the same attempt may be retried:
+
+1. The client generates a random **refresh-attempt ID** (base64url,
+   22-64 chars; a UUID v4 in the clients) and sends it as `X-Refresh-Attempt`. It is kept in `localStorage`
+   (`iranyaragh:refresh-attempt:customer|staff`, nothing else) and reused only
+   while younger than 12 s; success or any 4xx clears it, transport failure/5xx
+   keeps it, logout/login clear it, and a retry after 12 s gets a fresh ID.
+2. In the **same transaction** as the rotation the server stores one
+   `RefreshRecovery` row: SHA-256 of the attempt ID, `expiresAt = now + 15 s`, and
+   the successor refresh token + CSRF value sealed with AES-256-GCM under
+   `HKDF(previous refresh token, salt = attempt ID)` with AAD
+   `previousSessionId>successorSessionId`. No plaintext credential is stored and
+   neither a database reader nor a holder of only the old token or only the ID can
+   open it. If the insert fails the rotation rolls back and the old token stays
+   usable.
+3. A request presenting an already-rotated token is served the stored outcome
+   (fresh access token, same successor cookies, audit `auth.session.refresh_recovered`)
+   only if ALL hold: Origin/CSRF/realm checks pass; the previous token matches;
+   the attempt hash matches in constant time; now < `expiresAt`; the successor
+   is the unrevoked, unrotated head of the same family and level; and it is not
+   expired or past inactivity. No new session is created, so retries (also
+   concurrent, also from several tabs) never branch the family.
+4. Anything else - other/missing/malformed ID, window elapsed, successor revoked or
+   rotated again, tampered record - is a replay: the family is revoked and
+   `auth.session.replay_detected` is emitted exactly as before.
+5. Logout presenting a rotated token revokes the whole live family, so a lost
+   response cannot leave an orphaned live successor. Logout-all, credential change,
+   revocation, expiry and inactivity make recovery impossible by condition 3.
+
+The attempt ID is an idempotency key, never authentication proof. IP and
+User-Agent are not used. Expired rows are purged opportunistically after each
+attempt-bearing rotation (`purgeExpiredRecoveries`) and are cascade-deleted with
+their sessions. Remaining risk: a party holding the old refresh token AND the
+attempt ID inside the 15 s window can obtain the same successor the legitimate
+client would; that requires both values from the client (TLS, HttpOnly cookie,
+ID never in a URL or cookie) and the window is bounded. Retries after the
+window, or if the browser lost the ID (storage cleared), still end in replay
+revocation and a re-login.
 
 Session limits:
 
@@ -666,3 +730,33 @@ Rollout order:
 3. implement shared session/permission/audit core;
 4. implement OTP and staff flows while clients use accepted mocks;
 5. run integrated abuse/revocation E2E before enabling Auth routes in staging.
+
+### 17.1 Staff cookie-split rollout and inactivity keep-alive
+
+**One-time staff re-login.** Before this change staff sessions lived in the shared
+customer cookie pair. After deploy the Admin reads only the staff pair, which no
+browser holds yet, so every operator signs in once more (password + TOTP). Customers
+are unaffected. The cookie split does not rewrite existing Session rows. The
+forward migration `20261105120000_refresh_recovery` adds the bounded encrypted
+recovery table described in section 8.1; it is part of the same rollout.
+The legacy shared cookie may linger in a browser; the customer realm ignores a
+`STAFF_MFA` session presented there (level mismatch returns invalid *without*
+revoking) and the row expires through the normal 30-minute inactivity / 12-hour
+absolute policy. Staff sessions that predate the deploy remain in `Session` until
+they expire; operators may revoke them from the sessions page.
+
+**Inactivity.** Staff inactivity stays 30 minutes, measured from `lastUsedAt`
+(set at create/rotate). A user typing in a long form makes no API call, so the
+Admin sends `POST /auth/activity` only when genuine input (key, pointer, touch,
+wheel) occurred since the last signal and at least 5 minutes passed, shared across
+tabs through `localStorage`; an idle tab sends nothing. The server re-checks
+revocation, absolute expiry and the inactivity deadline before writing, throttles
+writes to one per minute per session, and never extends `expiresAt`, so absolute
+lifetime, logout, revocation and credential change are unaffected.
+
+**Lost refresh responses** are resolved by the idempotent recovery protocol in
+section 8.1 (15 s server window, 12 s client window). Deployment: forward migration
+`20261105120000_refresh_recovery` adds the `RefreshRecovery` table; deploy the API
+before the web/admin bundles so the `X-Refresh-Attempt` header is understood (an
+older API simply ignores it, and older clients simply never send it).
+

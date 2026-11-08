@@ -144,12 +144,12 @@ export function OrdersView({ initialQuery: raw }: { initialQuery: OrdersUrlQuery
               label={`${meta ? formatCount(meta.total) : '…'} سفارش`}
             />
             {canManage ? (
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<Plus size={16} />}
-                onClick={() => setStaffOrderOpen(true)}
-              >
+              <Button component={Link} href="/orders/new" variant="contained" size="small" startIcon={<Plus size={16} />}>
+                فروش و فاکتور جدید
+              </Button>
+            ) : null}
+            {canManage ? (
+              <Button variant="outlined" size="small" onClick={() => setStaffOrderOpen(true)}>
                 سفارش حضوری
               </Button>
             ) : null}

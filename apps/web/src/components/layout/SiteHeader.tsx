@@ -5,6 +5,7 @@ import { ChevronDown, Menu, Phone, Search, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '../../state/cart-context'
 import { toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
+import { useHasBlog } from '../../lib/blog-nav-context'
 import { NotificationBell } from '../notifications/NotificationBell'
 import { AccountMenu } from '../auth/AccountMenu'
 import { HAS_SITE_PHONE, SITE_PHONE } from '../../lib/site-config'
@@ -20,6 +21,7 @@ type SiteHeaderProps = {
 }
 
 export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSearch, onOpenLogin }: SiteHeaderProps) {
+  const hasBlog = useHasBlog()
   const navigate = useNavigate()
   const location = useLocation()
   const locationIdentity = `${location.pathname}${location.search}${location.hash}`
@@ -79,12 +81,13 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
           <div className="flex shrink-0 items-center gap-2 mr-auto lg:mr-0">
             <button onClick={onToggleSearch} aria-label="جستجو" aria-expanded={showSearch} aria-controls="mobile-header-search" className="lg:hidden w-11 h-11 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center"><Search size={18} aria-hidden="true" /></button>
             {HAS_SITE_PHONE && (
-              <a href={`tel:${SITE_PHONE}`} className="hidden lg:flex items-center gap-2 h-11 px-5 rounded-full bg-[#0F172A] text-white text-[13px] font-bold hover:bg-black transition">
-                <Phone size={16} aria-hidden="true" /> تماس با فروشگاه
+              <a href={`tel:${SITE_PHONE}`} className="hidden h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-orange-200 bg-orange-50 px-4 text-[13px] font-bold text-orange-800 transition-colors hover:border-orange-300 hover:bg-orange-100 hover:text-orange-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-700 focus-visible:ring-offset-2 lg:inline-flex">
+                <Phone size={16} className="shrink-0" aria-hidden="true" /> <span>تماس با فروشگاه</span>
               </a>
             )}
             <Link
               to={ROUTES.cart}
+              data-help="cart-link"
               aria-label={`سبد خرید، ${toPersianDigits(itemCount)} کالا`}
               className="relative w-11 h-11 rounded-full border border-slate-200 bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-white hover:border-[#FF4D00]/30 hover:text-[#FF4D00] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
             >
@@ -102,7 +105,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
 
         <nav aria-label="ناوبری اصلی" className="hidden lg:flex min-h-12 items-center gap-7 border-t border-slate-100 text-[13px] font-medium text-slate-600">
           <button type="button" onClick={openMenu} aria-expanded={menuOpen} aria-controls="store-navigation" aria-haspopup="dialog" className="flex min-h-12 items-center gap-2 border-l border-slate-200 pl-6 font-bold text-orange-800 transition-colors hover:text-orange-950"><Menu size={18} aria-hidden="true" /> دسته‌بندی کالاها <ChevronDown size={14} aria-hidden="true" /></button>
-          {[{ to: ROUTES.home, label: 'خانه' }, { to: ROUTES.search, label: 'همه کالاها' }, { to: ROUTES.bestsellers, label: 'پرفروش‌ها' }, { to: ROUTES.orders, label: 'پیگیری سفارش' }].map(item => <NavLink key={item.to} to={item.to} end className={({ isActive }) => `inline-flex min-h-12 items-center border-b-2 transition-colors hover:text-orange-800 ${isActive ? 'border-orange-700 font-bold text-orange-800' : 'border-transparent'}`}>{item.label}</NavLink>)}
+          {[{ to: ROUTES.home, label: 'خانه' }, { to: ROUTES.search, label: 'همه کالاها' }, { to: ROUTES.bestsellers, label: 'پرفروش‌ها' }, { to: ROUTES.orders, label: 'پیگیری سفارش' }, ...(hasBlog ? [{ to: ROUTES.blog, label: 'مقالات و راهنماها' }] : [])].map(item => <NavLink key={item.to} to={item.to} end={item.to !== ROUTES.blog} className={({ isActive }) => `inline-flex min-h-12 items-center border-b-2 transition-colors hover:text-orange-800 ${isActive ? 'border-orange-700 font-bold text-orange-800' : 'border-transparent'}`}>{item.label}</NavLink>)}
           <span className="mr-auto text-[11px] text-slate-500">فروشگاه تخصصی ابزار و یراق‌آلات</span>
         </nav>
 

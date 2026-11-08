@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InvoiceDraft, InvoiceDocument } from '@iranyaragh/contracts';
-import { InvoiceIssue } from './InvoiceIssue';
+import { InvoiceIssue, issueBlockers } from './InvoiceIssue';
 import { ApiClientError, ApiNetworkError } from '@/lib/api/client';
 import { documentFromDraft, issueInvoiceDocument } from '@/lib/invoices/invoice-documents-api';
 import { readInvoiceDraft } from '@/lib/invoices/invoice-drafts-api';
@@ -44,7 +44,13 @@ describe('Invoice issue UI authoritative result and ambiguity recovery',()=>{
   });
   it('stale source refusal requires fresh review and does not pretend a session expired',async()=>{
     vi.mocked(issueInvoiceDocument).mockRejectedValueOnce(new ApiClientError({code:'INVOICE_SOURCE_CHANGED',statusCode:409,message:'private detail',requestId:'test'}));view();confirm();submit();
-    await screen.findByText(/نسخهٔ پیش‌فاکتور، سفارش مبنا/);expect(screen.getByRole('checkbox')).not.toBeChecked();expect(screen.queryByRole('link',{name:'مشاهدهٔ سند نهایی'})).not.toBeInTheDocument();
+    await screen.findByText(/سفارش مبنا پس از ساخت پیش‌فاکتور تغییر کرده/);expect(screen.getByRole('checkbox')).not.toBeChecked();expect(screen.queryByRole('link',{name:'مشاهدهٔ سند نهایی'})).not.toBeInTheDocument();
+  });
+  it('keeps the form usable after a fresh-authentication refusal',async()=>{
+    vi.mocked(issueInvoiceDocument).mockRejectedValueOnce(new ApiClientError({code:'AUTH_REAUTHENTICATION_REQUIRED',statusCode:401,message:'x',requestId:'test'}));view();confirm();submit();
+    await screen.findByText(/تأیید تازهٔ رمز/);expect(screen.getByRole('checkbox')).not.toBeDisabled();expect(screen.getByRole('checkbox')).toBeChecked();
+    expect(screen.getByRole('button',{name:'صدور سند نهایی با شمارهٔ یکتا'})).not.toBeDisabled();
+    submit();await screen.findByRole('link',{name:'مشاهدهٔ سند نهایی'});expect(issueInvoiceDocument).toHaveBeenCalledTimes(2);
   });
   it('loads the same issued document after reload and permits recovery from a failed document read',async()=>{
     vi.mocked(documentFromDraft).mockRejectedValueOnce(new ApiNetworkError('offline'));view({...draft,state:'ISSUED'});
@@ -55,5 +61,31 @@ describe('Invoice issue UI authoritative result and ambiguity recovery',()=>{
     vi.mocked(issueInvoiceDocument).mockRejectedValueOnce(new ApiNetworkError('lost'));let release!:(value:InvoiceDraft)=>void;vi.mocked(readInvoiceDraft).mockReturnValueOnce(new Promise(resolve=>{release=resolve;}));
     const current=view();confirm();submit();await screen.findByText(/نتیجهٔ صدور نامشخص است/);fireEvent.click(screen.getByRole('button',{name:'بازخوانی و تکرار همان درخواست صدور'}));
     await waitFor(()=>expect(readInvoiceDraft).toHaveBeenCalledTimes(1));current.unmount();release(draft);await Promise.resolve();expect(issueInvoiceDocument).toHaveBeenCalledTimes(1);expect(changed).not.toHaveBeenCalled();
+  });
+});
+describe('issueBlockers tells the operator why issuing is unavailable',()=>{
+  it('is empty for a current, matching order draft of an authorized issuer',()=>{expect(issueBlockers(draft,true)).toEqual([]);});
+  it('reports a missing permission and a catalog quotation',()=>{
+    expect(issueBlockers(draft,false).join(' ')).toContain('invoices.issue');
+    expect(issueBlockers({...draft,source:'CATALOG',sourceTermsMatch:null,sourceOrderId:null,quote:{} as InvoiceDraft['quote']},true).join(' ')).toContain('ساخت پیش‌فاکتور از سفارش');
+  });
+  it('explains the EXCLUSIVE-tax total mismatch that makes issuing always refuse',()=>{
+    const reasons=issueBlockers({...draft,sourceTermsMatch:false,quote:{} as InvoiceDraft['quote']},true);
+    expect(reasons).toHaveLength(1);expect(reasons[0]).toContain('EXCLUSIVE');
+  });
+  it('asks for requote on policy or price changes and a fresh draft when the order changed',()=>{
+    expect(issueBlockers({...draft,quotationStatus:'POLICY_CHANGED'},true).join(' ')).toContain('بازقیمت‌گذاری');
+    expect(issueBlockers({...draft,quotationStatus:'PRICE_EXPIRED'},true).join(' ')).toContain('بازقیمت‌گذاری');
+    expect(issueBlockers({...draft,quotationStatus:'SOURCE_CHANGED'},true).join(' ')).toContain('پیش‌فاکتور تازه');
+    expect(issueBlockers({...draft,quotationStatus:'POLICY_REQUIRED',quote:null},true).join(' ')).toContain('سیاست فاکتور');
+  });
+  it('shows nothing for drafts that are already issued, and only the cancellation for cancelled ones',()=>{
+    expect(issueBlockers({...draft,state:'ISSUED'},true)).toEqual([]);
+    expect(issueBlockers({...draft,state:'CANCELLED'},true)).toEqual(['این پیش‌فاکتور لغو شده است.']);
+  });
+  it('renders the reasons next to the disabled issue button',()=>{
+    view({...draft,sourceTermsMatch:false,quote:{} as InvoiceDraft['quote']});
+    expect(screen.getByTestId('issue-blockers')).toHaveTextContent('EXCLUSIVE');
+    expect(screen.getByRole('button',{name:'صدور سند نهایی با شمارهٔ یکتا'})).toBeDisabled();
   });
 });

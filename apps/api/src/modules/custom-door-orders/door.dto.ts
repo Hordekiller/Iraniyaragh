@@ -304,7 +304,37 @@ export class DoorSelectionDto {
   @MaxLength(128)
   materialId!: string;
 }
+export class DoorHingeHoleDto {
+  @ApiProperty({ type: Number, description: "Integer millimetres from the selected reference edge." })
+  @Transform(({ value }) => normalizeDoorDigits(value))
+  @IsInt() @Min(1) @Max(2147483647)
+  distanceMm!: number;
+  @ApiProperty({ enum: ["TOP", "BOTTOM"] })
+  @IsEnum(["TOP", "BOTTOM"])
+  reference!: "TOP" | "BOTTOM";
+}
+export class DoorManufacturingDto {
+  @ApiProperty({ enum: ["BLACK", "WHITE", "GOLD", "BRONZE"] })
+  @IsEnum(["BLACK", "WHITE", "GOLD", "BRONZE"])
+  profileColor!: "BLACK" | "WHITE" | "GOLD" | "BRONZE";
+  @ApiProperty({ enum: ["RIGHT", "LEFT", "TOP", "BOTTOM"] })
+  @IsEnum(["RIGHT", "LEFT", "TOP", "BOTTOM"])
+  handleSide!: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
+  @ApiProperty({ enum: ["RIGHT", "LEFT", "TOP", "BOTTOM"] })
+  @IsEnum(["RIGHT", "LEFT", "TOP", "BOTTOM"])
+  hingeSide!: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
+  @ApiProperty({ enum: ["STANDARD", "CUSTOM"] })
+  @IsEnum(["STANDARD", "CUSTOM"])
+  drillingMode!: "STANDARD" | "CUSTOM";
+  @ApiProperty({ type: [DoorHingeHoleDto], maxItems: 4 })
+  @IsArray() @ArrayMaxSize(4) @ValidateNested({ each: true }) @Type(() => DoorHingeHoleDto)
+  holes!: DoorHingeHoleDto[];
+}
 export class DoorItemDto {
+  @ApiPropertyOptional({ type: DoorManufacturingDto })
+  @ValidateIf((_, v) => v !== undefined)
+  @IsDefined() @ValidateNested() @Type(() => DoorManufacturingDto)
+  manufacturing?: DoorManufacturingDto;
   @ApiProperty({ type: String }) @IsString() @MaxLength(128) modelId!: string;
   @ApiProperty({ type: Number })
   @Transform(({ value }) => normalizeDoorDigits(value))
@@ -364,11 +394,11 @@ export class DoorQuoteApprovalDto extends DoorVersionDto {
   @Type(() => DoorApprovedLineDto)
   lineTotals!: DoorApprovedLineDto[];
   @ApiProperty({ type: String }) @Matches(amountPattern) total!: string;
-  @ApiProperty({ type: DoorDepositDto })
-  @IsDefined()
+  @ApiPropertyOptional({ type: DoorDepositDto, deprecated: true })
+  @IsOptional()
   @ValidateNested()
   @Type(() => DoorDepositDto)
-  depositPolicy!: DoorDepositDto;
+  depositPolicy?: DoorDepositDto;
   @ApiProperty({ type: [DoorAmountLineDto] })
   @IsArray()
   @ArrayMaxSize(30)

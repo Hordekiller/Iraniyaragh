@@ -1,15 +1,20 @@
 # Delivery Roadmap
 
-> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
-> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
-> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
-> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
-> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
-> Older dates/status rows below are historical; accepted domain requirements remain.
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
 
-## Current release path — 2026-10-28
+## Current delivery sequence — 2026-11-07
 
-Complete the short remaining queue in V1_RECONCILIATION.md, collect authorized operational acceptance, then publish the accepted V1 tag. Do not reopen merged hardening/expiry/PDF/report/SSR work. Keep valuation inactive and AI/multi-provider/broad breaking upgrades post-V1. No completion percentage is inferred from issue counts.
+1. Complete exact-SHA publication/deployment and live discovery acceptance for the
+   canonical product seller identity and its container build dependency.
+2. Verify Admin blog access with a real authorized operator. A public test article
+   remains a plan with explicit test labelling and a deliberate indexing policy.
+3. Follow [NEWSLETTER_PLAN_FA.md](NEWSLETTER_PLAN_FA.md): decide channel and offer,
+   implement consent/verification/unsubscribe, then controlled delivery and rollout.
+4. Continue the remaining commerce/provider/operations acceptance gates recorded in
+   [CURRENT_STATE.md](CURRENT_STATE.md); source delivery is separate from field acceptance.
+
+The user decides scope and priority. Existing money, identity, inventory and recovery
+invariants remain in AGENTS.md, SECURITY.md and FOUNDATION.md.
 
 ## Historical roadmap context and accepted outcome requirements
 

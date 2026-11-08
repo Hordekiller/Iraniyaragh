@@ -599,3 +599,73 @@ editable in the separate **قالب‌های SMS.ir** section and persisted in P
 false; an approved private `SMS_IR_TEST_MOBILE` is required for a confirmed test.
 Deploy environment changes through the official exact-SHA release path. Keep
 payment mode unchanged. Missing approvals or handset evidence keep #114 open.
+
+## Search indexing switch (`APP_ENVIRONMENT`)
+
+`APP_ENVIRONMENT` is unset in `.env.staging` by default and then resolves to
+`staging`: all pages answer `noindex, nofollow`, `robots.txt` is `Disallow: /` and
+Search Console reports the sitemap as «Couldn't fetch». To allow indexing of a live
+store, set `APP_ENVIRONMENT=production` (this also sets the API/worker `NODE_ENV`).
+
+Preconditions: `PAYMENT_PROVIDER_MODE=live` and `SMS_PROVIDER_MODE=smsir` (production
+rejects `disabled`), `PUBLIC_WEB_ORIGIN` is the HTTPS apex, and the business has
+accepted that the store becomes discoverable.
+
+```sh
+cd /opt/iranyaragh/infrastructure/docker
+index_snapshot=".env.staging.before-indexing-$(date -u +%Y%m%dT%H%M%SZ)"
+cp -p .env.staging "$index_snapshot"
+chmod 600 "$index_snapshot"
+python3 - <<'ENV_PY'
+from pathlib import Path
+p = Path('.env.staging')
+lines = [line for line in p.read_text().splitlines() if not line.startswith('APP_ENVIRONMENT=')]
+lines.append('APP_ENVIRONMENT=production')
+p.write_text('\n'.join(lines) + '\n')
+ENV_PY
+docker compose --env-file .env.staging -f compose.staging.yml config --quiet
+docker compose --env-file .env.staging -f compose.staging.yml up -d --no-build
+```
+
+Verify, then submit the sitemap in Search Console:
+
+```sh
+curl -s https://<domain>/robots.txt                      # Allow: / and Sitemap: line
+curl -sI https://<domain>/ | grep -i x-robots-tag        # no noindex header
+curl -s https://<domain>/ | grep -o '<meta name="robots"[^>]*>'   # index, follow
+node .github/scripts/discovery-audit.mjs https://<domain>          # full contract audit
+```
+
+Rollback: select the private snapshot for this exact change, check for intervening
+configuration changes, restore the compatible settings and re-run the same `up -d`.
+Do not overwrite a newer credential/provider change blindly.
+
+## Governed blog and production SEO release checks
+
+1. Select the exact merged main SHA whose Publish Images workflow succeeded. PR
+   quality/typechecks can pass while a minimal Docker build context is missing a
+   cross-repository test import; the storefront build explicitly includes the SEO checker.
+2. Take fresh database/media backups and verify restoration into isolated scratch
+   targets before relying on them. Preserve production data and remove only scratch targets.
+3. Apply forward migration `20261106120000_blog_articles` when pending. Run the guarded
+   canonical RBAC baseline `--apply`/`--check` with `ALLOW_RBAC_BASELINE=true`; production
+   also requires `RBAC_BASELINE_CONFIRM_PRODUCTION=apply-canonical-rbac-baseline`.
+4. Wait for the new API's readiness before updating Admin/storefront/edge. Verify the
+   six application image tags/digests, workers, real TLS and current configured SHA.
+5. Check public blog list/RSS and expected empty-blog 404; protected blog Admin reads
+   must deny anonymous access. Real editorial writes require a real operator.
+6. Run the full deployed discovery audit: product seller Organization identity must
+   include the configured canonical store URL. Five static public pages or fixture
+   rendering alone do not cover eligible production Product schema.
+7. Configure GitHub `PRODUCTION_WEB_ORIGIN` and dispatch the existing Discovery Audit
+   only after that acceptance succeeds. Missing configuration leaves its production
+   stage inactive; it is not a successful site audit.
+
+For a repeat indexing switch, update the existing APP_ENVIRONMENT entry exactly once
+rather than append conflicting duplicates. Back up the private environment, validate
+Compose/runtime config, preserve payment/SMS settings, and retain noindex on private
+pages. The website being crawlable does not mean Google has already indexed it.
+
+A public test article and newsletter subscription/delivery are planning scope in
+`docs/NEWSLETTER_PLAN_FA.md`; this deployment procedure does not publish content or
+send marketing messages automatically.

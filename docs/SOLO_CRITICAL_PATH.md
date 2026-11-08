@@ -1,6 +1,8 @@
 # Historical V1 Critical Path
 
-> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
+
+> **Historical evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
 > [Release reconciliation](V1_RECONCILIATION.md) owns source/runtime/acceptance truth.
 > [Issue register](V1_ISSUE_REGISTER.json) covers all 151 issues (46 open / 105 closed).
 > Dated status/queue claims below are historical; security/domain requirements remain.

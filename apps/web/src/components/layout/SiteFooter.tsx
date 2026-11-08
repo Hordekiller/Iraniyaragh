@@ -4,6 +4,7 @@ import {
   HAS_SITE_PHONE,
   SITE_ADDRESS_LINE,
   SITE_MOBILE,
+  SITE_NAME,
   SITE_PHONE,
   SITE_PHONE_PERSIAN,
   SITE_POSTAL_CODE,
@@ -12,6 +13,7 @@ import {
 import { gregorianToJalali, toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
 import { StoreBrandLogo } from '../brand/StoreBrandLogo'
+import { useHasBlog } from '../../lib/blog-nav-context'
 
 function currentJalaliYear(): number {
   const now = new Date()
@@ -21,6 +23,7 @@ function currentJalaliYear(): number {
 const hasContactBlock = HAS_SITE_PHONE || SITE_MOBILE !== null || SITE_ADDRESS_LINE !== null || SITE_POSTAL_CODE !== null
 
 export function SiteFooter() {
+  const hasBlog = useHasBlog()
   return (
     <footer className="mt-8 bg-white border-t border-slate-100">
       <div className="max-w-[1280px] mx-auto px-4 lg:px-6">
@@ -37,6 +40,8 @@ export function SiteFooter() {
               <li><Link to={ROUTES.search} className="hover:text-[#C2410C] focus-visible:underline">جستجوی کالا</Link></li>
               <li><Link to={ROUTES.cart} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline"><ShoppingBag size={15} aria-hidden="true" /> سبد خرید</Link></li>
               <li><Link to={ROUTES.account} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline"><UserRound size={15} aria-hidden="true" /> حساب کاربری</Link></li>
+              {hasBlog && <li><Link to={ROUTES.blog} className="hover:text-[#C2410C] focus-visible:underline">مقالات و راهنماها</Link></li>}
+              <li><Link to={ROUTES.help} className="hover:text-[#C2410C] focus-visible:underline">راهنمای مشتری</Link></li>
               <li><Link to={ROUTES.privacy} className="hover:text-[#C2410C] focus-visible:underline">حریم خصوصی</Link></li>
               <li><Link to={ROUTES.terms} className="hover:text-[#C2410C] focus-visible:underline">قوانین و شرایط فروش</Link></li>
             </ul>
@@ -89,7 +94,7 @@ export function SiteFooter() {
           </div>
         </div>
         <div className="border-t border-slate-100 py-5 text-xs text-slate-500">
-          © {toPersianDigits(currentJalaliYear())} <StoreBrandLogo variant="inline" /> — کلیه حقوق محفوظ است.
+          © {toPersianDigits(currentJalaliYear())} {SITE_NAME} — کلیه حقوق محفوظ است.
         </div>
       </div>
     </footer>

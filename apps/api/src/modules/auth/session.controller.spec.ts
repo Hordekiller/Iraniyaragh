@@ -32,6 +32,8 @@ function createController(
     listSessions: ReturnType<typeof vi.fn>;
     revokeUserSession: ReturnType<typeof vi.fn>;
     revokeAllSessions: ReturnType<typeof vi.fn>;
+    touchActivity: ReturnType<typeof vi.fn>;
+    resolveLiveSessionId: ReturnType<typeof vi.fn>;
   };
 } {
   const now = Date.now();
@@ -61,6 +63,8 @@ function createController(
     ),
     revokeUserSession: vi.fn(overrides.revokeUserSession ?? (async () => 'revoked' as const)),
     revokeAllSessions: vi.fn(overrides.revokeAllSessions ?? (async () => 3)),
+    touchActivity: vi.fn(async () => true),
+    resolveLiveSessionId: vi.fn(async (_userId: string, sessionId: string) => (sessionId === 'session-rotated' ? 'session-current' : sessionId)),
   };
   const config: AuthRuntimeConfig = Object.freeze({
     accessSigningSecret: 'x',
@@ -98,6 +102,12 @@ function mockResponse() {
 describe('SessionManagementController (own session list)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('records activity only for the guard-validated principal session', async () => {
+    const { controller, sessions } = createController();
+    await expect(controller.activity(currentPrincipal)).resolves.toBeUndefined();
+    expect(sessions.touchActivity).toHaveBeenCalledExactlyOnceWith('session-current');
   });
 
   it('lists the caller\'s sessions with the current one flagged, using the live principal', async () => {
@@ -183,6 +193,14 @@ describe('SessionManagementController (revoke own session)', () => {
       name: 'iranyaragh_customer_csrf',
       options: { httpOnly: false, maxAge: 0 },
     });
+  });
+
+  it('resolves a rotated row to the live head and clears the cookies', async () => {
+    const { controller, sessions } = createController();
+    const response = mockResponse();
+    await controller.remove(currentPrincipal, 'session-rotated', response);
+    expect(sessions.revokeUserSession).toHaveBeenCalledWith('user-1', 'session-current');
+    expect(response.calls.length).toBeGreaterThan(0);
   });
 
   it('clears production __Host- cookies preserving their security attributes', async () => {

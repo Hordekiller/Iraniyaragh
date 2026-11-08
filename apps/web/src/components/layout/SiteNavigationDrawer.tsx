@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowLeft, ChevronLeft, Home, LayoutGrid, LoaderCircle, Package, PackageSearch, Search, ShoppingBag, TrendingUp, UserRound, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, ChevronLeft, Home, LayoutGrid, LoaderCircle, Package, PackageSearch, Search, ShoppingBag, TrendingUp, UserRound, X } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
+import { useHasBlog } from '../../lib/blog-nav-context'
 import { toPersianDigits } from '../../lib/format'
 import type { CatalogCategory } from '../../services/catalog/types'
 import { useCatalogApi } from '../../state/catalog-context'
@@ -44,6 +45,8 @@ function CategoryBranch({ category, childrenByParent, ancestors, onNavigate }: {
 }
 
 export function SiteNavigationDrawer({ onClose }: { onClose: () => void }) {
+  const hasBlog = useHasBlog()
+  const navigationLinks = hasBlog ? [...pageLinks, { to: ROUTES.blog, label: 'مقالات و راهنماها', detail: 'خواندن مطالب فروشگاه', icon: BookOpen }] : pageLinks
   const api = useCatalogApi()
   const { pathname } = useLocation()
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -129,7 +132,7 @@ export function SiteNavigationDrawer({ onClose }: { onClose: () => void }) {
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50"><StoreBrandLogo variant="mark" /></span>
             <div>
               <h2 id="store-navigation-title" className="text-base font-black">منوی فروشگاه</h2>
-              <p className="mt-1 text-xs text-slate-500"><StoreBrandLogo variant="inline" />؛ همراهِ پروژه‌های شما</p>
+              <p className="mt-1 text-xs text-slate-500">همراهِ پروژه‌های شما</p>
             </div>
           </div>
           <button type="button" autoFocus onClick={onClose} aria-label="بستن منوی فروشگاه" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-800"><X size={20} aria-hidden="true" /></button>
@@ -205,7 +208,7 @@ export function SiteNavigationDrawer({ onClose }: { onClose: () => void }) {
           <nav aria-label="صفحه‌های فروشگاه" className="border-t border-slate-100 px-5 py-6 sm:px-7">
             <h3 className="text-sm font-black">دسترسی سریع</h3>
             <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              {pageLinks.map(({ to, label, detail, icon: Icon }) => <Link key={to} to={to} onClick={onClose} aria-current={pathname === to ? 'page' : undefined} className={`group flex items-center gap-3 rounded-2xl border p-3 transition-colors sm:p-4 ${pathname === to ? 'border-orange-200 bg-orange-50' : 'border-slate-200 hover:border-orange-200 hover:bg-orange-50/60'}`}>
+              {navigationLinks.map(({ to, label, detail, icon: Icon }) => <Link key={to} to={to} onClick={onClose} aria-current={pathname === to ? 'page' : undefined} className={`group flex items-center gap-3 rounded-2xl border p-3 transition-colors sm:p-4 ${pathname === to ? 'border-orange-200 bg-orange-50' : 'border-slate-200 hover:border-orange-200 hover:bg-orange-50/60'}`}>
                 <Icon size={20} strokeWidth={1.7} aria-hidden="true" className="shrink-0 text-orange-800" />
                 <span><span className="block text-xs font-bold sm:text-[13px]">{label}</span><span className="mt-1 block text-[10px] leading-5 text-slate-500 sm:text-[11px]">{detail}</span></span>
               </Link>)}
@@ -216,6 +219,7 @@ export function SiteNavigationDrawer({ onClose }: { onClose: () => void }) {
         <nav aria-label="راهنمای فروشگاه" className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-[11px] text-slate-500 sm:px-7">
           <span className="font-bold text-slate-700">با خیال راحت انتخاب کنید.</span>
           <div className="flex items-center gap-4">
+            <Link to={ROUTES.help} onClick={onClose} className="inline-flex min-h-11 items-center hover:text-orange-800">راهنمای مشتری</Link>
             <Link to={ROUTES.terms} onClick={onClose} className="inline-flex min-h-11 items-center hover:text-orange-800">شرایط خرید</Link>
             <Link to={ROUTES.privacy} onClick={onClose} className="inline-flex min-h-11 items-center hover:text-orange-800">حریم خصوصی</Link>
           </div>

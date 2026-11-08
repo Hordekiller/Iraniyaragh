@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { gunzipSync } from "node:zlib";
+import { checkPage } from "./seo-page-check.mjs";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
@@ -106,6 +107,10 @@ function validatePage(html, headers, pageUrl) {
   for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/giu)) {
     if (attributes(match[1]).type?.toLowerCase() === "application/ld+json") check(JSON.parse(match[2]));
   }
+  // Full page-level SEO contract (lang, title, description, h1, Open Graph, alt text, JSON-LD).
+  const kind = new URL(pageUrl).pathname === "/" ? "home" : /^\/(?:products|categories|brands)\/[^/]+$/u.test(new URL(pageUrl).pathname) ? (pageUrl.includes("/products/") ? "product" : "collection") : "page";
+  const failures = checkPage(html, { url: pageUrl, origin: new URL(pageUrl).origin, kind }).filter(issue => issue.level === "error");
+  assert(failures.length === 0, `SEO contract failed for ${pageUrl}: ${failures.map(issue => issue.message).join("; ")}`);
 }
 
 export async function audit(originInput) {

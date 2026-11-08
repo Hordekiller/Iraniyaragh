@@ -1,6 +1,8 @@
 # Production Admin Panel Program
 
-> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
+> Review note — 2026-11-07: use [CURRENT_STATE.md](CURRENT_STATE.md) for current capability/release boundaries. Dated implementation and allocation tables below preserve their original checkpoint.
+
+> **Historical evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
 > [Release reconciliation](V1_RECONCILIATION.md) owns source/runtime/acceptance truth.
 > [Issue register](V1_ISSUE_REGISTER.json) covers all 151 issues (46 open / 105 closed).
 > Dated status/queue claims below are historical; security/domain requirements remain.

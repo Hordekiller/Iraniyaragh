@@ -1,23 +1,24 @@
 # Page, Content and Release Matrix
 
-> **Current evidence — 2026-10-28:** source and verified VPS `92b23a43aa095a563d798712d24d1ffdf8020f14`.
-> [Release reconciliation](V1_RECONCILIATION.md) and [issue register](V1_ISSUE_REGISTER.json)
-> distinguish implementation, deployed code, operator acceptance and post-V1 scope.
-> Combined main CI, Sonar, audit, exact-SHA publication, restored backup and six-service
-> runtime/digest/HTTPS checks passed. Full V1 is **not accepted**; no v1.0.0 tag exists.
-> Older dates/status rows below are historical; accepted domain requirements remain.
+> Documentation review: **2026-11-07**. [Current implementation and release boundaries](CURRENT_STATE.md) is the starting point. Source, CI, published images, deployed SHA and operator/provider acceptance are separate evidence levels. Dated sections below preserve their original checkpoint and do not assert current VPS parity.
 
-## Current route and acceptance overlay — 2026-10-28
+## Current route and acceptance overlay — 2026-11-07
 
-| Surface | Source/deployed status | Remaining boundary |
+| Surface | Implemented behavior | Acceptance boundary |
 | --- | --- | --- |
-| Public home/catalog/category/brand/product/policy | Server-readable Next HTML, metadata/canonicals/schema and dynamic API robots/sitemaps deployed | Articles/guides, Merchant feed, remaining IndexNow/content lifecycle and field acceptance; staging noindex |
-| Customer account/cart/checkout/orders/tracking | Existing real owned APIs/UI preserved through rendering migration | Full authenticated responsive/session/provider acceptance |
-| Admin products/Jodit | Current live draft snapshot, long Persian HTML transport, recovery and replay fix deployed | Full operator master-data/media/publish acceptance and scanner freshness |
-| Admin invoices / customer invoices | Draft/issue/publish/revoke and private PDF actions deployed | Complete controlled two-customer operator journey; corrections not delivered |
-| Reports | Operational projections and durable owned CSV/XLSX/PDF snapshots deployed | Correction-document integration, applicable acceptance; valuation intentionally inactive |
-| Warehouse / purchasing / stocktake / credit returns | Delivered workflows with PostgreSQL and real desktop/mobile CI | Physical operator acceptance; general paid-order returns not delivered |
-| Access management | Not present on main; local candidate only | Integrate/review/test #359 before delivery claim |
+| Public home/catalog/category/brand/product | Server HTML, canonicals, structured data, real image metadata and API-owned discovery | Check actual production sitemap URLs and seller identity; fixture rendering alone omits eligible product schema |
+| Help/custom doors | Public help and server-readable door introduction; interactive configurator and contextual helper | Real operator/order/provider acceptance remains explicit |
+| Account/cart/checkout/payment | Owned authenticated APIs, server prices and explicit payment states | Private pages stay noindex; no fixture authentication against live sales data |
+| `/blog`, `/blog/:slug`, `/blog/feed.xml` | Governed article publication, scheduling, revisions, redirects and RSS | Empty `/blog` is 404; header/drawer/home/footer links and sitemap entry appear only for a live blog; no article is automatically authored |
+| `/admin/blog` | Permissioned list/editor, image picker and fresh-MFA commands | Real staff login required; public route response alone does not verify editorial writes |
+| `/admin/custom-doors` | Editable catalog/rules, manufacturing review and full final-balance workflow | Legacy deposit records and states remain history; no new deposit policy |
+| `/admin/promotions` | Campaign/coupon controls, server eligibility and immutable redemption accounting | Real checkout/payment reconciliation and explicit role grants |
+| `/admin/settings/sessions` | Staff realm session management and bounded refresh recovery | Separate customer realm; no expired-session revival or bypass of MFA |
+| Newsletter section | Honest unavailable state | Subscription/delivery implementation and controlled acceptance are future work |
+
+Configured `APP_ENVIRONMENT=production` permits eligible public pages to index.
+Account, cart, payment and Admin pages retain their private/noindex policy.
+The compose file name `.staging.yml` does not itself determine current indexing.
 
 ## Historical page inventory and required journeys
 

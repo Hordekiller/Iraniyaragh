@@ -447,7 +447,10 @@ export class CustomerOtpController {
   async refreshSession(): Promise<boolean> {
     if (this.store.isExpired()) return false;
     if (this.silentRestoreLatch) return false;
-    if (this.refreshPromise) return false;
+    // Join the refresh already in flight instead of reporting failure: callers
+    // that raced it (a 401 retry, a restore, another request) must observe the
+    // real outcome, not a spurious `false` that surfaces as "session invalid".
+    if (this.refreshPromise) return this.refreshPromise;
 
     const refreshPromise = this.runCoordinatedRefresh();
     this.refreshPromise = refreshPromise;
@@ -467,12 +470,12 @@ export class CustomerOtpController {
         (error.message === 'AUTH_CROSS_TAB_LOCK_UNAVAILABLE' ||
           error.message === 'AUTH_CROSS_TAB_LOCK_TIMEOUT')
       ) {
-        this.silentRestoreLatch = true;
-        if (this.store.isAuthenticated()) this.expireSession('invalid');
+        // Not being able to take the cross-tab lock says nothing about the
+        // session itself (another tab may simply be busy). Keep the session and
+        // let the next request retry; never turn it into a forced re-login.
         return false;
       }
       console.error('Unexpected cross-tab refresh coordinator failure');
-      this.silentRestoreLatch = true;
       return false;
     }
   }

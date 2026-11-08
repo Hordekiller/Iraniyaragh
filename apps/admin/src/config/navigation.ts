@@ -5,9 +5,12 @@ import {
   ClipboardCheck,
   CreditCard,
   FileClock,
+  BadgePercent,
   Gauge,
   Handshake,
+  MessageSquareText,
   MonitorSmartphone,
+  Newspaper,
   PackageSearch,
   ChartNoAxesCombined,
   ReceiptText,
@@ -69,12 +72,19 @@ export const navigation: NavigationGroup[] = [
   {
     label: 'فروش و مشتری',
     items: [
+      { label: 'فروش و فاکتور جدید', href: '/orders/new', icon: ShoppingBag, permission: 'orders.manage' },
       { label: 'سفارش‌ها', href: '/orders', icon: ShoppingBag, permission: 'orders.read' },
       { label: 'پرداخت‌ها', href: '/payments', icon: CreditCard, permission: 'payments.read' },
       { label: 'فاکتورهای صادرشده', href: '/invoices/documents', icon: ReceiptText, permission: 'invoices.read' },
       { label: 'پیش‌فاکتورها', href: '/invoices', icon: ReceiptText, permission: 'invoices.read' },
       { label: 'مشتریان', href: '/customers', icon: Users, permission: 'customers.read' },
       { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'shipments.read' },
+    ],
+  },
+  {
+    label: 'بازاریابی',
+    items: [
+      { label: 'تخفیف‌ها و کمپین‌ها', href: '/marketing/promotions', icon: BadgePercent, permission: 'promotions.read' },
     ],
   },
   {
@@ -87,7 +97,6 @@ export const navigation: NavigationGroup[] = [
       { label: 'یراق‌آلات و قطعات', href: '/custom-doors/hardware', icon: Wrench, permission: 'catalog.read' },
       { label: 'تعرفه ساخت و مونتاژ', href: '/custom-doors/labor', icon: Settings2, permission: 'catalog.read' },
       { label: 'قوانین قیمت‌گذاری', href: '/custom-doors/rules', icon: Settings2, permission: 'catalog.read' },
-      { label: 'قوانین بیعانه', href: '/custom-doors/deposits', icon: CreditCard, permission: 'catalog.read' },
       { label: 'وضعیت تولید', href: '/custom-doors/production', icon: ClipboardCheck, permission: 'orders.read' },
       { label: 'گزارش‌های ساخت درب', href: '/custom-doors/reports', icon: ChartNoAxesCombined, permission: 'reports.read' },
     ],
@@ -118,6 +127,13 @@ export const navigation: NavigationGroup[] = [
     ],
   },
   {
+    label: 'محتوا',
+    items: [
+      { label: 'مقالات وبلاگ', href: '/blog', icon: Newspaper, permission: 'blog.read' },
+      { label: 'نظرات مشتریان', href: '/reviews', icon: MessageSquareText, permission: 'reviews.read' },
+    ],
+  },
+  {
     label: 'تأمین و خرید',
     items: [
       { label: 'تأمین‌کنندگان', href: '/suppliers', icon: Handshake, permission: 'suppliers.read' },
@@ -135,6 +151,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'روش هزینهٔ انبار', href: '/settings/inventory-cost', icon: Warehouse, permission: 'settings.manage' },
       { label: 'چیدمان صفحهٔ اصلی', href: '/settings/homepage', icon: Settings2, permission: 'settings.manage' },
       { label: 'بنرهای تبلیغاتی', href: '/settings/banners', icon: Settings2, permission: 'settings.manage' },
+      { label: 'راهنمای تعاملی مشتری', href: '/settings/customer-helper', icon: Settings2, permission: 'settings.manage' },
       { label: 'نشست‌ها و دستگاه‌ها', href: '/settings/sessions', icon: MonitorSmartphone },
       { label: 'تنظیمات', href: '/settings', icon: Settings2, permission: 'settings.manage' },
     ],

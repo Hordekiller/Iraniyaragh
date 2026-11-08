@@ -30,7 +30,6 @@ import {
 } from "./door-catalog.service";
 import {
   checkedMoney,
-  depositFor,
   doorMoney,
   doorPaid,
   priceDoors,
@@ -93,6 +92,7 @@ function itemView(i: Row["items"][number]): DoorItemInput {
     heightMm: i.heightMm,
     quantity: i.quantity,
     selections: i.configuration as unknown as DoorItemInput["selections"],
+    ...(i.manufacturing ? { manufacturing: i.manufacturing as unknown as NonNullable<DoorItemInput["manufacturing"]> } : {}),
     notes: i.notes,
   };
 }
@@ -304,6 +304,7 @@ export class DoorOrdersService {
                       heightMm: i.heightMm,
                       quantity: i.quantity,
                       configuration: asDoorJson(i.selections),
+                      ...(i.manufacturing ? { manufacturing: asDoorJson(i.manufacturing) } : {}),
                       notes: i.notes,
                     })),
                   },
@@ -392,6 +393,7 @@ export class DoorOrdersService {
             heightMm: i.heightMm,
             quantity: i.quantity,
             configuration: asDoorJson(i.selections),
+            ...(i.manufacturing ? { manufacturing: asDoorJson(i.manufacturing) } : {}),
             notes: i.notes,
           })),
         });
@@ -553,7 +555,7 @@ export class DoorOrdersService {
           doorConflict(
             "جمع قیمت‌های قطعی ردیف‌ها و هزینه‌های جانبی باید دقیقاً برابر مبلغ نهایی باشد.",
           );
-        const deposit = depositFor(total, input.depositPolicy);
+        const deposit = total;
         const version = row.currentQuoteVersion + 1;
         const snapshot: DoorQuoteSnapshot = {
           ...originalSnapshot,
@@ -570,7 +572,7 @@ export class DoorOrdersService {
           }),
           total: total.toString(),
           deposit: deposit.toString(),
-          depositPolicy: input.depositPolicy,
+          depositPolicy: { kind: "FIXED", value: total.toString(), minimum: "0" },
           adjustments: input.adjustments,
           approvalReason:
             input.reason +
@@ -657,7 +659,7 @@ export class DoorOrdersService {
           ].includes(row.status)
         )
           doorConflict("قیمت قطعی برای پذیرش آماده نیست.");
-        const funded = doorPaid(row.order.payments) >= q.deposit!;
+        const funded = doorPaid(row.order.payments) >= q.total!;
         await tx.doorOrder.update({
           where: { id },
           data: {
@@ -696,15 +698,15 @@ export class DoorOrdersService {
           !["DEPOSIT_PAID", "AWAITING_TECHNICAL_APPROVAL"].includes(row.status)
         )
           doorConflict(
-            "تأیید فنی پس از دریافت بیعانه و پذیرش مشخصات انجام می‌شود.",
+            "تأیید فنی پس از پرداخت کامل و پذیرش مشخصات انجام می‌شود.",
           );
         const q = currentDoorQuote(row);
         if (
           !q.approved ||
           row.customerAcceptedQuoteVersion !== q.version ||
-          doorPaid(row.order.payments) < q.deposit!
+          doorPaid(row.order.payments) < q.total!
         )
-          doorConflict("بیعانه یا پذیرش نسخه جاری کامل نیست.");
+          doorConflict("پرداخت کامل یا پذیرش نسخه جاری کامل نیست.");
         await tx.doorOrder.update({
           where: { id },
           data: {
@@ -739,7 +741,7 @@ export class DoorOrdersService {
         approved: q.approved,
         accepted: row.customerAcceptedQuoteVersion === q.version,
         paid,
-        deposit: q.deposit ?? 0n,
+        deposit: q.total ?? 0n,
         remaining: q.total === null ? 1n : q.total - paid,
         technical: row.technicalApproved,
         stockReady: requirements.every(

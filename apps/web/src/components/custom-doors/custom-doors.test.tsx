@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DoorSummary } from "./DoorSummary";
 import { DoorOrderFloatingLink } from "./DoorOrderFloatingLink";
 import { CustomDoorsPage } from "../../views/CustomDoorsPage";
 import { AuthContext, type AuthContextValue } from "../../state/auth-context";
@@ -338,6 +339,9 @@ describe("Door configurator", () => {
     fireEvent.change(screen.getByLabelText("تعداد"), {
       target: { value: "۲" },
     });
+    fireEvent.change(screen.getByLabelText("رنگ پروفیل"), { target: { value: "BRONZE" } });
+    fireEvent.change(screen.getByLabelText("سمت دستگیره"), { target: { value: "LEFT" } });
+    fireEvent.change(screen.getByLabelText("محل گازور / لولا"), { target: { value: "RIGHT" } });
     fireEvent.click(screen.getByRole("button", { name: "افزودن این درب" }));
     fireEvent.click(screen.getByRole("button", { name: "تکثیر درب 1" }));
     expect(screen.getByText(/مجموع تعداد: ۴/)).toBeInTheDocument();
@@ -353,6 +357,7 @@ describe("Door configurator", () => {
           widthMm: 500,
           heightMm: 1000,
           quantity: 2,
+          manufacturing: { profileColor: "BRONZE", handleSide: "LEFT", hingeSide: "RIGHT", drillingMode: "STANDARD", holes: [] },
           selections: [{ slot: "glass", materialId: "test-glass" }],
         }),
       ],
@@ -362,6 +367,7 @@ describe("Door configurator", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "ویرایش" }));
     expect(screen.getByLabelText("عرض (میلی‌متر)")).toHaveValue("500");
+    expect(screen.getByLabelText("رنگ پروفیل")).toHaveValue("BRONZE");
   });
   it("publishes no invented models or prices when the catalog is empty", async () => {
     load.mockResolvedValue({ ...catalog, models: [], materials: [] });
@@ -381,4 +387,18 @@ describe("Door configurator", () => {
     );
     expect(screen.getByRole("button", { name: "دریافت دوباره" })).toBeVisible();
   });
+});
+
+
+it("shows final payment guidance without exposing historical deposit installments", () => {
+  const quote: DoorQuoteSnapshot = {
+    currency: "IRR", lines: [], reasons: [], calculatedTotal: "1000000",
+    total: "1000000", deposit: "300000",
+    depositPolicy: { kind: "PERCENT", value: "3000", minimum: "0" },
+    adjustments: [], approvalReason: null,
+  };
+  const { container } = render(<DoorSummary quote={quote} approved />);
+  expect(screen.getByText("مبلغ قطعی")).toBeInTheDocument();
+  expect(screen.getByText(/مبلغ نهایی یکجا پرداخت می‌شود/)).toBeInTheDocument();
+  expect(container.textContent).not.toContain("بیعانه");
 });

@@ -87,16 +87,26 @@ export type DoorCatalog = {
   floatingEnabled: boolean;
   settingsVersion: number;
 };
+/** Manufacturing dimensions are integer mm; the customer form displays cm. */
+export type DoorManufacturing = {
+  profileColor: "BLACK" | "WHITE" | "GOLD" | "BRONZE";
+  handleSide: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
+  hingeSide: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
+  drillingMode: "STANDARD" | "CUSTOM";
+  holes: { distanceMm: number; reference: "TOP" | "BOTTOM" }[];
+};
 export type DoorItemInput = {
   modelId: string;
   widthMm: number;
   heightMm: number;
   quantity: number;
   selections: { slot: string; materialId: string }[];
+  manufacturing?: DoorManufacturing;
   notes: string;
 };
 export type DoorOrderInput = { items: DoorItemInput[] };
 export type DoorPricingLine = {
+  manufacturing?: DoorManufacturing;
   item: number;
   title: string;
   quantity: number;
@@ -197,7 +207,8 @@ export type DoorQuoteApproval = {
   lineTotals: { total: string; reason: string }[];
   expectedVersion: number;
   total: string;
-  depositPolicy: DoorDepositPolicy;
+  /** Deprecated input, ignored: new quotes always require the full final amount. */
+  depositPolicy?: DoorDepositPolicy;
   adjustments: { title: string; amount: string }[];
   reason: string;
 };
@@ -211,8 +222,8 @@ export type DoorTransitionInput = {
 export const DOOR_STATUS_LABELS: Record<DoorStatus, string> = {
   DRAFT: "پیش‌نویس",
   PENDING_QUOTE_APPROVAL: "در انتظار تأیید قیمت",
-  AWAITING_DEPOSIT: "در انتظار بیعانه",
-  DEPOSIT_PAID: "بیعانه دریافت شد",
+  AWAITING_DEPOSIT: "در انتظار پرداخت نهایی",
+  DEPOSIT_PAID: "پرداخت ثبت شد",
   AWAITING_TECHNICAL_APPROVAL: "بررسی فنی",
   APPROVED_FOR_PRODUCTION: "آماده تولید",
   IN_PRODUCTION: "در حال تولید",

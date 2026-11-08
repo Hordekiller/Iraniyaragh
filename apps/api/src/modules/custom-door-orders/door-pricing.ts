@@ -1,9 +1,9 @@
+import { validateDoorManufacturing } from "./door-manufacturing";
 import {
   BadRequestException,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import type {
-  DoorDepositPolicy,
   DoorItemInput,
   DoorMaterial,
   DoorModel,
@@ -32,23 +32,6 @@ export function ceilDiv(n: bigint, d: bigint): bigint {
   if (n < 0n || d <= 0n)
     throw new BadRequestException("قاعده محاسبه نامعتبر است.");
   return (n + d - 1n) / d;
-}
-export function depositFor(total: bigint, policy: DoorDepositPolicy): bigint {
-  const value = doorMoney(policy.value),
-    minimum = doorMoney(policy.minimum);
-  if (policy.kind === "PERCENT" && value > 10000n)
-    throw new BadRequestException(
-      "درصد بیعانه باید بین صفر و ده‌هزار واحد پایه باشد.",
-    );
-  const raw =
-    policy.kind === "PERCENT" ? ceilDiv(total * value, 10000n) : value;
-  return total < minimum
-    ? total
-    : raw < minimum
-      ? minimum
-      : raw > total
-        ? total
-        : raw;
 }
 function measured(
   item: DoorItemInput,
@@ -108,8 +91,8 @@ export function priceDoors(
   const materialMap = new Map(materials.map((m) => [m.id, m]));
   let calculated = 0n;
   let complete = true;
-  const policies: DoorDepositPolicy[] = [];
   const lines = items.map((item, index) => {
+    validateDoorManufacturing(item);
     for (const value of [item.widthMm, item.heightMm, item.quantity])
       if (!Number.isSafeInteger(value) || value <= 0 || value > 2147483647)
         throw new BadRequestException(
@@ -224,11 +207,12 @@ export function priceDoors(
     const total = checkedMoney(unit * BigInt(item.quantity));
     if (lineComplete) calculated = checkedMoney(calculated + total);
     else complete = false;
-    if (cfg.deposit) policies.push(cfg.deposit);
-    else reasons.push(prefix + "سیاست بیعانه تعیین نشده است.");
     return {
       item: index,
       title: model.title,
+      ...(item.manufacturing
+        ? { manufacturing: structuredClone(item.manufacturing) }
+        : {}),
       quantity: item.quantity,
       widthMm: item.widthMm,
       heightMm: item.heightMm,
@@ -239,14 +223,8 @@ export function priceDoors(
       materials: chosen,
     };
   });
-  // Mixed per-model policies are converted to the exact sum of line deposits.
-  let deposit: bigint | null = null;
-  if (complete && policies.length === items.length)
-    deposit = lines.reduce(
-      (sum, line, index) =>
-        sum + depositFor(BigInt(line.total!), policies[index]),
-      0n,
-    );
+  // Legacy snapshot fields remain readable; new quotations require full payment.
+  const deposit = complete ? calculated : null;
   const approved = complete && reasons.length === 0;
   return {
     currency: "IRR",

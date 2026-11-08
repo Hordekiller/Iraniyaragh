@@ -91,7 +91,7 @@ test('real staff refresh, fresh MFA, explicit template resubmit and revoked sess
   const cookies = await page.context().cookies(apiOrigin);
   const csrf = cookies.find(cookie => cookie.name.endsWith('csrf'))?.value;
   expect(csrf).toBeTruthy();
-  const rotation = await page.context().request.post(`${apiOrigin}/api/v1/auth/refresh`, { headers: { Origin: new URL(page.url()).origin, 'X-CSRF-Token': csrf! } });
+  const rotation = await page.context().request.post(`${apiOrigin}/api/v1/auth/refresh`, { headers: { Origin: new URL(page.url()).origin, 'X-CSRF-Token': csrf!, 'X-Auth-Realm': 'staff' } });
   expect(rotation.status()).toBe(200);
   const current = await rotation.json() as { data: { accessToken: string; principal: { sessionId: string } } };
   const currentCookies = await page.context().cookies(apiOrigin);

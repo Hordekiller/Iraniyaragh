@@ -5,7 +5,7 @@ import { AUTH_RUNTIME_CONFIG, type AuthRuntimeConfig } from './auth.config';
 import { AuthSessionService, type AuthSessionSummary } from './auth-session.service';
 import { CurrentPrincipal, RequireFreshAuthentication, RequireLiveSession } from './auth.guard';
 import type { AuthPrincipalContext } from './auth-principal.service';
-import { clearAuthCookies } from './auth-http';
+import { clearAuthCookies, cookieSpecForRealm } from './auth-http';
 
 const MAX_SESSION_ID_LENGTH = 128;
 
@@ -25,6 +25,20 @@ export class SessionManagementController {
     return { data: { sessions: sessions.map(session => this.toSessionSummary(session)) } };
   }
 
+  /**
+   * Authenticated activity signal for long-running work that makes no other
+   * API calls (e.g. editing a form). Only the guard-validated live session is
+   * touched; it cannot extend expiry or revive an inactive/revoked session.
+   */
+  @Post('activity')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  @RequireLiveSession()
+  async activity(@CurrentPrincipal() principal: AuthPrincipalContext): Promise<void> {
+    await this.sessions.touchActivity(principal.sessionId);
+  }
+
   @Delete('sessions/:sessionId')
   @Header('Cache-Control', 'no-store')
   @Header('Pragma', 'no-cache')
@@ -38,13 +52,14 @@ export class SessionManagementController {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found.' });
     }
 
-    const outcome = await this.sessions.revokeUserSession(principal.userId, sessionId);
+    const targetId = await this.sessions.resolveLiveSessionId(principal.userId, sessionId);
+    const outcome = await this.sessions.revokeUserSession(principal.userId, targetId);
     if (outcome === 'notFound') {
       throw new NotFoundException({ code: 'NOT_FOUND', message: 'Not found.' });
     }
 
-    if (sessionId === principal.sessionId) {
-      this.clearAuthCookies(response);
+    if (targetId === principal.sessionId) {
+      this.clearAuthCookies(response, principal);
     }
     return { data: {} };
   }
@@ -59,7 +74,7 @@ export class SessionManagementController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<EmptyResponse> {
     await this.sessions.revokeAllSessions(principal.userId);
-    this.clearAuthCookies(response);
+    this.clearAuthCookies(response, principal);
     return { data: {} };
   }
 
@@ -75,7 +90,8 @@ export class SessionManagementController {
     };
   }
 
-  private clearAuthCookies(response: Response): void {
-    clearAuthCookies(response, this.config.cookies);
+  private clearAuthCookies(response: Response, principal: AuthPrincipalContext): void {
+    const realm = principal.authenticationLevel === 'STAFF_MFA' ? 'staff' : 'customer';
+    clearAuthCookies(response, cookieSpecForRealm(this.config, realm));
   }
 }

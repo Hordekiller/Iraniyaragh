@@ -47,6 +47,7 @@ vi.mock('jodit/esm/plugins/indent/indent.js', () => ({}));
 vi.mock('jodit/esm/plugins/justify/justify.js', () => ({}));
 vi.mock('jodit/esm/plugins/source/source.js', () => ({}));
 vi.mock('jodit/esm/plugins/clean-html/clean-html.js', () => ({}));
+vi.mock('jodit/esm/plugins/hr/hr.js', () => ({}));
 vi.mock('./raw-html-source', () => ({ preserveRawHtmlSource: vi.fn() }));
 
 const noop = () => undefined;

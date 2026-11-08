@@ -6,6 +6,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { promotionsService } from '../promotions/promotions.service';
 import type { PaymentVerificationResponse } from '@iranyaragh/contracts';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -290,6 +291,8 @@ export class PaymentVerificationService {
               });
             }
 
+            // Verified settlement is the only event that confirms a redemption.
+            await promotionsService.confirmForOrder(tx, orderId);
             const consumedReservations = await this.inventory.consumeReservationsForOrder(tx, orderId, {
               requestId,
             });

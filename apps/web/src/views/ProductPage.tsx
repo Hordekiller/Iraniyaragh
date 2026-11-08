@@ -24,6 +24,9 @@ import { productStructuredData } from '../lib/product-json-ld'
 import { defaultCatalogVariant } from '../services/catalog/variants'
 import type { CatalogProduct } from '../services/catalog/types'
 import { commerceErrorMessage } from '../services/commerce/errors'
+import { HelpHint } from '../components/help/HelpHint'
+import { ProductReviews } from '../components/product/ProductReviews'
+import type { PublicReviewList } from '@iranyaragh/contracts'
 
 const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود در انبار',
@@ -32,7 +35,7 @@ const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   UNKNOWN: 'موجودی در حال بررسی',
 }
 
-export function ProductPage({ initialProduct, serverStructuredData = false }: { initialProduct?: CatalogProduct; serverStructuredData?: boolean } = {}) {
+export function ProductPage({ initialProduct, initialReviews = null, serverStructuredData = false }: { initialProduct?: CatalogProduct; initialReviews?: PublicReviewList | null; serverStructuredData?: boolean } = {}) {
   const api = useCatalogApi()
   const { state: cartState, add, setQuantity, quantityOf, isInCart } = useCart()
   const { show } = useToast()
@@ -146,7 +149,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
   // counts and dates that are not returned are never invented (spec §7).
   const structuredData: Record<string, unknown>[] = []
   if (!serverStructuredData) {
-    const productData = productStructuredData(product, ROUTES.product(product.slug), richTextToPlainText(product.description ?? ''), selectedVariant)
+    const productData = productStructuredData(product, ROUTES.product(product.slug), richTextToPlainText(product.description ?? ''), selectedVariant, undefined, initialReviews)
     if (productData) structuredData.push(productData)
   }
   for (const media of serverStructuredData ? [] : product.media) {
@@ -222,39 +225,22 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
             </span>
           </nav>
 
-          {product.rating != null && (
-            <div className="flex items-center gap-1.5 mt-2 text-sm">
-              <div
-                role="img"
-                aria-label={`${product.rating} از ۵ ستاره`}
-                className="flex"
-                aria-hidden="true"
-              >
+          {initialReviews && initialReviews.summary.count > 0 && initialReviews.summary.average !== null && (
+            <a href="#reviews" className="mt-2 flex items-center gap-1.5 text-sm">
+              <div role="img" aria-label={`${initialReviews.summary.average} از ۵ ستاره`} className="flex">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <Star
-                    key={n}
-                    size={14}
-                    className={
-                      n <= Math.round(product.rating!)
-                        ? 'fill-amber-400 text-amber-400'
-                        : 'fill-slate-200 text-slate-200'
-                    }
-                  />
+                  <Star key={n} size={14} aria-hidden="true" className={n <= Math.round(initialReviews.summary.average!) ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'} />
                 ))}
               </div>
-              <span className="font-bold text-slate-900">
-                {toPersianDigits(product.rating)}
-              </span>
-              <span className="text-slate-400">
-                ({toPersianDigits(product.reviews)} نظر)
-              </span>
-            </div>
+              <span className="font-bold text-slate-900">{toPersianDigits(initialReviews.summary.average)}</span>
+              <span className="text-slate-600">({toPersianDigits(initialReviews.summary.count)} نظر)</span>
+            </a>
           )}
 
           {product.variants.length > 1 && (
-            <fieldset className="mt-5">
+            <fieldset className="mt-5" data-help="product-variants">
               <legend className="text-sm font-black text-slate-900">
-                انتخاب تنوع
+                <span className="me-2"><HelpHint target="product-variants" label="انتخاب تنوع" /></span>انتخاب تنوع
               </legend>
               <div className="mt-2 flex flex-wrap gap-2">
                 {product.variants.map((variant) => {
@@ -343,6 +329,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
               ) : (
                 <button
                   type="button"
+                  data-help="add-to-cart"
                   onClick={() => void handleAdd()}
                   disabled={!available || cartBusy}
                   className="flex-1 h-12 rounded-full bg-[#FF4D00] text-white font-black hover:bg-[#E54400] disabled:bg-slate-300 disabled:cursor-not-allowed transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
@@ -362,6 +349,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
 
               <button
                 type="button"
+                data-help="view-cart"
                 onClick={() => navigate(ROUTES.cart)}
                 className="h-12 shrink-0 px-4 sm:px-6 rounded-full border-2 border-slate-900 font-black hover:bg-slate-900 hover:text-white transition"
               >
@@ -411,6 +399,7 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
               className="mb-4 text-lg font-black text-slate-900"
             >
               توضیحات و راهنمای محصول
+              <span className="ms-2"><HelpHint target="add-to-cart" label="خرید این کالا" /></span>
             </h2>
             <RichText
               html={product.description}
@@ -418,6 +407,8 @@ export function ProductPage({ initialProduct, serverStructuredData = false }: { 
             />
           </section>
         )}
+
+        <ProductReviews key={product.slug} slug={product.slug} initial={initialReviews} />
       </div>
     </div>
   )

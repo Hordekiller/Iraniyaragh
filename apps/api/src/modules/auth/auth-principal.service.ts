@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { UserStatus, type AuthenticationLevel } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthPermissionService } from './auth-permission.service';
-import { AuthSessionException } from './auth-session.service';
+import { AUTH_SESSION_REVOKE_REASON, AuthSessionException } from './auth-session.service';
 import { AuthTokenService, type VerifiedAccessToken } from './auth-token.service';
 
 const CUSTOMER_INACTIVITY_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
@@ -52,10 +52,22 @@ export class AuthPrincipalService {
 
   private async loadPrincipal(verified: VerifiedAccessToken): Promise<AuthPrincipalContext> {
     const now = new Date();
-    const session = await this.prisma.session.findFirst({
-      where: { id: verified.sessionId, userId: verified.userId, revokedAt: null },
+    const found = await this.prisma.session.findFirst({
+      where: { id: verified.sessionId, userId: verified.userId },
       include: { user: { select: { status: true } } },
     });
+    // Refresh rotation retires the row an access token was signed for, but that
+    // token stays valid until its own expiry while the family is still live
+    // (concurrent requests and other tabs must not be logged out by a rotation).
+    // Any other revocation (logout, replay, inactivity, expiry, credential
+    // change) leaves no live head, so those tokens stop working immediately.
+    const session =
+      found && found.revokedAt !== null && found.revokeReason === AUTH_SESSION_REVOKE_REASON.rotated
+        ? await this.prisma.session.findFirst({
+            where: { tokenFamilyId: found.tokenFamilyId, userId: found.userId, revokedAt: null },
+            include: { user: { select: { status: true } } },
+          })
+        : found;
     if (
       !session ||
       session.revokedAt !== null ||
@@ -86,7 +98,7 @@ export class AuthPrincipalService {
 
     return Object.freeze({
       userId: verified.userId,
-      sessionId: verified.sessionId,
+      sessionId: session.id,
       tokenId: verified.tokenId,
       authenticationLevel,
       authenticatedAt: new Date(sessionAuthTimeSeconds * 1_000),

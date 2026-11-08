@@ -11,6 +11,8 @@ import { formatRial } from '@/lib/orders/orders-labels';
 import { listInvoiceDocuments, readInvoiceDocument } from '@/lib/invoices/invoice-documents-api';
 import { invoiceDocumentError } from './InvoiceIssue';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ReceiptText } from 'lucide-react';
 import { InvoicePublication } from './InvoicePublication';
 import { InvoicePdfActions } from './InvoicePdfActions';
 import { brandAsset } from '@/lib/brand';
@@ -66,12 +68,12 @@ function Documents({id}:{id?:string}) {
         <Typography>سیاست مالی نسخهٔ {document.policyVersion}؛ {document.taxPolicy.treatment === 'EXEMPT' ? `معاف: ${document.taxPolicy.exemptionReason}` : document.taxPolicy.treatment === 'INCLUSIVE' ? 'مالیات در مبلغ منظور شده است' : 'مالیات جدا از مبلغ پایه'}.</Typography>
       </Stack></Paper>
       <Alert severity="info">این سند از اطلاعات ثبت‌شدهٔ زمان صدور نمایش داده می‌شود. برای وضعیت پرداخت و وصول، جزئیات سفارش و دفترکل را بررسی کنید.</Alert>
-      <Typography className={printStyles.pageFooter}>{document.number} — فاکتور فروشگاهی <Image src={brandAsset('wordmark-print.png')} alt="ایرانی یراق" width={90} height={31} style={{ display: 'inline-block', verticalAlign: 'middle' }} unoptimized /> — واحد مبالغ: ریال</Typography>
+      <Typography className={printStyles.pageFooter}>{document.number} — فاکتور فروشگاهی ایرانی یراق — واحد مبالغ: ریال</Typography>
       </Stack>
       <InvoicePublication id={document.id}/>
       <InvoicePdfActions id={document.id} number={document.number}/>
     </>}
-    {!id&&list&&<Paper sx={{p:2}}>{list.count===0?<Typography>هنوز فاکتوری صادر نشده است.</Typography>:list.items.map(item=><Box key={item.id} sx={{py:1}}><Link href={`/invoices/documents/${encodeURIComponent(item.id)}`}>{item.number} — {item.buyerLabel} — {formatRial(item.total)}</Link></Box>)}
+    {!id&&list&&<Paper sx={{p:2}}>{list.count===0?<EmptyState icon={<ReceiptText size={28}/>} title="هنوز فاکتوری صادر نشده است." description="فاکتور به‌صورت خودکار با خرید ساخته نمی‌شود. از «پیش‌فاکتورها» یک پیش‌فاکتور مربوط به سفارش پرداخت‌شده را باز کنید و صدور را بزنید." action={<Button component={Link} href="/invoices" variant="contained">رفتن به پیش‌فاکتورها</Button>}/>:list.items.map(item=><Box key={item.id} sx={{py:1}}><Link href={`/invoices/documents/${encodeURIComponent(item.id)}`}>{item.number} — {item.buyerLabel} — {formatRial(item.total)}</Link></Box>)}
       <Button disabled={loading||offset===0} onClick={()=>setOffset(value=>Math.max(0,value-25))}>صفحهٔ قبل</Button><Button disabled={loading||offset+25>=list.count} onClick={()=>setOffset(value=>value+25)}>صفحهٔ بعد</Button></Paper>}
   </Stack>;
 }

@@ -1,5 +1,6 @@
+import { DoorManufacturingFields } from "../components/custom-doors/DoorManufacturingFields";
+import { emptyManufacturing, manufacturingEntry, readManufacturing } from "../components/custom-doors/manufacturing-entry";
 import { DoorGlassChoices } from "../components/custom-doors/DoorGlassChoices";
-import { StoreBrandLogo } from '../components/brand/StoreBrandLogo';
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -37,6 +38,7 @@ import {
   saveDoorSubmission,
 } from "../services/custom-doors/api";
 import { DoorSummary } from "../components/custom-doors/DoorSummary";
+import { HelpHint } from "../components/help/HelpHint";
 
 const inputStyle =
   "mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100";
@@ -47,6 +49,7 @@ const emptyEntry = {
   quantity: "1",
   selections: [] as DoorItemInput["selections"],
   notes: "",
+  manufacturing: emptyManufacturing(),
 };
 type Entry = typeof emptyEntry;
 export function CustomDoorsPage() {
@@ -193,7 +196,11 @@ function Configurator() {
       setError("گزینه‌های ضروری مدل را تکمیل کنید.");
       return;
     }
+    let manufacturing;
+    try { manufacturing = readManufacturing(entry.manufacturing, heightMm); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "مشخصات سوراخ‌کاری معتبر نیست."); return; }
     const item: DoorItemInput = {
+      manufacturing,
       modelId: model.id,
       widthMm,
       heightMm,
@@ -231,6 +238,7 @@ function Configurator() {
       quantity: String(item.quantity),
       selections: item.selections,
       notes: item.notes,
+      manufacturing: manufacturingEntry(item.manufacturing),
     });
     setType(m.type);
     setEditing(index);
@@ -337,7 +345,7 @@ function Configurator() {
           </h1>
           <p className="mt-3">شماره سفارش: {created.number}</p>
           <p className="mt-3 text-sm leading-7">
-            وضعیت قیمت، تأیید مشخصات، بیعانه و مراحل تولید در حساب کاربری شما
+            وضعیت قیمت، تأیید مشخصات، مبلغ نهایی و مراحل تولید در حساب کاربری شما
             نمایش داده می‌شود.
           </p>
           <Link
@@ -362,7 +370,7 @@ function Configurator() {
       >
         <div className="p-6 md:p-10">
           <p className="text-sm font-bold text-orange-300">
-            اندازه شما، ساخت <StoreBrandLogo variant="inline" />
+            اندازه شما، ساخت ایرانی یراق
           </p>
           <h1
             id="custom-door-title"
@@ -374,7 +382,7 @@ function Configurator() {
           </h1>
           <p className="mt-5 max-w-xl text-sm leading-8 text-slate-300">
             مدل و متریال ثبت‌شده را انتخاب کنید، ابعاد دلخواه را وارد کنید و چند
-            درب را در یک سفارش بسازید. مشخصات و قیمت، پیش از پرداخت بیعانه تأیید
+            درب را در یک سفارش بسازید. مشخصات و قیمت، پیش از پرداخت مبلغ نهایی تأیید
             می‌شوند.
           </p>
           <a
@@ -392,7 +400,7 @@ function Configurator() {
             aria-hidden="true"
           />
           <p className="text-sm text-slate-300">
-            تصویر هر مدل پس از تأیید <StoreBrandLogo variant="inline" /> نمایش داده می‌شود.
+            تصویر هر مدل پس از تأیید ایرانی یراق نمایش داده می‌شود.
           </p>
           <p className="text-xs text-slate-400">
             فریم‌لس · دکوفیکس · ساخت با ابعاد سفارشی
@@ -402,7 +410,7 @@ function Configurator() {
       <ol className="my-7 grid gap-3 sm:grid-cols-3">
         {[
           [Ruler, "انتخاب مدل و ابعاد"],
-          [ShieldCheck, "تأیید قیمت و بیعانه"],
+          [ShieldCheck, "تأیید قیمت و مبلغ نهایی"],
           [Wrench, "تولید و تحویل"],
         ].map(([Icon, title], i) => {
           const StepIcon = Icon as typeof Ruler;
@@ -486,11 +494,12 @@ function Configurator() {
             >
               {stage === 0 && (
                 <div className="rounded-3xl border border-slate-200 bg-white p-5 md:p-7">
-                  <h3 className="text-lg font-black">نوع درب را انتخاب کنید</h3>
+                  <h3 className="text-lg font-black">نوع درب را انتخاب کنید <HelpHint target="door-type" label="انتخاب نوع و مدل درب" /></h3>
                   <div
                     className="mt-4 grid grid-cols-2 gap-3"
                     role="group"
                     aria-label="نوع درب"
+                    data-help="door-type"
                   >
                     {(["FORMLEX", "DECOFIX"] as const).filter(doorType => catalog.models.some(model => model.type === doorType)).map((t) => (
                       <button
@@ -504,7 +513,7 @@ function Configurator() {
                       </button>
                     ))}
                   </div>
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2" data-help="door-models">
                     {catalog.models
                       .filter((m) => m.type === type)
                       .map((m) => (
@@ -549,7 +558,7 @@ function Configurator() {
                     >
                       مدل تأییدشده‌ای برای{" "}
                       {type === "FORMLEX" ? "فریم‌لس" : "دکوفیکس"} منتشر نشده
-                      است. پس از ثبت اطلاعات فنی و تعرفه توسط <StoreBrandLogo variant="inline" />،
+                      است. پس از ثبت اطلاعات فنی و تعرفه توسط ایرانی یراق،
                       مدل‌ها در این بخش در دسترس خواهند بود.
                     </p>
                   )}
@@ -635,10 +644,13 @@ function Configurator() {
                       ["height", "ارتفاع (میلی‌متر)"],
                       ["quantity", "تعداد"],
                     ].map(([key, title]) => (
-                      <label key={key} className="text-sm font-bold">
+                      <div key={key} className="relative">
+                      <span className="absolute end-0 top-0"><HelpHint target={`door-${key}`} label={title} /></span>
+                      <label className="text-sm font-bold">
                         {title}
                         <input
                           required
+                          data-help={`door-${key}`}
                           inputMode="numeric"
                           dir="ltr"
                           value={entry[key as "width" | "height" | "quantity"]}
@@ -649,6 +661,7 @@ function Configurator() {
                           maxLength={12}
                         />
                       </label>
+                      </div>
                     ))}
                   </div>
                   <p className="mt-3 text-xs leading-7 text-slate-600">
@@ -656,6 +669,7 @@ function Configurator() {
                       ? `محدوده ثبت‌شده: عرض ${model.configuration.technical.minWidthMm} تا ${model.configuration.technical.maxWidthMm} و ارتفاع ${model.configuration.technical.minHeightMm} تا ${model.configuration.technical.maxHeightMm} میلی‌متر؛ تلرانس ثبت‌شده ${model.configuration.technical.toleranceMm} میلی‌متر. ابعاد خارج از محدوده برای بررسی مدیر ارسال می‌شوند.`
                       : "قواعد فنی مدل هنوز تکمیل نشده است؛ سفارش برای بررسی مدیر ارسال می‌شود."}
                   </p>
+                  <DoorManufacturingFields value={entry.manufacturing} heightMm={Number(doorDigits(entry.height))} onChange={manufacturing => setEntry(current => ({ ...current, manufacturing }))} />
                   <label className="mt-5 block text-sm font-bold">
                     توضیحات اختصاصی
                     <textarea
@@ -671,6 +685,7 @@ function Configurator() {
                   <div className="mt-5 flex flex-wrap gap-2">
                     <button
                       type="submit"
+                      data-help="door-add"
                       className={`${doorButton} bg-slate-950 text-white`}
                     >
                       <Plus size={17} aria-hidden="true" />
@@ -728,6 +743,7 @@ function Configurator() {
                     <div className="mt-5 flex flex-wrap gap-2">
                       <button
                         type="button"
+                        data-help="door-submit"
                         onClick={() => void submit(false)}
                         className={`${doorButton} bg-orange-700 text-white`}
                       >
@@ -737,6 +753,7 @@ function Configurator() {
                       </button>
                       <button
                         type="button"
+                        data-help="door-save-draft"
                         onClick={() => void submit(true)}
                         className={doorButton}
                       >
@@ -752,7 +769,7 @@ function Configurator() {
                     </div>
                     <p className="mt-3 text-xs leading-7 text-slate-600">
                       ثبت سفارش، پرداخت محسوب نمی‌شود. پذیرش نسخه قطعی مشخصات و
-                      پرداخت بیعانه در جزئیات سفارش انجام می‌شود.
+                      پرداخت مبلغ نهایی در جزئیات سفارش انجام می‌شود.
                     </p>
                   </div>
                 </>
@@ -830,6 +847,7 @@ function Configurator() {
               </ol>
               <button
                 type="button"
+                data-help="door-review"
                 disabled={busy || uncertain || !items.length}
                 onClick={() => void review()}
                 className={`${doorButton} mt-5 w-full bg-slate-950 text-white`}

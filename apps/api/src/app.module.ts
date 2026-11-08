@@ -1,4 +1,6 @@
 import { CustomDoorOrdersModule } from './modules/custom-door-orders/custom-door-orders.module';
+import { BlogModule } from './modules/blog/blog.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 import { DiscoveryModule } from './modules/discovery/discovery.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -22,6 +24,7 @@ import { validateEnvironment } from './config/environment';
 import { RedisModule } from './modules/redis/redis.module';
 import { MediaModule } from './modules/media/media.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { PromotionsModule } from './modules/promotions/promotions.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
 
 @Module({
@@ -39,9 +42,12 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     AuthModule,
     CatalogModule,
     DiscoveryModule,
+    BlogModule,
+    ReviewsModule,
     MediaModule,
     InventoryModule,
     OrdersModule,
+    PromotionsModule,
     CustomDoorOrdersModule,
     PaymentsModule,
     CustomersModule,

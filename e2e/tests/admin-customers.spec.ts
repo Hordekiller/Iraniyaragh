@@ -13,7 +13,7 @@ test('staff registers a real customer, annotates it and deactivates it without h
   test.setTimeout(120_000);
   await signInDiAsAdmin(page);
   if (isMobile(page)) await tap(page.getByRole('button', { name: 'باز کردن منو' }));
-  await tap(adminSidebar(page).getByRole('link', { name: 'مشتریان' }));
+  await tap(adminSidebar(page).getByRole('link', { name: 'مشتریان', exact: true }));
   await expect(page).toHaveURL(/\/customers$/);
 
   // A unique mobile per run: the mobile is the record's unique key, so reusing

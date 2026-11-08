@@ -14,6 +14,7 @@ import { useAuth } from '../state/auth-context'
 import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { commerceErrorMessage } from '../services/commerce/errors'
+import { CouponBox } from '../components/cart/CouponBox'
 
 export function CartPage() {
   const { state, setQuantity, remove, clear, reload } = useCart()
@@ -184,8 +185,8 @@ export function CartPage() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <ul className="space-y-3" aria-label="اقلام سبد خرید">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <ul className="space-y-3" aria-label="اقلام سبد خرید" data-help="cart-items">
           {lines.map((line) => {
             const pending = state.pendingVariantIds.includes(line.variantId)
             return (
@@ -279,11 +280,26 @@ export function CartPage() {
                   {formatToman(state.cart.quote.subtotal.amount)}
                 </dd>
               </div>
+              {state.cart.promotion?.applied.map((item) => (
+                <div key={item.promotionId} className="flex justify-between gap-4 text-emerald-300">
+                  <dt>{item.name}</dt>
+                  <dd className="font-black">
+                    {BigInt(item.discount.amount) > 0n ? `− ${formatToman(item.discount.amount)}` : 'ارسال رایگان'}
+                  </dd>
+                </div>
+              ))}
               <div className="flex justify-between gap-4 text-slate-300">
                 <dt>ارسال</dt>
                 <dd>پس از ثبت آدرس</dd>
               </div>
+              {state.cart.promotion && BigInt(state.cart.promotion.itemDiscount.amount) > 0n && (
+                <div className="flex justify-between gap-4 border-t border-white/10 pt-3 text-slate-300">
+                  <dt>مبلغ کالاها پس از تخفیف</dt>
+                  <dd className="font-black text-white">{formatToman(state.cart.promotion.payable.amount)}</dd>
+                </div>
+              )}
             </dl>
+            <CouponBox authenticated={state.owner === 'customer'} promotion={state.cart.promotion} />
             <p className="mt-4 border-t border-white/10 pt-4 text-xs leading-6 text-slate-400">
               قیمت، موجودی و هزینه ارسال در مرحله بعد دوباره توسط سرور بررسی
               می‌شود.
@@ -291,6 +307,7 @@ export function CartPage() {
             {state.owner === 'customer' ? (
               <Link
                 to={ROUTES.checkout}
+                data-help="cart-continue"
                 className="mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
                 ادامه فرایند خرید
@@ -298,6 +315,7 @@ export function CartPage() {
             ) : auth.state.phase === 'authenticated' ? (
               <button
                 type="button"
+                data-help="cart-continue"
                 onClick={() => void reload()}
                 disabled={state.phase === 'merging'}
                 className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
@@ -308,6 +326,7 @@ export function CartPage() {
             ) : (
               <button
                 type="button"
+                data-help="cart-continue"
                 onClick={auth.open}
                 className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >

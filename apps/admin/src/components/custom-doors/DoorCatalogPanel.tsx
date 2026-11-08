@@ -19,7 +19,6 @@ import {
 import {
   DOOR_GLASS_SAMPLES, doorGlassSample, type DoorGlassSampleKey,
   type DoorCatalog,
-  type DoorDepositPolicy,
   type DoorMaterial,
   type DoorModel,
   type DoorModelConfiguration,
@@ -279,7 +278,6 @@ export function DoorAdminTabs() {
         ["hardware", "یراق و قطعات"],
         ["labor", "اجرت و مونتاژ"],
         ["rules", "قواعد قیمت"],
-        ["deposits", "بیعانه"],
         ["production", "تولید"],
         ["reports", "گزارش‌ها"],
       ].map(([path, label]) => (
@@ -310,64 +308,6 @@ function Numeric({
       inputProps={{ inputMode: "numeric" }}
       fullWidth
     />
-  );
-}
-function DepositEditor({
-  value,
-  onChange,
-}: {
-  value: DoorDepositPolicy | null;
-  onChange: (v: DoorDepositPolicy | null) => void;
-}) {
-  return (
-    <Stack gap={2}>
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={value !== null}
-            onChange={(_, yes) =>
-              onChange(
-                yes ? { kind: "PERCENT", value: "", minimum: "0" } : null,
-              )
-            }
-          />
-        }
-        label="سیاست بیعانه مشخص است"
-      />
-      {value && (
-        <Stack direction={{ xs: "column", md: "row" }} gap={2}>
-          <TextField
-            select
-            label="روش بیعانه"
-            value={value.kind}
-            onChange={(e) =>
-              onChange({
-                ...value,
-                kind: e.target.value as DoorDepositPolicy["kind"],
-              })
-            }
-            fullWidth
-          >
-            <MenuItem value="PERCENT">درصدی (واحد پایه)</MenuItem>
-            <MenuItem value="FIXED">مبلغ ثابت (ریال)</MenuItem>
-          </TextField>
-          <Numeric
-            label={
-              value.kind === "PERCENT"
-                ? "درصد به واحد پایه؛ ۱۰۰ = یک درصد"
-                : "مبلغ ثابت ریالی"
-            }
-            value={value.value}
-            onChange={(v) => onChange({ ...value, value: v })}
-          />
-          <Numeric
-            label="حداقل بیعانه (ریال)"
-            value={value.minimum}
-            onChange={(minimum) => onChange({ ...value, minimum })}
-          />
-        </Stack>
-      )}
-    </Stack>
   );
 }
 function DoorModelEditor({
@@ -937,10 +877,7 @@ function DoorModelEditor({
               onChange={(minimumTotal) => patch({ minimumTotal })}
             />
           </Stack>
-          <DepositEditor
-            value={cfg.deposit}
-            onChange={(deposit) => patch({ deposit })}
-          />
+          <Alert severity="info">پرداخت سفارش فقط به مبلغ نهایی تأییدشده انجام می‌شود.</Alert>
           <Divider />
           <DoorImagePicker label="تصویر مدل درب" value={model.imageMediaId} onChange={id => setModel(current => ({ ...current, imageMediaId: id }))} imageUrl={initial?.imageUrl} initialValue={initial?.imageMediaId} originalWidth={initial?.imageOriginalWidth} originalHeight={initial?.imageOriginalHeight} />
           <Button

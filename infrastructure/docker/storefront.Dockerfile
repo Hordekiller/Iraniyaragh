@@ -19,6 +19,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 COPY packages/contracts packages/contracts
 COPY apps/web apps/web
+# Next type-checks the regression test that imports the production SEO checker.
+COPY .github/scripts/seo-page-check.mjs .github/scripts/seo-page-check.mjs
 
 # Declared-and-rejected: BuildKit silently drops unknown build args. Never turn
 # fixture authentication or fixture catalog data into a publishable release.

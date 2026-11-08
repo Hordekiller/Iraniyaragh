@@ -38,6 +38,7 @@ export function shippingQuoteContract(
     method: quote.methodCode,
     title: quote.methodTitle,
     amount: { amount: quote.amount.toString(), currency: 'IRR' },
+    promotionDiscount: { amount: quote.promotionDiscount.toString(), currency: 'IRR' },
     policyRevision: quote.policyRevision,
     pricePolicyRevision: quote.pricePolicyRevision,
     cartVersion: quote.cartVersion,

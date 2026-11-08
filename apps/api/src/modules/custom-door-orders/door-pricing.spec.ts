@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { depositFor, doorPaid, priceDoors } from "./door-pricing";
+import { doorPaid, priceDoors } from "./door-pricing";
 import { assertDoorTransition, DOOR_STATUSES } from "./door-state";
 import { DOOR_STATUSES as CONTRACT_DOOR_STATUSES } from "@iranyaragh/contracts";
 import { DoorOrderDto, normalizeDoorDigits } from "./door.dto";
@@ -17,9 +17,9 @@ describe("Custom door pricing (integer IRR / rational measurement)", () => {
       "6000",
     ]);
     expect(q.total).toBe("19001");
-    expect(q.deposit).toBe("5701");
+    expect(q.deposit).toBe("19001");
   });
-  it("aggregates different doors and per-model fixed/percent deposit policies", () => {
+  it("requires the full total regardless of legacy model deposit policies", () => {
     const f = pricingFixture();
     const b = structuredClone(f.model);
     b.id = "model-b";
@@ -34,7 +34,14 @@ describe("Custom door pricing (integer IRR / rational measurement)", () => {
     );
     expect(q.lines.map((l) => l.total)).toEqual(["38002", "27001"]);
     expect(q.total).toBe("65003");
-    expect(q.deposit).toBe("12201");
+    expect(q.deposit).toBe("65003");
+  });
+  it("does not require a legacy deposit policy to approve a complete quote", () => {
+    const f = pricingFixture();
+    f.cfg.deposit = null;
+    const quote = priceDoors([f.item], f.models, f.materials);
+    expect(quote.total).toBe("19001");
+    expect(quote.deposit).toBe(quote.total);
   });
   it("applies cut deductions, waste, minimum area and processing fees", () => {
     const f = pricingFixture();
@@ -73,7 +80,7 @@ describe("Custom door pricing (integer IRR / rational measurement)", () => {
       priceDoors([{ ...f.item, quantity: 2 }], f.models, f.materials).total,
     ).toBe("60000");
   });
-  it.each(["technical", "labor", "deposit"] as const)(
+  it.each(["technical", "labor"] as const)(
     "routes an incomplete %s policy to approval",
     (key) => {
       const f = pricingFixture();
@@ -152,16 +159,7 @@ describe("Custom door pricing (integer IRR / rational measurement)", () => {
     expect(q.total).toBe("19001");
     expect(priceDoors([f.item], f.models, f.materials).total).not.toBe(q.total);
   });
-  it("caps deposits by total, respects minimum and rejects invalid percentages", () => {
-    expect(
-      depositFor(100n, { kind: "FIXED", value: "500", minimum: "0" }),
-    ).toBe(100n);
-    expect(
-      depositFor(100n, { kind: "PERCENT", value: "1000", minimum: "200" }),
-    ).toBe(100n);
-    expect(() =>
-      depositFor(100n, { kind: "PERCENT", value: "10001", minimum: "0" }),
-    ).toThrow();
+  it("counts only verified net payments after refunds", () => {
     expect(
       doorPaid([
         { status: "PENDING", amount: 100n, refundedAmount: 0n },
@@ -221,9 +219,14 @@ describe("Production/financial separation", () => {
       assertDoorTransition(
         "AWAITING_TECHNICAL_APPROVAL",
         "APPROVED_FOR_PRODUCTION",
-        { ...context, paid: 0n },
+        { ...context, paid: 0n, remaining: 100n },
       ),
     ).toThrow();
+  });
+  it("blocks production when a historical deposit was paid but the total is outstanding", () => {
+    expect(() => assertDoorTransition("AWAITING_TECHNICAL_APPROVAL", "APPROVED_FOR_PRODUCTION", {
+      ...context, paid: 30n, deposit: 30n, remaining: 70n,
+    })).toThrow("پرداخت کامل");
   });
   it("blocks delivery/completion before consumption, settlement or delivery evidence", () => {
     expect(() =>

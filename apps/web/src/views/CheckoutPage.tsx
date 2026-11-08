@@ -286,7 +286,7 @@ function CheckoutContents() {
             </div>
           )}
           <fieldset disabled={busy !== null || unconfirmed}>
-            <section className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="saved-address-heading">
+            <section className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="saved-address-heading" data-help="checkout-saved-addresses">
               <h2 id="saved-address-heading" className="font-black text-slate-900">نشانی‌های ذخیره‌شده</h2>
               {addressesLoading ? <p className="mt-2 text-sm" role="status">در حال دریافت نشانی‌ها…</p> : savedAddressesUnavailable ? <div className="mt-2 text-sm text-slate-600">
                 <p>دریافت دفتر نشانی ممکن نشد؛ نشانی را دستی وارد کنید یا دوباره تلاش کنید.</p>
@@ -420,6 +420,7 @@ function CheckoutContents() {
           </fieldset>
           <button
             type="submit"
+            data-help="checkout-calc-shipping"
             disabled={busy !== null || unconfirmed}
             className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 font-black text-white hover:bg-black disabled:opacity-60 sm:w-auto sm:px-7"
           >
@@ -439,7 +440,7 @@ function CheckoutContents() {
           </button>
 
           {preview && (
-            <fieldset disabled={busy !== null || unconfirmed} className="mt-7 border-t border-slate-200 pt-6">
+            <fieldset disabled={busy !== null || unconfirmed} className="mt-7 border-t border-slate-200 pt-6" data-help="checkout-shipping">
               <legend className="text-base font-black text-slate-950">
                 روش ارسال
               </legend>
@@ -493,12 +494,32 @@ function CheckoutContents() {
                   )}
                 </dd>
               </div>
+              {quote?.promotionDiscount && BigInt(quote.promotionDiscount.amount) > 0n && (
+                <div className="flex justify-between text-emerald-300">
+                  <dt>تخفیف ({preview?.cart.promotion?.applied.map((a) => a.name).join('، ') || 'کمپین'})</dt>
+                  <dd className="font-bold">− {formatToman(quote.promotionDiscount.amount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between text-slate-300">
                 <dt>ارسال انتخابی</dt>
                 <dd className="font-bold text-white">
                   {quote ? formatToman(quote.amount.amount) : 'محاسبه نشده'}
                 </dd>
               </div>
+              {quote && (
+                <div className="flex justify-between border-t border-white/10 pt-3 text-slate-300">
+                  <dt>مبلغ قابل پرداخت (پیش‌نمایش)</dt>
+                  <dd className="font-black text-white">
+                    {formatToman(
+                      (
+                        BigInt((preview?.cart ?? state.cart).quote.subtotal.amount) +
+                        BigInt(quote.amount.amount) -
+                        BigInt(quote.promotionDiscount?.amount ?? '0')
+                      ).toString(),
+                    )}
+                  </dd>
+                </div>
+              )}
             </dl>
             <p className="mt-3 border-t border-white/10 pt-3 text-xs leading-6 text-slate-400">
               مبلغ نهایی پس از ثبت سفارش، مستقیماً از پاسخ سرور نمایش داده
@@ -515,6 +536,7 @@ function CheckoutContents() {
             <p className="mt-4 text-xs leading-7 text-slate-300">پیش از ثبت سفارش، <Link to={ROUTES.terms} className="font-bold text-white underline">قوانین و شرایط فروش</Link> و <Link to={ROUTES.privacy} className="font-bold text-white underline">حریم خصوصی</Link> را بررسی کنید.</p>
             <button
               type="button"
+              data-help="checkout-place-order"
               onClick={() => void handleCreate()}
               disabled={!preview || !quote || busy !== null}
               className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"

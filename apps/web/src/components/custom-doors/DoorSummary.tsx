@@ -1,3 +1,4 @@
+import { doorManufacturingSummary } from "@iranyaragh/contracts";
 import type { DoorQuoteSnapshot } from "@iranyaragh/contracts";
 import { doorRial } from "../../services/custom-doors/api";
 
@@ -21,7 +22,7 @@ export function DoorSummary({
           ? "قیمت قطعی این نسخه از پیش‌فاکتور"
           : quote.total !== null
             ? "محاسبه خودکار؛ قیمت و مشخصات هنگام ثبت، دوباره در سرور بررسی می‌شود."
-            : "این سفارش نیازمند بررسی مدیر است؛ بیعانه پس از تأیید قیمت فعال می‌شود."}
+            : "این سفارش نیازمند بررسی مدیر است؛ پرداخت پس از تأیید قیمت نهایی فعال می‌شود."}
       </p>
       <div className="mt-5 space-y-4">
         {quote.lines.map((line, index) => (
@@ -52,7 +53,15 @@ export function DoorSummary({
                 </li>
               ))}
             </ul>
-            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+            {line.manufacturing && (
+              <ul className="mt-3 space-y-1 text-sm text-slate-700">
+                {doorManufacturingSummary(line.manufacturing).map((text) => (
+                  <li key={text}>{text}</li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-4 text-sm leading-7 text-slate-600">پس از تأیید مشخصات و قیمت قطعی، مبلغ نهایی یکجا پرداخت می‌شود.</p>
+      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="inline text-slate-500">واحد: </dt>
                 <dd className="inline font-bold">
@@ -122,6 +131,7 @@ export function DoorSummary({
           توضیح تأیید قیمت: {quote.approvalReason}
         </p>
       )}
+      <p className="mt-4 text-sm leading-7 text-slate-600">پس از تأیید مشخصات و قیمت قطعی، مبلغ نهایی یکجا پرداخت می‌شود.</p>
       <dl className="mt-5 space-y-3 border-t border-slate-200 pt-5">
         <div className="flex justify-between gap-3 font-black">
           <dt>
@@ -132,20 +142,6 @@ export function DoorSummary({
                 : "قیمت قطعی"}
           </dt>
           <dd>{doorRial(quote.total)}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt>بیعانه</dt>
-          <dd>{doorRial(quote.deposit)}</dd>
-        </div>
-        <div className="flex justify-between gap-3 text-sm text-slate-600">
-          <dt>مانده پس از بیعانه</dt>
-          <dd>
-            {doorRial(
-              quote.total !== null && quote.deposit !== null
-                ? (BigInt(quote.total) - BigInt(quote.deposit)).toString()
-                : null,
-            )}
-          </dd>
         </div>
       </dl>
     </section>

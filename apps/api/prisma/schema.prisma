@@ -266,6 +266,8 @@ model User {
   orderTransitions            OrderTransition[]             @relation("OrderActor")
   paymentTransitions          PaymentTransition[]           @relation("PaymentActor")
   refunds                     Refund[]                      @relation("RefundActor")
+  promotionsCreated           Promotion[]                   @relation("PromotionCreator")
+  promotionCommands           PromotionCommand[]            @relation("PromotionCommandActor")
   fulfillmentTransitions      FulfillmentTransition[]       @relation("FulfillmentActor")
   fulfillmentPicks            FulfillmentPick[]             @relation("FulfillmentPickActor")
   dispatchedShipments         Shipment[]                    @relation("ShipmentDispatcher")
@@ -294,6 +296,13 @@ model User {
   stocktakeCommandRecords     StocktakeCommandRecord[]
   homepageCollectionCommands  HomepageCollectionCommand[]
   homepageBannerCommands      HomepageBannerCommand[]
+  blogPostsAuthored           BlogPost[]                    @relation("BlogPostAuthor")
+  blogPostsReviewed           BlogPost[]                    @relation("BlogPostReviewer")
+  blogRevisions               BlogPostRevision[]
+  reviewCommands              ProductReviewCommand[]
+  reviewsModerated            ProductReview[]               @relation("ReviewModerator")
+  reviewsReplied              ProductReview[]               @relation("ReviewReplier")
+  blogCommands                BlogCommand[]
   inAppNotifications          InAppNotification[]
   customer                    Customer?
 
@@ -395,10 +404,28 @@ model Session {
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   replacedBy          Session?            @relation("SessionRotation", fields: [replacedBySessionId], references: [id], onDelete: SetNull)
   replaces            Session?            @relation("SessionRotation")
+  recoveryAsPrevious  RefreshRecovery?    @relation("RecoveryPrevious")
+  recoveryAsSuccessor RefreshRecovery?    @relation("RecoverySuccessor")
 
   @@index([userId, revokedAt, expiresAt])
   @@index([tokenFamilyId, createdAt])
   @@index([tokenFamilyId, revokedAt])
+  @@index([expiresAt])
+}
+
+/// Short-lived (<= 15 s) sealed successor credentials of one refresh rotation,
+/// so a retry of the SAME client attempt can recover a lost response. See
+/// docs/AUTH_CONTRACT.md 8.1. Contains no plaintext credential.
+model RefreshRecovery {
+  previousSessionId  String   @id
+  successorSessionId String   @unique
+  attemptHash        String   @db.VarChar(64)
+  sealed             String   @db.Text
+  expiresAt          DateTime
+  createdAt          DateTime @default(now())
+  previous           Session  @relation("RecoveryPrevious", fields: [previousSessionId], references: [id], onDelete: Cascade)
+  successor          Session  @relation("RecoverySuccessor", fields: [successorSessionId], references: [id], onDelete: Cascade)
+
   @@index([expiresAt])
 }
 
@@ -524,12 +551,14 @@ model Product {
   variants    ProductVariant[]
   attributes  ProductAttributeConfiguration[]
   media       ProductMedia[]
+  reviews     ProductReview[]
   createdAt   DateTime                        @default(now())
   updatedAt   DateTime                        @updatedAt
 }
 
 model ProductMedia {
   doorModels       DoorModel[]
+  blogPostCovers   BlogPost[]
   id               String                  @id @default(cuid())
   productId        String
   product          Product                 @relation(fields: [productId], references: [id], onDelete: Restrict)
@@ -1101,6 +1130,10 @@ model Customer {
   cartMutations              CartMutation[]
   shippingQuotes             ShippingQuote[]
   checkoutIdempotencyRecords CheckoutIdempotencyRecord[]
+  promotions                 Promotion[]
+  coupons                    Coupon[]
+  promotionRedemptions       PromotionRedemption[]
+  productReviews             ProductReview[]
 }
 
 /// A reusable staff-entered delivery address. Orders keep their own immutable
@@ -1160,6 +1193,7 @@ model Cart {
   guestExpiresAt DateTime?
   version        Int                 @default(1)
   customer       Customer?           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  couponIntent   CartCouponIntent?
   items          CartItem[]
   mutations      CartMutation[]
   guestMutations GuestCartMutation[]
@@ -1220,6 +1254,7 @@ model GuestCartMutation {
 
 model Order {
   customDoorOrder            DoorOrder?
+  promotionRedemptions       PromotionRedemption[]
   invoiceDocument            InvoiceDocument?
   creditReturns              CreditSaleReturn[]
   id                         String                          @id @default(cuid())
@@ -1342,6 +1377,15 @@ model HomepageBannerConfig {
   updatedAt DateTime @updatedAt
 }
 
+/// Admin on/off switches for optional storefront features (e.g. the customer help assistant).
+/// A missing row means the feature's documented default; no customer data is stored.
+model StorefrontFeatureFlag {
+  key       String   @id @db.VarChar(64)
+  enabled   Boolean
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+}
+
 /// Idempotency evidence for settings.manage banner writes; no customer data.
 model HomepageBannerCommand {
   id          String   @id @default(cuid())
@@ -1393,6 +1437,9 @@ model ShippingQuote {
   amount              BigInt
   pricePolicyRevision String         @db.VarChar(100)
   policyRevision      String         @db.VarChar(100)
+  /// Server-computed promotion discount (items + shipping) this quote was
+  /// priced with; checkout recomputes and rejects the quote when it differs.
+  promotionDiscount   BigInt         @default(0)
   expiresAt           DateTime
   consumedAt          DateTime?
   orderId             String?        @unique
@@ -2521,6 +2568,7 @@ model DoorOrderItem {
   heightMm      Int
   quantity      Int
   configuration Json
+  manufacturing Json?
   notes         String    @default("") @db.VarChar(1000)
 
   @@unique([orderId, ordinal])
@@ -2614,4 +2662,293 @@ model DoorCommand {
   fingerprint String   @db.Char(64)
   resultId    String   @db.VarChar(128)
   createdAt   DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Promotions, coupons and sales campaigns
+// ---------------------------------------------------------------------------
+
+enum PromotionKind {
+  PERCENTAGE
+  FIXED_CART
+  FIXED_ITEM
+  FREE_SHIPPING
+}
+
+enum PromotionMode {
+  COUPON
+  AUTOMATIC
+}
+
+enum PromotionTargetType {
+  PRODUCT
+  VARIANT
+  CATEGORY
+  BRAND
+}
+
+/// RESERVED holds capacity for a pending-payment order, CONFIRMED is a verified
+/// settlement, RELEASED returns the capacity (cancel/expiry/failed settlement)
+/// and REFUNDED returns it after the whole order payment was refunded.
+enum PromotionRedemptionStatus {
+  RESERVED
+  CONFIRMED
+  RELEASED
+  REFUNDED
+}
+
+model Promotion {
+  id                String                @id @default(cuid())
+  name              String                @db.VarChar(160)
+  description       String?               @db.VarChar(500)
+  badgeText         String?               @db.VarChar(40)
+  kind              PromotionKind
+  mode              PromotionMode
+  /// Basis points (1..10000) for PERCENTAGE.
+  percentBp         Int?
+  /// IRR amount for FIXED_CART / FIXED_ITEM.
+  amount            BigInt?
+  maxDiscount       BigInt?
+  minOrder          BigInt?
+  maxOrder          BigInt?
+  startsAt          DateTime?
+  endsAt            DateTime?
+  isActive          Boolean               @default(true)
+  maxRedemptions    Int?
+  perCustomerLimit  Int?
+  firstPurchaseOnly Boolean               @default(false)
+  customerId        String?
+  stackable         Boolean               @default(false)
+  priority          Int                   @default(100)
+  /// RESERVED + CONFIRMED redemptions; mutated only with conditional updates.
+  usedCount         Int                   @default(0)
+  version           Int                   @default(1)
+  createdById       String?
+  customer          Customer?             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy         User?                 @relation("PromotionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  targets           PromotionTarget[]
+  coupons           Coupon[]
+  redemptions       PromotionRedemption[]
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([mode, isActive, startsAt, endsAt])
+  @@index([customerId])
+}
+
+model PromotionTarget {
+  id          String              @id @default(cuid())
+  promotionId String
+  type        PromotionTargetType
+  targetId    String              @db.VarChar(64)
+  exclude     Boolean             @default(false)
+  promotion   Promotion           @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, type, targetId, exclude])
+  @@index([type, targetId])
+}
+
+model Coupon {
+  id             String                @id @default(cuid())
+  promotionId    String
+  /// Normalized (upper-case ASCII, no separators) and globally unique.
+  code           String                @unique @db.VarChar(40)
+  isActive       Boolean               @default(true)
+  maxRedemptions Int?
+  usedCount      Int                   @default(0)
+  customerId     String?
+  promotion      Promotion             @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  customer       Customer?             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  redemptions    PromotionRedemption[]
+  createdAt      DateTime              @default(now())
+
+  @@index([promotionId])
+  @@index([customerId])
+}
+
+/// Coupon the customer asked to apply to the cart. Intent only: eligibility and
+/// amounts are always recomputed server-side.
+model CartCouponIntent {
+  cartId    String   @id
+  code      String   @db.VarChar(40)
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+/// Immutable order-time discount snapshot plus the capacity lifecycle.
+model PromotionRedemption {
+  id               String                    @id @default(cuid())
+  promotionId      String
+  couponId         String?
+  orderId          String
+  customerId       String
+  status           PromotionRedemptionStatus @default(RESERVED)
+  discountAmount   BigInt
+  shippingDiscount BigInt                    @default(0)
+  refundedDiscount BigInt                    @default(0)
+  /// Immutable: kind, rule values and per-line allocation used at checkout.
+  snapshot         Json
+  releaseReason    String?                   @db.VarChar(64)
+  reservedAt       DateTime                  @default(now())
+  confirmedAt      DateTime?
+  releasedAt       DateTime?
+  promotion        Promotion                 @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  coupon           Coupon?                   @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  order            Order                     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer         Customer                  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@unique([promotionId, orderId])
+  @@index([orderId])
+  @@index([customerId, promotionId, status])
+  @@index([promotionId, status])
+  @@index([couponId, status])
+}
+
+/// Exactly-once record for administrative promotion commands.
+model PromotionCommand {
+  id          String   @id @default(cuid())
+  actorId     String
+  scope       String   @db.VarChar(64)
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  actor       User     @relation("PromotionCommandActor", fields: [actorId], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, scope, keyHash])
+}
+
+enum BlogPostStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Governed editorial article. `bodyHtml` is only ever written through the server
+/// sanitizer. `contentUpdatedAt` is the last significant public change (sitemap
+/// lastmod / Article dateModified); it is not touched by workflow-only edits.
+model BlogPost {
+  id               String             @id @default(cuid())
+  slug             String             @unique @db.VarChar(250)
+  title            String             @db.VarChar(160)
+  /// Concise answer summary shown in listings, meta fallback and answer engines.
+  excerpt          String             @db.VarChar(400)
+  bodyHtml         String
+  coverMediaId     String?
+  coverMedia       ProductMedia?      @relation(fields: [coverMediaId], references: [id], onDelete: SetNull)
+  coverAlt         String?            @db.VarChar(200)
+  tags             String[]
+  seoTitle         String?            @db.VarChar(70)
+  seoDescription   String?            @db.VarChar(200)
+  /// Primary sources: [{ title, url, accessedAt }].
+  sources          Json               @default("[]")
+  status           BlogPostStatus     @default(DRAFT)
+  version          Int                @default(1)
+  authorId         String
+  author           User               @relation("BlogPostAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  reviewerId       String?
+  reviewer         User?              @relation("BlogPostReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  /// Go-live time; a future value schedules publication.
+  publishedAt      DateTime?
+  contentUpdatedAt DateTime           @default(now())
+  archivedAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  revisions        BlogPostRevision[]
+  slugHistory      BlogPostSlug[]
+
+  @@index([status, publishedAt(sort: Desc), id])
+  @@index([updatedAt])
+}
+
+/// Previous slugs resolve with a permanent redirect to the current article.
+model BlogPostSlug {
+  slug      String   @id @db.VarChar(250)
+  postId    String
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+/// Immutable content snapshot per saved version.
+model BlogPostRevision {
+  id        String   @id @default(cuid())
+  postId    String
+  version   Int
+  snapshot  Json
+  actorId   String
+  createdAt DateTime @default(now())
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Restrict)
+  actor     User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([postId, version])
+}
+
+/// Idempotency evidence for blog write commands; no customer data.
+model BlogCommand {
+  id          String   @id @default(cuid())
+  actorId     String
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
+}
+
+enum ProductReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+/// Customer product review. Only a customer with a DELIVERED order containing the product can write
+/// one (`orderId` is that proof). Public only while APPROVED; any customer edit returns it to PENDING.
+model ProductReview {
+  id               String              @id @default(cuid())
+  productId        String
+  product          Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
+  customerId       String
+  customer         Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  /// Delivered order that proves purchase; kept as evidence, not a foreign key to a mutable row.
+  orderId          String
+  rating           Int
+  title            String?             @db.VarChar(100)
+  body             String              @db.VarChar(2000)
+  status           ProductReviewStatus @default(PENDING)
+  version          Int                 @default(1)
+  moderationNote   String?             @db.VarChar(300)
+  moderatedById    String?
+  moderatedBy      User?               @relation("ReviewModerator", fields: [moderatedById], references: [id], onDelete: Restrict)
+  moderatedAt      DateTime?
+  staffReply       String?             @db.VarChar(1000)
+  staffRepliedById String?
+  staffRepliedBy   User?               @relation("ReviewReplier", fields: [staffRepliedById], references: [id], onDelete: Restrict)
+  staffRepliedAt   DateTime?
+  /// First time the review became public; stable ordering and schema.org datePublished.
+  publishedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@unique([productId, customerId])
+  @@index([productId, status, publishedAt(sort: Desc), id])
+  @@index([status, createdAt])
+  @@index([customerId, createdAt])
+}
+
+/// Idempotency evidence for review commands; payload is hashed, never stored.
+model ProductReviewCommand {
+  id          String   @id @default(cuid())
+  actorId     String
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
 }
