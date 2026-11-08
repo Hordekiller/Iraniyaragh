@@ -1,0 +1,22 @@
+.sheet { min-width: 0; }
+.money { white-space: nowrap; unicode-bidi: isolate; }
+.printOnly { display: none; }
+
+@page { size: A4; margin: 14mm; }
+@media print {
+  :global(body:has([data-statement-print])) { background: white; color: #111; margin: 0; }
+  :global(body:has([data-statement-print]) *) { visibility: hidden; }
+  :global(body:has([data-statement-print]) :is(div, main):has([data-statement-print])) {
+    position: static !important; transform: none !important; margin: 0 !important;
+    padding: 0 !important; width: 100% !important; max-width: none !important; min-height: 0 !important;
+  }
+  .sheet, .sheet * { visibility: visible !important; color: #111 !important; box-shadow: none !important; }
+  .sheet { display: block !important; position: absolute; inset: 0 0 auto; width: 100%; margin: 0; direction: rtl; }
+  .sheet table { width: 100%; border-collapse: collapse; }
+  .sheet thead { display: table-header-group; }
+  .sheet tr { break-inside: avoid; }
+  .sheet th, .sheet td { padding: 1.5mm 1mm; border: 1px solid #aaa; font-size: 8pt; overflow-wrap: anywhere; }
+  .sheet a { color: #111; text-decoration: none; }
+  .sheet .screenOnly { display: none !important; }
+  .sheet .printOnly { display: block !important; }
+}
