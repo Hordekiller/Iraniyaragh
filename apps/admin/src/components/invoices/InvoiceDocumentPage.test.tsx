@@ -90,4 +90,10 @@ describe('immutable issued invoice views', () => {
     expect(signal?.aborted).toBe(true); expect(screen.queryByText('فروشگاه زمان صدور')).not.toBeInTheDocument();
     view.unmount();
   });
+  it('explains the empty list and links to the drafts where an invoice is issued', async () => {
+    render(<InvoiceDocumentPage />);
+    expect(await screen.findByText('هنوز فاکتوری صادر نشده است.')).toBeVisible();
+    expect(screen.getByText(/به‌صورت خودکار با خرید ساخته نمی‌شود/)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'رفتن به پیش‌فاکتورها' })).toHaveAttribute('href', '/invoices');
+  });
 });
