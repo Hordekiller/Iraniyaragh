@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 import { adjustCreditDocument, getCreditLedger, getCreditStatement, recordCreditOpening, recordCreditReceipt, reverseCreditReceipt, saveCreditPolicy } from '@/lib/credit/credit-api';
 import { creditDate, creditError, creditKindLabels, creditRial, parseCreditIrr, receivableLabels } from '@/lib/credit/credit-ui';
 import { useCreditCommand } from '@/lib/credit/useCreditCommand';
+import { CreditStatementPanel } from './CreditStatementPanel';
 
 type Action = { kind: 'policy' | 'opening' | 'receipt' | 'adjust' | 'reverse'; version: number | null; documentId?: string; receiptId?: string };
 const titles = { policy: 'تنظیم اعتبار مشتری', opening: 'ثبت ماندهٔ اول دوره', receipt: 'ثبت دریافت واقعی', adjust: 'ثبت سند اصلاحی', reverse: 'برگشت دریافت' };
@@ -131,6 +132,7 @@ export function CreditAccountView({ customerId }: { customerId: string }) {
       {account && can('credit.opening') && !account.openingRecorded ? <Button disabled={locked} onClick={() => open('opening')}>ثبت ماندهٔ اول دوره</Button> : null}
       {account && can('credit.receive') ? <Button disabled={locked || account.outstanding.amount === '0'} onClick={() => open('receipt')}>ثبت دریافت واقعی</Button> : null}
     </Stack>
+    {account ? <CreditStatementPanel customerId={customerId} /> : null}
     {statement ? <>
       <DataTable caption="اسناد بدهی مشتری" rows={statement.documents} rowKey={row => row.id} emptyTitle="سند بدهی ثبت نشده" emptyDescription="ماندهٔ بدهی فقط با سند معتبر ثبت می‌شود." columns={[
         { id: 'kind', label: 'سند', render: row => row.orderId ? <Link href={`/orders/${encodeURIComponent(row.orderId)}`}>{creditKindLabels[row.kind]}</Link> : creditKindLabels[row.kind] },

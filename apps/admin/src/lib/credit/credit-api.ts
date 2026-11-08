@@ -3,6 +3,9 @@ import { apiFetch } from '@/lib/api/client';
 import { getAccessToken } from '@/lib/auth/token-store';
 const base = (customerId: string) => `/credit/admin/customers/${encodeURIComponent(customerId)}`;
 export const getCreditStatement = (customerId: string, offset = 0, signal?: AbortSignal) => apiFetch<CreditStatement>(`${base(customerId)}?offset=${offset}&limit=25`, { token: getAccessToken(), signal, responseShape: 'raw' });
+/** Page of the ledger with an explicit size (the statement loads 100 at a time). */
+export const getCreditLedgerPage = (customerId: string, offset: number, limit: number, signal?: AbortSignal) => apiFetch<CreditLedgerPage>(`${base(customerId)}/ledger?offset=${offset}&limit=${limit}`, { token: getAccessToken(), signal, responseShape: 'raw' });
+export const getCreditStatementPage = (customerId: string, offset: number, limit: number, signal?: AbortSignal) => apiFetch<CreditStatement>(`${base(customerId)}?offset=${offset}&limit=${limit}`, { token: getAccessToken(), signal, responseShape: 'raw' });
 export const getCreditLedger = (customerId: string, offset = 0, signal?: AbortSignal) => apiFetch<CreditLedgerPage>(`${base(customerId)}/ledger?offset=${offset}&limit=25`, { token: getAccessToken(), signal, responseShape: 'raw' });
 function command(customerId: string, path: string, input: unknown, key: string): Promise<CreditCommandResult> {
   return apiFetch<CreditCommandResult>(`${base(customerId)}${path}`, { method: 'POST', token: getAccessToken(), body: input, headers: { 'Idempotency-Key': key }, responseShape: 'raw' });
