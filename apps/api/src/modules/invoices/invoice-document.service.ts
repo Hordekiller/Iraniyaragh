@@ -38,13 +38,16 @@ export class InvoiceDocumentService {
     try { const row = await this.prisma.invoiceDocument.findUnique({ where: { draftId } }); if (!row) throw missing(); return view(row); }
     catch (error) { return this.safeFailure(error); }
   }
-  async list(offset = 0, limit = 25): Promise<{ items: InvoiceDocumentSummary[]; count: number; offset: number; limit: number }> {
+  /** `orderId` narrows the list to the invoices of one order (the sale file view). */
+  async list(offset = 0, limit = 25, orderId?: string): Promise<{ items: InvoiceDocumentSummary[]; count: number; offset: number; limit: number }> {
     if (!Number.isInteger(offset) || offset < 0 || offset > 1000000 || !Number.isInteger(limit) || limit < 1 || limit > 100) throw invoiceInvalid('Bounded pagination is required.');
+    if (orderId !== undefined && (typeof orderId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/u.test(orderId))) throw invoiceInvalid('A valid order id is required.');
+    const where = orderId === undefined ? {} : { orderId };
     try { return await this.prisma.$transaction(async tx => {
-      const rows = await tx.invoiceDocument.findMany({ skip: offset, take: limit, orderBy: [{ issuedAt: 'desc' }, { id: 'desc' }],
+      const rows = await tx.invoiceDocument.findMany({ where, skip: offset, take: limit, orderBy: [{ issuedAt: 'desc' }, { id: 'desc' }],
         select: { id: true, number: true, orderId: true, customerId: true, issuedAt: true, grandTotal: true, snapshot: true } });
       return { items: rows.map(row => ({ id: row.id, number: row.number, orderId: row.orderId, customerId: row.customerId, issuedAt: row.issuedAt.toISOString(),
-        buyerLabel: (row.snapshot as unknown as InvoiceDocument).buyerLabel, total: money(row.grandTotal) })), count: await tx.invoiceDocument.count(), offset, limit };
+        buyerLabel: (row.snapshot as unknown as InvoiceDocument).buyerLabel, total: money(row.grandTotal) })), count: await tx.invoiceDocument.count({ where }), offset, limit };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }); } catch (error) { return this.safeFailure(error); }
   }
   async issue(actorId: string, requestId: string, draftId: string, raw: InvoiceIssueRequest, key: string) {

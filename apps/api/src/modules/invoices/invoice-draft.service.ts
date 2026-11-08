@@ -75,12 +75,15 @@ export class InvoiceDraftService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService, @Inject(AuditLogService) private readonly audit: AuditLogService,
     @Inject(StaffOrderService) private readonly catalog: StaffOrderService, @Inject(ConfiguredShippingQuoteAdapter) private readonly shipping: ConfiguredShippingQuoteAdapter) {}
 
-  async list(offset = 0, limit = 25) {
+  /** `sourceOrderId` narrows the list to the drafts of one order (the sale file view). */
+  async list(offset = 0, limit = 25, sourceOrderId?: string) {
     this.page(offset, limit);
+    if (sourceOrderId !== undefined && (typeof sourceOrderId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/u.test(sourceOrderId))) throw invoiceInvalid('A valid source order id is required.');
+    const where = sourceOrderId === undefined ? {} : { sourceOrderId };
     try {
-      return await this.prisma.$transaction(async tx => ({ items: await tx.invoiceDraft.findMany({ skip: offset, take: limit,
+      return await this.prisma.$transaction(async tx => ({ items: await tx.invoiceDraft.findMany({ where, skip: offset, take: limit,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], select: { id: true, version: true, state: true, source: true, customerId: true,
-          buyerLabel: true, sourceOrderId: true, createdAt: true, updatedAt: true } }), count: await tx.invoiceDraft.count(), offset, limit }),
+          buyerLabel: true, sourceOrderId: true, createdAt: true, updatedAt: true } }), count: await tx.invoiceDraft.count({ where }), offset, limit }),
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
     } catch (error) { return this.safeFailure(error); }
   }

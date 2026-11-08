@@ -24,7 +24,7 @@ export class InvoiceDraftController {
   @Get()
   @InvoiceDraftResponses('list')
   @ApiOperation({ summary: 'Bounded staff-only independent invoice drafts; no financial effects' })
-  async list(@Query('offset') offset?: string, @Query('limit') limit?: string) { return { data: await this.service.list(integer(offset, 0), integer(limit, 25)) }; }
+  async list(@Query('offset') offset?: string, @Query('limit') limit?: string, @Query('sourceOrderId') sourceOrderId?: string) { return { data: await this.service.list(integer(offset, 0), integer(limit, 25), sourceOrderId) }; }
   @Get('options')
   @InvoiceDraftResponses('options')
   @RequirePermission('invoices.manage')

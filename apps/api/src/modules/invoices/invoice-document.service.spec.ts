@@ -42,6 +42,14 @@ describe('Store invoice service financial and replay decision boundary',()=>{
   it('uses the Tehran Gregorian year boundary, including local New Year before UTC midnight',()=>{
     expect(storeInvoicePeriod(new Date('2025-12-31T21:00:00Z'))).toBe(2026);expect(storeInvoicePeriod(new Date('2025-12-31T20:00:00Z'))).toBe(2025);
   });
+  it('narrows the list to one order and refuses malformed order ids before any query',async()=>{
+    await h.service.list(0,25,'order-a');
+    expect(h.tx.invoiceDocument.findMany).toHaveBeenCalledWith(expect.objectContaining({where:{orderId:'order-a'}}));
+    expect(h.tx.invoiceDocument.count).toHaveBeenCalledWith({where:{orderId:'order-a'}});
+    h.prisma.$transaction.mockClear();
+    for(const bad of ['','a b','x'.repeat(65),{ $ne:'x' } as unknown as string])await expect(h.service.list(0,25,bad)).rejects.toMatchObject(code('VALIDATION_ERROR'));
+    expect(h.prisma.$transaction).not.toHaveBeenCalled();
+  });
   it('bounded list preserves exact integer IRR, stable paging and only safe summary fields',async()=>{
     const result=await h.service.list(25,25);expect(result.items[0]).toEqual({id:'document-a',number:'IRY-2026-000001',orderId:'order-a',customerId:'customer-a',buyerLabel:'Isolated buyer',issuedAt:'2026-01-01T00:00:00.000Z',total:money('2000')});
     expect(h.tx.invoiceDocument.findMany).toHaveBeenCalledWith(expect.objectContaining({skip:25,take:25,orderBy:[{issuedAt:'desc'},{id:'desc'}]}));
