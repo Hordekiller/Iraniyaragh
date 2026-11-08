@@ -107,6 +107,13 @@ function InvoiceContent({
     }
   }, [id, offset, request])
   const missing = error instanceof AuthApiError && error.statusCode === 404
+  // An exempt invoice carries no tax to explain to the customer. Show tax only when it
+  // is real: a non-exempt policy, or (defensively) any non-zero stored tax amount.
+  const showTax = invoice
+    ? invoice.taxPolicy.treatment !== 'EXEMPT' ||
+      invoice.quote.tax.amount !== '0' ||
+      invoice.lines.some((line) => line.tax.amount !== '0')
+    : true
   return (
     <div className="mx-auto max-w-[1040px] px-4 py-8 lg:px-6">
       <Link
@@ -232,7 +239,7 @@ function InvoiceContent({
                     'تعداد',
                     'قیمت واحد (ریال)',
                     'تخفیف (ریال)',
-                    'مالیات (ریال)',
+                    ...(showTax ? ['مالیات (ریال)'] : []),
                     'جمع (ریال)',
                   ].map((label) => (
                     <th
@@ -258,7 +265,7 @@ function InvoiceContent({
                     <td className="p-3">
                       {new Intl.NumberFormat('fa-IR').format(line.quantity)}
                     </td>
-                    {[line.unitPrice, line.discount, line.tax, line.total].map(
+                    {[line.unitPrice, line.discount, ...(showTax ? [line.tax] : []), line.total].map(
                       (amount, ordinal) => (
                         <td key={ordinal} className="whitespace-nowrap p-3">
                           {rial(amount.amount)}
@@ -277,17 +284,17 @@ function InvoiceContent({
             <p>جمع اقلام: {rial(invoice.quote.subtotal.amount)}</p>
             <p>تخفیف: {rial(invoice.quote.discount.amount)}</p>
             <p>ارسال: {rial(invoice.quote.shipping.amount)}</p>
-            <p>مالیات: {rial(invoice.quote.tax.amount)}</p>
+            {showTax && <p>مالیات: {rial(invoice.quote.tax.amount)}</p>}
             <p className="mt-2 font-black">
               مبلغ نهایی: {rial(invoice.quote.total.amount)}
             </p>
-            <p className="mt-2 text-sm">
-              {invoice.taxPolicy.treatment === 'INCLUSIVE'
-                ? 'مالیات در مبلغ منظور شده است.'
-                : invoice.taxPolicy.treatment === 'EXEMPT'
-                  ? `معاف: ${invoice.taxPolicy.exemptionReason}`
+            {showTax && invoice.taxPolicy.treatment !== 'EXEMPT' && (
+              <p className="mt-2 text-sm">
+                {invoice.taxPolicy.treatment === 'INCLUSIVE'
+                  ? 'مالیات در مبلغ منظور شده است.'
                   : 'مالیات جدا از مبلغ پایه است.'}
-            </p>
+              </p>
+            )}
           </section>
         </>
       )}

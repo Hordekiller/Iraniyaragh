@@ -18,6 +18,14 @@ const errorMessage = (cause: unknown) => {
     if (cause.code === 'INVOICE_REQUOTE_REQUIRED') return 'قیمت، تعرفه یا سیاست مالی تغییر کرده است؛ بازقیمت‌گذاری را تأیید کنید.';
     if (cause.code === 'FORBIDDEN') return 'دسترسی لازم برای این عملیات وجود ندارد.';
     if (cause.code.startsWith('AUTH_')) return 'نشست معتبر نیست؛ دوباره وارد شوید.';
+    if (cause.code === 'INVOICE_POLICY_REQUIRED') return 'سیاست فاکتور در تنظیمات تأیید و فعال نشده است.';
+    if (cause.code === 'INVOICE_DRAFT_EXISTS') return 'برای این سفارش پیش‌نویس فعال وجود دارد؛ آن را از فهرست باز کنید.';
+    if (cause.code === 'INVOICE_SOURCE_UNAVAILABLE') return 'سفارش یا مشتری مجاز نیست (لغو/مرجوعی، مشتری غیرفعال، یا ساخت درب هنوز تأیید و پذیرفته نشده است).';
+    if (cause.code === 'INVOICE_SOURCE_UNSUPPORTED') return 'ترکیب مالی این سفارش (جمع اقلام، تخفیف، ارسال) با قالب پیش‌فاکتور سازگار نیست.';
+    if (cause.code === 'INVOICE_SOURCE_CHANGED') return 'سفارش مبنا تغییر کرده؛ از سفارش پیش‌فاکتور تازه بسازید.';
+    if (cause.code === 'INVOICE_DRAFT_TERMINAL') return 'این پیش‌فاکتور صادر یا لغو شده و قابل ویرایش نیست.';
+    if (cause.code === 'CUSTOMER_INACTIVE') return 'مشتری غیرفعال است.';
+    if (cause.code === 'VALIDATION_ERROR') return 'همهٔ فیلدها (مشتری، کالا، تعداد، تخفیف، روش تحویل و تمام فیلدهای نشانی) را کامل کنید؛ تخفیف نباید از سقف سیاست فاکتور یا مبلغ بیشتر باشد.';
     if (cause.statusCode < 500) return 'اطلاعات مشتری، نشانی، کالا، تخفیف و وضعیت پیش‌فاکتور را بررسی کنید.';
   }
   return 'نتیجهٔ عملیات تأیید نشد؛ اتصال را بررسی و وضعیت سرور را بازخوانی کنید.';
