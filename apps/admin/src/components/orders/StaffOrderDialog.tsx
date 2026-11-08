@@ -20,6 +20,7 @@ import { ApiClientError, ApiNetworkError } from '@/lib/api/client';
 import { randomUuid } from '@/lib/crypto/random-uuid';
 import { createStaffOrder } from '@/lib/orders/orders-api';
 import type { StaffOrderOption } from '@iranyaragh/contracts';
+import { PROVINCES } from '@/lib/orders/iran-provinces';
 import { StaffOrderOptionPicker } from './StaffOrderOptionPicker';
 
 export type StaffOrderLineDraft = {
@@ -28,35 +29,7 @@ export type StaffOrderLineDraft = {
   quantity: string;
 };
 
-const PROVINCES = [
-  { value: '', label: 'انتخاب استان' },
-  { value: 'THR', label: 'تهران' },
-  { value: 'ADL', label: 'اردبیل' },
-  { value: 'EAZ', label: 'آذربایجان شرقی' },
-  { value: 'WAZ', label: 'آذربایجان غربی' },
-  { value: 'BHR', label: 'بوشهر' },
-  { value: 'CHB', label: 'چهارمحال و بختیاری' },
-  { value: 'FRS', label: 'فارس' },
-  { value: 'GIL', label: 'گیلان' },
-  { value: 'HDN', label: 'همدان' },
-  { value: 'HRZ', label: 'هرمزگان' },
-  { value: 'ILM', label: 'ایلام' },
-  { value: 'ESF', label: 'اصفهان' },
-  { value: 'KRB', label: 'کرمانشاه' },
-  { value: 'KRN', label: 'کرمان' },
-  { value: 'KRD', label: 'کردستان' },
-  { value: 'KBD', label: 'کهگیلویه و بویراحمد' },
-  { value: 'MKZ', label: 'مرکزی' },
-  { value: 'MZN', label: 'مازندران' },
-  { value: 'QOM', label: 'قم' },
-  { value: 'QZV', label: 'قزوین' },
-  { value: 'RKH', label: 'رومان' },
-  { value: 'SMN', label: 'سمنان' },
-  { value: 'SBN', label: 'سیستان و بلوچستان' },
-  { value: 'SKH', label: 'سیستان' },
-  { value: 'ABZ', label: 'البرز' },
-  { value: 'YAZ', label: 'یزد' },
-];
+const PROVINCE_OPTIONS = [{ value: '', label: 'انتخاب استان' }, ...PROVINCES];
 
 function newLine(): StaffOrderLineDraft {
   return { key: randomUuid(), variant: null, quantity: '1' };
@@ -315,7 +288,7 @@ export function StaffOrderDialog({
                 required
                 fullWidth
               >
-                {PROVINCES.map((province) => (
+                {PROVINCE_OPTIONS.map((province) => (
                   <MenuItem key={province.value || 'empty'} value={province.value}>
                     {province.label}
                   </MenuItem>
