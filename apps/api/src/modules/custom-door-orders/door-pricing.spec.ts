@@ -17,13 +17,16 @@ describe("Custom door pricing (integer IRR / rational measurement)", () => {
       "6000",
     ]);
     expect(q.total).toBe("19001");
-    expect(q.deposit).toBe("19001");
+    expect(q).not.toHaveProperty("deposit");
+    expect(q).not.toHaveProperty("depositPolicy");
   });
   it("requires the full total regardless of legacy model deposit policies", () => {
     const f = pricingFixture();
     const b = structuredClone(f.model);
     b.id = "model-b";
-    b.configuration.deposit = { kind: "FIXED", value: "500", minimum: "800" };
+    Object.assign(b.configuration, {
+      deposit: { kind: "FIXED", value: "500", minimum: "800" },
+    });
     const q = priceDoors(
       [
         { ...f.item, quantity: 2 },
@@ -34,14 +37,7 @@ describe("Custom door pricing (integer IRR / rational measurement)", () => {
     );
     expect(q.lines.map((l) => l.total)).toEqual(["38002", "27001"]);
     expect(q.total).toBe("65003");
-    expect(q.deposit).toBe("65003");
-  });
-  it("does not require a legacy deposit policy to approve a complete quote", () => {
-    const f = pricingFixture();
-    f.cfg.deposit = null;
-    const quote = priceDoors([f.item], f.models, f.materials);
-    expect(quote.total).toBe("19001");
-    expect(quote.deposit).toBe(quote.total);
+    expect(q).not.toHaveProperty("deposit");
   });
   it("applies cut deductions, waste, minimum area and processing fees", () => {
     const f = pricingFixture();
@@ -87,7 +83,6 @@ describe("Custom door pricing (integer IRR / rational measurement)", () => {
       f.cfg[key] = null;
       const q = priceDoors([f.item], f.models, f.materials);
       expect(q.total).toBeNull();
-      expect(q.deposit).toBeNull();
       expect(q.reasons.length).toBeGreaterThan(0);
     },
   );
@@ -194,8 +189,6 @@ describe("Production/financial separation", () => {
   const context = {
     approved: true,
     accepted: true,
-    paid: 100n,
-    deposit: 30n,
     remaining: 0n,
     technical: true,
     stockReady: true,
@@ -219,14 +212,23 @@ describe("Production/financial separation", () => {
       assertDoorTransition(
         "AWAITING_TECHNICAL_APPROVAL",
         "APPROVED_FOR_PRODUCTION",
-        { ...context, paid: 0n, remaining: 100n },
+        { ...context, remaining: 100n },
       ),
     ).toThrow();
   });
   it("blocks production when a historical deposit was paid but the total is outstanding", () => {
     expect(() => assertDoorTransition("AWAITING_TECHNICAL_APPROVAL", "APPROVED_FOR_PRODUCTION", {
-      ...context, paid: 30n, deposit: 30n, remaining: 70n,
+      ...context, remaining: 70n,
     })).toThrow("پرداخت کامل");
+  });
+  it("blocks production while an overpayment is unreconciled", () => {
+    expect(() => assertDoorTransition("AWAITING_TECHNICAL_APPROVAL", "APPROVED_FOR_PRODUCTION", {
+      ...context, remaining: -1n,
+    })).toThrow("پرداخت کامل");
+  });
+  it("offers no post-delivery settlement stage but still closes legacy rows", () => {
+    expect(() => assertDoorTransition("READY_FOR_DELIVERY", "AWAITING_SETTLEMENT", context)).toThrow();
+    expect(() => assertDoorTransition("READY_FOR_DELIVERY", "COMPLETED", context)).not.toThrow();
   });
   it("blocks delivery/completion before consumption, settlement or delivery evidence", () => {
     expect(() =>

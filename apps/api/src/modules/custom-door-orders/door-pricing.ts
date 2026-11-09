@@ -223,8 +223,6 @@ export function priceDoors(
       materials: chosen,
     };
   });
-  // Legacy snapshot fields remain readable; new quotations require full payment.
-  const deposit = complete ? calculated : null;
   const approved = complete && reasons.length === 0;
   return {
     currency: "IRR",
@@ -232,14 +230,17 @@ export function priceDoors(
     reasons,
     calculatedTotal: complete ? calculated.toString() : null,
     total: approved ? calculated.toString() : null,
-    deposit: approved ? deposit!.toString() : null,
-    depositPolicy:
-      deposit === null
-        ? null
-        : { kind: "FIXED", value: deposit.toString(), minimum: "0" },
     adjustments: [],
     approvalReason: null,
   };
+}
+
+/** Historical rows may carry deposit terms; they stay stored but are never served. */
+export function withoutLegacyDeposit<T extends object>(value: T): T {
+  const copy = { ...value } as Record<string, unknown>;
+  delete copy.deposit;
+  delete copy.depositPolicy;
+  return copy as T;
 }
 
 export function doorPaid(

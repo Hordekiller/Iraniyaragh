@@ -19,7 +19,7 @@ import {
 import { AuditLogService } from "../audit/audit-log.service";
 import { MediaService } from "../media/media.service";
 import type { DoorMaterialWriteDto, DoorModelWriteDto } from "./door.dto";
-import { doorMoney } from "./door-pricing";
+import { doorMoney, withoutLegacyDeposit } from "./door-pricing";
 
 export const asDoorJson = (value: unknown): Prisma.InputJsonValue =>
   JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -86,7 +86,9 @@ export class DoorCatalogService {
     return {
       models: models.map((m) => ({
         ...m,
-        configuration: m.configuration as unknown as DoorModel["configuration"],
+        configuration: withoutLegacyDeposit(
+          m.configuration as unknown as DoorModel["configuration"],
+        ),
         type: m.type as DoorModel["type"],
         imageUrl: images.get(m.imageMediaId ?? "") ?? null,
         imageOriginalWidth: originalSizes.get(m.imageMediaId ?? "")?.width ?? null,
@@ -128,7 +130,6 @@ export class DoorCatalogService {
         cfg.technical.minHeightMm > cfg.technical.maxHeightMm)
     )
       throw new BadRequestException("دامنه ابعاد نامعتبر است.");
-    cfg.deposit = null;
     doorMoney(cfg.discount);
     doorMoney(cfg.minimumTotal);
     if (cfg.labor) {

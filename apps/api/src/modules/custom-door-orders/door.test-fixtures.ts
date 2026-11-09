@@ -61,7 +61,6 @@ export function pricingFixture() {
     taxBps: 0,
     discount: "0",
     minimumTotal: "0",
-    deposit: { kind: "PERCENT", value: "3000", minimum: "0" },
   };
   const model: DoorModel = {
     id: "model",

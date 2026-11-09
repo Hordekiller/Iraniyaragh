@@ -2,11 +2,6 @@ import type { DoorGlassSampleKey } from "./door-glass-samples";
 /** All persisted monetary values are integer IRR strings. Dimensions are mm. */
 export type DoorType = "FORMLEX" | "DECOFIX";
 export type DoorBasis = "AREA" | "PERIMETER" | "WIDTH" | "HEIGHT" | "FIXED";
-export type DoorDepositPolicy = {
-  kind: "PERCENT" | "FIXED";
-  value: string;
-  minimum: string;
-};
 export type DoorPricingComponent = {
   slot: string;
   basis: DoorBasis;
@@ -39,7 +34,6 @@ export type DoorModelConfiguration = {
   taxBps: number;
   discount: string;
   minimumTotal: string;
-  deposit: DoorDepositPolicy | null;
 };
 export type DoorMaterialConfiguration = {
   /** Optional synthetic illustration, never proof of actual material/color availability. */
@@ -133,8 +127,6 @@ export type DoorQuoteSnapshot = {
   reasons: string[];
   calculatedTotal: string | null;
   total: string | null;
-  deposit: string | null;
-  depositPolicy: DoorDepositPolicy | null;
   adjustments: { title: string; amount: string }[];
   approvalReason: string | null;
 };
@@ -207,8 +199,6 @@ export type DoorQuoteApproval = {
   lineTotals: { total: string; reason: string }[];
   expectedVersion: number;
   total: string;
-  /** Deprecated input, ignored: new quotes always require the full final amount. */
-  depositPolicy?: DoorDepositPolicy;
   adjustments: { title: string; amount: string }[];
   reason: string;
 };
@@ -222,7 +212,7 @@ export type DoorTransitionInput = {
 export const DOOR_STATUS_LABELS: Record<DoorStatus, string> = {
   DRAFT: "پیش‌نویس",
   PENDING_QUOTE_APPROVAL: "در انتظار تأیید قیمت",
-  AWAITING_DEPOSIT: "در انتظار پرداخت نهایی",
+  AWAITING_DEPOSIT: "در انتظار پرداخت کامل",
   DEPOSIT_PAID: "پرداخت ثبت شد",
   AWAITING_TECHNICAL_APPROVAL: "بررسی فنی",
   APPROVED_FOR_PRODUCTION: "آماده تولید",

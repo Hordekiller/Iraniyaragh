@@ -443,7 +443,7 @@ function DoorOrdersContent({ id, report }: { id?: string; report: boolean }) {
                     order.status,
                   ) && (
                     <Button
-                      disabled={!reason.trim() || order.remaining === null || BigInt(order.remaining) > 0n}
+                      disabled={!reason.trim() || order.financialStatus !== "SETTLED"}
                       onClick={() =>
                         void command(`/orders/${order.id}/technical`, {
                           expectedVersion: order.version,
@@ -471,6 +471,7 @@ function DoorOrdersContent({ id, report }: { id?: string; report: boolean }) {
                             "PENDING_QUOTE_APPROVAL",
                             "AWAITING_DEPOSIT",
                             "DEPOSIT_PAID",
+                            "AWAITING_SETTLEMENT",
                           ].includes(key),
                       )
                       .map(([key, label]) => (
@@ -481,7 +482,6 @@ function DoorOrdersContent({ id, report }: { id?: string; report: boolean }) {
                   </TextField>
                   {[
                     "READY_FOR_DELIVERY",
-                    "AWAITING_SETTLEMENT",
                     "COMPLETED",
                   ].includes(nextStatus) && (
                     <>

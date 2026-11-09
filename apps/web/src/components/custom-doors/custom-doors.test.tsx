@@ -43,7 +43,6 @@ const cfg = {
   taxBps: 0,
   discount: "0",
   minimumTotal: "0",
-  deposit: null,
 } as const;
 const catalog: DoorCatalog = {
   floatingEnabled: true,
@@ -114,8 +113,6 @@ beforeEach(() => {
     reasons: ["تعرفه آزمون تعیین نشده"],
     calculatedTotal: null,
     total: null,
-    deposit: null,
-    depositPolicy: null,
     adjustments: [],
     approvalReason: null,
   });
@@ -317,8 +314,6 @@ describe("Door configurator", () => {
       reasons: ["تعرفه آزمون تعیین نشده"],
       calculatedTotal: null,
       total: null,
-      deposit: null,
-      depositPolicy: null,
       adjustments: [],
       approvalReason: null,
     };
@@ -391,12 +386,12 @@ describe("Door configurator", () => {
 
 
 it("shows final payment guidance without exposing historical deposit installments", () => {
-  const quote: DoorQuoteSnapshot = {
+  const quote = {
     currency: "IRR", lines: [], reasons: [], calculatedTotal: "1000000",
     total: "1000000", deposit: "300000",
     depositPolicy: { kind: "PERCENT", value: "3000", minimum: "0" },
     adjustments: [], approvalReason: null,
-  };
+  } as DoorQuoteSnapshot;
   const { container } = render(<DoorSummary quote={quote} approved />);
   expect(screen.getByText("مبلغ قطعی")).toBeInTheDocument();
   expect(screen.getByText(/مبلغ نهایی یکجا پرداخت می‌شود/)).toBeInTheDocument();
