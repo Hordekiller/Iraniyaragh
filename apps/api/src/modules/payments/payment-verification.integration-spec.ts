@@ -678,7 +678,7 @@ describe.sequential('PaymentVerificationService database integration', () => {
 
   async function resetState() {
     assertIsolatedTestDatabase({databaseUrl:process.env.DATABASE_URL,nodeEnvironment:process.env.NODE_ENV});
-    await prisma.$executeRawUnsafe('TRUNCATE "Refund"');
+    await prisma.$executeRawUnsafe('TRUNCATE "OrderReturnRefund", "OrderReturnLine", "OrderReturn", "Refund"');
     const orderIds = (
       await prisma.order.findMany({
         where: { customerId: { in: [customerId, otherCustomerId] } },

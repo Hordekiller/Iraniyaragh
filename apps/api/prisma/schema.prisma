@@ -158,6 +158,22 @@ enum RefundStatus {
   RECORDED
 }
 
+/// Which return window applies to an order. A shipping method with no
+/// classification blocks returns until staff classify it; nothing is inferred.
+enum ReturnWindowKind {
+  IN_PERSON
+  DELIVERY
+}
+
+/// Physical outcome of an inspected returned line. Only RESTOCK re-enters
+/// sellable stock; the inventory has no quarantine location, so DAMAGED and
+/// NOT_RETURNED create no stock movement.
+enum ReturnDisposition {
+  RESTOCK
+  DAMAGED
+  NOT_RETURNED
+}
+
 enum FulfillmentStatus {
   PENDING
   PROCESSING
@@ -221,6 +237,8 @@ enum StocktakeScopeType {
 }
 
 model User {
+  orderReturnsRecorded        OrderReturn[]                 @relation("OrderReturnActor")
+  returnHolidaysCreated       ReturnHoliday[]               @relation("ReturnHolidayActor")
   doorCatalogRevisions        DoorCatalogRevision[]
   doorProductionRecords       DoorProductionRecord[]
   doorQuoteApprovals          DoorQuotation[]
@@ -815,6 +833,7 @@ model InventoryBalance {
 }
 
 model InventoryMovement {
+  orderReturnLine     OrderReturnLine?
   creditReturnLine    CreditSaleReturnLine?
   id                  String                @id @default(cuid())
   warehouseId         String
@@ -1253,6 +1272,7 @@ model GuestCartMutation {
 }
 
 model Order {
+  returns                    OrderReturn[]
   customDoorOrder            DoorOrder?
   promotionRedemptions       PromotionRedemption[]
   invoiceDocument            InvoiceDocument?
@@ -1296,6 +1316,7 @@ model Order {
 }
 
 model OrderItem {
+  returnLines          OrderReturnLine[]
   invoiceDocumentLines InvoiceDocumentLine[]
   id                   String                 @id @default(cuid())
   orderId              String
@@ -1319,16 +1340,17 @@ model OrderItem {
 }
 
 model ShippingMethod {
-  id             String          @id @default(cuid())
-  code           String          @unique @db.VarChar(64)
-  title          String          @db.VarChar(120)
-  amount         BigInt
-  policyRevision String          @db.VarChar(100)
-  isActive       Boolean         @default(true)
-  version        Int             @default(0)
-  quotes         ShippingQuote[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id               String            @id @default(cuid())
+  returnWindowKind ReturnWindowKind?
+  code             String            @unique @db.VarChar(64)
+  title            String            @db.VarChar(120)
+  amount           BigInt
+  policyRevision   String            @db.VarChar(100)
+  isActive         Boolean           @default(true)
+  version          Int               @default(0)
+  quotes           ShippingQuote[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([isActive, code])
 }
@@ -1594,20 +1616,21 @@ model Payment {
 /// check constraint, so the money invariant holds even for writes that bypass
 /// the service.
 model Refund {
-  id                     String       @id @default(cuid())
+  id                     String             @id @default(cuid())
+  returnLink             OrderReturnRefund?
   paymentId              String
   amount                 BigInt
-  status                 RefundStatus @default(RECORDED)
-  gatewayReferenceId     String       @unique @db.VarChar(128)
-  reason                 String       @db.VarChar(255)
-  note                   String?      @db.VarChar(500)
-  idempotencyKey         String       @unique @db.Char(64)
-  idempotencyFingerprint String       @db.Char(64)
+  status                 RefundStatus       @default(RECORDED)
+  gatewayReferenceId     String             @unique @db.VarChar(128)
+  reason                 String             @db.VarChar(255)
+  note                   String?            @db.VarChar(500)
+  idempotencyKey         String             @unique @db.Char(64)
+  idempotencyFingerprint String             @db.Char(64)
   actorId                String?
-  actor                  User?        @relation("RefundActor", fields: [actorId], references: [id], onDelete: SetNull)
-  requestId              String       @db.VarChar(100)
-  payment                Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  createdAt              DateTime     @default(now())
+  actor                  User?              @relation("RefundActor", fields: [actorId], references: [id], onDelete: SetNull)
+  requestId              String             @db.VarChar(100)
+  payment                Payment            @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdAt              DateTime           @default(now())
 
   @@index([paymentId, createdAt])
   @@index([actorId, createdAt])
@@ -2161,6 +2184,7 @@ model InvoiceSeriesCounter {
 }
 
 model InvoiceDocument {
+  returns             OrderReturn[]
   pdfArtifacts        InvoicePdfArtifact[]
   pdfRenderJobs       InvoicePdfRenderJob[]
   pdfRenderCommands   InvoicePdfRenderJobCommand[]
@@ -2951,4 +2975,81 @@ model ProductReviewCommand {
   actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
 
   @@unique([actorId, keyHash])
+}
+
+/// Official non-working days (Tehran calendar dates) that extend the in-person
+/// return window. Friday is a fixed weekly day off and is not stored here.
+model ReturnHoliday {
+  id        String   @id @default(cuid())
+  /// `YYYY-MM-DD`, enforced by a CHECK constraint; unique per day.
+  dateKey   String   @unique @db.VarChar(10)
+  label     String   @db.VarChar(120)
+  actorId   String?
+  actor     User?    @relation("ReturnHolidayActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+/// Append-only record of goods returned against a paid order. Nothing here moves
+/// money: the refund is executed manually in the gateway panel and linked later
+/// through OrderReturnRefund. Window, amounts and quantities are also enforced by
+/// database constraints, so a write that bypasses the service cannot break them.
+model OrderReturn {
+  id                String              @id @default(cuid())
+  orderId           String
+  /// Per-order running number, shown as `<order number>-R<sequence>`.
+  sequence          Int
+  windowKind        ReturnWindowKind
+  policyRevision    String              @db.VarChar(32)
+  invoiceId         String
+  invoiceIssuedAt   DateTime
+  deadlineAt        DateTime
+  returnedAt        DateTime            @default(now())
+  merchandiseRefund BigInt
+  shippingRefund    BigInt
+  refundDue         BigInt
+  reason            String              @db.VarChar(500)
+  note              String?             @db.VarChar(500)
+  actorId           String
+  requestId         String              @db.VarChar(100)
+  createdAt         DateTime            @default(now())
+  order             Order               @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  invoice           InvoiceDocument     @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  actor             User                @relation("OrderReturnActor", fields: [actorId], references: [id], onDelete: Restrict)
+  lines             OrderReturnLine[]
+  refunds           OrderReturnRefund[]
+
+  @@unique([orderId, sequence])
+  @@index([orderId, createdAt])
+  @@index([createdAt])
+}
+
+model OrderReturnLine {
+  id           String             @id @default(cuid())
+  returnId     String
+  orderItemId  String
+  quantity     Int
+  disposition  ReturnDisposition
+  unitPrice    BigInt
+  refundAmount BigInt
+  /// Present exactly when disposition is RESTOCK.
+  movementId   String?            @unique
+  orderReturn  OrderReturn        @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  orderItem    OrderItem          @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  movement     InventoryMovement? @relation(fields: [movementId], references: [id], onDelete: Restrict)
+
+  @@unique([returnId, orderItemId])
+  @@index([orderItemId])
+}
+
+/// Links a manually recorded gateway refund to the return it settles.
+model OrderReturnRefund {
+  id          String      @id @default(cuid())
+  returnId    String
+  refundId    String      @unique
+  amount      BigInt
+  createdAt   DateTime    @default(now())
+  orderReturn OrderReturn @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  refund      Refund      @relation(fields: [refundId], references: [id], onDelete: Restrict)
+
+  @@index([returnId])
 }

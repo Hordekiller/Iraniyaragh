@@ -1,4 +1,5 @@
 import {
+  CalendarX2,
   DoorOpen,
   Boxes,
   Building2,
@@ -79,6 +80,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'پیش‌فاکتورها', href: '/invoices', icon: ReceiptText, permission: 'invoices.read' },
       { label: 'مشتریان', href: '/customers', icon: Users, permission: 'customers.read' },
       { label: 'ارسال‌ها', href: '/shipments', icon: Truck, permission: 'shipments.read' },
+      { label: 'مرجوعی‌ها', href: '/returns', icon: PackageSearch, permission: 'returns.read' },
     ],
   },
   {
@@ -147,6 +149,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'گزارش ممیزی', href: '/audit', icon: FileClock, permission: 'audit.read' },
       { label: 'سرویس پیامک', href: '/settings/sms', icon: Send, permission: 'settings.manage' },
       { label: 'تعرفهٔ ارسال', href: '/settings/shipping', icon: Truck, permission: 'settings.manage' },
+      { label: 'مهلت مرجوعی و تعطیلات', href: '/settings/returns', icon: CalendarX2, permission: 'settings.manage' },
       { label: 'تنظیمات فاکتور', href: '/settings/invoices', icon: ReceiptText, permission: 'settings.manage' },
       { label: 'روش هزینهٔ انبار', href: '/settings/inventory-cost', icon: Warehouse, permission: 'settings.manage' },
       { label: 'چیدمان صفحهٔ اصلی', href: '/settings/homepage', icon: Settings2, permission: 'settings.manage' },

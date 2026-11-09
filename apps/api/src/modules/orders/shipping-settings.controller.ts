@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Headers, Inject, Param, Put, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsNotEmpty, IsString, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import type { ShippingMethodSettingsListResponse, ShippingMethodSettingsResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { normalizeIdempotencyKey } from '../../common/idempotency-key';
@@ -15,6 +15,7 @@ export class ShippingSettingsDto {
   @IsString() @IsNotEmpty() @MaxLength(120) title!: string;
   @ValidateNested() @Type(() => MoneyDto) amount!: MoneyDto;
   @IsBoolean() isActive!: boolean;
+  @IsOptional() @IsIn(['IN_PERSON', 'DELIVERY']) returnWindowKind?: 'IN_PERSON' | 'DELIVERY' | null;
   @ValidateIf((_object, value) => value !== null) @IsInt() @Min(0) expectedVersion!: number | null;
 }
 

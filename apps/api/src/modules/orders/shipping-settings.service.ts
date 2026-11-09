@@ -9,7 +9,7 @@ import { AuditLogService } from '../audit/audit-log.service';
 
 function view(row: ShippingMethod): ShippingMethodSettings {
   return { code: row.code, title: row.title, amount: { amount: row.amount.toString(), currency: 'IRR' }, isActive: row.isActive,
-    version: row.version, policyRevision: row.policyRevision, updatedAt: row.updatedAt.toISOString() };
+    returnWindowKind: row.returnWindowKind, version: row.version, policyRevision: row.policyRevision, updatedAt: row.updatedAt.toISOString() };
 }
 function hash(value: string): string { return createHash('sha256').update(value).digest('hex'); }
 
@@ -24,13 +24,16 @@ export class ShippingSettingsService {
   async update(actorId: string, requestId: string, code: string, input: ShippingMethodSettingsUpdate, idempotencyKey: string): Promise<ShippingMethodSettings> {
     const title = typeof input.title === 'string' ? input.title.normalize('NFKC').trim() : '';
     const valid = /^[a-z][a-z0-9-]{0,63}$/u.test(code) && /^\P{Cc}{1,120}$/u.test(title) &&
+      (input.returnWindowKind === undefined || input.returnWindowKind === null || input.returnWindowKind === 'IN_PERSON' || input.returnWindowKind === 'DELIVERY') &&
       input.amount?.currency === 'IRR' && typeof input.amount.amount === 'string' && /^(0|[1-9][0-9]{0,18})$/u.test(input.amount.amount) &&
       BigInt(input.amount.amount) <= 9223372036854775807n && typeof input.isActive === 'boolean' &&
       (input.expectedVersion === null || (Number.isSafeInteger(input.expectedVersion) && input.expectedVersion >= 0));
     if (!valid) throw new BadRequestException({ code: 'INVALID_REQUEST', message: 'Valid shipping code, title, integer IRR amount and expected version are required.' });
     const payload = { ...input, title };
     const keyHash = hash(idempotencyKey);
-    const payloadHash = hash(JSON.stringify([title, input.amount.amount, 'IRR', input.isActive, input.expectedVersion]));
+    // The classification joins the retry fingerprint only when supplied, so existing keys keep their hash.
+    const kindSupplied = input.returnWindowKind !== undefined;
+    const payloadHash = hash(JSON.stringify([title, input.amount.amount, 'IRR', input.isActive, input.expectedVersion, ...(kindSupplied ? [input.returnWindowKind] : [])]));
     return withSerializableRetry({
       isContention: () => false,
       conflictMessage: 'Shipping configuration changed concurrently; reload before retrying.',
@@ -49,7 +52,7 @@ export class ShippingSettingsService {
           throw new ConflictException({ code: 'STALE_VERSION', message: 'Reload the shipping method before editing its current version.' });
         if (!current && await tx.shippingMethod.count() >= 100)
           throw new ConflictException({ code: 'CONFLICT', message: 'Shipping method limit reached.' });
-        const data = { title, amount: BigInt(payload.amount.amount), isActive: payload.isActive, policyRevision: `shipping-${randomUUID()}` };
+        const data = { title, amount: BigInt(payload.amount.amount), isActive: payload.isActive, policyRevision: `shipping-${randomUUID()}`, ...(kindSupplied ? { returnWindowKind: input.returnWindowKind ?? null } : {}) };
         const changed = current
           ? await tx.shippingMethod.update({ where: { id: current.id }, data: { ...data, version: { increment: 1 } } })
           : await tx.shippingMethod.create({ data: { ...data, code } });

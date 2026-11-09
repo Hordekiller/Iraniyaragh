@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, FormControlLabel, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
-import type { ShippingMethodSettings, ShippingMethodSettingsUpdate } from '@iranyaragh/contracts';
+import { Alert, Box, Button, FormControlLabel, MenuItem, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
+import type { ReturnWindowKind, ShippingMethodSettings, ShippingMethodSettingsUpdate } from '@iranyaragh/contracts';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { canManageSettings } from '@/lib/settings/settings-permissions';
@@ -37,6 +37,7 @@ function ShippingEditor() {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [isActive, setIsActive] = useState(false);
+  const [windowKind, setWindowKind] = useState<ReturnWindowKind | ''>('');
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -67,7 +68,7 @@ function ShippingEditor() {
   function select(method: ShippingMethodSettings | null) {
     if (busy || uncertain) return;
     setSelected(method); setCode(method?.code ?? ''); setTitle(method?.title ?? ''); setAmount(method?.amount.amount ?? '');
-    setIsActive(method?.isActive ?? false); setError(null); setSaved(false); pending.current = null;
+    setIsActive(method?.isActive ?? false); setWindowKind(method?.returnWindowKind ?? ''); setError(null); setSaved(false); pending.current = null;
   }
 
   async function save(event: React.FormEvent) {
@@ -78,7 +79,7 @@ function ShippingEditor() {
       setError(new ApiClientError({ code: 'INVALID_REQUEST', statusCode: 400, message: '', requestId: '' })); return;
     }
     inFlight.current = true; setBusy(true); setError(null); setSaved(false);
-    pending.current ??= { code, body: { title: title.trim(), amount: { amount: normalized, currency: 'IRR' }, isActive, expectedVersion: selected?.version ?? null }, key: `shipping-${crypto.randomUUID()}` };
+    pending.current ??= { code, body: { title: title.trim(), amount: { amount: normalized, currency: 'IRR' }, isActive, returnWindowKind: windowKind === '' ? null : windowKind, expectedVersion: selected?.version ?? null }, key: `shipping-${crypto.randomUUID()}` };
     const request = pending.current;
     const abort = new AbortController(); requests.current.add(abort);
     try {
@@ -102,7 +103,7 @@ function ShippingEditor() {
     <Button disabled={busy || uncertain || loading} onClick={() => void load()}>دریافت نسخهٔ جدید برای بررسی</Button>
     <Stack direction="row" gap={1} flexWrap="wrap" sx={{ my: 2 }}>
       <Button disabled={busy || uncertain} onClick={() => select(null)}>روش جدید</Button>
-      {methods.map((method) => <Button key={method.code} disabled={busy || uncertain} onClick={() => select(method)}>{method.title} — {method.isActive ? 'فعال' : 'غیرفعال'}</Button>)}
+      {methods.map((method) => <Button key={method.code} disabled={busy || uncertain} onClick={() => select(method)}>{method.title} — {method.isActive ? 'فعال' : 'غیرفعال'}{method.returnWindowKind ? '' : ' — مهلت مرجوعی نامشخص'}</Button>)}
     </Stack>
     <Paper component="form" onSubmit={(event) => void save(event)} sx={{ p: 3 }}>
       {saved && <Alert severity="success" sx={{ mb: 2 }}>تعرفه در سرور ذخیره شد؛ سفارش‌های قبلی تغییر نمی‌کنند.</Alert>}
@@ -112,6 +113,12 @@ function ShippingEditor() {
           <TextField label="کد روش ارسال (لاتین)" value={code} disabled={Boolean(selected)} onChange={(event) => setCode(event.target.value)} required inputProps={{ maxLength: 64 }} helperText="کد یکتا و ثابت، مانند post؛ پس از ایجاد تغییر نمی‌کند." />
           <TextField label="نام قابل نمایش برای مشتری" value={title} onChange={(event) => setTitle(event.target.value)} required inputProps={{ maxLength: 120 }} />
           <TextField label="هزینهٔ مصوب ارسال (ریال)" value={amount} onChange={(event) => setAmount(event.target.value)} required inputProps={{ inputMode: 'numeric' }} helperText="عدد صحیح ریالی؛ تومان یا عدد اعشاری وارد نکنید. صفر تنها برای ارسال رایگان مصوب است." />
+          <TextField select label="نوع مهلت مرجوعی" value={windowKind} onChange={(event) => setWindowKind(event.target.value as ReturnWindowKind | '')}
+            helperText="تحویل حضوری: ۲ روز کاری از صدور فاکتور. ارسال به شهر دیگر: ۱ هفته از صدور فاکتور. تا مشخص نشود، مرجوعی سفارش‌های این روش ثبت نمی‌شود.">
+            <MenuItem value="">نامشخص (مرجوعی مسدود)</MenuItem>
+            <MenuItem value="IN_PERSON">تحویل حضوری (۲ روز کاری)</MenuItem>
+            <MenuItem value="DELIVERY">ارسال به شهر دیگر (۱ هفته)</MenuItem>
+          </TextField>
           <FormControlLabel control={<Switch checked={isActive} onChange={(_, checked) => setIsActive(checked)} />} label="فعال در فرایند خرید مشتری" />
         </Stack>
       </Box>

@@ -80,6 +80,9 @@ export type ChangeStockCommand = StockKey &
     expectedVersion?: number;
   };
 
+/** The only documents allowed to put returned goods back into sellable stock. */
+const RETURN_IN_REFERENCES: ReadonlySet<string> = new Set(['credit-return', 'order-return']);
+
 type TransactionStockCommand = Omit<ChangeStockCommand, 'type'> & { type: InventoryChangeType | 'RETURN_IN' };
 
 export type ReserveStockCommand = StockKey &
@@ -272,7 +275,7 @@ export class InventoryService {
         message: "This endpoint only accepts receipts and manual adjustments.",
       });
     }
-    if (command.type === 'RETURN_IN' && command.referenceType !== 'credit-return') throw new BadRequestException('Returned stock requires a credit-return reference.');
+    if (command.type === 'RETURN_IN' && !RETURN_IN_REFERENCES.has(command.referenceType ?? '')) throw new BadRequestException('Returned stock requires a credit-return or order-return reference.');
     const isOutboundAdjustment =
       command.type === InventoryMovementType.ADJUSTMENT_OUT;
     if (

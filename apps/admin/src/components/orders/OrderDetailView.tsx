@@ -2,6 +2,7 @@
 
 import { CreditSaleCompensation } from '@/components/credit/CreditSaleCompensation';
 import { SaleFilePanel } from '@/components/sales/SaleFilePanel';
+import { OrderReturnsPanel } from '@/components/returns/OrderReturnsPanel';
 import { CreditSaleApproval } from '@/components/credit/CreditSaleApproval';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -287,6 +288,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
             setOrder(updated); setPicks(updatedPicks); setPickError(null);
           }} /> : null}
         {(order.status === 'CREDIT_APPROVED' || order.timeline.some(entry => entry.domain === 'ORDER' && entry.to === 'CREDIT_APPROVED')) && user?.permissions.includes('credit.read') ? <CreditSaleCompensation key={`${order.id}:${user.userId}`} order={order} picks={picks} onChanged={async () => { const updated = await ordersApi.getOrder(orderId); setOrder(updated); }} /> : null}
+        {(order.status === 'PAID' || order.status === 'RETURNED') && user?.permissions.includes('returns.read') ? <OrderReturnsPanel key={`${order.id}:${user.userId}`} orderId={order.id} orderNumber={order.number} onChanged={async () => { const updated = await ordersApi.getOrder(orderId); setOrder(updated); }} /> : null}
         {order.status === 'CREDIT_APPROVED' ? <Alert severity="info">این سفارش با اعتبار مشتری تأیید شده است؛ وضعیت وصول وجه در دفترکل مشتری ثبت می‌شود.</Alert> : null}
         {order.fulfillment ? (
           <Card>

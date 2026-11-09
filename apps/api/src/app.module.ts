@@ -16,6 +16,7 @@ import { HealthModule } from './modules/health/health.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { ReturnsModule } from './modules/returns/returns.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
@@ -50,6 +51,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     PromotionsModule,
     CustomDoorOrdersModule,
     PaymentsModule,
+    ReturnsModule,
     CustomersModule,
     CreditModule,
     InvoicesModule,

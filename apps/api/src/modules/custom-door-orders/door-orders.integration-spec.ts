@@ -288,7 +288,7 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
     // This suite's append-only records cannot be deleted by application APIs.
     // TRUNCATE is strictly confined to the guarded disposable *_test database.
     await prisma.$executeRawUnsafe(
-      'TRUNCATE "DoorOrder", "DoorModel", "DoorMaterial", "DoorCatalogRevision", "DoorCommand", "Refund", "InvoiceDraft", "InvoicePolicyRevision", "InvoiceSeriesCounter" CASCADE',
+      'TRUNCATE "OrderReturnRefund", "OrderReturnLine", "OrderReturn", "DoorOrder", "DoorModel", "DoorMaterial", "DoorCatalogRevision", "DoorCommand", "Refund", "InvoiceDraft", "InvoicePolicyRevision", "InvoiceSeriesCounter" CASCADE',
     );
     await prisma.outboxEffect.deleteMany({
       where: { event: { aggregateId: { in: [...orderIds, ...paymentIds] } } },
