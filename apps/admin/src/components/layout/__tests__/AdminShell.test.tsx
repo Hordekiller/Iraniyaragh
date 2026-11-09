@@ -104,7 +104,9 @@ describe('AdminShell', () => {
     mocks.auth.isAuthenticated = false;
     mocks.auth.isRestoring = true;
     renderShell();
-    expect(screen.getByRole('heading', { name: 'در حال بازیابی نشست' })).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent('در حال بازیابی نشست');
+    // Not the login layout (#514): no sign-in heading, brand panel or footer hint.
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
     expect(screen.queryByText('نشست فعال یافت نشد')).not.toBeInTheDocument();
     expect(mocks.replace).not.toHaveBeenCalled();
   });

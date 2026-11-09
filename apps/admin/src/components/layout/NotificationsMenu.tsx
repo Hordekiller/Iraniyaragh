@@ -5,7 +5,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge, Box, Button, Divider, IconButton, Menu, Stack, Typography } from '@mui/material';
 import { Bell } from 'lucide-react';
 import type { InAppNotification } from '@iranyaragh/contracts';
+import { recoverApiSession } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { accessTokenExpiresSoon } from '@/lib/auth/token-expiry';
+import { getAccessToken } from '@/lib/auth/token-store';
 import { listNotifications, markAllNotificationsRead, readUnreadCount, setNotificationRead } from '@/lib/notifications/api';
 import { NotificationsList } from './NotificationsList';
 
@@ -20,7 +23,18 @@ export function NotificationsMenu() {
   const [error, setError] = useState(false);
   const open = Boolean(anchor);
 
-  const refreshCount = useCallback(() => { readUnreadCount().then(setUnread, () => undefined); }, []);
+  // Background polling must never be the request that discovers an expired token:
+  // that produced a 401 per poll and an extra refresh rotation (#513). Without a
+  // token it waits; with a (nearly) expired one it renews through the same
+  // single-flight, cross-tab-locked recovery every other request uses.
+  const refreshCount = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) return;
+    if (accessTokenExpiresSoon(token)) {
+      try { await recoverApiSession(); } catch { return; }
+    }
+    try { setUnread(await readUnreadCount()); } catch { /* the next poll retries */ }
+  }, []);
   const load = useCallback(() => {
     setError(false);
     listNotifications().then(page => { setItems(page.items); setUnread(page.unreadCount); }, () => setError(true));
@@ -28,8 +42,8 @@ export function NotificationsMenu() {
 
   useEffect(() => {
     if (!userId) { setUnread(0); setItems(null); return; }
-    refreshCount();
-    const tick = () => { if (document.visibilityState === 'visible') refreshCount(); };
+    void refreshCount();
+    const tick = () => { if (document.visibilityState === 'visible') void refreshCount(); };
     const timer = window.setInterval(tick, POLL_MS);
     document.addEventListener('visibilitychange', tick);
     return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', tick); };
@@ -38,9 +52,9 @@ export function NotificationsMenu() {
   useEffect(() => { if (open) load(); }, [open, load]);
 
   const toggle = (item: InAppNotification) => {
-    setNotificationRead(item.id, !item.read).then(next => { setItems(current => current?.map(row => (row.id === next.id ? next : row)) ?? current); refreshCount(); }, () => setError(true));
+    setNotificationRead(item.id, !item.read).then(next => { setItems(current => current?.map(row => (row.id === next.id ? next : row)) ?? current); void refreshCount(); }, () => setError(true));
   };
-  const navigate = (item: InAppNotification) => { setAnchor(null); if (!item.read) setNotificationRead(item.id, true).then(refreshCount, () => undefined); };
+  const navigate = (item: InAppNotification) => { setAnchor(null); if (!item.read) setNotificationRead(item.id, true).then(() => refreshCount(), () => undefined); };
   const markAll = () => { markAllNotificationsRead().then(count => { setUnread(count); setItems(current => current?.map(row => ({ ...row, read: true })) ?? current); }, () => setError(true)); };
 
   return (
