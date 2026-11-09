@@ -36,11 +36,37 @@ function isBoundedText(value: string, max: number): boolean {
   return value.length > 0 && value.length <= max && !hasControlCharacter(value);
 }
 
+/**
+ * Stable fingerprint of a refund command. `returnId` is appended only when the
+ * refund settles an order return, so every pre-existing refund keeps the exact
+ * fingerprint it was recorded with.
+ */
+function refundFingerprint(parts: {
+  amount: bigint;
+  gatewayReferenceId: string;
+  reason: string;
+  note: string | null;
+  returnId?: string | null;
+}): string {
+  return hash(
+    JSON.stringify({
+      scope: REFUND_SCOPE,
+      amount: parts.amount.toString(),
+      gatewayReferenceId: parts.gatewayReferenceId,
+      reason: parts.reason,
+      note: parts.note,
+      ...(parts.returnId ? { returnId: parts.returnId } : {}),
+    }),
+  );
+}
+
 type RefundInput = AdminRefundRequest & {
   paymentId: string;
   actorId: string;
   requestId: string;
   idempotencyKey: string;
+  /** Set when this refund settles an order return (see ReturnsService). */
+  returnId?: string;
 };
 
 @Injectable()
@@ -60,15 +86,13 @@ export class AdminPaymentRefundService {
     this.assertEvidence(input);
 
     const keyHash = hash(`${REFUND_SCOPE}:${input.paymentId}:${input.idempotencyKey}`);
-    const fingerprint = hash(
-      JSON.stringify({
-        scope: REFUND_SCOPE,
-        amount: amount.toString(),
-        gatewayReferenceId: input.gatewayReferenceId,
-        reason: input.reason,
-        note: input.note ?? null,
-      }),
-    );
+    const fingerprint = refundFingerprint({
+      amount,
+      gatewayReferenceId: input.gatewayReferenceId,
+      reason: input.reason,
+      note: input.note ?? null,
+      returnId: input.returnId,
+    });
 
     return withSerializableRetry({
       isContention: () => false,
@@ -82,6 +106,7 @@ export class AdminPaymentRefundService {
               select: {
                 id: true, paymentId: true, amount: true, status: true, gatewayReferenceId: true,
                 reason: true, note: true, createdAt: true,
+                returnLink: { select: { returnId: true } },
                 payment: { select: { status: true, amount: true, refundedAmount: true, orderId: true } },
               },
             });
@@ -149,6 +174,26 @@ export class AdminPaymentRefundService {
             // row and the outbox event still record this money movement.
             const statusChanges = nextStatus !== payment.status;
 
+            // A refund that settles a return must belong to that return's order and
+            // can never exceed what the return is still due (the database also
+            // enforces both, so a bypassing write cannot break them).
+            if (input.returnId) {
+              const settling = await tx.orderReturn.findUnique({
+                where: { id: input.returnId },
+                select: { orderId: true, refundDue: true, refunds: { select: { amount: true } } },
+              });
+              if (!settling || settling.orderId !== payment.orderId) {
+                throw new NotFoundException({ code: 'RETURN_NOT_FOUND', message: 'Order return not found for this payment.' });
+              }
+              const stillDue = settling.refundDue - settling.refunds.reduce((sum, link) => sum + link.amount, 0n);
+              if (amount > stillDue) {
+                throw new UnprocessableEntityException({
+                  code: 'RETURN_REFUND_EXCEEDED',
+                  message: 'Refund amount exceeds what this return is still due.',
+                });
+              }
+            }
+
             const refund = await tx.refund.create({
               data: {
                 paymentId: payment.id,
@@ -171,6 +216,9 @@ export class AdminPaymentRefundService {
               where: { id: payment.id },
               data: { refundedAmount: refundedTotal },
             });
+            if (input.returnId) {
+              await tx.orderReturnRefund.create({ data: { returnId: input.returnId, refundId: refund.id, amount } });
+            }
             await promotionsService.applyRefund(tx, payment.orderId, {
               paidTotal: payment.amount,
               refundedTotal,
@@ -262,19 +310,18 @@ export class AdminPaymentRefundService {
       reason: string;
       note: string | null;
       createdAt: Date;
+      returnLink: { returnId: string } | null;
       payment: { status: string; amount: bigint; refundedAmount: bigint; orderId: string };
     },
     fingerprint: string,
   ): AdminRefundResponse {
-    const stored = hash(
-      JSON.stringify({
-        scope: REFUND_SCOPE,
-        amount: claimed.amount.toString(),
-        gatewayReferenceId: claimed.gatewayReferenceId,
-        reason: claimed.reason,
-        note: claimed.note,
-      }),
-    );
+    const stored = refundFingerprint({
+      amount: claimed.amount,
+      gatewayReferenceId: claimed.gatewayReferenceId,
+      reason: claimed.reason,
+      note: claimed.note,
+      returnId: claimed.returnLink?.returnId,
+    });
     if (stored !== fingerprint) {
       throw new ConflictException({
         code: 'IDEMPOTENCY_CONFLICT',

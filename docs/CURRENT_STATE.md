@@ -20,18 +20,19 @@ passes: the container context must include build-time test imports.
 
 ## Implemented source capabilities
 
-| Capability         | Current behavior / reference                                                                                                                                                                                   |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Public storefront  | Next server rendering, fixed canonical origin, real catalog projections, scroll reset, RTL/mobile layouts and configured branding/contact surfaces                                                             |
-| Branding/contact   | Verified deployment configuration drives public contacts. The wordmark is used on identity surfaces such as header/footer; descriptive/legal business text and SEO identity remain meaningful text             |
-| Help               | `/help` and topic pages, contextual page helper and protected Admin enable/disable setting                                                                                                                     |
-| Custom doors       | Editable catalog/materials; Decofix configuration; manufacturing choices and four custom hole distances; full final-balance payment; [contract](CUSTOM_DOOR_ORDERS.md)                                         |
-| Promotions         | Campaign/coupon rules, server repricing, reservation/confirmation/release/refund accounting; [contract](PROMOTIONS.md)                                                                                         |
-| Sessions           | Separate staff/customer cookies, encrypted bounded same-attempt refresh recovery, live revocation/permissions and staff activity keep-alive; [contract](AUTH_CONTRACT.md)                                      |
-| Blog               | Draft/review/publication/archive, scheduling, revisions, redirects, protected editor, real image metadata, RSS, public structured data and conditional header/drawer/home/footer discovery links; [contract](BLOG.md)                                                 |
-| SEO                | Canonicals, Organization/WebSite, Product/Offer, collection/breadcrumb/article data, image metadata, dynamic sitemaps and page/discovery checkers; [plan and implemented slices](SEO_GEO_AI_DISCOVERY_PLAN.md) |
-| Commerce/inventory | Existing server-priced checkout, immutable stock/financial movements, verified provider reconciliation and owned order/invoice/report surfaces; domain contracts remain authoritative                          |
-| Newsletter         | Unavailable UI only. Backend subscription, verified consent, delivery and welcome-coupon workflow are [planned](NEWSLETTER_PLAN_FA.md)                                                                         |
+| Capability         | Current behavior / reference                                                                                                                                                                                                                                                     |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public storefront  | Next server rendering, fixed canonical origin, real catalog projections, scroll reset, RTL/mobile layouts and configured branding/contact surfaces                                                                                                                               |
+| Branding/contact   | Verified deployment configuration drives public contacts. The wordmark is used on identity surfaces such as header/footer; descriptive/legal business text and SEO identity remain meaningful text                                                                               |
+| Help               | `/help` and topic pages, contextual page helper and protected Admin enable/disable setting                                                                                                                                                                                       |
+| Custom doors       | Editable catalog/materials; Decofix configuration; manufacturing choices and four custom hole distances; full final-balance payment; [contract](CUSTOM_DOOR_ORDERS.md)                                                                                                           |
+| Promotions         | Campaign/coupon rules, server repricing, reservation/confirmation/release/refund accounting; [contract](PROMOTIONS.md)                                                                                                                                                           |
+| Sessions           | Separate staff/customer cookies, encrypted bounded same-attempt refresh recovery, live revocation/permissions and staff activity keep-alive; [contract](AUTH_CONTRACT.md)                                                                                                        |
+| Blog               | Draft/review/publication/archive, scheduling, revisions, redirects, protected editor, real image metadata, RSS, public structured data and conditional header/drawer/home/footer discovery links; [contract](BLOG.md)                                                            |
+| SEO                | Canonicals, Organization/WebSite, Product/Offer, collection/breadcrumb/article data, image metadata, dynamic sitemaps and page/discovery checkers; [plan and implemented slices](SEO_GEO_AI_DISCOVERY_PLAN.md)                                                                   |
+| Commerce/inventory | Existing server-priced checkout, immutable stock/financial movements, verified provider reconciliation and owned order/invoice/report surfaces; domain contracts remain authoritative                                                                                            |
+| Order returns      | Staff-recorded returns of paid orders: 2 business days (in-person) / 7 days (other cities) from invoice issuance, manual refund recording, database-enforced invariants, admin on/off switch (off by default); **source only, not deployed or accepted**; [contract](RETURNS.md) |
+| Newsletter         | Unavailable UI only. Backend subscription, verified consent, delivery and welcome-coupon workflow are [planned](NEWSLETTER_PLAN_FA.md)                                                                                                                                           |
 
 No first article is automatically authored. An empty blog is deliberately a real
 404 with no footer/sitemap listing; the feed can return an empty RSS document.
@@ -71,7 +72,7 @@ Changing indexing does not prove or replace real payment/SMS acceptance.
   production authoring acceptance. The public test article remains a plan.
 - Newsletter: decide channel, consent flow, offer constraints and send budget;
   implement and verify the real backend/provider flow before enabling the UI.
-- General paid-order returns, linked invoice corrections, remaining Merchant/feed
+- Paid-order returns exist in source ([RETURNS.md](RETURNS.md)) but need deployment and operator acceptance. Linked invoice corrections, remaining Merchant/feed
   and IndexNow/content-lifecycle work and applicable field/provider acceptance
   remain separate from the delivered foundations.
 - Local/unmerged work, including files in another agent's worktree, is not main

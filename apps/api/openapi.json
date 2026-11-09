@@ -22100,6 +22100,7 @@
                               "title",
                               "amount",
                               "isActive",
+                              "returnWindowKind",
                               "version",
                               "policyRevision",
                               "updatedAt"
@@ -22133,6 +22134,15 @@
                               },
                               "isActive": {
                                 "type": "boolean"
+                              },
+                              "returnWindowKind": {
+                                "type": "string",
+                                "nullable": true,
+                                "enum": [
+                                  "IN_PERSON",
+                                  "DELIVERY"
+                                ],
+                                "description": "Return window class; null until staff classify the method, which keeps returns blocked."
                               },
                               "code": {
                                 "type": "string",
@@ -22309,6 +22319,15 @@
                   "isActive": {
                     "type": "boolean"
                   },
+                  "returnWindowKind": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "IN_PERSON",
+                      "DELIVERY"
+                    ],
+                    "description": "Optional; omit to leave the classification unchanged."
+                  },
                   "expectedVersion": {
                     "type": "integer",
                     "minimum": 0,
@@ -22344,6 +22363,7 @@
                             "title",
                             "amount",
                             "isActive",
+                            "returnWindowKind",
                             "version",
                             "policyRevision",
                             "updatedAt"
@@ -22377,6 +22397,15 @@
                             },
                             "isActive": {
                               "type": "boolean"
+                            },
+                            "returnWindowKind": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "IN_PERSON",
+                                "DELIVERY"
+                              ],
+                              "description": "Return window class; null until staff classify the method, which keeps returns blocked."
                             },
                             "code": {
                               "type": "string",
@@ -40021,6 +40050,2359 @@
         ],
         "tags": [
           "customer-invoices"
+        ]
+      }
+    },
+    "/returns/admin/settings": {
+      "get": {
+        "operationId": "ReturnsController_readSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "enabled",
+                        "version",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Whether recording new returns is switched on (off by default)",
+        "tags": [
+          "returns"
+        ]
+      },
+      "put": {
+        "operationId": "ReturnsController_updateSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "expectedVersion",
+                  "enabled"
+                ],
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Current version; 0 when the switch has never been saved."
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "enabled",
+                        "version",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Switch recording of NEW returns on or off; refunds of recorded returns stay possible",
+        "tags": [
+          "returns"
+        ]
+      }
+    },
+    "/returns/admin/holidays": {
+      "get": {
+        "operationId": "ReturnsController_listHolidays",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "dateKey",
+                              "label",
+                              "createdAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "dateKey": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List official holidays that extend the in-person return window",
+        "tags": [
+          "returns"
+        ]
+      },
+      "post": {
+        "operationId": "ReturnsController_addHoliday",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "dateKey",
+                  "label"
+                ],
+                "properties": {
+                  "dateKey": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "Tehran calendar date."
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "dateKey",
+                        "label",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "dateKey": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Add an official holiday (Tehran calendar date)",
+        "tags": [
+          "returns"
+        ]
+      }
+    },
+    "/returns/admin/holidays/{id}": {
+      "delete": {
+        "operationId": "ReturnsController_removeHoliday",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove an official holiday; only returns recorded afterwards are affected",
+        "tags": [
+          "returns"
+        ]
+      }
+    },
+    "/returns/admin/orders/{orderId}/eligibility": {
+      "get": {
+        "operationId": "ReturnsController_eligibility",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "orderId",
+                        "orderNumber",
+                        "eligible",
+                        "reason",
+                        "windowKind",
+                        "policyRevision",
+                        "invoiceIssuedAt",
+                        "deadlineAt",
+                        "lines",
+                        "shippingAmount"
+                      ],
+                      "properties": {
+                        "orderId": {
+                          "type": "string"
+                        },
+                        "orderNumber": {
+                          "type": "string"
+                        },
+                        "eligible": {
+                          "type": "boolean"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "nullable": true,
+                          "enum": [
+                            "ORDER_NOT_PAID",
+                            "PAYMENT_NOT_SETTLED",
+                            "CUSTOM_DOOR_EXCLUDED",
+                            "NO_ISSUED_INVOICE",
+                            "METHOD_UNCLASSIFIED",
+                            "WINDOW_CLOSED",
+                            "FULLY_RETURNED",
+                            "AMOUNTS_DO_NOT_RECONCILE"
+                          ]
+                        },
+                        "windowKind": {
+                          "type": "string",
+                          "enum": [
+                            "IN_PERSON",
+                            "DELIVERY"
+                          ],
+                          "nullable": true
+                        },
+                        "policyRevision": {
+                          "type": "string"
+                        },
+                        "invoiceIssuedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "deadlineAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "lines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "orderItemId",
+                              "sku",
+                              "title",
+                              "orderedQuantity",
+                              "returnedQuantity",
+                              "remainingQuantity",
+                              "unitPrice",
+                              "netLineAmount"
+                            ],
+                            "properties": {
+                              "orderItemId": {
+                                "type": "string"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "orderedQuantity": {
+                                "type": "integer"
+                              },
+                              "returnedQuantity": {
+                                "type": "integer"
+                              },
+                              "remainingQuantity": {
+                                "type": "integer"
+                              },
+                              "unitPrice": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "netLineAmount": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "shippingAmount": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Return window, eligibility and returnable quantities of a paid order",
+        "tags": [
+          "returns"
+        ]
+      }
+    },
+    "/returns/admin/orders/{orderId}": {
+      "post": {
+        "operationId": "ReturnsController_create",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque retry key, maximum 128 characters.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "reason",
+                  "lines"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "lines": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "orderItemId",
+                        "quantity",
+                        "disposition"
+                      ],
+                      "properties": {
+                        "orderItemId": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "disposition": {
+                          "type": "string",
+                          "enum": [
+                            "RESTOCK",
+                            "DAMAGED",
+                            "NOT_RETURNED"
+                          ]
+                        },
+                        "warehouseId": {
+                          "type": "string",
+                          "description": "Required for RESTOCK, forbidden otherwise."
+                        },
+                        "locationId": {
+                          "type": "string",
+                          "description": "Required for RESTOCK, forbidden otherwise."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "orderId",
+                        "orderNumber",
+                        "number",
+                        "sequence",
+                        "windowKind",
+                        "policyRevision",
+                        "invoiceIssuedAt",
+                        "deadlineAt",
+                        "returnedAt",
+                        "merchandiseRefund",
+                        "shippingRefund",
+                        "refundDue",
+                        "refunded",
+                        "refundRemaining",
+                        "reason",
+                        "note",
+                        "lines",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "orderId": {
+                          "type": "string"
+                        },
+                        "orderNumber": {
+                          "type": "string"
+                        },
+                        "number": {
+                          "type": "string"
+                        },
+                        "sequence": {
+                          "type": "integer"
+                        },
+                        "windowKind": {
+                          "type": "string",
+                          "enum": [
+                            "IN_PERSON",
+                            "DELIVERY"
+                          ]
+                        },
+                        "policyRevision": {
+                          "type": "string"
+                        },
+                        "invoiceIssuedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "deadlineAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "returnedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "merchandiseRefund": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "shippingRefund": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "refundDue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "refunded": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "refundRemaining": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "note": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "lines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "orderItemId",
+                              "sku",
+                              "title",
+                              "quantity",
+                              "disposition",
+                              "unitPrice",
+                              "refundAmount",
+                              "movementId"
+                            ],
+                            "properties": {
+                              "orderItemId": {
+                                "type": "string"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "quantity": {
+                                "type": "integer"
+                              },
+                              "disposition": {
+                                "type": "string",
+                                "enum": [
+                                  "RESTOCK",
+                                  "DAMAGED",
+                                  "NOT_RETURNED"
+                                ]
+                              },
+                              "unitPrice": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "refundAmount": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "movementId": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record goods returned against a paid order (within its window); moves no money",
+        "tags": [
+          "returns"
+        ]
+      }
+    },
+    "/returns/admin": {
+      "get": {
+        "operationId": "ReturnsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "meta"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "orderId",
+                              "orderNumber",
+                              "number",
+                              "sequence",
+                              "windowKind",
+                              "policyRevision",
+                              "invoiceIssuedAt",
+                              "deadlineAt",
+                              "returnedAt",
+                              "merchandiseRefund",
+                              "shippingRefund",
+                              "refundDue",
+                              "refunded",
+                              "refundRemaining",
+                              "reason",
+                              "note",
+                              "lines",
+                              "createdAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "orderId": {
+                                "type": "string"
+                              },
+                              "orderNumber": {
+                                "type": "string"
+                              },
+                              "number": {
+                                "type": "string"
+                              },
+                              "sequence": {
+                                "type": "integer"
+                              },
+                              "windowKind": {
+                                "type": "string",
+                                "enum": [
+                                  "IN_PERSON",
+                                  "DELIVERY"
+                                ]
+                              },
+                              "policyRevision": {
+                                "type": "string"
+                              },
+                              "invoiceIssuedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "deadlineAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "returnedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "merchandiseRefund": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "shippingRefund": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "refundDue": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "refunded": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "refundRemaining": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "note": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "lines": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "orderItemId",
+                                    "sku",
+                                    "title",
+                                    "quantity",
+                                    "disposition",
+                                    "unitPrice",
+                                    "refundAmount",
+                                    "movementId"
+                                  ],
+                                  "properties": {
+                                    "orderItemId": {
+                                      "type": "string"
+                                    },
+                                    "sku": {
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    },
+                                    "quantity": {
+                                      "type": "integer"
+                                    },
+                                    "disposition": {
+                                      "type": "string",
+                                      "enum": [
+                                        "RESTOCK",
+                                        "DAMAGED",
+                                        "NOT_RETURNED"
+                                      ]
+                                    },
+                                    "unitPrice": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ],
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "enum": [
+                                            "IRR"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "refundAmount": {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ],
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "enum": [
+                                            "IRR"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "movementId": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  }
+                                }
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "required": [
+                            "page",
+                            "perPage",
+                            "total",
+                            "pages"
+                          ],
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "perPage": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            },
+                            "pages": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List recorded returns",
+        "tags": [
+          "returns"
+        ]
+      }
+    },
+    "/returns/admin/{id}": {
+      "get": {
+        "operationId": "ReturnsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "orderId",
+                        "orderNumber",
+                        "number",
+                        "sequence",
+                        "windowKind",
+                        "policyRevision",
+                        "invoiceIssuedAt",
+                        "deadlineAt",
+                        "returnedAt",
+                        "merchandiseRefund",
+                        "shippingRefund",
+                        "refundDue",
+                        "refunded",
+                        "refundRemaining",
+                        "reason",
+                        "note",
+                        "lines",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "orderId": {
+                          "type": "string"
+                        },
+                        "orderNumber": {
+                          "type": "string"
+                        },
+                        "number": {
+                          "type": "string"
+                        },
+                        "sequence": {
+                          "type": "integer"
+                        },
+                        "windowKind": {
+                          "type": "string",
+                          "enum": [
+                            "IN_PERSON",
+                            "DELIVERY"
+                          ]
+                        },
+                        "policyRevision": {
+                          "type": "string"
+                        },
+                        "invoiceIssuedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "deadlineAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "returnedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "merchandiseRefund": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "shippingRefund": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "refundDue": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "refunded": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "refundRemaining": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "amount": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "enum": [
+                                "IRR"
+                              ]
+                            }
+                          }
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "note": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "lines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "orderItemId",
+                              "sku",
+                              "title",
+                              "quantity",
+                              "disposition",
+                              "unitPrice",
+                              "refundAmount",
+                              "movementId"
+                            ],
+                            "properties": {
+                              "orderItemId": {
+                                "type": "string"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "quantity": {
+                                "type": "integer"
+                              },
+                              "disposition": {
+                                "type": "string",
+                                "enum": [
+                                  "RESTOCK",
+                                  "DAMAGED",
+                                  "NOT_RETURNED"
+                                ]
+                              },
+                              "unitPrice": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "refundAmount": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "movementId": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "One recorded return with its lines and refund progress",
+        "tags": [
+          "returns"
+        ]
+      }
+    },
+    "/returns/admin/{id}/refund": {
+      "post": {
+        "operationId": "ReturnsController_refund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque retry key, maximum 128 characters.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "amountMinorUnits",
+                  "gatewayReferenceId",
+                  "reason"
+                ],
+                "properties": {
+                  "amountMinorUnits": {
+                    "type": "string",
+                    "description": "Positive integer Rial, no leading zeros. Capped server-side by the remaining refundable amount."
+                  },
+                  "gatewayReferenceId": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "description": "The reference the gateway panel produced for this transfer. Required evidence and unique across refunds."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "Bounded operational reason recorded with the transition."
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Optional operational context. Never projected to customers."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "orderReturn",
+                        "refundId",
+                        "paymentStatus"
+                      ],
+                      "properties": {
+                        "orderReturn": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "orderId",
+                            "orderNumber",
+                            "number",
+                            "sequence",
+                            "windowKind",
+                            "policyRevision",
+                            "invoiceIssuedAt",
+                            "deadlineAt",
+                            "returnedAt",
+                            "merchandiseRefund",
+                            "shippingRefund",
+                            "refundDue",
+                            "refunded",
+                            "refundRemaining",
+                            "reason",
+                            "note",
+                            "lines",
+                            "createdAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "orderId": {
+                              "type": "string"
+                            },
+                            "orderNumber": {
+                              "type": "string"
+                            },
+                            "number": {
+                              "type": "string"
+                            },
+                            "sequence": {
+                              "type": "integer"
+                            },
+                            "windowKind": {
+                              "type": "string",
+                              "enum": [
+                                "IN_PERSON",
+                                "DELIVERY"
+                              ]
+                            },
+                            "policyRevision": {
+                              "type": "string"
+                            },
+                            "invoiceIssuedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "deadlineAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "returnedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "merchandiseRefund": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "shippingRefund": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "refundDue": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "refunded": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "refundRemaining": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "amount",
+                                "currency"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
+                            },
+                            "reason": {
+                              "type": "string"
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "lines": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "orderItemId",
+                                  "sku",
+                                  "title",
+                                  "quantity",
+                                  "disposition",
+                                  "unitPrice",
+                                  "refundAmount",
+                                  "movementId"
+                                ],
+                                "properties": {
+                                  "orderItemId": {
+                                    "type": "string"
+                                  },
+                                  "sku": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "integer"
+                                  },
+                                  "disposition": {
+                                    "type": "string",
+                                    "enum": [
+                                      "RESTOCK",
+                                      "DAMAGED",
+                                      "NOT_RETURNED"
+                                    ]
+                                  },
+                                  "unitPrice": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "refundAmount": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "IRR"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "movementId": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                }
+                              }
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        },
+                        "refundId": {
+                          "type": "string"
+                        },
+                        "paymentStatus": {
+                          "type": "string",
+                          "enum": [
+                            "PARTIALLY_REFUNDED",
+                            "REFUNDED"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message",
+                    "requestId",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Record the manual gateway refund that settles a return (no gateway call is made)",
+        "tags": [
+          "returns"
+        ]
+      }
+    },
+    "/returns/public/config": {
+      "get": {
+        "operationId": "ReturnsPublicController_config",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "enabled"
+                      ],
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Whether the store accepts returns (the return policy applies only while this is true)",
+        "tags": [
+          "returns"
         ]
       }
     },

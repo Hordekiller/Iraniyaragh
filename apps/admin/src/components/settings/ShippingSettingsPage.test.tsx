@@ -7,7 +7,7 @@ import { readShippingMethods, saveShippingMethod } from '@/lib/settings/shipping
 const auth = vi.hoisted(() => ({ user: { userId: 'operator', permissions: ['settings.manage'] }, isRestoring: false }));
 vi.mock('@/lib/auth/AuthProvider', () => ({ useAuth: () => auth }));
 vi.mock('@/lib/settings/shipping-settings-api', () => ({ readShippingMethods: vi.fn(), saveShippingMethod: vi.fn() }));
-const method = { code: 'post', title: 'پست', amount: { amount: '50000', currency: 'IRR' as const }, isActive: false, version: 0, policyRevision: 'r0', updatedAt: '2026-10-08T00:00:00Z' };
+const method = { code: 'post', title: 'پست', amount: { amount: '50000', currency: 'IRR' as const }, isActive: false, returnWindowKind: null, version: 0, policyRevision: 'r0', updatedAt: '2026-10-08T00:00:00Z' };
 
 async function fill() {
   await screen.findByText(/هیچ روش ارسالی ثبت نشده است/);
@@ -25,7 +25,7 @@ describe('Admin approved shipping tariffs', () => {
     render(<ShippingSettingsPage />); await fill();
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره تعرفهٔ مصوب' }));
     await screen.findByText(/تعرفه در سرور ذخیره شد/);
-    expect(saveShippingMethod).toHaveBeenCalledWith('post', { title: 'پست', amount: method.amount, isActive: false, expectedVersion: null }, expect.stringMatching(/^shipping-/), expect.any(AbortSignal));
+    expect(saveShippingMethod).toHaveBeenCalledWith('post', { title: 'پست', amount: method.amount, isActive: false, returnWindowKind: null, expectedVersion: null }, expect.stringMatching(/^shipping-/), expect.any(AbortSignal));
   });
   it('locks the exact payload and retries the same key after an uncertain response', async () => {
     vi.mocked(saveShippingMethod).mockRejectedValueOnce(new ApiNetworkError('connection lost'));
@@ -41,7 +41,7 @@ describe('Admin approved shipping tariffs', () => {
     vi.mocked(readShippingMethods).mockResolvedValueOnce([method]).mockResolvedValueOnce([{ ...method, version: 1 }]);
     vi.mocked(saveShippingMethod).mockRejectedValueOnce(new ApiClientError({ code: 'STALE_VERSION', message: '', statusCode: 409, requestId: 'test' }));
     render(<ShippingSettingsPage />);
-    fireEvent.click(await screen.findByRole('button', { name: 'پست — غیرفعال' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^پست — غیرفعال/ }));
     fireEvent.change(screen.getByLabelText(/هزینهٔ مصوب ارسال/), { target: { value: '60000' } });
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره تعرفهٔ مصوب' }));
     await screen.findByText(/تنظیمات تغییر کرده‌اند/);
@@ -52,6 +52,18 @@ describe('Admin approved shipping tariffs', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره تعرفهٔ مصوب' }));
     await screen.findByText(/تعرفه در سرور ذخیره شد/);
     expect(vi.mocked(saveShippingMethod).mock.calls[1]?.[1]).toMatchObject({ expectedVersion: 1, amount: { amount: '60000', currency: 'IRR' } });
+  });
+  it('shows an unclassified method as blocking returns and saves the chosen return window', async () => {
+    vi.mocked(readShippingMethods).mockResolvedValueOnce([method]);
+    vi.mocked(saveShippingMethod).mockResolvedValueOnce({ ...method, version: 1, returnWindowKind: 'IN_PERSON' });
+    render(<ShippingSettingsPage />);
+    expect(await screen.findByRole('button', { name: 'پست — غیرفعال — مهلت مرجوعی نامشخص' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^پست — غیرفعال/ }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: /نوع مهلت مرجوعی/ }));
+    fireEvent.click(await screen.findByRole('option', { name: /تحویل حضوری/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره تعرفهٔ مصوب' }));
+    await screen.findByText(/تعرفه در سرور ذخیره شد/);
+    expect(vi.mocked(saveShippingMethod).mock.calls[0]?.[1]).toMatchObject({ returnWindowKind: 'IN_PERSON', expectedVersion: 0 });
   });
   it('does not read or mutate settings when the UI principal lacks permission', () => {
     auth.user.permissions = []; render(<ShippingSettingsPage />);

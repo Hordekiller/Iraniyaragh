@@ -16,7 +16,7 @@ import { AdminPaymentRefundService } from './admin-payment-refund.service';
 @Module({
   imports: [PaymentProviderModule, AuditModule, InventoryModule],
   controllers: [PaymentInitiationController, ZarinpalCallbackController, AdminPaymentReadController, AdminPaymentReconciliationController, AdminPaymentRefundController],
-  exports: [PaymentInitiationService],
+  exports: [PaymentInitiationService, AdminPaymentRefundService],
   providers: [PaymentInitiationService, PaymentVerificationService, AdminPaymentReadService, AdminPaymentReconciliationService, AdminPaymentRefundService],
 })
 export class PaymentsModule {}

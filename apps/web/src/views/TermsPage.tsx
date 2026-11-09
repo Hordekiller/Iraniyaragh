@@ -3,9 +3,11 @@
 import { LegalDocument, PendingPolicyNote } from '../components/legal/LegalDocument'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../lib/routes'
+import { useReturnsEnabled } from '../lib/use-returns-enabled'
 
 // Restored from storefront-completion, adapted to the current server-backed flow.
 export function TermsPage() {
+  const returnsEnabled = useReturnsEnabled()
   return (
     <LegalDocument
       title="قوانین و شرایط فروش"
@@ -75,10 +77,29 @@ export function TermsPage() {
 
       <section aria-labelledby="terms-cancel-return">
         <h2 id="terms-cancel-return">۵) لغو سفارش، مرجوعی و خدمات پس از فروش</h2>
+        {returnsEnabled ? (
+          <>
+        <p>
+          <strong>مهلت مرجوعی کالا:</strong> برای سفارشی که حضوری تحویل می‌گیرید ۲ روز کاری و برای سفارشی که به
+          شهر دیگری ارسال می‌شود ۱ هفته (۷ روز) است. مهلت از زمان صدور فاکتور سفارش آغاز می‌شود. در شمارش روز کاری،
+          جمعه و تعطیلات رسمی روز کاری حساب نمی‌شوند.
+        </p>
+        <p>
+          استرداد وجه پس از ثبت مرجوعی توسط فروشگاه و به‌صورت دستی انجام می‌شود. مبلغ استرداد، قیمت کالای مرجوع‌شده پس از
+          کسر سهم همان کالا از تخفیف سفارش است و هزینهٔ ارسال تنها وقتی بازگردانده می‌شود که همهٔ کالاهای سفارش مرجوع شود.
+          کالای ساخت سفارشی (درب سفارشی) مشمول این روند مرجوعی نیست و جداگانه بررسی می‌شود.
+        </p>
         <PendingPolicyNote>
-          شرایط لغو سفارش پس از پرداخت، مهلت و شرایط مرجوعی کالا، و خدمات پس از فروش (ضمانت و
-          پشتیبانی) هنوز از سوی فروشنده اعلام نشده است. برای خرید، ابتدا این شرایط و اطلاعات تماس تأییدشدهٔ فروشنده باید اعلام شوند.
+          شرایط لغو سفارش پس از پرداخت، شرایط وضعیت کالای مرجوعی و خدمات پس از فروش (ضمانت و پشتیبانی) هنوز از سوی فروشنده
+          اعلام نشده است. برای خرید، ابتدا این شرایط و اطلاعات تماس تأییدشدهٔ فروشنده باید اعلام شوند.
         </PendingPolicyNote>
+          </>
+        ) : (
+          <PendingPolicyNote>
+            شرایط لغو سفارش پس از پرداخت، مهلت و شرایط مرجوعی کالا، و خدمات پس از فروش (ضمانت و پشتیبانی) هنوز از سوی فروشنده
+            اعلام نشده است. برای خرید، ابتدا این شرایط و اطلاعات تماس تأییدشدهٔ فروشنده باید اعلام شوند.
+          </PendingPolicyNote>
+        )}
       </section>
 
       <section aria-labelledby="terms-privacy-link">

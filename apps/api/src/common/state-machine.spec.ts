@@ -25,6 +25,13 @@ describe('order transition machine', () => {
     for (const status of ['PAID', 'PENDING_PAYMENT'] as const) expect(canTransition('CREDIT_APPROVED', status, ORDER_TRANSITIONS)).toBe(false);
   });
 
+  it('lets a paid order be closed only as RETURNED once everything is returned', () => {
+    expect(canTransition('PAID', 'RETURNED', ORDER_TRANSITIONS)).toBe(true);
+    for (const status of ['DRAFT', 'PENDING_PAYMENT', 'CANCELLED', 'CREDIT_APPROVED'] as const) {
+      expect(canTransition('PAID', status, ORDER_TRANSITIONS)).toBe(false);
+    }
+  });
+
   it('allows cancellation before payment', () => {
     expect(canTransition('PENDING_PAYMENT', 'CANCELLED', ORDER_TRANSITIONS)).toBe(true);
   });
@@ -33,6 +40,7 @@ describe('order transition machine', () => {
     ['PAID', 'PENDING_PAYMENT'],
     ['CANCELLED', 'PENDING_PAYMENT'],
     ['RETURNED', 'CANCELLED'],
+    ['RETURNED', 'PAID'],
     ['PENDING_PAYMENT', 'PENDING_PAYMENT'],
   ] as const)('rejects illegal order transition %s -> %s', (from, to) => {
     expect(canTransition(from, to, ORDER_TRANSITIONS)).toBe(false);

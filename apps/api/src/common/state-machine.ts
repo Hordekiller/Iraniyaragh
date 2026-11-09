@@ -14,7 +14,8 @@ export const ORDER_TRANSITIONS: TransitionMap<OrderStatus> = {
   DRAFT: new Set<OrderStatus>(['PENDING_PAYMENT', 'CANCELLED']),
   PENDING_PAYMENT: new Set<OrderStatus>(['PAID', 'CREDIT_APPROVED', 'CANCELLED']),
   CREDIT_APPROVED: new Set<OrderStatus>(['CANCELLED', 'RETURNED']),
-  PAID: new Set<OrderStatus>([]),
+  // A paid order is only ever closed by returning every unit of it (order returns).
+  PAID: new Set<OrderStatus>(['RETURNED']),
   CANCELLED: new Set<OrderStatus>([]),
   RETURNED: new Set<OrderStatus>([]),
 };

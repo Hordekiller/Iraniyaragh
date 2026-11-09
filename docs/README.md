@@ -64,6 +64,7 @@ security, money, inventory or payment invariant because a roadmap is stale.
 
 - [Governed blog](BLOG.md) — article lifecycle, permissions, images, RSS and rollout.
 - [Customer reviews](REVIEWS.md) — verified-purchase reviews, moderation, aggregates and structured data.
+- [Order returns](RETURNS.md) — return windows, manual refund settlement, database guarantees and deployment steps.
 - [Session recovery](ADMIN_SESSION_RECOVERY.md) — realm split, bounded recovery and reauthentication.
 - [Newsletter and public test-article plan](NEWSLETTER_PLAN_FA.md) — planned scope and activation gates.
 - [راهنمای فارسی MCP](../MCP_GUIDE_FA.md) — local Codex/Claude tools and shared handoff.
