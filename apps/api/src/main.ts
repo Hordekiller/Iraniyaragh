@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { RedactedLogger } from './common/redacted-logger';
 import { configureRequestBody } from './common/request-body';
+import { helmetOptions } from './common/security-headers';
 import type { EnvironmentVariables, TrustProxySetting } from './config/environment';
 import { createApiDocument, OPENAPI_UI_PATH } from './swagger';
 
@@ -30,7 +31,7 @@ async function bootstrap() {
 
   app.useLogger(logger);
   app.set('trust proxy', trustProxyExpressValue(config.get('TRUST_PROXY', { infer: true })));
-  app.use(helmet());
+  app.use(helmet(helmetOptions));
   app.enableCors({
     origin: corsOrigins,
     credentials: true,
