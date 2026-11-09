@@ -158,6 +158,15 @@ test.describe('nginx: storefront and API do not regress', () => {
     expect(await response.json()).toMatchObject({ status: 'ready' });
   });
 
+  test('exactly one Strict-Transport-Security header is sent on the API over TLS', async ({ request }) => {
+    // Helmet used to add a second, conflicting header behind nginx (#515).
+    const response = await request.get(`${HTTPS_ORIGIN}/api/v1/health/live`, { maxRedirects: 0 });
+    const values = response.headersArray().filter((h) => h.name.toLowerCase() === 'strict-transport-security');
+
+    expect(values).toHaveLength(1);
+    expect(values[0]?.value).toBe('max-age=31536000');
+  });
+
   test('media is still served under /media', async ({ request }) => {
     // Gated on the CI stack because this is the one assertion that needs the
     // object store, which only the e2e job starts.
