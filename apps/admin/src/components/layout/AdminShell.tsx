@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { AuthTransition } from '@/components/auth/AuthTransition';
+import { SessionRestoring } from '@/components/auth/SessionRestoring';
 import { Alert, Button } from '@mui/material';
 import { FreshAuthenticationDialog } from '@/components/auth/FreshAuthenticationDialog';
 import { filterNavigationByPermissions, navigation } from '@/config/navigation';
@@ -149,7 +150,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   }, [mobileMenuOpen]);
 
   if (isRestoring) {
-    return <AuthTransition title="در حال بازیابی نشست" description="اعتبار نشست و مجوزهای شما در حال بررسی است." />;
+    return <SessionRestoring />;
   }
 
   if (!isAuthenticated) {
