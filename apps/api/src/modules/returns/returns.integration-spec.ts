@@ -73,6 +73,9 @@ describe.sequential('Order returns: window, amounts, stock, refunds and database
 
   afterAll(async () => {
     if (!connected) return;
+    // Refund events are keyed by payment, not order. Left behind, they are due work for the
+    // next spec that drives the outbox relay against this shared database.
+    const paymentIds = (await prisma.payment.findMany({ where: { orderId: { in: orderIds } }, select: { id: true } })).map((payment) => payment.id);
     await asReplica(async (tx) => {
       await tx.orderReturnRefund.deleteMany({ where: { orderReturn: { orderId: { in: orderIds } } } });
       await tx.orderReturnLine.deleteMany({ where: { orderReturn: { orderId: { in: orderIds } } } });
@@ -82,7 +85,7 @@ describe.sequential('Order returns: window, amounts, stock, refunds and database
       await tx.refund.deleteMany({ where: { payment: { orderId: { in: orderIds } } } });
       await tx.paymentTransition.deleteMany({ where: { payment: { orderId: { in: orderIds } } } });
       await tx.payment.deleteMany({ where: { orderId: { in: orderIds } } });
-      await tx.outboxEvent.deleteMany({ where: { aggregateId: { in: orderIds } } });
+      await tx.outboxEvent.deleteMany({ where: { aggregateId: { in: [...orderIds, ...paymentIds] } } });
     });
     await prisma.fulfillmentTransition.deleteMany({ where: { fulfillment: { orderId: { in: orderIds } } } });
     await prisma.fulfillment.deleteMany({ where: { orderId: { in: orderIds } } });
