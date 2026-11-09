@@ -38,7 +38,7 @@ function modelInput(ids) {
   return { code: manifest.modelCode, title: manifest.modelTitle, type: 'DECOFIX', active: true, expectedVersion: 0, imageMediaId: null,
     configuration: { technical: null, manualApproval: true, slots: [{ key: 'glass', title: 'رنگ شیشه ۴ میل', materialIds: ids, required: true }], incompatible: [],
       components: [{ slot: 'glass', basis: 'AREA', multiplier: 1, divisor: 1, widthDeductionMm: 0, heightDeductionMm: 0, wasteBps: 0, minimumQuantity: '0' }],
-      labor: { fixed: '0', perSquareMeter: '0' }, additional: [], taxBps: 0, discount: '0', minimumTotal: '0', deposit: null } };
+      labor: { fixed: '0', perSquareMeter: '0' }, additional: [], taxBps: 0, discount: '0', minimumTotal: '0' } };
 }
 async function verify(client) {
   const model = await client.doorModel.findUnique({ where: { code: manifest.modelCode } });
@@ -50,11 +50,12 @@ async function verify(client) {
     return material.id;
   });
   const expected = modelInput(ids);
-  if (model.type !== 'DECOFIX' || model.title !== expected.title || !model.active || model.imageMediaId !== null || !isDeepStrictEqual(model.configuration, expected.configuration)) fail('The existing model differs; no operator edits will be overwritten.');
+  const { deposit: _legacyDeposit, ...storedConfiguration } = model.configuration;
+  if (model.type !== 'DECOFIX' || model.title !== expected.title || !model.active || model.imageMediaId !== null || !isDeepStrictEqual(storedConfiguration, expected.configuration)) fail('The existing model differs; no operator edits will be overwritten.');
   const publicModels = [{ ...model, imageUrl: null }];
   for (const [widthMm, heightMm, quantity, total] of [[1000,1000,1,'100000000'],[500,1000,1,'50000000'],[800,2000,2,'320000000']]) {
     const quote = priceDoors([{ modelId: model.id, widthMm, heightMm, quantity, selections: [{slot:'glass',materialId:ids[0]}], notes:'' }], publicModels, materials);
-    if (quote.calculatedTotal !== total || quote.total !== null || quote.deposit !== null) fail('Price or technical approval reconciliation failed.');
+    if (quote.calculatedTotal !== total || quote.total !== null) fail('Price or technical approval reconciliation failed.');
   }
   return { type: 'DECOFIX', models: 1, colors: materials.length, thicknessMm: 4, unit: 'M2', rateIrr: manifest.rateIrrPerM2, rateToman: '10000000', manualApproval: true, paymentAutoEnabled: false, pricingReconciled: true };
 }

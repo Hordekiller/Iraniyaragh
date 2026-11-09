@@ -255,7 +255,6 @@ describe("Custom door HTTP authorization and input boundary", () => {
       expectedVersion: 1,
       total: "100",
       lineTotals: [{ total: "100", reason: "آزمون" }],
-      depositPolicy: { kind: "FIXED", value: "30", minimum: "0" },
       adjustments: [],
       reason: "تأیید آزمون",
     };
@@ -269,6 +268,14 @@ describe("Custom door HTTP authorization and input boundary", () => {
       (await post("custom-doors/admin/orders/test-order/quote", "staff", body))
         .status,
     ).toBe(200);
+    expect(
+      (
+        await post("custom-doors/admin/orders/test-order/quote", "staff", {
+          ...body,
+          depositPolicy: { kind: "PERCENT", value: "3000", minimum: "0" },
+        })
+      ).status,
+    ).toBe(400);
   });
   it("requires inventory permission in addition to order management for stock reservations", async () => {
     const body = {
@@ -451,9 +458,17 @@ describe("Custom door HTTP authorization and input boundary", () => {
       "test-user",
       expect.any(String),
       expect.objectContaining({
-        configuration: expect.objectContaining({ deposit: f.cfg.deposit }),
+        configuration: expect.objectContaining({ taxBps: f.cfg.taxBps }),
       }),
     );
+    expect(
+      (
+        await send("custom-doors/admin/models", "staff", "PUT", {
+          ...model,
+          configuration: { ...model.configuration, deposit: null },
+        })
+      ).status,
+    ).toBe(400);
     expect(
       (
         await send("custom-doors/admin/models", "staff", "PUT", {

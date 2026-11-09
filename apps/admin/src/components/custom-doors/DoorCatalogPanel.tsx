@@ -50,7 +50,6 @@ const freshModel = (): Omit<DoorModel, "id" | "version" | "imageUrl"> => ({
     taxBps: 0,
     discount: "0",
     minimumTotal: "0",
-    deposit: null,
   },
 });
 const freshMaterial = (): Omit<DoorMaterial, "id" | "version"> => ({
@@ -98,7 +97,7 @@ function CatalogEditor({ section }: { section: string }) {
   const [history, setHistory] = useState<
     { version: number; actorId: string; createdAt: string }[]
   >([]);
-  const modelSection = ["models", "rules", "labor", "deposits"].includes(
+  const modelSection = ["models", "rules", "labor"].includes(
     section,
   );
   const category =

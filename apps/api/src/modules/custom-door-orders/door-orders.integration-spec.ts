@@ -433,7 +433,6 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
         expectedVersion: order.version,
         total: "100000",
         lineTotals: [{ total: "99000", reason: "TEST ONLY approved line" }],
-        depositPolicy: { kind: "PERCENT", value: "3000", minimum: "0" },
         adjustments: [{ title: "TEST ONLY special work", amount: "1000" }],
         reason: "TEST ONLY technical review",
       },
@@ -445,7 +444,10 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
       order.version,
       key(),
     );
-    expect(order.quote.snapshot.deposit).toBe("100000");
+    expect(order.quote.snapshot).not.toHaveProperty("deposit");
+    expect(
+      (await prisma.doorQuotation.findUniqueOrThrow({ where: { id: order.quote.id } })).deposit,
+    ).toBe(100000n);
     order = await historicalDeposit(order, 30000n);
     expect(order.paid).toBe("30000");
     order = await service.approveQuote(
@@ -552,7 +554,7 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
   });
   it("preserves a historical deposit, charges only the remaining total and blocks early production", async () => {
     let order = await create(true);
-    const originalSnapshot = structuredClone(order.quote.snapshot);
+    const originalSnapshot: Record<string, unknown> = structuredClone(order.quote.snapshot);
     originalSnapshot.deposit = "5701";
     originalSnapshot.depositPolicy = { kind: "PERCENT", value: "3000", minimum: "0" };
     // Isolated TEST ONLY representation of an attempt opened before this release.
@@ -570,6 +572,8 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
     });
     });
     order = await service.detail(actor, order.id);
+    expect(order.quote.snapshot).not.toHaveProperty("deposit");
+    expect(order.quote.snapshot).not.toHaveProperty("depositPolicy");
     order = await historicalDeposit(order, 5701n);
     expect(order.paid).toBe("5701");
     expect(order.remaining).toBe("13300");
@@ -584,6 +588,18 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
     const historical = await prisma.doorQuotation.findUniqueOrThrow({ where: { id: order.quote.id } });
     expect(historical.deposit).toBe(5701n);
     expect(historical.snapshot).toEqual(originalSnapshot);
+  });
+  it("holds an unreconciled overpayment out of technical approval and production", async () => {
+    let order = await create(true);
+    // Two individually valid historical attempts that together exceed the quote.
+    order = await historicalDeposit(order, 19001n);
+    order = await historicalDeposit(order, 1n);
+    expect(order.paid).toBe("19002");
+    expect(order.financialStatus).toBe("CREDIT");
+    await expect(service.technical(commandActor(staff), order.id, order.version, "TEST ONLY", key()))
+      .rejects.toMatchObject({ status: 409 });
+    await expect(service.transition(commandActor(staff), order.id, { expectedVersion: order.version, status: "AWAITING_TECHNICAL_APPROVAL", reason: "TEST ONLY" }, key()))
+      .rejects.toMatchObject({ status: 409 });
   });
   it("never fabricates disabled, failed, forged or uncertain provider outcomes", async () => {
     const order = await create(true);
@@ -815,16 +831,18 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
       },
       key(),
     );
-    order = await service.transition(
-      commandActor(staff),
-      order.id,
-      {
-        expectedVersion: order.version,
-        status: "AWAITING_SETTLEMENT",
-        reason: "TEST ONLY",
-      },
-      key(),
-    );
+    await expect(
+      service.transition(
+        commandActor(staff),
+        order.id,
+        {
+          expectedVersion: order.version,
+          status: "AWAITING_SETTLEMENT",
+          reason: "TEST ONLY",
+        },
+        key(),
+      ),
+    ).rejects.toMatchObject({ status: 409 });
     await expect(
       service.transition(
         commandActor(staff),

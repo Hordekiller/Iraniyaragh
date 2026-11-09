@@ -24,7 +24,6 @@ import { DOOR_STATUSES } from "./door-state";
 import type {
   DoorGlassSampleKey,
   DoorBasis,
-  DoorDepositPolicy,
   DoorMaterialConfiguration,
   DoorModelConfiguration,
   DoorStatus,
@@ -49,13 +48,6 @@ export class DoorAmountLineDto {
   @ApiProperty({ type: String, pattern: amountPattern.source })
   @Matches(amountPattern)
   amount!: string;
-}
-export class DoorDepositDto implements DoorDepositPolicy {
-  @ApiProperty({ type: String, enum: ["PERCENT", "FIXED"] })
-  @IsEnum(["PERCENT", "FIXED"])
-  kind!: "PERCENT" | "FIXED";
-  @ApiProperty({ type: String }) @Matches(amountPattern) value!: string;
-  @ApiProperty({ type: String }) @Matches(amountPattern) minimum!: string;
 }
 export class DoorTechnicalDto {
   @ApiProperty({ type: Number })
@@ -199,12 +191,6 @@ export class DoorModelConfigurationDto implements DoorModelConfiguration {
   @ApiProperty({ type: Number }) @IsInt() @Min(0) @Max(10000) taxBps!: number;
   @ApiProperty({ type: String }) @Matches(amountPattern) discount!: string;
   @ApiProperty({ type: String }) @Matches(amountPattern) minimumTotal!: string;
-  @ApiProperty({ type: DoorDepositDto, nullable: true })
-  @ValidateIf((_, v) => v !== null)
-  @IsDefined()
-  @ValidateNested()
-  @Type(() => DoorDepositDto)
-  deposit!: DoorDepositDto | null;
 }
 export class DoorModelWriteDto {
   @ApiProperty({ type: String })
@@ -394,11 +380,6 @@ export class DoorQuoteApprovalDto extends DoorVersionDto {
   @Type(() => DoorApprovedLineDto)
   lineTotals!: DoorApprovedLineDto[];
   @ApiProperty({ type: String }) @Matches(amountPattern) total!: string;
-  @ApiPropertyOptional({ type: DoorDepositDto, deprecated: true })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => DoorDepositDto)
-  depositPolicy?: DoorDepositDto;
   @ApiProperty({ type: [DoorAmountLineDto] })
   @IsArray()
   @ArrayMaxSize(30)

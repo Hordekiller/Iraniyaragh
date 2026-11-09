@@ -378,7 +378,7 @@ function CustomerDoorOrders({ id }: { id?: string }) {
                 <dd className="mt-2 font-black">{doorRial(order.paid)}</dd>
               </div>
               <div>
-                <dt className="text-sm text-slate-500">مانده قابل تسویه</dt>
+                <dt className="text-sm text-slate-500">مبلغ قابل پرداخت</dt>
                 <dd className="mt-2 font-black">{doorRial(order.remaining)}</dd>
               </div>
               <div>
@@ -417,7 +417,7 @@ function CustomerDoorOrders({ id }: { id?: string }) {
                     className={`${doorButton} bg-orange-700 text-white`}
                     onClick={() => void run("payment", undefined)}
                   >
-                    پرداخت مبلغ نهایی
+                    پرداخت کامل سفارش
                   </button>
                 )}
             </div>

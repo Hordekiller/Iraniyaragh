@@ -21,7 +21,8 @@ export const DOOR_TRANSITIONS: Record<DoorStatus, ReadonlySet<DoorStatus>> = {
   APPROVED_FOR_PRODUCTION: new Set(["IN_PRODUCTION", "CANCELLED"]),
   IN_PRODUCTION: new Set(["QUALITY_CONTROL"]),
   QUALITY_CONTROL: new Set(["IN_PRODUCTION", "READY_FOR_DELIVERY"]),
-  READY_FOR_DELIVERY: new Set(["AWAITING_SETTLEMENT", "COMPLETED"]),
+  READY_FOR_DELIVERY: new Set(["COMPLETED"]),
+  // Legacy rows only: full payment precedes production, so nothing enters this state.
   AWAITING_SETTLEMENT: new Set(["COMPLETED"]),
   COMPLETED: new Set(),
   CANCELLED: new Set(),
@@ -32,8 +33,7 @@ export function assertDoorTransition(
   context: {
     approved: boolean;
     accepted: boolean;
-    paid: bigint;
-    deposit: bigint;
+    /** Approved total minus net verified payments; negative when overpaid. */
     remaining: bigint;
     technical: boolean;
     stockReady: boolean;
@@ -48,14 +48,15 @@ export function assertDoorTransition(
   if (to === "CANCELLED") return;
   if (!context.approved || !context.accepted)
     fail("قیمت قطعی و تأیید مشخصات توسط مشتری لازم است.");
-  if (context.remaining > 0n) fail("پرداخت کامل مبلغ نهایی سفارش لازم است.");
+  // Underpayment and unreconciled overpayment both stop the order.
+  if (context.remaining !== 0n)
+    fail("پرداخت کامل و تطبیق‌شده مبلغ قطعی سفارش لازم است.");
   if (
     [
       "APPROVED_FOR_PRODUCTION",
       "IN_PRODUCTION",
       "QUALITY_CONTROL",
       "READY_FOR_DELIVERY",
-      "AWAITING_SETTLEMENT",
       "COMPLETED",
     ].includes(to) &&
     !context.technical
@@ -68,6 +69,6 @@ export function assertDoorTransition(
     !context.consumed
   )
     fail("ثبت مصرف واقعی قطعات لازم است.");
-  if (to === "COMPLETED" && (context.remaining !== 0n || !context.delivery))
-    fail("تسویه کامل و اطلاعات تحویل لازم است.");
+  if (to === "COMPLETED" && !context.delivery)
+    fail("اطلاعات تحویل لازم است.");
 }

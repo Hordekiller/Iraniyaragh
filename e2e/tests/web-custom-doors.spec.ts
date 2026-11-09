@@ -18,7 +18,6 @@ const configuration = {
   taxBps: 0,
   discount: "0",
   minimumTotal: "0",
-  deposit: null,
 };
 const model = {
   id: "test-model",
@@ -146,8 +145,6 @@ test("configures several doors in Persian, reviews unpriced terms and remains ac
             reasons: ["این داده صرفاً آزمون است؛ تعرفه تعیین نشده"],
             calculatedTotal: null,
             total: null,
-            deposit: null,
-            depositPolicy: null,
             adjustments: [],
             approvalReason: null,
           },
@@ -182,7 +179,7 @@ test("configures several doors in Persian, reviews unpriced terms and remains ac
   await expect(
     page.getByText("این داده صرفاً آزمون است؛ تعرفه تعیین نشده"),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "پرداخت مبلغ نهایی" })).toHaveCount(
+  await expect(page.getByRole("button", { name: "پرداخت کامل سفارش" })).toHaveCount(
     0,
   );
   expect(
