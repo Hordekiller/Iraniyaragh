@@ -155,6 +155,31 @@ describe('AccessService command safety', () => {
     expect(unsafe.tx.accessCommandRecord.update).not.toHaveBeenCalled();
   });
 
+  it('refuses to reactivate a role whose permissions exceed the actor access', async () => {
+    const h = harness();
+    h.tx.role.findUnique.mockResolvedValue({ ...baseRole, isActive: false });
+    h.permissions.effectivePermissionKeys.mockResolvedValue(new Set(['roles.manage']));
+
+    await expect(h.service.updateRole(baseRole.id, { expectedVersion: 1, isActive: true }, context))
+      .rejects.toMatchObject({ response: { code: 'ACCESS_PRIVILEGE_ESCALATION' } });
+
+    expect(h.tx.role.updateMany).not.toHaveBeenCalled();
+    expect(h.audit.record).not.toHaveBeenCalled();
+    expect(h.tx.accessCommandRecord.update).not.toHaveBeenCalled();
+  });
+
+  it('allows reactivation when the actor currently holds all active role permissions', async () => {
+    const h = harness();
+    h.tx.role.findUnique.mockResolvedValue({ ...baseRole, isActive: false });
+
+    await h.service.updateRole(baseRole.id, { expectedVersion: 1, isActive: true }, context);
+
+    expect(h.permissions.effectivePermissionKeys).toHaveBeenCalledWith(context.actorId, expect.any(Date), h.tx);
+    expect(h.tx.role.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ isActive: true }),
+    }));
+  });
+
   it('keeps roles.manage on the system administrator role', async () => {
     const h = harness();
     h.tx.role.findUnique.mockResolvedValue({ ...baseRole, key: 'system-admin', isSystem: true });

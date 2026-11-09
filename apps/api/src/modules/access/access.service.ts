@@ -244,9 +244,26 @@ export class AccessService {
 
   async updateRole(id: string, input: AccessRoleUpdateDto, context: CommandContext): Promise<AccessRoleDetail> {
     return this.command(`role:${id}:update`, input, context, async (tx) => {
-      const role = await tx.role.findUnique({ where: { id } });
+      const role = await tx.role.findUnique({
+        where: { id },
+        include: {
+          permissions: {
+            where: { revokedAt: null },
+            select: { permission: { select: { key: true, isActive: true } } },
+          },
+        },
+      });
       if (!role) throw roleNotFound();
       if (input.isActive === false && role.isSystem) throw systemProtected();
+      // Reactivation restores the role's grants to every existing member, so
+      // enforce the same delegation ceiling as assigning a role or permissions.
+      if (input.isActive === true && !role.isActive) {
+        await this.assertActorCanGrant(
+          tx,
+          context.actorId,
+          role.permissions.filter((grant) => grant.permission.isActive).map((grant) => grant.permission.key),
+        );
+      }
 
       const result = await tx.role.updateMany({
         where: { id, version: input.expectedVersion },
