@@ -21,11 +21,6 @@ const obj = (
 const ref = (name: string): SchemaObject => ({
   allOf: [{ $ref: `#/components/schemas/${name}` }],
 });
-const deposit = obj({
-  kind: { type: "string", enum: ["PERCENT", "FIXED"] },
-  value: money,
-  minimum: money,
-});
 const component = obj({
   slot: text,
   basis: {
@@ -61,7 +56,6 @@ const modelConfiguration = obj({
   taxBps: int,
   discount: money,
   minimumTotal: money,
-  deposit: nullable(deposit),
 });
 const model = obj({
   id: text,
@@ -140,8 +134,6 @@ export const doorQuoteSnapshotSchema = obj({
   reasons: arr(text),
   calculatedTotal: nullable(money),
   total: nullable(money),
-  deposit: nullable(money),
-  depositPolicy: nullable(deposit),
   adjustments: arr(extra),
   approvalReason: nullable(text),
 });

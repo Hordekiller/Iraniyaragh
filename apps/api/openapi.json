@@ -59801,29 +59801,6 @@
           "amount"
         ]
       },
-      "DoorDepositDto": {
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PERCENT",
-              "FIXED"
-            ]
-          },
-          "value": {
-            "type": "string"
-          },
-          "minimum": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "value",
-          "minimum"
-        ]
-      },
       "DoorModelConfigurationDto": {
         "type": "object",
         "properties": {
@@ -59880,15 +59857,6 @@
           },
           "minimumTotal": {
             "type": "string"
-          },
-          "deposit": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DoorDepositDto"
-              }
-            ]
           }
         },
         "required": [
@@ -59901,8 +59869,7 @@
           "additional",
           "taxBps",
           "discount",
-          "minimumTotal",
-          "deposit"
+          "minimumTotal"
         ]
       },
       "DoorModelWriteDto": {
@@ -60162,14 +60129,6 @@
           "total": {
             "type": "string"
           },
-          "depositPolicy": {
-            "deprecated": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DoorDepositDto"
-              }
-            ]
-          },
           "adjustments": {
             "type": "array",
             "items": {
@@ -60404,8 +60363,7 @@
               "additional",
               "taxBps",
               "discount",
-              "minimumTotal",
-              "deposit"
+              "minimumTotal"
             ],
             "properties": {
               "technical": {
@@ -60590,34 +60548,6 @@
                 "type": "string",
                 "pattern": "^(0|[1-9][0-9]{0,18})$",
                 "description": "Integer IRR; never a floating-point amount."
-              },
-              "deposit": {
-                "type": "object",
-                "required": [
-                  "kind",
-                  "value",
-                  "minimum"
-                ],
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "PERCENT",
-                      "FIXED"
-                    ]
-                  },
-                  "value": {
-                    "type": "string",
-                    "pattern": "^(0|[1-9][0-9]{0,18})$",
-                    "description": "Integer IRR; never a floating-point amount."
-                  },
-                  "minimum": {
-                    "type": "string",
-                    "pattern": "^(0|[1-9][0-9]{0,18})$",
-                    "description": "Integer IRR; never a floating-point amount."
-                  }
-                },
-                "nullable": true
               }
             }
           },
@@ -60785,8 +60715,6 @@
           "reasons",
           "calculatedTotal",
           "total",
-          "deposit",
-          "depositPolicy",
           "adjustments",
           "approvalReason"
         ],
@@ -60997,40 +60925,6 @@
             "type": "string",
             "pattern": "^(0|[1-9][0-9]{0,18})$",
             "description": "Integer IRR; never a floating-point amount.",
-            "nullable": true
-          },
-          "deposit": {
-            "type": "string",
-            "pattern": "^(0|[1-9][0-9]{0,18})$",
-            "description": "Integer IRR; never a floating-point amount.",
-            "nullable": true
-          },
-          "depositPolicy": {
-            "type": "object",
-            "required": [
-              "kind",
-              "value",
-              "minimum"
-            ],
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "PERCENT",
-                  "FIXED"
-                ]
-              },
-              "value": {
-                "type": "string",
-                "pattern": "^(0|[1-9][0-9]{0,18})$",
-                "description": "Integer IRR; never a floating-point amount."
-              },
-              "minimum": {
-                "type": "string",
-                "pattern": "^(0|[1-9][0-9]{0,18})$",
-                "description": "Integer IRR; never a floating-point amount."
-              }
-            },
             "nullable": true
           },
           "adjustments": {

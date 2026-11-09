@@ -33,6 +33,7 @@ import {
   doorMoney,
   doorPaid,
   priceDoors,
+  withoutLegacyDeposit,
 } from "./door-pricing";
 import { assertDoorTransition } from "./door-state";
 import type {
@@ -76,12 +77,39 @@ export function currentDoorQuote(row: Row) {
   if (!quote) throw new ConflictException("نسخه قیمت سفارش یافت نشد.");
   return quote;
 }
+/** door_quote_money requires an approved quote's legacy deposit column and
+ * snapshot field to match. Payment is 100%, so both hold the total; neither is
+ * read by the payment flow or served. */
+function quoteColumns(snapshot: DoorQuoteSnapshot, approved: boolean) {
+  const total = approved ? BigInt(snapshot.total!) : null;
+  return {
+    approved,
+    total,
+    deposit: total,
+    snapshot: asDoorJson(
+      approved ? { ...snapshot, deposit: snapshot.total } : snapshot,
+    ),
+  };
+}
+function publicSnapshot(stored: DoorQuoteSnapshot): DoorQuoteSnapshot {
+  const snapshot = withoutLegacyDeposit(stored);
+  return {
+    ...snapshot,
+    lines: snapshot.lines.map((line) => ({
+      ...line,
+      model: {
+        ...line.model,
+        configuration: withoutLegacyDeposit(line.model.configuration),
+      },
+    })),
+  };
+}
 function quoteView(q: Row["quotes"][number]): DoorQuote {
   return {
     id: q.id,
     version: q.version,
     approved: q.approved,
-    snapshot: q.snapshot as unknown as DoorQuoteSnapshot,
+    snapshot: publicSnapshot(q.snapshot as unknown as DoorQuoteSnapshot),
     createdAt: q.createdAt.toISOString(),
   };
 }
@@ -311,12 +339,7 @@ export class DoorOrdersService {
                   quotes: {
                     create: {
                       version: 1,
-                      approved: !draft && approved,
-                      total:
-                        !draft && approved ? BigInt(snapshot.total!) : null,
-                      deposit:
-                        !draft && approved ? BigInt(snapshot.deposit!) : null,
-                      snapshot: asDoorJson(snapshot),
+                      ...quoteColumns(snapshot, !draft && approved),
                     },
                   },
                 },
@@ -443,10 +466,7 @@ export class DoorOrdersService {
           data: {
             orderId: id,
             version,
-            approved,
-            total: approved ? BigInt(snapshot.total!) : null,
-            deposit: approved ? BigInt(snapshot.deposit!) : null,
-            snapshot: asDoorJson(snapshot),
+            ...quoteColumns(snapshot, approved),
           },
         });
         await tx.doorOrder.update({
@@ -543,8 +563,9 @@ export class DoorOrdersService {
         );
         if (extras > total)
           doorConflict("هزینه‌های جانبی از جمع قطعی بیشتر است.");
-        const originalSnapshot =
-          previous.snapshot as unknown as DoorQuoteSnapshot;
+        const originalSnapshot = withoutLegacyDeposit(
+          previous.snapshot as unknown as DoorQuoteSnapshot,
+        );
         if (
           input.lineTotals.length !== originalSnapshot.lines.length ||
           input.lineTotals.reduce(
@@ -555,7 +576,6 @@ export class DoorOrdersService {
           doorConflict(
             "جمع قیمت‌های قطعی ردیف‌ها و هزینه‌های جانبی باید دقیقاً برابر مبلغ نهایی باشد.",
           );
-        const deposit = total;
         const version = row.currentQuoteVersion + 1;
         const snapshot: DoorQuoteSnapshot = {
           ...originalSnapshot,
@@ -571,8 +591,6 @@ export class DoorOrdersService {
             };
           }),
           total: total.toString(),
-          deposit: deposit.toString(),
-          depositPolicy: { kind: "FIXED", value: total.toString(), minimum: "0" },
           adjustments: input.adjustments,
           approvalReason:
             input.reason +
@@ -585,10 +603,7 @@ export class DoorOrdersService {
           data: {
             orderId: id,
             version,
-            approved: true,
-            total,
-            deposit,
-            snapshot: asDoorJson(snapshot),
+            ...quoteColumns(snapshot, true),
             approvedById: actor.userId,
           },
         });
@@ -621,7 +636,6 @@ export class DoorOrdersService {
         await this.record(tx, actor, id, "QUOTE_APPROVED", input.reason, {
           quoteVersion: version,
           total: total.toString(),
-          deposit: deposit.toString(),
         });
         await tx.outboxEvent.create({
           data: {
@@ -659,7 +673,7 @@ export class DoorOrdersService {
           ].includes(row.status)
         )
           doorConflict("قیمت قطعی برای پذیرش آماده نیست.");
-        const funded = doorPaid(row.order.payments) >= q.total!;
+        const funded = doorPaid(row.order.payments) === q.total!;
         await tx.doorOrder.update({
           where: { id },
           data: {
@@ -704,7 +718,7 @@ export class DoorOrdersService {
         if (
           !q.approved ||
           row.customerAcceptedQuoteVersion !== q.version ||
-          doorPaid(row.order.payments) < q.total!
+          doorPaid(row.order.payments) !== q.total!
         )
           doorConflict("پرداخت کامل یا پذیرش نسخه جاری کامل نیست.");
         await tx.doorOrder.update({
@@ -740,8 +754,6 @@ export class DoorOrdersService {
       assertDoorTransition(row.status, input.status, {
         approved: q.approved,
         accepted: row.customerAcceptedQuoteVersion === q.version,
-        paid,
-        deposit: q.total ?? 0n,
         remaining: q.total === null ? 1n : q.total - paid,
         technical: row.technicalApproved,
         stockReady: requirements.every(
