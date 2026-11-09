@@ -59,7 +59,7 @@ SELECT
   'role.permission.granted',
   'Role',
   "roleId",
-  jsonb_build_object('permissionId', "permissionId", 'source', '20261026140000_access_administration'),
+  jsonb_build_object('permissionId', "permissionId", 'source', '20261109090000_access_administration'),
   CURRENT_TIMESTAMP
 FROM inserted_grant;
 
