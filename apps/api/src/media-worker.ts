@@ -13,6 +13,7 @@ import { OutboxConsumerService } from './modules/outbox/outbox-consumer.service'
 import { OutboxRelayService } from './modules/outbox/outbox-relay.service';
 import { CustomerSmsDeliveryService } from './modules/notifications/customer-sms-delivery.service';
 import { OUTBOX_QUEUE_NAME, OUTBOX_QUEUE_PREFIX } from './modules/outbox/outbox-queue.port';
+import { InvoiceAutomationService } from './modules/invoices/invoice-automation.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
@@ -23,6 +24,7 @@ async function bootstrap(): Promise<void> {
   const outboxConsumer = app.get(OutboxConsumerService);
   const outboxRelay = app.get(OutboxRelayService);
   const customerSms = app.get(CustomerSmsDeliveryService);
+  const invoiceAutomation = app.get(InvoiceAutomationService);
   const connection = { url: config.get('REDIS_URL', { infer: true }) };
   const orderExpiry = await startOrderExpiryRuntime({
     redisUrl: connection.url,
@@ -129,6 +131,23 @@ async function bootstrap(): Promise<void> {
   const outboxTimer = setInterval(runOutbox, 5_000);
   runOutbox();
 
+  // Paid orders receive their store invoice shortly after payment once an operator has switched the
+  // automation on. Each pass is bounded and idempotent; an overlapping pass is skipped, not queued.
+  let invoicePass: Promise<void> | null = null;
+  const runInvoices = () => {
+    if (invoicePass) return;
+    invoicePass = invoiceAutomation.sweep()
+      .then(result => {
+        if (result.considered > 0) {
+          process.stdout.write(`Invoice automation considered=${result.considered} issued=${result.issued} published=${result.published} failed=${result.failed}\n`);
+        }
+      })
+      .catch(() => { process.stderr.write('Invoice automation pass failed.\n'); })
+      .finally(() => { invoicePass = null; });
+  };
+  const invoiceTimer = setInterval(runInvoices, 30_000);
+  runInvoices();
+
   let smsPass: Promise<void> | null = null;
   const runSms = () => {
     if (smsPass) return;
@@ -150,6 +169,7 @@ async function bootstrap(): Promise<void> {
     closing = true;
     clearInterval(outboxTimer);
     clearInterval(smsTimer);
+    clearInterval(invoiceTimer);
     await orderExpiry.close();
     await outboxPass;
     await smsPass;

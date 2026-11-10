@@ -15,6 +15,10 @@ import { ReviewsService } from './reviews.service';
 const ID = /^[A-Za-z0-9_-]{1,64}$/u;
 const SLUG = /^[\p{L}\p{N}_-]{1,250}$/u;
 const pipe = (expectedType: new () => object) => new ValidationPipe({ expectedType, whitelist: true, forbidNonWhitelisted: true, transform: true });
+// The compiled class declares every optional field as an own `undefined` property, and the global
+// pipe hands the route pipe such an instance. An absent filter must stay absent: `Number(undefined)`
+// is NaN, which `@IsOptional()` does not skip, and the unfiltered Admin list was rejected with 400.
+export const optionalInteger = ({ value }: { value: unknown }): unknown => (value === undefined || value === null ? undefined : Number(value));
 
 class ReviewBody {
   @IsInt() @Min(1) @Max(5) rating!: number;
@@ -31,16 +35,16 @@ class ReplyBody {
   @IsInt() @Min(1) expectedVersion!: number;
   @IsOptional() @IsString() @MaxLength(4000) reply!: string | null;
 }
-class PublicQuery {
-  @IsOptional() @Transform(({ value }) => Number(value)) @IsInt() @Min(1) @Max(100_000) page = 1;
+export class PublicQuery {
+  @IsOptional() @Transform(optionalInteger) @IsInt() @Min(1) @Max(100_000) page = 1;
   @IsOptional() @IsIn(['newest', 'highest', 'lowest']) sort: ReviewSort = 'newest';
 }
-class AdminQuery {
-  @IsOptional() @Transform(({ value }) => Number(value)) @IsInt() @Min(1) @Max(100_000) page = 1;
+export class AdminQuery {
+  @IsOptional() @Transform(optionalInteger) @IsInt() @Min(1) @Max(100_000) page = 1;
   @IsOptional() @IsIn(['PENDING', 'APPROVED', 'REJECTED', 'HIDDEN']) status?: ProductReviewStatus;
   @IsOptional() @IsString() @MaxLength(80) q?: string;
   @IsOptional() @Matches(ID) productId?: string;
-  @IsOptional() @Transform(({ value }) => Number(value)) @IsInt() @Min(1) @Max(5) rating?: number;
+  @IsOptional() @Transform(optionalInteger) @IsInt() @Min(1) @Max(5) rating?: number;
 }
 class SlugParam { @Matches(SLUG) slug!: string; }
 class IdParam { @Matches(ID) id!: string; }

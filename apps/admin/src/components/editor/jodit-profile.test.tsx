@@ -18,6 +18,17 @@ describe('buildJoditProfile', () => {
     expect(buildJoditProfile({ height: '100%' }).height).toBe('100%');
   });
 
+  it('never hands Jodit an explicit undefined that would replace its default', () => {
+    for (const profile of [buildJoditProfile(), buildJoditProfile({ variant: 'article' }), buildJoditProfile({ placeholder: undefined, height: undefined, readonly: undefined })]) {
+      expect(Object.entries(profile).filter(([, value]) => value === undefined)).toEqual([]);
+      expect('placeholder' in profile).toBe(false);
+      expect('height' in profile).toBe(false);
+      expect('events' in profile).toBe(false);
+    }
+    expect(buildJoditProfile({ readonly: false }).readonly).toBe(false);
+    expect(buildJoditProfile({ placeholder: '' }).placeholder).toBe('');
+  });
+
   it('propagates placeholder and readonly', () => {
     const profile = buildJoditProfile({ placeholder: 'متن توضیحات', readonly: true });
     expect(profile.placeholder).toBe('متن توضیحات');

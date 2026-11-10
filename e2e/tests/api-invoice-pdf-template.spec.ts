@@ -101,8 +101,11 @@ test("issued invoice PDF template embeds approved local assets, escapes text and
       page.locator("script,iframe,embed,object,a,[onerror]"),
     ).toHaveCount(0);
     await expect(page.locator("img")).toHaveCount(1);
-    await expect(page.locator(".line")).toHaveCount(70);
-    await expect(page.locator(".item").first()).toHaveText(
+    await expect(page.locator("tbody tr")).toHaveCount(70);
+    // The customer copy never carries a tax column, row or sentence.
+    await expect(page.locator("body")).not.toContainText("مالیات");
+    await expect(page.locator("thead th")).toHaveText(["ردیف", "شرح کالا", "تعداد", "قیمت واحد", "مبلغ کل"]);
+    await expect(page.locator("tbody .t").first()).toHaveText(
       /<img src="https:\/\/external.invalid\/private" onerror="alert\(1\)">/u,
     );
     expect(

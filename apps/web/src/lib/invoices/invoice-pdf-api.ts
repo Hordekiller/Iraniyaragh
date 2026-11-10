@@ -5,6 +5,7 @@ import type { AuthenticatedJsonRequest } from '../../state/auth-context'
 const root = (id: string) => `/api/v1/customers/me/invoices/${encodeURIComponent(id)}`
 
 type PdfResult = InvoicePdfRequestResponse['data']['pdf']
+type PdfEnvelope = InvoicePdfRequestResponse['data']
 
 /** POST /customers/me/invoices/:id/pdf — one idempotent, capacity-bounded request. */
 export function requestCustomerInvoicePdf(
@@ -12,10 +13,10 @@ export function requestCustomerInvoicePdf(
   id: string,
   key: string,
 ): Promise<PdfResult> {
-  return scoped<PdfResult>(root(id), {
+  return scoped<PdfEnvelope>(`${root(id)}/pdf`, {
     method: 'POST',
     headers: { 'Idempotency-Key': key },
-  }).then(value => value.data)
+  }).then(value => value.data.pdf)
 }
 
 /** GET /customers/me/invoices/:id/pdf — polling status. */
@@ -23,7 +24,7 @@ export function customerInvoicePdfStatus(
   scoped: AuthenticatedJsonRequest,
   id: string,
 ): Promise<PdfResult> {
-  return scoped<PdfResult>(root(id)).then(value => value.data)
+  return scoped<PdfEnvelope>(`${root(id)}/pdf`).then(value => value.data.pdf)
 }
 
 /** GET artifact — verified bytes; the caller resolves after the digest check. */

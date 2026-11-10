@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { CreditCard, MapPin, Package, RefreshCw, Truck } from 'lucide-react'
-import type { OrderDetail } from '@iranyaragh/contracts'
+import { CreditCard, FileText, MapPin, Package, RefreshCw, Truck } from 'lucide-react'
+import type { CustomerInvoiceListResponse, CustomerInvoiceSummary, OrderDetail } from '@iranyaragh/contracts'
 import { useOrderApi } from '../state/order-context'
 import { useAuth } from '../state/auth-context'
 import { formatTimestamp, formatToman, toPersianDigits } from '../lib/format'
@@ -62,6 +62,28 @@ function OrderDetailContents() {
 
   const order = result.key === requestKey ? result.order : null
   const error = result.key === requestKey ? result.error : null
+
+  // The published invoice of this order, if one exists. A failed lookup only hides the link;
+  // it never blocks or alters the order page.
+  const [invoiceResult, setInvoiceResult] = useState<{ key: string; invoice: CustomerInvoiceSummary | null }>({ key: '', invoice: null })
+  const loadedOrderId = order?.id
+  useEffect(() => {
+    if (auth.state.phase !== 'authenticated' || !loadedOrderId) return
+    let current = true
+    auth.request
+      .forCurrentPrincipal()<CustomerInvoiceListResponse['data']>(`/api/v1/customers/me/invoices?offset=0&limit=1&orderId=${encodeURIComponent(loadedOrderId)}`)
+      .then((response) => {
+        const found = response.data.items.find((item) => item.orderId === loadedOrderId) ?? null
+        if (current) setInvoiceResult({ key: requestKey, invoice: found })
+      })
+      .catch(() => {
+        if (current) setInvoiceResult({ key: requestKey, invoice: null })
+      })
+    return () => {
+      current = false
+    }
+  }, [auth.request, auth.state.phase, loadedOrderId, requestKey])
+  const invoice = invoiceResult.key === requestKey ? invoiceResult.invoice : null
 
   async function cancelOrder() {
     if (!order || order.status !== 'PENDING_PAYMENT' || !confirmCancel || inFlight.current) return
@@ -168,6 +190,17 @@ function OrderDetailContents() {
         </div>}
         {Boolean(cancelError) && <p role="alert" className="mt-3 text-sm font-bold text-red-700">لغو سفارش تأیید نشد. وضعیت سفارش را به‌روزرسانی کنید؛ تلاش دوباره با همان درخواست انجام می‌شود. {commerceErrorMessage(cancelError)}</p>}
       </section>}
+
+      {invoice && (
+        <section aria-label="فاکتور سفارش" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-emerald-900">
+            <FileText size={18} /> فاکتور این سفارش صادر شده است: <span dir="ltr">{invoice.number}</span>
+          </p>
+          <Link to={ROUTES.invoice(invoice.id)} className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white">
+            مشاهده و دریافت فاکتور
+          </Link>
+        </section>
+      )}
 
       <section className="mt-6 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="flex items-center gap-2 font-black text-slate-950">

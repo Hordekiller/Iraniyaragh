@@ -210,31 +210,77 @@ describe('Customer invoice ownership UI and session lifetime', () => {
       screen.queryByRole('link', { name: invoice.number }),
     ).not.toBeInTheDocument()
   })
-  it('shows tax lines and the policy sentence for a non-exempt invoice', async () => {
-    auth.request.mockResolvedValue({ data: { invoice } })
+  it('never shows tax to the customer when items, discount and shipping explain the total', async () => {
+    const inclusive = { ...invoice, taxPolicy: { treatment: 'INCLUSIVE' }, quote: { ...invoice.quote, tax: money('743713699842284') },
+      lines: [{ ...invoice.lines[0], tax: money('743713699842284') }] }
+    const exempt = { ...invoice, taxPolicy: { treatment: 'EXEMPT', exemptionReason: 'دلیل داخلی معافیت' } }
+    for (const stored of [invoice, inclusive, exempt]) {
+      auth.request.mockResolvedValue({ data: { invoice: stored } })
+      const view = render(component('/account/invoices/doc-a'))
+      await screen.findByRole('heading', { name: `فاکتور ${invoice.number}` })
+      expect(view.container).not.toHaveTextContent('مالیات')
+      expect(view.container).not.toHaveTextContent('معاف')
+      expect(view.container).not.toHaveTextContent('دلیل داخلی معافیت')
+      expect(view.container).not.toHaveTextContent('۷۴۳٬۷۱۳٬۶۹۹٬۸۴۲٬۲۸۴')
+      expect(screen.getByRole('table', { name: 'اقلام فاکتور' })).toHaveTextContent('۹٬۰۰۷٬۱۹۹٬۲۵۴٬۷۴۰٬۹۹۳')
+      expect(screen.getByLabelText('مبالغ فاکتور')).toHaveTextContent('مبلغ نهایی')
+      view.unmount()
+    }
+  })
+  it('keeps the tax line only when the stored total cannot be explained without it', async () => {
+    const added = { ...invoice, taxPolicy: { treatment: 'EXCLUSIVE' },
+      quote: { subtotal: money('1000'), discount: money('0'), shipping: money('0'), tax: money('90'), total: money('1090') } }
+    auth.request.mockResolvedValue({ data: { invoice: added } })
     render(component('/account/invoices/doc-a'))
     await screen.findByRole('heading', { name: `فاکتور ${invoice.number}` })
     expect(screen.getByRole('columnheader', { name: 'مالیات (ریال)' })).toBeVisible()
-    expect(screen.getByText(/^مالیات:/)).toBeVisible()
-    expect(screen.getByText('مالیات در مبلغ منظور شده است.')).toBeVisible()
+    expect(screen.getByLabelText('مبالغ فاکتور')).toHaveTextContent('مالیات')
   })
-  it('does not mention tax, the exemption or its reason to the customer of an exempt invoice', async () => {
-    const exempt = { ...invoice, taxPolicy: { treatment: 'EXEMPT', exemptionReason: 'دلیل داخلی معافیت' } }
-    auth.request.mockResolvedValue({ data: { invoice: exempt } })
-    const view = render(component('/account/invoices/doc-a'))
+  it('shows the discount column and row only when a discount exists', async () => {
+    auth.request.mockResolvedValue({ data: { invoice } })
+    const plain = render(component('/account/invoices/doc-a'))
     await screen.findByRole('heading', { name: `فاکتور ${invoice.number}` })
-    expect(screen.queryByRole('columnheader', { name: 'مالیات (ریال)' })).not.toBeInTheDocument()
-    expect(view.container).not.toHaveTextContent('مالیات')
-    expect(view.container).not.toHaveTextContent('معاف')
-    expect(view.container).not.toHaveTextContent('دلیل داخلی معافیت')
-    expect(screen.getByRole('table', { name: 'اقلام فاکتور' })).toHaveTextContent('۹٬۰۰۷٬۱۹۹٬۲۵۴٬۷۴۰٬۹۹۳')
-  })
-  it('still shows a non-zero tax amount even if the policy says exempt', async () => {
-    const odd = { ...invoice, taxPolicy: { treatment: 'EXEMPT', exemptionReason: 'x' }, quote: { ...invoice.quote, tax: money('5') } }
-    auth.request.mockResolvedValue({ data: { invoice: odd } })
+    expect(plain.container).not.toHaveTextContent('تخفیف')
+    plain.unmount()
+    const discounted = { ...invoice, quote: { ...invoice.quote, subtotal: money('1000'), discount: money('100'), total: money('900') } }
+    auth.request.mockResolvedValue({ data: { invoice: discounted } })
     render(component('/account/invoices/doc-a'))
     await screen.findByRole('heading', { name: `فاکتور ${invoice.number}` })
-    expect(screen.getByText(/^مالیات:/)).toBeVisible()
-    expect(screen.queryByText(/جدا از مبلغ پایه/)).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'تخفیف (ریال)' })).toBeVisible()
+  })
+  it('downloads the stored PDF with one action: request, wait until ready, verify, save', async () => {
+    const bytes = new TextEncoder().encode('%PDF-1.7 test')
+    const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), value => value.toString(16).padStart(2, '0')).join('')
+    const pending = { data: { pdf: { documentId: 'doc-a', status: 'PENDING', sha256: null, byteCount: null, replayed: false } } }
+    const ready = { data: { pdf: { documentId: 'doc-a', status: 'READY', sha256: digest, byteCount: bytes.byteLength, replayed: false } } }
+    const artifact = vi.fn(async () => new Response(bytes, { headers: { 'Content-Disposition': 'attachment; filename="iranyaragh-invoice-IRY-2026-000001.pdf"', 'X-Content-SHA256': digest } }))
+    Object.assign(auth.request, { response: artifact })
+    auth.request.mockImplementation(async (path: string, init?: { method?: string }) => {
+      if (path.endsWith('/pdf')) return init?.method === 'POST' ? pending : ready
+      return { data: { invoice } }
+    })
+    const createObjectURL = vi.fn(() => 'blob:invoice'); const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL }))
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    render(component('/account/invoices/doc-a'))
+    fireEvent.click(await screen.findByRole('button', { name: 'دریافت فایل فاکتور (PDF)' }))
+    expect(await screen.findByText('فایل فاکتور دریافت شد.', undefined, { timeout: 8000 })).toBeVisible()
+    const post = auth.request.mock.calls.find(([path, init]) => path === '/api/v1/customers/me/invoices/doc-a/pdf' && init?.method === 'POST')
+    expect(post?.[1].headers['Idempotency-Key']).toMatch(/^[0-9a-f-]{36}$/u)
+    expect(artifact).toHaveBeenCalledWith('/api/v1/customers/me/invoices/doc-a/pdf/artifact')
+    expect(createObjectURL).toHaveBeenCalledOnce()
+    expect(click).toHaveBeenCalledOnce()
+    click.mockRestore()
+  }, 15000)
+  it('reports a failed PDF request without claiming a file', async () => {
+    auth.request.mockImplementation(async (path: string) => {
+      if (path.endsWith('/pdf')) throw new AuthApiError({ code: 'INVOICE_PDF_DISABLED', message: 'private capacity detail', statusCode: 409 })
+      return { data: { invoice } }
+    })
+    render(component('/account/invoices/doc-a'))
+    fireEvent.click(await screen.findByRole('button', { name: 'دریافت فایل فاکتور (PDF)' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('دریافت فایل فاکتور در این لحظه ممکن نیست')
+    expect(screen.queryByText('private capacity detail')).not.toBeInTheDocument()
+    expect(screen.queryByText('فایل فاکتور دریافت شد.')).not.toBeInTheDocument()
   })
 })
