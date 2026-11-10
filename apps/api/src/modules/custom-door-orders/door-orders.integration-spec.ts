@@ -947,8 +947,8 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
       "19001",
     );
   });
-  it("issues a production service invoice through existing numbering and immutable invoice guards without a fake SKU", async () => {
-    let order = await create(true);
+  it("keeps a door sale a proforma until accepted and fully paid, then issues through the existing guards without a fake SKU", async () => {
+    let order = await create();
     order = await service.prepareInvoiceSource(
       commandActor(staff),
       order.id,
@@ -984,6 +984,28 @@ describe.sequential("Custom door orders PostgreSQL integration", () => {
     expect(draft.draft.doorQuoteId).toBe(order.quote.id);
     expect(draft.draft.lines[0].variantId).toBeNull();
     expect(draft.draft.sourceTermsMatch).toBe(true);
+    expect(draft.draft.doorPayment).toEqual({
+      status: "UNPAID",
+      customerAccepted: false,
+      finalInvoiceAllowed: false,
+    });
+    const issueRequest = {
+      expectedVersion: draft.draft.version,
+      expectedOrderVersion: order.commerceVersion,
+    };
+    await expect(
+      documents.issue(staff.userId, key(), draft.draft.id, issueRequest, key()),
+    ).rejects.toMatchObject({ response: { code: "INVOICE_PROFORMA_ONLY" } });
+    order = await service.accept(
+      commandActor(actor),
+      order.id,
+      order.version,
+      key(),
+    );
+    await expect(
+      documents.issue(staff.userId, key(), draft.draft.id, issueRequest, key()),
+    ).rejects.toMatchObject({ response: { code: "INVOICE_PROFORMA_ONLY" } });
+    order = await pay(order);
     const result = await documents.issue(
       staff.userId,
       key(),

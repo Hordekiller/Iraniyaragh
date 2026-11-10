@@ -1055,12 +1055,19 @@ function DoorInvoiceBridge({ order }: { order: DoorOrderView }) {
   return (
     <Paper sx={{ p: 3 }}>
       <Stack gap={2}>
-        <Typography variant="h6">فاکتور رسمی فروشگاه</Typography>
+        <Typography variant="h6">پیش‌فاکتور و فاکتور فروشگاه</Typography>
         <Typography variant="body2">
-          نسخه قطعی پذیرفته‌شده به‌عنوان خدمت ساخت وارد پیش‌فاکتور موجود فروشگاه
-          می‌شود. صدور شماره، انتشار و PDF از همان سامانه فاکتور انجام می‌شود.
-          سیاست مالیات باید با مبلغ قطعی سازگار باشد.
+          نسخه قطعی قیمت، حتی پیش از پذیرش مشتری، به‌عنوان خدمت ساخت وارد
+          پیش‌فاکتور فروشگاه می‌شود. فاکتور نهایی، شماره، انتشار و PDF فقط پس از
+          پذیرش مشتری و پرداخت کامل صادر می‌شود. سیاست مالیات باید با مبلغ قطعی
+          سازگار باشد.
         </Typography>
+        {order.financialStatus !== "SETTLED" && (
+          <Alert severity="warning">
+            پیش‌فاکتور این سفارش «پرداخت نشده» است و فاکتور فروش یا رسید پرداخت
+            محسوب نمی‌شود.
+          </Alert>
+        )}
         <Button
           disabled={busy || !!pending.current}
           onClick={() => void load()}
@@ -1084,8 +1091,7 @@ function DoorInvoiceBridge({ order }: { order: DoorOrderView }) {
           disabled={
             busy ||
             !addressId ||
-            !order.quote.approved ||
-            order.customerAcceptedQuoteVersion !== order.quote.version
+            !order.quote.approved
           }
           onClick={() => void prepare()}
         >
@@ -1098,7 +1104,7 @@ function DoorInvoiceBridge({ order }: { order: DoorOrderView }) {
             component={Link}
             href={`/invoices/${encodeURIComponent(draftId)}`}
           >
-            بررسی و صدور فاکتور
+            بررسی پیش‌فاکتور
           </Button>
         )}
         {error && <Alert severity="error">{error}</Alert>}

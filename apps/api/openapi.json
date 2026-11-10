@@ -28424,6 +28424,36 @@
                                 "PRICE_EXPIRED",
                                 "SOURCE_CHANGED"
                               ]
+                            },
+                            "doorQuoteId": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "doorPayment": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "UNPAID",
+                                    "PARTIALLY_PAID",
+                                    "FULLY_PAID",
+                                    "OVERPAID"
+                                  ]
+                                },
+                                "customerAccepted": {
+                                  "type": "boolean"
+                                },
+                                "finalInvoiceAllowed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "customerAccepted",
+                                "finalInvoiceAllowed"
+                              ]
                             }
                           },
                           "required": [
@@ -29633,6 +29663,36 @@
                                 "PRICE_EXPIRED",
                                 "SOURCE_CHANGED"
                               ]
+                            },
+                            "doorQuoteId": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "doorPayment": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "UNPAID",
+                                    "PARTIALLY_PAID",
+                                    "FULLY_PAID",
+                                    "OVERPAID"
+                                  ]
+                                },
+                                "customerAccepted": {
+                                  "type": "boolean"
+                                },
+                                "finalInvoiceAllowed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "customerAccepted",
+                                "finalInvoiceAllowed"
+                              ]
                             }
                           },
                           "required": [
@@ -30498,6 +30558,36 @@
                                 "POLICY_CHANGED",
                                 "PRICE_EXPIRED",
                                 "SOURCE_CHANGED"
+                              ]
+                            },
+                            "doorQuoteId": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "doorPayment": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "UNPAID",
+                                    "PARTIALLY_PAID",
+                                    "FULLY_PAID",
+                                    "OVERPAID"
+                                  ]
+                                },
+                                "customerAccepted": {
+                                  "type": "boolean"
+                                },
+                                "finalInvoiceAllowed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "customerAccepted",
+                                "finalInvoiceAllowed"
                               ]
                             }
                           },
@@ -31739,6 +31829,36 @@
                                 "PRICE_EXPIRED",
                                 "SOURCE_CHANGED"
                               ]
+                            },
+                            "doorQuoteId": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "doorPayment": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "UNPAID",
+                                    "PARTIALLY_PAID",
+                                    "FULLY_PAID",
+                                    "OVERPAID"
+                                  ]
+                                },
+                                "customerAccepted": {
+                                  "type": "boolean"
+                                },
+                                "finalInvoiceAllowed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "customerAccepted",
+                                "finalInvoiceAllowed"
+                              ]
                             }
                           },
                           "required": [
@@ -32617,6 +32737,36 @@
                                 "PRICE_EXPIRED",
                                 "SOURCE_CHANGED"
                               ]
+                            },
+                            "doorQuoteId": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "doorPayment": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "UNPAID",
+                                    "PARTIALLY_PAID",
+                                    "FULLY_PAID",
+                                    "OVERPAID"
+                                  ]
+                                },
+                                "customerAccepted": {
+                                  "type": "boolean"
+                                },
+                                "finalInvoiceAllowed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "customerAccepted",
+                                "finalInvoiceAllowed"
+                              ]
                             }
                           },
                           "required": [
@@ -33494,6 +33644,36 @@
                                 "POLICY_CHANGED",
                                 "PRICE_EXPIRED",
                                 "SOURCE_CHANGED"
+                              ]
+                            },
+                            "doorQuoteId": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "doorPayment": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "UNPAID",
+                                    "PARTIALLY_PAID",
+                                    "FULLY_PAID",
+                                    "OVERPAID"
+                                  ]
+                                },
+                                "customerAccepted": {
+                                  "type": "boolean"
+                                },
+                                "finalInvoiceAllowed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "status",
+                                "customerAccepted",
+                                "finalInvoiceAllowed"
                               ]
                             }
                           },
