@@ -24,6 +24,7 @@ import { ROUTES } from '../lib/routes'
 import { StoreBrandLogo } from '../components/brand/StoreBrandLogo'
 const rial = (amount: string) =>
   `${new Intl.NumberFormat('fa-IR').format(BigInt(amount))} ریال`
+const amountOnly = (amount: string) => new Intl.NumberFormat('fa-IR').format(BigInt(amount))
 const button =
   'rounded-xl border border-slate-200 px-4 py-3 font-bold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600'
 export function AccountInvoicesPage() {
@@ -107,13 +108,17 @@ function InvoiceContent({
     }
   }, [id, offset, request])
   const missing = error instanceof AuthApiError && error.statusCode === 404
-  // An exempt invoice carries no tax to explain to the customer. Show tax only when it
-  // is real: a non-exempt policy, or (defensively) any non-zero stored tax amount.
+  // The customer copy carries no tax column, row or wording. The one exception is a stored total
+  // that items, discount and shipping do not explain (a separately added tax): hiding that line
+  // would show figures that do not add up. Display decision only; nothing is recalculated.
   const showTax = invoice
-    ? invoice.taxPolicy.treatment !== 'EXEMPT' ||
-      invoice.quote.tax.amount !== '0' ||
-      invoice.lines.some((line) => line.tax.amount !== '0')
-    : true
+    ? invoice.quote.tax.amount !== '0' &&
+      BigInt(invoice.quote.subtotal.amount) - BigInt(invoice.quote.discount.amount) + BigInt(invoice.quote.shipping.amount) !==
+        BigInt(invoice.quote.total.amount)
+    : false
+  const showDiscount = invoice
+    ? invoice.quote.discount.amount !== '0' || invoice.lines.some((line) => line.discount.amount !== '0')
+    : false
   return (
     <div className="mx-auto max-w-[1040px] px-4 py-8 lg:px-6">
       <Link
@@ -126,7 +131,7 @@ function InvoiceContent({
         {invoice ? `فاکتور ${invoice.number}` : 'فاکتورهای من'}
       </h1>
       <p className="mt-2 text-sm text-slate-600">
-        فاکتور فروشگاهی، به‌تنهایی نشان‌دهندهٔ پرداخت یا تسویهٔ سفارش نیست.
+        {invoice ? 'نسخهٔ فاکتور فروش شما؛ می‌توانید فایل PDF آن را هم دریافت کنید.' : 'فاکتور سفارش‌های پرداخت‌شده پس از صدور در این صفحه دیده می‌شود.'}
       </p>
       <AccountNavigation />
       {id && (
@@ -200,53 +205,60 @@ function InvoiceContent({
         </>
       )}
       {!loading && error === undefined && invoice && (
-        <>
-          <section
-            aria-label="مشخصات فاکتور"
-            className="rounded-2xl border border-slate-200 bg-white p-5"
-          >
-            <div className="mb-4">
-              <StoreBrandLogo variant="wordmark" />
-            </div>
-            <h2 className="font-black">{invoice.seller.name}</h2>            <p>{invoice.seller.address}</p>
-            <p>{invoice.seller.contact}</p>
-            <p className="mt-3">
-              شماره: {invoice.number} — {formatTimestamp(invoice.issuedAt)}
-            </p>
-            <p>خریدار: {invoice.buyerLabel}</p>
-            <p>گیرنده: {invoice.address.recipient}</p>
-            <p>
-              نشانی: {invoice.address.city}، {invoice.address.address} — کد پستی{' '}
-              {invoice.address.postalCode}
-            </p>
-            <p>روش تحویل: {invoice.shippingTitle}</p>
-            <Link
-              to={ROUTES.order(encodeURIComponent(invoice.orderId))}
-              className="mt-3 inline-block font-bold underline"
-            >
-              مشاهدهٔ سفارش مبنا
-            </Link>
-          </section>
-          <CustomerInvoicePdf invoice={invoice} request={request.forCurrentPrincipal()} />
-          <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-            <table className="w-full text-right text-sm">
-              <caption className="p-3 font-bold">اقلام فاکتور</caption>
-              <thead className="bg-slate-50">
+        <article
+          aria-label="فاکتور فروش"
+          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+          <header className="flex flex-wrap items-center justify-between gap-4 border-b-4 border-slate-900 p-5">
+            <StoreBrandLogo variant="wordmark" />
+            <dl className="min-w-[230px] overflow-hidden rounded-xl border border-slate-200 text-sm">
+              <div className="flex border-b border-slate-200">
+                <dt className="w-28 bg-slate-100 px-3 py-2 text-slate-600">شمارهٔ فاکتور</dt>
+                <dd className="flex-1 px-3 py-2 text-left font-black" dir="ltr">{invoice.number}</dd>
+              </div>
+              <div className="flex">
+                <dt className="w-28 bg-slate-100 px-3 py-2 text-slate-600">تاریخ صدور</dt>
+                <dd className="flex-1 px-3 py-2 text-left font-bold">{formatTimestamp(invoice.issuedAt)}</dd>
+              </div>
+            </dl>
+          </header>
+          <div className="grid gap-4 p-5 md:grid-cols-2">
+            <section aria-label="فروشنده" className="overflow-hidden rounded-xl border border-slate-200">
+              <h2 className="bg-slate-900 px-4 py-2 text-sm font-black text-white">فروشنده</h2>
+              <div className="space-y-1 p-4 text-sm leading-7">
+                <p className="font-black text-slate-950">{invoice.seller.name}</p>
+                <p>{invoice.seller.address}</p>
+                <p><span className="text-slate-500">تماس:</span> {invoice.seller.contact}</p>
+              </div>
+            </section>
+            <section aria-label="خریدار" className="overflow-hidden rounded-xl border border-slate-200">
+              <h2 className="bg-slate-900 px-4 py-2 text-sm font-black text-white">خریدار</h2>
+              <div className="space-y-1 p-4 text-sm leading-7">
+                <p className="font-black text-slate-950">{invoice.buyerLabel}</p>
+                <p>{invoice.address.city}، {invoice.address.address}</p>
+                <p><span className="text-slate-500">کد پستی:</span> <bdi dir="ltr">{invoice.address.postalCode}</bdi></p>
+                <p><span className="text-slate-500">گیرنده:</span> {invoice.address.recipient}</p>
+              </div>
+            </section>
+          </div>
+          <p className="mx-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm">
+            <span className="text-slate-500">روش تحویل:</span> <b>{invoice.shippingTitle}</b>
+          </p>
+          <div className="mx-5 mt-4 overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full min-w-[560px] text-right text-sm">
+              <caption className="sr-only">اقلام فاکتور</caption>
+              <thead className="bg-slate-900 text-white">
                 <tr>
                   {[
-                    'کد کالا',
-                    'شرح',
+                    'ردیف',
+                    'شرح کالا',
                     'تعداد',
                     'قیمت واحد (ریال)',
-                    'تخفیف (ریال)',
+                    ...(showDiscount ? ['تخفیف (ریال)'] : []),
                     ...(showTax ? ['مالیات (ریال)'] : []),
-                    'جمع (ریال)',
+                    'مبلغ کل (ریال)',
                   ].map((label) => (
-                    <th
-                      scope="col"
-                      className="whitespace-nowrap p-3"
-                      key={label}
-                    >
+                    <th scope="col" className="whitespace-nowrap px-3 py-2.5 text-center text-xs font-bold" key={label}>
                       {label}
                     </th>
                   ))}
@@ -254,21 +266,19 @@ function InvoiceContent({
               </thead>
               <tbody>
                 {invoice.lines.map((line, index) => (
-                  <tr
-                    key={`${index}:${line.sku}`}
-                    className="border-t border-slate-100"
-                  >
-                    <th scope="row" className="p-3">
-                      {line.sku}
+                  <tr key={`${index}:${line.sku}`} className="border-t border-slate-200 even:bg-slate-50">
+                    <td className="px-3 py-2.5 text-center">{new Intl.NumberFormat('fa-IR').format(index + 1)}</td>
+                    <th scope="row" className="px-3 py-2.5 text-right font-bold">
+                      {line.title}
+                      <span className="block text-xs font-normal text-slate-500">
+                        کد کالا: <bdi dir="ltr">{line.sku}</bdi>
+                      </span>
                     </th>
-                    <td className="p-3">{line.title}</td>
-                    <td className="p-3">
-                      {new Intl.NumberFormat('fa-IR').format(line.quantity)}
-                    </td>
-                    {[line.unitPrice, line.discount, ...(showTax ? [line.tax] : []), line.total].map(
-                      (amount, ordinal) => (
-                        <td key={ordinal} className="whitespace-nowrap p-3">
-                          {rial(amount.amount)}
+                    <td className="px-3 py-2.5 text-center">{new Intl.NumberFormat('fa-IR').format(line.quantity)}</td>
+                    {[line.unitPrice, ...(showDiscount ? [line.discount] : []), ...(showTax ? [line.tax] : []), line.total].map(
+                      (amount, ordinal, cells) => (
+                        <td key={ordinal} className={`whitespace-nowrap px-3 py-2.5 text-center ${ordinal === cells.length - 1 ? 'font-black' : ''}`}>
+                          {amountOnly(amount.amount)}
                         </td>
                       ),
                     )}
@@ -277,33 +287,52 @@ function InvoiceContent({
               </tbody>
             </table>
           </div>
-          <section
-            aria-label="مبالغ فاکتور"
-            className="mt-5 rounded-2xl border border-slate-200 bg-white p-5"
-          >
-            <p>جمع اقلام: {rial(invoice.quote.subtotal.amount)}</p>
-            <p>تخفیف: {rial(invoice.quote.discount.amount)}</p>
-            <p>ارسال: {rial(invoice.quote.shipping.amount)}</p>
-            {showTax && <p>مالیات: {rial(invoice.quote.tax.amount)}</p>}
-            <p className="mt-2 font-black">
-              مبلغ نهایی: {rial(invoice.quote.total.amount)}
+          <div className="flex flex-wrap items-start justify-between gap-5 p-5">
+            <p className="max-w-md text-xs leading-6 text-slate-500">
+              مبالغ این فاکتور به ریال است. این سند از اطلاعات ثبت‌شدهٔ زمان صدور تهیه شده و رسید پرداخت نیست.
             </p>
-            {showTax && invoice.taxPolicy.treatment !== 'EXEMPT' && (
-              <p className="mt-2 text-sm">
-                {invoice.taxPolicy.treatment === 'INCLUSIVE'
-                  ? 'مالیات در مبلغ منظور شده است.'
-                  : 'مالیات جدا از مبلغ پایه است.'}
-              </p>
-            )}
-          </section>
-        </>
+            <dl aria-label="مبالغ فاکتور" className="w-full max-w-sm overflow-hidden rounded-xl border border-slate-200 text-sm">
+              <div className="flex justify-between border-b border-slate-200 px-4 py-2">
+                <dt className="text-slate-600">جمع اقلام</dt><dd className="font-bold">{rial(invoice.quote.subtotal.amount)}</dd>
+              </div>
+              {showDiscount && (
+                <div className="flex justify-between border-b border-slate-200 px-4 py-2">
+                  <dt className="text-slate-600">تخفیف</dt><dd className="font-bold">{rial(invoice.quote.discount.amount)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between border-b border-slate-200 px-4 py-2">
+                <dt className="text-slate-600">هزینهٔ ارسال</dt><dd className="font-bold">{rial(invoice.quote.shipping.amount)}</dd>
+              </div>
+              {showTax && (
+                <div className="flex justify-between border-b border-slate-200 px-4 py-2">
+                  <dt className="text-slate-600">مالیات</dt><dd className="font-bold">{rial(invoice.quote.tax.amount)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between bg-slate-900 px-4 py-3 text-base font-black text-white">
+                <dt>مبلغ نهایی</dt><dd>{rial(invoice.quote.total.amount)}</dd>
+              </div>
+            </dl>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 p-5">
+            <Link to={ROUTES.order(encodeURIComponent(invoice.orderId))} className="font-bold underline">
+              مشاهدهٔ سفارش این فاکتور
+            </Link>
+            <CustomerInvoicePdf invoice={invoice} request={request.forCurrentPrincipal()} />
+          </div>
+        </article>
       )}
     </div>
   )
 }
 
-/** Private downloadable copy of one published invoice; requests remain bounded
- * and the saved file is verified against the server-stored digest. */
+const PDF_POLL_INTERVAL_MS = 2000
+const PDF_POLL_ATTEMPTS = 20
+
+/**
+ * One action for the customer: ask the server for the stored PDF of this
+ * invoice, wait for it to be rendered, verify it against the server digest and
+ * save it. Waiting is bounded; nothing here reports a file that was not received.
+ */
 function CustomerInvoicePdf({
   invoice,
   request,
@@ -311,59 +340,42 @@ function CustomerInvoicePdf({
   invoice: CustomerInvoice
   request: AuthenticatedJsonRequest
 }) {
-  const [status, setStatus] = useState<InvoicePdfRequestResult>()
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const activeRef = useRef(true)
-  const pendingRef = useRef<Set<AbortController>>(new Set<AbortController>())
-  useEffect(() => () => {
-    activeRef.current = false
-    for (const controller of pendingRef.current) controller.abort()
+  // One key per requested file: repeating the click while it renders asks for the same file.
+  const keyRef = useRef<string | null>(null)
+  useEffect(() => {
+    activeRef.current = true
+    return () => { activeRef.current = false }
   }, [])
-  async function run(action: () => Promise<InvoicePdfRequestResult>) {
+  async function handleDownload() {
     if (busy) return
     setBusy(true)
     setError('')
-    setMessage('')
-    const controller = new AbortController()
-    pendingRef.current.add(controller)
+    setMessage('در حال آماده‌سازی فایل فاکتور…')
     try {
-      const result = await action()
+      keyRef.current ??= crypto.randomUUID()
+      let status: InvoicePdfRequestResult = await requestCustomerInvoicePdf(request, invoice.id, keyRef.current)
+      for (let attempt = 0; status.status !== 'READY' && attempt < PDF_POLL_ATTEMPTS; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, PDF_POLL_INTERVAL_MS))
+        if (!activeRef.current) return
+        status = await customerInvoicePdfStatus(request, invoice.id)
+      }
       if (!activeRef.current) return
-      setStatus(result)
-      setMessage(result.status === 'READY'
-        ? 'پروندهٔ فاکتور آماده است.'
-        : 'درخواست ثبت شد؛ کمی بعد وضعیت را بررسی کنید.')
-    } catch (cause) {
-      if (!activeRef.current) return
-      if (cause instanceof AuthApiError) setError('تنظیمات چاپ در دسترس نیست؛ کمی بعد دوباره امتحان کنید.')
-      else setError('درخواست تأیید نشد؛ دوباره تلاش کنید.')
-    } finally {
-      pendingRef.current.delete(controller)
-      if (activeRef.current) setBusy(false)
-    }
-  }
-  function handleRequest() {
-    const key = crypto.randomUUID()
-    void run(() => requestCustomerInvoicePdf(request, invoice.id, key))
-  }
-  function handleStatus() {
-    void run(() => customerInvoicePdfStatus(request, invoice.id))
-  }
-  async function handleDownload() {
-    if (busy || status?.status !== 'READY') return
-    setBusy(true)
-    setError('')
-    setMessage('')
-    const controller = new AbortController()
-    pendingRef.current.add(controller)
-    try {
+      if (status.status !== 'READY') {
+        setMessage('')
+        setError('فایل فاکتور هنوز آماده نشده است؛ چند لحظهٔ دیگر دوباره همین دکمه را بزنید.')
+        return
+      }
       const artifact = await downloadCustomerInvoicePdf(request, invoice.id, invoice.number)
       const digest = await crypto.subtle.digest('SHA-256', artifact.bytes)
       const sha256 = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('')
+      if (!activeRef.current) return
       if (artifact.serverSha256 && artifact.serverSha256 !== sha256) {
-        setError('پروندهٔ دریافت‌شده با هش ثبت‌شده سازگار نیست؛ دوباره بارگیری کنید.')
+        setMessage('')
+        setError('فایل دریافت‌شده کامل نیست؛ دوباره تلاش کنید.')
         return
       }
       const url = URL.createObjectURL(new Blob([artifact.bytes], { type: 'application/pdf' }))
@@ -373,44 +385,30 @@ function CustomerInvoicePdf({
       anchor.download = artifact.filename
       anchor.click()
       URL.revokeObjectURL(url)
-      if (activeRef.current) setMessage('پروندهٔ بررسی‌شده ذخیره شد.')
+      keyRef.current = null
+      setMessage('فایل فاکتور دریافت شد.')
     } catch (cause) {
       if (!activeRef.current) return
+      setMessage('')
       setError(cause instanceof AuthApiError
-        ? 'پرونده در این لحظه در دسترس نیست؛ کمی بعد دوباره امتحان کنید.'
-        : 'بارگیری تأیید نشد؛ دوباره امتحان کنید.')
+        ? 'دریافت فایل فاکتور در این لحظه ممکن نیست؛ کمی بعد دوباره تلاش کنید.'
+        : 'دریافت فایل تأیید نشد؛ اتصال را بررسی و دوباره تلاش کنید.')
     } finally {
-      pendingRef.current.delete(controller)
-      setBusy(false)
+      if (activeRef.current) setBusy(false)
     }
   }
   return (
-    <section aria-label="پروندهٔ خصوصی فاکتور" className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-      <h2 className="font-black">پروندهٔ خصوصی فاکتور</h2>
-      <p className="mt-2 text-sm text-slate-600">
-        درخواست یک نسخهٔ فایلِ ذخیره‌شده از همین فاکتور؛ ظرفیت و هش در سرور کنترل می‌شود.
-      </p>
-      {message && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-emerald-800">{message}</p>}
-      {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-red-800">{error}</p>}
-      <div className="mt-4 flex flex-wrap gap-3">
-        <button type="button" className={button} onClick={handleRequest} disabled={busy}>درخواست ساخت پرونده</button>
-        <button type="button" className={button} onClick={handleStatus} disabled={busy}>بررسی وضعیت</button>
-        <button
-          type="button"
-          className={`${button} bg-orange-700 text-white`}
-          onClick={() => void handleDownload()}
-          disabled={busy || status?.status !== 'READY'}
-        >
-          بارگیری پروندهٔ فاکتور
-        </button>
-      </div>
-      {status && (
-        <p className="mt-3 text-sm text-slate-700">
-          وضعیت: {status.status === 'READY' ? 'آماده' : 'در انتظار چاپ'}
-          {status.status === 'READY' && status.sha256 ? ` — هش ${status.sha256.slice(0, 12)}…` : ''}
-          {status.replayed ? '؛ پاسخ تکرارِ درخواست قبلی است.' : ''}
-        </p>
-      )}
-    </section>
+    <div className="flex flex-col items-end gap-2">
+      <button
+        type="button"
+        className="rounded-xl bg-orange-700 px-5 py-3 font-bold text-white disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 focus-visible:ring-offset-2"
+        onClick={() => void handleDownload()}
+        disabled={busy}
+      >
+        {busy ? 'در حال آماده‌سازی…' : 'دریافت فایل فاکتور (PDF)'}
+      </button>
+      {message && <p role="status" className="text-sm text-emerald-800">{message}</p>}
+      {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
+    </div>
   )
 }

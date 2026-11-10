@@ -39,6 +39,14 @@ describe('Invoice issuance HTTP current authorization and strict contract',()=>{
   it.each([{number:'fake'}, {customerId:'foreign'}, {actorId:'spoof'}, {total:'1'}, {state:'PAID'}, {taxRateBps:0}, {expectedVersion:-1}, {expectedOrderVersion:1.5}, {expectedOrderVersion:undefined}])('rejects arbitrary financial/state/identity input before issuing',async patch=>{
     expect((await call('/drafts/draft/issue','staff',{expectedVersion:0,expectedOrderVersion:1,...patch})).status).toBe(400);expect(service.issue).not.toHaveBeenCalled();
   });
+  it('answers PDF request and status in the published `data.pdf` envelope the Admin client reads',async()=>{
+    const asked=await fetch(`${origin}/api/v1/invoices/admin/documents/invoice/pdf`,{method:'POST',headers:{authorization:'Bearer reader','idempotency-key':'pdf-envelope-key'}});
+    expect(asked.status).toBe(200);
+    expect(await asked.json()).toMatchObject({data:{pdf:{documentId:'invoice',status:'PENDING',replayed:false}}});
+    const polled=await call('/documents/invoice/pdf','reader');
+    expect(polled.status).toBe(200);
+    expect(await polled.json()).toMatchObject({data:{pdf:{documentId:'invoice',status:'READY',byteCount:64}}});
+  });
   it('uses bounded no-store reads and rejects owner/query/pagination injection',async()=>{
     expect((await call('/documents','reader')).status).toBe(200);expect((await call('/documents/invoice','reader')).headers.get('cache-control')).toBe('no-store');
     vi.clearAllMocks();for(const path of ['/documents?customerId=foreign','/documents?offset=-1','/documents/invoice?userId=foreign','/drafts/draft/document?customerId=foreign'])expect((await call(path,'staff')).status).toBe(400);

@@ -193,7 +193,10 @@ describe('Invoice visibility HTTP authorization and customer-self boundaries', (
       expect(response.status).toBe(200);
       expect(response.headers.get('cache-control')).toBe('no-store');
     }
-    expect(service.customerList).toHaveBeenCalledWith('customer-a', 0, 25);
+    expect(service.customerList).toHaveBeenCalledWith('customer-a', 0, 25, undefined);
+    // Narrowing to one order is a filter inside the caller's own invoices; identity still comes from the session.
+    expect((await call('/customers/me/invoices?orderId=order-1&limit=1', 'customer')).status).toBe(200);
+    expect(service.customerList).toHaveBeenLastCalledWith('customer-a', 0, 1, 'order-1');
     expect(service.customerRead).toHaveBeenCalledWith('customer-a', 'doc-a');
     expect((await call(admin, 'customer')).status).toBe(403);
     expect((await call('/customers/me/invoices', 'staff')).status).toBe(403);
@@ -221,11 +224,25 @@ describe('Invoice visibility HTTP authorization and customer-self boundaries', (
     '/customers/me/invoices?userId=foreign',
     '/customers/me/invoices?offset=-1',
     '/customers/me/invoices?limit=101',
+    '/customers/me/invoices?orderId=',
+    '/customers/me/invoices?orderId=bad%20id',
+    '/customers/me/invoices?orderId=a&orderId=b',
     '/customers/me/invoices/doc-a?customerId=foreign',
   ])('rejects ownership/pagination query tampering', async (path) => {
     expect((await call(path, 'customer')).status).toBe(400);
     expect(service.customerRead).not.toHaveBeenCalled();
     expect(service.customerList).not.toHaveBeenCalled();
+  });
+  it('answers the customer PDF request and status in the published `data.pdf` envelope', async () => {
+    const asked = await fetch(`${origin}/api/v1/customers/me/invoices/doc-a/pdf`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer customer', 'idempotency-key': 'customer-pdf-key' },
+    });
+    expect(asked.status).toBe(200);
+    expect(await asked.json()).toMatchObject({ data: { pdf: { documentId: 'doc-a', status: 'PENDING', replayed: false } } });
+    const polled = await call('/customers/me/invoices/doc-a/pdf', 'customer');
+    expect(polled.status).toBe(200);
+    expect(await polled.json()).toMatchObject({ data: { pdf: { documentId: 'doc-a', status: 'READY', byteCount: 64 } } });
   });
   it('requires a bounded idempotency key and allows safe staff-only paginated history', async () => {
     expect((await call(admin, 'staff', body, '')).status).toBe(400);

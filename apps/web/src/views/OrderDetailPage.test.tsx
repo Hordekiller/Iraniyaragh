@@ -114,3 +114,35 @@ it('shows confirmed delivery time from the fulfillment timeline', async () => {
   expect(await screen.findByText(/تحویل تأیید شد/)).toBeInTheDocument()
   expect(screen.getByText('PKG-1234')).toBeInTheDocument()
 })
+
+it('links a paid order to its own published invoice and stays silent when there is none or the lookup fails', async () => {
+  const api = commerceStub({ getOrder: async () => ({ ...ORDER, status: 'PAID' }) })
+  const summary = { id: 'inv-1', number: 'IRY-2026-000007', orderId: ORDER.id, issuedAt: ORDER.updatedAt, total: { amount: '1000', currency: 'IRR' } }
+  const scoped = vi.fn(async () => ({ data: { items: [summary], count: 1, offset: 0, limit: 1 } }))
+  const withInvoices = (request: typeof scoped): AuthContextValue => {
+    const auth = testAuthContext()
+    return { ...auth, request: Object.assign(request, { forCurrentPrincipal: () => request }) as unknown as AuthContextValue['request'] }
+  }
+  const found = render(sessionPage(withInvoices(scoped), api))
+  const link = await screen.findByRole('link', { name: 'مشاهده و دریافت فاکتور' })
+  expect(link).toHaveAttribute('href', '/account/invoices/inv-1')
+  expect(screen.getByRole('region', { name: 'فاکتور سفارش' })).toHaveTextContent('IRY-2026-000007')
+  // The filter narrows the caller's own invoices; no customer or user id is ever sent.
+  expect(scoped).toHaveBeenCalledWith(`/api/v1/customers/me/invoices?offset=0&limit=1&orderId=${ORDER.id}`)
+  found.unmount()
+
+  // An invoice of another order is never attached to this one.
+  const foreign = vi.fn(async () => ({ data: { items: [{ ...summary, orderId: 'other-order' }], count: 1, offset: 0, limit: 1 } }))
+  const none = render(sessionPage(withInvoices(foreign), api))
+  await screen.findByRole('heading', { name: /سفارش IR-0001/ })
+  await waitFor(() => expect(foreign).toHaveBeenCalled())
+  expect(screen.queryByRole('link', { name: 'مشاهده و دریافت فاکتور' })).not.toBeInTheDocument()
+  none.unmount()
+
+  const failing = vi.fn(async () => { throw new Error('private transport') }) as unknown as typeof scoped
+  render(sessionPage(withInvoices(failing), api))
+  await screen.findByRole('heading', { name: /سفارش IR-0001/ })
+  await waitFor(() => expect(failing).toHaveBeenCalled())
+  expect(screen.queryByRole('link', { name: 'مشاهده و دریافت فاکتور' })).not.toBeInTheDocument()
+  expect(screen.queryByText('private transport')).not.toBeInTheDocument()
+})

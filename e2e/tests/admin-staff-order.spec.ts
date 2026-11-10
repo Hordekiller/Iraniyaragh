@@ -497,8 +497,8 @@ test('staff records a server-priced pending walk-in order then explicitly approv
         headers: { authorization: `Bearer ${accessToken}`, 'idempotency-key': key },
       });
       expect(ask.status()).toBe(200);
-      const asked = (await ask.json()) as { data: { documentId: string; status: string; sha256: string | null; byteCount: number | null; replayed: boolean } };
-      expect(asked.data).toMatchObject({ documentId, status: 'PENDING', replayed: false });
+      const asked = (await ask.json()) as { data: { pdf: { documentId: string; status: string; sha256: string | null; byteCount: number | null; replayed: boolean } } };
+      expect(asked.data.pdf).toMatchObject({ documentId, status: 'PENDING', replayed: false });
 
       // The isolated render worker claims the lease, renders and finalises.
       let ready: { status: string; sha256: string | null; byteCount: number | null; replayed: boolean } | undefined;
@@ -507,8 +507,8 @@ test('staff records a server-priced pending walk-in order then explicitly approv
           headers: { authorization: `Bearer ${accessToken}` },
         });
         expect(polling.status()).toBe(200);
-        const body = (await polling.json()) as { data: { status: string; sha256: string | null; byteCount: number | null; replayed: boolean } };
-        ready = body.data;
+        const body = (await polling.json()) as { data: { pdf: { status: string; sha256: string | null; byteCount: number | null; replayed: boolean } } };
+        ready = body.data.pdf;
         return ready.status;
       }, { timeout: 80_000, intervals: [2_000] }).toBe('READY');
       expect(ready!.replayed).toBe(false);
@@ -535,7 +535,7 @@ test('staff records a server-priced pending walk-in order then explicitly approv
         headers: { authorization: `Bearer ${accessToken}`, 'idempotency-key': key },
       });
       expect(replay.status()).toBe(200);
-      expect(((await replay.json()) as { data: { status: string; replayed: boolean } }).data)
+      expect(((await replay.json()) as { data: { pdf: { status: string; replayed: boolean } } }).data.pdf)
         .toMatchObject({ status: 'READY', replayed: true });
     } finally {
       await api.dispose();

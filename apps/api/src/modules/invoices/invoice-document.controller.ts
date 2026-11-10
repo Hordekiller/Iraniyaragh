@@ -66,7 +66,8 @@ export class InvoiceDocumentController {
   async requestPdf(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Headers('idempotency-key') key: string,
     @Query() query: Record<string, unknown>) {
     if (Object.keys(query).length) throw invoiceInvalid('This resource accepts no owner or query override.');
-    return { data: await this.pdf.request({ scope: 'staff', actorId: principal.userId, requestId: getRequestId(), documentId: id, key: normalizeIdempotencyKey(key) }) };
+    // The shared contract and the published schema wrap the result as `data.pdf`; the Admin client reads exactly that.
+    return { data: { pdf: await this.pdf.request({ scope: 'staff', actorId: principal.userId, requestId: getRequestId(), documentId: id, key: normalizeIdempotencyKey(key) }) } };
   }
 
   /** Poll the render status of one issued document. */
@@ -75,7 +76,7 @@ export class InvoiceDocumentController {
   @ApiResponse({ status: 409, schema: failureError(['INVOICE_PDF_NOT_READY'], 409) })
   async pdfStatus(@CurrentPrincipal() principal: AuthPrincipalContext, @Param('id') id: string, @Query() query: Record<string, unknown>) {
     if (Object.keys(query).length) throw invoiceInvalid('This resource accepts no owner or query override.');
-    return { data: await this.pdf.status({ scope: 'staff', actorId: principal.userId, documentId: id }) };
+    return { data: { pdf: await this.pdf.status({ scope: 'staff', actorId: principal.userId, documentId: id }) } };
   }
 
   /** Authoritative private artifact download; bytes are verified and never READY-early. */

@@ -45,6 +45,7 @@ import { normalizeIdempotencyKey } from '../../common/idempotency-key';
 import { failureError } from '../orders/order-openapi-schemas';
 import { invoiceInvalid } from './invoice-policy.validation';
 import {
+  customerInvoicePage,
   invoicePage,
   InvoicePublicationService,
 } from './invoice-publication.service';
@@ -182,12 +183,13 @@ export class CustomerInvoiceController {
     @CurrentPrincipal() principal: AuthPrincipalContext,
     @Query() query: Record<string, unknown>,
   ) {
-    const page = invoicePage(query);
+    const page = customerInvoicePage(query);
     return {
       data: await this.service.customerList(
         principal.userId,
         page.offset,
         page.limit,
+        page.orderId,
       ),
     };
   }
@@ -233,13 +235,15 @@ export class CustomerInvoiceController {
     if (Object.keys(query).length)
       throw invoiceInvalid('This resource accepts no owner or query override.');
     return {
-      data: await this.pdf.request({
-        scope: 'customer',
-        actorId: principal.userId,
-        requestId: getRequestId(),
-        documentId: id,
-        key: normalizeIdempotencyKey(key),
-      }),
+      data: {
+        pdf: await this.pdf.request({
+          scope: 'customer',
+          actorId: principal.userId,
+          requestId: getRequestId(),
+          documentId: id,
+          key: normalizeIdempotencyKey(key),
+        }),
+      },
     };
   }
 
@@ -255,11 +259,13 @@ export class CustomerInvoiceController {
     if (Object.keys(query).length)
       throw invoiceInvalid('This resource accepts no owner or query override.');
     return {
-      data: await this.pdf.status({
-        scope: 'customer',
-        actorId: principal.userId,
-        documentId: id,
-      }),
+      data: {
+        pdf: await this.pdf.status({
+          scope: 'customer',
+          actorId: principal.userId,
+          documentId: id,
+        }),
+      },
     };
   }
 

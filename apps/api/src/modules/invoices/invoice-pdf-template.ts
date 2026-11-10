@@ -3,7 +3,12 @@ import type { CustomerInvoice, Money } from "@iranyaragh/contracts";
 
 // Internal rendering boundary only. Authorization, durable jobs and private
 // artifact downloads must be implemented before exposing a PDF endpoint.
-export const INVOICE_PDF_TEMPLATE_REVISION = "store-invoice-a4-v3";
+export const INVOICE_PDF_TEMPLATE_REVISION = "store-invoice-a4-v4";
+/** Earlier layouts stay renderable byte for byte, so evidence of an already rendered PDF can be reproduced. */
+export const INVOICE_PDF_PREVIOUS_REVISIONS = Object.freeze(["store-invoice-a4-v1", "store-invoice-a4-v2", "store-invoice-a4-v3"]);
+/** Revisions printed with the first wordmark asset. */
+const FIRST_WORDMARK_REVISIONS = ["store-invoice-a4-v1", "store-invoice-a4-v2"];
+export const invoicePdfUsesFirstWordmark = (templateRevision: string): boolean => FIRST_WORDMARK_REVISIONS.includes(templateRevision);
 export const INVOICE_PDF_LEGACY_BRAND_SHA256 = "457401b43c2c484ced56e1858da9c84a0998d86099ab0935e82bad90f69cbcc4";
 export const INVOICE_PDF_LIMITS = Object.freeze({
   lines: 100,
@@ -82,6 +87,86 @@ function taxText(policy: CustomerInvoice["taxPolicy"]): string {
   return `${policy.treatment === "INCLUSIVE" ? "مالیات در مبلغ منظور شده است" : "مالیات جدا از مبلغ پایه"}؛ نرخ ثبت‌شده: <bdi dir="ltr">${rate}%</bdi>`;
 }
 
+const isZero = (value: Money): boolean => value?.amount === "0";
+
+/**
+ * Current customer layout (v4): wordmark and document identity side by side,
+ * seller/buyer cards, one row per item and a totals box.
+ *
+ * The customer copy carries no tax column, row, rate or exemption text. Stored
+ * amounts are printed verbatim; the single exception is a document whose stored
+ * total is not explained by items, discount and shipping alone (a separately
+ * added tax), where the tax line is kept so the printed figures still add up.
+ */
+function currentInvoiceHtml(
+  invoice: CustomerInvoice,
+  parts: { number: string; date: string; fontBase64: string; wordmarkBase64: string },
+): string {
+  // Display decision only, never a recalculation: is the stored total explained by the printed rows?
+  const figure = (value: Money): bigint => { amount(value); return BigInt(value.amount); };
+  const explained = figure(invoice.quote.subtotal) - figure(invoice.quote.discount) + figure(invoice.quote.shipping) === figure(invoice.quote.total);
+  const taxAdded = !explained && !isZero(invoice.quote.tax);
+  const showDiscount = !isZero(invoice.quote.discount) || invoice.lines.some((line) => !isZero(line?.discount));
+  const rows = invoice.lines
+    .map((line, index) => {
+      if (!line || !Number.isSafeInteger(line.quantity) || line.quantity < 1 || line.quantity > 1000) invalid();
+      // Validate every stored component, including the ones this layout does not print.
+      amount(line.netAmount);
+      amount(line.tax);
+      const discount = amount(line.discount);
+      return `<tr><td class="n">${index + 1}</td><td class="d"><span class="t">${text(line.title, 500)}</span><span class="s">کد کالا: <bdi dir="ltr">${text(line.sku, 128)}</bdi></span></td><td class="q">${line.quantity}</td><td class="m">${amount(line.unitPrice)}</td>${showDiscount ? `<td class="m">${discount}</td>` : ""}<td class="m total">${amount(line.total)}</td></tr>`;
+    })
+    .join("");
+  amount(invoice.quote.netAmount);
+  const tax = amount(invoice.quote.tax);
+  const totals = [
+    ["جمع اقلام", amount(invoice.quote.subtotal), ""],
+    ...(showDiscount ? [["تخفیف", amount(invoice.quote.discount), ""]] : []),
+    ["هزینهٔ ارسال", amount(invoice.quote.shipping), ""],
+    ...(taxAdded ? [["مالیات", tax, ""]] : []),
+    ["مبلغ نهایی", amount(invoice.quote.total), " grand"],
+  ]
+    .map(([label, value, modifier]) => `<div class="row${modifier}"><dt>${label}</dt><dd>${value} <span class="unit">ریال</span></dd></div>`)
+    .join("");
+  const headers = ["ردیف", "شرح کالا", "تعداد", "قیمت واحد", ...(showDiscount ? ["تخفیف"] : []), "مبلغ کل"];
+  const widths = showDiscount ? ["9mm", "auto", "14mm", "30mm", "26mm", "32mm"] : ["9mm", "auto", "16mm", "34mm", "36mm"];
+  return `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:">
+<title>فاکتور فروش ${parts.number}</title><style>
+@font-face{font-family:InvoiceLocal;src:url(data:font/woff2;base64,${parts.fontBase64}) format('woff2');font-weight:100 900;font-display:block}
+@page{size:A4;margin:12mm 12mm 16mm;@bottom-center{content:"${parts.number} — فاکتور فروش — مبالغ به ریال";font-family:InvoiceLocal,sans-serif;font-size:8px;color:#6b7280;direction:rtl}}
+*{box-sizing:border-box}body{margin:0;color:#1f2937;background:#fff;font:10.5px/1.75 InvoiceLocal,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+bdi{unicode-bidi:isolate}p{margin:0;overflow-wrap:anywhere}h1,h2{margin:0}
+.head{display:table;width:100%;table-layout:fixed;border-bottom:1.2mm solid #1c2434;padding-bottom:4mm}
+.head>div{display:table-cell;vertical-align:middle}.brand{width:62mm;height:21mm;object-fit:contain;object-position:right center;display:block}
+.identity{width:74mm}.identity h1{font-size:19px;font-weight:800;color:#1c2434;line-height:1.5;text-align:left}
+.meta{margin-top:1.5mm;border:.25mm solid #d1d5db;border-radius:1.6mm;overflow:hidden}.meta div{display:table;width:100%;table-layout:fixed}.meta div+div{border-top:.25mm solid #e5e7eb}
+.meta span{display:table-cell;padding:1mm 2.5mm;font-size:9.5px}.meta .k{width:24mm;background:#f3f4f6;color:#4b5563}.meta .v{font-weight:700;text-align:left}
+.parties{display:table;width:100%;table-layout:fixed;border-spacing:0;margin:5mm 0 3mm}.party{display:table-cell;width:50%;vertical-align:top;border:.25mm solid #d1d5db;border-radius:1.6mm;padding:0 0 2.5mm;overflow-wrap:anywhere}
+.party+.gap{display:table-cell;width:4mm;border:0}.party h2{font-size:10.5px;font-weight:800;color:#fff;background:#1c2434;padding:1mm 3mm;border-radius:1.2mm 1.2mm 0 0;margin-bottom:1.5mm}.party p{padding:0 3mm}
+.party .name{font-weight:700;font-size:11px}.party .k{color:#6b7280}
+.delivery{margin:0 0 3mm;padding:1.4mm 3mm;background:#f9fafb;border:.25mm solid #e5e7eb;border-radius:1.6mm}.delivery b{font-weight:700}
+table{width:100%;table-layout:fixed;border-collapse:collapse}thead{display:table-header-group}tr{break-inside:avoid}
+th{background:#1c2434;color:#fff;font-weight:700;font-size:9.5px;padding:1.8mm 2mm;text-align:center;border:.25mm solid #1c2434}
+td{padding:1.8mm 2mm;border:.25mm solid #d1d5db;vertical-align:middle;overflow-wrap:anywhere}tbody tr:nth-child(even) td{background:#f9fafb}
+.n,.q,.m{text-align:center}.total{font-weight:700}.d .t{display:block;font-weight:600}.d .s{display:block;font-size:8.5px;color:#6b7280}
+.amount{white-space:nowrap;font-variant-numeric:tabular-nums}
+.summary{break-inside:avoid;margin-top:4mm;display:table;width:100%;table-layout:fixed}.summary>div{display:table-cell;vertical-align:top}
+.notice{padding-left:5mm;font-size:8.5px;color:#6b7280;line-height:1.9}
+.totals{width:78mm;margin:0;border:.25mm solid #d1d5db;border-radius:1.6mm;overflow:hidden}.totals .row{display:table;width:100%;table-layout:fixed}.totals .row+.row{border-top:.25mm solid #e5e7eb}
+.totals dt,.totals dd{display:table-cell;padding:1.5mm 3mm;margin:0}.totals dt{width:30mm;color:#4b5563}.totals dd{text-align:left;font-weight:600}.unit{font-size:8.5px;color:#6b7280;font-weight:400}
+.totals .grand dt,.totals .grand dd{background:#1c2434;color:#fff;font-weight:800;font-size:12px}.totals .grand .unit{color:#e5e7eb}
+</style></head><body>
+<header class="head"><div><img class="brand" width="1086" height="370" src="data:image/png;base64,${parts.wordmarkBase64}" alt="ایرانی یراق"></div>
+<div class="identity"><h1>فاکتور فروش</h1><div class="meta"><div><span class="k">شمارهٔ فاکتور</span><span class="v"><bdi dir="ltr">${parts.number}</bdi></span></div><div><span class="k">تاریخ صدور</span><span class="v">${parts.date}</span></div></div></div></header>
+<section class="parties" aria-label="فروشنده و خریدار"><section class="party"><h2>فروشنده</h2><p class="name">${text(invoice.seller.name, 200)}</p><p>${text(invoice.seller.address, 1000)}</p><p><span class="k">تماس:</span> ${text(invoice.seller.contact, 200)}</p></section><div class="gap"></div>
+<section class="party"><h2>خریدار</h2><p class="name">${text(invoice.buyerLabel, 300)}</p><p>${text(invoice.address.city, 100)}، ${text(invoice.address.address, 500)}</p><p><span class="k">کد پستی:</span> <bdi dir="ltr">${text(invoice.address.postalCode, 32)}</bdi></p><p><span class="k">گیرنده:</span> ${text(invoice.address.recipient, 120)} — <span class="k">تلفن:</span> <bdi dir="ltr">${text(invoice.address.mobile, 32)}</bdi></p></section></section>
+<p class="delivery"><span class="k">روش تحویل:</span> <b>${text(invoice.shippingTitle, 200)}</b></p>
+<table><colgroup>${widths.map((width) => `<col style="width:${width}">`).join("")}</colgroup><thead><tr>${headers.map((label) => `<th scope="col">${label}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>
+<section class="summary"><div class="notice"><p>مبالغ این فاکتور به ریال است.</p><p>این سند از اطلاعات ثبت‌شدهٔ زمان صدور تهیه شده است و رسید پرداخت نیست. این سند، صورتحساب سامانهٔ مؤدیان نیست.</p></div><div style="width:78mm"><dl class="totals">${totals}</dl></div></section>
+</body></html>`;
+}
+
 /** Render stored amounts verbatim. This function never quotes or changes money,
  * payment, invoice numbering, ownership or inventory. Only the customer-safe
  * issued projection is printed; extra staff/audit/provider properties are ignored.
@@ -98,8 +183,9 @@ export function buildInvoicePdfHtml(
   brandSha256: string;
 } {
   try {
-    if (!["store-invoice-a4-v1", "store-invoice-a4-v2", INVOICE_PDF_TEMPLATE_REVISION].includes(templateRevision)) throw new InvoicePdfInputError();
-    const legacy = templateRevision !== INVOICE_PDF_TEMPLATE_REVISION;
+    if (![...INVOICE_PDF_PREVIOUS_REVISIONS, INVOICE_PDF_TEMPLATE_REVISION].includes(templateRevision)) throw new InvoicePdfInputError();
+    const legacy = invoicePdfUsesFirstWordmark(templateRevision);
+    const current = templateRevision === INVOICE_PDF_TEMPLATE_REVISION;
     const expectedBrandHash = legacy ? INVOICE_PDF_LEGACY_BRAND_SHA256 : INVOICE_PDF_ASSETS.brandSha256;
     const brandName = templateRevision === "store-invoice-a4-v1" ? "ایران یراق" : "ایرانی یراق";
     if (
@@ -135,6 +221,11 @@ export function buildInvoicePdfHtml(
       }).format(issuedAt),
     );
     const policy = taxText(invoice.taxPolicy);
+    if (current) {
+      const html = currentInvoiceHtml(invoice, { number, date, fontBase64: assets.fontWoff2.toString("base64"), wordmarkBase64: assets.wordmarkPng.toString("base64") });
+      if (Buffer.byteLength(html, "utf8") > INVOICE_PDF_LIMITS.htmlBytes) invalid();
+      return { html, htmlSha256: hash(html), templateRevision, ...INVOICE_PDF_ASSETS, brandSha256: expectedBrandHash };
+    }
     // An exempt invoice carries no tax to explain to the customer, so tax columns, rows, the
     // policy sentence and the internal exemption reason are not printed. A non-zero stored
     // tax amount is still shown (it must never be hidden).

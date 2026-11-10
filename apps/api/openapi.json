@@ -40233,6 +40233,44 @@
         ]
       }
     },
+    "/settings/admin/invoice-automation": {
+      "get": {
+        "operationId": "InvoiceAutomationController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read whether paid orders are invoiced and published automatically, and how many are waiting",
+        "tags": [
+          "InvoiceAutomation"
+        ]
+      },
+      "put": {
+        "operationId": "InvoiceAutomationController_update",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Switch automatic invoice issuance and publication for paid orders on or off; the enabling operator is the standing authority",
+        "tags": [
+          "InvoiceAutomation"
+        ]
+      }
+    },
     "/returns/admin/settings": {
       "get": {
         "operationId": "ReturnsController_readSettings",
