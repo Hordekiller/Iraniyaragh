@@ -102,9 +102,23 @@ test('staff opens the review list, writes an article in the real editor, saves i
   await expect(page.getByText(UNCONFIRMED)).toHaveCount(0);
 
   // A full reload restores the session and reads the article from the server.
-  const reread = page.waitForResponse(response => isApiExact(response, `/blog/admin/posts/${createdPost.id}`));
+  // The article route that replaced /blog/new reads the article itself. Let that read finish first:
+  // a response captured before the reload loses its body once the page navigates.
+  await expect(editor).toHaveAttribute('data-status', 'ready', { timeout: 20_000 });
+  await expect(page.getByRole('textbox', { name: 'عنوان', exact: true })).toHaveValue(title);
+  await page.waitForLoadState('networkidle');
+  type StoredPost = { title: string; excerpt: string; bodyHtml: string; status: string };
+  let stored: StoredPost | null = null;
+  const reread = page.waitForResponse(async response => {
+    if (!isApiExact(response, `/blog/admin/posts/${createdPost.id}`)) return false;
+    // Read the body while its request is still the current document's.
+    stored = await response.json().then((body: { data: { post: StoredPost } }) => body.data.post, () => null);
+    return stored !== null;
+  });
   await page.reload();
-  const stored = ((await (await reread).json()) as { data: { post: { title: string; excerpt: string; bodyHtml: string; status: string } } }).data.post;
+  await reread;
+  if (stored === null) throw new Error('The reloaded article page did not read the article from the server.');
+  stored = stored as StoredPost;
   expect(stored.title).toBe(title);
   expect(stored.excerpt).toBe(excerpt);
   expect(stored.status).toBe('DRAFT');
