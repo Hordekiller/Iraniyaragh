@@ -107,6 +107,17 @@ export function customerInvoice(snapshot: InvoiceDocument): CustomerInvoice {
     })),
   };
 }
+/**
+ * The customer list may additionally be narrowed to one order. This is a filter
+ * inside the caller's own invoices, never an identity: ownership still comes only
+ * from the session, so another customer's order id simply matches nothing.
+ */
+export function customerInvoicePage(query: Record<string, unknown>) {
+  const { orderId, ...page } = query;
+  if (orderId !== undefined && (typeof orderId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/u.test(orderId)))
+    throw invoiceInvalid('A valid order id is required.');
+  return { ...invoicePage(page), orderId: orderId as string | undefined };
+}
 export function invoicePage(query: Record<string, unknown>) {
   if (Object.keys(query).some((key) => !['offset', 'limit'].includes(key)))
     throw invoiceInvalid('Only bounded pagination is accepted.');
@@ -353,15 +364,18 @@ export class InvoicePublicationService {
       return this.safeFailure(error);
     }
   }
-  async customerList(userId: string, offset = 0, limit = 25) {
+  async customerList(userId: string, offset = 0, limit = 25, orderId?: string) {
     if (typeof userId !== 'string' || !userId.trim()) throw missing();
     bounded(offset, limit);
+    if (orderId !== undefined && (typeof orderId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/u.test(orderId)))
+      throw invoiceInvalid('A valid order id is required.');
     try {
       return await this.prisma.$transaction(
         async (tx) => {
           const where: Prisma.InvoiceDocumentWhereInput = {
             customer: { userId, status: 'ACTIVE' },
             publication: { isPublished: true },
+            ...(orderId === undefined ? {} : { orderId }),
           };
           const rows = await tx.invoiceDocument.findMany({
             where,

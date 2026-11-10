@@ -73,8 +73,14 @@ function invoice(): CustomerInvoice {
 describe("Private invoice PDF fixed template boundary", () => {
   it("uses the corrected display brand for new PDFs and preserves the legacy render revision", () => {
     const current = buildInvoicePdfHtml(invoice(), assets);
-    expect(current.templateRevision).toBe("store-invoice-a4-v3");
+    expect(current.templateRevision).toBe("store-invoice-a4-v4");
     expect(current.html).toContain('alt="ایرانی یراق"');
+    // The layout before this one stays reproducible byte for byte with the same wordmark.
+    const third = buildInvoicePdfHtml(invoice(), assets, "store-invoice-a4-v3");
+    expect(third.templateRevision).toBe("store-invoice-a4-v3");
+    expect(third.htmlSha256).toBe("7f36ff6ddd4f5a63d112961bafe580804c4a5cad5919ec7593374fa0d46d9869");
+    expect(third.brandSha256).toBe(current.brandSha256);
+    expect(third.html).not.toBe(current.html);
     const legacy = buildInvoicePdfHtml(invoice(), legacyAssets, "store-invoice-a4-v1");
     expect(legacy.templateRevision).toBe("store-invoice-a4-v1");
     expect(legacy.htmlSha256).toBe("f2643cac3d89dbc839906f2a84ee6fe5707a4ee9d343dfe3b52da9530003822b");
@@ -207,7 +213,9 @@ describe("Private invoice PDF fixed template boundary", () => {
       exemptionReason: null,
       shippingTaxable: true,
     };
-    expect(buildInvoicePdfHtml(input, assets).html).toContain("1.25%");
+    // The customer copy never prints a rate; the earlier layout still does for its own artifacts.
+    expect(buildInvoicePdfHtml(input, assets).html).not.toContain("1.25%");
+    expect(buildInvoicePdfHtml(input, assets, "store-invoice-a4-v3").html).toContain("1.25%");
     input.taxPolicy = {
       treatment: "EXEMPT",
       rateBps: 0,
@@ -224,25 +232,42 @@ describe("Private invoice PDF fixed template boundary", () => {
       InvoicePdfInputError,
     );
   });
-  it("keeps tax visible for taxed invoices and never hides a non-zero tax amount", () => {
-    const taxed = invoice();
-    const html = buildInvoicePdfHtml(taxed, assets).html;
-    expect(html).toContain("مالیات");
-    expect(html).toContain('colspan="4"');
-    const odd = invoice();
-    odd.taxPolicy = { treatment: "EXEMPT", rateBps: 0, exemptionReason: "x", shippingTaxable: false };
-    odd.quote.tax = { amount: "5", currency: "IRR" };
-    const oddHtml = buildInvoicePdfHtml(odd, assets).html;
-    expect(oddHtml).toContain("<dt>مالیات</dt>");
+  it("never prints tax on the customer copy when items, discount and shipping explain the total", () => {
+    for (const treatment of ["INCLUSIVE", "EXEMPT"] as const) {
+      const input = invoice();
+      input.taxPolicy = { treatment, rateBps: treatment === "EXEMPT" ? 0 : 900, exemptionReason: treatment === "EXEMPT" ? "سبب داخلی" : null, shippingTaxable: false };
+      // An inclusive policy stores a tax component inside the price; the customer still sees one price.
+      if (treatment === "INCLUSIVE") { input.quote.tax = money("743713699842284"); input.lines[0].tax = money("743713699842284"); }
+      const html = buildInvoicePdfHtml(input, assets).html;
+      expect(html, treatment).not.toContain("مالیات");
+      expect(html, treatment).not.toContain("معاف");
+      expect(html, treatment).not.toContain("سبب داخلی");
+      expect(html, treatment).not.toContain("743,713,699,842,284");
+      expect(html, treatment).toContain("مبلغ نهایی");
+      expect(html, treatment).toContain("9,007,199,254,740,993");
+    }
   });
-  it("prints a three-column table without tax for an exempt invoice", () => {
-    const input = invoice();
-    input.taxPolicy = { treatment: "EXEMPT", rateBps: 0, exemptionReason: "سبب", shippingTaxable: false };
-    const html = buildInvoicePdfHtml(input, assets).html;
-    expect(html).toContain('colspan="3"');
-    expect(html).not.toContain('colspan="4"');
-    expect(html).not.toContain("<dt>مالیات</dt>");
-    expect(html).toContain("مبلغ نهایی");
+  it("keeps the tax line only when the stored total cannot be explained without it", () => {
+    const added = invoice();
+    added.taxPolicy = { treatment: "EXCLUSIVE", rateBps: 900, exemptionReason: null, shippingTaxable: false };
+    added.quote = { subtotal: money("1000"), discount: money("0"), shipping: money("0"), netAmount: money("1000"), tax: money("90"), total: money("1090") };
+    const html = buildInvoicePdfHtml(added, assets).html;
+    expect(html).toContain("<dt>مالیات</dt>");
+    expect(html).toContain("1,090");
+    expect(html).not.toContain("9.00%");
+  });
+  it("prints one row per item with its code and quantity, and a discount column only when a discount exists", () => {
+    const plain = buildInvoicePdfHtml(invoice(), assets).html;
+    expect(plain).toContain('<th scope="col">شرح کالا</th>');
+    expect(plain).toContain('<td class="q">1</td>');
+    expect(plain).toContain("SYNTHETIC-1");
+    expect(plain).not.toContain('<th scope="col">تخفیف</th>');
+    expect(plain).not.toContain("<dt>تخفیف</dt>");
+    const discounted = invoice();
+    discounted.quote = { ...discounted.quote, subtotal: money("1000"), discount: money("100"), netAmount: money("900"), total: money("900") };
+    const html = buildInvoicePdfHtml(discounted, assets).html;
+    expect(html).toContain('<th scope="col">تخفیف</th>');
+    expect(html).toContain("<dt>تخفیف</dt>");
   });
   it("bounds rows, quantities, plain text and encoded input; never silently truncates an invoice", () => {
     const input = invoice();

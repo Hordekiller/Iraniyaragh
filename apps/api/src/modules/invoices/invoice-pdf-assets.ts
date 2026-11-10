@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { INVOICE_PDF_ASSETS, INVOICE_PDF_LEGACY_BRAND_SHA256, INVOICE_PDF_TEMPLATE_REVISION, InvoicePdfInputError } from './invoice-pdf-template';
+import { INVOICE_PDF_ASSETS, INVOICE_PDF_LEGACY_BRAND_SHA256, INVOICE_PDF_PREVIOUS_REVISIONS, INVOICE_PDF_TEMPLATE_REVISION, InvoicePdfInputError, invoicePdfUsesFirstWordmark } from './invoice-pdf-template';
 
 const FONT_RELATIVE = join('fonts', 'Vazirmatn[wght].woff2');
 const WORDMARK_RELATIVE = join('brand', 'wordmark-print.png');
@@ -31,7 +31,7 @@ export class InvoicePdfAssetsProvider {
   constructor(private readonly assetsDir?: string) {}
 
   load(templateRevision: string = INVOICE_PDF_TEMPLATE_REVISION): InvoicePdfAssets {
-    if (!['store-invoice-a4-v1', 'store-invoice-a4-v2', INVOICE_PDF_TEMPLATE_REVISION].includes(templateRevision)) throw new InvoicePdfInputError();
+    if (![...INVOICE_PDF_PREVIOUS_REVISIONS, INVOICE_PDF_TEMPLATE_REVISION].includes(templateRevision)) throw new InvoicePdfInputError();
     let assets = this.cached.get(templateRevision);
     if (!assets) {
       assets = this.read(templateRevision);
@@ -43,7 +43,7 @@ export class InvoicePdfAssetsProvider {
   private read(templateRevision: string): InvoicePdfAssets {
     const baseDir = this.assetsDir ?? REPO_FALLBACK_DIR;
     const fontWoff2 = readAsset(baseDir, FONT_RELATIVE);
-    const legacy = templateRevision !== INVOICE_PDF_TEMPLATE_REVISION;
+    const legacy = invoicePdfUsesFirstWordmark(templateRevision);
     const wordmarkPng = readAsset(baseDir, legacy ? join('brand', 'wordmark-print-v2.png') : WORDMARK_RELATIVE);
     if (hash(fontWoff2) !== invoicePdfAssetHashes.font || hash(wordmarkPng) !== (legacy ? INVOICE_PDF_LEGACY_BRAND_SHA256 : invoicePdfAssetHashes.brand)) {
       throw new InvoicePdfInputError();
