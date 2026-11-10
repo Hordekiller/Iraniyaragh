@@ -11,6 +11,7 @@ import { InvoiceDraftService, invoiceDraftStorage } from './invoice-draft.servic
 import { InvoicePolicyService } from './invoice-policy.service';
 import { invoiceDraftId, invoiceDraftVersion } from './invoice-draft.validation';
 import { invoiceInvalid } from './invoice-policy.validation';
+import { doorInvoiceState } from '../custom-door-orders/door-pricing';
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
 const conflict = (message: string) => new ConflictException({ code: 'INVOICE_ISSUE_CONFLICT', message });
@@ -71,13 +72,18 @@ export class InvoiceDocumentService {
         if (row.version !== input.expectedVersion) throw new ConflictException({ code: 'STALE_VERSION', message: 'Review the current draft version.' });
         if (row.source !== 'ORDER' || !row.sourceOrderId) throw conflict('Catalog quotations require an authorized source order before issuance.');
         await tx.$queryRaw`SELECT "id" FROM "Order" WHERE "id" = ${row.sourceOrderId} FOR UPDATE`;
-        const order = await tx.order.findUnique({ where: { id: row.sourceOrderId }, include: { items: { orderBy: { ordinal: 'asc' } }, customer: true } });
+        const order = await tx.order.findUnique({ where: { id: row.sourceOrderId }, include: { items: { orderBy: { ordinal: 'asc' } }, customer: true, customDoorOrder: { include: { quotes: true } }, payments: { select: { status: true, amount: true, refundedAmount: true } } } });
         if (!order || order.customerId !== row.customerId || order.customer.status !== 'ACTIVE' || !['PENDING_PAYMENT','PAID','CREDIT_APPROVED'].includes(order.status)) throw conflict('The source sale/customer is not currently eligible.');
         if (order.version !== input.expectedOrderVersion || row.sourceOrderVersion !== order.version) throw new ConflictException({ code: 'INVOICE_SOURCE_CHANGED', message: 'Review and requote the current source order.' });
         const policy = await this.policies.requireActive(tx);
         if (policy.id !== row.policyRevisionId) throw new ConflictException({ code: 'INVOICE_REQUOTE_REQUIRED', message: 'Explicitly review the current seller/tax policy.' });
         const draft = await this.drafts.inspectIn(tx, draftId);
         if (draft.quotationStatus !== 'CURRENT' || !draft.sourceTermsMatch || !draft.quote || draft.quote.total.amount !== order.grandTotal.toString()) throw conflict('Issued terms must match the original authorized sale and current backend quote exactly.');
+        if (order.customDoorOrder) {
+          const doorQuote = order.customDoorOrder.quotes.find(q => q.id === row.doorQuoteId);
+          if (!doorQuote || doorQuote.total === null || !doorInvoiceState(order.customDoorOrder, { version: doorQuote.version, total: doorQuote.total }, order.payments).finalInvoiceAllowed)
+            throw new ConflictException({ code: 'INVOICE_PROFORMA_ONLY', message: 'A custom-door sale stays a proforma until its accepted quote is fully paid.' });
+        }
         if (await tx.invoiceDocument.findUnique({ where: { orderId: order.id }, select: { id: true } })) throw conflict('An original invoice already exists for this order.');
         const now = new Date(); const period = storeInvoicePeriod(now);
         if (period < 2000 || period > 9999) throw conflict('Issuance time is outside the supported store numbering period.');

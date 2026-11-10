@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DoorProformaNotice } from "./DoorProformaNotice";
 import { DoorSummary } from "./DoorSummary";
 import { DoorOrderFloatingLink } from "./DoorOrderFloatingLink";
 import { CustomDoorsPage } from "../../views/CustomDoorsPage";
@@ -396,4 +397,20 @@ it("shows final payment guidance without exposing historical deposit installment
   expect(screen.getByText("مبلغ قطعی")).toBeInTheDocument();
   expect(screen.getByText(/مبلغ نهایی یکجا پرداخت می‌شود/)).toBeInTheDocument();
   expect(container.textContent).not.toContain("بیعانه");
+});
+
+describe("DoorProformaNotice", () => {
+  it.each([
+    ["UNPAID", "پیش‌فاکتور — پرداخت نشده"],
+    ["UNPRICED", "پیش‌فاکتور — پرداخت نشده"],
+    ["PARTIAL", "پیش‌فاکتور — پرداخت کامل نشده"],
+  ] as const)("states the %s payment state on the proforma", (status, text) => {
+    render(<DoorProformaNotice financialStatus={status} />);
+    expect(screen.getByRole("note")).toHaveTextContent(text);
+    expect(screen.getByRole("note")).toHaveTextContent("رسید پرداخت نیست");
+  });
+  it("is absent once payment is settled", () => {
+    const { container } = render(<DoorProformaNotice financialStatus="SETTLED" />);
+    expect(container).toBeEmptyDOMElement();
+  });
 });

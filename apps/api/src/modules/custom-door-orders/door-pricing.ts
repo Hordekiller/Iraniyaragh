@@ -235,6 +235,30 @@ export function priceDoors(
   };
 }
 
+/** A door sale document is a proforma until the current quote is accepted and
+ * net verified payments equal its total exactly. */
+export function doorInvoiceState(
+  door: { customerAcceptedQuoteVersion: number | null },
+  quote: { version: number; total: bigint },
+  payments: { status: string; amount: bigint; refundedAmount: bigint }[],
+) {
+  const paid = doorPaid(payments);
+  const status =
+    paid === 0n
+      ? ("UNPAID" as const)
+      : paid < quote.total
+        ? ("PARTIALLY_PAID" as const)
+        : paid === quote.total
+          ? ("FULLY_PAID" as const)
+          : ("OVERPAID" as const);
+  const customerAccepted = door.customerAcceptedQuoteVersion === quote.version;
+  return {
+    status,
+    customerAccepted,
+    finalInvoiceAllowed: customerAccepted && status === "FULLY_PAID",
+  };
+}
+
 /** Historical rows may carry deposit terms; they stay stored but are never served. */
 export function withoutLegacyDeposit<T extends object>(value: T): T {
   const copy = { ...value } as Record<string, unknown>;

@@ -14,10 +14,11 @@ import { STAFF_PICKUP_POLICY } from '../orders/staff-pickup-policy';
 import { invoiceDraftEdit, invoiceDraftFields, invoiceDraftId, invoiceDraftText, invoiceDraftVersion } from './invoice-draft.validation';
 import { invoiceInvalid } from './invoice-policy.validation';
 import { invoiceAmount, quoteInvoice } from './invoice-quote';
+import { doorInvoiceState } from '../custom-door-orders/door-pricing';
 
 const include = { lines: { orderBy: { ordinal: 'asc' as const } }, policyRevision: true };
 type Row = Prisma.InvoiceDraftGetPayload<{ include: typeof include }>;
-const orderInclude = { customDoorOrder: { include: { quotes: true } }, items: { orderBy: { ordinal: 'asc' as const } }, customer: true };
+const orderInclude = { customDoorOrder: { include: { quotes: true } }, payments: { select: { status: true, amount: true, refundedAmount: true } }, items: { orderBy: { ordinal: 'asc' as const } }, customer: true };
 type SourceOrder = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
 const money = (amount: bigint) => ({ amount: invoiceAmount(amount.toString()).toString(), currency: 'IRR' as const });
@@ -142,7 +143,7 @@ export class InvoiceDraftService {
       if (order.customDoorOrder) {
         const door = order.customDoorOrder;
         const q = door.quotes.find(q => q.version === door.currentQuoteVersion);
-        if (!q?.approved || q.total === null || door.customerAcceptedQuoteVersion !== q.version || ['DRAFT','CANCELLED','PENDING_QUOTE_APPROVAL'].includes(door.status)) throw conflict('INVOICE_SOURCE_UNAVAILABLE', 'A final customer-accepted door quote is required.');
+        if (!q?.approved || q.total === null || ['DRAFT','CANCELLED','PENDING_QUOTE_APPROVAL'].includes(door.status)) throw conflict('INVOICE_SOURCE_UNAVAILABLE', 'A final approved door quote is required.');
         if (await tx.invoiceDraft.findFirst({ where: { sourceOrderId: orderId, state: 'DRAFT' } })) throw conflict('INVOICE_DRAFT_EXISTS', 'An active draft already exists for this order.');
         const policy = await this.activePolicy(tx);
         const address = normalizeCheckoutAddress(order.addressSnapshot as unknown as CheckoutAddress);
@@ -293,7 +294,9 @@ export class InvoiceDraftService {
       })) : null;
     const quotationStatus = !policy || !row.policyRevisionId ? 'POLICY_REQUIRED' : policy.id !== row.policyRevisionId ? 'POLICY_CHANGED' :
       row.source === 'ORDER' && !sourceCurrent ? 'SOURCE_CHANGED' : row.source === 'CATALOG' && (!row.quoteExpiresAt || row.quoteExpiresAt <= new Date()) ? 'PRICE_EXPIRED' : 'CURRENT';
-    return { ...(row.doorQuoteId ? { doorQuoteId: row.doorQuoteId } : {}), id: row.id, version: row.version, state: row.state, source: row.source, customerId: row.customerId, buyerLabel: row.buyerLabel,
+    const door = source?.customDoorOrder; const doorQuote = door?.quotes.find(q => q.id === row.doorQuoteId);
+    const doorPayment = door && doorQuote && doorQuote.total !== null ? doorInvoiceState(door, { version: doorQuote.version, total: doorQuote.total }, source!.payments) : null;
+    return { ...(row.doorQuoteId ? { doorQuoteId: row.doorQuoteId } : {}), ...(doorPayment ? { doorPayment } : {}), id: row.id, version: row.version, state: row.state, source: row.source, customerId: row.customerId, buyerLabel: row.buyerLabel,
       sourceOrderId: row.sourceOrderId, sourceOrderVersion: row.sourceOrderVersion, sourceTermsMatch,
       address: row.addressSnapshot as unknown as CheckoutAddress, note: row.note,
       lines: row.lines.map(line => ({ variantId: line.variantId, sku: line.sku, title: line.title, quantity: line.quantity,

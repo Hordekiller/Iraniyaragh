@@ -6,6 +6,8 @@ export type InvoiceDraftEdit = Omit<InvoiceDraftCreate, 'customerId'> & { expect
 export type InvoiceDraftFromOrder = { expectedOrderVersion: number; note: string | null };
 export type InvoiceDraft = {
   doorQuoteId?: string | null;
+  /** Custom-door drafts only. A door draft stays a proforma until finalInvoiceAllowed. */
+  doorPayment?: { status: 'UNPAID' | 'PARTIALLY_PAID' | 'FULLY_PAID' | 'OVERPAID'; customerAccepted: boolean; finalInvoiceAllowed: boolean };
   id: string; version: number; state: InvoiceDraftState; source: 'CATALOG' | 'ORDER';
   customerId: string; buyerLabel: string; sourceOrderId: string | null; sourceOrderVersion: number | null;
   sourceTermsMatch: boolean | null; address: CheckoutAddress; note: string | null;
