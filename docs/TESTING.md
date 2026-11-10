@@ -52,6 +52,29 @@ preserves exact mutation payloads/idempotency keys, cancels work from another
 identity, and never loops when the refreshed bearer is rejected. The existing
 server inactivity, revocation, fresh-MFA and permission rules remain authoritative.
 
+## Admin blog and review browser regression
+
+`e2e/tests/admin-blog-reviews.spec.ts` signs in with the real staff password/TOTP
+and, against the real API and isolated test database, opens the review list,
+starts the packaged Jodit article editor, writes Persian content (including a
+source-mode round trip), creates the draft, reloads and compares the stored HTML,
+edits it and submits it for review. No response is mocked. It exists because three
+failures were invisible to unit tests:
+
+- the production `tsc` build declares optional DTO fields as own `undefined`
+  properties, while the unit-test transpiler does not, so a query transform that
+  is not safe for `undefined` (`Number(undefined)`) only failed in the built API;
+- the article editor was mocked in page tests, so nothing started the real Jodit
+  with the article page's own options;
+- the article API client was mocked, so a command key that a browser cannot send
+  as a header value (it contained the Persian button label) was never passed to
+  `fetch`.
+
+Keep query transforms idempotent and `undefined`-safe (`reviews.query-pipe.spec.ts`
+runs the global and the route pipe in sequence), keep one real-Jodit test per
+editor variant, and keep idempotency keys ASCII (`blog-api.test.ts` builds real
+`Headers`).
+
 ## Local PostgreSQL setup
 
 Start the repository PostgreSQL service, then create dedicated test and shadow

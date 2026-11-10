@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 import { ApiAbortError } from '@/lib/api/client';
 import { canPublishBlog, canReadBlog, canWriteBlog } from '@/lib/blog/blog-permissions';
 import { createBlogPost, newBlogCommandKey, readBlogMedia, readBlogPost, readBlogRevisions, transitionBlogPost, updateBlogPost } from '@/lib/blog/blog-api';
+import type { BlogCommand } from '@/lib/blog/blog-api';
 import { STATUS_LABEL, STATUS_TONE, blogErrorText, suggestSlug } from '@/lib/blog/blog-labels';
 
 const EMPTY: BlogPostInput = { slug: '', title: '', excerpt: '', bodyHtml: '', coverMediaId: null, coverAlt: null, tags: [], seoTitle: null, seoDescription: null, sources: [] };
@@ -83,12 +84,13 @@ function Editor({ postId }: { postId: string | null }) {
     { ok: !form.seoTitle || form.seoTitle.length <= 70, text: 'عنوان سئو حداکثر ۷۰ نویسه' },
   ];
 
-  async function run(work: (key: string, input: BlogPostInput) => Promise<BlogPostAdmin>, label: string, afterNew?: boolean) {
+  async function run(command: BlogCommand, work: (key: string, input: BlogPostInput) => Promise<BlogPostAdmin>, label: string, afterNew?: boolean) {
     if (busy) return;
     setBusy(true); setError(null); setNotice(null);
     const input = current();
-    const signature = JSON.stringify({ label, input, version: post?.version });
-    if (keyRef.current?.signature !== signature) keyRef.current = { signature, key: newBlogCommandKey(label) };
+    const signature = JSON.stringify({ command, input, version: post?.version });
+    // The key names the command, never the Persian label shown to the operator: header values must be Latin-1.
+    if (keyRef.current?.signature !== signature) keyRef.current = { signature, key: newBlogCommandKey(command) };
     try {
       const result = await work(keyRef.current.key, input);
       keyRef.current = null;
@@ -101,8 +103,8 @@ function Editor({ postId }: { postId: string | null }) {
     } finally { setBusy(false); }
   }
 
-  const save = () => run((key, input) => (post ? updateBlogPost(post.id, post.version, input, key) : createBlogPost(input, key)), post ? 'ذخیره' : 'ایجاد پیش‌نویس', !post);
-  const move = (action: BlogTransitionAction, label: string) => run((key) => transitionBlogPost(post!.id, { action, expectedVersion: post!.version, ...(action === 'publish' ? { publishAt: localToIso(publishAt) } : {}) }, key), label);
+  const save = () => run(post ? 'update' : 'create', (key, input) => (post ? updateBlogPost(post.id, post.version, input, key) : createBlogPost(input, key)), post ? 'ذخیره' : 'ایجاد پیش‌نویس', !post);
+  const move = (action: BlogTransitionAction, label: string) => run(action, (key) => transitionBlogPost(post!.id, { action, expectedVersion: post!.version, ...(action === 'publish' ? { publishAt: localToIso(publishAt) } : {}) }, key), label);
 
   if (loading) return <Typography role="status">در حال دریافت مقاله…</Typography>;
   if (loadError) return <Alert severity="error">{blogErrorText(loadError)}</Alert>;
@@ -126,7 +128,7 @@ function Editor({ postId }: { postId: string | null }) {
             helperText={`${form.excerpt.length}/400 — در فهرست، اشتراک‌گذاری و موتورهای پاسخ نمایش داده می‌شود؛ پاسخ اصلی مقاله را در همین چند جمله بدهید.`} onChange={event => change({ excerpt: event.target.value })} />
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>متن مقاله</Typography>
-            <RichTextEditor value={form.bodyHtml} onChange={html => change({ bodyHtml: html })} disabled={!editable} height={420} ariaLabel="ویرایشگر متن مقاله" mediaPicker={mediaPicker} variant="article" onError={setError} />
+            <RichTextEditor value={form.bodyHtml} onChange={html => change({ bodyHtml: html })} disabled={!editable} height={420} ariaLabel="ویرایشگر متن مقاله" mediaPicker={mediaPicker} variant="article" />
             <Typography variant="caption" color="text.secondary">عنوان‌ها را از «سطح ۲» شروع کنید (h1 همان عنوان صفحه است). تصویر داخل متن را با دکمهٔ تصویر ویرایشگر درج کنید (حداکثر ۲۰ تصویر)؛ هر تصویر باید متن جایگزین (alt) داشته باشد.</Typography>
           </Box>
           <Paper variant="outlined" sx={{ p: 2 }}>
