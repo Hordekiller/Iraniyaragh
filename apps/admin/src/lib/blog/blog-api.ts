@@ -4,7 +4,11 @@ import type {
 import { apiFetch } from '@/lib/api/client';
 import { getAccessToken } from '@/lib/auth/token-store';
 
-export const newBlogCommandKey = (command: string) => `blog-${command}-${globalThis.crypto.randomUUID()}`;
+/** Fixed ASCII command names. A key travels in an HTTP header, which a browser refuses to send unless every character is Latin-1. */
+export type BlogCommand = 'create' | 'update' | BlogTransitionRequest['action'];
+// The Persian button label used to be interpolated here; `fetch` then threw before sending anything
+// and every article save or status change was reported as an unconfirmed request.
+export const newBlogCommandKey = (command: BlogCommand) => `blog-${command}-${globalThis.crypto.randomUUID()}`;
 
 export async function listBlogPosts(query: { page: number; status?: BlogPostStatus; q?: string }, signal?: AbortSignal) {
   const params = new URLSearchParams({ page: String(query.page) });

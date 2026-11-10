@@ -151,7 +151,10 @@ export function RichTextEditor({
         setStatus('ready');
       } catch (err) {
         if (disposed) return;
-        setError('راه‌اندازی ویرایشگر ناموفق بود.');
+        // Keep the cause diagnosable: it carries no user content, only the
+        // editor's own start-up error, and was previously discarded.
+        console.error('RichTextEditor initialization failed', err);
+        setError('راه‌اندازی ویرایشگر ناموفق بود. صفحه را دوباره بارگذاری کنید؛ متن ذخیره‌شدهٔ قبلی تغییری نکرده است.');
         setStatus('error');
         onErrorRef.current?.(err);
       }

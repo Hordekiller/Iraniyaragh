@@ -3,16 +3,38 @@
 import createCache from '@emotion/cache';
 import { CacheProvider } from '@emotion/react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import { useMemo, type ReactNode } from 'react';
+import { useServerInsertedHTML } from 'next/navigation';
+import { useMemo, useState, type ReactNode } from 'react';
 import { prefixer } from 'stylis';
 import rtlPlugin from 'stylis-plugin-rtl';
 import { useAdminPreferences } from '@/lib/preferences/AdminPreferencesProvider';
 
-const rtlCache = createCache({
-  key: 'iraniyaragh-rtl',
-  prepend: true,
-  stylisPlugins: [prefixer, rtlPlugin],
-});
+const CACHE_KEY = 'iraniyaragh-rtl';
+
+type InsertedStyle = { name: string; isGlobal: boolean };
+
+/**
+ * Emotion cache that reports what it inserted during a server render.
+ *
+ * Without this registry Emotion writes its `<style>` elements inline, next to
+ * the component that needed them. React does not expect those elements when it
+ * hydrates, so every Admin page failed hydration (React error 418) and was
+ * rendered a second time on the client. Collecting the rules and emitting them
+ * through `useServerInsertedHTML` keeps the server markup identical to the
+ * client tree. The compat flag stops Emotion from inlining the tags itself.
+ */
+function createStyleRegistry() {
+  const cache = createCache({ key: CACHE_KEY, prepend: true, stylisPlugins: [prefixer, rtlPlugin] });
+  cache.compat = true;
+  const insert = cache.insert;
+  let inserted: InsertedStyle[] = [];
+  cache.insert = (...args) => {
+    const [selector, serialized] = args;
+    if (cache.inserted[serialized.name] === undefined) inserted.push({ name: serialized.name, isGlobal: !selector });
+    return insert(...args);
+  };
+  return { cache, flush: () => { const flushed = inserted; inserted = []; return flushed; } };
+}
 
 const LIGHT_PALETTE = {
   primary: { main: '#675dd8', light: '#7367f0', dark: '#5f54c7', contrastText: '#ffffff' },
@@ -40,6 +62,29 @@ const DARK_PALETTE = {
 
 export function AdminThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const { prefs, resolvedMode } = useAdminPreferences();
+  const [registry] = useState(createStyleRegistry);
+
+  useServerInsertedHTML(() => {
+    const inserted = registry.flush();
+    if (inserted.length === 0) return null;
+    let rules = '';
+    let names = registry.cache.key;
+    const globals: Array<{ name: string; style: string }> = [];
+    for (const { name, isGlobal } of inserted) {
+      const style = registry.cache.inserted[name];
+      if (typeof style !== 'string') continue;
+      if (isGlobal) globals.push({ name, style });
+      else { rules += style; names += ` ${name}`; }
+    }
+    return (
+      <>
+        {globals.map(({ name, style }) => (
+          <style key={name} data-emotion={`${registry.cache.key}-global ${name}`} dangerouslySetInnerHTML={{ __html: style }} />
+        ))}
+        {rules ? <style data-emotion={names} dangerouslySetInnerHTML={{ __html: rules }} /> : null}
+      </>
+    );
+  });
 
   const theme = useMemo(
     () =>
@@ -148,7 +193,7 @@ export function AdminThemeProvider({ children }: Readonly<{ children: ReactNode 
   );
 
   return (
-    <CacheProvider value={rtlCache}>
+    <CacheProvider value={registry.cache}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         {children}
