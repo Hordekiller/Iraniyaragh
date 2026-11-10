@@ -47,6 +47,26 @@ async function serializeCookieMutation<T>(operation: () => Promise<T>): Promise<
   } finally { clearTimeout(timeout); }
 }
 
+const RESTORE_RETRY_DELAYS_MS = [2_000, 5_000, 10_000, 20_000];
+const RESTORE_RETRY_MAX_WAIT_MS = 30_000;
+
+/**
+ * How long to wait before retrying a failed session restore, or `null` when the
+ * outcome is final. An authoritative answer about the session (invalid, replayed,
+ * forbidden, a rejected CSRF proof) is never retried; only a rate limit, a server
+ * or gateway error and a transport failure are, and only a bounded number of times.
+ */
+export function restoreRetryDelayMs(error: unknown, attempt: number): number | null {
+  if (error instanceof ApiAbortError || attempt >= RESTORE_RETRY_DELAYS_MS.length) return null;
+  if (error instanceof ApiClientError) {
+    if (error.statusCode !== 429 && error.statusCode < 500) return null;
+    if (error.statusCode === 429 && error.retryAfterSeconds !== undefined) {
+      return Math.min(Math.max(error.retryAfterSeconds * 1000, 1_000), RESTORE_RETRY_MAX_WAIT_MS);
+    }
+  }
+  return RESTORE_RETRY_DELAYS_MS[attempt];
+}
+
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
@@ -129,11 +149,25 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         setUser(null);
       }
     });
-    if (readCsrfToken(document)) {
-      void recoverApiSession().catch(() => { /* Recovery fails closed; the login surface handles reauthentication. */ })
-        .finally(() => { if (active) setIsRestoring(false); });
-    } else setIsRestoring(false);
-    return () => { active = false; unregister(); unregisterFailure(); };
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    // A page load restores the session from its cookie. Only the API saying the session is
+    // invalid ends it. A rate limit, a gateway error during a deployment or a dropped
+    // connection says nothing about the session, so those are retried a few times behind the
+    // restoring screen instead of sending a signed-in operator to the login page.
+    const restore = (attempt: number): void => {
+      void recoverApiSession().then(
+        () => { if (active) setIsRestoring(false); },
+        (error: unknown) => {
+          if (!active) return;
+          const delay = restoreRetryDelayMs(error, attempt);
+          if (delay === null || !readCsrfToken(document)) { setIsRestoring(false); return; }
+          retryTimer = setTimeout(() => restore(attempt + 1), delay);
+        },
+      );
+    };
+    if (readCsrfToken(document)) restore(0);
+    else setIsRestoring(false);
+    return () => { active = false; if (retryTimer !== undefined) clearTimeout(retryTimer); unregister(); unregisterFailure(); };
   }, [recoverSession]);
 
   // Genuine input keeps the 30-minute server inactivity window alive while an
