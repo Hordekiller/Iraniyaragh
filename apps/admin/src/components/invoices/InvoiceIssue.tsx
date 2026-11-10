@@ -21,6 +21,7 @@ export function invoiceDocumentError(cause: unknown) {
     if (cause.code === 'INVOICE_SOURCE_CHANGED') return 'سفارش مبنا پس از ساخت پیش‌فاکتور تغییر کرده است؛ بازقیمت‌گذاری کنید یا از سفارش، پیش‌فاکتور تازه بسازید.';
     if (cause.code === 'STALE_VERSION') return 'نسخهٔ پیش‌فاکتور تغییر کرده است؛ وضعیت را بازخوانی کنید.';
     if (cause.code === 'IDEMPOTENCY_CONFLICT') return 'درخواست تکراری با محتوای متفاوت است؛ صفحه را بازخوانی کنید.';
+    if (cause.code === 'INVOICE_PROFORMA_ONLY') return 'این سفارش ساخت درب هنوز فقط پیش‌فاکتور است؛ فاکتور نهایی پس از پذیرش مشتری و پرداخت کامل صادر می‌شود.';
     if (cause.code === 'INVOICE_ISSUE_CONFLICT') return 'صدور مجاز نیست: سفارش باید در وضعیت «در انتظار پرداخت»، «پرداخت‌شده» یا «اعتبار تأییدشده» و مشتری فعال باشد، پیش‌فاکتور باید از سفارش ساخته شده باشد و برای این سفارش قبلاً فاکتور صادر نشده باشد.';
     if (cause.statusCode < 500) return 'نسخهٔ پیش‌فاکتور، سفارش مبنا و سیاست مالی را بازخوانی و دوباره بررسی کنید.';
   }
@@ -31,6 +32,7 @@ export function issueBlockers(draft: InvoiceDraft, mayIssue: boolean): string[] 
   if (!mayIssue) list.push('دسترسی «صدور فاکتور» (invoices.issue) برای حساب شما فعال نیست.');
   if (draft.state === 'CANCELLED') list.push('این پیش‌فاکتور لغو شده است.');
   if (draft.state !== 'DRAFT') return list;
+  if (draft.doorPayment && !draft.doorPayment.finalInvoiceAllowed) list.push('این سفارش ساخت درب هنوز فقط پیش‌فاکتور است؛ فاکتور نهایی پس از پذیرش مشتری و پرداخت کامل صادر می‌شود.');
   if (draft.source === 'CATALOG') list.push('پیش‌فاکتور از کاتالوگ ساخته شده؛ برای صدور باید از صفحهٔ سفارش «ساخت پیش‌فاکتور از سفارش» را بزنید.');
   if (draft.quotationStatus === 'POLICY_REQUIRED') list.push('سیاست فاکتور (فروشنده و مالیات) در تنظیمات فعال نیست یا به پیش‌فاکتور وصل نشده است.');
   if (draft.quotationStatus === 'POLICY_CHANGED') list.push('سیاست مالی بعد از ساخت پیش‌فاکتور تغییر کرده؛ «تأیید بازقیمت‌گذاری» را بزنید.');
@@ -57,7 +59,7 @@ function Issue({ draft, locked, onIssued, onLockChange, mayIssue }: { draft: Inv
   },[draft.id,draft.state]);
   useEffect(()=>onFreshAuthentication(()=>{if(alive.current)setError(undefined);}),[]);
   async function run() {
-    if(flight.current||!mayIssue||(!pending.current&&(locked||!confirmed||needsReview||draft.state!=='DRAFT'||!draft.sourceTermsMatch||draft.quotationStatus!=='CURRENT'||draft.sourceOrderVersion===null)))return;
+    if(flight.current||!mayIssue||(!pending.current&&(locked||!confirmed||needsReview||draft.state!=='DRAFT'||draft.doorPayment?.finalInvoiceAllowed===false||!draft.sourceTermsMatch||draft.quotationStatus!=='CURRENT'||draft.sourceOrderVersion===null)))return;
     const retry=pending.current!==null;
     if(!pending.current)pending.current={body:{expectedVersion:draft.version,expectedOrderVersion:draft.sourceOrderVersion!},key:`invoice-issue-${randomUuid()}`};
     const captured=pending.current;flight.current=true;onLockChange(true);setBusy(true);setError(undefined);const controller=new AbortController();aborts.current.add(controller);
@@ -90,7 +92,7 @@ function Issue({ draft, locked, onIssued, onLockChange, mayIssue }: { draft: Inv
     {!document&&draft.state==='DRAFT'&&mayIssue?<>
       {draft.source==='CATALOG'?<Alert severity="warning">برای صدور نهایی، پیش‌فاکتور باید از سفارش واقعی ساخته شود؛ این پیش‌نویس کاتالوگ، سفارش ایجاد نمی‌کند.</Alert>:!draft.sourceTermsMatch||draft.quotationStatus!=='CURRENT'?<Alert severity="warning">صدور نیازمند تطابق دقیق مبلغ و اقلام با سفارش و سیاست مالی فعلی است.</Alert>:null}
       <FormControlLabel label="مبلغ، اقلام، مشخصات فروشنده و سفارش مبنا را برای صدور نهایی بررسی کردم" control={<Checkbox checked={confirmed} disabled={locked||busy||uncertain||needsReview} onChange={event=>setConfirmed(event.target.checked)}/>} />
-      <Button variant="contained" disabled={locked||busy||uncertain||needsReview||!confirmed||!draft.sourceTermsMatch||draft.quotationStatus!=='CURRENT'} onClick={()=>void run()}>صدور سند نهایی با شمارهٔ یکتا</Button>
+      <Button variant="contained" disabled={locked||busy||uncertain||needsReview||!confirmed||draft.doorPayment?.finalInvoiceAllowed===false||!draft.sourceTermsMatch||draft.quotationStatus!=='CURRENT'} onClick={()=>void run()}>صدور سند نهایی با شمارهٔ یکتا</Button>
     </>:null}
     {uncertain?<Alert severity="warning">نتیجهٔ صدور نامشخص است؛ درخواست اولیه حفظ شده است.<Button disabled={busy} onClick={()=>void run()}>بازخوانی و تکرار همان درخواست صدور</Button></Alert>:
       <Button disabled={busy||locked} onClick={()=>void reload()}>بازخوانی وضعیت صدور</Button>}

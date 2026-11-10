@@ -18,6 +18,7 @@ const draft = object({ ...summary, sourceOrderVersion: { ...integer, nullable: t
   globalDiscount: money, shipping: object({ code: text, title: text, amount: money, policyRevision: text }), pricePolicyRevision: text,
   quoteExpiresAt: { ...date, nullable: true }, policyVersion: { type: 'integer', minimum: 1, nullable: true }, quote: { ...quote, nullable: true },
   quotationStatus: { type: 'string', enum: ['CURRENT', 'POLICY_REQUIRED', 'POLICY_CHANGED', 'PRICE_EXPIRED', 'SOURCE_CHANGED'] } });
+Object.assign(draft.properties!, { doorQuoteId: nullableText, doorPayment: object({ status: { type: 'string', enum: ['UNPAID', 'PARTIALLY_PAID', 'FULLY_PAID', 'OVERPAID'] }, customerAccepted: { type: 'boolean' }, finalInvoiceAllowed: { type: 'boolean' } }) });
 const page = (items: SchemaObject) => object({ items: { type: 'array', items }, count: integer, offset: integer, limit: { type: 'integer', minimum: 1, maximum: 100 } });
 const schemas = { read: object({ draft }), command: object({ draft, committedVersion: integer, replayed: { type: 'boolean', description: 'Replay returns the current workspace and the originally committed version.' } }),
   list: page(object(summary)), history: page(object({ version: integer, action: { type: 'string', enum: ['CREATED', 'EDITED', 'REQUOTED', 'CANCELLED', 'ISSUED'] }, actorId: text, createdAt: date })),

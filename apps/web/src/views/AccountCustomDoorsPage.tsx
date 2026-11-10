@@ -11,6 +11,7 @@ import {
   AccountNavigation,
   SessionRestoring,
 } from "../components/account/AccountNavigation";
+import { DoorProformaNotice } from "../components/custom-doors/DoorProformaNotice";
 import { DoorSummary } from "../components/custom-doors/DoorSummary";
 import {
   doorApi,
@@ -366,6 +367,7 @@ function CustomerDoorOrders({ id }: { id?: string }) {
               چاپ / ذخیره پیش‌فاکتور و رسیدها
             </button>
           </div>
+          <DoorProformaNotice financialStatus={order.financialStatus} />
           <DoorSummary quote={quote.snapshot} approved={quote.approved} />
           <section
             className="mt-5 rounded-3xl border border-slate-200 bg-white p-5"

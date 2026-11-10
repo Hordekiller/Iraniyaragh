@@ -138,6 +138,7 @@ function DraftWorkspace({ id, manage }: { id?: string; manage: boolean }) {
       {draft.quoteExpiresAt && <Typography>انقضای قیمت‌گذاری: {new Date(draft.quoteExpiresAt).toLocaleString('fa-IR')}</Typography>}
       {manage && draft.state === 'DRAFT' && <Button disabled={locked || serverChanged} onClick={() => void run({ kind: 'requote', id: draft.id, body: { expectedVersion: draft.version } })}>تأیید بازقیمت‌گذاری با قیمت و سیاست فعلی</Button>}
     </Stack></Paper>}
+    {draft?.doorPayment && draft.doorPayment.status !== 'FULLY_PAID' && <Alert severity="error" data-testid="door-proforma-unpaid"><strong>{draft.doorPayment.status === 'UNPAID' ? 'پیش‌فاکتور — پرداخت نشده' : draft.doorPayment.status === 'PARTIALLY_PAID' ? 'پیش‌فاکتور — پرداخت کامل نشده' : 'پیش‌فاکتور — پرداخت نیازمند تطبیق'}.</strong> این سند فاکتور فروش یا رسید پرداخت نیست.</Alert>}
     {draft?.doorQuoteId && <Alert severity="info">این پیش‌فاکتور از نسخه قطعی سفارش ساخت درب تهیه شده است؛ اصلاح مبلغ از مسیر سفارش ساخت انجام می‌شود.</Alert>}
     {draft && <InvoiceIssue draft={draft} locked={busy || loading || !readReady || uncertain} onLockChange={setIssuing} onIssued={() => load(true)} />}
     {(manage || draft) && !draft?.doorQuoteId && <Paper component="form" onSubmit={submit} sx={{ p: 3 }}><Stack spacing={2}>

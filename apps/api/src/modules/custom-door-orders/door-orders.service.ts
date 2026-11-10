@@ -839,10 +839,9 @@ export class DoorOrdersService {
         const q = currentDoorQuote(row);
         if (
           !q.approved ||
-          row.customerAcceptedQuoteVersion !== q.version ||
           ["CANCELLED", "DRAFT"].includes(row.status)
         )
-          doorConflict("نسخه قطعی پذیرفته‌شده لازم است.");
+          doorConflict("نسخه قطعی قیمت برای پیش‌فاکتور لازم است.");
         if (
           await tx.invoiceDraft.count({
             where: { sourceOrderId: id, state: { not: "CANCELLED" } },

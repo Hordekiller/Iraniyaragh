@@ -46,6 +46,11 @@ describe('Invoice issue UI authoritative result and ambiguity recovery',()=>{
     vi.mocked(issueInvoiceDocument).mockRejectedValueOnce(new ApiClientError({code:'INVOICE_SOURCE_CHANGED',statusCode:409,message:'private detail',requestId:'test'}));view();confirm();submit();
     await screen.findByText(/سفارش مبنا پس از ساخت پیش‌فاکتور تغییر کرده/);expect(screen.getByRole('checkbox')).not.toBeChecked();expect(screen.queryByRole('link',{name:'مشاهدهٔ سند نهایی'})).not.toBeInTheDocument();
   });
+  it('offers only a proforma for an unpaid custom-door sale',()=>{
+    const unpaid={...draft,doorPayment:{status:'UNPAID',customerAccepted:false,finalInvoiceAllowed:false}} as InvoiceDraft;
+    expect(issueBlockers(unpaid,true).join(' ')).toContain('فقط پیش‌فاکتور');
+    expect(issueBlockers({...draft,doorPayment:{status:'FULLY_PAID',customerAccepted:true,finalInvoiceAllowed:true}} as InvoiceDraft,true).join(' ')).not.toContain('فقط پیش‌فاکتور');
+  });
   it('keeps the form usable after a fresh-authentication refusal',async()=>{
     vi.mocked(issueInvoiceDocument).mockRejectedValueOnce(new ApiClientError({code:'AUTH_REAUTHENTICATION_REQUIRED',statusCode:401,message:'x',requestId:'test'}));view();confirm();submit();
     await screen.findByText(/تأیید تازهٔ رمز/);expect(screen.getByRole('checkbox')).not.toBeDisabled();expect(screen.getByRole('checkbox')).toBeChecked();
