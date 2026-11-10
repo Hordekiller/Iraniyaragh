@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Header, Inject, Put, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { IsBoolean, IsInt, Max, Min } from 'class-validator';
-import { INVOICE_PDF_CAPACITY_LIMITS as LIMITS, type InvoicePdfCapacityResponse } from '@iranyaragh/contracts';
+import type { InvoicePdfCapacityResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
-import { InvoicePdfCapacityService } from './invoice-pdf-capacity.service';
+import { INVOICE_PDF_CAPACITY_LIMITS as LIMITS, InvoicePdfCapacityService } from './invoice-pdf-capacity.service';
 
 class InvoicePdfCapacityDto {
   @IsInt() @Min(0) expectedVersion!: number;

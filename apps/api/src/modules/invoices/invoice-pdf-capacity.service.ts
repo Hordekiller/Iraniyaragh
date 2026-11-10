@@ -1,11 +1,21 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { INVOICE_PDF_CAPACITY_LIMITS, type InvoicePdfCapacityConfig, type InvoicePdfCapacityUpdate } from '@iranyaragh/contracts';
+import type { InvoicePdfCapacityConfig, InvoicePdfCapacityUpdate } from '@iranyaragh/contracts';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit/audit-log.service';
 
 export const INVOICE_PDF_CAPACITY_ID = 'invoice-pdf';
 export const INVOICE_PDF_CAPACITY_AUDIT_ACTION = 'invoice.pdf.capacity.updated';
+/**
+ * The contracts workspace exports unbuilt TypeScript, so the compiled API may
+ * only import its types. These bounds mirror the contract's
+ * INVOICE_PDF_CAPACITY_LIMITS; the HTTP spec asserts they stay equal.
+ */
+export const INVOICE_PDF_CAPACITY_LIMITS = {
+  budgetMegabytes: { min: 1, max: 1024 },
+  maxArtifacts: { min: 1, max: 20000 },
+  maxPendingJobs: { min: 1, max: 20 },
+} as const;
 const MEBIBYTE = 1024 * 1024;
 
 type Row = { budgetBytes: bigint; maxArtifacts: number; storedBytes: bigint; artifactCount: number; pendingJobCount: number; maxPendingJobs: number; isEnabled: boolean; version: number };

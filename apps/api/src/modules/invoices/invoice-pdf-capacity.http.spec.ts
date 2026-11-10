@@ -8,7 +8,8 @@ import { AuthGuard } from '../auth/auth.guard';
 import { AuthPrincipalService, type AuthPrincipalContext } from '../auth/auth-principal.service';
 import { AuthSessionException } from '../auth/auth-session.service';
 import { InvoicePdfCapacityController } from './invoice-pdf-capacity.controller';
-import { InvoicePdfCapacityService } from './invoice-pdf-capacity.service';
+import { INVOICE_PDF_CAPACITY_LIMITS as CONTRACT_LIMITS } from '@iranyaragh/contracts';
+import { INVOICE_PDF_CAPACITY_LIMITS, InvoicePdfCapacityService } from './invoice-pdf-capacity.service';
 
 const principal = (userId: string, level: 'CUSTOMER_OTP' | 'STAFF_MFA', permissions: string[], stale = false): AuthPrincipalContext => ({
   userId, sessionId: 'session', tokenId: 'token', authenticationLevel: level, permissions: new Set(permissions),
@@ -67,6 +68,10 @@ describe('invoice PDF capacity setting HTTP security', () => {
     expect(service.update).not.toHaveBeenCalled();
     expect((await call('PUT', 'owner', body)).status).toBe(200);
     expect(service.update).toHaveBeenCalledWith('owner', expect.any(String), body);
+  });
+
+  it('keeps the server bounds equal to the published contract bounds', () => {
+    expect(INVOICE_PDF_CAPACITY_LIMITS).toEqual(CONTRACT_LIMITS);
   });
 
   it('rejects malformed, out-of-range and spoofed bodies before the service', async () => {
