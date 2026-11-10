@@ -40271,6 +40271,44 @@
         ]
       }
     },
+    "/settings/admin/invoice-pdf-capacity": {
+      "get": {
+        "operationId": "InvoicePdfCapacityController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Read the operator-approved invoice PDF storage capacity and its current usage",
+        "tags": [
+          "InvoicePdfCapacity"
+        ]
+      },
+      "put": {
+        "operationId": "InvoicePdfCapacityController_update",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Approve, resize or switch off the invoice PDF storage capacity; never lowers it below what is stored",
+        "tags": [
+          "InvoicePdfCapacity"
+        ]
+      }
+    },
     "/returns/admin/settings": {
       "get": {
         "operationId": "ReturnsController_readSettings",
