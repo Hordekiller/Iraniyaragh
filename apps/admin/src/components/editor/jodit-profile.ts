@@ -137,7 +137,7 @@ export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfi
     });
   }
 
-  return {
+  const profile: JoditProfile = {
     direction: 'rtl',
     height: typeof options.height === 'number' ? `${options.height}px` : options.height,
     placeholder: options.placeholder,
@@ -173,5 +173,13 @@ export function buildJoditProfile(options: JoditProfileOptions = {}): JoditProfi
       { value: 'insert_as_html', text: 'Insert as HTML' },
     ],
   };
+  // Jodit copies every own key over its defaults, including an explicit
+  // `undefined`. An omitted placeholder then reached the placeholder plugin as
+  // `i18n(undefined)` and aborted initialization, so unset options are left out
+  // and Jodit keeps its own default for them.
+  for (const key of Object.keys(profile) as Array<keyof JoditProfile>) {
+    if (profile[key] === undefined) delete profile[key];
+  }
+  return profile;
 }
 
