@@ -472,7 +472,11 @@ matches the renderer package). Compose ships the worker next to
 - Rendering capacity is operator state, not deploy state. Enabling the private
   PDF store happens through the admin settings command that approves the
   `invoice-pdf` capacity singleton (byte budget, artifact and pending-job
-  caps). The worker starts inert and does nothing until that approval exists;
+  caps). That command is `PUT /api/v1/settings/admin/invoice-pdf-capacity`
+  (`settings.manage`, fresh staff MFA, optimistic version, audited as
+  `invoice.pdf.capacity.updated`), surfaced as the «فایل PDF فاکتور» card on
+  the Admin invoice settings page. It never lowers limits below stored or
+  pending usage and never writes the usage counters. The worker starts inert and does nothing until that approval exists;
   disabling withholds new claims and requests, while verifying existing bytes
   (backup restore, download integrity) keeps working.
 - Environment knobs are minimal: `INVOICE_PDF_RENDER_TIMEOUT_MS` (default

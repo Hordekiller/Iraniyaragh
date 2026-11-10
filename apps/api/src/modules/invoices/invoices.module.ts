@@ -16,9 +16,11 @@ import { INVOICE_PDF_QUEUE } from './invoice-pdf-queue.port';
 import { AuthModule } from '../auth/auth.module';
 import { InvoiceAutomationController } from './invoice-automation.controller';
 import { InvoiceAutomationService } from './invoice-automation.service';
+import { InvoicePdfCapacityController } from './invoice-pdf-capacity.controller';
+import { InvoicePdfCapacityService } from './invoice-pdf-capacity.service';
 @Module({
   imports: [AuditModule, AuthModule, OrdersModule],
-  controllers: [InvoicePolicyController, InvoiceDraftController, InvoiceDocumentController, InvoicePublicationController, CustomerInvoiceController, InvoiceAutomationController],
+  controllers: [InvoicePolicyController, InvoiceDraftController, InvoiceDocumentController, InvoicePublicationController, CustomerInvoiceController, InvoiceAutomationController, InvoicePdfCapacityController],
   providers: [
     InvoicePolicyService,
     InvoiceDraftService,
@@ -29,6 +31,7 @@ import { InvoiceAutomationService } from './invoice-automation.service';
     { provide: INVOICE_PDF_QUEUE, useExisting: BullMqInvoicePdfQueue },
     InvoicePdfJobService,
     InvoiceAutomationService,
+    InvoicePdfCapacityService,
   ],
   exports: [InvoicePolicyService, InvoiceDraftService, InvoiceAutomationService],
 })
