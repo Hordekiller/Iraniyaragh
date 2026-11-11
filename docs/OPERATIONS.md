@@ -466,6 +466,7 @@ matches the renderer package). Compose ships the worker next to
   or duplicated queue delivery cannot render anything that the database lease
   does not already authorize, so reconciling after a worker restart is a
   database read, never a message replay.
+- The Chromium sandbox stays on: the renderer passes `chromiumSandbox: true` (Playwright's default is off) and compose applies `infrastructure/docker/chromium-seccomp.json`, Playwright's published profile, because Docker's default seccomp blocks the user namespaces the sandbox needs. The base image tag must equal the `playwright` package version.
 - The Chromium sandbox stays on. The image asserts the SUID `chrome_sandbox`
   permission mode at build time, and the process runs as `pwuser`; never pass
   `--no-sandbox` or an equivalent in any environment.

@@ -281,6 +281,10 @@ services:
   pdf-render-worker:
     image: ${IMAGE_REGISTRY:-ghcr.io/hordekiller}/iranyaragh/pdf-render-worker:${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}
     restart: *restart
+    # Chromium's sandbox needs user namespaces, which Docker's default seccomp
+    # profile blocks. This is Playwright's published profile for that purpose.
+    security_opt:
+      - seccomp=${PDF_SECCOMP_PROFILE:-/opt/iranyaragh/infrastructure/docker/chromium-seccomp.json}
     env_file: [.env.staging]
     environment:
       IMAGE_TAG: ${IMAGE_TAG:?IMAGE_TAG must be the exact release commit SHA}

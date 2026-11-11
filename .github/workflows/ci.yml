@@ -30,7 +30,7 @@ jobs:
       - name: Verify dependency audit failure handling
         run: node --test .github/scripts/audit-prod.test.mjs
       - name: Verify exact-SHA deployment environment precedence
-        run: node --test --test-concurrency=2 scripts/deploy/runtime-provenance.test.mjs scripts/deploy/rollback-topology.test.mjs
+        run: node --test --test-concurrency=2 scripts/deploy/runtime-provenance.test.mjs scripts/deploy/rollback-topology.test.mjs scripts/deploy/pdf-worker-playwright.test.mjs
       - name: Verify real TLS proxy route boundaries
         run: node --test scripts/deploy/storefront-routing.test.mjs
       - run: pnpm lint
@@ -276,6 +276,8 @@ jobs:
           pnpm --filter @iranyaragh/api media:bucket
       - name: Build API, start it and the media and PDF workers, build and smoke web and admin
         run: |
+          # The PDF worker launches Chromium with its sandbox on, which needs user namespaces.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           pnpm --filter @iranyaragh/api build
           node apps/api/dist/src/main.js > api.log 2>&1 &
           API_PID=$!

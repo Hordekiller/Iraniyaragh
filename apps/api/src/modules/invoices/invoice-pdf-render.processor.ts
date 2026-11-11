@@ -98,8 +98,9 @@ function resolveFailureCode(error: unknown): InvoicePdfFailureCode {
 async function renderPdfWithChromium(html: string, renderTimeoutMs: number): Promise<Buffer> {
   let browser;
   try {
-    // Sandbox stays enabled; launch failure reports a bounded infrastructure error.
-    browser = await chromium.launch({ headless: true, timeout: renderTimeoutMs });
+    // Playwright disables the sandbox unless asked: chromiumSandbox must stay explicit.
+    // Launch failure reports a bounded infrastructure error.
+    browser = await chromium.launch({ headless: true, chromiumSandbox: true, timeout: renderTimeoutMs });
     const context = await browser.newContext();
     try {
       const page = await context.newPage();
