@@ -242,7 +242,8 @@ export function QuantityStepper({
   const invalid = message?.tone === 'error'
 
   const small = size === 'sm'
-  const buttonSize = small ? 'h-9 w-9' : 'h-10 w-10'
+  // The default size tightens on phones so it shares one row with the purchase buttons.
+  const buttonSize = small ? 'h-9 w-9' : 'h-9 w-9 sm:h-10 sm:w-10'
   const buttonFocus =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2'
 
@@ -294,7 +295,7 @@ export function QuantityStepper({
           }}
           onKeyDown={handleKeyDown}
           // 16px text keeps iOS Safari from zooming the page on focus.
-          className={`${small ? 'h-9' : 'h-10'} w-14 min-w-0 rounded-full bg-transparent text-center text-base font-black text-slate-950 outline-none focus:bg-amber-50 focus:ring-2 focus:ring-amber-500 disabled:opacity-50`}
+          className={`${small ? 'h-9 w-14' : 'h-9 w-12 sm:h-10 sm:w-14'} min-w-0 rounded-full bg-transparent text-center text-base font-black text-slate-950 outline-none focus:bg-amber-50 focus:ring-2 focus:ring-amber-500 disabled:opacity-50`}
         />
         <button
           type="button"

@@ -146,6 +146,29 @@ describe('ProductPage commerce', () => {
       expect(screen.getByRole('textbox', { name: 'تعداد محصول' })).toHaveValue('۱'),
     )
   })
+  it('warns on the product page when the added quantity exceeds the stock', async () => {
+    let cart: typeof CART = { ...CART, lines: [] }
+    const overStock = (quantity: number) => ({
+      ...CART,
+      lines: [{ ...CART.lines[0], variantId: 'variant-p-101', quantity, available: 40 }],
+    })
+    const api = commerceStub({
+      getCart: vi.fn(async () => cart),
+      mergeGuestCart: vi.fn(async () => ({ cart, warnings: [] })),
+      addLine: vi.fn(async (_o: 'guest' | 'customer', _id: string, quantity: number) => (cart = overStock(quantity))),
+    })
+    renderPage(signedInStore(), api)
+    await screen.findByRole('button', { name: 'افزودن به سبد خرید' })
+    const input = screen.getByRole('textbox', { name: 'تعداد محصول' })
+    input.focus()
+    fireEvent.change(input, { target: { value: '100' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن به سبد خرید' }))
+    expect(
+      await screen.findByText('فقط ۴۰ عدد از این کالا قابل سفارش است؛ تعداد را کاهش دهید.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'افزایش تعداد' })).toBeDisabled()
+  })
   it('adds to the real Guest Cart without forcing early authentication', async () => {
     const api = commerceStub()
     renderPage(new MemorySessionStore(), api)

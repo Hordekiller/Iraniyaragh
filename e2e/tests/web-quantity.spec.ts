@@ -155,6 +155,58 @@ test.describe('web: direct quantity entry', () => {
     await expectSideBySide(page)
   })
 
+  test('keeps quantity, add and view-cart on one row on common phones', async ({ page }) => {
+    test.skip(!isMobile(page), 'phone layout')
+    for (const width of [360, 390, 412]) {
+      await page.setViewportSize({ width, height: 800 })
+      await page.goto(PRODUCT)
+      const add = page.getByRole('button', { name: 'افزودن به سبد خرید' })
+      await expect(add).toBeEnabled()
+      const row = await Promise.all(
+        [page.getByRole('group', { name: /^تعداد/ }), add, page.getByRole('button', { name: 'مشاهده سبد' })].map(
+          async (item) => (await item.boundingBox())!,
+        ),
+      )
+      const centres = row.map((box) => box.y + box.height / 2)
+      expect(Math.max(...centres) - Math.min(...centres), `one row at ${width}px`).toBeLessThan(8)
+      await expectNoHorizontalOverflow(page)
+    }
+    // The narrowest phones may wrap the label, but never clip it.
+    for (const width of [320, 360, 412]) {
+      await page.setViewportSize({ width, height: 800 })
+      const label = page.getByRole('button', { name: 'افزودن به سبد خرید' }).locator('span').first()
+      const clipped = await label.evaluate((node) => {
+        const button = node.parentElement!.getBoundingClientRect()
+        const text = node.getBoundingClientRect()
+        return text.left < button.left - 1 || text.right > button.right + 1 || text.height > button.height
+      })
+      expect(clipped, `label clipped at ${width}px`).toBe(false)
+    }
+  })
+
+  test('lets the end of the cart scroll clear of the help button', async ({ page }) => {
+    test.skip(!isMobile(page), 'floating help button is mobile-only')
+    // The fixture build has no API; answer the admin helper switch as "on".
+    await page.route('**/api/v1/catalog/storefront-helper', (route) =>
+      route.fulfill({
+        json: { data: { enabled: true } },
+        headers: {
+          'access-control-allow-origin': new URL(page.url() || 'http://127.0.0.1:4173').origin,
+          'access-control-allow-credentials': 'true',
+        },
+      }),
+    )
+    await addQuantity(page, '3')
+    await openCart(page)
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    const helpButton = page.getByRole('button', { name: 'راهنمای این صفحه' })
+    await expect(helpButton).toBeVisible()
+    const help = await helpButton.boundingBox()
+    const summaryEnd = await page.getByRole('complementary').evaluate((node) => node.getBoundingClientRect().bottom)
+    expect(help).not.toBeNull()
+    expect(summaryEnd).toBeLessThanOrEqual(help!.y)
+  })
+
   test('has no accessibility violations in the selector', async ({ page }) => {
     await addQuantity(page, '12')
     await openCart(page)
