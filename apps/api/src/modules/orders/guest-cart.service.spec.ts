@@ -185,7 +185,7 @@ describe('GuestCartService', () => {
       service.addForToken(
         currentHash,
         [replacementHash],
-        { variantId: variant.id, quantity: 100 },
+        { variantId: variant.id, quantity: 1_000_000 },
         'invalid-quantity',
       ),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
@@ -312,9 +312,9 @@ describe('GuestCartService', () => {
       return null;
     });
     tx.cartItem.findMany.mockResolvedValue([
-      { id: 'customer-line-1', variantId: variant.id, quantity: 98 },
+      { id: 'customer-line-1', variantId: variant.id, quantity: 999_998 },
     ]);
-    tx.cart.findUniqueOrThrow.mockResolvedValue(pricedCart(customerCart, 99));
+    tx.cart.findUniqueOrThrow.mockResolvedValue(pricedCart(customerCart, 999_999));
 
     const result = await service.mergeForUser(
       'user-1',
@@ -328,7 +328,7 @@ describe('GuestCartService', () => {
     ]);
     expect(tx.cartItem.update).toHaveBeenCalledWith({
       where: { id: 'customer-line-1' },
-      data: { quantity: 99 },
+      data: { quantity: 999_999 },
     });
     expect(tx.cart.delete).toHaveBeenCalledWith({
       where: { id: guestCart.id },

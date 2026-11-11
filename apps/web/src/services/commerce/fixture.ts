@@ -8,6 +8,7 @@ import type {
   PaymentInitiation,
   ShippingQuote,
 } from '@iranyaragh/contracts'
+import { MAX_CART_LINE_QUANTITY } from '@iranyaragh/contracts'
 import { AuthApiError } from '../../lib/auth/errors'
 import { fixtureAllProducts } from '../catalog/fixture-data'
 import type { CommerceApi } from './types'
@@ -220,7 +221,7 @@ export class CommerceFixtureClient implements CommerceApi {
     }
     const next = this.cart.lines.filter((line) => line.variantId !== variantId)
     if (quantity > 0) {
-      const safeQuantity = Math.min(99, quantity)
+      const safeQuantity = Math.min(MAX_CART_LINE_QUANTITY, quantity)
       const line: CartLine = {
         variantId,
         quantity: safeQuantity,
@@ -231,7 +232,7 @@ export class CommerceFixtureClient implements CommerceApi {
           amount: String(Number(variant.price.amount) * safeQuantity),
           currency: 'IRR',
         },
-        available: 99,
+        available: MAX_CART_LINE_QUANTITY,
       }
       next.push(line)
     }

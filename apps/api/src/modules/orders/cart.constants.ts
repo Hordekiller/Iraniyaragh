@@ -1,5 +1,10 @@
 export const MAX_CART_LINES = 100;
-export const MAX_CART_QUANTITY = 99;
+/**
+ * Technical per-line bound, not a business limit: it keeps unitPrice * quantity
+ * inside the BIGINT money columns at checkout. Must match the CartItem CHECK and
+ * the contracts' MAX_CART_LINE_QUANTITY. Available stock is the real limit.
+ */
+export const MAX_CART_QUANTITY = 999_999;
 export const CART_REPLAY_TTL_MS = 24 * 60 * 60 * 1000;
 export const GUEST_CART_IDLE_TTL_MS = 24 * 60 * 60 * 1000;
 export const CART_EXPIRED_CLEANUP_BATCH = 100;

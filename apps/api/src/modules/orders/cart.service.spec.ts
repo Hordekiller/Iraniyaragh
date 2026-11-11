@@ -119,7 +119,7 @@ describe('CartService', () => {
     expect(prisma.cart.findUnique).not.toHaveBeenCalled();
   });
 
-  it.each([0, -1, 100, 1.5])(
+  it.each([0, -1, 1_000_000, 1.5])(
     'rejects add quantity %s before persistence',
     async (quantity) => {
       const { service, prisma } = setup();
@@ -344,9 +344,9 @@ describe('CartService', () => {
     );
   });
 
-  it('rejects an increment that would exceed quantity 99', async () => {
+  it('rejects an increment that would exceed the line quantity bound', async () => {
     const { service, tx } = setup();
-    tx.cartItem.findUnique.mockResolvedValue({ quantity: 99 });
+    tx.cartItem.findUnique.mockResolvedValue({ quantity: 999_999 });
 
     await expect(
       service.addForUser(
@@ -428,7 +428,21 @@ describe('CartService', () => {
     expect(tx.cartMutation.create).toHaveBeenCalledOnce();
   });
 
-  it.each([0, -1, 100, 1.5])(
+  it.each([100, 250, 1000, 25_000, 999_999])(
+    'accepts a directly entered bulk quantity of %s in one mutation',
+    async (quantity) => {
+      const { service, tx } = setup();
+
+      await service.setForUser('user-1', variant.id, quantity, 'set-bulk');
+
+      expect(tx.cartItem.upsert).toHaveBeenCalledOnce();
+      expect(tx.cartItem.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ update: { quantity } }),
+      );
+    },
+  );
+
+  it.each([0, -1, 1_000_000, 1.5, Number.MAX_SAFE_INTEGER, Number.NaN])(
     'rejects set quantity %s before persistence',
     async (quantity) => {
       const { service, prisma } = setup();

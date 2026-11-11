@@ -238,7 +238,7 @@ describe.sequential('GuestCartService database integration', () => {
       data: {
         customerId,
         items: {
-          create: { variantId: variantIds[0], quantity: 98 },
+          create: { variantId: variantIds[0], quantity: 999_998 },
         },
       },
     });
@@ -272,7 +272,7 @@ describe.sequential('GuestCartService database integration', () => {
       include: { items: { orderBy: { variantId: 'asc' } }, mutations: true },
     });
     expect(customer.items).toEqual([
-      expect.objectContaining({ variantId: variantIds[0], quantity: 99 }),
+      expect.objectContaining({ variantId: variantIds[0], quantity: 999_999 }),
       expect.objectContaining({ variantId: variantIds[1], quantity: 2 }),
     ]);
     expect(customer.mutations).toHaveLength(1);

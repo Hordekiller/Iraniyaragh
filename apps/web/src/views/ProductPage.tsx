@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
-  Minus,
-  Plus,
   Star,
   Truck,
   ShoppingBag,
@@ -25,8 +23,9 @@ import { defaultCatalogVariant } from '../services/catalog/variants'
 import type { CatalogProduct } from '../services/catalog/types'
 import { commerceErrorMessage } from '../services/commerce/errors'
 import { HelpHint } from '../components/help/HelpHint'
+import { QuantityStepper } from '../components/cart/QuantityStepper'
 import { ProductReviews } from '../components/product/ProductReviews'
-import type { PublicReviewList } from '@iranyaragh/contracts'
+import { MAX_CART_LINE_QUANTITY, type PublicReviewList } from '@iranyaragh/contracts'
 
 const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود در انبار',
@@ -46,6 +45,8 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
   const [loading, setLoading] = useState(!initialProduct)
   const [notFound, setNotFound] = useState(false)
   const [selectedVariantId, setSelectedVariantId] = useState(defaultCatalogVariant(initialProduct?.variants ?? [])?.id ?? '')
+  // Quantity chosen before the variant is in the cart; it belongs to one variant only.
+  const [chosen, setChosen] = useState<{ variantId: string; quantity: number } | null>(null)
 
   const [resolvedSlug, setResolvedSlug] = useState(slug)
   if (resolvedSlug !== slug) {
@@ -107,6 +108,11 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
     null
   const inCart = selectedVariant ? isInCart(selectedVariant.id) : false
   const qty = selectedVariant ? quantityOf(selectedVariant.id) : 0
+  const cartLine = selectedVariant
+    ? cartState.cart.lines.find((line) => line.variantId === selectedVariant.id)
+    : undefined
+  const chosenQuantity =
+    chosen && chosen.variantId === selectedVariant?.id ? chosen.quantity : 1
   const available =
     selectedVariant != null &&
     (selectedVariant.stockStatus === 'IN_STOCK' ||
@@ -130,8 +136,15 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
   async function handleAdd() {
     if (!available || !selectedVariant) return
     try {
-      const added = await add(selectedVariant.id)
-      if (added) show('به سبد خرید افزوده شد')
+      const added = await add(selectedVariant.id, chosenQuantity)
+      if (added) {
+        setChosen(null)
+        show(
+          chosenQuantity > 1
+            ? `${toPersianDigits(chosenQuantity)} عدد به سبد خرید افزوده شد`
+            : 'به سبد خرید افزوده شد',
+        )
+      }
     } catch (error) {
       show(commerceErrorMessage(error))
     }
@@ -294,39 +307,36 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">
-              {inCart ? (
-                <div className="flex items-center gap-3 rounded-full border-2 border-[#0F172A] p-1">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      selectedVariant &&
-                      void setQuantity(selectedVariant.id, qty + 1)
-                    }
-                    aria-label="افزایش تعداد"
-                    className="w-10 h-10 rounded-full bg-[#0F172A] text-white flex items-center justify-center hover:bg-black disabled:opacity-40"
-                    disabled={!available}
-                  >
-                    <Plus size={18} aria-hidden="true" />
-                  </button>
-                  <span
-                    className="min-w-[24px] text-center font-black"
-                    aria-label={toPersianDigits(qty)}
-                  >
-                    {toPersianDigits(qty)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      selectedVariant &&
-                      void setQuantity(selectedVariant.id, qty - 1)
-                    }
-                    aria-label="کاهش تعداد"
-                    className="w-10 h-10 rounded-full bg-slate-100 text-slate-900 flex items-center justify-center hover:bg-slate-200"
-                  >
-                    <Minus size={18} aria-hidden="true" />
-                  </button>
-                </div>
-              ) : (
+              {selectedVariant && (inCart || available) && (
+                <QuantityStepper
+                  key={`${selectedVariant.id}:${inCart ? 'cart' : 'new'}`}
+                  value={inCart ? qty : chosenQuantity}
+                  max={
+                    inCart
+                      ? available
+                        ? Math.min(MAX_CART_LINE_QUANTITY, cartLine?.available ?? 0)
+                        : 0
+                      : MAX_CART_LINE_QUANTITY
+                  }
+                  maxReason={
+                    inCart && (cartLine?.available ?? 0) < MAX_CART_LINE_QUANTITY ? 'stock' : 'limit'
+                  }
+                  onCommit={(quantity) =>
+                    inCart
+                      ? setQuantity(selectedVariant.id, quantity)
+                      : setChosen({ variantId: selectedVariant.id, quantity })
+                  }
+                  onRemove={inCart ? () => setQuantity(selectedVariant.id, 0) : undefined}
+                  describeError={commerceErrorMessage}
+                  disabled={
+                    cartState.phase === 'idle' ||
+                    cartState.phase === 'loading' ||
+                    cartState.phase === 'merging' ||
+                    (!inCart && cartBusy)
+                  }
+                />
+              )}
+              {inCart ? null : (
                 <button
                   type="button"
                   data-help="add-to-cart"
@@ -351,7 +361,7 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
                 type="button"
                 data-help="view-cart"
                 onClick={() => navigate(ROUTES.cart)}
-                className="h-12 shrink-0 px-4 sm:px-6 rounded-full border-2 border-slate-900 font-black hover:bg-slate-900 hover:text-white transition"
+                className="h-12 shrink-0 grow px-4 sm:grow-0 sm:px-6 rounded-full border-2 border-slate-900 font-black hover:bg-slate-900 hover:text-white transition"
               >
                 مشاهده سبد
               </button>
