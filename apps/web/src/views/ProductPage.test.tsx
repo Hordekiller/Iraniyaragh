@@ -118,6 +118,34 @@ describe('ProductPage commerce', () => {
       'به سبد خرید افزوده شد',
     )
   })
+  it('adds a directly typed quantity with a single request', async () => {
+    const addLine = vi.fn(async () => await commerceStub().getCart('customer'))
+    renderPage(signedInStore(), commerceStub({ addLine }))
+    await screen.findByRole('button', { name: 'افزودن به سبد خرید' })
+    const input = screen.getByRole('textbox', { name: 'تعداد محصول' })
+    input.focus()
+    fireEvent.change(input, { target: { value: '۱۰۰' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(input).toHaveValue('۱۰۰'))
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن به سبد خرید' }))
+    await waitFor(() => expect(addLine).toHaveBeenCalledOnce())
+    expect(addLine).toHaveBeenCalledWith('customer', 'variant-p-101', 100, expect.stringMatching(/^cart-/))
+  })
+  it('does not carry a typed quantity over to another variant', async () => {
+    const base = fixtureAllProducts.find((item) => item.slug === 'ronix-2210-hammer-drill')!
+    const first = base.variants[0]
+    const second = { ...first, id: 'variant-second', sku: 'SKU-SECOND', title: 'نوع دوم' }
+    renderPageWithProduct({ ...base, variants: [first, second] })
+    const input = await screen.findByRole('textbox', { name: 'تعداد محصول' })
+    input.focus()
+    fireEvent.change(input, { target: { value: '40' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(input).toHaveValue('۴۰'))
+    fireEvent.click(screen.getByRole('button', { name: /نوع دوم/ }))
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'تعداد محصول' })).toHaveValue('۱'),
+    )
+  })
   it('adds to the real Guest Cart without forcing early authentication', async () => {
     const api = commerceStub()
     renderPage(new MemorySessionStore(), api)

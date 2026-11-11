@@ -192,8 +192,8 @@ describe.sequential('CartService database integration', () => {
     ).resolves.toEqual({ quantity: 4 });
   });
 
-  it('enforces quantity 99 under concurrent increments', async () => {
-    await seedCart([{ variantId: variantIds[0], quantity: 98 }]);
+  it('enforces quantity 1000 under concurrent increments', async () => {
+    await seedCart([{ variantId: variantIds[0], quantity: 999 }]);
 
     const results = await Promise.allSettled([
       cart.addForUser(
@@ -218,7 +218,7 @@ describe.sequential('CartService database integration', () => {
     const storedLine = await prisma.cartItem.findFirstOrThrow({
       where: { cart: { customerId }, variantId: variantIds[0] },
     });
-    expect(storedLine.quantity).toBe(99);
+    expect(storedLine.quantity).toBe(1000);
   });
 
   it('enforces 100 distinct lines under concurrent inserts', async () => {

@@ -15,6 +15,9 @@ export class CommerceCartController {
   private readonly listeners = new Set<() => void>()
   private readonly retryKeys = new Map<string, string>()
   private readonly inflightMutations = new Set<Promise<unknown>>()
+  /** Latest quantity typed while a write for the same line is still in flight. */
+  private readonly queuedQuantities = new Map<string, number>()
+  private readonly quantityWrites = new Map<string, Promise<void>>()
   private authenticated: boolean | null = null
   private identityVersion: number | null = null
   private authEpoch = 0
@@ -40,6 +43,7 @@ export class CommerceCartController {
     this.authenticated = authenticated
     this.authEpoch += 1
     this.retryKeys.clear()
+    this.queuedQuantities.clear()
     this.lastAppliedRequest = 0
     this.patch({ cart: EMPTY_CART, owner: 'guest', error: null, pendingVariantIds: [], mergeWarnings: [] })
     if (authenticated)
@@ -82,13 +86,79 @@ export class CommerceCartController {
     )
   }
 
-  async setQuantity(variantId: string, quantity: number): Promise<void> {
-    if (quantity <= 0) return this.remove(variantId)
-    await this.trackMutation(
-      this.mutate(variantId, `set:${variantId}:${quantity}`, (key) =>
-        this.api.setLine(this.state.owner, variantId, quantity, key),
-      ),
-    )
+  /**
+   * Sets the absolute quantity of a line in one request. While a write for the
+   * line is in flight, a newer quantity replaces any earlier queued one and is
+   * sent once that write settles, so rapid edits end on the last intent without
+   * one request per keystroke. The returned promise reports the final outcome.
+   */
+  setQuantity(variantId: string, quantity: number): Promise<void> {
+    const running = this.quantityWrites.get(variantId)
+    if (running && this.state.pendingVariantIds.includes(variantId)) {
+      this.queuedQuantities.set(variantId, quantity)
+      return running
+    }
+    const write = this.trackMutation(this.writeQuantities(variantId, quantity))
+    this.quantityWrites.set(variantId, write)
+    const forget = () => {
+      if (this.quantityWrites.get(variantId) === write)
+        this.quantityWrites.delete(variantId)
+    }
+    void write.then(forget, forget)
+    return write
+  }
+
+  private async writeQuantities(variantId: string, first: number): Promise<void> {
+    const epoch = this.authEpoch
+    let quantity: number | undefined = first
+    let continuing = false
+    let holdsLine = false
+    try {
+      while (quantity !== undefined) {
+        const target: number = quantity
+        const current = this.state.cart.lines.find(
+          (line) => line.variantId === variantId,
+        )?.quantity
+        if (!continuing || target !== (current ?? 0)) {
+          try {
+            const sent = await this.mutate(
+              variantId,
+              target <= 0 ? `remove:${variantId}` : `set:${variantId}:${target}`,
+              (key) =>
+                target <= 0
+                  ? this.api.removeLine(this.state.owner, variantId, key)
+                  : this.api.setLine(this.state.owner, variantId, target, key),
+              continuing,
+            )
+            // Another mutation (or a merge) owns this line; nothing was sent.
+            if (!sent && !continuing) return
+            holdsLine = true
+          } catch (error) {
+            holdsLine = true
+            // A newer quantity is waiting; it supersedes the failed one.
+            if (!this.isActive(epoch) || !this.queuedQuantities.has(variantId))
+              throw error
+          }
+        }
+        if (!this.isActive(epoch)) return
+        continuing = true
+        quantity = this.queuedQuantities.get(variantId)
+        this.queuedQuantities.delete(variantId)
+      }
+    } finally {
+      if (
+        holdsLine &&
+        this.isActive(epoch) &&
+        this.state.pendingVariantIds.includes(variantId)
+      ) {
+        this.queuedQuantities.delete(variantId)
+        this.patch({
+          pendingVariantIds: this.state.pendingVariantIds.filter(
+            (id) => id !== variantId,
+          ),
+        })
+      }
+    }
   }
 
   async remove(variantId: string): Promise<void> {
@@ -140,11 +210,13 @@ export class CommerceCartController {
     variantId: string,
     fingerprint: string,
     operation: (key: string) => Promise<CommerceCartState['cart']>,
+    /** The caller already holds this line's pending flag (queued quantity). */
+    continuing = false,
   ): Promise<boolean> {
     if (
       this.authenticated === null ||
       this.state.phase === 'merging' ||
-      this.state.pendingVariantIds.includes(variantId)
+      (!continuing && this.state.pendingVariantIds.includes(variantId))
     )
       return false
     const epoch = this.authEpoch
@@ -154,7 +226,9 @@ export class CommerceCartController {
     this.retryKeys.set(fingerprint, key)
     this.patch({
       error: null,
-      pendingVariantIds: [...this.state.pendingVariantIds, variantId],
+      pendingVariantIds: continuing
+        ? this.state.pendingVariantIds
+        : [...this.state.pendingVariantIds, variantId],
     })
     try {
       const cart = await operation(key)
@@ -166,7 +240,8 @@ export class CommerceCartController {
       if (this.isActive(epoch)) this.patch({ error, phase: 'error' })
       throw error
     } finally {
-      if (this.isActive(epoch)) {
+      // A queued quantity keeps the line pending until its own write settles.
+      if (this.isActive(epoch) && !this.queuedQuantities.has(variantId)) {
         this.patch({
           pendingVariantIds: this.state.pendingVariantIds.filter(
             (id) => id !== variantId,

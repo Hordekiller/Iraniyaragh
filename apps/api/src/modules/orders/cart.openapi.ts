@@ -48,7 +48,7 @@ export const openApiCart = {
     required: ["variantId", "quantity"],
     properties: {
       variantId: { type: "string", minLength: 1, maxLength: 191 },
-      quantity: { type: "integer", minimum: 1, maximum: 99 },
+      quantity: { type: "integer", minimum: 1, maximum: 1000 },
     },
   } satisfies SchemaObject,
   response,

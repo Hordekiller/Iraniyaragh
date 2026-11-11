@@ -52,7 +52,7 @@ export function validateCartQuantity(quantity: number): void {
   ) {
     throw new UnprocessableEntityException({
       code: 'CART_QUANTITY_INVALID',
-      message: 'Quantity must be between 1 and 99.',
+      message: `Quantity must be between 1 and ${MAX_CART_QUANTITY}.`,
     });
   }
 }

@@ -1,5 +1,6 @@
 export const MAX_CART_LINES = 100;
-export const MAX_CART_QUANTITY = 99;
+/** Per-line ceiling; must match the CartItem_quantity_range CHECK and the contracts' MAX_CART_LINE_QUANTITY. Stock is enforced at checkout. */
+export const MAX_CART_QUANTITY = 1000;
 export const CART_REPLAY_TTL_MS = 24 * 60 * 60 * 1000;
 export const GUEST_CART_IDLE_TTL_MS = 24 * 60 * 60 * 1000;
 export const CART_EXPIRED_CLEANUP_BATCH = 100;

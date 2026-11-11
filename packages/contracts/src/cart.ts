@@ -32,6 +32,12 @@ export type CartView = {
 
 export type CartResponse = ApiSuccess<{ cart: CartView }>;
 
+/**
+ * Highest quantity one cart line may hold. The API enforces the same ceiling
+ * (and the database a matching CHECK); available stock is enforced separately.
+ */
+export const MAX_CART_LINE_QUANTITY = 1000;
+
 export type CartMutationRequest = { variantId: string; quantity: number };
 export type CartRemoveRequest = { variantId: string };
 

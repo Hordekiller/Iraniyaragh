@@ -2,8 +2,6 @@ import { Link } from 'react-router-dom'
 import {
   Info,
   LogIn,
-  Minus,
-  Plus,
   RefreshCw,
   ShoppingBag,
   Trash2,
@@ -15,12 +13,17 @@ import { formatToman, toPersianDigits } from '../lib/format'
 import { ROUTES } from '../lib/routes'
 import { commerceErrorMessage } from '../services/commerce/errors'
 import { CouponBox } from '../components/cart/CouponBox'
+import { QuantityStepper } from '../components/cart/QuantityStepper'
+import { MAX_CART_LINE_QUANTITY } from '@iranyaragh/contracts'
 
 export function CartPage() {
   const { state, setQuantity, remove, clear, reload } = useCart()
   const auth = useAuth()
   const lines = state.cart.lines
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0)
+  // Checkout would be refused for these; say so here instead of at the next step.
+  const overStock = lines.some((line) => line.quantity > line.available)
+  const saving = state.pendingVariantIds.length > 0
 
   if (state.phase === 'idle' || state.phase === 'loading') {
     return (
@@ -157,7 +160,7 @@ export function CartPage() {
             {state.mergeWarnings.map((warning) => (
               <li key={`${warning.variantId}:${warning.code}`}>
                 {warning.code === 'QUANTITY_CAPPED'
-                  ? 'تعداد یکی از کالاهای مشترک به سقف ۹۹ عدد رسید.'
+                  ? `تعداد یکی از کالاهای مشترک به سقف ${toPersianDigits(MAX_CART_LINE_QUANTITY)} عدد رسید.`
                   : 'به‌دلیل سقف ۱۰۰ ردیف، یکی از کالاهای سبد مهمان اضافه نشد.'}
               </li>
             ))}
@@ -226,43 +229,18 @@ export function CartPage() {
                   <span className="text-xs text-slate-500">
                     موجودی قابل سفارش: {toPersianDigits(line.available)}
                   </span>
-                  <div
-                    className="flex items-center rounded-full border border-slate-300 p-1"
-                    aria-label={`تعداد ${line.title}`}
-                  >
-                    <button
-                      type="button"
-                      disabled={
-                        pending ||
-                        state.phase === 'merging' ||
-                        line.quantity >= 99
-                      }
-                      onClick={() =>
-                        void setQuantity(line.variantId, line.quantity + 1)
-                      }
-                      aria-label={`افزایش تعداد ${line.title}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-white disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <Plus size={15} />
-                    </button>
-                    <span
-                      className="min-w-10 text-center font-black"
-                      aria-live="polite"
-                    >
-                      {toPersianDigits(line.quantity)}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={pending || state.phase === 'merging'}
-                      onClick={() =>
-                        void setQuantity(line.variantId, line.quantity - 1)
-                      }
-                      aria-label={`کاهش تعداد ${line.title}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-950 disabled:opacity-40"
-                    >
-                      <Minus size={15} />
-                    </button>
-                  </div>
+                  <QuantityStepper
+                    size="sm"
+                    itemName={line.title}
+                    value={line.quantity}
+                    max={Math.min(MAX_CART_LINE_QUANTITY, line.available)}
+                    maxReason={line.available < MAX_CART_LINE_QUANTITY ? 'stock' : 'limit'}
+                    onCommit={(quantity) => setQuantity(line.variantId, quantity)}
+                    onRemove={() => setQuantity(line.variantId, 0)}
+                    describeError={commerceErrorMessage}
+                    disabled={state.phase === 'merging'}
+                    className="items-end"
+                  />
                 </div>
               </li>
             )
@@ -304,11 +282,21 @@ export function CartPage() {
               قیمت، موجودی و هزینه ارسال در مرحله بعد دوباره توسط سرور بررسی
               می‌شود.
             </p>
+            {overStock && (
+              <p role="alert" className="mt-4 rounded-xl bg-red-500/15 p-3 text-xs font-bold leading-6 text-red-200">
+                تعداد یک یا چند کالا بیشتر از موجودی قابل سفارش است. پیش از ادامه، تعداد را اصلاح کنید.
+              </p>
+            )}
             {state.owner === 'customer' ? (
               <Link
                 to={ROUTES.checkout}
                 data-help="cart-continue"
-                className="mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                aria-disabled={overStock || saving || undefined}
+                onClick={(event) => {
+                  // Never continue with a quantity the server has not confirmed or cannot supply.
+                  if (overStock || saving) event.preventDefault()
+                }}
+                className={`mt-5 flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-l from-amber-400 to-orange-500 font-black text-slate-950 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${overStock ? 'cursor-not-allowed opacity-50' : ''}`}
               >
                 ادامه فرایند خرید
               </Link>

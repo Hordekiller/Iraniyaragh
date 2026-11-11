@@ -1,4 +1,5 @@
 import { Transform } from 'class-transformer';
+import { MAX_CART_QUANTITY } from './cart.constants';
 import {
   IsInt,
   IsNotEmpty,
@@ -15,5 +16,5 @@ export class CartLineDto {
   @MaxLength(191)
   variantId!: string;
 
-  @IsInt() @Min(1) @Max(99) quantity!: number;
+  @IsInt() @Min(1) @Max(MAX_CART_QUANTITY) quantity!: number;
 }
