@@ -7,6 +7,7 @@ import {
   Star,
   Truck,
   ShoppingBag,
+  ShoppingCart,
 } from 'lucide-react'
 import { useCatalogApi } from '../state/catalog-context'
 import { useCart } from '../state/cart-context'
@@ -342,10 +343,10 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
                   data-help="add-to-cart"
                   onClick={() => void handleAdd()}
                   disabled={!available || cartBusy}
-                  className="flex-1 h-12 rounded-full bg-[#FF4D00] text-white font-black hover:bg-[#E54400] disabled:bg-slate-300 disabled:cursor-not-allowed transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
+                  className="min-w-0 flex-1 basis-0 h-12 rounded-full bg-[#FF4D00] px-2 text-sm leading-tight text-white font-black min-[360px]:whitespace-nowrap sm:basis-auto sm:text-base hover:bg-[#E54400] disabled:bg-slate-300 disabled:cursor-not-allowed transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
                 >
                   <span className="inline-flex items-center gap-2">
-                    <ShoppingBag size={18} aria-hidden="true" />
+                    <ShoppingBag size={18} aria-hidden="true" className="hidden min-[400px]:inline" />
                     {cartBusy
                       ? 'در حال آماده‌سازی سبد…'
                       : !selectedVariant
@@ -361,9 +362,11 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
                 type="button"
                 data-help="view-cart"
                 onClick={() => navigate(ROUTES.cart)}
-                className="h-12 shrink-0 grow px-4 sm:grow-0 sm:px-6 rounded-full border-2 border-slate-900 font-black hover:bg-slate-900 hover:text-white transition"
+                className={`flex h-12 shrink-0 items-center justify-center rounded-full border-2 border-slate-900 font-black hover:bg-slate-900 hover:text-white transition sm:grow-0 sm:px-6 ${inCart ? 'grow px-4' : 'w-12 sm:w-auto'}`}
               >
-                مشاهده سبد
+                {/* Icon-only beside the add button on phones, so the purchase row stays on one line. */}
+                {!inCart && <ShoppingCart size={20} aria-hidden="true" className="sm:hidden" />}
+                <span className={inCart ? '' : 'sr-only sm:not-sr-only'}>مشاهده سبد</span>
               </button>
             </div>
           </ProductPurchaseDock>
