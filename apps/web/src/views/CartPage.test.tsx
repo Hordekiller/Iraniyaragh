@@ -174,7 +174,7 @@ describe('CartPage', () => {
     const warningTitle = await screen.findByText(/سبدها ادغام شدند/)
     const status = warningTitle.closest('[role="status"]')
     expect(status).toHaveTextContent(
-      'تعداد یکی از کالاهای مشترک به سقف ۱۰۰۰ عدد رسید',
+      'تعداد یکی از کالاهای مشترک به بیشترین مقدار قابل ثبت رسید',
     )
     expect(status).toHaveTextContent('به‌دلیل سقف ۱۰۰ ردیف')
     expect(screen.queryByText('internal-variant-2')).not.toBeInTheDocument()

@@ -83,8 +83,8 @@ describe('CommerceFixtureClient', () => {
     expect(bulk.lines[0]?.quantity).toBe(200)
     expect(bulk.lines[0]?.lineTotal.amount).toBe('5700000000')
 
-    const capped = await client.setLine('guest', SELLABLE_VARIANT, 5000, 'set-2')
-    expect(capped.lines[0]?.quantity).toBe(1000)
+    const capped = await client.setLine('guest', SELLABLE_VARIANT, 5_000_000, 'set-2')
+    expect(capped.lines[0]?.quantity).toBe(999_999)
 
     const withSecondLine = await client.addLine(
       'guest',

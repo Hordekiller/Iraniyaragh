@@ -102,7 +102,7 @@ test.describe('web: direct quantity entry', () => {
     await expect(field).toHaveValue('۲۵۰')
   })
 
-  test('refuses letters and zero, and caps at the allowed quantity with a message', async ({ page }) => {
+  test('refuses letters and zero, and accepts bulk quantities above 1000', async ({ page }) => {
     await addQuantity(page, '5')
     await openCart(page)
     const field = quantityField(page)
@@ -116,9 +116,9 @@ test.describe('web: direct quantity entry', () => {
     await expect(page.getByText('حداقل تعداد ۱ عدد است.')).toBeVisible()
     await expect(field).toHaveValue('۵')
 
-    await typeQuantity(page, field, '5000')
-    await expect(field).toHaveValue('۱۰۰۰')
-    await expect(page.getByText(/۱۰۰۰ عدد/).first()).toBeVisible()
+    await typeQuantity(page, field, '25000')
+    await expect(field).toHaveValue('۲۵۰۰۰')
+    await expect(page.getByText(toman(UNIT_TOMAN * 25000)).first()).toBeVisible()
   })
 
   test('works from the keyboard alone', async ({ page }) => {

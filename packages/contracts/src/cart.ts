@@ -33,10 +33,11 @@ export type CartView = {
 export type CartResponse = ApiSuccess<{ cart: CartView }>;
 
 /**
- * Highest quantity one cart line may hold. The API enforces the same ceiling
- * (and the database a matching CHECK); available stock is enforced separately.
+ * Technical bound for one cart line, not a business limit: six digits keep
+ * unitPrice * quantity inside the BIGINT money columns. The API and a database
+ * CHECK enforce the same value; available stock is the real limit.
  */
-export const MAX_CART_LINE_QUANTITY = 1000;
+export const MAX_CART_LINE_QUANTITY = 999_999;
 
 export type CartMutationRequest = { variantId: string; quantity: number };
 export type CartRemoveRequest = { variantId: string };

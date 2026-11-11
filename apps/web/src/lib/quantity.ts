@@ -3,7 +3,7 @@ import { toLatinDigits } from './format'
 /** Idle time after the last keystroke before a valid typed quantity is saved. */
 export const QUANTITY_COMMIT_DELAY_MS = 800
 
-/** Longest draft kept while typing; far below Number's safe integer range. */
+/** Longest draft kept while typing; matches the six-digit cart line bound. */
 const MAX_DRAFT_DIGITS = 6
 
 /**

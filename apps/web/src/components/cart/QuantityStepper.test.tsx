@@ -6,7 +6,7 @@ import { QuantityStepper } from './QuantityStepper'
 
 type Commit = (quantity: number) => void | Promise<unknown>
 
-function Harness({ start = 1, max = 2000, onCommit, onRemove, maxReason }: {
+function Harness({ start = 1, max = 999_999, onCommit, onRemove, maxReason }: {
   start?: number
   max?: number
   onCommit?: Commit
@@ -57,6 +57,7 @@ describe('QuantityStepper', () => {
   it.each([
     ['100', 100, '۱۰۰'],
     ['1000', 1000, '۱۰۰۰'],
+    ['25000', 25000, '۲۵۰۰۰'],
     ['۱۲۵', 125, '۱۲۵'],
     ['١٢٥', 125, '۱۲۵'],
   ])('commits %s once as exactly %i', async (text, quantity, shown) => {

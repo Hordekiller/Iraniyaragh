@@ -160,7 +160,7 @@ export function CartPage() {
             {state.mergeWarnings.map((warning) => (
               <li key={`${warning.variantId}:${warning.code}`}>
                 {warning.code === 'QUANTITY_CAPPED'
-                  ? `تعداد یکی از کالاهای مشترک به سقف ${toPersianDigits(MAX_CART_LINE_QUANTITY)} عدد رسید.`
+                  ? 'تعداد یکی از کالاهای مشترک به بیشترین مقدار قابل ثبت رسید.'
                   : 'به‌دلیل سقف ۱۰۰ ردیف، یکی از کالاهای سبد مهمان اضافه نشد.'}
               </li>
             ))}

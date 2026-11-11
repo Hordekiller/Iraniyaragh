@@ -53,7 +53,8 @@ const routes: Array<[string, () => Promise<void> | void]> = [
     '/products/ronix-2210-hammer-drill',
     async () => {
       expect(
-        await screen.findByRole('heading', { name: /رونیکس ۲۲۱۰/ }),
+        // The fixture catalog answers after a delay; allow for a loaded test runner.
+        await screen.findByRole('heading', { name: /رونیکس ۲۲۱۰/ }, { timeout: 5_000 }),
       ).toBeInTheDocument()
     },
   ],

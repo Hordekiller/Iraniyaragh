@@ -49,7 +49,7 @@ const cartLine: SchemaObject = {
   ],
   properties: {
     variantId: { type: "string" },
-    quantity: { type: "integer", minimum: 1, maximum: 1000 },
+    quantity: { type: "integer", minimum: 1, maximum: 999999 },
     title: { type: "string" },
     sku: { type: "string" },
     unitPrice: money,
@@ -187,7 +187,7 @@ export const openApiCheckout = {
                     productTitle: { type: "string" },
                     variantTitle: { type: "string", nullable: true },
                     sku: { type: "string" },
-                    quantity: { type: "integer", minimum: 1, maximum: 1000 },
+                    quantity: { type: "integer", minimum: 1, maximum: 999999 },
                     unitPrice: money,
                     lineTotal: money,
                   },
