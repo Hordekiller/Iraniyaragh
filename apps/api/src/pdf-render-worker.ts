@@ -40,11 +40,14 @@ async function bootstrap(): Promise<void> {
   const invoiceWorker = new Worker<{ jobId: string }>(
     INVOICE_PDF_QUEUE_NAME,
     async (job) => {
-      if (job.name !== 'render' || typeof job.data.jobId !== 'string') {
+      if (!['render', 'recover'].includes(job.name) || typeof job.data.jobId !== 'string') {
         throw new Error('Unsupported invoice PDF render job.');
       }
+      // A failed attempt leaves the row PENDING but completes its delivery, and a
+      // repeat request reuses the same queue job id, which BullMQ ignores. The
+      // recurring 'recover' wake-up is what retries it; the database budget decides finality.
       await invoiceProcessor.process(job.data.jobId, {
-        finalAttempt: job.attemptsMade + 1 >= (job.opts.attempts ?? 1),
+        finalAttempt: job.name === 'render' && job.attemptsMade + 1 >= (job.opts.attempts ?? 1),
       });
     },
     {
@@ -106,12 +109,18 @@ async function bootstrap(): Promise<void> {
   });
   recoveryQueue.on('error', () => process.stderr.write('Report export recovery queue unavailable.\n'));
   await scheduleDatabaseRecovery(recoveryQueue);
+  const invoiceRecoveryQueue = new Queue<{ jobId: string }>(INVOICE_PDF_QUEUE_NAME, {
+    connection: { url: config.get('REDIS_URL', { infer: true }) },
+    prefix: INVOICE_PDF_QUEUE_PREFIX,
+  });
+  invoiceRecoveryQueue.on('error', () => process.stderr.write('Invoice PDF recovery queue unavailable.\n'));
+  await scheduleDatabaseRecovery(invoiceRecoveryQueue);
 
   let closing = false;
   const close = async () => {
     if (closing) return;
     closing = true;
-    await Promise.allSettled([invoiceWorker.close(), exportWorker.close(), recoveryQueue.close()]);
+    await Promise.allSettled([invoiceWorker.close(), exportWorker.close(), recoveryQueue.close(), invoiceRecoveryQueue.close()]);
     await exportProcessor.stop();
     await app.close();
   };

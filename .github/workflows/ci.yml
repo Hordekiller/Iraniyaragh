@@ -81,9 +81,16 @@ jobs:
           node-version: 22
           cache: pnpm
       - name: Install PostgreSQL client
+        # psql runs from the same pinned image as the service, so this job does
+        # not depend on an Ubuntu apt mirror being reachable.
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+          sudo tee /usr/local/bin/psql >/dev/null <<'SHIM'
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -v "$PWD:$PWD" -w "$PWD" \
+            postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2 psql "$@"
+          SHIM
+          sudo chmod 755 /usr/local/bin/psql
+          psql --version
       - run: pnpm install --frozen-lockfile
       - name: Generate and validate Prisma client
         run: |
@@ -249,7 +256,15 @@ jobs:
           pnpm --filter @iranyaragh/api invoice-pdf:capacity
           pnpm --filter @iranyaragh/api report-export:capacity
       - name: Install Chromium and system dependencies
-        run: pnpm --filter @iranyaragh/e2e exec playwright install --with-deps chromium
+        # The runner image already carries Chromium's libraries; apt only tops
+        # them up. When the Ubuntu mirror is unreachable the job continues only
+        # if a real headless launch and PDF render still succeed.
+        run: |
+          pnpm --filter @iranyaragh/e2e exec playwright install chromium
+          if ! timeout 600 pnpm --filter @iranyaragh/e2e exec playwright install-deps chromium; then
+            echo "::warning ::apt mirror unavailable; verifying Chromium launches with the runner's libraries"
+            cd e2e && node -e "require('@playwright/test').chromium.launch().then(async b => { const p = await b.newPage(); await p.setContent('<p>ok</p>'); await p.pdf(); await b.close(); })"
+          fi
       - name: Ensure the isolated PDF worker's Chromium revision is present
         run: pnpm --filter @iranyaragh/api exec playwright install chromium
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

@@ -7,7 +7,7 @@ import { customerInvoice } from './invoice-publication.service';
 import { buildInvoicePdfHtml, InvoicePdfInputError } from './invoice-pdf-template';
 import { InvoicePdfAssetsProvider } from './invoice-pdf-assets';
 import type { InvoicePdfClaimedJob, InvoicePdfFailureCode } from './invoice-pdf-job.service';
-import { InvoicePdfJobService } from './invoice-pdf-job.service';
+import { INVOICE_PDF_MAX_ATTEMPTS, InvoicePdfJobService } from './invoice-pdf-job.service';
 
 export type InvoicePdfRuntimeOptions = {
   /** Bounded lease identity validated by the job service claim pattern. */
@@ -49,7 +49,10 @@ export class InvoicePdfRenderProcessor {
       const bytes = await this.render(identity);
       await this.jobs.completeRender(identity, bytes, requestId);
     } catch (error) {
-      await this.recordFailure(identity, options.finalAttempt, resolveFailureCode(error), requestId);
+      // The database attempt budget is authoritative: a recovery wake-up carries
+      // no BullMQ attempt history, and the last budgeted attempt must settle.
+      const finalAttempt = options.finalAttempt || identity.attempts >= INVOICE_PDF_MAX_ATTEMPTS;
+      await this.recordFailure(identity, finalAttempt, resolveFailureCode(error), requestId);
     }
   }
 
