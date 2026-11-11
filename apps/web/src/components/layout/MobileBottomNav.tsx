@@ -26,7 +26,8 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }:
 
   // Product pages provide their own persistent purchase controls.
   if (!embedded && (pathname.startsWith('/products/') || pathname.startsWith('/product/'))) {
-    return <div aria-hidden="true" data-testid="product-dock-spacer" className="h-[var(--product-dock-height,14rem)] lg:h-0" />
+    // Room for the dock plus the page-helper button above it, so the last content can scroll clear of both.
+    return <div aria-hidden="true" data-testid="product-dock-spacer" className="h-[calc(var(--product-dock-height,14rem)+3.75rem)] lg:h-0" />
   }
 
   const items = [
@@ -50,6 +51,7 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }:
         </div>
       </div>
     </nav>
-    {!embedded && <div aria-hidden="true" className="h-[calc(6rem+env(safe-area-inset-bottom))] lg:h-0" />}
+    {/* Bottom nav plus the 48px page-helper button above it (and its gap). */}
+    {!embedded && <div aria-hidden="true" className="h-[calc(9.75rem+env(safe-area-inset-bottom))] lg:h-0" />}
   </>
 }
