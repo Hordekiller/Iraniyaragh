@@ -5,7 +5,7 @@
 # The worker is the only component allowed to launch a browser engine. It is
 # published as its own immutable image, built from the official Playwright base
 # image whose exact Chromium revision matches the `playwright` version the API
-# compiles against (both pinned to 1.52.0). It never accepts network traffic:
+# compiles against (kept equal by scripts/deploy/pdf-worker-playwright.test.mjs). It never accepts network traffic:
 # no port, no HTTP surface, no shell entrypoint beyond the single node command.
 #
 # Chromium runs WITH its sandbox. The Playwright base image ships
@@ -69,7 +69,7 @@ RUN set -eu; \
 # The digest resolves a single linux/amd64 manifest, which is the only platform
 # this deployment publishes for, so the browser runtime cannot shift underneath
 # the pinned playwright JavaScript package.
-FROM mcr.microsoft.com/playwright:v1.55.1-noble@sha256:d8e0bdf35da90942fc8f97a65fa7f1969200ccd916ec0fd78780d80d9b81e07b AS runtime
+FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:ee15712262f017b8157421b212b12099146645f44b1bc5c0514cbbe6a229b1d0 AS runtime
 
 # tini reaps zombie browser processes and forwards SIGTERM so an in-flight
 # render can settle before close. The base image ships no init, so add it while
@@ -96,7 +96,7 @@ COPY --from=build --chown=pwuser:pwuser /tmp/pdf-assets/brand/ ./assets/brand/
 # bit. A base update that drops the helper or breaks this mode fails the build
 # here instead of shipping a browser that would refuse to sandbox at runtime.
 RUN set -eu; \
-    chromeDir="/ms-playwright/$(ls /ms-playwright | grep '^chromium-' | sort -n | tail -n 1)/chrome-linux"; \
+    chromeDir="/ms-playwright/$(ls /ms-playwright | grep '^chromium-' | sort -n | tail -n 1)/chrome-linux64"; \
     test -x "$chromeDir/chrome"; \
     chmod 4755 "$chromeDir/chrome_sandbox"; \
     test -u "$chromeDir/chrome_sandbox" || { echo "chrome_sandbox did not accept its SUID mode" >&2; exit 1; }
