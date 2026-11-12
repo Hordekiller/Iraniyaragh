@@ -264,14 +264,47 @@ describe('Customer invoice ownership UI and session lifetime', () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
     render(component('/account/invoices/doc-a'))
     fireEvent.click(await screen.findByRole('button', { name: 'دریافت فایل فاکتور (PDF)' }))
-    expect(await screen.findByText('فایل فاکتور دریافت شد.', undefined, { timeout: 8000 })).toBeVisible()
+    expect(await screen.findByText(/فایل فاکتور آماده شد/u, undefined, { timeout: 8000 })).toBeVisible()
     const post = auth.request.mock.calls.find(([path, init]) => path === '/api/v1/customers/me/invoices/doc-a/pdf' && init?.method === 'POST')
     expect(post?.[1].headers['Idempotency-Key']).toMatch(/^[0-9a-f-]{36}$/u)
     expect(artifact).toHaveBeenCalledWith('/api/v1/customers/me/invoices/doc-a/pdf/artifact')
     expect(createObjectURL).toHaveBeenCalledOnce()
     expect(click).toHaveBeenCalledOnce()
+    // WebKit cancels a download whose object URL is revoked right after the
+    // click, so the verified file stays reachable as a visible, tappable link.
+    expect(revokeObjectURL).not.toHaveBeenCalled()
+    const link = screen.getByRole('link', { name: 'ذخیرهٔ فایل فاکتور' })
+    expect(link).toHaveAttribute('href', 'blob:invoice')
+    expect(link).toHaveAttribute('download', 'iranyaragh-invoice-IRY-2026-000001.pdf')
+    expect(document.body.querySelector('a[hidden]')).toBeNull()
     click.mockRestore()
   }, 15000)
+  it('asks with a fresh idempotency key after a failed attempt instead of replaying the failure', async () => {
+    let posts = 0
+    auth.request.mockImplementation(async (path: string, init?: { method?: string }) => {
+      if (path.endsWith('/pdf') && init?.method === 'POST') {
+        posts += 1
+        if (posts === 1) throw new AuthApiError({ code: 'INVOICE_PDF_NOT_READY', message: 'earlier render failed', statusCode: 409 })
+        return { data: { pdf: { documentId: 'doc-a', status: 'READY', sha256: null, byteCount: 3, replayed: false } } }
+      }
+      return { data: { invoice } }
+    })
+    Object.assign(auth.request, { response: vi.fn(async () => new Response(new TextEncoder().encode('%PDF-'), { headers: { 'Content-Disposition': 'attachment; filename="iranyaragh-invoice-IRY-2026-000001.pdf"' } })) })
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:retry'), revokeObjectURL: vi.fn() }))
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    render(component('/account/invoices/doc-a'))
+    const action = await screen.findByRole('button', { name: 'دریافت فایل فاکتور (PDF)' })
+    fireEvent.click(action)
+    expect(await screen.findByRole('alert')).toHaveTextContent('دریافت فایل فاکتور در این لحظه ممکن نیست')
+    fireEvent.click(await screen.findByRole('button', { name: 'دریافت فایل فاکتور (PDF)' }))
+    expect(await screen.findByText(/فایل فاکتور آماده شد/u)).toBeVisible()
+    const keys = auth.request.mock.calls
+      .filter(([path, init]) => path === '/api/v1/customers/me/invoices/doc-a/pdf' && init?.method === 'POST')
+      .map(([, init]) => init.headers['Idempotency-Key'])
+    expect(keys).toHaveLength(2)
+    expect(keys[0]).not.toBe(keys[1])
+    click.mockRestore()
+  })
   it('reports a failed PDF request without claiming a file', async () => {
     auth.request.mockImplementation(async (path: string) => {
       if (path.endsWith('/pdf')) throw new AuthApiError({ code: 'INVOICE_PDF_DISABLED', message: 'private capacity detail', statusCode: 409 })
@@ -281,6 +314,7 @@ describe('Customer invoice ownership UI and session lifetime', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'دریافت فایل فاکتور (PDF)' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('دریافت فایل فاکتور در این لحظه ممکن نیست')
     expect(screen.queryByText('private capacity detail')).not.toBeInTheDocument()
-    expect(screen.queryByText('فایل فاکتور دریافت شد.')).not.toBeInTheDocument()
+    expect(screen.queryByText(/فایل فاکتور آماده شد/u)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'ذخیرهٔ فایل فاکتور' })).not.toBeInTheDocument()
   })
 })

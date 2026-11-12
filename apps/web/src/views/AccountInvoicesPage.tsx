@@ -326,12 +326,32 @@ function InvoiceContent({
 }
 
 const PDF_POLL_INTERVAL_MS = 2000
-const PDF_POLL_ATTEMPTS = 20
+// A cold render (worker start + Chromium) can take most of a minute; wait up to
+// ~90s before asking the customer to try again.
+const PDF_POLL_ATTEMPTS = 45
+
+/** Idempotency key for one requested file; older WebKit lacks crypto.randomUUID. */
+function newRequestKey(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+type SavedPdf = { url: string; filename: string }
 
 /**
  * One action for the customer: ask the server for the stored PDF of this
  * invoice, wait for it to be rendered, verify it against the server digest and
  * save it. Waiting is bounded; nothing here reports a file that was not received.
+ *
+ * The verified file stays available as a visible link: browsers that do not
+ * start a programmatic download (iOS Safari, some in-app browsers) still let
+ * the customer save or open it with a direct tap. The object URL lives until
+ * the next request or until the page closes; revoking it right after the
+ * programmatic click cancels the download in WebKit.
  */
 function CustomerInvoicePdf({
   invoice,
@@ -343,12 +363,18 @@ function CustomerInvoicePdf({
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [saved, setSaved] = useState<SavedPdf | null>(null)
   const activeRef = useRef(true)
+  const savedUrlRef = useRef<string | null>(null)
   // One key per requested file: repeating the click while it renders asks for the same file.
   const keyRef = useRef<string | null>(null)
   useEffect(() => {
     activeRef.current = true
-    return () => { activeRef.current = false }
+    return () => {
+      activeRef.current = false
+      if (savedUrlRef.current) URL.revokeObjectURL(savedUrlRef.current)
+      savedUrlRef.current = null
+    }
   }, [])
   async function handleDownload() {
     if (busy) return
@@ -356,7 +382,7 @@ function CustomerInvoicePdf({
     setError('')
     setMessage('در حال آماده‌سازی فایل فاکتور…')
     try {
-      keyRef.current ??= crypto.randomUUID()
+      keyRef.current ??= newRequestKey()
       let status: InvoicePdfRequestResult = await requestCustomerInvoicePdf(request, invoice.id, keyRef.current)
       for (let attempt = 0; status.status !== 'READY' && attempt < PDF_POLL_ATTEMPTS; attempt += 1) {
         await new Promise((resolve) => setTimeout(resolve, PDF_POLL_INTERVAL_MS))
@@ -365,6 +391,7 @@ function CustomerInvoicePdf({
       }
       if (!activeRef.current) return
       if (status.status !== 'READY') {
+        // The same key keeps asking for the same pending file on the next tap.
         setMessage('')
         setError('فایل فاکتور هنوز آماده نشده است؛ چند لحظهٔ دیگر دوباره همین دکمه را بزنید.')
         return
@@ -374,20 +401,32 @@ function CustomerInvoicePdf({
       const sha256 = Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('')
       if (!activeRef.current) return
       if (artifact.serverSha256 && artifact.serverSha256 !== sha256) {
+        keyRef.current = null
         setMessage('')
         setError('فایل دریافت‌شده کامل نیست؛ دوباره تلاش کنید.')
         return
       }
+      if (savedUrlRef.current) URL.revokeObjectURL(savedUrlRef.current)
       const url = URL.createObjectURL(new Blob([artifact.bytes], { type: 'application/pdf' }))
+      savedUrlRef.current = url
+      setSaved({ url, filename: artifact.filename })
       const anchor = document.createElement('a')
       anchor.href = url
       anchor.rel = 'noopener'
       anchor.download = artifact.filename
-      anchor.click()
-      URL.revokeObjectURL(url)
+      anchor.hidden = true
+      document.body.appendChild(anchor)
+      try {
+        anchor.click()
+      } finally {
+        anchor.remove()
+      }
       keyRef.current = null
-      setMessage('فایل فاکتور دریافت شد.')
+      setMessage('فایل فاکتور آماده شد. اگر بارگیری خودکار شروع نشد، پیوند «ذخیرهٔ فایل فاکتور» را بزنید.')
     } catch (cause) {
+      // A failed or refused attempt must not be replayed by the next tap: the
+      // server answers a replayed failed request with the same failure.
+      keyRef.current = null
       if (!activeRef.current) return
       setMessage('')
       setError(cause instanceof AuthApiError
@@ -407,6 +446,17 @@ function CustomerInvoicePdf({
       >
         {busy ? 'در حال آماده‌سازی…' : 'دریافت فایل فاکتور (PDF)'}
       </button>
+      {saved && !busy && (
+        <a
+          href={saved.url}
+          download={saved.filename}
+          target="_blank"
+          rel="noopener"
+          className="rounded-xl border border-orange-700 px-4 py-2 text-sm font-bold text-orange-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600"
+        >
+          ذخیرهٔ فایل فاکتور
+        </a>
+      )}
       {message && <p role="status" className="text-sm text-emerald-800">{message}</p>}
       {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
     </div>
