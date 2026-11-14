@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+@keyframes hero-fade { from { opacity: .55; transform: scale(1.015); } to { opacity: 1; transform: scale(1); } }
+
 .product-dock-menu { display: none; }
 @media (width < 64rem) {
   .product-dock-price[data-active='false'] { display: none; }
@@ -162,3 +164,52 @@ main:focus {
 @media (width < 64rem) {
   body:has(input:focus, textarea:focus, select:focus) .page-helper-fab { display: none; }
 }
+
+/* Contact launcher sits above the page helper and follows the mobile nav/product dock. */
+.contact-launcher {
+  position: fixed;
+  z-index: 81;
+  inset-inline-end: 1rem;
+  bottom: calc(var(--mobile-nav-height, calc(6rem + env(safe-area-inset-bottom))) + 4.35rem);
+}
+.contact-launcher-product { bottom: calc(var(--product-dock-height, 14rem) + 4.35rem); }
+.contact-launcher-button {
+  display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: .5rem;
+  border-radius: 999px; border: 1px solid #0f766e; padding: .65rem 1rem;
+  background: #0f766e; color: white; font-size: .8125rem; font-weight: 800;
+  box-shadow: 0 9px 28px rgb(15 118 110 / 26%); transition: transform .25s ease, background-color .25s ease, box-shadow .25s ease;
+}
+.contact-launcher-button:hover { background: #115e59; transform: translateY(-2px); box-shadow: 0 13px 30px rgb(15 118 110 / 32%); }
+.contact-popover {
+  position: absolute; inset-inline-end: 0; bottom: calc(100% + .65rem); width: min(82vw, 290px);
+  overflow: hidden; border: 1px solid #dbe7e6; border-radius: 1.25rem; background: #fff;
+  box-shadow: 0 20px 55px rgb(15 23 42 / 20%); color: #0f172a;
+  opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(10px) scale(.97);
+  transform-origin: bottom right; transition: opacity .26s ease, transform .32s cubic-bezier(.22, 1, .36, 1), visibility .32s;
+}
+.contact-popover-open { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0) scale(1); }
+.contact-popover-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .8rem 1rem; background: #f0fdfa; font-size: .85rem; font-weight: 900; }
+.contact-popover-heading button { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; }
+.contact-popover-heading button:hover { background: #ccfbf1; }
+.contact-popover-list { display: grid; gap: .3rem; padding: .55rem; max-height: min(50vh, 420px); overflow-y: auto; }
+.contact-popover-link { display: flex; min-height: 48px; align-items: center; gap: .75rem; border-radius: .8rem; padding: .45rem .7rem; font-size: .85rem; font-weight: 700; transition: background-color .2s ease, transform .2s ease; }
+.contact-popover-link:hover { background: #f8fafc; transform: translateX(-2px); }
+.contact-popover-icon { display: grid; width: 34px; height: 34px; flex: none; place-items: center; border-radius: 50%; background: #e2e8f0; }
+.contact-link-instagram .contact-popover-icon { background: #fce7f3; color: #be185d; }
+.contact-link-whatsapp .contact-popover-icon { background: #dcfce7; color: #15803d; }
+.contact-link-bale .contact-popover-icon { background: #dbeafe; color: #1d4ed8; }
+.contact-link-phone .contact-popover-icon { background: #ffedd5; color: #c2410c; }
+@media (width < 64rem) {
+  .contact-launcher-button { width: 48px; padding: 0; }
+  .contact-launcher-button span { display: none; }
+  .contact-launcher-product .contact-popover { position: fixed; top: max(12px, env(safe-area-inset-top)); bottom: auto; inset-inline-end: 1rem; max-height: calc(100dvh - var(--product-dock-height, 14rem) - 5rem); }
+  .contact-launcher-product .contact-popover-list { max-height: calc(100dvh - var(--product-dock-height, 14rem) - 8rem); }
+  body:has(input:focus, textarea:focus, select:focus) .contact-launcher { display: none; }
+}
+@media (width >= 64rem) {
+  .contact-launcher, .contact-launcher-product { inset-inline-end: 1.5rem; bottom: 5.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .contact-launcher-button, .contact-popover, .contact-popover-link { transition: none; }
+}
+@media print { .contact-launcher { display: none !important; } }

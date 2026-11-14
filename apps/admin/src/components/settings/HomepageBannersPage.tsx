@@ -160,7 +160,7 @@ function HomepageBannersEditor() {
   return <Box>
     <PageHeader title="بنرهای تبلیغاتی صفحهٔ اصلی" description="حداکثر چهار بنر زیر کاروسل ویژه؛ ترتیب، تصویر، پیوند و زمان‌بندی را مدیریت کنید." breadcrumbs={[{ label: 'تنظیمات', href: '/settings' }, { label: 'بنرها' }]} />
     <Stack gap={2}>
-      <Alert severity="info">تصویر بنر از میان تصاویر آمادهٔ رسانهٔ کالاها انتخاب می‌شود. برای تصویر جدید یا جایگزین، ابتدا آن را در بخش رسانهٔ یک کالا بارگذاری کنید و پس از «آماده» شدن، اینجا انتخاب کنید. بنرِ غیرفعال، خارج از بازهٔ انتشار یا بدون تصویر آماده در فروشگاه نمایش داده نمی‌شود.</Alert>
+      <Alert severity="info">برای چهار بنر میان کاروسل‌ها می‌توانید از تصاویر آمادهٔ یراق کابینت یا رسانهٔ کالاها استفاده کنید. برای تصویر تازه، آن را در رسانهٔ یک کالا بارگذاری کنید و پس از «آماده» شدن اینجا انتخاب کنید. بنرِ غیرفعال یا خارج از بازهٔ انتشار نمایش داده نمی‌شود.</Alert>
       {loading && <Typography role="status">در حال دریافت تنظیمات…</Typography>}
       {Boolean(loadError) && <Alert severity="error">{errorText(loadError)} <Button onClick={() => void load()}>تلاش دوباره</Button></Alert>}
       {stale && <Alert severity="warning">{errorText(error)} <Button onClick={() => void load()}>دریافت نسخهٔ جدید</Button></Alert>}

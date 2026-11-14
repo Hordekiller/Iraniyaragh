@@ -89,6 +89,8 @@ export interface CatalogApi {
   getHomepageCollections(): Promise<HomepageCollectionsConfig>
   /** Live admin-managed banners; absent in adapters that have no banner source. */
   getHomepageBanners?(): Promise<HomepageBannerPublic[]>
+  /** The separate hero slider at the top of the home page. */
+  getHomepageHero?(): Promise<HomepageBannerPublic[]>
   listProducts(query?: CatalogQuery): Promise<CatalogListResult>
   getProductBySlug(slug: string): Promise<CatalogProduct>
 }

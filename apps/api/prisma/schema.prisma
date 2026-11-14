@@ -315,6 +315,7 @@ model User {
   stocktakeCommandRecords     StocktakeCommandRecord[]
   homepageCollectionCommands  HomepageCollectionCommand[]
   homepageBannerCommands      HomepageBannerCommand[]
+  homepageHeroCommands        HomepageHeroCommand[]
   blogPostsAuthored           BlogPost[]                    @relation("BlogPostAuthor")
   blogPostsReviewed           BlogPost[]                    @relation("BlogPostReviewer")
   blogRevisions               BlogPostRevision[]
@@ -1422,6 +1423,34 @@ model StorefrontFeatureFlag {
   enabled   Boolean
   version   Int      @default(1)
   updatedAt DateTime @updatedAt
+}
+
+/// Admin-managed public contact links. A missing row means no links are published.
+model StorefrontContactConfig {
+  id        String   @id @default("storefront") @db.VarChar(32)
+  version   Int      @default(0)
+  links     Json     @default("[]")
+  updatedAt DateTime @updatedAt
+}
+
+/// Separately managed hero slides; independent of the four promotional banners.
+model HomepageHeroConfig {
+  id        String   @id @default("storefront") @db.VarChar(32)
+  version   Int      @default(0)
+  slides    Json     @default("[]")
+  updatedAt DateTime @updatedAt
+}
+
+model HomepageHeroCommand {
+  id          String   @id @default(cuid())
+  actorId     String
+  keyHash     String   @db.Char(64)
+  payloadHash String   @db.Char(64)
+  response    Json
+  createdAt   DateTime @default(now())
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, keyHash])
 }
 
 /// Idempotency evidence for settings.manage banner writes; no customer data.

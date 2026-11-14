@@ -71,6 +71,11 @@ export class CatalogHttpClient implements CatalogApi {
     return response.data.banners
   }
 
+  async getHomepageHero() {
+    const response = await this.request<HomepageBannersPublicResponse>('/api/v1/catalog/homepage-hero')
+    return response.data.banners
+  }
+
   async listProducts(query: CatalogQuery = {}): Promise<CatalogListResult> {
     const perPage = Number.isInteger(query.perPage)
       ? Math.max(1, Math.min(100, query.perPage!))
