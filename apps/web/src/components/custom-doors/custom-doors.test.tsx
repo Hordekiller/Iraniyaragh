@@ -217,6 +217,34 @@ describe("Door floating link", () => {
   });
 });
 describe("Door configurator", () => {
+  it("moves the mobile viewport to each new step, including the price summary", async () => {
+    const original = Object.getOwnPropertyDescriptor(Element.prototype, "scrollIntoView");
+    const scrolled: Element[] = [];
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: function (this: Element) { scrolled.push(this); },
+    });
+    try {
+      restoreRow();
+      configurator();
+      await screen.findByRole("button", { name: /مدل آزمون جداگانه/ });
+      fireEvent.click(screen.getByRole("button", { name: "محاسبه و بررسی سفارش" }));
+      await screen.findByRole("heading", { name: "جزئیات و برآورد سفارش" });
+      expect(scrolled.at(-1)).toContainElement(screen.getByRole("heading", { name: "جزئیات و برآورد سفارش" }));
+      scrolled.length = 0;
+      fireEvent.click(screen.getByRole("button", { name: "محاسبه و بررسی سفارش" }));
+      await waitFor(() => expect(scrolled).toHaveLength(1));
+      expect(scrolled[0]).toContainElement(screen.getByRole("heading", { name: "جزئیات و برآورد سفارش" }));
+
+      fireEvent.click(screen.getByRole("button", { name: "بازگشت به انتخاب درب" }));
+      expect(scrolled.at(-1)).toHaveAttribute("id", "door-configurator");
+      fireEvent.click(screen.getByRole("button", { name: "ویرایش" }));
+      expect(scrolled.at(-1)).toBe(screen.getByLabelText("عرض (میلی‌متر)").closest("form"));
+    } finally {
+      if (original) Object.defineProperty(Element.prototype, "scrollIntoView", original);
+      else Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+    }
+  });
   it("updates the 3D preview with the selected glass and entered dimensions", async () => {
     load.mockResolvedValue({
       ...catalog,

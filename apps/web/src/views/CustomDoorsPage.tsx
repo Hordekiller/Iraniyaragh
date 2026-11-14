@@ -1,7 +1,7 @@
 import { DoorManufacturingFields } from "../components/custom-doors/DoorManufacturingFields";
 import { emptyManufacturing, manufacturingEntry, readManufacturing } from "../components/custom-doors/manufacturing-entry";
 import { DoorGlassChoices } from "../components/custom-doors/DoorGlassChoices";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -74,6 +74,7 @@ function Configurator() {
   const [loadError, setLoadError] = useState("");
   const [reload, setReload] = useState(0);
   const [stage, setStage] = useState(0);
+  const [reviewRevision, setReviewRevision] = useState(0);
   const [type, setType] = useState<DoorType>("FORMLEX");
   const [entry, setEntry] = useState<Entry>(emptyEntry);
   const [items, setItems] = useState<DoorItemInput[]>(() => {
@@ -110,9 +111,44 @@ function Configurator() {
   const [reference, setReference] = useState<File | null>(null);
   const inFlight = useRef(false);
   const alive = useRef(true);
+  const configuratorRef = useRef<HTMLElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const reviewRef = useRef<HTMLDivElement>(null);
+  const createdRef = useRef<HTMLElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const previousStage = useRef(stage);
+  const previousReviewRevision = useRef(reviewRevision);
   const pending = useRef<
     import("../services/custom-doors/api").DoorSubmission | null
   >(restoredSubmission);
+
+  useLayoutEffect(() => {
+    if (previousStage.current === stage && previousReviewRevision.current === reviewRevision) return;
+    previousStage.current = stage;
+    previousReviewRevision.current = reviewRevision;
+    const target = stage === 1 ? formRef.current : stage === 2 ? reviewRef.current : configuratorRef.current;
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView?.({
+      block: "start",
+      behavior: "instant",
+    });
+  }, [stage, reviewRevision]);
+
+  useLayoutEffect(() => {
+    if (!created) return;
+    createdRef.current?.focus({ preventScroll: true });
+    createdRef.current?.scrollIntoView?.({
+      block: "start",
+      behavior: "instant",
+    });
+  }, [created]);
+
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView?.({
+      block: "start",
+      behavior: "instant",
+    });
+  }, [error]);
 
   useEffect(() => {
     alive.current = true;
@@ -256,6 +292,7 @@ function Configurator() {
       if (alive.current) {
         setQuote(value);
         setStage(2);
+        setReviewRevision((current) => current + 1);
       }
     } catch (cause) {
       if (alive.current) setError(doorError(cause));
@@ -336,7 +373,7 @@ function Configurator() {
   }
   if (created)
     return (
-      <section className="mx-auto max-w-3xl px-4 py-12">
+      <section ref={createdRef} tabIndex={-1} className="mx-auto max-w-3xl scroll-mt-24 px-4 py-12 focus:outline-none">
         <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-7">
           <Check className="text-emerald-700" aria-hidden="true" />
           <h1 className="mt-4 text-2xl font-black">
@@ -357,7 +394,7 @@ function Configurator() {
           </Link>
         </div>
         {error && (
-          <p role="alert" className="mt-5 rounded-xl bg-amber-50 p-4">
+          <p ref={errorRef} role="alert" className="mt-5 scroll-mt-24 rounded-xl bg-amber-50 p-4">
             {error}
           </p>
         )}
@@ -431,8 +468,10 @@ function Configurator() {
         })}
       </ol>
       <section
+        ref={configuratorRef}
         id="door-configurator"
-        className="scroll-mt-24"
+        tabIndex={-1}
+        className="scroll-mt-24 focus:outline-none"
         aria-labelledby="door-configurator-title"
       >
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -481,8 +520,9 @@ function Configurator() {
         )}
         {error && (
           <p
+            ref={errorRef}
             role="alert"
-            className="my-4 rounded-xl bg-amber-50 p-4 text-sm leading-7 text-amber-950"
+            className="my-4 scroll-mt-24 rounded-xl bg-amber-50 p-4 text-sm leading-7 text-amber-950"
           >
             {error}
           </p>
@@ -567,8 +607,10 @@ function Configurator() {
               )}
               {stage === 1 && model && (
                 <form
+                  ref={formRef}
+                  tabIndex={-1}
                   onSubmit={saveItem}
-                  className="rounded-3xl border border-slate-200 bg-white p-5 md:p-7"
+                  className="scroll-mt-24 rounded-3xl border border-slate-200 bg-white p-5 focus:outline-none md:p-7"
                 >
                   <h3 className="text-xl font-black">
                     {editing === null
@@ -708,7 +750,9 @@ function Configurator() {
               )}
               {stage === 2 && quote && (
                 <>
-                  <DoorSummary quote={quote} />
+                  <div ref={reviewRef} tabIndex={-1} className="scroll-mt-24 focus:outline-none">
+                    <DoorSummary quote={quote} />
+                  </div>
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
                     <label className="block cursor-pointer rounded-xl text-sm font-bold focus-within:ring-2 focus-within:ring-orange-700">
                       تصویر یا فایل مرجع (اختیاری)
