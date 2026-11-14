@@ -2,7 +2,7 @@ CREATE TABLE "HomepageHeroConfig" (
     "id" VARCHAR(32) NOT NULL DEFAULT 'storefront',
     "version" INTEGER NOT NULL DEFAULT 0,
     "slides" JSONB NOT NULL DEFAULT '[]',
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "HomepageHeroConfig_pkey" PRIMARY KEY ("id")
 );
 
