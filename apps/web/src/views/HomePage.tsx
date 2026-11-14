@@ -34,6 +34,16 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
   const [loading, setLoading] = useState(!initialCatalog)
   const [attempt, setAttempt] = useState(0)
   const [banners, setBanners] = useState<HomepageBannerPublic[] | null>(api.getHomepageBanners ? null : [])
+  const [heroSlides, setHeroSlides] = useState<HomepageBannerPublic[] | null>(null)
+
+  useEffect(() => {
+    if (!api.getHomepageHero) return
+    let cancelled = false
+    void api.getHomepageHero()
+      .then(items => { if (!cancelled) setHeroSlides(items) })
+      .catch(() => { /* keep the bundled cabinet-hardware slides available */ })
+    return () => { cancelled = true }
+  }, [api])
 
   useEffect(() => {
     if (!api.getHomepageBanners) return
@@ -125,7 +135,7 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
         </div>
       )}
       <section className="max-w-[1280px] mx-auto px-4 lg:px-6 pt-4 lg:pt-6">
-        <HeroSlider />
+        <HeroSlider banners={heroSlides ?? undefined} />
       </section>
 
       {error && (

@@ -17,6 +17,18 @@ const HOMEPAGE_BANNER_SLOTS = 4;
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const ID = /^[A-Za-z0-9_-]{1,64}$/u;
 const MEDIA_ID = /^[A-Za-z0-9_-]{1,128}$/u;
+const CABINET_MEDIA: Record<string, { path: string; alt: string; name: string }> = {
+  'cabinet-hinge-hero': { path: '/images/cabinet-hinge-hero.webp', alt: 'لولای آرام‌بند کابینت', name: 'تصویر آماده: لولا' },
+  'cabinet-drawer-hero': { path: '/images/cabinet-drawer-hero.webp', alt: 'ریل کشوی کابینت', name: 'تصویر آماده: ریل کشو' },
+  'cabinet-handle-hero': { path: '/images/cabinet-handle-hero.webp', alt: 'دستگیره کابینت', name: 'تصویر آماده: دستگیره' },
+  'cabinet-lift-hero': { path: '/images/cabinet-lift-hero.webp', alt: 'جک درب کابینت', name: 'تصویر آماده: جک کابینت' },
+};
+const DEFAULT_BANNERS: HomepageBannerInput[] = [
+  { id: 'cabinet-hinges', title: 'لولا و یراق کابینت', subtitle: 'انتخاب لولای مناسب برای درب کابینت', ctaLabel: 'مشاهده لولاها', href: '/search?q=%D9%84%D9%88%D9%84%D8%A7', desktopMediaId: 'cabinet-hinge-hero', mobileMediaId: null, imageAlt: 'لولای آرام‌بند روی درب کابینت', enabled: true, publishAt: null, unpublishAt: null },
+  { id: 'cabinet-drawers', title: 'ریل کشو', subtitle: 'حرکت نرم و دسترسی آسان به کشوها', ctaLabel: 'مشاهده ریل‌ها', href: '/search?q=%D8%B1%DB%8C%D9%84%20%DA%A9%D8%B4%D9%88', desktopMediaId: 'cabinet-drawer-hero', mobileMediaId: null, imageAlt: 'ریل فلزی کشوی کابینت', enabled: true, publishAt: null, unpublishAt: null },
+  { id: 'cabinet-handles', title: 'دستگیره کابینت', subtitle: 'جزئیاتی که ظاهر کابینت را کامل می‌کنند', ctaLabel: 'مشاهده دستگیره‌ها', href: '/search?q=%D8%AF%D8%B3%D8%AA%DA%AF%DB%8C%D8%B1%D9%87', desktopMediaId: 'cabinet-handle-hero', mobileMediaId: null, imageAlt: 'دستگیره‌های کابینت چوبی', enabled: true, publishAt: null, unpublishAt: null },
+  { id: 'cabinet-lifts', title: 'جک درب کابینت', subtitle: 'راهکار باز شدن راحت درب‌های بالایی', ctaLabel: 'مشاهده جک‌ها', href: '/search?q=%D8%AC%DA%A9%20%DA%A9%D8%A7%D8%A8%DB%8C%D9%86%D8%AA', desktopMediaId: 'cabinet-lift-hero', mobileMediaId: null, imageAlt: 'جک فلزی درب کابینت چوبی', enabled: true, publishAt: null, unpublishAt: null },
+];
 
 export function isSafeBannerHref(href: string): boolean {
   if (href.length > 500 || /[\s\\]/u.test(href) || [...href].some(ch => ch.charCodeAt(0) < 32)) return false;
@@ -58,15 +70,23 @@ export class HomepageBannersService {
 
   private get origin(): string { return this.config?.get('PUBLIC_MEDIA_ORIGIN', { infer: true }) ?? 'http://localhost:9000/products'; }
 
+  private builtinImage(id: string): HomepageBannerImage | undefined {
+    const asset = CABINET_MEDIA[id];
+    if (!asset) return undefined;
+    return { url: asset.path, width: 1672, height: 941 };
+  }
+
   private async images(ids: string[], client: Pick<PrismaService, 'productMedia'> = this.prisma): Promise<Map<string, HomepageBannerImage>> {
-    const rows = ids.length ? await client.productMedia.findMany({ where: { id: { in: ids }, state: 'READY', kind: 'IMAGE' }, include: { renditions: true } }) : [];
+    const productIds = ids.filter(id => !CABINET_MEDIA[id]);
+    const rows = productIds.length ? await client.productMedia.findMany({ where: { id: { in: productIds }, state: 'READY', kind: 'IMAGE' }, include: { renditions: true } }) : [];
     const map = new Map<string, HomepageBannerImage>();
+    for (const id of ids) { const image = this.builtinImage(id); if (image) map.set(id, image); }
     for (const row of rows) { const p = widestRenditionProjection(this.origin, row.renditions); if (p) map.set(row.id, p); }
     return map;
   }
 
   private async project(row: HomepageBannerConfig | null): Promise<HomepageBannersAdminConfig> {
-    const stored = (row?.banners ?? []) as unknown as HomepageBannerInput[];
+    const stored = (row?.banners ?? DEFAULT_BANNERS) as unknown as HomepageBannerInput[];
     const images = await this.images(stored.flatMap(b => b.mobileMediaId ? [b.desktopMediaId, b.mobileMediaId] : [b.desktopMediaId]));
     const banners: HomepageBannerAdmin[] = stored.map(b => ({ ...b, desktopImage: images.get(b.desktopMediaId) ?? null, mobileImage: b.mobileMediaId ? images.get(b.mobileMediaId) ?? null : null }));
     return { version: row?.version ?? 0, banners, updatedAt: row?.updatedAt.toISOString() ?? null };
@@ -88,7 +108,10 @@ export class HomepageBannersService {
     const rows = await this.prisma.productMedia.findMany({
       where: { state: 'READY', kind: 'IMAGE' }, orderBy: { createdAt: 'desc' }, take: 60, include: { renditions: true, product: { select: { name: true } } },
     });
-    return rows.flatMap(row => { const p = widestRenditionProjection(this.origin, row.renditions); return p ? [{ id: row.id, ...p, alt: row.altText ?? '', productName: row.product.name }] : []; });
+    return [
+      ...Object.entries(CABINET_MEDIA).map(([id, asset]) => ({ id, ...this.builtinImage(id)!, alt: asset.alt, productName: asset.name })),
+      ...rows.flatMap(row => { const p = widestRenditionProjection(this.origin, row.renditions); return p ? [{ id: row.id, ...p, alt: row.altText ?? '', productName: row.product.name }] : []; }),
+    ];
   }
 
   async update(actorId: string, requestId: string, raw: HomepageBannersUpdate, idempotencyKey: string): Promise<HomepageBannersAdminConfig> {

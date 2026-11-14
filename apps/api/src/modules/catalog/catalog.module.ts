@@ -10,6 +10,10 @@ import { HomepageBannersController } from './homepage-banners.controller';
 import { HomepageBannersService } from './homepage-banners.service';
 import { StorefrontHelperController } from './storefront-helper.controller';
 import { StorefrontHelperService } from './storefront-helper.service';
+import { StorefrontContactsController } from './storefront-contacts.controller';
+import { StorefrontContactsService } from './storefront-contacts.service';
+import { HomepageHeroController } from './homepage-hero.controller';
+import { HomepageHeroService } from './homepage-hero.service';
 
-@Module({ imports: [AuditModule], controllers: [CatalogController, HomepageCollectionsController, HomepageBannersController, StorefrontHelperController], providers: [CatalogService, CatalogIdempotencyService, CatalogImportService, HomepageCollectionsService, HomepageBannersService, StorefrontHelperService], exports: [CatalogService, CatalogImportService, CatalogIdempotencyService] })
+@Module({ imports: [AuditModule], controllers: [CatalogController, HomepageCollectionsController, HomepageBannersController, HomepageHeroController, StorefrontHelperController, StorefrontContactsController], providers: [CatalogService, CatalogIdempotencyService, CatalogImportService, HomepageCollectionsService, HomepageBannersService, HomepageHeroService, StorefrontHelperService, StorefrontContactsService], exports: [CatalogService, CatalogImportService, CatalogIdempotencyService] })
 export class CatalogModule {}

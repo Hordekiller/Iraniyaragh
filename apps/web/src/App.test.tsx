@@ -28,7 +28,7 @@ const routes: Array<[string, () => Promise<void> | void]> = [
         await screen.findByLabelText('جستجو در محصولات'),
       ).toBeInTheDocument()
       expect(
-        screen.getByRole('heading', { name: /تخصصی ابزار/ }),
+        screen.getByRole('heading', { name: /لولا و یراق کابینت/ }),
       ).toBeInTheDocument()
       expect(screen.getByRole('note')).toHaveTextContent('پیش‌نمایش دمو')
     },

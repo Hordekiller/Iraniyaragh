@@ -7170,6 +7170,85 @@
         ]
       }
     },
+    "/catalog/homepage-hero": {
+      "get": {
+        "operationId": "HomepageHeroController_publicConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Read live slides for the storefront homepage hero",
+        "tags": [
+          "HomepageHero"
+        ]
+      }
+    },
+    "/catalog/homepage-hero/admin/media-options": {
+      "get": {
+        "operationId": "HomepageHeroController_mediaOptions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "HomepageHero"
+        ]
+      }
+    },
+    "/catalog/homepage-hero/admin": {
+      "get": {
+        "operationId": "HomepageHeroController_adminConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "HomepageHero"
+        ]
+      },
+      "put": {
+        "operationId": "HomepageHeroController_update",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "HomepageHero"
+        ]
+      }
+    },
     "/catalog/storefront-helper": {
       "get": {
         "operationId": "StorefrontHelperController_publicConfig",
@@ -7218,6 +7297,57 @@
         ],
         "tags": [
           "StorefrontHelper"
+        ]
+      }
+    },
+    "/catalog/storefront-contacts": {
+      "get": {
+        "operationId": "StorefrontContactsController_publicConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Published storefront contact links",
+        "tags": [
+          "StorefrontContacts"
+        ]
+      }
+    },
+    "/catalog/storefront-contacts/admin": {
+      "get": {
+        "operationId": "StorefrontContactsController_adminConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "StorefrontContacts"
+        ]
+      },
+      "put": {
+        "operationId": "StorefrontContactsController_update",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "StorefrontContacts"
         ]
       }
     },

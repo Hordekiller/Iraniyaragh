@@ -7,6 +7,7 @@ import { MobileBottomNav } from './MobileBottomNav'
 import { SiteFooter } from './SiteFooter'
 import { GuidedTour } from '../help/GuidedTour'
 import { PageHelper } from '../help/PageHelper'
+import { ContactLauncher } from '../contact/ContactLauncher'
 import { LoginDialog } from '../auth/LoginDialog'
 import { SECTION_IDS } from '../../lib/site-config'
 import { useRouteMetadata } from '../../lib/use-route-metadata'
@@ -76,6 +77,7 @@ export function AppLayout({ children, serverMetadata = false }: { children?: Rea
       <LoginDialog open={loginOpen} onClose={auth.close} />
       <GuidedTour />
       <PageHelper />
+      <ContactLauncher key={location.pathname} />
     </>
   )
 }

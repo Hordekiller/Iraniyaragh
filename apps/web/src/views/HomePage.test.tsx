@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { CatalogProvider } from '../state/CatalogProvider'
 import type { CatalogApi, CatalogCategory, CatalogProduct } from '../services/catalog/types'
+import type { HomepageBannerPublic } from '@iranyaragh/contracts'
 import { HomePage } from './HomePage'
 
 const PRODUCT: CatalogProduct = {
@@ -48,6 +49,18 @@ function renderHome(api: CatalogApi) {
 }
 
 describe('HomePage', () => {
+  it('keeps the four mid-page banners separate from the editable top slider', async () => {
+    const slide = (id: string): HomepageBannerPublic => ({ id, title: id, subtitle: null, ctaLabel: 'مشاهده', href: '/search', imageAlt: id, desktopImage: { url: `/images/${id}.webp`, width: 1200, height: 600 }, mobileImage: null })
+    renderHome(catalogApi({
+      getHomepageBanners: vi.fn(async () => ['بنر ۱', 'بنر ۲', 'بنر ۳', 'بنر ۴'].map(slide)),
+      getHomepageHero: vi.fn(async () => [slide('اسلاید مستقل')]),
+    }))
+    expect(await screen.findByRole('heading', { name: 'اسلاید مستقل' })).toBeInTheDocument()
+    const grid = await screen.findByRole('region', { name: 'پیشنهادهای ویژه فروشگاه' })
+    expect(within(grid).getAllByRole('link')).toHaveLength(4)
+    expect(within(grid).queryByText('اسلاید مستقل')).toBeNull()
+  })
+
   it('renders only products and categories received from the catalog API', async () => {
     const listProducts = vi.fn(async () => ({ items: [PRODUCT], meta: { page: 1, perPage: 8, total: 1, pages: 1 } }))
     renderHome(catalogApi({ listProducts }))

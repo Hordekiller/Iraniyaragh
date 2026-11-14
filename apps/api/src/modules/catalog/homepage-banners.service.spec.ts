@@ -46,7 +46,7 @@ function fixture(stored: unknown[] = [], version = 1) {
   };
   const prisma = { ...tx, $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)) };
   const audit = { record: vi.fn() };
-  const config = { get: () => 'https://cdn.test/products' };
+  const config = { get: (key: string) => key === 'STOREFRONT_ORIGIN' ? 'https://shop.test' : 'https://cdn.test/products' };
   return { tx, prisma, audit, service: new HomepageBannersService(prisma as never, audit as never, config as never) };
 }
 
@@ -59,7 +59,22 @@ describe('HomepageBannersService', () => {
   });
   it('lists media options', async () => {
     const { service } = fixture();
-    expect((await service.mediaOptions())[0]).toMatchObject({ id: 'm1', productName: 'P' });
+    const options = await service.mediaOptions();
+    expect(options).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'cabinet-lift-hero', url: '/images/cabinet-lift-hero.webp' }),
+      expect.objectContaining({ id: 'm1', productName: 'P' }),
+    ]));
+  });
+  it('provides four cabinet hardware banners before custom settings are saved', async () => {
+    const { service } = fixture([], 0);
+    const { banners } = await service.readPublic();
+    expect(banners).toHaveLength(4);
+    expect(banners.map(item => item.desktopImage.url)).toEqual([
+      '/images/cabinet-hinge-hero.webp',
+      '/images/cabinet-drawer-hero.webp',
+      '/images/cabinet-handle-hero.webp',
+      '/images/cabinet-lift-hero.webp',
+    ]);
   });
   it('saves with version bump, audit and idempotency record', async () => {
     const { service, audit, tx } = fixture([banner()], 1);
