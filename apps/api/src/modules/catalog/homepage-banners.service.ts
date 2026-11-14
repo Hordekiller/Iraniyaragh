@@ -73,8 +73,7 @@ export class HomepageBannersService {
   private builtinImage(id: string): HomepageBannerImage | undefined {
     const asset = CABINET_MEDIA[id];
     if (!asset) return undefined;
-    const origin = this.config?.get('STOREFRONT_ORIGIN', { infer: true }) ?? 'http://localhost:3000';
-    return { url: new URL(asset.path, origin).href, width: 1672, height: 941 };
+    return { url: asset.path, width: 1672, height: 941 };
   }
 
   private async images(ids: string[], client: Pick<PrismaService, 'productMedia'> = this.prisma): Promise<Map<string, HomepageBannerImage>> {

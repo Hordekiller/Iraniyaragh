@@ -18,7 +18,7 @@ describe('independent homepage hero slider', () => {
     const { service, prisma } = fixture();
     const { banners } = await service.readPublic();
     expect(banners.map(slide => slide.id)).toEqual(['cabinet-hinge', 'cabinet-drawer', 'cabinet-handle']);
-    expect(banners[0]?.desktopImage.url).toBe('https://store.example/images/cabinet-hinge-hero.webp');
+    expect(banners[0]?.desktopImage.url).toBe('/images/cabinet-hinge-hero.webp');
     expect(prisma.homepageBannerConfig.findUnique).not.toHaveBeenCalled();
     expect((await service.mediaOptions()).map(option => option.id)).toEqual(['cabinet-hinge-hero', 'cabinet-drawer-hero', 'cabinet-handle-hero']);
   });

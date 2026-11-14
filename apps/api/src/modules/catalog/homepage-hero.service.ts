@@ -30,8 +30,7 @@ export class HomepageHeroService {
   private get mediaOrigin() { return this.config?.get('PUBLIC_MEDIA_ORIGIN', { infer: true }) ?? 'http://localhost:9000/products'; }
   private builtinImage(id: string): HomepageBannerImage | undefined {
     const builtin = BUILTINS[id]; if (!builtin) return undefined;
-    const origin = this.config?.get('STOREFRONT_ORIGIN', { infer: true }) ?? 'http://localhost:3000';
-    return { url: new URL(builtin.path, origin).href, width: 1672, height: 941 };
+    return { url: builtin.path, width: 1672, height: 941 };
   }
   private async images(ids: string[], client: Pick<PrismaService, 'productMedia'> = this.prisma) {
     const productIds = ids.filter(id => !BUILTINS[id]);

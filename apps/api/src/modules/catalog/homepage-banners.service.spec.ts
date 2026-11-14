@@ -61,7 +61,7 @@ describe('HomepageBannersService', () => {
     const { service } = fixture();
     const options = await service.mediaOptions();
     expect(options).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: 'cabinet-lift-hero', url: 'https://shop.test/images/cabinet-lift-hero.webp' }),
+      expect.objectContaining({ id: 'cabinet-lift-hero', url: '/images/cabinet-lift-hero.webp' }),
       expect.objectContaining({ id: 'm1', productName: 'P' }),
     ]));
   });
@@ -70,10 +70,10 @@ describe('HomepageBannersService', () => {
     const { banners } = await service.readPublic();
     expect(banners).toHaveLength(4);
     expect(banners.map(item => item.desktopImage.url)).toEqual([
-      'https://shop.test/images/cabinet-hinge-hero.webp',
-      'https://shop.test/images/cabinet-drawer-hero.webp',
-      'https://shop.test/images/cabinet-handle-hero.webp',
-      'https://shop.test/images/cabinet-lift-hero.webp',
+      '/images/cabinet-hinge-hero.webp',
+      '/images/cabinet-drawer-hero.webp',
+      '/images/cabinet-handle-hero.webp',
+      '/images/cabinet-lift-hero.webp',
     ]);
   });
   it('saves with version bump, audit and idempotency record', async () => {

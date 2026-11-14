@@ -35,14 +35,14 @@ export function HeroSlider({ banners }: { banners?: HomepageBannerPublic[] } = {
   }, [])
 
   useEffect(() => {
-    if (paused || !visible || reducedMotion || slides.length < 2) return
+    if (paused || !visible || (reducedMotion && !manualPlay) || slides.length < 2) return
     const timer = window.setInterval(() => setIndex(current => (current + 1) % slides.length), 5000)
     return () => window.clearInterval(timer)
-  }, [paused, visible, reducedMotion, slides.length])
+  }, [paused, visible, reducedMotion, manualPlay, slides.length])
 
   const current = slides.length ? index % slides.length : 0
   const slide = slides[current]
-  const rotating = !paused && visible && !reducedMotion
+  const rotating = !paused && visible && (!reducedMotion || manualPlay)
   const controlClass = 'flex size-11 items-center justify-center rounded-full border border-white/30 bg-slate-950/70 text-white hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
   function select(next: number) { setIndex((next + slides.length) % slides.length); setPaused(true); setManualPlay(false) }
 
@@ -72,7 +72,7 @@ export function HeroSlider({ banners }: { banners?: HomepageBannerPublic[] } = {
       <div className="flex items-center gap-2">
         <button type="button" className={controlClass} aria-label="اسلاید قبلی" onClick={() => select(current - 1)}><ChevronRight aria-hidden="true" size={20} /></button>
         <button type="button" className={controlClass} aria-label="اسلاید بعدی" onClick={() => select(current + 1)}><ChevronLeft aria-hidden="true" size={20} /></button>
-        {!reducedMotion && <button type="button" className={controlClass} aria-label={paused ? 'شروع پخش خودکار' : 'توقف پخش خودکار'} onClick={() => { setPaused(value => !value); setManualPlay(paused) }}>{paused ? <Play aria-hidden="true" size={18} /> : <Pause aria-hidden="true" size={18} />}</button>}
+        <button type="button" className={controlClass} aria-label={paused ? 'شروع پخش خودکار' : 'توقف پخش خودکار'} onClick={() => { setPaused(value => !value); setManualPlay(paused) }}>{paused ? <Play aria-hidden="true" size={18} /> : <Pause aria-hidden="true" size={18} />}</button>
       </div>
       <div className="flex items-center gap-1" aria-label="انتخاب اسلاید">
         {slides.map((item, position) => <button type="button" key={item.id} className="flex size-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"

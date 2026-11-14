@@ -51,7 +51,7 @@ describe('HeroSlider', () => {
   it('respects reduced motion and keeps discovery after an image fails', () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
     const { container } = renderSlider()
-    expect(screen.queryByRole('button', { name: 'شروع پخش خودکار' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'شروع پخش خودکار' })).toBeInTheDocument()
     fireEvent.error(container.querySelector('img')!)
     expect(container.querySelector('img')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'اسلاید بعدی' }))
