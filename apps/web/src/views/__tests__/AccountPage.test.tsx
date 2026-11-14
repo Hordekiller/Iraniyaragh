@@ -49,6 +49,20 @@ describe('AccountPage', () => {
     expect(screen.getByRole('link', { name: /امنیت و نشست‌ها/ })).toHaveAttribute('href', '/account/security')
   })
 
+  it('makes unsaved profile changes clear and lets the customer discard them', async () => {
+    mocks.request.mockResolvedValue({ data: { account } })
+    renderAccount()
+    const firstName = await screen.findByLabelText('نام')
+    expect(screen.getByRole('button', { name: 'ذخیره پروفایل' })).toBeDisabled()
+    fireEvent.change(firstName, { target: { value: 'نیکا' } })
+    expect(screen.getByText('تغییرهای شما هنوز ذخیره نشده‌اند.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'ذخیره پروفایل' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'لغو تغییرها' }))
+    expect(firstName).toHaveValue('آوا')
+    expect(screen.getByRole('button', { name: 'ذخیره پروفایل' })).toBeDisabled()
+    expect(mocks.request).toHaveBeenCalledTimes(1)
+  })
+
   it('saves profile fields with optimistic version and an idempotency key', async () => {
     mocks.request.mockResolvedValueOnce({ data: { account } }).mockResolvedValueOnce({ data: { account: { ...account, firstName: 'نیکا', version: 4 } } })
     renderAccount()

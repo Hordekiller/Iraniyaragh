@@ -24,6 +24,18 @@ export function DoorSummary({
             ? "محاسبه خودکار؛ قیمت و مشخصات هنگام ثبت، دوباره در سرور بررسی می‌شود."
             : "این سفارش نیازمند بررسی مدیر است؛ پرداخت پس از تأیید قیمت نهایی فعال می‌شود."}
       </p>
+      <dl className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <dt className="text-sm font-bold text-slate-700">
+            {approved
+              ? "مبلغ قطعی"
+              : quote.total !== null
+                ? "جمع محاسبه‌شده"
+                : "قیمت قطعی"}
+          </dt>
+          <dd className="text-lg font-black text-slate-950">{doorRial(quote.total)}</dd>
+        </div>
+      </dl>
       <div className="mt-5 space-y-4">
         {quote.lines.map((line, index) => (
           <article key={index} className="rounded-2xl bg-slate-50 p-4">
@@ -132,18 +144,6 @@ export function DoorSummary({
         </p>
       )}
       <p className="mt-4 text-sm leading-7 text-slate-600">پس از تأیید مشخصات و قیمت قطعی، مبلغ نهایی یکجا پرداخت می‌شود.</p>
-      <dl className="mt-5 space-y-3 border-t border-slate-200 pt-5">
-        <div className="flex justify-between gap-3 font-black">
-          <dt>
-            {approved
-              ? "مبلغ قطعی"
-              : quote.total !== null
-                ? "جمع محاسبه‌شده"
-                : "قیمت قطعی"}
-          </dt>
-          <dd>{doorRial(quote.total)}</dd>
-        </div>
-      </dl>
     </section>
   );
 }
