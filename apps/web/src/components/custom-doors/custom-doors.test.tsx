@@ -217,6 +217,47 @@ describe("Door floating link", () => {
   });
 });
 describe("Door configurator", () => {
+  it("updates the 3D preview with the selected glass and entered dimensions", async () => {
+    load.mockResolvedValue({
+      ...catalog,
+      materials: [
+        {
+          ...catalog.materials[0],
+          title: "شیشه دودی روشن",
+          configuration: {
+            ...catalog.materials[0].configuration,
+            color: "دودی روشن",
+          },
+        },
+      ],
+    });
+    configurator();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /مدل آزمون جداگانه/ }),
+    );
+    expect(
+      screen.getByRole("img", { name: /عرض 900 و ارتفاع 2100 میلی‌متر/ }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: /دودی روشن/ }));
+    fireEvent.change(screen.getByLabelText("عرض (میلی‌متر)"), {
+      target: { value: "۱۲۰۰" },
+    });
+    expect(
+      screen.getByRole("img", {
+        name: /دودی روشن، عرض 1200 و ارتفاع 2100 میلی‌متر/,
+      }),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("ارتفاع (میلی‌متر)"), {
+      target: { value: "۲۴۰۰" },
+    });
+    expect(
+      screen.getByRole("img", {
+        name: /دودی روشن، عرض 1200 و ارتفاع 2400 میلی‌متر/,
+      }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "باز کردن درب" }));
+    expect(screen.getByRole("button", { name: "بستن درب" })).toBeVisible();
+  });
   it("requests authentication before creating an anonymous customer's restored order", async () => {
     restoreRow();
     await reviewRestored();
