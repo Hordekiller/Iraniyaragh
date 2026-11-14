@@ -13,9 +13,9 @@ import { randomUuid } from '@/lib/crypto/random-uuid';
 
 const SUGGESTIONS = ['لولا کابینت', 'ریل کشو', 'دستگیره کابینت', 'درب‌های سفارشی فرملکس و دکوفیکس'];
 
-function errorText(error: unknown) {
+function errorText(error: unknown, kind: 'banners' | 'hero') {
   if (error instanceof ApiClientError) {
-    if (error.code === 'STALE_VERSION') return 'بنرها تغییر کرده‌اند؛ نسخهٔ جدید را دریافت و دوباره بررسی کنید.';
+    if (error.code === 'STALE_VERSION') return kind === 'hero' ? 'اسلایدها تغییر کرده‌اند؛ نسخهٔ جدید را دریافت و دوباره بررسی کنید.' : 'بنرها تغییر کرده‌اند؛ نسخهٔ جدید را دریافت و دوباره بررسی کنید.';
     if (error.code === 'AUTH_REAUTHENTICATION_REQUIRED') return 'برای ذخیره، تأیید تازهٔ رمز عبور و کد دومرحله‌ای لازم است.';
     if (error.code === 'FORBIDDEN') return 'دسترسی مدیریت تنظیمات لازم است.';
     if (error.code === 'INVALID_MEDIA') return 'تصویر انتخاب‌شده آماده یا معتبر نیست.';
@@ -31,11 +31,18 @@ const toInput = (banner: HomepageBannerAdmin): HomepageBannerInput => ({
 const toLocal = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() - new Date(iso).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '');
 const fromLocal = (value: string) => (value ? new Date(value).toISOString() : null);
 
-export function HomepageBannersPage() {
+type ReadConfig = typeof readHomepageBanners;
+type SaveConfig = typeof saveHomepageBanners;
+
+export function HomepageMediaPage({ kind, read, save }: { kind: 'banners' | 'hero'; read: ReadConfig; save: SaveConfig }) {
   const { user, isRestoring } = useAuth();
   if (isRestoring) return <Typography role="status">در حال بررسی نشست…</Typography>;
   if (!canManageSettings(user)) return <Alert severity="error">مجوز مدیریت تنظیمات لازم است.</Alert>;
-  return <HomepageBannersEditor key={user?.userId} />;
+  return <HomepageBannersEditor key={user?.userId} kind={kind} read={read} save={save} />;
+}
+
+export function HomepageBannersPage() {
+  return <HomepageMediaPage kind="banners" read={readHomepageBanners} save={saveHomepageBanners} />;
 }
 
 function MediaSelect({ label, value, options, optional, disabled, onChange }: { label: string; value: string | null; options: HomepageBannerMediaOption[]; optional?: boolean; disabled: boolean; onChange: (id: string | null) => void }) {
@@ -55,7 +62,7 @@ function MediaSelect({ label, value, options, optional, disabled, onChange }: { 
   );
 }
 
-function Preview({ banner, media }: { banner: HomepageBannerInput; media: HomepageBannerMediaOption[] }) {
+function Preview({ banner, media, kind }: { banner: HomepageBannerInput; media: HomepageBannerMediaOption[]; kind: 'banners' | 'hero' }) {
   const urlOf = (id: string | null) => media.find(option => option.id === id)?.url;
   const desktop = urlOf(banner.desktopMediaId);
   const mobile = urlOf(banner.mobileMediaId) ?? desktop;
@@ -65,7 +72,7 @@ function Preview({ banner, media }: { banner: HomepageBannerInput; media: Homepa
       <Box sx={{ position: 'relative', aspectRatio: ratio, bgcolor: 'action.hover', borderRadius: 2, overflow: 'hidden' }}>
         {src && <Box component="img" src={src} alt={banner.imageAlt} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
         <Box sx={{ position: 'absolute', insetInline: 0, bottom: 0, p: 1.5, color: '#fff', background: 'linear-gradient(to top, rgba(0,0,0,.75), transparent)' }}>
-          <Typography fontWeight={900} variant="body2">{banner.title || 'عنوان بنر'}</Typography>
+          <Typography fontWeight={900} variant="body2">{banner.title || (kind === 'hero' ? 'عنوان اسلاید' : 'عنوان بنر')}</Typography>
           {banner.subtitle && <Typography variant="caption">{banner.subtitle}</Typography>}
           <Box><Box component="span" sx={{ display: 'inline-block', mt: 0.5, px: 1.25, py: 0.25, borderRadius: 4, bgcolor: '#FF4D00', fontSize: 12, fontWeight: 700 }}>{banner.ctaLabel || 'دکمه'}</Box></Box>
         </Box>
@@ -75,7 +82,7 @@ function Preview({ banner, media }: { banner: HomepageBannerInput; media: Homepa
   return <Stack direction={{ xs: 'column', md: 'row' }} gap={2} aria-label="پیش‌نمایش زنده">{card(desktop, 360, '2 / 1', 'پیش‌نمایش دسکتاپ')}{card(mobile, 240, '16 / 9', 'پیش‌نمایش موبایل')}</Stack>;
 }
 
-function HomepageBannersEditor() {
+function HomepageBannersEditor({ kind, read, save }: { kind: 'banners' | 'hero'; read: ReadConfig; save: SaveConfig }) {
   const [config, setConfig] = useState<HomepageBannersAdminConfig | null>(null);
   const [media, setMedia] = useState<HomepageBannerMediaOption[]>([]);
   const [banners, setBanners] = useState<HomepageBannerInput[]>([]);
@@ -93,7 +100,7 @@ function HomepageBannersEditor() {
     setLoading(true); setLoadError(null);
     const request = new AbortController(); life.current.requests.add(request);
     try {
-      const result = await readHomepageBanners(request.signal);
+      const result = await read(request.signal);
       if (!life.current.alive) return;
       setConfig(result.config); setMedia(result.media);
       if (!pending.current) setBanners(result.config.banners.map(toInput));
@@ -129,7 +136,7 @@ function HomepageBannersEditor() {
   async function execute() {
     const request = pending.current; if (!request) return;
     try {
-      const result = await saveHomepageBanners(request.body, request.key);
+      const result = await save(request.body, request.key);
       if (!life.current.alive) return;
       pending.current = null; setConfig(result); setBanners(result.banners.map(toInput));
       setUncertain(false); setStale(false); setSaved(true); setError(null);
@@ -145,7 +152,7 @@ function HomepageBannersEditor() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (life.current.flight || !config || loading || Boolean(loadError) || stale || uncertain) return;
-    pending.current = { body: { expectedVersion: config.version, banners }, key: `homepage-banners-${randomUuid()}` };
+    pending.current = { body: { expectedVersion: config.version, banners }, key: `homepage-${kind}-${randomUuid()}` };
     life.current.flight = true; setBusy(true); setError(null); setSaved(false);
     try { await execute(); } finally { life.current.flight = false; if (life.current.alive) setBusy(false); }
   }
@@ -157,25 +164,27 @@ function HomepageBannersEditor() {
   }
 
   const locked = loading || busy || uncertain || stale || !config || Boolean(loadError);
+  const hero = kind === 'hero';
+  const itemName = hero ? 'اسلاید' : 'بنر';
   return <Box>
-    <PageHeader title="بنرهای تبلیغاتی صفحهٔ اصلی" description="حداکثر چهار بنر زیر کاروسل ویژه؛ ترتیب، تصویر، پیوند و زمان‌بندی را مدیریت کنید." breadcrumbs={[{ label: 'تنظیمات', href: '/settings' }, { label: 'بنرها' }]} />
+    <PageHeader title={hero ? 'اسلایدر بالای صفحهٔ اصلی' : 'بنرهای تبلیغاتی صفحهٔ اصلی'} description={hero ? 'حداکثر چهار اسلاید بالای صفحه؛ ترتیب، تصویر، پیوند و زمان‌بندی را مدیریت کنید.' : 'حداکثر چهار بنر میان کاروسل‌ها؛ ترتیب، تصویر، پیوند و زمان‌بندی را مدیریت کنید.'} breadcrumbs={[{ label: 'تنظیمات', href: '/settings' }, { label: hero ? 'اسلایدها' : 'بنرها' }]} />
     <Stack gap={2}>
-      <Alert severity="info">برای چهار بنر میان کاروسل‌ها می‌توانید از تصاویر آمادهٔ یراق کابینت یا رسانهٔ کالاها استفاده کنید. برای تصویر تازه، آن را در رسانهٔ یک کالا بارگذاری کنید و پس از «آماده» شدن اینجا انتخاب کنید. بنرِ غیرفعال یا خارج از بازهٔ انتشار نمایش داده نمی‌شود.</Alert>
+      <Alert severity="info">{hero ? 'تصاویر آمادهٔ یراق کابینت نیز در فهرست تصاویر هستند.' : 'برای چهار بنر میان کاروسل‌ها می‌توانید از تصاویر آمادهٔ یراق کابینت یا رسانهٔ کالاها استفاده کنید.'} برای تصویر تازه، آن را در رسانهٔ یک کالا بارگذاری کنید و پس از «آماده» شدن اینجا انتخاب کنید. {itemName} غیرفعال یا خارج از بازهٔ انتشار نمایش داده نمی‌شود.</Alert>
       {loading && <Typography role="status">در حال دریافت تنظیمات…</Typography>}
-      {Boolean(loadError) && <Alert severity="error">{errorText(loadError)} <Button onClick={() => void load()}>تلاش دوباره</Button></Alert>}
-      {stale && <Alert severity="warning">{errorText(error)} <Button onClick={() => void load()}>دریافت نسخهٔ جدید</Button></Alert>}
+      {Boolean(loadError) && <Alert severity="error">{errorText(loadError, kind)} <Button onClick={() => void load()}>تلاش دوباره</Button></Alert>}
+      {stale && <Alert severity="warning">{errorText(error, kind)} <Button onClick={() => void load()}>دریافت نسخهٔ جدید</Button></Alert>}
       {uncertain && <Alert severity="warning">نتیجهٔ ذخیره مشخص نیست. همین درخواست با همان کلید تکرار می‌شود تا دوباره ثبت نشود.</Alert>}
-      {Boolean(error) && !stale && !uncertain && <Alert severity="error">{errorText(error)}</Alert>}
-      {saved && <Alert severity="success">بنرها ذخیره شدند.</Alert>}
+      {Boolean(error) && !stale && !uncertain && <Alert severity="error">{errorText(error, kind)}</Alert>}
+      {saved && <Alert severity="success">{hero ? 'اسلایدها ذخیره شدند.' : 'بنرها ذخیره شدند.'}</Alert>}
       {!loading && !loadError && media.length === 0 && <Alert severity="warning">هنوز تصویر آماده‌ای در رسانهٔ کالاها وجود ندارد.</Alert>}
       <Paper component="form" onSubmit={event => void submit(event)} sx={{ p: { xs: 2, md: 3 } }}>
         <Stack gap={2}>
-          {banners.length === 0 && !loading && <Alert severity="warning">بنری تعریف نشده؛ بخش بنر در فروشگاه نمایش داده نمی‌شود.</Alert>}
+          {banners.length === 0 && !loading && <Alert severity="warning">{hero ? 'اسلایدی تعریف نشده؛ بخش اسلاید در فروشگاه نمایش داده نمی‌شود.' : 'بنری تعریف نشده؛ بخش بنر در فروشگاه نمایش داده نمی‌شود.'}</Alert>}
           {banners.map((banner, index) => (
-            <Paper key={banner.id} variant="outlined" sx={{ p: 2 }} component="fieldset" aria-label={`بنر ${index + 1}`}>
+            <Paper key={banner.id} variant="outlined" sx={{ p: 2 }} component="fieldset" aria-label={`${itemName} ${index + 1}`}>
               <Stack gap={1.5}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
-                  <Typography fontWeight={800}>بنر {index + 1}</Typography>
+                  <Typography fontWeight={800}>{itemName} {index + 1}</Typography>
                   <Stack direction="row" gap={0.5} alignItems="center">
                     <FormControlLabel control={<Switch checked={banner.enabled} disabled={locked} onChange={event => patch(index, { enabled: event.target.checked })} />} label="فعال" />
                     <Button type="button" aria-label="انتقال به بالا" disabled={locked || index === 0} onClick={() => move(index, -1)}>↑</Button>
@@ -200,12 +209,12 @@ function HomepageBannersEditor() {
                   <TextField size="small" fullWidth type="datetime-local" label="شروع انتشار (اختیاری)" InputLabelProps={{ shrink: true }} value={toLocal(banner.publishAt)} disabled={locked} onChange={event => patch(index, { publishAt: fromLocal(event.target.value) })} />
                   <TextField size="small" fullWidth type="datetime-local" label="پایان انتشار (اختیاری)" InputLabelProps={{ shrink: true }} value={toLocal(banner.unpublishAt)} disabled={locked} onChange={event => patch(index, { unpublishAt: fromLocal(event.target.value) })} />
                 </Stack>
-                <Preview banner={banner} media={media} />
+                <Preview banner={banner} media={media} kind={kind} />
               </Stack>
             </Paper>
           ))}
           <Stack direction="row" gap={1} flexWrap="wrap">
-            <Button type="button" variant="outlined" disabled={locked || banners.length >= HOMEPAGE_BANNER_SLOTS || media.length === 0} onClick={add}>افزودن بنر</Button>
+            <Button type="button" variant="outlined" disabled={locked || banners.length >= HOMEPAGE_BANNER_SLOTS || media.length === 0} onClick={add}>افزودن {itemName}</Button>
             {uncertain && <Button type="button" variant="outlined" onClick={() => void retry()}>بررسی و تکرار همان ذخیره</Button>}
             <Button type="submit" variant="contained" disabled={locked}>{busy ? 'در حال ذخیره…' : 'ذخیره و انتشار'}</Button>
           </Stack>

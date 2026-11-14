@@ -1,31 +1,12 @@
 import { Body, Controller, Get, Header, Headers, Inject, Put, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiOperation } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsBoolean, IsInt, IsOptional, IsString, MaxLength, Min, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
 import type { HomepageBannerMediaOptionsResponse, HomepageBannersAdminResponse, HomepageBannersPublicResponse } from '@iranyaragh/contracts';
 import { getRequestId } from '../../common/request-context';
 import { normalizeIdempotencyKey } from '../../common/idempotency-key';
 import { CurrentPrincipal, RequireAuthentication, RequireFreshAuthentication, RequirePermission } from '../auth/auth.guard';
 import type { AuthPrincipalContext } from '../auth/auth-principal.service';
 import { HomepageBannersService } from './homepage-banners.service';
-
-class BannerDto {
-  @IsString() @MaxLength(64) id!: string;
-  @IsString() @MaxLength(80) title!: string;
-  @IsOptional() @IsString() @MaxLength(160) subtitle!: string | null;
-  @IsString() @MaxLength(40) ctaLabel!: string;
-  @IsString() @MaxLength(500) href!: string;
-  @IsString() @MaxLength(128) desktopMediaId!: string;
-  @IsOptional() @IsString() @MaxLength(128) mobileMediaId!: string | null;
-  @IsString() @MaxLength(200) imageAlt!: string;
-  @IsBoolean() enabled!: boolean;
-  @IsOptional() @IsString() @MaxLength(40) publishAt!: string | null;
-  @IsOptional() @IsString() @MaxLength(40) unpublishAt!: string | null;
-}
-class BannersUpdateDto {
-  @IsInt() @Min(0) expectedVersion!: number;
-  @IsArray() @ArrayMaxSize(4) @ValidateNested({ each: true }) @Type(() => BannerDto) banners!: BannerDto[];
-}
+import { BannersUpdateDto } from './homepage-banners.dto';
 
 @Controller({ path: 'catalog/homepage-banners', version: '1' })
 export class HomepageBannersController {
