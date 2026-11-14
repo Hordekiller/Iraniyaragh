@@ -38,6 +38,7 @@ import {
   saveDoorSubmission,
 } from "../services/custom-doors/api";
 import { DoorSummary } from "../components/custom-doors/DoorSummary";
+import { DoorPreview3D } from "../components/custom-doors/DoorPreview3D";
 import { HelpHint } from "../components/help/HelpHint";
 
 const inputStyle =
@@ -619,23 +620,20 @@ function Configurator() {
                     ))}
                   </div>
                   {model.configuration.slots.map(slot => <DoorGlassChoices key={slot.key} title={slot.title} materials={catalog.materials.filter(material => material.active && slot.materialIds.includes(material.id))} selected={entry.selections.find(item => item.slot === slot.key)?.materialId ?? ''} onChange={id => selection(slot.key, id)} unavailable={id => incompatible(slot.key, id)} />)}
-                  <div className="my-6 rounded-2xl bg-slate-50 p-4">
-                    <div
-                      className="mx-auto grid w-44 grid-cols-[1fr_2rem] gap-2 text-center text-xs text-slate-600"
-                      aria-label="راهنمای اندازه‌گیری: عرض افقی و ارتفاع عمودی"
-                    >
-                      <div className="col-span-2">← عرض →</div>
-                      <div className="h-32 rounded-md border-2 border-dashed border-orange-600 bg-orange-50" />
-                      <div
-                        className="flex items-center justify-center"
-                        style={{ writingMode: "vertical-rl" }}
-                      >
-                        ↑ ارتفاع ↓
-                      </div>
-                    </div>
+                  <div className="my-6">
+                    <DoorPreview3D
+                      type={model.type}
+                      widthMm={Number(doorDigits(entry.width)) || 0}
+                      heightMm={Number(doorDigits(entry.height)) || 0}
+                      material={catalog.materials.find(
+                        (m) =>
+                          m.category === "GLASS" &&
+                          entry.selections.some((s) => s.materialId === m.id),
+                      )}
+                    />
                     <p className="mt-3 text-center text-xs leading-6">
-                      عرض و ارتفاع نهایی را به میلی‌متر وارد کنید. ابعاد برش از
-                      قواعد ثبت‌شده مدل محاسبه می‌شود.
+                      عرض و ارتفاع نهایی را به میلی‌متر وارد کنید؛ تصویر بالا
+                      هم‌زمان با ابعاد و رنگ انتخابی به‌روز می‌شود.
                     </p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-3">
@@ -665,7 +663,10 @@ function Configurator() {
                     ))}
                   </div>
                   <p className="mt-3 text-xs leading-7 text-slate-600">
-                    {model.configuration.technical
+                    {model.configuration.technical &&
+                    model.configuration.technical.maxWidthMm >= 100000
+                      ? "قیمت بر اساس متر مربع ابعاد واردشده محاسبه می‌شود."
+                      : model.configuration.technical
                       ? `محدوده ثبت‌شده: عرض ${model.configuration.technical.minWidthMm} تا ${model.configuration.technical.maxWidthMm} و ارتفاع ${model.configuration.technical.minHeightMm} تا ${model.configuration.technical.maxHeightMm} میلی‌متر؛ تلرانس ثبت‌شده ${model.configuration.technical.toleranceMm} میلی‌متر. ابعاد خارج از محدوده برای بررسی مدیر ارسال می‌شوند.`
                       : "قواعد فنی مدل هنوز تکمیل نشده است؛ سفارش برای بررسی مدیر ارسال می‌شود."}
                   </p>
