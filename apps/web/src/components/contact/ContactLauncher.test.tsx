@@ -31,11 +31,14 @@ describe('ContactLauncher', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('hides unconfigured and unsafe channels and avoids the open helper', async () => {
+  it('shows a visible empty state without configured links or unsafe channels and avoids the open helper', async () => {
     vi.mocked(jsonRequest).mockResolvedValueOnce({ data: { links: [{ ...links[0], value: 'javascript:alert(1)' }] } } as never)
     const { unmount } = mount()
+    const trigger = screen.getByRole('button', { name: 'راه‌های ارتباط با فروشگاه' })
     await waitFor(() => expect(jsonRequest).toHaveBeenCalled())
-    expect(screen.queryByRole('button', { name: 'راه‌های ارتباط با فروشگاه' })).toBeNull()
+    fireEvent.click(trigger)
+    expect(screen.getByText('راه‌های تماس هنوز در فروشگاه ثبت نشده‌اند.')).toBeVisible()
+    expect(screen.queryByRole('link', { name: 'اینستاگرام' })).toBeNull()
     unmount()
     vi.mocked(jsonRequest).mockResolvedValue({ data: { links } } as never)
     setHelperOpen(true)

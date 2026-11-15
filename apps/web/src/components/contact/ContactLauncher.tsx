@@ -51,12 +51,13 @@ export function ContactLauncher() {
   }, [open])
 
   const published = links.filter(link => contactHref(link) !== null)
-  if (!published.length || (helperEnabled && helperOpen)) return null
+  if (helperEnabled && helperOpen) return null
 
   return <div ref={root} className={`contact-launcher ${/^\/products?\//u.test(pathname) ? 'contact-launcher-product' : ''}`}>
     <nav id="contact-launcher-menu" aria-label="راه‌های ارتباط با فروشگاه" aria-hidden={!open} className={`contact-popover ${open ? 'contact-popover-open' : ''}`}>
       <div className="contact-popover-heading"><span>ارتباط با ایرانی یراق</span><button type="button" aria-label="بستن راه‌های ارتباط" tabIndex={open ? 0 : -1} onClick={() => { setOpen(false); button.current?.focus() }}><X size={18} aria-hidden="true" /></button></div>
       <div className="contact-popover-list">
+        {!published.length && <p className="contact-popover-empty">راه‌های تماس هنوز در فروشگاه ثبت نشده‌اند.</p>}
         {published.map(link => {
           const Icon = icons[link.channel]
           const href = contactHref(link)!
@@ -67,7 +68,7 @@ export function ContactLauncher() {
       </div>
     </nav>
     <button ref={button} type="button" className="contact-launcher-button" aria-label="راه‌های ارتباط با فروشگاه" aria-controls="contact-launcher-menu" aria-expanded={open} onClick={() => setOpen(value => !value)}>
-      <MessageCircle size={21} aria-hidden="true" /><span>ارتباط با ما</span>
+      <MessageCircle size={21} aria-hidden="true" /><span>تماس با ما</span>
     </button>
   </div>
 }

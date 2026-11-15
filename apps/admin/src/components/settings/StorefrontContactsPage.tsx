@@ -64,7 +64,7 @@ function ContactsEditor() {
         {!config && <Typography role="status">در حال دریافت تنظیمات…</Typography>}
         {config && <>
           <Alert severity="info">فقط موارد ذخیره‌شده نمایش داده می‌شوند. برای اینستاگرام، واتس‌اپ، بله و پیوندهای دیگر، نشانی کامل https وارد کنید؛ برای تماس، شماره را بنویسید. حداکثر ۱۲ مورد.</Alert>
-          {links.length === 0 && <Typography color="text.secondary">هنوز راه ارتباطی ثبت نشده است؛ دکمهٔ ارتباط در فروشگاه دیده نمی‌شود.</Typography>}
+          {links.length === 0 && <Typography color="text.secondary">هنوز راه ارتباطی ثبت نشده است؛ دکمهٔ تماس در فروشگاه پیام راهنمایی نشان می‌دهد.</Typography>}
           {links.map((link, index) => <Paper key={link.id} variant="outlined" sx={{ p: 2 }} component="fieldset" aria-label={`راه ارتباطی ${index + 1}`}>
             <Stack gap={1.5}>
               <Stack direction={{ xs: 'column', md: 'row' }} gap={1.5}>
