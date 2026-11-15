@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { PrivacyPage } from '../../../views/PrivacyPage'
 import { TermsPage } from '../../../views/TermsPage'
+import { JsonLd, breadcrumb, webpageJsonLd } from '../../../server/structured-data'
 import { metadataFor } from '../../../server/policy'
 
 const policies = {
@@ -15,6 +16,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  policy(slug)
-  return <>{slug === 'privacy' ? <PrivacyPage /> : <TermsPage />}</>
+  const info = policy(slug)
+  return <><JsonLd data={[webpageJsonLd({ ...info, path: `/policies/${slug}` }), breadcrumb([{ name: 'خانه', path: '/' }, { name: info.title, path: `/policies/${slug}` }])]} />{slug === 'privacy' ? <PrivacyPage /> : <TermsPage />}</>
 }

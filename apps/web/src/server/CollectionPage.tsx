@@ -27,7 +27,7 @@ const collectionSnapshot = cache(async (kind: Kind, slug: string, page: number, 
   const basePath = kind === 'catalog' ? '/catalog' : entityPath(kind, slug)
   const title = entity?.name ?? 'همهٔ کالاها'
   const ancestors = kind === 'categories' && entity ? categoryAncestors(allCategories, entity.id) : []
-  return { ancestors, title, basePath, path: `${basePath}${page > 1 ? `?page=${page}` : ''}`, page, result, indexable: indexable && !filtered, children: entity ? allCategories.filter(item => item.parentId === entity.id) : [] }
+  return { ancestors, title, basePath, path: `${basePath}${page > 1 ? `?page=${page}` : ''}`, page, result, indexable: indexable && !filtered && result.items.length > 0, children: entity ? allCategories.filter(item => item.parentId === entity.id) : [] }
 })
 export async function collectionMetadata(kind: Kind, slug: string, query: SearchParams) {
   const data = await collectionData(kind, slug, query)

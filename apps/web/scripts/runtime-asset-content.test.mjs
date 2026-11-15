@@ -63,3 +63,14 @@ test('allows canonical sitemap locations but preserves offsite locations and res
   assert.match(result, /https:\/\/other\.example\//);
   assert.match(contentToInspect(file, '<loc>https://iraniyaragh.com/</loc>'), /https:\/\//);
 });
+
+
+test('allows schema variation vocabulary only in the variesBy metadata mapping', () => {
+  const template = '`https://schema.org/${axis.attributeCode}`';
+  assert.doesNotMatch(contentToInspect(file, 'const data = { variesBy: axes.map(axis => known ? ' + template + ' : axis.name) }'), /https?:\/\//);
+  for (const source of [
+    'const data = { image: axes.map(axis => ' + template + ') }',
+    'const data = { variesBy: axes.map(axis => fetch(' + template + ')) }',
+    'const url = ' + template,
+  ]) assert.match(contentToInspect(file, source), /https?:\/\//);
+});

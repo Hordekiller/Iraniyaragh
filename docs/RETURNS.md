@@ -1,4 +1,4 @@
-# Order returns (policy `returns-v1`)
+# Order returns (policy `returns-v2`)
 
 Status: implemented in source (migration `20261109120000_order_returns`). Not
 deployed or accepted: see [Acceptance](#acceptance-still-required). This document
@@ -15,7 +15,7 @@ API) and is then recorded as evidence and linked to the return.
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Clock starts            | When the order's store invoice was **issued** (day 0 is the Tehran calendar day of issuance).                                                  |
 | In-person handover      | 2 **business days** after day 0.                                                                                                               |
-| Shipped to another city | 7 **calendar days** after day 0 (Fridays and holidays do not extend it).                                                                       |
+| Shipped to another city | Not eligible for a new return. Existing `returns-v1` records retain their historical `DELIVERY` classification and settlement path. |
 | Business day            | Saturday–Thursday and not a listed official holiday. Friday is always off.                                                                     |
 | Window end              | 23:59:59.999 `Asia/Tehran` of the last day. Inclusive.                                                                                         |
 | Who records             | Staff only (customers cannot request returns in this slice).                                                                                   |
@@ -30,8 +30,9 @@ Consequences that follow from these rules rather than from a guess:
 - An order with **no issued invoice** has no window and cannot be returned
   (`NO_ISSUED_INVOICE`).
 - A shipping method that staff have **not classified** blocks returns
-  (`METHOD_UNCLASSIFIED`). Nothing is inferred from its name. The staff counter
-  policy code `PICKUP` is always in-person.
+  (`METHOD_UNCLASSIFIED`); a method classified `DELIVERY` also blocks a new
+  return (`DELIVERY_NOT_ELIGIBLE`). Nothing is inferred from its name. The staff
+  counter policy code `PICKUP` is always in-person.
 - Credit sales (`CREDIT_APPROVED`) are outside this flow (not `PAID`).
 - Only the in-person window is affected by holidays, and a holiday only affects
   returns recorded **after** it is added: every return stores its own deadline.
@@ -63,7 +64,7 @@ and reports the first failing reason:
 `RETURNS_DISABLED` → `FULLY_RETURNED` → `ORDER_NOT_PAID` → `CUSTOM_DOOR_EXCLUDED` → `PAYMENT_NOT_SETTLED`
 → `AMOUNTS_DO_NOT_RECONCILE` (exactly one settled payment equal to the order's grand
 total, and subtotal/discount/shipping must add up) → `NO_ISSUED_INVOICE` →
-`METHOD_UNCLASSIFIED` → `WINDOW_CLOSED`.
+`METHOD_UNCLASSIFIED` → `DELIVERY_NOT_ELIGIBLE` → `WINDOW_CLOSED`.
 
 ## Recording a return
 

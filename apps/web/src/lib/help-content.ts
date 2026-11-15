@@ -4,6 +4,7 @@
  * announced (returns, warranty, delivery times, support hours) are deliberately
  * marked `pending` and are never invented — keep that rule when editing.
  */
+import type { HelpTopicSlug } from '@iranyaragh/contracts'
 import { ROUTES } from './routes'
 
 export type HelpNoteKind = 'tip' | 'warning' | 'pending'
@@ -19,7 +20,7 @@ export interface HelpSection {
 export interface HelpFaq { question: string; answer: string }
 
 export interface HelpTopic {
-  slug: string
+  slug: HelpTopicSlug
   title: string
   summary: string
   /** Primary storefront page this topic is about. */

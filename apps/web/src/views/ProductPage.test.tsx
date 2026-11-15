@@ -40,7 +40,7 @@ function renderPage(store = signedInStore(), commerce = commerceStub()) {
   )
 }
 
-function renderPageWithProduct(product: CatalogProduct) {
+function renderPageWithProduct(product: CatalogProduct, query = '') {
   const stub: CatalogApi = {
     getProductBySlug: vi.fn(async () => product),
     listCategories: vi.fn(async () => []),
@@ -51,7 +51,7 @@ function renderPageWithProduct(product: CatalogProduct) {
     })),
   }
   return render(
-    <MemoryRouter initialEntries={['/products/ronix-2210-hammer-drill']}>
+    <MemoryRouter initialEntries={[`/products/ronix-2210-hammer-drill${query}`]}>
       <Routes>
         <Route
           path="/products/:slug"
@@ -60,7 +60,7 @@ function renderPageWithProduct(product: CatalogProduct) {
               <AuthProvider {...testAuthProps(signedInStore())}>
                 <CatalogProvider api={stub}>
                   <CartProvider api={commerceStub()}>
-                    <ProductPage />
+                    <ProductPage initialProduct={product} />
                   </CartProvider>
                 </CatalogProvider>
               </AuthProvider>
@@ -320,4 +320,25 @@ describe('ProductPage rich description', () => {
     const productNode = data.find((node) => node['@type'] === 'Product')
     expect(productNode?.description).toBeUndefined()
   })
+})
+
+
+describe('variant URLs', () => {
+  it('preselects the requested SKU including unavailable variants without enabling purchase', async () => {
+    const base = fixtureAllProducts.find(item => item.slug === 'ronix-2210-hammer-drill')!
+    const variants = [
+      { ...base.variants[0], id: 'available', sku: 'AVAILABLE', title: 'انتخاب موجود', stockStatus: 'IN_STOCK' as const },
+      { ...base.variants[0], id: 'unavailable', sku: 'UNAVAILABLE', title: 'انتخاب ناموجود', stockStatus: 'OUT_OF_STOCK' as const },
+    ]
+    renderPageWithProduct({ ...base, variants }, '?variant=unavailable')
+    expect(await screen.findByRole('button', { name: 'انتخاب ناموجود' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'انتخاب موجود' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('button', { name: /^افزودن به سبد خرید$/ })).not.toBeInTheDocument()
+  })
+})
+
+
+it('links a product brand using its stored slug rather than the display name', async () => {
+  renderPageWithProduct({ ...fixtureAllProducts[0], brand: 'نام برند', brandSlug: 'stored-brand-slug' })
+  expect(await screen.findByRole('link', { name: 'نام برند' })).toHaveAttribute('href', '/brands/stored-brand-slug')
 })

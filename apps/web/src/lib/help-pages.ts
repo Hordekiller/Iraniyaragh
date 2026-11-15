@@ -172,6 +172,8 @@ export const PAGE_GUIDES: readonly PageGuide[] = [
 const FALLBACK: PageGuide = { id: 'generic', match: /./u, title: 'این صفحه', summary: 'برای راهنمای کامل مراحل خرید، مرکز راهنما را ببینید.', items: [searchItem, cartItem, accountItem] }
 
 export function guideForPath(pathname: string): PageGuide {
+  if (pathname === ROUTES.contact) return { id: 'contact', match: /^\/contact$/u, title: 'تماس و پشتیبانی', summary: 'راه‌های ارتباط اعلام‌شدهٔ فروشنده و راهنمای پیگیری سفارش را در این صفحه ببینید.', items: [] }
+  if (pathname === ROUTES.about) return { id: 'about', match: /^\/about$/u, title: 'دربارهٔ ایرانی یراق', summary: 'با کاتالوگ کالاها، سفارش درب و مسیرهای راهنمای فروشگاه آشنا شوید.', items: [] }
   return PAGE_GUIDES.find(guide => guide.match.test(pathname)) ?? FALLBACK
 }
 

@@ -3,8 +3,9 @@ import type { BlogPublicPost, BlogPublicSummary, PublicReviewList } from '@irany
 import type { CatalogProduct } from '../services/catalog/types'
 import { serializeJsonLd } from '../lib/json-ld'
 import { absolute, entityPath, STORE_NAME } from './policy'
-import { INSTAGRAM_URL, SITE_ADDRESS_LINE, SITE_EMAIL, SITE_PHONE, SITE_POSTAL_CODE } from '../lib/site-config'
-import { productStructuredData } from '../lib/product-json-ld'
+import { INSTAGRAM_URL, SITE_ADDRESS_LINE, SITE_EMAIL, SITE_PHONE, SITE_MOBILE, SITE_POSTAL_CODE } from '../lib/site-config'
+import { productStructuredData, productVariantGroup } from '../lib/product-json-ld'
+import { requestedCatalogVariant, variantUrl } from '../services/catalog/variants'
 
 export function JsonLd({ data }: { data: unknown }) {
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />
@@ -26,11 +27,15 @@ export function plainDescription(html: string | null) {
   return text.join('').replace(/\s+/gu, ' ').trim()
 }
 
-export function productJsonLd(product: CatalogProduct, reviews: PublicReviewList | null = null) {
+export function productJsonLd(product: CatalogProduct, reviews: PublicReviewList | null = null, variantId?: string) {
   const url = absolute(entityPath('products', product.slug))
-  const schema = productStructuredData(product, url, plainDescription(product.description), undefined, undefined, reviews)
+  const variant = requestedCatalogVariant(product.variants, variantId)
+  const description = plainDescription(product.description)
+  const group = productVariantGroup(product, url, description, undefined, reviews)
+  const selected = variant ?? (group ? product.variants.find(item => item.stockStatus === 'IN_STOCK' || item.stockStatus === 'LOW_STOCK') ?? product.variants[0] : null)
+  const schema = productStructuredData(product, selected ? variantUrl(url, selected.id) : url, description, selected ?? undefined, undefined, group ? null : reviews)
   if (!schema) return null
-  return { ...schema, offers: { ...schema.offers, seller: { ...schema.offers.seller, '@id': absolute('/#organization'), url: absolute('/') } } }
+  return { ...schema, ...(group ? { isVariantOf: { ...group, hasVariant: group.hasVariant.map(child => child && ({ ...child, offers: { ...child.offers, seller: { ...child.offers.seller, '@id': absolute('/#organization'), url: absolute('/') } } })) } } : {}), offers: { ...schema.offers, seller: { ...schema.offers.seller, '@id': absolute('/#organization'), url: absolute('/') } } }
 }
 
 /** Organization identity. Contact fields appear only when the deployment configured verified values. */
@@ -41,13 +46,24 @@ export function organizationJsonLd() {
     logo: { '@type': 'ImageObject', url: absolute('/brand/wordmark-print.png?v=20261104'), width: 1086, height: 370 },
     ...(INSTAGRAM_URL ? { sameAs: [INSTAGRAM_URL] } : {}),
     ...(SITE_EMAIL ? { email: SITE_EMAIL } : {}),
-    ...(SITE_PHONE ? { contactPoint: [{ '@type': 'ContactPoint', telephone: SITE_PHONE, contactType: 'customer service', areaServed: 'IR', availableLanguage: 'fa' }] } : {}),
+    ...((SITE_PHONE || SITE_MOBILE) ? { contactPoint: [...new Set([SITE_PHONE, SITE_MOBILE].filter((phone): phone is string => !!phone))].map(telephone => ({ '@type': 'ContactPoint', telephone, contactType: 'customer service', areaServed: 'IR', availableLanguage: 'fa' })) } : {}),
     ...(SITE_ADDRESS_LINE ? { address: { '@type': 'PostalAddress', streetAddress: SITE_ADDRESS_LINE, addressCountry: 'IR', ...(SITE_POSTAL_CODE ? { postalCode: SITE_POSTAL_CODE } : {}) } } : {}),
   }
 }
 /** Site entity without SearchAction: internal search results are intentionally non-indexable. */
 export function websiteJsonLd() {
   return { '@context': 'https://schema.org', '@type': 'WebSite', '@id': absolute('/#website'), url: absolute('/'), name: STORE_NAME, inLanguage: 'fa-IR', publisher: { '@id': absolute('/#organization') } }
+}
+
+/** Describe the actual document; contact/about pages refer to the same verified store. */
+export function webpageJsonLd({ title, description, path, type = 'WebPage' }: { title: string; description: string; path: string; type?: 'WebPage' | 'ContactPage' | 'AboutPage' | 'CollectionPage' }) {
+  const url = absolute(path)
+  return {
+    '@context': 'https://schema.org', '@type': type, '@id': `${url}#webpage`, url,
+    name: title, description, inLanguage: 'fa-IR', isPartOf: { '@id': absolute('/#website') },
+    publisher: { '@id': absolute('/#organization') },
+    ...(['ContactPage', 'AboutPage'].includes(type) ? { mainEntity: { '@id': absolute('/#organization') }, about: { '@id': absolute('/#organization') } } : {}),
+  }
 }
 /** Collection landing page with an ItemList of the visible products on this page. */
 export function collectionJsonLd({ name, path, products, offset }: { name: string; path: string; products: { slug: string; name: string }[]; offset: number }) {

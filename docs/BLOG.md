@@ -46,8 +46,12 @@ It is allowed so a one-person shop can publish, but it is visible, never silent.
 Article pages emit `BlogPosting` (store as author — staff names are never published —
 real `datePublished`/`dateModified`, `citation` from sources), `BreadcrumbList`,
 `og:type=article` with published/modified times, and an RSS `<link rel="alternate">`.
-The sitemap gains `blog-posts.xml.gz` (with `lastmod` = last significant content
-change, and the cover as `image:image`) and `/blog` only when something is live.
+The sitemap gains bounded `blog-<range>.xml.gz` shards (target 1,000 live articles
+per shard, with `lastmod` = last significant content change and the cover as
+`image:image`) and `/blog` only when something is live. Ranges are built in one
+repeatable database snapshot, and every shard rechecks publication eligibility.
+The previous `blog-posts.xml.gz` URL remains readable for catalogs below its
+10,000-article limit; newly generated indexes always use the ranged shards.
 Product sitemap URLs carry their first ready image as `image:image`. Share previews
 (`og:image`/`twitter:image`) use the widest rendition with real width, height and alt.
 

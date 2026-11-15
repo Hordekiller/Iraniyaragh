@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { RichText } from '../../../components/product/RichText'
 import { blogPost } from '../../../server/blog'
-import { hasNonPageQuery, metadataFor, type SearchParams } from '../../../server/policy'
+import { metadataFor, type SearchParams } from '../../../server/policy'
 import { JsonLd, articleJsonLd, breadcrumb, plainDescription } from '../../../server/structured-data'
+import { SITE_NAME } from '../../../lib/site-config'
 import { formatTimestamp, toPersianDigits } from '../../../lib/format'
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<SearchParams> }
@@ -10,7 +11,7 @@ export async function generateMetadata({ params, searchParams }: Props) {
   const post = await blogPost((await params).slug)
   return metadataFor({
     title: post.seoTitle ?? post.title, description: post.seoDescription ?? post.excerpt, path: `/blog/${encodeURIComponent(post.slug)}`,
-    indexable: !hasNonPageQuery(await searchParams), image: post.cover ?? undefined, rss: true,
+    indexable: Object.keys(await searchParams).length === 0, image: post.cover ?? undefined, rss: true,
     article: { publishedTime: post.publishedAt, modifiedTime: post.updatedAt, tags: post.tags },
   })
 }
@@ -25,7 +26,7 @@ export default async function Page({ params, searchParams }: Props) {
       <h1 className="text-2xl font-black leading-[1.9] text-slate-900 lg:text-3xl">{post.title}</h1>
       <p className="mt-3 text-base leading-8 text-slate-700">{post.excerpt}</p>
       <p className="mt-4 text-xs text-slate-500">
-        انتشار: <time dateTime={post.publishedAt}>{formatTimestamp(post.publishedAt)}</time>
+        نویسنده: <Link href="/about">{SITE_NAME}</Link> · انتشار: <time dateTime={post.publishedAt}>{formatTimestamp(post.publishedAt)}</time>
         {post.updatedAt.slice(0, 10) !== post.publishedAt.slice(0, 10) && <> · به‌روزرسانی: <time dateTime={post.updatedAt}>{formatTimestamp(post.updatedAt)}</time></>}
         <span aria-hidden="true"> · </span>{toPersianDigits(post.readingMinutes)} دقیقه مطالعه
       </p>

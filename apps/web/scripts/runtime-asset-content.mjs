@@ -30,12 +30,28 @@ function isSchemaIdentifier(node) {
   return false;
 }
 
+
+// ProductGroup variation identifiers are metadata, never downloaded resources.
+// Only the exact schema.org template returned directly by a variesBy.map callback
+// is exempt; fetch/JSX/other properties retain the normal asset checks.
+function isVariantVocabulary(node) {
+  if (!ts.isTemplateExpression(node) || node.head.text !== 'https://schema.org/' || node.templateSpans.length !== 1 || node.templateSpans[0].literal.text !== '') return false;
+  let expression = node;
+  if (ts.isConditionalExpression(expression.parent) && (expression.parent.whenTrue === expression || expression.parent.whenFalse === expression)) expression = expression.parent;
+  const arrow = expression.parent;
+  if (!ts.isArrowFunction(arrow) || arrow.body !== expression) return false;
+  const call = arrow.parent;
+  if (!ts.isCallExpression(call) || call.arguments[0] !== arrow || !ts.isPropertyAccessExpression(call.expression) || call.expression.name.text !== 'map') return false;
+  const property = call.parent;
+  return ts.isPropertyAssignment(property) && property.initializer === call && property.name.getText().replace(/^['"]|['"]$/g, '') === 'variesBy';
+}
+
 function removeSchemaIdentifiers(file, content) {
   const kind = /\.[jt]sx$/.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
   const source = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, kind);
   const ranges = [];
   function visit(node) {
-    if (ts.isStringLiteral(node) && isSchemaIdentifier(node)) ranges.push([node.getStart(source), node.end]);
+    if ((ts.isStringLiteral(node) && isSchemaIdentifier(node)) || isVariantVocabulary(node)) ranges.push([node.getStart(source), node.end]);
     ts.forEachChild(node, visit);
   }
   visit(source);

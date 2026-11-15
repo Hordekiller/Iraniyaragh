@@ -38,7 +38,7 @@ export function metadataFor({ title, description, path, indexable = true, image,
   return {
     title: `${title} | ${STORE_NAME}`, description,
     alternates: { canonical: url, ...(rss ? { types: { 'application/rss+xml': absolute('/blog/feed.xml') } } : {}) },
-    robots: { index: isProductionDiscovery() && indexable, follow: isProductionDiscovery() },
+    robots: { index: isProductionDiscovery() && indexable, follow: isProductionDiscovery(), ...(isProductionDiscovery() && indexable ? { googleBot: { index: true, follow: true, 'max-image-preview': 'large' as const, 'max-snippet': -1, 'max-video-preview': -1 } } : {}) },
     openGraph: { type: article ? 'article' : 'website', ...(article ? { publishedTime: article.publishedTime, modifiedTime: article.modifiedTime, tags: article.tags } : {}), locale: 'fa_IR', siteName: STORE_NAME, title, description, url, images: [shareImage] },
     twitter: { card: image ? 'summary_large_image' : 'summary', title, description, images: [shareImage] },
   }

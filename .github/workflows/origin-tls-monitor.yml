@@ -1,0 +1,20 @@
+name: Origin TLS monitor
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  origin-tls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      ORIGIN_IP: ${{ vars.PRODUCTION_ORIGIN_IP || '185.211.59.93' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify the origin certificate and site response
+        run: bash scripts/deploy/check-origin-tls.sh iraniyaragh.com "$ORIGIN_IP"

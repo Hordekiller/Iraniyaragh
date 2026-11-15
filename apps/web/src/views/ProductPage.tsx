@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Star,
@@ -20,7 +20,7 @@ import { RichText } from '../components/product/RichText'
 import { serializeJsonLd } from '../lib/json-ld'
 import { richTextToPlainText } from '../lib/rich-text'
 import { productStructuredData } from '../lib/product-json-ld'
-import { defaultCatalogVariant } from '../services/catalog/variants'
+import { defaultCatalogVariant, requestedCatalogVariant, variantUrl } from '../services/catalog/variants'
 import type { CatalogProduct } from '../services/catalog/types'
 import { commerceErrorMessage } from '../services/commerce/errors'
 import { HelpHint } from '../components/help/HelpHint'
@@ -40,12 +40,14 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
   const { state: cartState, add, setQuantity, quantityOf, isInCart } = useCart()
   const { show } = useToast()
   const navigate = useNavigate()
+  const { search } = useLocation()
+  const requestedVariantId = new URLSearchParams(search).get('variant') ?? undefined
   const { slug = '' } = useParams<{ slug: string }>()
 
   const [product, setProduct] = useState<CatalogProduct | null>(initialProduct ?? null)
   const [loading, setLoading] = useState(!initialProduct)
   const [notFound, setNotFound] = useState(false)
-  const [selectedVariantId, setSelectedVariantId] = useState(defaultCatalogVariant(initialProduct?.variants ?? [])?.id ?? '')
+  const [selectedVariantId, setSelectedVariantId] = useState((requestedCatalogVariant(initialProduct?.variants ?? [], requestedVariantId) ?? defaultCatalogVariant(initialProduct?.variants ?? []))?.id ?? '')
   // Quantity chosen before the variant is in the cart; it belongs to one variant only.
   const [chosen, setChosen] = useState<{ variantId: string; quantity: number } | null>(null)
 
@@ -65,7 +67,7 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
       .then((p) => {
         if (cancelled) return
         setProduct(p)
-        setSelectedVariantId(defaultCatalogVariant(p.variants)?.id ?? '')
+        setSelectedVariantId((requestedCatalogVariant(p.variants, requestedVariantId) ?? defaultCatalogVariant(p.variants))?.id ?? '')
         setLoading(false)
       })
       .catch(() => {
@@ -76,7 +78,7 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
     return () => {
       cancelled = true
     }
-  }, [api, slug, initialProduct])
+  }, [api, slug, initialProduct, requestedVariantId])
 
   if (loading)
     return (
@@ -231,7 +233,7 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
           <nav className="flex flex-wrap items-center gap-2">
             {product.brand && (
               <span className="text-sm font-black text-slate-500">
-                {product.brand}
+                {product.brandSlug ? <Link to={`/brands/${encodeURIComponent(product.brandSlug)}`} className="underline underline-offset-4">{product.brand}</Link> : product.brand}
               </span>
             )}
             <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-slate-200 text-slate-600">
@@ -258,9 +260,6 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
               </legend>
               <div className="mt-2 flex flex-wrap gap-2">
                 {product.variants.map((variant) => {
-                  const sellable =
-                    variant.stockStatus === 'IN_STOCK' ||
-                    variant.stockStatus === 'LOW_STOCK'
                   const label =
                     variant.title ||
                     variant.attributes
@@ -271,9 +270,8 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
                     <button
                       key={variant.id}
                       type="button"
-                      disabled={!sellable}
                       aria-pressed={variant.id === selectedVariant?.id}
-                      onClick={() => setSelectedVariantId(variant.id)}
+                      onClick={() => { setSelectedVariantId(variant.id); if (serverStructuredData) navigate(variantUrl(ROUTES.product(product.slug), variant.id)) }}
                       className={`rounded-xl border px-3 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${variant.id === selectedVariant?.id ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-700'} disabled:cursor-not-allowed disabled:opacity-40`}
                     >
                       {label}

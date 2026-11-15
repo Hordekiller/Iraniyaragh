@@ -2,18 +2,15 @@
 #
 # Obtain and renew the Let's Encrypt IP address certificate.
 #
-# Why IP certificates and why they are short-lived: this deployment has no domain
-# name yet, it is reached at a bare public IP. Let's Encrypt issues certificates
-# for IP address identifiers, but only under the `shortlived` profile, which is
-# valid for 160 hours -- just over six days. So the renewal path is not an
-# optimisation on this host, it is the mechanism: there is no long-lived
-# certificate that could be fetched once and forgotten.
+# The origin currently uses a short-lived Let's Encrypt IP certificate that also
+# covers iraniyaragh.com and www.iraniyaragh.com. It lasts about six days, so
+# unattended renewal and an independent origin check are essential.
 #
 # Two things follow from that, and both are load-bearing:
 #
 #   1. Certbot cannot install the certificate for us. Its nginx plugin still has
 #      no support for IP identifiers, so nginx reads the files directly and a
-#      deploy hook reloads it. The layout under TLS_DIR is deliberately flat
+#      post-install reload makes it live. The layout under TLS_DIR is deliberately flat
 #      (fullchain.pem, privkey.pem) rather than a copy of Certbot's
 #      archive/ + live/ symlink tree, which nothing else should depend on.
 #
@@ -34,10 +31,8 @@
 set -Eeuo pipefail
 
 # Derived from this script's own location rather than hardcoded, so the paths
-# follow the checkout wherever it lives. They have to agree with deploy.sh, which
-# reads the same env file and compose file: the deploy hook is a separate process
-# with no way to inherit them, and a hook pointed at a different env file would
-# reload the wrong Compose project.
+# follow the checkout wherever it lives. They have to agree with deploy.sh,
+# which reads the same env file and compose file for the Nginx reload.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFRA_DIR="${INFRA_DIR:-$(cd "${SCRIPT_DIR}/../../infrastructure/docker" && pwd)}"
 ENV_FILE="${ENV_FILE:-${INFRA_DIR}/.env.staging}"
@@ -69,8 +64,14 @@ command -v "${CERTBOT_BIN}" >/dev/null || fail "${CERTBOT_BIN} is not installed 
 # --ip-address arrived in Certbot 5.3 and --webroot support for IP identifiers in
 # 5.4, so an older client fails in a way that looks like an ACME problem rather
 # than a version problem. Checked up front to say something useful.
-"${CERTBOT_BIN}" --version 2>/dev/null | grep -qE ' 5\.(4|5|6|7|8|9)|^.*\b5\.(4|5|6|7|8|9)' \
-  || fail "certbot $( "${CERTBOT_BIN}" --version 2>/dev/null | awk '{print $2}' ) is too old; 5.4+ is required for --ip-address with --webroot."
+CERTBOT_VERSION="$("${CERTBOT_BIN}" --version 2>/dev/null | awk '{print $2}')"
+if ! awk -v version="${CERTBOT_VERSION}" 'BEGIN {
+  if (version !~ /^[0-9]+\.[0-9]+(\.[0-9]+)?$/) exit 1
+  split(version, parts, ".")
+  exit !(parts[1] > 5 || (parts[1] == 5 && parts[2] >= 4))
+}'; then
+  fail "certbot ${CERTBOT_VERSION:-unknown} is too old; 5.4+ is required for --ip-address with --webroot."
+fi
 
 mkdir -p "${TLS_DIR}" "${ACME_WEBROOT_DIR}/.well-known/acme-challenge"
 chmod 755 "${TLS_DIR}" "${ACME_WEBROOT_DIR}"
@@ -85,82 +86,9 @@ renewal_args=(
 )
 [[ ${USE_STAGING} -eq 1 ]] && renewal_args+=(--server https://acme-staging-v02.api.letsencrypt.org/directory)
 
-# Re-running Certbot with the webroot authenticator replaces the stored
-# authentication method for this certificate, so the renew timer uses webroot
-# even when the first certificate was issued with --standalone. Without this the
-# bootstrap choice would silently follow the certificate into every renewal.
-#
-# No `--deploy-hook` is passed, deliberately. Certbot runs the hook *before* this
-# script installs the renewed pair, so a hook that reloads nginx can only make it
-# read the files that were already on disk -- the previous certificate. The
-# renewal would succeed, the pair on disk would be new, and the site would carry
-# on serving the old one until something else happened to reload. That is exactly
-# the failure this script exists to prevent, and it was found by forcing a real
-# renewal and comparing the served certificate against the one on disk: they
-# differed, with the site days from expiry. An earlier version also passed the
-# hook inline, which Certbot rejects outright ("Unable to find deploy-hook command
-# set in the PATH"). The reload is now done after the install, further down.
-
-renewal_args=(
-  --cert-name "${CERT_NAME}"
-  --preferred-profile shortlived
-  --non-interactive
-  --agree-tos
-  --register-unsafely-without-email
-  --keep-until-expiring
-)
-[[ ${USE_STAGING} -eq 1 ]] && renewal_args+=(--server https://acme-staging-v02.api.letsencrypt.org/directory)
-
-# Re-running Certbot with the webroot authenticator replaces the stored
-# authentication method for this certificate, so the renew timer uses webroot
-# even when the first certificate was issued with --standalone. Without this the
-# bootstrap choice would silently follow the certificate into every renewal.
-#
-# The hook lives in a file rather than being passed inline. Certbot validates a
-# --deploy-hook by looking for an executable on PATH and rejects a multi-line
-# string outright ("Unable to find deploy-hook command set in the PATH"), so the
-# inline form could not have worked on a real host. Found the first time this ran
-# against the real Certbot.
-#
-# Nginx reads the certificate at startup, so a renewed pair is not live until it
-# reloads. The two failure modes are told apart deliberately: on a first issuance
-# there is no `web` container yet, which is not a failure, whereas a reload that
-# fails with the container up leaves Nginx serving an expired certificate. Only
-# the second exits non-zero.
-# Deliberately no `--deploy-hook` here. Certbot runs the hook *before* this
-# script installs the renewed pair, so a hook that reloads nginx makes it read the
-# files that were already on disk -- the previous certificate. That is precisely
-# the failure this whole script exists to prevent: the renewal succeeds, the pair
-# on disk is new, and the site keeps serving the old one until something else
-# reloads. Found by forcing a real renewal and comparing the served certificate
-# against the one on disk; they were different, and the site was days from
-# expiring. The reload therefore happens below, after the install.
-
-renewal_args=(
-  --cert-name "${CERT_NAME}"
-  --preferred-profile shortlived
-  --non-interactive
-  --agree-tos
-  --register-unsafely-without-email
-  --keep-until-expiring
-)
-[[ ${USE_STAGING} -eq 1 ]] && renewal_args+=(--server https://acme-staging-v02.api.letsencrypt.org/directory)
-
-renewal_args=(
-  --cert-name "${CERT_NAME}"
-  --preferred-profile shortlived
-  --non-interactive
-  --agree-tos
-  --register-unsafely-without-email
-  --keep-until-expiring
-)
-[[ ${USE_STAGING} -eq 1 ]] && renewal_args+=(--server https://acme-staging-v02.api.letsencrypt.org/directory)
-
-# Re-running Certbot with the webroot authenticator replaces the stored
-# authentication method for this certificate, so the renew timer uses webroot
-# even when the first certificate was issued with --standalone. Without this the
-# bootstrap choice would silently follow the certificate into every renewal.
-#
+# Certbot's saved renewal configuration supplies the webroot authenticator.
+# No deploy hook runs before installation: Nginx reloads only after the new
+# certificate is copied into TLS_DIR, below.
 
 # What decides between --standalone and --webroot is whether something is already
 # bound to port 80, so that is what gets tested, directly. Inferring it from

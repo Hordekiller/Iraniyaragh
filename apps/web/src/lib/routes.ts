@@ -4,6 +4,8 @@
  */
 export const ROUTES = {
   home: '/',
+  contact: '/contact',
+  about: '/about',
   customDoors: '/custom-doors',
   myCustomDoors: '/account/custom-doors',
   customDoorOrder: '/account/custom-doors/:id',
@@ -37,6 +39,8 @@ export const ROUTES = {
 /** Route path patterns for react-router `<Route path>` definitions. */
 export const ROUTE_PATHS = {
   home: '/',
+  contact: '/contact',
+  about: '/about',
   customDoors: '/custom-doors',
   myCustomDoors: '/account/custom-doors',
   customDoorOrder: '/account/custom-doors/:id',

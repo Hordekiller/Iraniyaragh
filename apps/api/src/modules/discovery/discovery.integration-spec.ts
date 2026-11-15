@@ -56,7 +56,7 @@ describe.sequential('Real catalog sitemap PostgreSQL acceptance', () => {
     expect(urls).toContain(`https://iraniyaragh.com/categories/${leafSlug}`);
     expect(urls).not.toContain(`https://iraniyaragh.com/products/${draftSlug}`);
     expect(urls).not.toContain(`https://iraniyaragh.com/products/${archivedSlug}`);
-    expect(urls.some(url => /\/account|\/checkout|\/cart|\/admin|\/api\//u.test(url))).toBe(false);
+    expect(urls.some(url => /^\/(?:account|checkout|cart|admin|api)(?:\/|$)/u.test(new URL(url).pathname))).toBe(false);
     expect(urls.some(url => /\/policies\//u.test(url))).toBe(false);
     expect(urls.every(url => !new URL(url).search && !new URL(url).hash)).toBe(true);
     expect(new Set(urls).size).toBe(urls.length);

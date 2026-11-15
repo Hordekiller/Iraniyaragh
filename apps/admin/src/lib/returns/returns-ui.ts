@@ -3,7 +3,7 @@ import { ApiAbortError, ApiClientError, ApiNetworkError } from '@/lib/api/client
 
 export const returnWindowLabels: Record<ReturnWindowKind, string> = {
   IN_PERSON: 'تحویل حضوری؛ ۲ روز کاری از صدور فاکتور',
-  DELIVERY: 'ارسال به شهر دیگر؛ ۱ هفته (۷ روز تقویمی) از صدور فاکتور',
+  DELIVERY: 'ارسال به شهر دیگر؛ طبق سیاست فعلی قابل مرجوعی نیست',
 };
 
 export const returnWindowShortLabels: Record<ReturnWindowKind, string> = { IN_PERSON: 'حضوری', DELIVERY: 'شهر دیگر' };
@@ -15,6 +15,7 @@ export const returnIneligibleLabels: Record<ReturnIneligibleReason, string> = {
   CUSTOM_DOOR_EXCLUDED: 'سفارش ساخت درب سفارشی مشمول این جریان مرجوعی نیست.',
   NO_ISSUED_INVOICE: 'فاکتور صادرشده‌ای برای این سفارش وجود ندارد؛ مهلت مرجوعی از لحظهٔ صدور فاکتور آغاز می‌شود.',
   METHOD_UNCLASSIFIED: 'روش ارسال این سفارش هنوز در «تنظیمات ارسال» به‌عنوان حضوری یا شهر دیگر مشخص نشده است.',
+  DELIVERY_NOT_ELIGIBLE: 'فقط کالایی که حضوری تحویل داده شده باشد مشمول مرجوعی است.',
   WINDOW_CLOSED: 'مهلت مرجوعی به پایان رسیده و ثبت مرجوعی امکان‌پذیر نیست.',
   FULLY_RETURNED: 'همهٔ اقلام این سفارش قبلاً مرجوع شده است.',
   AMOUNTS_DO_NOT_RECONCILE: 'مبلغ سفارش و پرداخت هم‌خوان نیست؛ ابتدا مغایرت مالی را بررسی کنید.',

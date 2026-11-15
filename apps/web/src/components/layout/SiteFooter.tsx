@@ -36,6 +36,8 @@ export function SiteFooter() {
           <nav aria-label="دسترسی‌های فروشگاه" className="lg:col-span-3">
             <h2 className="font-black text-sm text-slate-900">دسترسی سریع</h2>
             <ul className="mt-4 space-y-3 text-[13px] text-slate-600">
+              <li><Link to={ROUTES.about} className="hover:text-[#C2410C] focus-visible:underline">دربارهٔ ایرانی یراق</Link></li>
+              <li><Link to={ROUTES.contact} className="hover:text-[#C2410C] focus-visible:underline">تماس و پشتیبانی</Link></li>
               <li><Link to={ROUTES.categories} className="hover:text-[#C2410C] focus-visible:underline">دسته‌بندی کالاها</Link></li>
               <li><Link to={ROUTES.search} className="hover:text-[#C2410C] focus-visible:underline">جستجوی کالا</Link></li>
               <li><Link to={ROUTES.cart} className="inline-flex items-center gap-2 hover:text-[#C2410C] focus-visible:underline"><ShoppingBag size={15} aria-hidden="true" /> سبد خرید</Link></li>

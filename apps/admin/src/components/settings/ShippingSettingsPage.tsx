@@ -114,10 +114,10 @@ function ShippingEditor() {
           <TextField label="نام قابل نمایش برای مشتری" value={title} onChange={(event) => setTitle(event.target.value)} required inputProps={{ maxLength: 120 }} />
           <TextField label="هزینهٔ مصوب ارسال (ریال)" value={amount} onChange={(event) => setAmount(event.target.value)} required inputProps={{ inputMode: 'numeric' }} helperText="عدد صحیح ریالی؛ تومان یا عدد اعشاری وارد نکنید. صفر تنها برای ارسال رایگان مصوب است." />
           <TextField select label="نوع مهلت مرجوعی" value={windowKind} onChange={(event) => setWindowKind(event.target.value as ReturnWindowKind | '')}
-            helperText="تحویل حضوری: ۲ روز کاری از صدور فاکتور. ارسال به شهر دیگر: ۱ هفته از صدور فاکتور. تا مشخص نشود، مرجوعی سفارش‌های این روش ثبت نمی‌شود.">
+            helperText="فقط تحویل حضوری مشمول مرجوعی ۲ روز کاری است. سفارش ارسالی قابل مرجوعی نیست؛ روش نامشخص نیز مسدود می‌ماند.">
             <MenuItem value="">نامشخص (مرجوعی مسدود)</MenuItem>
             <MenuItem value="IN_PERSON">تحویل حضوری (۲ روز کاری)</MenuItem>
-            <MenuItem value="DELIVERY">ارسال به شهر دیگر (۱ هفته)</MenuItem>
+            <MenuItem value="DELIVERY">ارسال به شهر دیگر (بدون مرجوعی)</MenuItem>
           </TextField>
           <FormControlLabel control={<Switch checked={isActive} onChange={(_, checked) => setIsActive(checked)} />} label="فعال در فرایند خرید مشتری" />
         </Stack>

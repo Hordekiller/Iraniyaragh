@@ -3,9 +3,8 @@
  * Runtime asset policy for the storefront.
  *
  * The web shell stays self-hosted except for the operator-approved Enamad
- * verification image in SiteFooter. Vazirmatn is self-hosted (see
- * public/fonts/) and no `https?://` reference or remote CSS `@import` may be
- * shipped in built output sources.
+ * verification image and the consent-gated GA4 tag on public pages. Vazirmatn
+ * is self-hosted (see public/fonts/); other remote assets and CSS imports fail.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -41,6 +40,8 @@ const SERVER_CONFIG_URLS = new Map([
   [fileURLToPath(new URL('../src/server/policy.ts', import.meta.url)), new Set(['http://localhost:3000'])],
 ]);
 const ENAMAD_FOOTER_FILE = fileURLToPath(new URL('../src/components/layout/SiteFooter.tsx', import.meta.url));
+const ANALYTICS_TRACKER_FILE = fileURLToPath(new URL('../src/components/analytics/AnalyticsTracker.tsx', import.meta.url));
+const ANALYTICS_TAG_URL = 'https://www.googletagmanager.com/gtag/js?id=G-ERHW21LZXZ';
 
 function remoteUrls(file, content) {
   const matches = [];
@@ -49,6 +50,7 @@ function remoteUrls(file, content) {
   while ((match = re.exec(content)) !== null) {
     if (SERVER_CONFIG_URLS.get(file)?.has(match[0])) continue;
     if (file === ENAMAD_FOOTER_FILE && ENAMAD_FOOTER_URLS.has(match[0])) continue;
+    if (file === ANALYTICS_TRACKER_FILE && match[0] === ANALYTICS_TAG_URL) continue;
     if (!NAVIGATION_ONLY_DOMAINS.some(domain => match[0].includes(domain))) {
       matches.push(match[0]);
     }
@@ -92,4 +94,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('Runtime asset policy passed: only the approved Enamad footer seal may be remote.');
+console.log('Runtime asset policy passed: only the approved Enamad seal and consent-gated Analytics tag may be remote.');

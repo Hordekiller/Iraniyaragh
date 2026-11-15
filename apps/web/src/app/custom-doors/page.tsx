@@ -1,11 +1,11 @@
 import { PrivateJourney } from '../../components/next/PrivateJourney'
-import { absolute, metadataFor } from '../../server/policy'
+import { absolute, metadataFor, type SearchParams } from '../../server/policy'
 import { JsonLd, breadcrumb } from '../../server/structured-data'
 import { ROUTES } from '../../lib/routes'
 
 const title = 'سفارش آنلاین درب فریم‌لس و دکوفیکس'
 const description = 'انتخاب مدل، متریال و ابعاد سفارشی؛ تأیید قیمت، پرداخت مبلغ نهایی و پیگیری ساخت در ایرانی یراق.'
-export function generateMetadata() { return metadataFor({ title, description, path: ROUTES.customDoors }) }
+export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) { return metadataFor({ title, description, path: ROUTES.customDoors, indexable: Object.keys(await searchParams).length === 0 }) }
 
 /** Mirrors the copy shown by the interactive configurator; no price or lead time is stated. */
 function Intro() {

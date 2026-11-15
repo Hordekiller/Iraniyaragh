@@ -24,4 +24,11 @@ describe('product rating structured data', () => {
       expect(data).not.toHaveProperty('review')
     }
   })
+  it('omits invalid summary ratings and unverified individual reviews', () => {
+    const invalid = { ...reviews, summary: { ...reviews.summary, average: 6 } }
+    expect(productStructuredData(product, 'https://x/products/p', '', undefined, undefined, invalid)).not.toHaveProperty('aggregateRating')
+    const unverified = { ...reviews, items: [{ ...reviews.items[0], verifiedPurchase: false }] }
+    expect(productStructuredData(product, 'https://x/products/p', '', undefined, undefined, unverified as unknown as PublicReviewList)?.review).toEqual([])
+  })
+
 })

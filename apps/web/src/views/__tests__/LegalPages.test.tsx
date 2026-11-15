@@ -21,9 +21,9 @@ describe('restored legal pages', () => {
   it('publishes exactly the announced return window and manual refund only while returns are switched on', async () => {
     returns.answer = () => Promise.resolve({ data: { enabled: true } })
     render(<MemoryRouter><TermsPage /></MemoryRouter>)
-    expect(await screen.findByText(/برای سفارشی که حضوری تحویل می‌گیرید ۲ روز کاری/)).toBeInTheDocument()
-    expect(screen.getByText(/۱ هفته \(۷ روز\)/)).toBeInTheDocument()
-    expect(screen.getByText(/مهلت از زمان صدور فاکتور سفارش آغاز می‌شود/)).toBeInTheDocument()
+    expect(await screen.findByText(/فقط کالایی که حضوری تحویل داده شده باشد مشمول مرجوعی است/)).toBeInTheDocument()
+    expect(screen.getByText(/کالای ارسال‌شده مشمول این روند مرجوعی نیست/)).toBeInTheDocument()
+    expect(screen.getByText(/از زمان صدور فاکتور سفارش است/)).toBeInTheDocument()
     expect(screen.getByText(/استرداد وجه پس از ثبت مرجوعی توسط فروشگاه و به‌صورت دستی انجام می‌شود/)).toBeInTheDocument()
     expect(screen.getByText(/کالای ساخت سفارشی \(درب سفارشی\) مشمول این روند مرجوعی نیست/)).toBeInTheDocument()
     // Not announced by the seller yet: no invented conditions for cancellation, item condition or warranty.

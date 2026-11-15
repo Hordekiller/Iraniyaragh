@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { widestRenditionProjection } from '../media/media-url';
+import { HELP_TOPIC_SLUGS } from './help-topic-slugs';
 import { DISCOVERY_KINDS, escapeXml, IMAGE_NAMESPACE, isCanonicalSlug, isDiscoveryKind, parsePublicWebOrigin, SITEMAP_NAMESPACE, XML_HEADER, type DiscoveryKind } from './discovery.policy';
 
 const compress = promisify(gzip);
@@ -20,6 +21,7 @@ const landingEligibility = { products: { some: productEligibility } };
 const liveBlog = (now: Date): Prisma.BlogPostWhereInput => ({ status: 'PUBLISHED', publishedAt: { lte: now } });
 type Range = { after: string; through: string };
 type Row = { id: string; slug: string };
+type SitemapKind = DiscoveryKind | 'blog';
 export type DiscoveryArtifact = { body: Buffer; etag: string; contentType: string };
 
 function encodeRange(range: Range): string { return Buffer.from(JSON.stringify(range)).toString('base64url'); }
@@ -61,10 +63,11 @@ export class DiscoveryService {
       // A repeatable snapshot prevents duplicate/gapped ranges during concurrent publication.
       const paths = await this.prisma.$transaction(async tx => {
         const shards: string[] = ['/sitemaps/pages-home.xml.gz'];
-        for (const kind of DISCOVERY_KINDS) {
+        const snapshotTime = new Date();
+        for (const kind of [...DISCOVERY_KINDS, 'blog'] as const) {
           let after = '';
           for (;;) {
-            const rows = await this.rows(tx, kind, { after }, DISCOVERY_SHARD_TARGET);
+            const rows = await this.rows(tx, kind, { after }, DISCOVERY_SHARD_TARGET, snapshotTime);
             if (!rows.length) break;
             const through = rows[rows.length - 1]!.id;
             if (rows.some(row => isCanonicalSlug(row.slug))) {
@@ -75,8 +78,6 @@ export class DiscoveryService {
             if (rows.length < DISCOVERY_SHARD_TARGET) break;
           }
         }
-        // Blog articles are one bounded shard: an editorial site stays far below the 10,000 URL target.
-        if (await tx.blogPost.count({ where: liveBlog(new Date()), take: 1 })) shards.push('/sitemaps/blog-posts.xml.gz');
         return shards;
       }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 15_000 });
       const xml = `${XML_HEADER}<sitemapindex xmlns="${SITEMAP_NAMESPACE}">${paths.map(path => `<sitemap><loc>${escapeXml(origin + path)}</loc></sitemap>`).join('')}</sitemapindex>`;
@@ -89,25 +90,19 @@ export class DiscoveryService {
       // Policy text still awaits business approval and its HTML is noindex.
       // Only canonical, indexable public destinations belong in the sitemap.
       return this.singleflight(filename, async () => {
-        const paths = ['/', '/catalog', '/categories', '/custom-doors', '/help'];
+        const paths = ['/', '/catalog', '/categories', '/custom-doors', '/help', '/about', '/contact', ...HELP_TOPIC_SLUGS.map(slug => `/help/${slug}`)];
         if (await this.prisma.blogPost.count({ where: liveBlog(new Date()), take: 1 })) paths.push('/blog');
         return this.urlset(paths.map(path => ({ path })));
       });
     }
-    if (filename === 'blog-posts.xml.gz') {
-      return this.singleflight(filename, async () => {
-        const rows = await this.prisma.blogPost.findMany({ where: liveBlog(new Date()), select: { slug: true, contentUpdatedAt: true, coverMedia: { select: { state: true, renditions: true } } }, orderBy: { id: 'asc' }, take: MAX_SHARD_URLS + 1 });
-        if (rows.length > MAX_SHARD_URLS) throw new Error('Blog sitemap requires repartitioning.');
-        const urls = rows.filter(row => isCanonicalSlug(row.slug)).map(row => ({ path: `/blog/${encodeURIComponent(row.slug)}`, lastmod: row.contentUpdatedAt, images: this.imageUrls(row.coverMedia?.state === 'READY' ? row.coverMedia.renditions : []) }));
-        if (!urls.length) throw new NotFoundException('Empty sitemap shard.');
-        return this.urlset(urls);
-      });
-    }
-    const match = /^(products|categories|brands)-([A-Za-z0-9_-]{1,320})\.xml\.gz$/u.exec(filename);
-    if (!match || !isDiscoveryKind(match[1]!)) throw new NotFoundException('Unknown sitemap shard.');
-    const kind = match[1];
+    // Keep previously submitted small-blog URLs readable; new indexes use bounded ranges.
+    if (filename === 'blog-posts.xml.gz') return this.singleflight(filename, () => this.blogShard());
+    const match = /^(products|categories|brands|blog)-([A-Za-z0-9_-]{1,320})\.xml\.gz$/u.exec(filename);
+    if (!match || (match[1] !== 'blog' && !isDiscoveryKind(match[1]!))) throw new NotFoundException('Unknown sitemap shard.');
+    const kind = match[1] as SitemapKind;
     const range = decodeRange(match[2]!);
     return this.singleflight(filename, async () => {
+      if (kind === 'blog') return this.blogShard(range);
       const rows = await this.rows(this.prisma, kind, range, MAX_SHARD_URLS + 1);
       if (rows.length > MAX_SHARD_URLS) throw new Error('Discovery shard requires repartitioning.');
       const images = kind === 'products' ? await this.primaryImages(rows.map(row => row.id)) : new Map<string, string[]>();
@@ -143,9 +138,10 @@ export class DiscoveryService {
     return { data: { indexable, canonicalPath: `/${kind}/${encodeURIComponent(slug)}` } };
   }
 
-  private rows(tx: Prisma.TransactionClient, kind: DiscoveryKind, range: { after: string; through?: string }, take: number): Promise<Row[]> {
+  private rows(tx: Prisma.TransactionClient, kind: SitemapKind, range: { after: string; through?: string }, take: number, now = new Date()): Promise<Row[]> {
     const id = { ...(range.after ? { gt: range.after } : {}), ...(range.through ? { lte: range.through } : {}) };
     const common = { select: { id: true, slug: true }, orderBy: { id: 'asc' as const }, take };
+    if (kind === 'blog') return tx.blogPost.findMany({ ...common, where: { ...liveBlog(now), id } });
     if (kind === 'products') return tx.product.findMany({ ...common, where: { ...productEligibility, id } });
     if (kind === 'categories') return tx.$queryRaw<Row[]>(Prisma.sql`
       WITH RECURSIVE eligible(id) AS (
@@ -157,6 +153,21 @@ export class DiscoveryService {
         ${range.through ? Prisma.sql`AND c.id<=${range.through}` : Prisma.empty}
         ORDER BY c.id ASC LIMIT ${take}`);
     return tx.brand.findMany({ ...common, where: { ...landingEligibility, id } });
+  }
+
+  private async blogShard(range?: Range): Promise<DiscoveryArtifact> {
+    const rows = await this.prisma.blogPost.findMany({
+      where: { ...liveBlog(new Date()), ...(range ? { id: { ...(range.after ? { gt: range.after } : {}), lte: range.through } } : {}) },
+      select: { slug: true, contentUpdatedAt: true, coverMedia: { select: { state: true, renditions: true } } },
+      orderBy: { id: 'asc' }, take: MAX_SHARD_URLS + 1,
+    });
+    if (rows.length > MAX_SHARD_URLS) throw new Error('Blog sitemap requires repartitioning.');
+    const urls = rows.filter(row => isCanonicalSlug(row.slug)).map(row => ({
+      path: `/blog/${encodeURIComponent(row.slug)}`, lastmod: row.contentUpdatedAt,
+      images: this.imageUrls(row.coverMedia?.state === 'READY' ? row.coverMedia.renditions : []),
+    }));
+    if (!urls.length) throw new NotFoundException('Empty sitemap shard.');
+    return this.urlset(urls);
   }
 
   private requireOrigin(): string {

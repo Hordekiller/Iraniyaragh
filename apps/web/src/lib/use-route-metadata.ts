@@ -1,8 +1,11 @@
 import { useEffect } from 'react'
 import { SITE_NAME } from './site-config'
 import { ROUTES } from './routes'
+import { STORE_PAGES } from './store-pages'
 
 const documents: Record<string, { title: string; description: string }> = {
+  [ROUTES.contact]: STORE_PAGES.contact,
+  [ROUTES.about]: STORE_PAGES.about,
   [ROUTES.categories]: { title: 'دسته‌بندی کالاها', description: 'دسته‌بندی ابزار و یراق‌آلات ایرانی یراق؛ جستجو میان دسته‌ها و زیر‌دسته‌ها.' },
   [ROUTES.privacy]: { title: 'حریم خصوصی', description: 'نحوهٔ استفاده از اطلاعات حساب، سبد خرید، نشانی و سفارش در ایرانی یراق.' },
   [ROUTES.help]: { title: 'مرکز راهنمای مشتری', description: 'راهنمای گام‌به‌گام ورود، خرید، پرداخت، پیگیری سفارش و سفارش ساخت درب در ایرانی یراق.' },

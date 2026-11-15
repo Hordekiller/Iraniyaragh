@@ -84,10 +84,10 @@ describe('CatalogHttpClient', () => {
   it('maps detail primary media and active variant price', async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL) => String(input).includes('/availability')
       ? response({ items: [{ variantId: 'v-1', status: 'IN_STOCK' }] })
-      : response({ data: { product: { id: 'p-1', name: 'دریل', slug: 'drill', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', description: 'توضیح', brand: null, category: null, variants: [{ id: 'v-1', isActive: true, salePrice: { amount: '990000', currency: 'IRR' } }], media: [image] } } }))
+      : response({ data: { product: { id: 'p-1', name: 'دریل', slug: 'drill', status: 'PUBLISHED', brandId: null, categoryId: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', description: 'توضیح', brand: { id: 'b', name: 'نام نمایشی برند', slug: 'stored-brand' }, category: null, variants: [{ id: 'v-1', isActive: true, salePrice: { amount: '990000', currency: 'IRR' } }], media: [image] } } }))
     const product = await new CatalogHttpClient({ fetch: fetcher }).getProductBySlug('drill/blue')
     expect(fetcher).toHaveBeenCalledWith('/api/v1/catalog/products/drill%2Fblue', expect.anything())
-    expect(product).toMatchObject({ price: { amount: '990000' }, description: 'توضیح', image: image.sources[0].url, stockStatus: 'IN_STOCK' })
+    expect(product).toMatchObject({ price: { amount: '990000' }, description: 'توضیح', image: image.sources[0].url, stockStatus: 'IN_STOCK', brandSlug: 'stored-brand' })
     expect(product.media).toEqual([image])
   })
 
