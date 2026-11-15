@@ -9,6 +9,16 @@ const API_URL = process.env.API_E2E_URL ?? 'http://127.0.0.1:4000';
 // The real nginx vhost, from scripts/nginx-routing-proxy.sh. Routing is the one
 // layer no other project here covers, because they all bypass nginx entirely.
 const NGINX_URL = process.env.NGINX_E2E_URL ?? `http://127.0.0.1:${process.env.NGINX_E2E_HTTP_PORT ?? 8080}`;
+// General storefront journeys run with analytics rejected so the consent
+// prompt cannot cover navigation controls. Its unchosen state is covered by a
+// dedicated browser test; no third-party request is made by this state.
+const webConsentStorageState = {
+  cookies: [],
+  origins: [WEB_URL, REAL_WEB_URL].map((url) => ({
+    origin: new URL(url).origin,
+    localStorage: [{ name: 'iraniyaragh_analytics_consent', value: 'rejected' }],
+  })),
+};
 
 export default defineConfig({
   testDir: './tests',
@@ -44,12 +54,12 @@ export default defineConfig({
     {
       name: 'web-desktop',
       testMatch: /web-.*\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'], baseURL: WEB_URL, viewport: { width: 1440, height: 900 } },
+      use: { ...devices['Desktop Chrome'], baseURL: WEB_URL, storageState: webConsentStorageState, viewport: { width: 1440, height: 900 } },
     },
     {
       name: 'web-mobile',
       testMatch: /web-.*\.spec\.ts/,
-      use: { ...devices['Pixel 7'], baseURL: WEB_URL },
+      use: { ...devices['Pixel 7'], baseURL: WEB_URL, storageState: webConsentStorageState },
     },
     {
       name: 'admin-desktop',
