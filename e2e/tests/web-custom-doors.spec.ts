@@ -23,7 +23,7 @@ const model = {
   id: "test-model",
   code: "test-model",
   title: "مدل صرفاً آزمون",
-  type: "FORMLEX",
+  type: "DECOFIX",
   active: true,
   version: 1,
   configuration,
@@ -70,7 +70,7 @@ test("floating link clears site navigation and the live product purchase/menu do
   page,
 }, testInfo) => {
   await page.goto("/");
-  const link = page.getByRole("link", { name: "سفارش درب فریم‌لس و دکوفیکس" });
+  const link = page.getByRole("link", { name: "سفارش درب دکوفیکس" });
   await expect(link).toBeVisible();
   const mobile = (page.viewportSize()?.width ?? 1440) < 1024;
   if (mobile) {
@@ -105,7 +105,7 @@ test("floating link clears site navigation and the live product purchase/menu do
   });
   await link.click();
   await expect(
-    page.getByRole("heading", { name: "سفارش آنلاین درب فریم‌لس و دکوفیکس" }),
+    page.getByRole("heading", { name: "سفارش آنلاین درب دکوفیکس" }),
   ).toBeVisible();
   await expect(link).toHaveCount(0);
   expect(
@@ -155,8 +155,8 @@ test("configures several doors in Persian, reviews unpriced terms and remains ac
   await page.goto("/custom-doors");
   await page.getByRole("button", { name: /مدل صرفاً آزمون/ }).click();
   await page.getByLabel("شیشه مورد تأیید").selectOption("test-glass");
-  await page.getByLabel("عرض (میلی‌متر)", { exact: true }).fill("۵۰۰");
-  await page.getByLabel("ارتفاع (میلی‌متر)", { exact: true }).fill("۱۰۰۰");
+  await page.getByLabel("عرض (سانتی‌متر)", { exact: true }).fill("۵۰");
+  await page.getByLabel("ارتفاع (سانتی‌متر)", { exact: true }).fill("۱۰۰");
   await page.getByLabel("تعداد", { exact: true }).fill("۲");
   await page.getByRole("combobox", { name: "رنگ پروفیل", exact: true }).selectOption("BRONZE");
   await page.getByRole("combobox", { name: "سمت دستگیره", exact: true }).selectOption("LEFT");
