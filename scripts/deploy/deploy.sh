@@ -109,10 +109,13 @@ else
   "${SCRIPT_DIR}/backup-postgres.sh" || fail "pre-migrate backup failed; refusing to migrate."
 fi
 
-log "Pulling images for ${NEW_TAG}"
-# No `--quiet`: the pull is the only record of which digests were fetched, and a
-# deployment whose provenance cannot be read back is not auditable.
-IMAGE_TAG="${NEW_TAG}" compose pull || fail "could not pull the images for ${NEW_TAG}."
+log "Pulling missing images for ${NEW_TAG}"
+# SHA tags are immutable release identities. Reusing a present exact-SHA image
+# avoids contacting every upstream registry on repeat deploys (including pinned
+# infrastructure images that are already running), which otherwise turns a
+# transient registry reset into a release failure. Missing images still pull.
+# No `--quiet`: the pull records which images were fetched or reused.
+IMAGE_TAG="${NEW_TAG}" compose pull --policy missing || fail "could not pull the images for ${NEW_TAG}."
 
 # The web container terminates TLS itself and reads the certificate at startup, so a
 # missing one is a container that will not start. Checked here so the failure is a
