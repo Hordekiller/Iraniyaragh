@@ -143,7 +143,7 @@ export function DoorPreview3D({
     <div className="rounded-2xl bg-gradient-to-b from-slate-100 to-slate-50 p-4">
       <div
         role="img"
-        aria-label={`پیش‌نمایش سه‌بعدی درب ${framed ? "دکوفیکس" : "فریم‌لس"} با ${finish.label}، عرض ${w} و ارتفاع ${h} میلی‌متر`}
+        aria-label={`پیش‌نمایش سه‌بعدی درب ${framed ? "دکوفیکس" : "فریم‌لس"} با ${finish.label}، عرض ${w / 10} و ارتفاع ${h / 10} سانتی‌متر`}
         className="relative mx-auto flex h-[300px] cursor-grab touch-none select-none items-end justify-center active:cursor-grabbing"
         style={{ perspective: 900 }}
         onPointerDown={(e) => {
@@ -262,7 +262,7 @@ export function DoorPreview3D({
           className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded bg-white/90 px-2 text-xs font-bold text-slate-700"
           dir="rtl"
         >
-          ← عرض {w.toLocaleString("fa-IR")} →
+          ← عرض {(w / 10).toLocaleString("fa-IR")} سانتی‌متر →
         </span>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">

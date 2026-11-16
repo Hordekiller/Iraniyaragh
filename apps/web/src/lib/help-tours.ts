@@ -112,10 +112,10 @@ export const TOURS: readonly Tour[] = [
     title: 'سفارش ساخت درب',
     start: ROUTES.customDoors,
     steps: [
-      { onRoute: '^/custom-doors$', goto: { to: ROUTES.customDoors, label: 'رفتن به سفارش ساخت درب' }, target: q('door-type'), title: 'نوع درب', text: 'فریم‌لس یا دکوفیکس را انتخاب کنید.', missing: 'فهرست مدل‌ها هنوز از سرور دریافت نشده است؛ کمی صبر کنید.' },
+      { onRoute: '^/custom-doors$', goto: { to: ROUTES.customDoors, label: 'رفتن به سفارش ساخت درب' }, target: q('door-type'), title: 'مدل درب', text: 'مدل دکوفیکس را انتخاب کنید.', missing: 'فهرست مدل‌ها هنوز از سرور دریافت نشده است؛ کمی صبر کنید.' },
       { onRoute: '^/custom-doors$', target: q('door-models'), title: 'مدل و متریال', text: 'یکی از مدل‌های ثبت‌شده را بزنید تا فرم ابعاد باز شود.', missing: 'مدل تأییدشده‌ای هنوز برای این نوع ثبت نشده است.' },
-      { onRoute: '^/custom-doors$', target: q('door-width'), title: 'عرض', text: 'عرض نهایی را به میلی‌متر بنویسید (عدد صحیح مثبت). عرض افقی درب است.', missing: 'این کادر پس از انتخاب مدل باز می‌شود.' },
-      { onRoute: '^/custom-doors$', target: q('door-height'), title: 'ارتفاع', text: 'ارتفاع عمودی را به میلی‌متر بنویسید. ابعاد برش را سامانه از قواعد مدل حساب می‌کند.', missing: 'این کادر پس از انتخاب مدل باز می‌شود.' },
+      { onRoute: '^/custom-doors$', target: q('door-width'), title: 'عرض', text: 'عرض نهایی را به سانتی‌متر بنویسید (حداکثر یک رقم اعشار). عرض افقی درب است.', missing: 'این کادر پس از انتخاب مدل باز می‌شود.' },
+      { onRoute: '^/custom-doors$', target: q('door-height'), title: 'ارتفاع', text: 'ارتفاع عمودی را به سانتی‌متر بنویسید. ابعاد برش را سامانه از قواعد مدل حساب می‌کند.', missing: 'این کادر پس از انتخاب مدل باز می‌شود.' },
       { onRoute: '^/custom-doors$', target: q('door-quantity'), title: 'تعداد', text: 'تعداد درب با همین مشخصات (تا ۱۰۰۰). برای اندازهٔ دیگر، درب جدیدی اضافه کنید (تا ۵۰ ردیف).', missing: 'این کادر پس از انتخاب مدل باز می‌شود.' },
       { onRoute: '^/custom-doors$', target: q('door-add'), title: 'افزودن این درب', text: 'درب را به فهرست سفارش می‌افزاید. می‌توانید چند درب با اندازه‌های مختلف اضافه کنید.', missing: 'این دکمه پس از انتخاب مدل در فرم ابعاد است.' },
       { onRoute: '^/custom-doors$', target: q('door-review'), title: 'محاسبه و بررسی', text: 'قیمت و مشخصات از سرور بازبینی می‌شود. هنوز چیزی ثبت یا پرداخت نمی‌شود.', missing: 'این دکمه پس از افزودن حداقل یک درب نمایش داده می‌شود.' },

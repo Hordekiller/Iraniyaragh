@@ -48,8 +48,8 @@ export function DoorSummary({
               <span>{line.quantity.toLocaleString("fa-IR")} عدد</span>
             </div>
             <p className="mt-2 text-sm text-slate-600">
-              عرض {line.widthMm.toLocaleString("fa-IR")} × ارتفاع{" "}
-              {line.heightMm.toLocaleString("fa-IR")} میلی‌متر
+              عرض {(line.widthMm / 10).toLocaleString("fa-IR")} × ارتفاع{" "}
+              {(line.heightMm / 10).toLocaleString("fa-IR")} سانتی‌متر
             </p>
             <ul className="mt-2 flex flex-wrap gap-2 text-xs text-slate-700">
               {line.materials.map((m) => (

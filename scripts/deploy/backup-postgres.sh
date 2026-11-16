@@ -97,7 +97,7 @@ fi
 
 # Keep a bounded history rather than growing without limit on the host.
 prune() {
-  find "${BACKUP_DIR}" -name 'iranyaragh-*.dump' -type f -mtime "+${BACKUP_RETENTION_DAYS:-14}" -print -delete
+  find "${BACKUP_DIR}" -maxdepth 1 -name 'iranyaragh-*.dump' -type f -mtime "+${BACKUP_RETENTION_DAYS:-14}" -print -delete
   find "${BACKUP_DIR}" -maxdepth 1 -type d -name 'iranyaragh-objects-*' -mtime "+${BACKUP_RETENTION_DAYS:-14}" -print -exec rm -rf {} +
 }
 prune

@@ -3,7 +3,7 @@ import { absolute, metadataFor, type SearchParams } from '../../server/policy'
 import { JsonLd, breadcrumb } from '../../server/structured-data'
 import { ROUTES } from '../../lib/routes'
 
-const title = 'سفارش آنلاین درب فریم‌لس و دکوفیکس'
+const title = 'سفارش آنلاین درب دکوفیکس'
 const description = 'انتخاب مدل، متریال و ابعاد سفارشی؛ تأیید قیمت، پرداخت مبلغ نهایی و پیگیری ساخت در ایرانی یراق.'
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) { return metadataFor({ title, description, path: ROUTES.customDoors, indexable: Object.keys(await searchParams).length === 0 }) }
 
