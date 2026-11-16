@@ -53,6 +53,11 @@ const emptyEntry = {
   manufacturing: emptyManufacturing(),
 };
 type Entry = typeof emptyEntry;
+function centimetersToMillimeters(value: string): number {
+  const normalized = doorDigits(value).replace("٫", ".");
+  if (!/^\d+(?:\.\d)?$/.test(normalized)) return NaN;
+  return Number(normalized) * 10;
+}
 export function CustomDoorsPage() {
   const auth = useAuth();
   return (
@@ -75,7 +80,7 @@ function Configurator() {
   const [reload, setReload] = useState(0);
   const [stage, setStage] = useState(0);
   const [reviewRevision, setReviewRevision] = useState(0);
-  const [type, setType] = useState<DoorType>("FORMLEX");
+  const [type, setType] = useState<DoorType>("DECOFIX");
   const [entry, setEntry] = useState<Entry>(emptyEntry);
   const [items, setItems] = useState<DoorItemInput[]>(() => {
     if (restoredSubmission) return restoredSubmission.input.items;
@@ -209,8 +214,8 @@ function Configurator() {
   function saveItem(event: React.FormEvent) {
     event.preventDefault();
     setError("");
-    const widthMm = Number(doorDigits(entry.width)),
-      heightMm = Number(doorDigits(entry.height)),
+    const widthMm = centimetersToMillimeters(entry.width),
+      heightMm = centimetersToMillimeters(entry.height),
       quantity = Number(doorDigits(entry.quantity));
     if (
       !model ||
@@ -220,7 +225,7 @@ function Configurator() {
       quantity > 1000
     ) {
       setError(
-        "عرض، ارتفاع و تعداد را با عدد صحیح مثبت وارد کنید. حداکثر تعداد هر ردیف هزار است.",
+        "عرض و ارتفاع را به سانتی‌متر، با حداکثر یک رقم اعشار وارد کنید. تعداد باید عدد صحیح مثبت و حداکثر هزار باشد.",
       );
       return;
     }
@@ -270,8 +275,8 @@ function Configurator() {
     }
     setEntry({
       modelId: item.modelId,
-      width: String(item.widthMm),
-      height: String(item.heightMm),
+      width: String(item.widthMm / 10),
+      height: String(item.heightMm / 10),
       quantity: String(item.quantity),
       selections: item.selections,
       notes: item.notes,
@@ -416,7 +421,7 @@ function Configurator() {
           >
             سفارش آنلاین درب
             <br />
-            فریم‌لس و دکوفیکس
+            دکوفیکس
           </h1>
           <p className="mt-5 max-w-xl text-sm leading-8 text-slate-300">
             مدل و متریال ثبت‌شده را انتخاب کنید، ابعاد دلخواه را وارد کنید و چند
@@ -441,7 +446,7 @@ function Configurator() {
             تصویر هر مدل پس از تأیید ایرانی یراق نمایش داده می‌شود.
           </p>
           <p className="text-xs text-slate-400">
-            فریم‌لس · دکوفیکس · ساخت با ابعاد سفارشی
+            دکوفیکس · ساخت با ابعاد سفارشی
           </p>
         </div>
       </section>
@@ -535,8 +540,8 @@ function Configurator() {
             >
               {stage === 0 && (
                 <div className="rounded-3xl border border-slate-200 bg-white p-5 md:p-7">
-                  <h3 className="text-lg font-black">نوع درب را انتخاب کنید <HelpHint target="door-type" label="انتخاب نوع و مدل درب" /></h3>
-                  <div
+                  <h3 className="text-lg font-black">مدل درب را انتخاب کنید <HelpHint target="door-type" label="انتخاب نوع و مدل درب" /></h3>
+                  {new Set(catalog.models.map((model) => model.type)).size > 1 && <div
                     className="mt-4 grid grid-cols-2 gap-3"
                     role="group"
                     aria-label="نوع درب"
@@ -553,7 +558,7 @@ function Configurator() {
                         {t === "FORMLEX" ? "فریم‌لس" : "دکوفیکس"}
                       </button>
                     ))}
-                  </div>
+                  </div>}
                   <div className="mt-6 grid gap-4 sm:grid-cols-2" data-help="door-models">
                     {catalog.models
                       .filter((m) => m.type === type)
@@ -665,8 +670,8 @@ function Configurator() {
                   <div className="my-6">
                     <DoorPreview3D
                       type={model.type}
-                      widthMm={Number(doorDigits(entry.width)) || 0}
-                      heightMm={Number(doorDigits(entry.height)) || 0}
+                      widthMm={centimetersToMillimeters(entry.width) || 0}
+                      heightMm={centimetersToMillimeters(entry.height) || 0}
                       material={catalog.materials.find(
                         (m) =>
                           m.category === "GLASS" &&
@@ -674,14 +679,14 @@ function Configurator() {
                       )}
                     />
                     <p className="mt-3 text-center text-xs leading-6">
-                      عرض و ارتفاع نهایی را به میلی‌متر وارد کنید؛ تصویر بالا
+                      عرض و ارتفاع نهایی را به سانتی‌متر وارد کنید؛ تصویر بالا
                       هم‌زمان با ابعاد و رنگ انتخابی به‌روز می‌شود.
                     </p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-3">
                     {[
-                      ["width", "عرض (میلی‌متر)"],
-                      ["height", "ارتفاع (میلی‌متر)"],
+                      ["width", "عرض (سانتی‌متر)"],
+                      ["height", "ارتفاع (سانتی‌متر)"],
                       ["quantity", "تعداد"],
                     ].map(([key, title]) => (
                       <div key={key} className="relative">
@@ -691,7 +696,7 @@ function Configurator() {
                         <input
                           required
                           data-help={`door-${key}`}
-                          inputMode="numeric"
+                          inputMode={key === "quantity" ? "numeric" : "decimal"}
                           dir="ltr"
                           value={entry[key as "width" | "height" | "quantity"]}
                           onChange={(e) =>
@@ -709,10 +714,10 @@ function Configurator() {
                     model.configuration.technical.maxWidthMm >= 100000
                       ? "قیمت بر اساس متر مربع ابعاد واردشده محاسبه می‌شود."
                       : model.configuration.technical
-                      ? `محدوده ثبت‌شده: عرض ${model.configuration.technical.minWidthMm} تا ${model.configuration.technical.maxWidthMm} و ارتفاع ${model.configuration.technical.minHeightMm} تا ${model.configuration.technical.maxHeightMm} میلی‌متر؛ تلرانس ثبت‌شده ${model.configuration.technical.toleranceMm} میلی‌متر. ابعاد خارج از محدوده برای بررسی مدیر ارسال می‌شوند.`
+                      ? `محدوده ثبت‌شده: عرض ${model.configuration.technical.minWidthMm / 10} تا ${model.configuration.technical.maxWidthMm / 10} و ارتفاع ${model.configuration.technical.minHeightMm / 10} تا ${model.configuration.technical.maxHeightMm / 10} سانتی‌متر؛ تلرانس ثبت‌شده ${model.configuration.technical.toleranceMm / 10} سانتی‌متر. ابعاد خارج از محدوده برای بررسی مدیر ارسال می‌شوند.`
                       : "قواعد فنی مدل هنوز تکمیل نشده است؛ سفارش برای بررسی مدیر ارسال می‌شود."}
                   </p>
-                  <DoorManufacturingFields value={entry.manufacturing} heightMm={Number(doorDigits(entry.height))} onChange={manufacturing => setEntry(current => ({ ...current, manufacturing }))} />
+                  <DoorManufacturingFields value={entry.manufacturing} heightMm={centimetersToMillimeters(entry.height)} onChange={manufacturing => setEntry(current => ({ ...current, manufacturing }))} />
                   <label className="mt-5 block text-sm font-bold">
                     توضیحات اختصاصی
                     <textarea
@@ -845,8 +850,8 @@ function Configurator() {
                         ?.title ?? "مدل غیرفعال"}
                     </p>
                     <p className="mt-1 text-xs text-slate-600">
-                      {item.widthMm.toLocaleString("fa-IR")} ×{" "}
-                      {item.heightMm.toLocaleString("fa-IR")} میلی‌متر ·{" "}
+                      {(item.widthMm / 10).toLocaleString("fa-IR")} ×{" "}
+                      {(item.heightMm / 10).toLocaleString("fa-IR")} سانتی‌متر ·{" "}
                       {item.quantity.toLocaleString("fa-IR")} عدد
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1">

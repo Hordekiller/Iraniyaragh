@@ -164,7 +164,7 @@ describe("Door floating link", () => {
       </MemoryRouter>,
     );
     const link = await screen.findByRole("link", {
-      name: "سفارش درب فریم‌لس و دکوفیکس",
+      name: "سفارش درب دکوفیکس",
     });
     expect(link).toHaveAttribute("href", "/custom-doors");
     expect(link).toHaveClass("custom-door-floating-product");
@@ -184,7 +184,7 @@ describe("Door floating link", () => {
     );
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     expect(
-      screen.queryByRole("link", { name: "سفارش درب فریم‌لس و دکوفیکس" }),
+      screen.queryByRole("link", { name: "سفارش درب دکوفیکس" }),
     ).not.toBeInTheDocument();
   });
   it("honors disabled visibility and fails closed on a network error", async () => {
@@ -239,7 +239,7 @@ describe("Door configurator", () => {
       fireEvent.click(screen.getByRole("button", { name: "بازگشت به انتخاب درب" }));
       expect(scrolled.at(-1)).toHaveAttribute("id", "door-configurator");
       fireEvent.click(screen.getByRole("button", { name: "ویرایش" }));
-      expect(scrolled.at(-1)).toBe(screen.getByLabelText("عرض (میلی‌متر)").closest("form"));
+      expect(scrolled.at(-1)).toBe(screen.getByLabelText("عرض (سانتی‌متر)").closest("form"));
     } finally {
       if (original) Object.defineProperty(Element.prototype, "scrollIntoView", original);
       else Reflect.deleteProperty(Element.prototype, "scrollIntoView");
@@ -264,23 +264,23 @@ describe("Door configurator", () => {
       await screen.findByRole("button", { name: /مدل آزمون جداگانه/ }),
     );
     expect(
-      screen.getByRole("img", { name: /عرض 900 و ارتفاع 2100 میلی‌متر/ }),
+      screen.getByRole("img", { name: /عرض 90 و ارتفاع 210 سانتی‌متر/ }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: /دودی روشن/ }));
-    fireEvent.change(screen.getByLabelText("عرض (میلی‌متر)"), {
-      target: { value: "۱۲۰۰" },
+    fireEvent.change(screen.getByLabelText("عرض (سانتی‌متر)"), {
+      target: { value: "۱۲۰" },
     });
     expect(
       screen.getByRole("img", {
-        name: /دودی روشن، عرض 1200 و ارتفاع 2100 میلی‌متر/,
+        name: /دودی روشن، عرض 120 و ارتفاع 210 سانتی‌متر/,
       }),
     ).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("ارتفاع (میلی‌متر)"), {
-      target: { value: "۲۴۰۰" },
+    fireEvent.change(screen.getByLabelText("ارتفاع (سانتی‌متر)"), {
+      target: { value: "۲۴۰" },
     });
     expect(
       screen.getByRole("img", {
-        name: /دودی روشن، عرض 1200 و ارتفاع 2400 میلی‌متر/,
+        name: /دودی روشن، عرض 120 و ارتفاع 240 سانتی‌متر/,
       }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "باز کردن درب" }));
@@ -395,11 +395,11 @@ describe("Door configurator", () => {
     fireEvent.change(screen.getByLabelText(/شیشه تأییدشده/), {
       target: { value: "test-glass" },
     });
-    fireEvent.change(screen.getByLabelText("عرض (میلی‌متر)"), {
-      target: { value: "۵۰۰" },
+    fireEvent.change(screen.getByLabelText("عرض (سانتی‌متر)"), {
+      target: { value: "۵۰٫۵" },
     });
-    fireEvent.change(screen.getByLabelText("ارتفاع (میلی‌متر)"), {
-      target: { value: "۱۰۰۰" },
+    fireEvent.change(screen.getByLabelText("ارتفاع (سانتی‌متر)"), {
+      target: { value: "۱۰۰" },
     });
     fireEvent.change(screen.getByLabelText("تعداد"), {
       target: { value: "۲" },
@@ -419,7 +419,7 @@ describe("Door configurator", () => {
     expect(preview).toHaveBeenCalledWith({
       items: [
         expect.objectContaining({
-          widthMm: 500,
+          widthMm: 505,
           heightMm: 1000,
           quantity: 2,
           manufacturing: { profileColor: "BRONZE", handleSide: "LEFT", hingeSide: "RIGHT", drillingMode: "STANDARD", holes: [] },
@@ -431,14 +431,14 @@ describe("Door configurator", () => {
       screen.getByRole("button", { name: "بازگشت به انتخاب درب" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "ویرایش" }));
-    expect(screen.getByLabelText("عرض (میلی‌متر)")).toHaveValue("500");
+    expect(screen.getByLabelText("عرض (سانتی‌متر)")).toHaveValue("50.5");
     expect(screen.getByLabelText("رنگ پروفیل")).toHaveValue("BRONZE");
   });
   it("publishes no invented models or prices when the catalog is empty", async () => {
     load.mockResolvedValue({ ...catalog, models: [], materials: [] });
     configurator();
     expect(
-      await screen.findByText(/مدل تأییدشده‌ای برای فریم‌لس منتشر نشده است/),
+      await screen.findByText(/مدل تأییدشده‌ای برای دکوفیکس منتشر نشده است/),
     ).toBeVisible();
     expect(
       screen.queryByRole("button", { name: /مدل آزمون جداگانه/ }),
