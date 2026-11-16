@@ -123,7 +123,7 @@ describe('quiet access', () => {
     render(<AuthContext.Provider value={auth('anonymous')}><CartContext.Provider value={cart(0)}><MemoryRouter initialEntries={['/custom-doors']}><PageHelper /><HelpHint target="door-height" label="ارتفاع" /></MemoryRouter></CartContext.Provider></AuthContext.Provider>)
     expect(screen.queryByRole('region', { name: 'راهنمای این صفحه' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'راهنما: ارتفاع' }))
-    expect(screen.getByRole('region', { name: 'راهنمای این صفحه' })).toHaveTextContent('ارتفاع (میلی‌متر)')
+    expect(screen.getByRole('region', { name: 'راهنمای این صفحه' })).toHaveTextContent('ارتفاع (سانتی‌متر)')
   })
 })
 
