@@ -3,6 +3,7 @@
 import { LegalDocument } from '../components/legal/LegalDocument'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../lib/routes'
+import { openAnalyticsSettings } from '../components/analytics/analytics-policy'
 
 // Restored from storefront-completion, adapted to the current server-backed flow.
 export function PrivacyPage() {
@@ -37,6 +38,16 @@ export function PrivacyPage() {
             </span>
           </li>
         </ul>
+      </section>
+
+      <section aria-labelledby="privacy-analytics">
+        <h2 id="privacy-analytics">آمار بازدید اختیاری</h2>
+        <p>
+          تنها با انتخاب شما، Google Analytics بازدید صفحات عمومی را برای تحلیل عملکرد سایت دریافت می‌کند.
+          نشانی‌های حساب، سبد خرید و تسویه‌حساب و پارامترهای نشانی برای این ابزار ارسال نمی‌شوند.
+          می‌توانید تصمیم خود را هر زمان تغییر دهید.
+        </p>
+        <button type="button" onClick={openAnalyticsSettings} className="mt-3 rounded-lg border border-slate-300 px-4 py-2 font-bold text-slate-900 focus-visible:outline-2 focus-visible:outline-orange-600">تنظیم آمار بازدید</button>
       </section>
 
       <section aria-labelledby="privacy-storage">

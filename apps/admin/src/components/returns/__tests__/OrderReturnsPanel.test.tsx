@@ -48,7 +48,7 @@ describe('OrderReturnsPanel', () => {
     vi.mocked(api.getReturnEligibility).mockResolvedValue({ ...eligible, eligible: false, reason: 'WINDOW_CLOSED' });
     mount();
     expect(await screen.findByText(/مهلت مرجوعی به پایان رسیده/)).toBeInTheDocument();
-    expect(screen.getByText(/۲ روز کاری برای تحویل حضوری و ۱ هفته برای شهرهای دیگر/)).toBeInTheDocument();
+    expect(screen.getByText(/سفارش ارسالی مشمول مرجوعی جدید نیست/)).toBeInTheDocument();
     expect(screen.getByText(/هیچ پولی جابه‌جا نمی‌کند/)).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'ثبت مرجوعی' })).not.toBeInTheDocument();
   });
@@ -66,6 +66,13 @@ describe('OrderReturnsPanel', () => {
     vi.mocked(api.getReturnEligibility).mockResolvedValue({ ...eligible, eligible: false, reason: 'METHOD_UNCLASSIFIED', windowKind: null, deadlineAt: null });
     mount();
     expect(await screen.findByText(/هنوز در «تنظیمات ارسال» به‌عنوان حضوری یا شهر دیگر مشخص نشده/)).toBeInTheDocument();
+  });
+
+  it('explains that delivered orders cannot start a new return', async () => {
+    vi.mocked(api.getReturnEligibility).mockResolvedValue({ ...eligible, eligible: false, reason: 'DELIVERY_NOT_ELIGIBLE', windowKind: 'DELIVERY', deadlineAt: null });
+    mount();
+    expect(await screen.findByText(/فقط کالایی که حضوری تحویل داده شده باشد مشمول مرجوعی است/)).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'ثبت مرجوعی' })).not.toBeInTheDocument();
   });
 
   it('does not offer recording without returns.manage', async () => {

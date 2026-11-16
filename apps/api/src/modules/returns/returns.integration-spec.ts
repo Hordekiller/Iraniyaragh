@@ -175,7 +175,7 @@ describe.sequential('Order returns: window, amounts, stock, refunds and database
     it('reports the window and returnable quantities of a paid in-person order', async () => {
       const order = await paidOrder();
       const { data } = await service.eligibility(order.orderId);
-      expect(data).toMatchObject({ eligible: true, reason: null, windowKind: 'IN_PERSON', policyRevision: 'returns-v1' });
+      expect(data).toMatchObject({ eligible: true, reason: null, windowKind: 'IN_PERSON', policyRevision: 'returns-v2' });
       expect(data.lines).toEqual([expect.objectContaining({ orderedQuantity: 3, returnedQuantity: 0, remainingQuantity: 3, netLineAmount: { amount: '3000', currency: 'IRR' } })]);
       expect(new Date(data.deadlineAt!).getTime()).toBeGreaterThan(Date.now());
     });
@@ -206,14 +206,13 @@ describe.sequential('Order returns: window, amounts, stock, refunds and database
       await expect(service.create(order.orderId, input([restock(order.itemIds[0]!, 1)]), ctx())).rejects.toEqual(reasonOf('WINDOW_CLOSED'));
     });
 
-    it('gives shipped orders 7 calendar days, through the end of the last day', async () => {
+    it('refuses newly requested returns for shipped orders even under their old DELIVERY classification', async () => {
       const code = `it-ship-${run}`;
       shippingCodes.push(code);
       await prisma.shippingMethod.create({ data: { code, title: 'Isolated courier', amount: 0n, policyRevision: 'it', returnWindowKind: 'DELIVERY' } });
       const open = await paidOrder({ method: code, issuedAt: new Date(Date.now() - 5 * DAY) });
-      const closed = await paidOrder({ method: code, issuedAt: new Date(Date.now() - 9 * DAY) });
-      expect((await service.eligibility(open.orderId)).data).toMatchObject({ eligible: true, windowKind: 'DELIVERY' });
-      expect((await service.eligibility(closed.orderId)).data).toMatchObject({ eligible: false, reason: 'WINDOW_CLOSED' });
+      expect((await service.eligibility(open.orderId)).data).toMatchObject({ eligible: false, reason: 'DELIVERY_NOT_ELIGIBLE', windowKind: 'DELIVERY', deadlineAt: null, policyRevision: 'returns-v2' });
+      await expect(service.create(open.orderId, input([restock(open.itemIds[0]!, 1)]), ctx())).rejects.toEqual(reasonOf('DELIVERY_NOT_ELIGIBLE'));
     });
 
     it('blocks an unclassified or unknown shipping method until staff classify it', async () => {
@@ -223,7 +222,7 @@ describe.sequential('Order returns: window, amounts, stock, refunds and database
       const order = await paidOrder({ method: code });
       expect((await service.eligibility(order.orderId)).data).toMatchObject({ eligible: false, reason: 'METHOD_UNCLASSIFIED' });
       await prisma.shippingMethod.update({ where: { code }, data: { returnWindowKind: 'DELIVERY' } });
-      expect((await service.eligibility(order.orderId)).data.eligible).toBe(true);
+      expect((await service.eligibility(order.orderId)).data).toMatchObject({ eligible: false, reason: 'DELIVERY_NOT_ELIGIBLE', deadlineAt: null });
       const unknown = await paidOrder({ method: `it-missing-${run}` });
       expect((await service.eligibility(unknown.orderId)).data.reason).toBe('METHOD_UNCLASSIFIED');
     });

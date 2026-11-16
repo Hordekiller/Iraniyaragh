@@ -4,6 +4,7 @@ import '../index.css'
 import { Storefront } from '../components/next/Storefront'
 import { publicOrigin, STORE_NAME } from '../server/policy'
 import { hasLiveBlog } from '../server/blog'
+import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker'
 
 /** Relative asset URLs resolve against the configured canonical origin, never the request Host. */
 function metadataBase(): URL | undefined {
@@ -25,5 +26,5 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, them
 
 export const dynamic = 'force-dynamic'
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  return <html lang="fa" dir="rtl"><body><Storefront hasBlog={await hasLiveBlog()}>{children}</Storefront></body></html>
+  return <html lang="fa" dir="rtl"><body><Storefront hasBlog={await hasLiveBlog()}>{children}</Storefront><AnalyticsTracker /></body></html>
 }

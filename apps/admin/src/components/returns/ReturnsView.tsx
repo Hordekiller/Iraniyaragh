@@ -59,7 +59,7 @@ export function ReturnsView() {
       <PageHeader
         title="مرجوعی‌ها"
         eyebrow="فروش و مشتری"
-        description="کالاهای مرجوع‌شده و وضعیت استرداد دستی هر کدام. مهلت: ۲ روز کاری برای حضوری و ۱ هفته برای شهرهای دیگر، از صدور فاکتور. ثبت مرجوعی از صفحهٔ هر سفارش انجام می‌شود."
+        description="کالاهای مرجوع‌شده و وضعیت استرداد دستی هر کدام. مرجوعی جدید فقط برای تحویل حضوری، تا ۲ روز کاری از صدور فاکتور مجاز است. ثبت مرجوعی از صفحهٔ هر سفارش انجام می‌شود."
         breadcrumbs={[{ label: 'فروش و مشتری' }, { label: 'مرجوعی‌ها' }]}
       />
       <Stack component="form" direction="row" spacing={1} sx={{ mb: 2 }} onSubmit={(event) => { event.preventDefault(); setPage(1); setApplied(orderNumber.trim()); }}>

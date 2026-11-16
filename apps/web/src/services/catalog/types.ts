@@ -34,6 +34,8 @@ export type CatalogProduct = {
   slug: string
   name: string
   brand: string | null
+  /** Stored public slug; never derived from a display name. */
+  brandSlug?: string | null
   category: { id: string; name: string; slug: string } | null
   image: string
   /** Ordered ready media gallery for the product detail page (contract union). */

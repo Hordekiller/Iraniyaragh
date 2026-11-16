@@ -1,7 +1,7 @@
 import { CategoriesPage } from '../../views/CategoriesPage'
 import { categories } from '../../server/catalog'
 import { JsonLd, breadcrumb } from '../../server/structured-data'
-import { hasNonPageQuery, metadataFor, type SearchParams } from '../../server/policy'
+import { metadataFor, type SearchParams } from '../../server/policy'
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const items = await categories()
@@ -9,7 +9,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     title: 'دسته‌بندی کالاها',
     description: 'دسته‌بندی‌های ابزار و یراق‌آلات ایرانی یراق؛ جستجو میان دسته‌ها و دسترسی به زیر‌دسته‌ها و کالاها.',
     path: '/categories',
-    indexable: items.length > 0 && !hasNonPageQuery(await searchParams),
+    indexable: items.length > 0 && Object.keys(await searchParams).length === 0,
   })
 }
 

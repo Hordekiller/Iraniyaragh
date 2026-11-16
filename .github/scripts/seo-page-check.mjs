@@ -115,13 +115,20 @@ export function checkPage(html, { url, origin, kind = 'page', allowNoindex = fal
     if (typeof node[key] === 'string' && /^https?:/iu.test(node[key]) && new URL(node[key]).origin !== origin) error(`JSON-LD ${key} leaves the canonical origin: ${node[key]}`);
   }
   const products = all('Product');
-  if (products.length > 1) error('more than one Product node on a page');
+  const groups = all('ProductGroup');
+  const groupedIds = new Set(groups.flatMap(group => group.hasVariant ?? []).map(variant => variant['@id']).filter(Boolean));
+  if (products.length > 1 && (!groups.length || products.some(product => !groupedIds.has(product['@id'])))) error('more than one Product node on a page outside a declared ProductGroup');
   for (const product of products) {
     const offers = [product.offers].flat().filter(Boolean);
     if (!product.name) error('Product without name');
     if (!offers.some(o => /^\d+(?:\.\d+)?$/u.test(String(o.price ?? '')) && o.priceCurrency)) error('Product without a complete Offer (price + priceCurrency)');
     if (!product.image) warn('Product without image');
-    if (canonical && product.url && new URL(product.url).href !== canonical.href) error('Product url differs from canonical');
+    if (canonical && product.url) {
+      const target = new URL(product.url);
+      const variant = target.searchParams.get('variant');
+      if (variant && [...target.searchParams.keys()].every(key => key === 'variant')) target.search = '';
+      if (target.href !== canonical.href) error('Product url differs from canonical');
+    }
   }
   const crumbs = all('BreadcrumbList');
   // Fixture builds have no discovery projection, so catalog entities legitimately omit rich data.
@@ -174,12 +181,13 @@ async function fetchHtml(url) {
 
 /** Crawl a running instance: fixed public routes plus the first product/category/brand it links to. */
 export async function run({ base, origin, allowNoindex }) {
-  const routes = [['/', 'home'], ['/catalog', 'collection'], ['/categories', 'page'], ['/custom-doors', 'page'], ['/help', 'page'], ['/blog', 'collection']];
+  const routes = [['/', 'home'], ['/catalog', 'collection'], ['/categories', 'page'], ['/custom-doors', 'page'], ['/help', 'page'], ['/contact', 'page'], ['/about', 'page']];
   const catalog = await fetchHtml(`${base}/catalog`);
   const first = prefix => hrefs(catalog.html).find(h => h.startsWith(prefix));
   const product = first('/products/');
   if (product) routes.push([product, 'product']);
   const blog = await fetchHtml(`${base}/blog`);
+  if (blog.status === 200) routes.push(['/blog', 'collection']);
   const article = hrefs(blog.html).find(h => /^\/blog\/[^/?#]+$/u.test(h) && h !== '/blog/feed.xml');
   if (article) routes.push([article, 'article']);
   const categoriesPage = await fetchHtml(`${base}/categories`);

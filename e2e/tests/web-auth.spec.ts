@@ -46,13 +46,14 @@ test.describe('web: customer OTP login (fixture client, #50)', () => {
 
     await expect(page.getByRole('dialog')).toBeHidden();
 
-    // AUTH_CONTRACT §7: session secrets stay memory-only.
+    // AUTH_CONTRACT §7: session secrets stay memory-only. The analytics
+    // preference is the only persisted local value in this browser suite.
     expect(
       await page.evaluate(() => ({
-        local: localStorage.length,
+        local: Object.keys(localStorage),
         session: sessionStorage.length,
       })),
-    ).toEqual({ local: 0, session: 0 });
+    ).toEqual({ local: ['iraniyaragh_analytics_consent'], session: 0 });
 
     // A reload must not restore the in-memory session.
     await page.reload();

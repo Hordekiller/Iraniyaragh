@@ -42,7 +42,7 @@ export const openApiReturns = {
     type: 'object', required: ['orderId', 'orderNumber', 'eligible', 'reason', 'windowKind', 'policyRevision', 'invoiceIssuedAt', 'deadlineAt', 'lines', 'shippingAmount'],
     properties: {
       orderId: { type: 'string' }, orderNumber: { type: 'string' }, eligible: { type: 'boolean' },
-      reason: { type: 'string', nullable: true, enum: ['ORDER_NOT_PAID', 'PAYMENT_NOT_SETTLED', 'CUSTOM_DOOR_EXCLUDED', 'NO_ISSUED_INVOICE', 'METHOD_UNCLASSIFIED', 'WINDOW_CLOSED', 'FULLY_RETURNED', 'AMOUNTS_DO_NOT_RECONCILE'] },
+      reason: { type: 'string', nullable: true, enum: ['ORDER_NOT_PAID', 'PAYMENT_NOT_SETTLED', 'CUSTOM_DOOR_EXCLUDED', 'NO_ISSUED_INVOICE', 'METHOD_UNCLASSIFIED', 'DELIVERY_NOT_ELIGIBLE', 'WINDOW_CLOSED', 'FULLY_RETURNED', 'AMOUNTS_DO_NOT_RECONCILE'] },
       windowKind: { ...windowKind, nullable: true }, policyRevision: { type: 'string' },
       invoiceIssuedAt: { type: 'string', format: 'date-time', nullable: true }, deadlineAt: { type: 'string', format: 'date-time', nullable: true },
       lines: { type: 'array', items: { type: 'object', required: ['orderItemId', 'sku', 'title', 'orderedQuantity', 'returnedQuantity', 'remainingQuantity', 'unitPrice', 'netLineAmount'],

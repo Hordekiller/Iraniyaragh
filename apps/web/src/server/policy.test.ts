@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { metadataFor, publicOrigin, pageNumber, hasNonPageQuery, validSlug, entityPath } from './policy'
-import { breadcrumb, collectionJsonLd, organizationJsonLd, websiteJsonLd, plainDescription, productJsonLd, JsonLd } from './structured-data'
+import { breadcrumb, collectionJsonLd, organizationJsonLd, websiteJsonLd, plainDescription, productJsonLd, JsonLd, webpageJsonLd } from './structured-data'
 import { categoryAncestors } from './category-ancestors'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { CatalogProduct, CatalogCategory } from '../services/catalog/types'
@@ -128,5 +128,25 @@ describe('truthful server structured data', () => {
     expect(categoryAncestors(nodes, 'leaf').map(node => node.id)).toEqual(['root', 'parent'])
     expect(categoryAncestors([make('root','leaf'), ...nodes.slice(1)], 'leaf').map(node => node.id)).toEqual(['root','parent'])
     expect(breadcrumb([{ name: 'خانه', path: '/' }, { name: 'کالا', path: '/products/test-hinge' }])).toMatchObject({ itemListElement: [{ position: 1, item: origin+'/' }, { position: 2, item: origin+'/products/test-hinge' }] })
+  })
+})
+
+
+describe('document identity and search preview controls', () => {
+  it('links contact and about documents to the verified store without inventing business details', () => {
+    setup()
+    for (const type of ['ContactPage', 'AboutPage'] as const) {
+      const data = webpageJsonLd({ type, title: 'فروشگاه', description: 'اطلاعات فروشگاه', path: '/contact' })
+      expect(data).toMatchObject({ '@type': type, url: origin + '/contact', mainEntity: { '@id': origin + '/#organization' }, isPartOf: { '@id': origin + '/#website' } })
+      expect(data).not.toHaveProperty('openingHours')
+      expect(data).not.toHaveProperty('aggregateRating')
+    }
+  })
+  it('allows rich previews only on indexable production documents', () => {
+    setup()
+    expect(metadataFor({ title: 't', description: 'd', path: '/' }).robots).toMatchObject({ googleBot: { 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 } })
+    expect(metadataFor({ title: 't', description: 'd', path: '/', indexable: false }).robots).not.toHaveProperty('googleBot')
+    vi.stubEnv('APP_ENVIRONMENT', 'staging')
+    expect(metadataFor({ title: 't', description: 'd', path: '/' }).robots).not.toHaveProperty('googleBot')
   })
 })

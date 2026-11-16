@@ -30,7 +30,7 @@ describe('ReturnHolidaysPage', () => {
   it('states the approved policy and lists holidays', async () => {
     render(<ReturnHolidaysPage />);
     expect(await screen.findByRole('table', { name: 'تعطیلات ثبت‌شده' })).toHaveTextContent('نوروز');
-    expect(screen.getByText(/۲ روز کاری برای تحویل حضوری و ۱ هفته/)).toBeInTheDocument();
+    expect(screen.getByText(/سفارش ارسالی مشمول مرجوعی نیست/)).toBeInTheDocument();
     expect(screen.getByText(/جمعه همیشه تعطیل است/)).toBeInTheDocument();
   });
 

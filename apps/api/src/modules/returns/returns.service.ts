@@ -210,7 +210,7 @@ export class ReturnsService {
 
     const windowKind = await this.windowKind(tx, order.shippingMethod);
     const issuedAt = order.invoiceDocument?.issuedAt ?? null;
-    const deadline = windowKind && issuedAt
+    const deadline = windowKind === 'IN_PERSON' && issuedAt
       ? computeReturnDeadline({ kind: windowKind, anchor: issuedAt, holidays: await this.holidays(tx) })
       : null;
 
@@ -226,6 +226,7 @@ export class ReturnsService {
     else if (!reconciles || order.payments.length !== 1 || settled[0]!.amount !== order.grandTotal) reason = 'AMOUNTS_DO_NOT_RECONCILE';
     else if (!order.invoiceDocument) reason = 'NO_ISSUED_INVOICE';
     else if (!windowKind) reason = 'METHOD_UNCLASSIFIED';
+    else if (windowKind === 'DELIVERY') reason = 'DELIVERY_NOT_ELIGIBLE';
     else if (deadline && !isWithinReturnWindow(now, deadline)) reason = 'WINDOW_CLOSED';
 
     const eligibility: ReturnEligibility = {

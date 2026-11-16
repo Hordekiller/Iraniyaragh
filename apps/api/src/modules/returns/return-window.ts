@@ -1,18 +1,21 @@
 /**
- * Return window policy (owner-approved, revision `returns-v1`).
+ * Return window calculations. New eligibility uses `returns-v2` and only
+ * in-person handover; the delivery calculation remains for historical v1 data.
  *
  * - The clock starts when the order's store invoice was issued (day 0 is the
  *   Tehran calendar day of issuance).
  * - In-person handover: 2 business days after day 0. A business day is
  *   Saturday–Thursday and not an officially listed holiday. Friday is off.
- * - Shipped to another city: 7 full calendar days after day 0 (holidays do not
- *   extend it).
+ * - Historical v1 delivery: 7 full calendar days after day 0 (holidays do not
+ *   extend it). No new delivery return uses this calculation.
  * - The window ends at the very end (23:59:59.999, Asia/Tehran) of its last day.
  *
  * Everything here is pure: the caller supplies the instant, the classification
  * and the holiday set, so the same inputs always produce the same deadline.
  */
-export const RETURN_POLICY_REVISION = 'returns-v1';
+// Keep the delivery window calculator for historical v1 return records; new
+// delivery orders are ineligible under v2 regardless of their old classification.
+export const RETURN_POLICY_REVISION = 'returns-v2';
 export const RETURN_BUSINESS_DAYS_IN_PERSON = 2;
 export const RETURN_CALENDAR_DAYS_DELIVERY = 7;
 export const RETURN_TIME_ZONE = 'Asia/Tehran';

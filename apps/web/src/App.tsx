@@ -8,6 +8,8 @@ import { AppLayout } from './components/layout/AppLayout'
 import { HomePage } from './views/HomePage'
 import { ROUTE_PATHS } from './lib/routes'
 
+const ContactPage = lazy(() => import('./views/StoreInfoPages').then(module => ({ default: module.ContactPage })))
+const AboutPage = lazy(() => import('./views/StoreInfoPages').then(module => ({ default: module.AboutPage })))
 const CategoriesPage = lazy(() => import('./views/CategoriesPage').then(module => ({ default: module.CategoriesPage })))
 const CategoryPage = lazy(() => import('./views/CategoryPage').then(module => ({ default: module.CategoryPage })))
 const ProductPage = lazy(() => import('./views/ProductPage').then(module => ({ default: module.ProductPage })))
@@ -51,6 +53,8 @@ export default function App() {
                   <Routes>
                     <Route element={<AppLayout />}>
                       <Route path={ROUTE_PATHS.home} element={<HomePage />} />
+                      <Route path={ROUTE_PATHS.contact} element={<ContactPage />} />
+                      <Route path={ROUTE_PATHS.about} element={<AboutPage />} />
                       <Route path={ROUTE_PATHS.categories} element={<CategoriesPage />} />
                       <Route path={ROUTE_PATHS.category} element={<CategoryPage />} />
                       <Route path={ROUTE_PATHS.product} element={<ProductPage />} />

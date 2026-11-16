@@ -85,3 +85,12 @@ test("entities are decoded once (no double-unescape) in titles", () => {
   const issues = checkPage(page({ title: "A &amp;lt; B" }), { url, origin, kind: "product" });
   assert.ok(!issues.some(i => /title/u.test(i.message) && i.level === "error"));
 });
+
+
+test('accepts URL-addressable variants inside one ProductGroup with a base canonical', () => {
+  const v1 = { ...product, '@id': url + '?variant=v1#product', url: url + '?variant=v1', sku: 'v1' };
+  const v2 = { ...product, '@id': url + '?variant=v2#product', url: url + '?variant=v2', sku: 'v2' };
+  const group = { '@type': 'ProductGroup', '@id': url + '#group', productGroupID: 'g', variesBy: ['https://schema.org/color'], hasVariant: [v1, v2] };
+  assert.deepEqual(errors(page({ jsonld: [{ ...v1, isVariantOf: group }, crumbs] })), []);
+  assert.match(errors(page({ jsonld: [{ ...v1, isVariantOf: group }, product, crumbs] })).join('\n'), /more than one Product/u);
+});

@@ -137,7 +137,7 @@ export function OrderReturnsPanel({ orderId, orderNumber, onChanged }: Props) {
         <Stack spacing={2}>
           <Typography variant="h6" component="h2">مرجوعی کالا</Typography>
           <Alert severity="info">
-            مهلت از لحظهٔ صدور فاکتور آغاز می‌شود: ۲ روز کاری برای تحویل حضوری و ۱ هفته برای شهرهای دیگر. ثبت مرجوعی فقط دریافت کالا را ثبت می‌کند و هیچ پولی جابه‌جا نمی‌کند؛ استرداد وجه دستی است.
+            فقط کالای تحویل‌داده‌شده به‌صورت حضوری تا ۲ روز کاری از صدور فاکتور مشمول مرجوعی است؛ سفارش ارسالی مشمول مرجوعی جدید نیست. ثبت مرجوعی فقط دریافت کالا را ثبت می‌کند و هیچ پولی جابه‌جا نمی‌کند؛ استرداد وجه دستی است.
           </Alert>
           {loading ? <Typography role="status">در حال بررسی مرجوعی…</Typography> : null}
           {loadError ? <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => void reload()}>تلاش دوباره</Button>}>{loadError}</Alert> : null}

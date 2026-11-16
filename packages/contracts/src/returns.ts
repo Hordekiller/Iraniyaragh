@@ -1,12 +1,12 @@
 import type { ApiSuccess, Money } from './index';
 
 /**
- * Customer returns against paid orders (policy `returns-v1`).
+ * Customer returns against paid orders (policy `returns-v2`).
  *
  * A return records goods received back; it never moves money. The refund is
  * executed manually in the gateway panel and linked to the return afterwards.
- * Windows: 2 business days after invoice issuance for in-person handover,
- * 7 calendar days for orders shipped to another city (Asia/Tehran calendar).
+ * Only in-person handover is eligible for new returns: 2 business days after
+ * invoice issuance. DELIVERY remains in the type for historical v1 records.
  */
 export type ReturnWindowKind = 'IN_PERSON' | 'DELIVERY';
 export type ReturnDisposition = 'RESTOCK' | 'DAMAGED' | 'NOT_RETURNED';
@@ -18,6 +18,7 @@ export type ReturnIneligibleReason =
   | 'CUSTOM_DOOR_EXCLUDED'
   | 'NO_ISSUED_INVOICE'
   | 'METHOD_UNCLASSIFIED'
+  | 'DELIVERY_NOT_ELIGIBLE'
   | 'WINDOW_CLOSED'
   | 'FULLY_RETURNED'
   | 'AMOUNTS_DO_NOT_RECONCILE';

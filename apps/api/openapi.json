@@ -40981,6 +40981,7 @@
                             "CUSTOM_DOOR_EXCLUDED",
                             "NO_ISSUED_INVOICE",
                             "METHOD_UNCLASSIFIED",
+                            "DELIVERY_NOT_ELIGIBLE",
                             "WINDOW_CLOSED",
                             "FULLY_RETURNED",
                             "AMOUNTS_DO_NOT_RECONCILE"

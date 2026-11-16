@@ -179,7 +179,7 @@ export class CatalogHttpClient implements CatalogApi {
             statuses.every((status) => status === 'OUT_OF_STOCK')
           ? 'OUT_OF_STOCK'
           : 'UNKNOWN'
-    return { ...this.mapProduct(product), variants, stockStatus }
+    return { ...this.mapProduct(product), brandSlug: product.brand?.slug ?? null, variants, stockStatus }
   }
 
   private async listBrands() {
