@@ -32,10 +32,16 @@ export function productJsonLd(product: CatalogProduct, reviews: PublicReviewList
   const variant = requestedCatalogVariant(product.variants, variantId)
   const description = plainDescription(product.description)
   const group = productVariantGroup(product, url, description, undefined, reviews)
-  const selected = variant ?? (group ? product.variants.find(item => item.stockStatus === 'IN_STOCK' || item.stockStatus === 'LOW_STOCK') ?? product.variants[0] : null)
-  const schema = productStructuredData(product, selected ? variantUrl(url, selected.id) : url, description, selected ?? undefined, undefined, group ? null : reviews)
+  if (group) {
+    // Google's single-page pattern is one ProductGroup with nested sellable
+    // variants. A second top-level Product for the selected variant duplicates
+    // its properties when Google merges the graph.
+    return { ...group, hasVariant: group.hasVariant.map(child => child && ({ ...child, offers: { ...child.offers, seller: { ...child.offers.seller, '@id': absolute('/#organization'), url: absolute('/') } } })) }
+  }
+  const selected = variant
+  const schema = productStructuredData(product, selected ? variantUrl(url, selected.id) : url, description, selected ?? undefined, undefined, reviews)
   if (!schema) return null
-  return { ...schema, ...(group ? { isVariantOf: { ...group, hasVariant: group.hasVariant.map(child => child && ({ ...child, offers: { ...child.offers, seller: { ...child.offers.seller, '@id': absolute('/#organization'), url: absolute('/') } } })) } } : {}), offers: { ...schema.offers, seller: { ...schema.offers.seller, '@id': absolute('/#organization'), url: absolute('/') } } }
+  return { ...schema, offers: { ...schema.offers, seller: { ...schema.offers.seller, '@id': absolute('/#organization'), url: absolute('/') } } }
 }
 
 /** Organization identity. Contact fields appear only when the deployment configured verified values. */
