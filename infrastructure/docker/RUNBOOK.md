@@ -19,7 +19,7 @@ inspectable on a real host.
 | `.github/workflows/publish-images.yml` | Builds the images for a commit and tags them with that commit's SHA |
 | `infrastructure/docker/.env.staging.example` | Every variable, with the negative requirements spelled out |
 | `scripts/deploy/deploy.sh` | Pull, back up, migrate, start, wait for readiness, verify over HTTPS |
-| `scripts/deploy/ensure-certificate.sh` | Obtain and renew the Let's Encrypt IP address certificate |
+| `scripts/deploy/ensure-certificate.sh` | Obtain and renew the Let's Encrypt domain certificate |
 | `infrastructure/systemd/iranyaragh-certbot-renew.{service,timer}` | Unattended renewal, twice a day |
 | `scripts/deploy/backup-postgres.sh` | Dumped automatically before every migration |
 | `scripts/deploy/restore-postgres.sh` | Destructive restore, with an explicit confirmation flag |
@@ -186,21 +186,12 @@ Nginx terminates TLS in the `web` container, and ports 80 and 443 are both
 published: 443 serves everything, 80 exists so the certificate can be renewed
 without the site ever going dark.
 
-The host is reached at a bare public IP, with no domain name, so the certificate
-is a **Let's Encrypt IP address certificate**. Three facts about those shape
-everything here:
-
-- They are only issued under the `shortlived` profile and are valid for **160
-  hours**, just over six days. Renewal is the mechanism on this host, not an
-  optimisation: there is no long-lived certificate to fetch once and forget.
-- Certbot's nginx plugin has no support for IP identifiers, so Certbot cannot
-  install the certificate. Nginx reads `fullchain.pem` and `privkey.pem` from
-  `/etc/nginx/tls`, bind-mounted from `TLS_DIR` on the host, and a `--deploy-hook`
-  reloads Nginx after each renewal.
-- Renewal uses `--webroot`, not `--standalone`. `--standalone` has to bind port
-  80 itself, which means stopping the proxy; with a six-day certificate an
-  unattended window where port 80 is closed is a window where renewal can fail.
-  `--webroot` writes the challenge token into a directory Nginx already serves.
+The public certificate covers `iraniyaragh.com` and `www.iraniyaragh.com` under
+Let's Encrypt's 90-day `classic` profile. It does not cover the bare server IP.
+Nginx reads `fullchain.pem` and `privkey.pem` from `/etc/nginx/tls`, bind-mounted
+from `TLS_DIR` on the host. After Certbot renews, the script installs that pair
+and reloads Nginx. Renewal uses `--webroot` while the proxy is serving: the
+challenge token goes into a directory Nginx already serves on port 80.
 
 `ensure-certificate.sh` picks the method from the host's state rather than
 requiring a flag: `--standalone` when nothing is listening on 80 (the first
@@ -210,16 +201,16 @@ certificate into every later renewal.
 
 ### Getting a certificate
 
-Certbot **5.4 or newer** is required (`--ip-address` arrived in 5.3, webroot
-support for IP identifiers in 5.4). The Ubuntu package is older, so use the snap:
+Install Certbot from its supported distribution for the host and check its
+version before first use:
 
 ```bash
 snap install certbot --classic
-certbot --version   # must be 5.4 or newer
+certbot --version
 ```
 
-Test against the staging CA first. The staging CA issues untrusted certificates,
-so this proves the plumbing without spending the production rate limit:
+Test against the staging CA first. The script uses a dry run and does not
+replace the installed production certificate:
 
 ```bash
 cd infrastructure/docker
@@ -233,12 +224,14 @@ a TLS handshake:
 
 ```bash
 ../../scripts/deploy/ensure-certificate.sh
-openssl s_client -connect 185.211.59.93:443 -servername 185.211.59.93 \
-  -verify_return_error </dev/null 2>&1 | grep -E 'Verify return code|subject=|issuer='
+openssl s_client -connect 185.211.59.93:443 -servername iraniyaragh.com \
+  -verify_hostname iraniyaragh.com -verify_return_error </dev/null 2>&1 \
+  | grep -E 'Verify return code|subject=|issuer='
 ```
 
-`Verify return code: 0 (ok)` is the line that matters. The same check from the
-host with `-connect 127.0.0.1:443` and the same `-servername` is what `deploy.sh`
+`Verify return code: 0 (ok)` is the line that matters. Also confirm the SAN
+contains the domain and `www` names. The same check from the host with
+`-connect 127.0.0.1:443` and the domain `-servername` is what `deploy.sh`
 relies on.
 
 ### Unattended renewal
@@ -265,10 +258,14 @@ openssl x509 -in "${TLS_DIR:-/srv/iranyaragh/tls}/fullchain.pem" -noout -dates
 there is none, so a missing certificate is a named prerequisite rather than a
 `web` container stuck in a restart loop.
 
-**Not production readiness.** A six-day certificate on a bare IP is a staging
-arrangement: it works, it is publicly trusted, and it keeps itself renewed, but it
-depends on that timer staying armed. Moving to a domain is the change that makes
-the TLS story conventional.
+The certificate still depends on the timer and on Let's Encrypt being reachable
+when renewal is due. Check both after a DNS or network incident.
+
+The public A and `www` records resolve directly to the Iranian origin, but the
+authoritative name servers are currently outside Iran. Availability during a
+complete international network isolation therefore also requires a domestic
+authoritative DNS arrangement and a test from Iranian access networks; the
+domain certificate alone cannot provide that.
 
 ## Host layout
 
@@ -541,10 +538,7 @@ attempted yet:
 
 ## What this does not do
 
-- No domain name yet, so the certificate is a short-lived IP address
-  certificate on a six-day renewal cycle rather than a 90-day domain one. It is
-  publicly trusted and it renews itself, but it is a staging arrangement: see
-  "TLS" above.
+- The domain certificate is issued and renewed on this host; see "TLS" above.
 - No multi-host, no replicas, no load balancer, no log shipping. This is a
   single-host shape on purpose.
 - No automated seed of business data.

@@ -215,8 +215,8 @@ Deployed ${NEW_TAG} (previous: ${PREVIOUS_TAG})
 
   certificate: check its expiry with
     openssl x509 -in ${TLS_DIR_PATH}/fullchain.pem -noout -dates
-  It is a Let's Encrypt IP address certificate and lasts about six days, so
-  renewal is automatic but a lapsed one takes the site down with it. Confirm
+  The domain certificate renews automatically, but a lapsed one takes the site
+  down with it. Confirm
   the timer is armed: systemctl status iranyaragh-certbot-renew.timer
 
 This deploy is not accepted until the flows in
