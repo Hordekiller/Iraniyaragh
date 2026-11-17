@@ -20,6 +20,46 @@ describe("Custom door pricing (integer IRR / rational measurement)", () => {
     expect(q).not.toHaveProperty("deposit");
     expect(q).not.toHaveProperty("depositPolicy");
   });
+  it("prices each undersized dimension at 50 by 100 cm without changing physical dimensions", () => {
+    const fixture = pricingFixture();
+    fixture.cfg.slots = fixture.cfg.slots.slice(0, 1);
+    fixture.cfg.components = fixture.cfg.components.slice(0, 1);
+    fixture.cfg.labor = { fixed: "0", perSquareMeter: "0" };
+    fixture.materials[0].configuration.rate = "53000000";
+    const item = {
+      ...fixture.item,
+      selections: fixture.item.selections.slice(0, 1),
+    };
+    for (const [widthMm, heightMm, total] of [
+      [400, 900, "26500000"],
+      [500, 1000, "26500000"],
+      [600, 900, "31800000"],
+      [400, 1200, "31800000"],
+      [600, 1200, "38160000"],
+    ] as const) {
+      const quote = priceDoors(
+        [{ ...item, widthMm, heightMm }],
+        fixture.models,
+        fixture.materials,
+      );
+      expect(quote.total).toBe(total);
+      expect(quote.lines[0]).toMatchObject({ widthMm, heightMm });
+    }
+  });
+  it("keeps physical perimeter pricing while flooring area-based labor", () => {
+    const fixture = pricingFixture();
+    const quote = priceDoors(
+      [{ ...fixture.item, widthMm: 400, heightMm: 900 }],
+      fixture.models,
+      fixture.materials,
+    );
+    expect(quote.lines[0].parts.map((part) => part.amount)).toEqual([
+      "5001",
+      "5200",
+      "6000",
+    ]);
+    expect(quote.total).toBe("18201");
+  });
   it("requires the full total regardless of legacy model deposit policies", () => {
     const f = pricingFixture();
     const b = structuredClone(f.model);

@@ -12,6 +12,8 @@ import type {
 } from "@iranyaragh/contracts";
 
 export const MAX_DOOR_MONEY = 9223372036854775807n;
+const MIN_BILLABLE_WIDTH_MM = 500n;
+const MIN_BILLABLE_HEIGHT_MM = 1000n;
 export function doorMoney(value: string): bigint {
   if (
     typeof value !== "string" ||
@@ -52,7 +54,8 @@ function measured(
     );
   let n =
     rule.basis === "AREA"
-      ? w * h
+      ? (w < MIN_BILLABLE_WIDTH_MM ? MIN_BILLABLE_WIDTH_MM : w) *
+        (h < MIN_BILLABLE_HEIGHT_MM ? MIN_BILLABLE_HEIGHT_MM : h)
       : rule.basis === "PERIMETER"
         ? 2n * (w + h)
         : rule.basis === "WIDTH"
@@ -191,8 +194,12 @@ export function priceDoors(
       unit +=
         doorMoney(cfg.labor.fixed) +
         ceilDiv(
-          BigInt(item.widthMm) *
-            BigInt(item.heightMm) *
+          (BigInt(item.widthMm) < MIN_BILLABLE_WIDTH_MM
+            ? MIN_BILLABLE_WIDTH_MM
+            : BigInt(item.widthMm)) *
+            (BigInt(item.heightMm) < MIN_BILLABLE_HEIGHT_MM
+              ? MIN_BILLABLE_HEIGHT_MM
+              : BigInt(item.heightMm)) *
             doorMoney(cfg.labor.perSquareMeter),
           1000000n,
         );
