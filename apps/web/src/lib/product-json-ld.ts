@@ -64,7 +64,9 @@ export function productVariantGroup(product: CatalogProduct, url: string, descri
   // Each sellable variant needs a description of its own for merchant markup.
   // Reuse a short excerpt of the published product copy to avoid repeating a
   // long editorial page for every variant in the rendered HTML.
-  const excerpt = description.length > 320 ? description.slice(0, 320).replace(/\s+\S*$/u, '').trim() || description.slice(0, 320) : description
+  const draft = description.slice(0, 320)
+  const lastSpace = draft.lastIndexOf(' ')
+  const excerpt = description.length > 320 && lastSpace > 0 ? draft.slice(0, lastSpace).trim() : draft.trim()
   const children = variants.map(variant => {
     const schema = productStructuredData(product, variantUrl(url, variant.id), excerpt, variant, sellerName)
     if (!schema) return null
