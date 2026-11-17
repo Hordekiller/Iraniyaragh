@@ -65,7 +65,11 @@ export function productVariantGroup(product: CatalogProduct, url: string, descri
     const schema = productStructuredData(product, variantUrl(url, variant.id), '', variant, sellerName)
     if (!schema) return null
     const label = variant.title || variant.attributes.filter(item => item.isVariantAxis).map(item => item.optionLabel).join(' / ') || variant.sku
-    return { ...schema, name: `${product.name} — ${label}`, inProductGroupWithID: product.id }
+    // The brand is shared by the group. Repeating it on each variant causes
+    // Google's merchant parser to report a duplicate brand on ProductGroup.
+    const variantSchema = { ...schema }
+    delete variantSchema.brand
+    return { ...variantSchema, name: `${product.name} — ${label}` }
   })
   if (children.some(child => child === null)) return null
   const shared = productStructuredData(product, url, description, undefined, sellerName, reviews)

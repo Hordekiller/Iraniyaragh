@@ -10,6 +10,10 @@ afterEach(() => vi.unstubAllEnvs())
 const origin = 'https://iraniyaragh.com'
 const setup = () => { vi.stubEnv('PUBLIC_WEB_ORIGIN', origin); vi.stubEnv('APP_ENVIRONMENT', 'production') }
 const item: CatalogProduct = { id: 'isolated-test', slug: 'test-hinge', name: 'لولای آزمایشی', brand: 'برند آزمایشی', category: null, image: '', media: [], variants: [{ id: 'v', sku: 'TEST-HINGE', title: null, attributes: [], price: { amount: '9007199254740993', currency: 'IRR' }, stockStatus: 'UNKNOWN' }], description: '<h2>راهنمای نصب</h2><p>فقط آزمایشی</p>', price: { amount: '9007199254740993', currency: 'IRR' }, oldPrice: null, stockStatus: 'UNKNOWN', rating: null, reviews: 0, badge: null }
+function singleProduct(schema: ReturnType<typeof productJsonLd>) {
+  if (!schema || !('offers' in schema)) throw new Error('Expected a priced Product')
+  return schema
+}
 
 describe('public URL and indexing policy', () => {
   it('accepts only the configured HTTPS apex origin in production', () => {
@@ -61,7 +65,7 @@ describe('truthful server structured data', () => {
   it('links the product seller to the configured store and passes the production SEO contract', () => {
     setup()
     const schema = productJsonLd(item)
-    expect(schema?.offers.seller).toMatchObject({ '@type': 'Organization', '@id': origin + '/#organization', name: 'ایرانی یراق', url: origin + '/' })
+    expect(singleProduct(schema).offers.seller).toMatchObject({ '@type': 'Organization', '@id': origin + '/#organization', name: 'ایرانی یراق', url: origin + '/' })
     const url = origin + '/products/test-hinge'
     const data = [schema, breadcrumb([{ name: 'خانه', path: '/' }, { name: item.name, path: '/products/test-hinge' }])]
     const html = `<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
@@ -72,7 +76,7 @@ describe('truthful server structured data', () => {
       </head><body><h1>${item.name}</h1>${renderToStaticMarkup(JsonLd({ data }))}</body></html>`
     expect(checkPage(html, { url, origin, kind: 'product', allowNoindex: false }).filter(issue => issue.level === 'error')).toEqual([])
     vi.stubEnv('PUBLIC_WEB_ORIGIN', 'https://shop.example.org')
-    expect(productJsonLd(item)?.offers.seller).toMatchObject({ '@id': 'https://shop.example.org/#organization', url: 'https://shop.example.org/' })
+    expect(singleProduct(productJsonLd(item)).offers.seller).toMatchObject({ '@id': 'https://shop.example.org/#organization', url: 'https://shop.example.org/' })
   })
   it('adds rating markup only from approved reviews, keeps the canonical seller and serializes hostile text safely', () => {
     setup()
@@ -88,12 +92,12 @@ describe('truthful server structured data', () => {
   })
   it('keeps integer IRR precision and omits unknown inventory and invented review evidence', () => {
     setup(); const schema = productJsonLd(item)
-    if (!schema) throw new Error('Expected a priced product')
+    singleProduct(schema)
     expect(schema).toMatchObject({ name: item.name, sku: 'TEST-HINGE', url: origin+'/products/test-hinge', offers: { price: '9007199254740993', priceCurrency: 'IRR' } })
-    expect(schema.offers).not.toHaveProperty('availability'); expect(schema).not.toHaveProperty('aggregateRating'); expect(schema).not.toHaveProperty('review')
+    expect(singleProduct(schema).offers).not.toHaveProperty('availability'); expect(schema).not.toHaveProperty('aggregateRating'); expect(schema).not.toHaveProperty('review')
     expect(productJsonLd({ ...item, variants: [item.variants[0], { ...item.variants[0], id: 'v2' }] })).toMatchObject({ sku: 'TEST-HINGE', offers: { price: '9007199254740993' } })
     const outOfStock = productJsonLd({ ...item, variants: [{ ...item.variants[0], stockStatus: 'OUT_OF_STOCK' }] })
-    expect(outOfStock?.offers).toMatchObject({ availability: 'https://schema.org/OutOfStock' })
+    expect(singleProduct(outOfStock).offers).toMatchObject({ availability: 'https://schema.org/OutOfStock' })
   })
   it('describes the default visible in-stock variant rather than a cheaper unavailable SKU', () => {
     setup()
@@ -104,6 +108,24 @@ describe('truthful server structured data', () => {
     expect(schema).toMatchObject({ sku: 'AVAILABLE-TEST', offers: { '@type': 'Offer', price: '9007199254740993', priceCurrency: 'IRR', availability: 'https://schema.org/InStock' } })
     expect(schema).not.toHaveProperty('aggregateRating')
     expect(schema).not.toHaveProperty('hasVariant')
+  })
+  it('emits one ProductGroup with distinct sellable variants and one shared brand', () => {
+    setup()
+    const axis = (code: string) => [{ attributeCode: 'size', attributeName: 'اندازه', optionCode: code, optionLabel: code, isVariantAxis: true }]
+    const grouped = { ...item, variants: [
+      { ...item.variants[0], id: 'small', sku: 'TEST-S', attributes: axis('کوچک') },
+      { ...item.variants[0], id: 'large', sku: 'TEST-L', attributes: axis('بزرگ') },
+    ] }
+    const schema = productJsonLd(grouped)
+    if (!schema || !('hasVariant' in schema)) throw new Error('Expected a ProductGroup')
+    expect(schema).toMatchObject({ '@type': 'ProductGroup', brand: { name: item.brand }, productGroupID: item.id })
+    expect(schema).not.toHaveProperty('offers')
+    expect(schema.hasVariant).toHaveLength(2)
+    for (const child of schema.hasVariant) {
+      expect(child).not.toHaveProperty('brand')
+      expect(child?.offers.seller).toMatchObject({ '@id': origin + '/#organization', url: origin + '/' })
+    }
+    expect(schema.hasVariant.map(child => child?.sku)).toEqual(['TEST-S', 'TEST-L'])
   })
   it('never emits an incomplete Product or a fabricated free offer for a missing price', () => {
     setup()
