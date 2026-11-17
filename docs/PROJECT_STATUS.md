@@ -344,18 +344,17 @@ G6–G10 have not reached integrated completion.
   against the configured public origin name, so a certificate that is valid for
   something else fails the deploy instead of passing a loopback probe.
 - TLS terminates in the web container on ports 80 and 443: 443 serves everything
-  and 80 exists so the certificate can be renewed without downtime. There is no
-  domain yet, so the certificate is a Let's Encrypt **IP address** certificate,
-  which is only issued under the `shortlived` profile and is valid for 160 hours.
-  `ensure-certificate.sh` obtains and renews it: `--standalone` for the first
-  issuance when port 80 is free, `--webroot` afterwards so no renewal has to stop
-  the proxy, chosen by testing whether port 80 is actually bound rather than by
-  inferring it from Compose state. Certbot's nginx plugin cannot install an IP
-  certificate, so Nginx reads a bind-mounted pair and a deploy hook reloads it.
-  Renewal is a systemd timer, not a deploy step, because a certificate has to keep
-  being renewed whether or not anyone deploys. **This is a staging arrangement**:
-  publicly trusted and self-renewing, but dependent on a six-day cycle and on
-  that timer staying armed. A domain is what makes the TLS story conventional.
+  and 80 exists so the certificate can be renewed without downtime. The public
+  domain and `www` use a Let's Encrypt domain-only certificate under the
+  90-day `classic` profile. `ensure-certificate.sh` obtains and renews it:
+  `--standalone` for the first issuance when port 80 is free, `--webroot`
+  afterwards so no renewal has to stop the proxy, chosen by testing whether
+  port 80 is actually bound rather than inferring it from Compose state. Nginx
+  reads a bind-mounted pair and is reloaded after the renewed pair is installed.
+  Renewal is a systemd timer, not a deploy step, because a certificate has to
+  keep being renewed whether or not anyone deploys. The timer and independent
+  origin monitor must remain active; renewal still depends on Let's Encrypt
+  being reachable when the certificate nears expiry.
 - The API's requirement that public origins be https is enforced by validation,
   not convention, and was confirmed against the built image: it refuses to boot
   in staging and production with an http `STOREFRONT_ORIGIN` or
