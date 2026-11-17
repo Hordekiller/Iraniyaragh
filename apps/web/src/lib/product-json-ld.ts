@@ -61,8 +61,12 @@ export function productVariantGroup(product: CatalogProduct, url: string, descri
   if (!axes.length) return null
   const signatures = variants.map(variant => JSON.stringify(axes.map(axis => variant.attributes.find(item => item.attributeCode === axis.attributeCode)?.optionCode)))
   if (new Set(signatures).size !== variants.length) return null
+  // Each sellable variant needs a description of its own for merchant markup.
+  // Reuse a short excerpt of the published product copy to avoid repeating a
+  // long editorial page for every variant in the rendered HTML.
+  const excerpt = description.length > 320 ? description.slice(0, 320).replace(/\s+\S*$/u, '').trim() || description.slice(0, 320) : description
   const children = variants.map(variant => {
-    const schema = productStructuredData(product, variantUrl(url, variant.id), '', variant, sellerName)
+    const schema = productStructuredData(product, variantUrl(url, variant.id), excerpt, variant, sellerName)
     if (!schema) return null
     const label = variant.title || variant.attributes.filter(item => item.isVariantAxis).map(item => item.optionLabel).join(' / ') || variant.sku
     // The brand is shared by the group. Repeating it on each variant causes
