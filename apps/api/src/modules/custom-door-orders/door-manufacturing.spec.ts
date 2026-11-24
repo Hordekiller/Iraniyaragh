@@ -27,6 +27,12 @@ const item = (manufacturing?: DoorManufacturing): DoorItemInput => ({
   ...(manufacturing ? { manufacturing } : {}),
 });
 describe("door manufacturing validation", () => {
+  it("rejects matching hinge and handle sides while preserving legacy handle models", () => {
+    expect(() => validateDoorManufacturing(item({ ...custom(), hingeSide: "LEFT" }))).toThrow(/یک سمت/);
+    expect(() => validateDoorManufacturing(item({ ...custom(), handleModel: "45" }))).not.toThrow();
+    expect(() => validateDoorManufacturing(item({ ...custom(), handleModel: "invalid" as "L" }))).toThrow();
+    expect(() => validateDoorManufacturing(item(custom()))).not.toThrow();
+  });
   it("accepts old orders and leaves standard drilling to the store without invented positions", () => {
     expect(() => validateDoorManufacturing(item())).not.toThrow();
     expect(() =>
@@ -73,6 +79,7 @@ describe("door manufacturing validation", () => {
       null,
       { ...custom(), profileColor: "RED" },
       { ...custom(), handleSide: "invalid" },
+      { ...custom(), handleModel: "invalid" },
       { ...custom(), holes: [{ distanceMm: 10, reference: "SIDE" }] },
       {
         ...custom(),

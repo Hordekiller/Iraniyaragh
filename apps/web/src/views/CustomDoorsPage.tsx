@@ -677,6 +677,7 @@ function Configurator() {
                           m.category === "GLASS" &&
                           entry.selections.some((s) => s.materialId === m.id),
                       )}
+                      manufacturing={entry.manufacturing}
                     />
                     <p className="mt-3 text-center text-xs leading-6">
                       عرض و ارتفاع نهایی را به سانتی‌متر وارد کنید؛ تصویر بالا

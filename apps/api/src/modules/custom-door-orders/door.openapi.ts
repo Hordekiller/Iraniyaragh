@@ -110,11 +110,12 @@ const part = obj({
 });
 const manufacturing = obj({
   profileColor: { type: "string", enum: ["BLACK", "WHITE", "GOLD", "BRONZE"] },
+  handleModel: { type: "string", enum: ["L", "45"] },
   handleSide: { type: "string", enum: ["RIGHT", "LEFT", "TOP", "BOTTOM"] },
   hingeSide: { type: "string", enum: ["RIGHT", "LEFT", "TOP", "BOTTOM"] },
   drillingMode: { type: "string", enum: ["STANDARD", "CUSTOM"] },
   holes: { type: "array", maxItems: 4, items: obj({ distanceMm: { type: "integer", minimum: 1, description: "Maximum equals this door heightMm; CUSTOM requires four distinct positions, STANDARD requires no holes." }, reference: { type: "string", enum: ["TOP", "BOTTOM"] } }) },
-});
+}, ["profileColor", "handleSide", "hingeSide", "drillingMode", "holes"]);
 export const doorQuoteSnapshotSchema = obj({
   currency: { type: "string", enum: ["IRR"] },
   lines: arr(

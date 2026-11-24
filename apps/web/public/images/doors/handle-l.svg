@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 120" role="img" aria-labelledby="title">
+  <title id="title">نمای شماتیک مقطع پروفیل دستگیره L</title>
+  <rect width="220" height="120" rx="12" fill="#f1f5f9"/>
+  <path d="M52 25h89v14H68v45h73v14H52z" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+  <path d="M141 25v73h-15V42h-58V25z" fill="#64748b"/>
+  <path d="M141 25h27v15h-12v58h-15z" fill="#0f172a"/>
+  <path d="M68 42h58v42H68z" fill="#a5d5dc" fill-opacity=".7"/>
+  <path d="M161 30h25" stroke="#f97316" stroke-width="3" stroke-linecap="round"/>
+</svg>

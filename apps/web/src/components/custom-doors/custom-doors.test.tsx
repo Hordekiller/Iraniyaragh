@@ -422,7 +422,7 @@ describe("Door configurator", () => {
           widthMm: 505,
           heightMm: 1000,
           quantity: 2,
-          manufacturing: { profileColor: "BRONZE", handleSide: "LEFT", hingeSide: "RIGHT", drillingMode: "STANDARD", holes: [] },
+          manufacturing: { profileColor: "BRONZE", handleModel: "L", handleSide: "LEFT", hingeSide: "RIGHT", drillingMode: "STANDARD", holes: [] },
           selections: [{ slot: "glass", materialId: "test-glass" }],
         }),
       ],

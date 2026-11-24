@@ -84,6 +84,7 @@ export type DoorCatalog = {
 /** Manufacturing dimensions are integer mm; the customer form displays cm. */
 export type DoorManufacturing = {
   profileColor: "BLACK" | "WHITE" | "GOLD" | "BRONZE";
+  handleModel?: "L" | "45";
   handleSide: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
   hingeSide: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
   drillingMode: "STANDARD" | "CUSTOM";
