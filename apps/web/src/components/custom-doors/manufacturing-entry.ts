@@ -1,4 +1,5 @@
 import {
+  type DoorItemInput,
   type DoorManufacturing,
 } from "@iranyaragh/contracts";
 import { doorDigits } from "../../services/custom-doors/api";
@@ -19,6 +20,21 @@ export const emptyManufacturing = (): ManufacturingEntry => ({
   drillingMode: "STANDARD",
   holes: Array.from({ length: 4 }, () => ({ distance: "", reference: "TOP" })),
 });
+export function mirroredDoorItem(item: DoorItemInput): DoorItemInput | null {
+  if (!item.manufacturing) return null;
+  const mirrorSide = (side: DoorManufacturing["handleSide"]) =>
+    side === "LEFT" ? "RIGHT" : side === "RIGHT" ? "LEFT" : side;
+  return {
+    ...item,
+    selections: item.selections.map((selection) => ({ ...selection })),
+    manufacturing: {
+      ...item.manufacturing,
+      handleSide: mirrorSide(item.manufacturing.handleSide),
+      hingeSide: mirrorSide(item.manufacturing.hingeSide),
+      holes: item.manufacturing.holes.map((hole) => ({ ...hole })),
+    },
+  };
+}
 export function manufacturingEntry(
   value?: DoorManufacturing,
 ): ManufacturingEntry {
