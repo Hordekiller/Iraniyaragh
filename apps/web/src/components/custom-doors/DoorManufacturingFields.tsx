@@ -1,5 +1,4 @@
 import { DOOR_PROFILE_COLORS, DOOR_SIDES } from "@iranyaragh/contracts";
-import { FlipHorizontal2 } from "lucide-react";
 import type { ManufacturingEntry } from "./manufacturing-entry";
 const fieldStyle =
   "mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm";
@@ -7,17 +6,16 @@ type Side = ManufacturingEntry["handleSide"];
 function opposite(side: Side): Side {
   return ({ LEFT: "RIGHT", RIGHT: "LEFT", TOP: "BOTTOM", BOTTOM: "TOP", "": "" } as const)[side];
 }
-function mirror(side: Side): Side {
-  return side === "LEFT" || side === "RIGHT" ? opposite(side) : side;
-}
 export function DoorManufacturingFields({
   value,
   heightMm,
   onChange,
+  handleImages,
 }: {
   value: ManufacturingEntry;
   heightMm: number;
   onChange: (value: ManufacturingEntry) => void;
+  handleImages?: Partial<Record<"L" | "45", string>>;
 }) {
   const maximum = heightMm > 0 ? (heightMm / 10).toLocaleString("fa-IR") : null;
   return (
@@ -25,13 +23,6 @@ export function DoorManufacturingFields({
       <legend className="px-2 font-black">
         پروفیل، دستگیره و محل گازور / لولا
       </legend>
-      <button
-        type="button"
-        className="mb-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold focus-visible:ring-2 focus-visible:ring-orange-700"
-        onClick={() => onChange({ ...value, handleSide: mirror(value.handleSide), hingeSide: mirror(value.hingeSide) })}
-      >
-        <FlipHorizontal2 size={18} aria-hidden="true" /> قرینه
-      </button>
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="text-sm font-bold">
           رنگ پروفیل
@@ -84,8 +75,9 @@ export function DoorManufacturingFields({
           {(["L", "45"] as const).map((handleModel) => (
             <label key={handleModel} className={`cursor-pointer rounded-xl border p-3 text-center text-sm ${value.handleModel === handleModel ? "border-orange-600 bg-orange-50" : "border-slate-200"}`}>
               <input type="radio" name="door-handle-model" className="sr-only" checked={value.handleModel === handleModel} onChange={() => onChange({ ...value, handleModel })} />
-              <img src={`/images/doors/handle-${handleModel === "L" ? "l" : "45"}.svg`} alt={`نمای شماتیک دستگیره ${handleModel === "L" ? "L" : "۴۵ درجه"}`} className="mx-auto mb-2 h-20 w-full object-contain" />
+              <img src={handleImages?.[handleModel] ?? `/images/doors/handle-${handleModel === "L" ? "l" : "45"}.svg`} alt={`تصویر دستگیره ${handleModel === "L" ? "L" : "۴۵ درجه"}`} className="mx-auto mb-2 h-20 w-full object-contain" />
               دستگیره {handleModel === "L" ? "L" : "۴۵ درجه"}
+              {!handleImages?.[handleModel] && <span className="mt-1 block text-xs text-slate-500">طرح نمونه؛ تصویر واقعی ثبت نشده</span>}
             </label>
           ))}
         </div>

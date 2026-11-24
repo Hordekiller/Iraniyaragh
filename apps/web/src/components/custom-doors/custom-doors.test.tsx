@@ -217,6 +217,51 @@ describe("Door floating link", () => {
   });
 });
 describe("Door configurator", () => {
+  it("uses approved hardware media for the matching handle model", async () => {
+    load.mockResolvedValue({
+      ...catalog,
+      materials: [...catalog.materials, {
+        ...catalog.materials[0],
+        id: "test-handle-image",
+        code: "door-handle-l",
+        category: "HARDWARE",
+        imageUrl: "/media/approved-handle.webp",
+      }],
+    });
+    configurator();
+    fireEvent.click(await screen.findByRole("button", { name: /مدل آزمون جداگانه/ }));
+    expect(screen.getByRole("img", { name: "تصویر دستگیره L" })).toHaveAttribute("src", "/media/approved-handle.webp");
+    expect(screen.getByRole("img", { name: "تصویر دستگیره ۴۵ درجه" })).toHaveAttribute("src", "/images/doors/handle-45.svg");
+  });
+  it("adds a second, mirrored door without changing the registered original or its dimensions", async () => {
+    sessionStorage.setItem("iranyaragh:door-draft:v1:anonymous", JSON.stringify([{
+      ...testItem,
+      quantity: 2,
+      manufacturing: {
+        profileColor: "BRONZE",
+        handleModel: "45",
+        handleSide: "LEFT",
+        hingeSide: "RIGHT",
+        drillingMode: "CUSTOM",
+        holes: [{ distanceMm: 120, reference: "TOP" }],
+      },
+    }]));
+    configurator();
+    await screen.findByRole("button", { name: /مدل آزمون جداگانه/ });
+    fireEvent.click(screen.getByRole("button", { name: "افزودن قرینه درب 1" }));
+    expect(screen.getByText(/مجموع تعداد: ۴/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "محاسبه و بررسی سفارش" }));
+    await waitFor(() => expect(preview).toHaveBeenCalledWith({ items: [
+      expect.objectContaining({ widthMm: 500, heightMm: 1000, quantity: 2, manufacturing: expect.objectContaining({ handleSide: "LEFT", hingeSide: "RIGHT" }) }),
+      expect.objectContaining({ widthMm: 500, heightMm: 1000, quantity: 2, manufacturing: expect.objectContaining({ handleModel: "45", handleSide: "RIGHT", hingeSide: "LEFT", holes: [{ distanceMm: 120, reference: "TOP" }] }) }),
+    ] }));
+  });
+  it("does not offer a mirrored copy for legacy rows without manufacturing details", async () => {
+    restoreRow();
+    configurator();
+    await screen.findByRole("button", { name: /مدل آزمون جداگانه/ });
+    expect(screen.getByRole("button", { name: "افزودن قرینه درب 1" })).toBeDisabled();
+  });
   it("moves the mobile viewport to each new step, including the price summary", async () => {
     const original = Object.getOwnPropertyDescriptor(Element.prototype, "scrollIntoView");
     const scrolled: Element[] = [];
