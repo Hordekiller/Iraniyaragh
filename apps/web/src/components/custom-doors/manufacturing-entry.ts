@@ -5,6 +5,7 @@ import { doorDigits } from "../../services/custom-doors/api";
 
 export type ManufacturingEntry = {
   profileColor: DoorManufacturing["profileColor"] | "";
+  handleModel: NonNullable<DoorManufacturing["handleModel"]>;
   handleSide: DoorManufacturing["handleSide"] | "";
   hingeSide: DoorManufacturing["hingeSide"] | "";
   drillingMode: DoorManufacturing["drillingMode"];
@@ -12,6 +13,7 @@ export type ManufacturingEntry = {
 };
 export const emptyManufacturing = (): ManufacturingEntry => ({
   profileColor: "",
+  handleModel: "L",
   handleSide: "",
   hingeSide: "",
   drillingMode: "STANDARD",
@@ -23,6 +25,7 @@ export function manufacturingEntry(
   if (!value) return emptyManufacturing();
   return {
     ...value,
+    handleModel: value.handleModel ?? "L",
     holes:
       value.drillingMode === "CUSTOM"
         ? value.holes.map((hole) => ({
@@ -49,6 +52,8 @@ export function readManufacturing(
     throw new Error(
       "رنگ پروفیل، سمت دستگیره و محل گازور / لولا را انتخاب کنید.",
     );
+  if (value.handleSide === value.hingeSide)
+    throw new Error("محل گازور و دستگیره نمی‌تواند یک سمت باشد.");
   const holes =
     value.drillingMode === "CUSTOM"
       ? value.holes.map((hole) => ({

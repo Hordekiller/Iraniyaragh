@@ -16,6 +16,7 @@ export function doorManufacturingSummary(value?: DoorManufacturing): string[] {
   if (!value) return [];
   return [
     `رنگ پروفیل: ${DOOR_PROFILE_COLORS[value.profileColor]}`,
+    ...(value.handleModel ? [`مدل دستگیره: ${value.handleModel === "L" ? "L" : "۴۵ درجه"}`] : []),
     `سمت دستگیره: ${DOOR_SIDES[value.handleSide]}`,
     `محل گازور / لولا: ${DOOR_SIDES[value.hingeSide]}`,
     `حالت سوراخ‌کاری: ${value.drillingMode === "STANDARD" ? "استاندارد" : "سفارشی"}`,

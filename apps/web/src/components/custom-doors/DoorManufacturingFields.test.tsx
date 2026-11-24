@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { DoorManufacturingFields } from "./DoorManufacturingFields";
@@ -31,6 +31,21 @@ function Form() {
   );
 }
 describe("door manufacturing fields", () => {
+  it("mirrors left and right sides, blocks matching selections and shows both handle drawings", () => {
+    render(<Form />);
+    const hinge = screen.getByLabelText("محل گازور / لولا");
+    const handle = screen.getByLabelText("سمت دستگیره");
+    fireEvent.change(hinge, { target: { value: "LEFT" } });
+    expect(within(handle).getByRole("option", { name: "چپ" })).toBeDisabled();
+    expect(screen.getByRole("img", { name: "نمای شماتیک دستگیره L" })).toBeVisible();
+    expect(screen.getByRole("img", { name: "نمای شماتیک دستگیره ۴۵ درجه" })).toBeVisible();
+    fireEvent.change(handle, { target: { value: "RIGHT" } });
+    fireEvent.click(screen.getByRole("button", { name: "قرینه" }));
+    expect(hinge).toHaveValue("RIGHT");
+    expect(handle).toHaveValue("LEFT");
+    fireEvent.click(screen.getByRole("radio", { name: /دستگیره ۴۵ درجه/ }));
+    expect(screen.getByRole("radio", { name: /دستگیره ۴۵ درجه/ })).toBeChecked();
+  });
   it("offers four colors and handle directions; custom fields start blank with both reference edges", () => {
     render(<Form />);
     for (const label of ["مشکی", "سفید", "طلایی", "برنز"])
