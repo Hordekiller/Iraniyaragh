@@ -47,7 +47,7 @@ function PurchaseButtons({ product }: { product: CatalogProduct }) {
       const added = await add(selected.id, 1)
       if (added) {
         show('به سبد خرید افزوده شد')
-        if (quick) navigate(ROUTES.cart)
+        if (quick) void navigate(ROUTES.cart)
       }
     } catch (error) {
       show(commerceErrorMessage(error))
