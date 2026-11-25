@@ -125,7 +125,7 @@ test.describe('web: storefront shell', () => {
 
     await expect(page.locator('section#categories').getByRole('link')).toHaveCount(6);
     const categoryCarousels = page.locator('section[aria-labelledby^="home-category-"]');
-    await expect(categoryCarousels.first().getByRole('link', { name: /دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰/ })).toBeVisible();
+    await expect(categoryCarousels.first().getByRole('link', { name: 'دریل چکشی ۱۳ میلی‌متر رونیکس ۲۲۱۰', exact: true })).toBeVisible();
     const productCount = await categoryCarousels.first().getByRole('listitem').count();
     expect(productCount).toBeGreaterThan(0);
     expect(productCount).toBeLessThanOrEqual(8);
@@ -142,7 +142,12 @@ test.describe('web: storefront shell', () => {
     const list = carousel.getByRole('list');
     await expect(list).toHaveAttribute('dir', 'rtl');
     const start = await list.evaluate(element => element.scrollLeft);
-    await tap(carousel.getByRole('button', { name: /کالاهای بعدی/ }));
+    if (isMobile(page)) {
+      await list.focus();
+      await page.keyboard.press('ArrowLeft');
+    } else {
+      await tap(carousel.getByRole('button', { name: /کالاهای بعدی/ }));
+    }
     await expect.poll(() => list.evaluate(element => element.scrollLeft)).not.toBe(start);
     expect(await page.evaluate(() => document.body.scrollWidth <= window.innerWidth)).toBe(true);
   });
