@@ -38,7 +38,7 @@ describe('BestsellersPage', () => {
 
     expect(screen.getByRole('heading', { name: 'پرفروش‌ترین‌ها' })).toBeInTheDocument()
 
-    const links = await screen.findAllByRole('link', { name: /تومان/ })
+    const links = await screen.findAllByRole('link', { name: /مشاهده تصویر/ })
     expect(links.length).toBeGreaterThan(0)
 
     expect(screen.queryByText('در حال بارگذاری...')).not.toBeInTheDocument()
