@@ -39,13 +39,18 @@ describe("door manufacturing fields", () => {
     fireEvent.change(hinge, { target: { value: "LEFT" } });
     expect(within(handle).getByRole("option", { name: "چپ" })).toBeDisabled();
     expect(screen.getByRole("img", { name: "تصویر دستگیره L" })).toHaveAttribute("src", "/media/approved-l.webp");
-    expect(screen.getByRole("img", { name: "تصویر دستگیره ۴۵ درجه" })).toHaveAttribute("src", "/images/doors/handle-45.svg");
+    expect(screen.getByRole("img", { name: "تصویر دستگیره ۴۵ درجه" })).toHaveAttribute("src", "/images/doors/handle-45.png");
     fireEvent.change(handle, { target: { value: "RIGHT" } });
     expect(hinge).toHaveValue("LEFT");
     expect(handle).toHaveValue("RIGHT");
     expect(screen.queryByRole("button", { name: "قرینه" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: /دستگیره ۴۵ درجه/ }));
     expect(screen.getByRole("radio", { name: /دستگیره ۴۵ درجه/ })).toBeChecked();
+  });
+  it("lets the approved 45-degree image replace the supplied default photo", () => {
+    render(<Form handleImages={{ "45": "/media/approved-45.webp" }} />);
+    expect(screen.getByRole("img", { name: "تصویر دستگیره ۴۵ درجه" })).toHaveAttribute("src", "/media/approved-45.webp");
+    expect(screen.getByRole("img", { name: "تصویر دستگیره L" })).toHaveAttribute("src", "/images/doors/handle-l.jpg");
   });
   it("offers four colors and handle directions; custom fields start blank with both reference edges", () => {
     render(<Form />);

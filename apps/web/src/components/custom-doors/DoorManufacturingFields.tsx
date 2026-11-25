@@ -75,9 +75,8 @@ export function DoorManufacturingFields({
           {(["L", "45"] as const).map((handleModel) => (
             <label key={handleModel} className={`cursor-pointer rounded-xl border p-3 text-center text-sm ${value.handleModel === handleModel ? "border-orange-600 bg-orange-50" : "border-slate-200"}`}>
               <input type="radio" name="door-handle-model" className="sr-only" checked={value.handleModel === handleModel} onChange={() => onChange({ ...value, handleModel })} />
-              <img src={handleImages?.[handleModel] ?? `/images/doors/handle-${handleModel === "L" ? "l" : "45"}.svg`} alt={`تصویر دستگیره ${handleModel === "L" ? "L" : "۴۵ درجه"}`} className="mx-auto mb-2 h-20 w-full object-contain" />
+              <img src={handleImages?.[handleModel] ?? (handleModel === "L" ? "/images/doors/handle-l.jpg" : "/images/doors/handle-45.png")} alt={`تصویر دستگیره ${handleModel === "L" ? "L" : "۴۵ درجه"}`} className="mx-auto mb-2 h-20 w-full object-contain" />
               دستگیره {handleModel === "L" ? "L" : "۴۵ درجه"}
-              {!handleImages?.[handleModel] && <span className="mt-1 block text-xs text-slate-500">طرح نمونه؛ تصویر واقعی ثبت نشده</span>}
             </label>
           ))}
         </div>
