@@ -60,7 +60,7 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
     if (!catalog?.categories || !state?.scrollToCategories || handledKeyRef.current === location.key) return
     handledKeyRef.current = location.key
     document.getElementById(SECTION_IDS.categories)?.scrollIntoView({ behavior: 'smooth' })
-    navigate(ROUTES.home, { replace: true, state: {} })
+    void navigate(ROUTES.home, { replace: true, state: {} })
   }, [location.state, location.key, navigate, catalog])
 
   useEffect(() => {

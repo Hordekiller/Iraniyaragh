@@ -31,12 +31,12 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }:
   }
 
   const items = [
-    { label: 'خانه', icon: Home, active: pathname === ROUTES.home, action: () => navigate(ROUTES.home) },
+    { label: 'خانه', icon: Home, active: pathname === ROUTES.home, action: () => { void navigate(ROUTES.home) } },
     { label: 'جستجو', icon: Search, active: pathname === ROUTES.search, action: () => { onOpenSearch(); window.scrollTo({ top: 0, behavior: 'smooth' }) } },
-    { label: 'دسته‌بندی‌ها', short: 'دسته‌ها', icon: LayoutGrid, active: pathname === ROUTES.categories || pathname.startsWith('/categories/'), action: () => navigate(ROUTES.categories) },
-    { label: 'سبد خرید', icon: ShoppingBag, active: pathname === ROUTES.cart || pathname === ROUTES.checkout, action: () => navigate(ROUTES.cart) },
-    { label: 'پیگیری سفارش‌ها', short: 'پیگیری', icon: PackageSearch, active: pathname === ROUTES.orders || pathname.startsWith(`${ROUTES.orders}/`), action: () => navigate(ROUTES.orders) },
-    { label: 'حساب کاربری', short: 'پروفایل', icon: User, active: pathname === ROUTES.account || pathname.startsWith(`${ROUTES.account}/`), action: () => { if (authState.phase === 'authenticated') navigate(ROUTES.account); else onOpenLogin() } },
+    { label: 'دسته‌بندی‌ها', short: 'دسته‌ها', icon: LayoutGrid, active: pathname === ROUTES.categories || pathname.startsWith('/categories/'), action: () => { void navigate(ROUTES.categories) } },
+    { label: 'سبد خرید', icon: ShoppingBag, active: pathname === ROUTES.cart || pathname === ROUTES.checkout, action: () => { void navigate(ROUTES.cart) } },
+    { label: 'پیگیری سفارش‌ها', short: 'پیگیری', icon: PackageSearch, active: pathname === ROUTES.orders || pathname.startsWith(`${ROUTES.orders}/`), action: () => { void navigate(ROUTES.orders) } },
+    { label: 'حساب کاربری', short: 'پروفایل', icon: User, active: pathname === ROUTES.account || pathname.startsWith(`${ROUTES.account}/`), action: () => { if (authState.phase === 'authenticated') void navigate(ROUTES.account); else onOpenLogin() } },
   ]
 
   return <>
