@@ -36,7 +36,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
 
   function submitSearch() {
     if (!searchQuery.trim()) return
-    navigate(`${ROUTES.search}?q=${encodeURIComponent(searchQuery.trim())}`)
+    void navigate(`${ROUTES.search}?q=${encodeURIComponent(searchQuery.trim())}`)
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {

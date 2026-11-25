@@ -271,7 +271,7 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
                       key={variant.id}
                       type="button"
                       aria-pressed={variant.id === selectedVariant?.id}
-                      onClick={() => { setSelectedVariantId(variant.id); if (serverStructuredData) navigate(variantUrl(ROUTES.product(product.slug), variant.id)) }}
+                      onClick={() => { setSelectedVariantId(variant.id); if (serverStructuredData) void navigate(variantUrl(ROUTES.product(product.slug), variant.id)) }}
                       className={`rounded-xl border px-3 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${variant.id === selectedVariant?.id ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-700'} disabled:cursor-not-allowed disabled:opacity-40`}
                     >
                       {label}
