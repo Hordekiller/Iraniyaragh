@@ -44,15 +44,15 @@ export function ProductCarousel({
 
   return (
     <section
-      className={`mt-10 lg:mt-14 ${offer ? "rounded-3xl bg-gradient-to-l from-[#9A3412] to-[#C2410C] p-4 text-white sm:p-6" : ""}`}
+      className={`mt-8 lg:mt-14 ${offer ? "rounded-3xl bg-gradient-to-l from-[#9A3412] to-[#C2410C] p-4 text-white sm:p-6" : ""}`}
       aria-labelledby={`${id}-title`}
       aria-busy={status === "loading"}
     >
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex items-center justify-between gap-2 lg:gap-4">
         <div className="min-w-0">
           <h2
             id={`${id}-title`}
-            className={`text-xl font-black lg:text-2xl ${offer ? "text-white" : "text-slate-900"}`}
+            className={`text-lg font-black lg:text-2xl ${offer ? "text-white" : "text-slate-900"}`}
           >
             {title}
           </h2>
@@ -64,7 +64,7 @@ export function ProductCarousel({
             </p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 lg:gap-2">
           <Link
             to={moreHref}
             className={`rounded-xl px-3 py-2 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] sm:text-sm ${offer ? "bg-white text-[#9A3412] hover:bg-orange-50" : "text-[#9A3412] hover:bg-orange-50"}`}
@@ -75,7 +75,7 @@ export function ProductCarousel({
             type="button"
             onClick={() => scroll("previous")}
             aria-label={`کالاهای قبلی در ${title}`}
-            className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:border-orange-300 hover:text-[#C2410C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] lg:size-10"
+            className="hidden lg:flex size-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:border-orange-300 hover:text-[#C2410C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] lg:size-10"
           >
             <ArrowRight size={18} aria-hidden="true" />
           </button>
@@ -83,7 +83,7 @@ export function ProductCarousel({
             type="button"
             onClick={() => scroll("next")}
             aria-label={`کالاهای بعدی در ${title}`}
-            className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:border-orange-300 hover:text-[#C2410C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] lg:size-10"
+            className="hidden lg:flex size-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:border-orange-300 hover:text-[#C2410C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] lg:size-10"
           >
             <ArrowLeft size={18} aria-hidden="true" />
           </button>
@@ -129,7 +129,7 @@ export function ProductCarousel({
           dir="rtl"
           tabIndex={0}
           aria-label={`فهرست ${title}; برای پیمایش افقی از کلیدهای جهت‌دار استفاده کنید`}
-          className="mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-px-1 pb-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] sm:gap-4"
+          className="mt-4 lg:mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-px-1 pb-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] sm:gap-4"
         >
           {products.map((product) => (
             <li

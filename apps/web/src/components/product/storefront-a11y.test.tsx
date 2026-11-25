@@ -41,17 +41,14 @@ function withRouter(node: ReactNode) {
 }
 
 describe('storefront product card › a11y baseline (#82)', () => {
-  it('renders the card as a real link with an accessible name', () => {
+  it('uses an article with separately named image, title and purchase links', () => {
     render(withRouter(<ProductCard product={product} />))
-
-    const link = screen.getByRole('link')
-    expect(link).toHaveAttribute('href', ROUTES.product(product.slug))
-    // The card's accessible name is composed from its contents: the product
-    // name (image alt plus heading) followed by price and stock. Asserting the
-    // name is present keeps the baseline honest about what a screen reader
-    // announces without freezing incidental wording into the test.
-    expect(link).toHaveAccessibleName(new RegExp(product.name, 'u'))
-    expect(link).toHaveAccessibleName(/موجود/u)
+    const card = screen.getByRole('article')
+    expect(card).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: product.name })).toHaveAttribute('href', ROUTES.product(product.slug))
+    expect(screen.getByRole('link', { name: `مشاهده تصویر ${product.name}` })).toHaveAttribute('href', ROUTES.product(product.slug))
+    expect(screen.getByRole('link', { name: 'مشاهده محصول' })).toHaveAttribute('href', ROUTES.product(product.slug))
+    expect(card.querySelector('a a')).toBeNull()
   })
 
   it('keeps no product card implemented as a click-only generic element', () => {

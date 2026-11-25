@@ -3,6 +3,8 @@ import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import { ProductGrid } from '../components/product/ProductGrid'
 import { CategoryGrid } from '../components/catalog/CategoryGrid'
+import { CategoryChips } from '../components/catalog/CategoryChips'
+import { CategoryMobileListing } from '../components/catalog/CategoryMobileListing'
 import { brands, categories, eligibility, products } from './catalog'
 import { entityPath, hasNonPageQuery, metadataFor, pageNumber, type SearchParams, validSlug } from './policy'
 import { JsonLd, breadcrumb, collectionJsonLd } from './structured-data'
@@ -17,7 +19,8 @@ export async function collectionData(kind: Kind, slug: string, query: SearchPara
 // Primitive request-local keys coalesce metadata and page reads without a cross-request cache.
 const collectionSnapshot = cache(async (kind: Kind, slug: string, page: number, filtered: boolean) => {
   const allCategories = kind === 'categories' ? await categories() : []
-  const entity = kind === 'categories' ? allCategories.find(item => item.slug === slug) : kind === 'brands' ? (await brands()).find(item => item.slug === slug) : null
+  const category = kind === 'categories' ? allCategories.find(item => item.slug === slug) ?? null : null
+  const entity = category ?? (kind === 'brands' ? (await brands()).find(item => item.slug === slug) : null)
   if (kind !== 'catalog' && !entity) notFound()
   const [result, indexable] = await Promise.all([
     products({ ...(kind === 'categories' ? { categoryId: entity!.id } : kind === 'brands' ? { brand: slug } : {}), page, perPage: 24 }),
@@ -27,7 +30,7 @@ const collectionSnapshot = cache(async (kind: Kind, slug: string, page: number, 
   const basePath = kind === 'catalog' ? '/catalog' : entityPath(kind, slug)
   const title = entity?.name ?? 'همهٔ کالاها'
   const ancestors = kind === 'categories' && entity ? categoryAncestors(allCategories, entity.id) : []
-  return { ancestors, title, basePath, path: `${basePath}${page > 1 ? `?page=${page}` : ''}`, page, result, indexable: indexable && !filtered && result.items.length > 0, children: entity ? allCategories.filter(item => item.parentId === entity.id) : [] }
+  return { category, ancestors, title, basePath, path: `${basePath}${page > 1 ? `?page=${page}` : ''}`, page, result, indexable: indexable && !filtered && result.items.length > 0, children: entity ? allCategories.filter(item => item.parentId === entity.id) : [], siblings: category ? allCategories.filter(item => item.parentId === category.parentId) : [] }
 })
 export async function collectionMetadata(kind: Kind, slug: string, query: SearchParams) {
   const data = await collectionData(kind, slug, query)
@@ -39,8 +42,10 @@ export async function CollectionPage({ kind, slug = '', query }: { kind: Kind; s
     <div className="max-w-[1280px] mx-auto px-4 lg:px-6 py-6">
       <nav aria-label="مسیر صفحه" className="text-xs text-slate-500 mb-3"><Link href="/">خانه</Link>{kind === 'categories' && <><span className="mx-1" aria-hidden="true">/</span><Link href="/categories">همه دسته‌بندی‌ها</Link></>}{data.ancestors.map(ancestor => <span key={ancestor.id}> / <Link href={entityPath('categories', ancestor.slug)}>{ancestor.name}</Link></span>)} / <span aria-current="page">{data.title}</span></nav>
       <h1 className="font-black text-slate-900 text-xl">{data.title}{data.page > 1 ? ` — صفحهٔ ${data.page}` : ''}</h1>
-      {data.children.length > 0 && <section className="mt-6" aria-labelledby="category-children-title"><h2 id="category-children-title" className="text-base font-bold text-slate-900">زیردسته‌های {data.title}</h2><CategoryGrid categories={data.children} /></section>}
-      <section className="mt-5" aria-labelledby="collection-products-title"><h2 id="collection-products-title" className="sr-only">کالاهای {data.title}</h2>{data.result.items.length ? <ProductGrid products={data.result.items} /> : <p>هنوز کالای منتشرشده‌ای وجود ندارد.</p>}</section>
+      {kind === 'categories' && data.category && <CategoryChips categories={[...data.siblings, ...data.children.filter(child => !data.siblings.some(sibling => sibling.id === child.id))]} activeId={data.category.id} />}
+      {data.children.length > 0 && <section className="mt-6 hidden lg:block" aria-labelledby="category-children-title"><h2 id="category-children-title" className="text-base font-bold text-slate-900">زیردسته‌های {data.title}</h2><CategoryGrid categories={data.children} /></section>}
+      {kind === 'categories' && data.category && data.result.items.length > 0 && <CategoryMobileListing key={`${data.category.id}:${data.page}`} categoryId={data.category.id} page={data.page} initialResult={data.result} />}
+      <section className={`mt-5 ${kind === 'categories' && data.result.items.length > 0 ? 'hidden lg:block' : ''}`} aria-labelledby="collection-products-title"><h2 id="collection-products-title" className="sr-only">کالاهای {data.title}</h2>{data.result.items.length ? <ProductGrid products={data.result.items} /> : <p>هنوز کالای منتشرشده‌ای وجود ندارد.</p>}</section>
       <nav aria-label="صفحه‌بندی کالاها" className="mt-8 flex gap-6">
         {data.page > 1 && <Link rel="prev" href={data.page === 2 ? data.basePath : `${data.basePath}?page=${data.page - 1}`}>صفحهٔ قبل</Link>}
         {data.page < data.result.meta.pages && <Link rel="next" href={`${data.basePath}?page=${data.page + 1}`}>صفحهٔ بعد</Link>}

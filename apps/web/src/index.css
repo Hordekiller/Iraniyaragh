@@ -213,3 +213,12 @@ main:focus {
   .contact-launcher-button, .contact-popover, .contact-popover-link { transition: none; }
 }
 @media print { .contact-launcher { display: none !important; } }
+
+@media (width < 64rem) {
+  .site-header-account button[data-help='account-button'] {
+    border-radius: 1rem;
+    border-color: #ffedd5;
+    background: #fff7ed;
+    color: #0f172a;
+  }
+}

@@ -71,7 +71,7 @@ describe('SearchPage', () => {
     renderSearch('دریل', stubCatalog())
 
     expect(await screen.findByText(/برای «دریل»/)).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /دریل چکشی رونیکس/ })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /^دریل چکشی رونیکس$/ })).toBeInTheDocument()
     expect(screen.getByText('۱ کالا یافت شد')).toBeInTheDocument()
   })
 
@@ -122,7 +122,7 @@ describe('SearchPage', () => {
       </MemoryRouter>,
     )
 
-    await screen.findByRole('link', { name: /دریل چکشی رونیکس/ })
+    await screen.findByRole('link', { name: /^دریل چکشی رونیکس$/ })
 
     fireEvent.click(screen.getByText('next'))
 
