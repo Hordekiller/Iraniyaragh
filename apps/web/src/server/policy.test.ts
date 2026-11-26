@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { metadataFor, publicOrigin, pageNumber, hasNonPageQuery, validSlug, entityPath } from './policy'
+import { metadataFor, publicOrigin, pageNumber, hasNonPageQuery, validSlug, decodedRouteSlug, entityPath } from './policy'
 import { breadcrumb, collectionJsonLd, organizationJsonLd, websiteJsonLd, plainDescription, productJsonLd, JsonLd, webpageJsonLd } from './structured-data'
 import { categoryAncestors } from './category-ancestors'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -34,6 +34,9 @@ describe('public URL and indexing policy', () => {
     expect(entityPath('products', 'لولای-کابینت')).toBe('/products/'+encodeURIComponent('لولای-کابینت'))
     expect(validSlug('لولای-کابینت')).toBe(true); expect(validSlug('a'.repeat(250))).toBe(true)
     for (const value of ['a'.repeat(251), '', '../cart', '%2fadmin', 'a/b', 'a?b', '-a', 'a--b']) expect(validSlug(value)).toBe(false)
+    expect(decodedRouteSlug(encodeURIComponent('امیت'))).toBe('امیت')
+    expect(decodedRouteSlug('امیت')).toBe('امیت')
+    for (const value of ['%25D8%25A7', '%2Fadmin', '%252Fadmin', '%', 'a%3Fb', '../cart']) expect(decodedRouteSlug(value)).toBeNull()
   })
 })
 describe('share metadata and site structured data', () => {

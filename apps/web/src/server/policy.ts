@@ -19,6 +19,13 @@ export function isProductionDiscovery() { return process.env.APP_ENVIRONMENT ===
 export function validSlug(slug: string): boolean {
   return slug.length <= 250 && slug === slug.normalize('NFC') && /^[a-z0-9\u0621-\u063A\u0641-\u0642\u0644-\u0648\u067E\u0686\u0698\u06A9\u06AF\u06CC\u06F0-\u06F9]+(?:-[a-z0-9\u0621-\u063A\u0641-\u0642\u0644-\u0648\u067E\u0686\u0698\u06A9\u06AF\u06CC\u06F0-\u06F9]+)*$/u.test(slug)
 }
+/** Next.js route params can retain percent encoding for non-ASCII segments. Decode once at the route boundary. */
+export function decodedRouteSlug(value: string): string | null {
+  try {
+    const slug = decodeURIComponent(value)
+    return validSlug(slug) ? slug : null
+  } catch { return null }
+}
 export function entityPath(kind: 'products' | 'categories' | 'brands', slug: string) { return `/${kind}/${encodeURIComponent(slug)}` }
 export function absolute(path: string) { return `${publicOrigin()}${path}` }
 export function pageNumber(params: SearchParams): number | null {

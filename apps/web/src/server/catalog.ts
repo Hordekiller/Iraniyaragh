@@ -7,7 +7,7 @@ import { fixtureAllProducts } from '../services/catalog/fixture-data'
 import type { CatalogApi } from '../services/catalog/types'
 import { CatalogHttpClient } from '../services/catalog/http'
 import { CatalogError } from '../services/catalog/errors'
-import { entityPath, validSlug } from './policy'
+import { decodedRouteSlug, entityPath, validSlug } from './policy'
 
 export function apiOrigin() {
   const url = new URL(process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:4000')
@@ -22,11 +22,12 @@ export const categories = cache(() => catalogApi().listCategories())
 export const brands = cache(async () => isolatedFixture() ? [...new Set(fixtureAllProducts.map(item => item.brand).filter((name): name is string => !!name))].map(name => ({ id: name, name, slug: name.toLowerCase() })) : (await publicJson<BrandListResponse>('/api/v1/catalog/brands')).data.items)
 export const products = cache(async (query: Parameters<ReturnType<typeof catalogApi>['listProducts']>[0]) => catalogApi().listProducts(query))
 export const product = cache(async (slug: string) => {
-  if (!validSlug(slug)) notFound()
+  const decodedSlug = decodedRouteSlug(slug)
+  if (decodedSlug === null) notFound()
   try {
-    const value = await catalogApi().getProductBySlug(slug)
+    const value = await catalogApi().getProductBySlug(decodedSlug)
     if (!validSlug(value.slug)) notFound()
-    if (value.slug !== slug) permanentRedirect(entityPath('products', value.slug))
+    if (value.slug !== decodedSlug) permanentRedirect(entityPath('products', value.slug))
     return value
   } catch (error) {
     if (error instanceof CatalogError && error.statusCode === 404) notFound()
