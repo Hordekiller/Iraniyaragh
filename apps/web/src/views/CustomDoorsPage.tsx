@@ -1,5 +1,5 @@
 import { DoorManufacturingFields } from "../components/custom-doors/DoorManufacturingFields";
-import { emptyManufacturing, manufacturingEntry, readManufacturing } from "../components/custom-doors/manufacturing-entry";
+import { emptyManufacturing, manufacturingEntry, mirroredDoorItem, readManufacturing } from "../components/custom-doors/manufacturing-entry";
 import { DoorGlassChoices } from "../components/custom-doors/DoorGlassChoices";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -8,6 +8,7 @@ import {
   Check,
   Copy,
   DoorOpen,
+  FlipHorizontal2,
   ImageOff,
   Plus,
   Ruler,
@@ -15,6 +16,7 @@ import {
   Trash2,
   Wrench,
 } from "lucide-react";
+import { DOOR_HANDLE_IMAGE_CODES, DOOR_SIDES } from "@iranyaragh/contracts";
 import type {
   DoorCatalog,
   DoorItemInput,
@@ -184,6 +186,10 @@ function Configurator() {
     }
   }, [items, storageKey, userId]);
   const model = catalog?.models.find((m) => m.id === entry.modelId);
+  const handleImages = {
+    L: catalog?.materials.find((material) => material.active && material.category === "HARDWARE" && material.code === DOOR_HANDLE_IMAGE_CODES.L)?.imageUrl ?? undefined,
+    "45": catalog?.materials.find((material) => material.active && material.category === "HARDWARE" && material.code === DOOR_HANDLE_IMAGE_CODES["45"])?.imageUrl ?? undefined,
+  };
   function choose(m: DoorModel) {
     setEntry({ ...emptyEntry, modelId: m.id });
     setEditing(null);
@@ -677,6 +683,7 @@ function Configurator() {
                           m.category === "GLASS" &&
                           entry.selections.some((s) => s.materialId === m.id),
                       )}
+                      manufacturing={entry.manufacturing}
                     />
                     <p className="mt-3 text-center text-xs leading-6">
                       عرض و ارتفاع نهایی را به سانتی‌متر وارد کنید؛ تصویر بالا
@@ -717,7 +724,7 @@ function Configurator() {
                       ? `محدوده ثبت‌شده: عرض ${model.configuration.technical.minWidthMm / 10} تا ${model.configuration.technical.maxWidthMm / 10} و ارتفاع ${model.configuration.technical.minHeightMm / 10} تا ${model.configuration.technical.maxHeightMm / 10} سانتی‌متر؛ تلرانس ثبت‌شده ${model.configuration.technical.toleranceMm / 10} سانتی‌متر. ابعاد خارج از محدوده برای بررسی مدیر ارسال می‌شوند.`
                       : "قواعد فنی مدل هنوز تکمیل نشده است؛ سفارش برای بررسی مدیر ارسال می‌شود."}
                   </p>
-                  <DoorManufacturingFields value={entry.manufacturing} heightMm={centimetersToMillimeters(entry.height)} onChange={manufacturing => setEntry(current => ({ ...current, manufacturing }))} />
+                  <DoorManufacturingFields value={entry.manufacturing} heightMm={centimetersToMillimeters(entry.height)} handleImages={handleImages} onChange={manufacturing => setEntry(current => ({ ...current, manufacturing }))} />
                   <label className="mt-5 block text-sm font-bold">
                     توضیحات اختصاصی
                     <textarea
@@ -854,6 +861,9 @@ function Configurator() {
                       {(item.heightMm / 10).toLocaleString("fa-IR")} سانتی‌متر ·{" "}
                       {item.quantity.toLocaleString("fa-IR")} عدد
                     </p>
+                    {item.manufacturing && <p className="mt-1 text-xs text-slate-600">
+                      دستگیره {DOOR_SIDES[item.manufacturing.handleSide]} · گازور {DOOR_SIDES[item.manufacturing.hingeSide]}
+                    </p>}
                     <div className="mt-2 flex flex-wrap gap-1">
                       <button
                         type="button"
@@ -875,6 +885,21 @@ function Configurator() {
                         className={`${doorButton} px-2`}
                       >
                         <Copy size={16} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`افزودن قرینه درب ${index + 1}`}
+                        disabled={busy || uncertain || items.length >= 50 || !item.manufacturing}
+                        onClick={() => {
+                          const mirrored = mirroredDoorItem(item);
+                          if (!mirrored) return;
+                          setItems((current) => current.length < 50 ? [...current, mirrored] : current);
+                          setQuote(null);
+                          setStage(0);
+                        }}
+                        className={`${doorButton} px-2 text-xs`}
+                      >
+                        <FlipHorizontal2 size={16} aria-hidden="true" /> افزودن قرینه
                       </button>
                       <button
                         type="button"

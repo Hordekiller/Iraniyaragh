@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page, Request } from '@playwright/test';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
-import { adminSidebar, createApplicationRequestTracker, isApprovedEnamadImageRequest, signInDiAsAdmin, tap } from './helpers';
+import { adminSidebar, createApplicationRequestTracker, isApprovedEnamadImageRequest, isMobile, signInDiAsAdmin, tap } from './helpers';
 
 /**
  * End-to-end verification of the #279 rich-text description stack as assembled
@@ -449,11 +449,13 @@ test.describe.serial('#279 description journey (assembled stack)', () => {
     await expect(homepageCategories.getByRole('link', { name: childName, exact: true })).toHaveCount(0);
     await tap(homepageCategories.getByRole('link', { name: rootName, exact: true }));
     await expect(page).toHaveURL(`${realStorefront}/categories/${rootSlug}`);
-    const subcategories = page.getByRole('region', { name: `زیردسته‌های ${rootName}` });
-    await expect(subcategories.getByRole('link')).toHaveCount(1);
+    const subcategories = isMobile(page)
+      ? page.getByRole('navigation', { name: 'دسته‌بندی‌های کالا' })
+      : page.getByRole('region', { name: `زیردسته‌های ${rootName}` });
+    await expect(subcategories.getByRole('link', { name: new RegExp(childName) })).toHaveCount(1);
     // A parent projection includes the real product assigned to its child.
     await expect(page.getByRole('link', { name: new RegExp(productName) }).first()).toBeVisible();
-    await tap(subcategories.getByRole('link', { name: childName, exact: true }));
+    await tap(subcategories.getByRole('link', { name: new RegExp(childName) }));
     await expect(page).toHaveURL(`${realStorefront}/categories/${childSlug}`);
     await page.reload();
     await expect(page.getByRole('heading', { name: childName, exact: true })).toBeVisible();

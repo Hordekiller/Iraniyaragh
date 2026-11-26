@@ -1,6 +1,7 @@
 import type { DoorGlassSampleKey } from "./door-glass-samples";
 /** All persisted monetary values are integer IRR strings. Dimensions are mm. */
 export type DoorType = "FORMLEX" | "DECOFIX";
+export const DOOR_HANDLE_IMAGE_CODES = { L: "door-handle-l", "45": "door-handle-45" } as const;
 export type DoorBasis = "AREA" | "PERIMETER" | "WIDTH" | "HEIGHT" | "FIXED";
 export type DoorPricingComponent = {
   slot: string;
@@ -84,6 +85,7 @@ export type DoorCatalog = {
 /** Manufacturing dimensions are integer mm; the customer form displays cm. */
 export type DoorManufacturing = {
   profileColor: "BLACK" | "WHITE" | "GOLD" | "BRONZE";
+  handleModel?: "L" | "45";
   handleSide: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
   hingeSide: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";
   drillingMode: "STANDARD" | "CUSTOM";

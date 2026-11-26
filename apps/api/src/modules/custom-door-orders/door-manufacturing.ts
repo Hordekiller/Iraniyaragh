@@ -11,12 +11,15 @@ export function validateDoorManufacturing(item: DoorItemInput): void {
   if (
     !value ||
     !["BLACK", "WHITE", "GOLD", "BRONZE"].includes(value.profileColor) ||
+    (value.handleModel !== undefined && !["L", "45"].includes(value.handleModel)) ||
     !["RIGHT", "LEFT", "TOP", "BOTTOM"].includes(value.handleSide) ||
     !["RIGHT", "LEFT", "TOP", "BOTTOM"].includes(value.hingeSide) ||
     !["STANDARD", "CUSTOM"].includes(value.drillingMode) ||
     !Array.isArray(value.holes)
   )
     fail("مشخصات پروفیل، دستگیره و لولا معتبر نیست.");
+  if (value.handleSide === value.hingeSide)
+    fail("محل گازور و دستگیره نمی‌تواند یک سمت باشد.");
   if (value.drillingMode === "STANDARD") {
     if (value.holes.length !== 0)
       fail("در حالت استاندارد، محل سوراخ سفارشی نباید ثبت شود.");

@@ -97,7 +97,7 @@ export function HelpTopicPage({ slug: slugProp }: { slug?: string } = {}) {
       {tour && <div className="mt-4 rounded-3xl border border-orange-200 bg-orange-50 p-4">
         <p className="text-sm font-black text-orange-950">راهنمای روی صفحه</p>
         <p className="mt-1 text-sm leading-7 text-orange-950">با یک راهنمای مرحله‌به‌مرحله، دکمه‌های واقعی فروشگاه را روی خود صفحه می‌بینید و محل هر دکمه هایلایت می‌شود. راهنما به‌جای شما کلیک یا ثبت نمی‌کند.</p>
-        <button type="button" onClick={() => { startTour(tour.id); navigate(tour.start) }} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-orange-700 px-5 text-sm font-black text-white hover:bg-orange-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]"><MousePointerClick size={16} aria-hidden="true" />نمایش روی صفحه: {tour.title}</button>
+        <button type="button" onClick={() => { startTour(tour.id); void navigate(tour.start) }} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-orange-700 px-5 text-sm font-black text-white hover:bg-orange-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]"><MousePointerClick size={16} aria-hidden="true" />نمایش روی صفحه: {tour.title}</button>
       </div>}
       <Link to={topic.action.to} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-slate-900 px-5 text-sm font-bold text-white hover:bg-orange-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]">
         {topic.action.label}<ArrowLeft size={16} aria-hidden="true" />

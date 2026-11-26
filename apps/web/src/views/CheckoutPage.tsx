@@ -236,7 +236,7 @@ function CheckoutContents() {
       setUnconfirmed(false)
       await reload().catch(() => undefined)
       if (!active.current) return
-      navigate(ROUTES.payment(order.id), { replace: true })
+      void navigate(ROUTES.payment(order.id), { replace: true })
     } catch (cause) {
       setError(cause)
       const ambiguous = !(cause instanceof AuthApiError) ||
