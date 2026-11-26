@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
 #
-# Obtain and renew the Let's Encrypt IP address certificate.
+# Obtain and renew the Let's Encrypt certificate for the public domain.
 #
-# The origin currently uses a short-lived Let's Encrypt IP certificate that also
-# covers iraniyaragh.com and www.iraniyaragh.com. It lasts about six days, so
-# unattended renewal and an independent origin check are essential.
+# A certificate containing an IP address must use the six-day profile. Browsers
+# visit the domain, so use a domain-only certificate with the 90-day classic
+# profile. This leaves more time to recover from an international connectivity
+# interruption without weakening HTTPS on the direct Iranian origin.
 #
 # Two things follow from that, and both are load-bearing:
 #
-#   1. Certbot cannot install the certificate for us. Its nginx plugin still has
-#      no support for IP identifiers, so nginx reads the files directly and a
-#      post-install reload makes it live. The layout under TLS_DIR is deliberately flat
+#   1. Nginx reads the files directly and a post-install reload makes them live.
+#      The layout under TLS_DIR is deliberately flat
 #      (fullchain.pem, privkey.pem) rather than a copy of Certbot's
 #      archive/ + live/ symlink tree, which nothing else should depend on.
 #
 #   2. Renewal uses --webroot, never --standalone. --standalone has to bind port
-#      80 itself, which means stopping the proxy that is serving on 80, and with
-#      a 6-day certificate an unattended window where port 80 is closed is a
-#      window where renewal can fail. --webroot writes the challenge token into
+#      80 itself, which means stopping the proxy that is serving on 80.
+#      --webroot writes the challenge token into
 #      the directory nginx already serves for exactly this purpose.
 #
 # The first run is the one exception to (2): on a host where the stack is not up
@@ -26,7 +25,7 @@
 #
 # Usage:
 #   ensure-certificate.sh              # obtain or renew, then reload nginx
-#   ensure-certificate.sh --staging    # use the LE staging CA (untrusted cert)
+#   ensure-certificate.sh --staging    # dry-run against staging; do not install
 #   ensure-certificate.sh --force      # renew even if not near expiry
 set -Eeuo pipefail
 
@@ -41,10 +40,7 @@ COMPOSE_FILE="${COMPOSE_FILE:-${INFRA_DIR}/compose.staging.yml}"
 TLS_DIR="${TLS_DIR:-/srv/iranyaragh/tls}"
 ACME_WEBROOT_DIR="${ACME_WEBROOT_DIR:-/srv/iranyaragh/acme-webroot}"
 CERTBOT_BIN="${CERTBOT_BIN:-certbot}"
-# The identifier and the profile are one decision: Let's Encrypt requires
-# --preferred-profile shortlived for an IP address certificate, so there is no
-# long-lived variant to request here.
-CERT_NAME="${CERT_NAME:-185.211.59.93}"
+CERT_NAME="${CERT_NAME:-iraniyaragh-domain}"
 
 FORCE=0
 USE_STAGING=0
@@ -61,30 +57,19 @@ log() { printf '\n=== %s\n' "$*"; }
 fail() { printf '\nFAILED: %s\n' "$*" >&2; exit 1; }
 
 command -v "${CERTBOT_BIN}" >/dev/null || fail "${CERTBOT_BIN} is not installed on this host."
-# --ip-address arrived in Certbot 5.3 and --webroot support for IP identifiers in
-# 5.4, so an older client fails in a way that looks like an ACME problem rather
-# than a version problem. Checked up front to say something useful.
-CERTBOT_VERSION="$("${CERTBOT_BIN}" --version 2>/dev/null | awk '{print $2}')"
-if ! awk -v version="${CERTBOT_VERSION}" 'BEGIN {
-  if (version !~ /^[0-9]+\.[0-9]+(\.[0-9]+)?$/) exit 1
-  split(version, parts, ".")
-  exit !(parts[1] > 5 || (parts[1] == 5 && parts[2] >= 4))
-}'; then
-  fail "certbot ${CERTBOT_VERSION:-unknown} is too old; 5.4+ is required for --ip-address with --webroot."
-fi
 
 mkdir -p "${TLS_DIR}" "${ACME_WEBROOT_DIR}/.well-known/acme-challenge"
 chmod 755 "${TLS_DIR}" "${ACME_WEBROOT_DIR}"
 
 renewal_args=(
   --cert-name "${CERT_NAME}"
-  --preferred-profile shortlived
+  --preferred-profile classic
   --non-interactive
   --agree-tos
   --register-unsafely-without-email
   --keep-until-expiring
 )
-[[ ${USE_STAGING} -eq 1 ]] && renewal_args+=(--server https://acme-staging-v02.api.letsencrypt.org/directory)
+[[ ${USE_STAGING} -eq 1 ]] && renewal_args+=(--dry-run)
 
 # Certbot's saved renewal configuration supplies the webroot authenticator.
 # No deploy hook runs before installation: Nginx reloads only after the new
@@ -150,16 +135,19 @@ case "${MODE}" in
     fi
     "${CERTBOT_BIN}" certonly "${renewal_args[@]}" \
       --webroot --webroot-path "${ACME_WEBROOT_DIR}" \
-      --ip-address "${CERT_NAME}" \
-     
+      -d iraniyaragh.com -d www.iraniyaragh.com
     ;;
   standalone)
     "${CERTBOT_BIN}" certonly "${renewal_args[@]}" \
       --standalone \
-      --ip-address "${CERT_NAME}" \
-     
+      -d iraniyaragh.com -d www.iraniyaragh.com
     ;;
 esac
+
+if [[ ${USE_STAGING} -eq 1 ]]; then
+  log "Staging dry run succeeded; keeping the installed production certificate"
+  exit 0
+fi
 
 log "Installing the issued certificate into ${TLS_DIR}"
 # Certbot's own layout uses a `live/<name>` directory of symlinks into `archive`.
@@ -190,6 +178,5 @@ else
   log "Reloaded nginx with the new certificate"
 fi
 
-# Reported with dates because a 6-day certificate that expired silently is the
-# failure mode this whole script exists to prevent.
+# Report the installed certificate dates so a failed renewal is visible.
 openssl x509 -in "${TLS_DIR}/fullchain.pem" -noout -subject -issuer -dates -ext subjectAltName
