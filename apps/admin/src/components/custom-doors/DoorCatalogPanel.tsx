@@ -17,6 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import {
+  DOOR_HANDLE_IMAGE_CODES,
   DOOR_GLASS_SAMPLES, doorGlassSample, type DoorGlassSampleKey,
   type DoorCatalog,
   type DoorMaterial,
@@ -995,6 +996,9 @@ function DoorMaterialEditor({
               ))}
             </TextField>
           </Stack>
+          {material.category === "HARDWARE" && <Alert severity="info">
+            برای تصویر دستگیره مدل L، شناسه «{DOOR_HANDLE_IMAGE_CODES.L}» و برای مدل ۴۵ درجه شناسه «{DOOR_HANDLE_IMAGE_CODES["45"]}» را ثبت کنید. تصویر آماده و تأییدشدهٔ این متریال در فرم سفارش نمایش داده می‌شود؛ تصویر به‌تنهایی قیمت را تغییر نمی‌دهد.
+          </Alert>}
           <FormControlLabel
             control={
               <Switch
@@ -1063,12 +1067,12 @@ function DoorMaterialEditor({
               onChange={(v) => patch({ thicknessMm: v ? Number(v) : null })}
             />
           </Stack>
-          <DoorImagePicker label="تصویر شیشه" square value={cfg.imageMediaId ?? null} onChange={id => patch({ imageMediaId: id })} imageUrl={initial?.imageUrl} initialValue={initial?.configuration.imageMediaId} originalWidth={initial?.imageOriginalWidth} originalHeight={initial?.imageOriginalHeight} />
-          <TextField select label="تصویر آزمایشی رنگ" value={cfg.sampleKey === null ? '' : cfg.sampleKey ?? doorGlassSample(material.code)?.key ?? ''} onChange={event => patch({ sampleKey: (event.target.value || null) as DoorGlassSampleKey | null })} helperText="نمونه‌های ساخته‌شده با ابعاد ۲۴۰ × ۲۴۰ پیکسل؛ عکس کالای واقعی نیستند. تصویر ثبت‌شده فروشگاه بر این نمونه اولویت دارد. انتخاب تصویر قیمت را تغییر نمی‌دهد.">
+          <DoorImagePicker label={material.category === "HARDWARE" ? "تصویر دستگیره / یراق‌آلات" : "تصویر شیشه"} square value={cfg.imageMediaId ?? null} onChange={id => patch({ imageMediaId: id })} imageUrl={initial?.imageUrl} initialValue={initial?.configuration.imageMediaId} originalWidth={initial?.imageOriginalWidth} originalHeight={initial?.imageOriginalHeight} />
+          {material.category === "GLASS" && <TextField select label="تصویر آزمایشی رنگ" value={cfg.sampleKey === null ? '' : cfg.sampleKey ?? doorGlassSample(material.code)?.key ?? ''} onChange={event => patch({ sampleKey: (event.target.value || null) as DoorGlassSampleKey | null })} helperText="نمونه‌های ساخته‌شده با ابعاد ۲۴۰ × ۲۴۰ پیکسل؛ عکس کالای واقعی نیستند. تصویر ثبت‌شده فروشگاه بر این نمونه اولویت دارد. انتخاب تصویر قیمت را تغییر نمی‌دهد.">
             <MenuItem value="">بدون تصویر</MenuItem>
             {DOOR_GLASS_SAMPLES.map(sample => <MenuItem key={sample.key} value={sample.key}>{sample.title}</MenuItem>)}
-          </TextField>
-          {doorGlassSample(material.code, cfg.sampleKey) && <Box component="img" src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/door-glass-samples/${doorGlassSample(material.code, cfg.sampleKey)!.key}.webp`} alt="نمونه آزمایشی رنگ شیشه" width={160} height={160} sx={{ objectFit: 'cover', borderRadius: 2, maxWidth: '100%' }} />}
+          </TextField>}
+          {material.category === "GLASS" && doorGlassSample(material.code, cfg.sampleKey) && <Box component="img" src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/door-glass-samples/${doorGlassSample(material.code, cfg.sampleKey)!.key}.webp`} alt="نمونه آزمایشی رنگ شیشه" width={160} height={160} sx={{ objectFit: 'cover', borderRadius: 2, maxWidth: '100%' }} />}
           <TextField
             multiline
             rows={3}

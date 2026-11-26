@@ -1,10 +1,12 @@
 import {
+  type DoorItemInput,
   type DoorManufacturing,
 } from "@iranyaragh/contracts";
 import { doorDigits } from "../../services/custom-doors/api";
 
 export type ManufacturingEntry = {
   profileColor: DoorManufacturing["profileColor"] | "";
+  handleModel: NonNullable<DoorManufacturing["handleModel"]>;
   handleSide: DoorManufacturing["handleSide"] | "";
   hingeSide: DoorManufacturing["hingeSide"] | "";
   drillingMode: DoorManufacturing["drillingMode"];
@@ -12,17 +14,34 @@ export type ManufacturingEntry = {
 };
 export const emptyManufacturing = (): ManufacturingEntry => ({
   profileColor: "",
+  handleModel: "L",
   handleSide: "",
   hingeSide: "",
   drillingMode: "STANDARD",
   holes: Array.from({ length: 4 }, () => ({ distance: "", reference: "TOP" })),
 });
+export function mirroredDoorItem(item: DoorItemInput): DoorItemInput | null {
+  if (!item.manufacturing) return null;
+  const mirrorSide = (side: DoorManufacturing["handleSide"]) =>
+    side === "LEFT" ? "RIGHT" : side === "RIGHT" ? "LEFT" : side;
+  return {
+    ...item,
+    selections: item.selections.map((selection) => ({ ...selection })),
+    manufacturing: {
+      ...item.manufacturing,
+      handleSide: mirrorSide(item.manufacturing.handleSide),
+      hingeSide: mirrorSide(item.manufacturing.hingeSide),
+      holes: item.manufacturing.holes.map((hole) => ({ ...hole })),
+    },
+  };
+}
 export function manufacturingEntry(
   value?: DoorManufacturing,
 ): ManufacturingEntry {
   if (!value) return emptyManufacturing();
   return {
     ...value,
+    handleModel: value.handleModel ?? "L",
     holes:
       value.drillingMode === "CUSTOM"
         ? value.holes.map((hole) => ({
@@ -49,6 +68,8 @@ export function readManufacturing(
     throw new Error(
       "رنگ پروفیل، سمت دستگیره و محل گازور / لولا را انتخاب کنید.",
     );
+  if (value.handleSide === value.hingeSide)
+    throw new Error("محل گازور و دستگیره نمی‌تواند یک سمت باشد.");
   const holes =
     value.drillingMode === "CUSTOM"
       ? value.holes.map((hole) => ({

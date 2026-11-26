@@ -59933,6 +59933,13 @@
               "BRONZE"
             ]
           },
+          "handleModel": {
+            "type": "string",
+            "enum": [
+              "L",
+              "45"
+            ]
+          },
           "handleSide": {
             "type": "string",
             "enum": [
@@ -61241,6 +61248,13 @@
                         "BRONZE"
                       ]
                     },
+                    "handleModel": {
+                      "type": "string",
+                      "enum": [
+                        "L",
+                        "45"
+                      ]
+                    },
                     "handleSide": {
                       "type": "string",
                       "enum": [
@@ -61472,6 +61486,13 @@
                         "WHITE",
                         "GOLD",
                         "BRONZE"
+                      ]
+                    },
+                    "handleModel": {
+                      "type": "string",
+                      "enum": [
+                        "L",
+                        "45"
                       ]
                     },
                     "handleSide": {

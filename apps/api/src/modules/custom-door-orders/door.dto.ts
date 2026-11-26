@@ -303,6 +303,11 @@ export class DoorManufacturingDto {
   @ApiProperty({ enum: ["BLACK", "WHITE", "GOLD", "BRONZE"] })
   @IsEnum(["BLACK", "WHITE", "GOLD", "BRONZE"])
   profileColor!: "BLACK" | "WHITE" | "GOLD" | "BRONZE";
+  @ApiPropertyOptional({ enum: ["L", "45"] })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsDefined()
+  @IsEnum(["L", "45"])
+  handleModel?: "L" | "45";
   @ApiProperty({ enum: ["RIGHT", "LEFT", "TOP", "BOTTOM"] })
   @IsEnum(["RIGHT", "LEFT", "TOP", "BOTTOM"])
   handleSide!: "RIGHT" | "LEFT" | "TOP" | "BOTTOM";

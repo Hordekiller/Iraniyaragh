@@ -36,7 +36,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
 
   function submitSearch() {
     if (!searchQuery.trim()) return
-    navigate(`${ROUTES.search}?q=${encodeURIComponent(searchQuery.trim())}`)
+    void navigate(`${ROUTES.search}?q=${encodeURIComponent(searchQuery.trim())}`)
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -50,7 +50,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-100">
       <div className="max-w-[1280px] mx-auto px-4 lg:px-6">
         <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 h-[72px] lg:h-[88px]">
-          <button type="button" onClick={openMenu} aria-label="باز کردن منوی فروشگاه" aria-expanded={menuOpen} aria-controls="store-navigation" aria-haspopup="dialog" className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-800">
+          <button type="button" onClick={openMenu} aria-label="باز کردن منوی فروشگاه" aria-expanded={menuOpen} aria-controls="store-navigation" aria-haspopup="dialog" className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-slate-900 transition-colors hover:border-orange-200 hover:text-[#C2410C] lg:border-slate-200 lg:bg-white lg:text-slate-800">
             <Menu size={22} strokeWidth={1.8} aria-hidden="true" />
           </button>
           {/* Logo */}
@@ -89,7 +89,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
               to={ROUTES.cart}
               data-help="cart-link"
               aria-label={`سبد خرید، ${toPersianDigits(itemCount)} کالا`}
-              className="relative w-11 h-11 rounded-full border border-slate-200 bg-slate-50 text-slate-600 flex items-center justify-center hover:bg-white hover:border-[#FF4D00]/30 hover:text-[#FF4D00] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
+              className="relative w-11 h-11 rounded-full border border-[#FF4D00] bg-white text-[#FF4D00] flex items-center justify-center hover:bg-orange-50 lg:border-slate-200 lg:bg-slate-50 lg:text-slate-600 lg:hover:bg-white lg:hover:border-[#FF4D00]/30 lg:hover:text-[#FF4D00] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] focus-visible:ring-offset-2"
             >
               <ShoppingBag size={18} aria-hidden="true" />
               {itemCount > 0 && (
@@ -99,7 +99,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
               )}
             </Link>
             <NotificationBell />
-            <AccountMenu onOpenLogin={onOpenLogin} />
+            <div className="site-header-account"><AccountMenu onOpenLogin={onOpenLogin} /></div>
           </div>
         </div>
 

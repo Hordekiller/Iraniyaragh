@@ -5,6 +5,8 @@ packages:
 
 overrides:
   '@prisma/config>deepmerge-ts': 8.0.2
+  # GHSA-7589-6fvf-x4pw: patched Schema.TemplateLiteral matching in Prisma tooling.
+  '@prisma/config>effect': 3.22.1
   # GHSA-q7qp-rjg7-q26m: release pending fileFilter callbacks after teardown.
   multer: 2.5.0
   # GHSA-27r3-jxmh-p828: reject trailing compressed request-body bytes safely.

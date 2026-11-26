@@ -60,7 +60,7 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
     if (!catalog?.categories || !state?.scrollToCategories || handledKeyRef.current === location.key) return
     handledKeyRef.current = location.key
     document.getElementById(SECTION_IDS.categories)?.scrollIntoView({ behavior: 'smooth' })
-    navigate(ROUTES.home, { replace: true, state: {} })
+    void navigate(ROUTES.home, { replace: true, state: {} })
   }, [location.state, location.key, navigate, catalog])
 
   useEffect(() => {
@@ -150,8 +150,8 @@ export function HomePage({ initialCatalog }: { initialCatalog?: HomeCatalog } = 
 
       {catalog && (
         <>
-          <section id={SECTION_IDS.categories} className="max-w-[1280px] mx-auto px-4 lg:px-6 mt-8 lg:mt-10" aria-labelledby="home-categories-title">
-            <h2 id="home-categories-title" className="text-xl lg:text-2xl font-black text-slate-900">دسته‌بندی کالاها</h2>
+          <section id={SECTION_IDS.categories} className="max-w-[1280px] mx-auto px-4 lg:px-6 mt-6 lg:mt-10" aria-labelledby="home-categories-title">
+            <h2 id="home-categories-title" className="text-lg lg:text-2xl font-black text-slate-900">دسته‌بندی کالاها</h2>
             {catalog.categories === null ? (
               <p className="mt-4 text-sm text-slate-600">دسته‌بندی‌ها فعلاً در دسترس نیستند.</p>
             ) : rootCategories.length === 0 ? (

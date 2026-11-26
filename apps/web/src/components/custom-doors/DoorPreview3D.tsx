@@ -1,5 +1,6 @@
 import { useRef, useState, type CSSProperties } from "react";
 import type { DoorMaterial, DoorType } from "@iranyaragh/contracts";
+import type { ManufacturingEntry } from "./manufacturing-entry";
 
 /** Visual-only preview. It never computes price; the server quote is authoritative. */
 type Finish = { fill: string; mirror: boolean; label: string };
@@ -41,11 +42,13 @@ export function DoorPreview3D({
   heightMm,
   type,
   material,
+  manufacturing,
 }: {
   widthMm: number;
   heightMm: number;
   type: DoorType;
   material: DoorMaterial | undefined;
+  manufacturing?: Pick<ManufacturingEntry, "handleSide" | "hingeSide" | "handleModel">;
 }) {
   const sample = !(widthMm > 0 && heightMm > 0);
   const w = widthMm > 0 ? widthMm : 900;
@@ -111,11 +114,12 @@ export function DoorPreview3D({
       <div
         style={{
           position: "absolute",
-          [back ? "right" : "left"]: Math.max(6, W * 0.08),
+          [(manufacturing?.handleSide === "RIGHT") !== back ? "right" : "left"]: Math.max(6, W * 0.08),
           top: H * 0.38,
           width: 4,
           height: Math.max(18, H * 0.22),
           borderRadius: 3,
+          transform: manufacturing?.handleModel === "45" ? "skewY(-22deg)" : undefined,
           background: "linear-gradient(90deg,#6b7280,#e5e7eb,#6b7280)",
           boxShadow: "0 1px 2px rgba(0,0,0,0.35)",
         }}
@@ -127,7 +131,7 @@ export function DoorPreview3D({
             key={y}
             style={{
               position: "absolute",
-              [back ? "left" : "right"]: 0,
+              [(manufacturing?.hingeSide === "LEFT") !== back ? "left" : "right"]: 0,
               top: H * y,
               width: Math.max(8, W * 0.1),
               height: Math.max(6, H * 0.05),
@@ -143,7 +147,7 @@ export function DoorPreview3D({
     <div className="rounded-2xl bg-gradient-to-b from-slate-100 to-slate-50 p-4">
       <div
         role="img"
-        aria-label={`پیش‌نمایش سه‌بعدی درب ${framed ? "دکوفیکس" : "فریم‌لس"} با ${finish.label}، عرض ${w / 10} و ارتفاع ${h / 10} سانتی‌متر`}
+        aria-label={`پیش‌نمایش سه‌بعدی درب ${framed ? "دکوفیکس" : "فریم‌لس"} با ${finish.label}، عرض ${w / 10} و ارتفاع ${h / 10} سانتی‌متر${manufacturing?.hingeSide ? `، گازور ${manufacturing.hingeSide === "LEFT" ? "چپ" : manufacturing.hingeSide === "RIGHT" ? "راست" : "عمودی"}` : ""}${manufacturing?.handleSide ? ` و دستگیره ${manufacturing.handleSide === "LEFT" ? "چپ" : manufacturing.handleSide === "RIGHT" ? "راست" : "عمودی"}` : ""}`}
         className="relative mx-auto flex h-[300px] cursor-grab touch-none select-none items-end justify-center active:cursor-grabbing"
         style={{ perspective: 900 }}
         onPointerDown={(e) => {
@@ -219,8 +223,8 @@ export function DoorPreview3D({
               position: "absolute",
               inset: 0,
               transformStyle: "preserve-3d",
-              transformOrigin: "right center",
-              transform: `rotateY(${open ? 70 : 0}deg)`,
+              transformOrigin: manufacturing?.hingeSide === "LEFT" ? "left center" : "right center",
+              transform: `rotateY(${open ? (manufacturing?.hingeSide === "LEFT" ? -70 : 70) : 0}deg)`,
             }}
             className="transition-transform duration-700 motion-reduce:transition-none"
           >

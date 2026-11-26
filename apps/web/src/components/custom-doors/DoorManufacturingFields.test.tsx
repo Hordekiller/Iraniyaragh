@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { DoorManufacturingFields } from "./DoorManufacturingFields";
@@ -10,7 +10,7 @@ const chosen = () => ({
   handleSide: "LEFT" as const,
   hingeSide: "RIGHT" as const,
 });
-function Form() {
+function Form({ handleImages }: { handleImages?: Partial<Record<"L" | "45", string>> } = {}) {
   const [value, setValue] = useState(emptyManufacturing());
   const [height, setHeight] = useState("2000");
   return (
@@ -26,11 +26,27 @@ function Form() {
         value={value}
         heightMm={Number(height)}
         onChange={setValue}
+        handleImages={handleImages}
       />
     </>
   );
 }
 describe("door manufacturing fields", () => {
+  it("blocks matching sides and shows replaceable handle images", () => {
+    render(<Form handleImages={{ L: "/media/approved-l.webp" }} />);
+    const hinge = screen.getByLabelText("محل گازور / لولا");
+    const handle = screen.getByLabelText("سمت دستگیره");
+    fireEvent.change(hinge, { target: { value: "LEFT" } });
+    expect(within(handle).getByRole("option", { name: "چپ" })).toBeDisabled();
+    expect(screen.getByRole("img", { name: "تصویر دستگیره L" })).toHaveAttribute("src", "/media/approved-l.webp");
+    expect(screen.getByRole("img", { name: "تصویر دستگیره ۴۵ درجه" })).toHaveAttribute("src", "/images/doors/handle-45.svg");
+    fireEvent.change(handle, { target: { value: "RIGHT" } });
+    expect(hinge).toHaveValue("LEFT");
+    expect(handle).toHaveValue("RIGHT");
+    expect(screen.queryByRole("button", { name: "قرینه" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: /دستگیره ۴۵ درجه/ }));
+    expect(screen.getByRole("radio", { name: /دستگیره ۴۵ درجه/ })).toBeChecked();
+  });
   it("offers four colors and handle directions; custom fields start blank with both reference edges", () => {
     render(<Form />);
     for (const label of ["مشکی", "سفید", "طلایی", "برنز"])

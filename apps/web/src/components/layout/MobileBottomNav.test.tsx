@@ -35,6 +35,13 @@ describe('MobileBottomNav', () => {
     window.scrollTo = vi.fn()
   })
 
+  it('keeps six actions and the translucent floating capsule', () => {
+    render(<MemoryRouter><Harness /></MemoryRouter>)
+    const nav = screen.getByRole('navigation', { name: 'ناوبری پایین' })
+    expect(nav.querySelectorAll('button')).toHaveLength(6)
+    expect(nav.querySelector('.backdrop-blur-xl')).not.toBeNull()
+  })
+
   it('is exposed as a labelled navigation landmark', () => {
     render(
       <MemoryRouter>

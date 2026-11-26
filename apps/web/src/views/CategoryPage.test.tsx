@@ -73,9 +73,31 @@ describe('CategoryPage', () => {
     expect(screen.getByText('در حال بارگذاری...')).toBeInTheDocument()
 
     expect(await screen.findByRole('heading', { name: 'ابزار برقی' })).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /دریل چکشی رونیکس/ })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /^دریل چکشی رونیکس$/ })).toBeInTheDocument()
     expect(screen.getByText('۱ کالا')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'خانه' })).toHaveAttribute('href', '/')
+  })
+
+  it('maps mobile sorting to catalog sort keys and filters unavailable items on the fetched page', async () => {
+    const first = result().items[0]
+    const unavailable = { ...first, id: 'p-102', slug: 'unavailable', name: 'کالای ناموجود', stockStatus: 'OUT_OF_STOCK' as const, price: { amount: '10000000', currency: 'IRR' as const } }
+    const listProducts = vi.fn(async () => ({ items: [first, unavailable], meta: { page: 1, perPage: 24, total: 2, pages: 1 } }))
+    renderCategory(CATEGORY.slug, stubCatalog({ listProducts }))
+    await screen.findByRole('link', { name: /^دریل چکشی رونیکس$/ })
+    expect(screen.getByText('۲ محصول')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'پرفروش‌ترین' }))
+    await screen.findByRole('link', { name: /^دریل چکشی رونیکس$/ })
+    expect(listProducts).toHaveBeenLastCalledWith({ categorySlug: CATEGORY.slug, sortBy: 'popular' })
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'فقط کالاهای موجود' }))
+    expect(screen.queryByRole('link', { name: /^کالای ناموجود$/ })).not.toBeInTheDocument()
+    expect(screen.getByText('۱ محصول')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'ارزان‌ترین' }))
+    await screen.findByRole('link', { name: /^دریل چکشی رونیکس$/ })
+    expect(listProducts).toHaveBeenLastCalledWith({ categorySlug: CATEGORY.slug, sortBy: 'price_asc' })
+    expect(screen.getByText('مرتب‌سازی قیمت روی کالاهای همین صفحه اعمال شده است.')).toBeInTheDocument()
   })
 
   it('falls back to a generic title and empty hint for an unknown category', async () => {
@@ -145,7 +167,7 @@ describe('CategoryPage', () => {
     const breadcrumb = screen.getByRole('navigation', { name: 'مسیر دسته‌بندی' })
     expect(within(breadcrumb).getByRole('link', { name: CATEGORY.name })).toHaveAttribute('href', '/categories/power-tools')
     expect(within(breadcrumb).getByRole('link', { name: child.name })).toHaveAttribute('href', '/categories/drills')
-    expect(await screen.findByRole('link', { name: /دریل چکشی رونیکس/ })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /^دریل چکشی رونیکس$/ })).toBeInTheDocument()
   })
 
   it('re-fetches when the slug route parameter changes', async () => {

@@ -2,14 +2,20 @@ import { DOOR_PROFILE_COLORS, DOOR_SIDES } from "@iranyaragh/contracts";
 import type { ManufacturingEntry } from "./manufacturing-entry";
 const fieldStyle =
   "mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm";
+type Side = ManufacturingEntry["handleSide"];
+function opposite(side: Side): Side {
+  return ({ LEFT: "RIGHT", RIGHT: "LEFT", TOP: "BOTTOM", BOTTOM: "TOP", "": "" } as const)[side];
+}
 export function DoorManufacturingFields({
   value,
   heightMm,
   onChange,
+  handleImages,
 }: {
   value: ManufacturingEntry;
   heightMm: number;
   onChange: (value: ManufacturingEntry) => void;
+  handleImages?: Partial<Record<"L" | "45", string>>;
 }) {
   const maximum = heightMm > 0 ? (heightMm / 10).toLocaleString("fa-IR") : null;
   return (
@@ -47,13 +53,15 @@ export function DoorManufacturingFields({
               required
               className={fieldStyle}
               value={value[key]}
-              onChange={(event) =>
-                onChange({ ...value, [key]: event.target.value })
-              }
+              onChange={(event) => {
+                const selected = event.target.value as Side;
+                const other = key === "handleSide" ? "hingeSide" : "handleSide";
+                onChange({ ...value, [key]: selected, ...(selected && selected === value[other] ? { [other]: opposite(selected) } : {}) });
+              }}
             >
               <option value="">انتخاب کنید</option>
               {Object.entries(DOOR_SIDES).map(([side, label]) => (
-                <option key={side} value={side}>
+                <option key={side} value={side} disabled={side === value[key === "handleSide" ? "hingeSide" : "handleSide"]}>
                   {label}
                 </option>
               ))}
@@ -61,6 +69,19 @@ export function DoorManufacturingFields({
           </label>
         ))}
       </div>
+      <fieldset className="mt-4">
+        <legend className="text-sm font-bold">مدل دستگیره</legend>
+        <div className="mt-2 grid grid-cols-2 gap-3">
+          {(["L", "45"] as const).map((handleModel) => (
+            <label key={handleModel} className={`cursor-pointer rounded-xl border p-3 text-center text-sm ${value.handleModel === handleModel ? "border-orange-600 bg-orange-50" : "border-slate-200"}`}>
+              <input type="radio" name="door-handle-model" className="sr-only" checked={value.handleModel === handleModel} onChange={() => onChange({ ...value, handleModel })} />
+              <img src={handleImages?.[handleModel] ?? `/images/doors/handle-${handleModel === "L" ? "l" : "45"}.svg`} alt={`تصویر دستگیره ${handleModel === "L" ? "L" : "۴۵ درجه"}`} className="mx-auto mb-2 h-20 w-full object-contain" />
+              دستگیره {handleModel === "L" ? "L" : "۴۵ درجه"}
+              {!handleImages?.[handleModel] && <span className="mt-1 block text-xs text-slate-500">طرح نمونه؛ تصویر واقعی ثبت نشده</span>}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <label className="mt-4 block text-sm font-bold">
         حالت سوراخ‌کاری
         <select

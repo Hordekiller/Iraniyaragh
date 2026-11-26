@@ -67,7 +67,7 @@ describe('HomePage', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('در حال دریافت کاتالوگ')
     expect(await screen.findByRole('link', { name: 'یراق کابینت' })).toHaveAttribute('href', '/categories/cabinet')
-    expect(screen.getAllByRole('link', { name: /کالای منتشرشده/ })[0]).toHaveAttribute('href', '/products/published-product')
+    expect(screen.getAllByRole('link', { name: /^کالای منتشرشده$/ })[0]).toHaveAttribute('href', '/products/published-product')
     expect(screen.getByRole('region', { name: 'جدیدترین یراق کابینت' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'کالاهای بعدی در جدیدترین یراق کابینت' })).toBeInTheDocument()
     expect(listProducts).toHaveBeenCalledWith({ categoryId: 'category-1', sortBy: 'newest', perPage: 8 })
@@ -101,7 +101,7 @@ describe('HomePage', () => {
     expect(screen.getByRole('region', { name: 'محصولات یراق کابینت' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'تلاش دوباره' }))
     await waitFor(() => expect(listProducts).toHaveBeenCalledTimes(2))
-    expect(await screen.findAllByRole('link', { name: /کالای منتشرشده/ })).toHaveLength(1)
+    expect(await screen.findAllByRole('link', { name: /^کالای منتشرشده$/ })).toHaveLength(1)
   })
 
   it('refreshes configured category products when returning from publishing in another tab', async () => {
@@ -111,7 +111,7 @@ describe('HomePage', () => {
     renderHome(catalogApi({ listProducts }))
     await waitFor(() => expect(listProducts).toHaveBeenCalledTimes(1))
     fireEvent.focus(window)
-    expect(await screen.findByRole('link', { name: /کالای منتشرشده/ })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /^کالای منتشرشده$/ })).toBeInTheDocument()
     expect(listProducts).toHaveBeenCalledWith({ categoryId: 'category-1', sortBy: 'newest', perPage: 8 })
   })
 
