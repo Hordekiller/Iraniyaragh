@@ -6,15 +6,16 @@ import { CategoryGrid } from '../components/catalog/CategoryGrid'
 import { CategoryChips } from '../components/catalog/CategoryChips'
 import { CategoryMobileListing } from '../components/catalog/CategoryMobileListing'
 import { brands, categories, eligibility, products } from './catalog'
-import { entityPath, hasNonPageQuery, metadataFor, pageNumber, type SearchParams, validSlug } from './policy'
+import { decodedRouteSlug, entityPath, hasNonPageQuery, metadataFor, pageNumber, type SearchParams } from './policy'
 import { JsonLd, breadcrumb, collectionJsonLd } from './structured-data'
 import { categoryAncestors } from './category-ancestors'
 
 type Kind = 'categories' | 'brands' | 'catalog'
 export async function collectionData(kind: Kind, slug: string, query: SearchParams) {
   const page = pageNumber(query)
-  if (!page || (kind !== 'catalog' && !validSlug(slug))) notFound()
-  return collectionSnapshot(kind, slug, page, hasNonPageQuery(query))
+  const decodedSlug = kind === 'catalog' ? '' : decodedRouteSlug(slug)
+  if (!page || decodedSlug === null) notFound()
+  return collectionSnapshot(kind, decodedSlug, page, hasNonPageQuery(query))
 }
 // Primitive request-local keys coalesce metadata and page reads without a cross-request cache.
 const collectionSnapshot = cache(async (kind: Kind, slug: string, page: number, filtered: boolean) => {
