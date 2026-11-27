@@ -8,7 +8,7 @@ type Choice = 'accepted' | 'rejected' | 'pending' | 'loading'
 
 declare global {
   interface Window {
-    dataLayer?: unknown[][]
+    dataLayer?: unknown[]
     gtag?: (...args: unknown[]) => void
   }
 }
@@ -66,7 +66,10 @@ export function AnalyticsTracker() {
       return
     }
     window.dataLayer ??= []
-    window.gtag ??= (...args: unknown[]) => { window.dataLayer?.push(args) }
+    // Google tag commands are queued as Arguments objects, as in the official
+    // gtag snippet. Plain arrays are not the same data-layer command format.
+    // eslint-disable-next-line prefer-rest-params -- gtag.js requires the native Arguments object.
+    window.gtag ??= function gtag() { window.dataLayer?.push(arguments) }
     const existing = document.getElementById('iraniyaragh-ga4')
     if (existing) {
       if (existing.dataset.loaded === 'true' && !configured) queueMicrotask(() => { if (configureTag()) setConfigured(true) })
