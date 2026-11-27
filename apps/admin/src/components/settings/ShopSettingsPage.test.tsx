@@ -35,4 +35,70 @@ describe('shop editor', () => {
     expect(moveItem(['a', 'b', 'c'], 0, 2)).toEqual(['b', 'c', 'a']);
     expect(moveItem(['a', 'b'], 0, -1)).toEqual(['a', 'b']);
   });
+  it('edits shop slides and collections without touching homepage settings', async () => {
+    render(<ShopSettingsPage />);
+    await screen.findByLabelText('عنوان بخش');
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن اسلاید' }));
+    fireEvent.change(screen.getByLabelText('عنوان', { exact: true }), { target: { value: 'فروش ویژه ابزار' } });
+    fireEvent.change(screen.getByLabelText('متن جایگزین تصویر'), { target: { value: 'تصویر ابزار' } });
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن بنر' }));
+    fireEvent.click(screen.getByRole('button', { name: 'افزودن مجموعه' }));
+    await screen.findByLabelText('جستجوی کالای منتشرشده');
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره و انتشار' }));
+    await waitFor(() => expect(saveShop).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(saveShop).mock.calls[0]?.[0]).toMatchObject({
+      expectedVersion: 4,
+      hero: [{ title: 'فروش ویژه ابزار', imageAlt: 'تصویر ابزار' }],
+      banners: [{}],
+      sections: [{ kind: 'newest' }, { kind: 'manual' }],
+    });
+  });
+  it('reorders sections with the accessible controls and removes an optional section', async () => {
+    vi.mocked(readShop).mockResolvedValueOnce({ ...config, sections: [
+      config.sections[0]!, { ...config.sections[0]!, id: 'offers', kind: 'offers', title: 'پیشنهادها' },
+    ] });
+    render(<ShopSettingsPage />);
+    await screen.findByRole('button', { name: 'جابه‌جایی پیشنهادها' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'انتقال به بالا' })[1]!);
+    fireEvent.click(screen.getAllByRole('button', { name: /^حذف$/u })[1]!);
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره و انتشار' }));
+    await waitFor(() => expect(saveShop).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(saveShop).mock.calls[0]?.[0].sections.map(section => section.id)).toEqual(['offers']);
+  });
+  it('offers a retry after a failed settings read', async () => {
+    vi.mocked(readShop).mockRejectedValueOnce(new Error('offline'));
+    render(<ShopSettingsPage />);
+    await screen.findByText('دریافت تنظیمات انجام نشد.');
+    fireEvent.click(screen.getByRole('button', { name: 'دریافت دوبارهٔ تنظیمات' }));
+    await screen.findByLabelText('عنوان بخش');
+    expect(readShop).toHaveBeenCalledTimes(2);
+  });
+  it('updates section copy, visibility and count before publishing', async () => {
+    render(<ShopSettingsPage />);
+    await screen.findByLabelText('عنوان بخش');
+    fireEvent.change(screen.getByLabelText('عنوان بخش'), { target: { value: 'تازه‌ها' } });
+    fireEvent.change(screen.getByLabelText('توضیح بخش'), { target: { value: 'کالاهای تازه افزوده‌شده' } });
+    fireEvent.change(screen.getByLabelText('تعداد نمایش'), { target: { value: '6' } });
+    fireEvent.click(screen.getByRole('switch', { name: 'نمایش بخش' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره و انتشار' }));
+    await waitFor(() => expect(saveShop).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(saveShop).mock.calls[0]?.[0].sections[0]).toMatchObject({
+      title: 'تازه‌ها', description: 'کالاهای تازه افزوده‌شده', limit: 6, enabled: false,
+    });
+  });
+  it('supports section reordering by drag and drop', async () => {
+    vi.mocked(readShop).mockResolvedValueOnce({ ...config, sections: [
+      config.sections[0]!, { ...config.sections[0]!, id: 'offers', kind: 'offers', title: 'پیشنهادها' },
+    ] });
+    render(<ShopSettingsPage />);
+    const handle = await screen.findByRole('button', { name: 'جابه‌جایی پیشنهادها' });
+    const destination = screen.getByRole('button', { name: 'جابه‌جایی جدیدترین' }).closest('.MuiPaper-root')!;
+    fireEvent.dragStart(handle);
+    fireEvent.dragOver(destination);
+    fireEvent.drop(destination);
+    fireEvent.dragEnd(handle);
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره و انتشار' }));
+    await waitFor(() => expect(saveShop).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(saveShop).mock.calls[0]?.[0].sections.map(section => section.id)).toEqual(['offers', 'new']);
+  });
 });
