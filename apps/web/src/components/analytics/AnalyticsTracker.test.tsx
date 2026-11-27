@@ -24,17 +24,19 @@ describe('AnalyticsTracker consent', () => {
       expect(found).not.toBeNull()
       return found!
     })
-    fireEvent.load(script)
-
-    await waitFor(() => expect(window.dataLayer?.length).toBeGreaterThanOrEqual(4))
+    await waitFor(() => expect(window.dataLayer?.some(command => (command as IArguments)[0] === 'event')).toBe(true))
     const commands = window.dataLayer as IArguments[]
     expect(commands.every(command => Object.prototype.toString.call(command) === '[object Arguments]')).toBe(true)
+    expect(commands.slice(0, 3).map(command => command[0])).toEqual(['js', 'consent', 'config'])
+    expect(script.dataset.configured).toBe('true')
     expect(Array.from(commands.find(command => command[0] === 'config')!)).toEqual([
       'config', ANALYTICS_MEASUREMENT_ID, expect.objectContaining({ send_page_view: false }),
     ])
     expect(Array.from(commands.find(command => command[0] === 'event')!)).toEqual([
       'event', 'page_view', expect.objectContaining({ page_path: '/products/hinge' }),
     ])
+    fireEvent.load(script)
+    expect(commands.filter(command => command[0] === 'event')).toHaveLength(1)
   })
 
   it('loads no remote tag before consent or after rejection', async () => {
@@ -54,11 +56,12 @@ describe('AnalyticsTracker consent', () => {
       expect(found).not.toBeNull()
       return found!
     })
+    await waitFor(() => expect(window.dataLayer?.some(command => (command as IArguments)[0] === 'event')).toBe(true))
+    expect((window.dataLayer as IArguments[]).find(command => command[0] === 'event')?.[2]).toEqual(expect.objectContaining({ page_path: '/products/hinge' }))
     const calls = vi.fn()
     window.gtag = calls
     fireEvent.load(script)
-    await waitFor(() => expect(calls).toHaveBeenCalledWith('event', 'page_view', expect.objectContaining({ page_path: '/products/hinge' })))
-    expect(JSON.stringify(calls.mock.calls)).not.toContain('query=')
+    expect(calls).not.toHaveBeenCalledWith('event', 'page_view', expect.anything())
 
     calls.mockClear()
     route.pathname = '/checkout'
@@ -70,6 +73,7 @@ describe('AnalyticsTracker consent', () => {
     route.pathname = '/products/hinge'
     rerender(<AnalyticsTracker />)
     await waitFor(() => expect(calls).toHaveBeenCalledWith('event', 'page_view', expect.objectContaining({ page_path: '/products/hinge' })))
+    expect(JSON.stringify(calls.mock.calls)).not.toContain('query=')
     window.dispatchEvent(new Event(CONSENT_EVENT))
   })
 })
