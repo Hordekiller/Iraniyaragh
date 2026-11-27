@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AnalyticsTracker } from './AnalyticsTracker'
-import { CONSENT_EVENT, CONSENT_KEY } from './analytics-policy'
+import { ANALYTICS_MEASUREMENT_ID, CONSENT_EVENT, CONSENT_KEY } from './analytics-policy'
 
 const route = vi.hoisted(() => ({ pathname: '/products/hinge' }))
 vi.mock('next/navigation', () => ({ usePathname: () => route.pathname }))
@@ -16,6 +16,27 @@ beforeEach(() => {
 afterEach(() => document.getElementById('iraniyaragh-ga4')?.remove())
 
 describe('AnalyticsTracker consent', () => {
+  it('queues Google tag commands in the supported Arguments format after consent', async () => {
+    render(<AnalyticsTracker />)
+    fireEvent.click(await screen.findByRole('button', { name: 'می‌پذیرم' }))
+    const script = await waitFor(() => {
+      const found = document.getElementById('iraniyaragh-ga4')
+      expect(found).not.toBeNull()
+      return found!
+    })
+    fireEvent.load(script)
+
+    await waitFor(() => expect(window.dataLayer?.length).toBeGreaterThanOrEqual(4))
+    const commands = window.dataLayer as IArguments[]
+    expect(commands.every(command => Object.prototype.toString.call(command) === '[object Arguments]')).toBe(true)
+    expect(Array.from(commands.find(command => command[0] === 'config')!)).toEqual([
+      'config', ANALYTICS_MEASUREMENT_ID, expect.objectContaining({ send_page_view: false }),
+    ])
+    expect(Array.from(commands.find(command => command[0] === 'event')!)).toEqual([
+      'event', 'page_view', expect.objectContaining({ page_path: '/products/hinge' }),
+    ])
+  })
+
   it('loads no remote tag before consent or after rejection', async () => {
     render(<AnalyticsTracker />)
     expect(await screen.findByRole('dialog', { name: 'انتخاب آمار بازدید' })).toBeInTheDocument()
