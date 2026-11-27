@@ -113,7 +113,7 @@ describe.sequential('Dedicated shop PostgreSQL invariants', () => {
       declaredMime: 'image/webp', declaredBytes: 100n, altText: 'Orphan image',
       createdById: actor, uploadExpiresAt: new Date(), createdAt: old,
     } })).id;
-    const storage = { deleteObject: async () => {} } as ProductMediaStorage;
+    const storage = { deleteObject: async () => {} } as unknown as ProductMediaStorage;
     await new ProductMediaCleanupService(prisma, storage).sweep();
     expect((await prisma.productMedia.findUniqueOrThrow({ where: { id: orphan } })).state).toBe('ARCHIVED');
     expect((await prisma.productMedia.findUniqueOrThrow({ where: { id: media } })).state).toBe('READY');
