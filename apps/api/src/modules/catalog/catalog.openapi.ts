@@ -37,6 +37,7 @@ const publicProductItem: SchemaObject = {
     createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' },
     primaryMedia: { ...publicImage, nullable: true },
     stockStatus: { type: 'string', enum: ['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK', 'UNKNOWN'] },
+    previousPrice: { type: 'object', nullable: true, description: 'Verified prior price for the cheapest active variant, only when reduced.', properties: { amount: { type: 'string' }, currency: { type: 'string', enum: ['IRR'] } } },
     startingPrice: { type: 'object', nullable: true, properties: { amount: { type: 'string' }, currency: { type: 'string', enum: ['IRR'] } } },
   },
 };

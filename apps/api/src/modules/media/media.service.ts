@@ -104,7 +104,7 @@ export class MediaService {
   /** Batch only explicitly selected READY image references; never expose source keys. */
   async publicImageReferences(ids: readonly string[], tx: Prisma.TransactionClient = this.prisma): Promise<AdminProductMediaPickerItem[]> {
     if (!ids.length) return [];
-    const rows = await tx.productMedia.findMany({ where: { id: { in: [...new Set(ids)] }, state: "READY", kind: "IMAGE" }, include: { renditions: true } });
+    const rows = await tx.productMedia.findMany({ where: { id: { in: [...new Set(ids)] }, assetScope: "PRODUCT", state: "READY", kind: "IMAGE" }, include: { renditions: true } });
     const origin = this.config?.get("PUBLIC_MEDIA_ORIGIN", { infer: true }) ?? "http://localhost:9000/products";
     return rows.flatMap(row => { const image = pickerImage(row, origin); return image ? [image] : []; });
   }
@@ -285,7 +285,7 @@ export class MediaService {
     };
   }
 
-  async confirmUpload(actorId: string, idempotencyKey: string, productId: string, mediaId: string, input: ProductMediaConfirmDto): Promise<ProductMediaConfirmResponse> {
+  async confirmUpload(actorId: string, idempotencyKey: string, productId: string | null, mediaId: string, input: ProductMediaConfirmDto): Promise<ProductMediaConfirmResponse> {
     const current = await this.prisma.productMedia.findFirst({
       where: { id: mediaId, productId },
     });

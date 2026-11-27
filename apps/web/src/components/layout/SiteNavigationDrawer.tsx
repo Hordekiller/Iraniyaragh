@@ -1,21 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowLeft, BookOpen, ChevronLeft, Home, LayoutGrid, LoaderCircle, Package, PackageSearch, Search, ShoppingBag, TrendingUp, UserRound, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, ChevronLeft, Heart, Home, LayoutGrid, LoaderCircle, Package, PackageSearch, Search, ShoppingBag, Store, TrendingUp, UserRound, X } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
 import { useHasBlog } from '../../lib/blog-nav-context'
 import { toPersianDigits } from '../../lib/format'
 import type { CatalogCategory } from '../../services/catalog/types'
 import { useCatalogApi } from '../../state/catalog-context'
 import { StoreBrandLogo } from '../brand/StoreBrandLogo'
+import { useShopNavigation } from '../../lib/shop-navigation'
 
 const pageLinks = [
   { to: ROUTES.home, label: 'صفحه اصلی', detail: 'ویترین فروشگاه', icon: Home },
+  { to: ROUTES.shop, label: 'فروشگاه', detail: 'خرید ابزار و یراق‌آلات', icon: Store },
   { to: ROUTES.search, label: 'همه کالاها', detail: 'جستجو و انتخاب', icon: Search },
   { to: ROUTES.bestsellers, label: 'پرفروش‌ها', detail: 'انتخاب خریداران', icon: TrendingUp },
   { to: ROUTES.orders, label: 'سفارش‌های من', detail: 'مشاهده و پیگیری', icon: PackageSearch },
   { to: ROUTES.cart, label: 'سبد خرید', detail: 'ادامه خرید شما', icon: ShoppingBag },
   { to: ROUTES.account, label: 'حساب کاربری', detail: 'اطلاعات و نشانی‌ها', icon: UserRound },
+]
+const shopLinks = [
+  { to: ROUTES.shop, label: 'فروشگاه', detail: 'شروع خرید', icon: Store },
+  { to: ROUTES.categories, label: 'دسته‌بندی‌ها', detail: 'پیدا کردن کالا', icon: LayoutGrid },
+  { to: ROUTES.cart, label: 'سبد خرید', detail: 'ادامه خرید', icon: ShoppingBag },
+  { to: ROUTES.wishlist, label: 'علاقه‌مندی‌ها', detail: 'کالاهای نشان‌شده', icon: Heart },
+  { to: ROUTES.account, label: 'حساب کاربری', detail: 'سفارش‌ها و نشانی‌ها', icon: UserRound },
+  { to: ROUTES.home, label: 'سایت اصلی', detail: 'بازگشت به خانه', icon: Home },
 ]
 
 function normalize(value: string) {
@@ -46,7 +56,8 @@ function CategoryBranch({ category, childrenByParent, ancestors, onNavigate }: {
 
 export function SiteNavigationDrawer({ onClose }: { onClose: () => void }) {
   const hasBlog = useHasBlog()
-  const navigationLinks = hasBlog ? [...pageLinks, { to: ROUTES.blog, label: 'مقالات و راهنماها', detail: 'خواندن مطالب فروشگاه', icon: BookOpen }] : pageLinks
+  const shopMode = useShopNavigation()
+  const navigationLinks = shopMode ? shopLinks : hasBlog ? [...pageLinks, { to: ROUTES.blog, label: 'مقالات و راهنماها', detail: 'خواندن مطالب فروشگاه', icon: BookOpen }] : pageLinks
   const api = useCatalogApi()
   const { pathname } = useLocation()
   const dialogRef = useRef<HTMLDialogElement>(null)

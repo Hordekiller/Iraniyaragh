@@ -87,7 +87,7 @@ describe("Door catalog safeguards and revision evidence", () => {
     expect(s.db.doorMaterial.upsert).not.toHaveBeenCalled();
     s.db.productMedia.findFirst.mockResolvedValue({ id: "glass-image" });
     await expect(s.service.writeMaterial("staff", "request", f.materialInput)).resolves.toBe("test-material");
-    expect(s.db.productMedia.findFirst).toHaveBeenCalledWith({ where: { id: "glass-image", state: "READY", kind: "IMAGE" }, select: { id: true } });
+    expect(s.db.productMedia.findFirst).toHaveBeenCalledWith({ where: { id: "glass-image", assetScope: "PRODUCT", state: "READY", kind: "IMAGE" }, select: { id: true } });
     expect(s.db.doorCatalogRevision.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ entityType: "MATERIAL", actorId: "staff" }) }));
   });
   it("projects glass photos and original dimensions only through the ready-media projection", async () => {

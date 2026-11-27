@@ -1,3 +1,7 @@
+import { WishlistController } from './wishlist.controller';
+import { WishlistService } from './wishlist.service';
+import { ShopController } from './shop.controller';
+import { ShopService } from './shop.service';
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogController } from './catalog.controller';
@@ -15,5 +19,5 @@ import { StorefrontContactsService } from './storefront-contacts.service';
 import { HomepageHeroController } from './homepage-hero.controller';
 import { HomepageHeroService } from './homepage-hero.service';
 
-@Module({ imports: [AuditModule], controllers: [CatalogController, HomepageCollectionsController, HomepageBannersController, HomepageHeroController, StorefrontHelperController, StorefrontContactsController], providers: [CatalogService, CatalogIdempotencyService, CatalogImportService, HomepageCollectionsService, HomepageBannersService, HomepageHeroService, StorefrontHelperService, StorefrontContactsService], exports: [CatalogService, CatalogImportService, CatalogIdempotencyService] })
+@Module({ imports: [AuditModule], controllers: [WishlistController, ShopController, CatalogController, HomepageCollectionsController, HomepageBannersController, HomepageHeroController, StorefrontHelperController, StorefrontContactsController], providers: [WishlistService, ShopService, CatalogService, CatalogIdempotencyService, CatalogImportService, HomepageCollectionsService, HomepageBannersService, HomepageHeroService, StorefrontHelperService, StorefrontContactsService], exports: [CatalogService, CatalogImportService, CatalogIdempotencyService] })
 export class CatalogModule {}

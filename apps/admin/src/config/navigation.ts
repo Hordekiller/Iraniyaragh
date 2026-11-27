@@ -152,6 +152,7 @@ export const navigation: NavigationGroup[] = [
       { label: 'مهلت مرجوعی و تعطیلات', href: '/settings/returns', icon: CalendarX2, permission: 'settings.manage' },
       { label: 'تنظیمات فاکتور', href: '/settings/invoices', icon: ReceiptText, permission: 'settings.manage' },
       { label: 'روش هزینهٔ انبار', href: '/settings/inventory-cost', icon: Warehouse, permission: 'settings.manage' },
+      { label: 'مدیریت فروشگاه', href: '/settings/shop', icon: ShoppingBag, permission: 'settings.manage' },
       { label: 'چیدمان صفحهٔ اصلی', href: '/settings/homepage', icon: Settings2, permission: 'settings.manage' },
       { label: 'بنرهای تبلیغاتی', href: '/settings/banners', icon: Settings2, permission: 'settings.manage' },
       { label: 'اسلایدر بالای صفحه', href: '/settings/hero', icon: Settings2, permission: 'settings.manage' },

@@ -7,6 +7,7 @@ const CustomDoorsPage = lazy(() => import('../../views/CustomDoorsPage').then(mo
 const AccountCustomDoorsPage = lazy(() => import('../../views/AccountCustomDoorsPage').then(module => ({ default: module.AccountCustomDoorsPage })))
 const SearchPage = lazy(() => import('../../views/SearchPage').then(module => ({ default: module.SearchPage })))
 const BestsellersPage = lazy(() => import('../../views/BestsellersPage').then(module => ({ default: module.BestsellersPage })))
+const WishlistPage = lazy(() => import('../../views/WishlistPage').then(module => ({ default: module.WishlistPage })))
 const CartPage = lazy(() => import('../../views/CartPage').then(module => ({ default: module.CartPage })))
 const CheckoutPage = lazy(() => import('../../views/CheckoutPage').then(module => ({ default: module.CheckoutPage })))
 const PaymentPage = lazy(() => import('../../views/PaymentPage').then(module => ({ default: module.PaymentPage })))
@@ -30,6 +31,7 @@ export default function PrivateRoutes() {
                       <Route path={ROUTE_PATHS.customDoorOrder} element={<AccountCustomDoorsPage />} />
                       <Route path={ROUTE_PATHS.search} element={<SearchPage />} />
                       <Route path={ROUTE_PATHS.bestsellers} element={<BestsellersPage />} />
+                      <Route path={ROUTE_PATHS.wishlist} element={<WishlistPage />} />
                       <Route path={ROUTE_PATHS.cart} element={<CartPage />} />
                       <Route path={ROUTE_PATHS.checkout} element={<CheckoutPage />} />
                       <Route path={ROUTE_PATHS.payment} element={<PaymentPage />} />

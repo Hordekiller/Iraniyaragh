@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { ToastProvider } from '../feedback/Toast'
 import { CatalogProvider } from '../../state/CatalogProvider'
 import type { CatalogApi, CatalogListResult, CatalogProduct } from '../../services/catalog/types'
 import { CategoryMobileListing } from './CategoryMobileListing'
@@ -20,32 +21,16 @@ const result: CatalogListResult = { items: [first, second], meta: { page: 1, per
 function setup() {
   const listProducts = vi.fn(async () => result)
   const api = { listProducts } as unknown as CatalogApi
-  render(<MemoryRouter><CatalogProvider api={api}><CategoryMobileListing categoryId="category-1" page={1} initialResult={result} /></CatalogProvider></MemoryRouter>)
+  render(<MemoryRouter><ToastProvider><CatalogProvider api={api}><CategoryMobileListing categoryId="category-1" page={1} initialResult={result} /></CatalogProvider></ToastProvider></MemoryRouter>)
   return listProducts
 }
 
 describe('CategoryMobileListing', () => {
-  it('uses current meta for total and filters only fetched unavailable products', () => {
-    setup()
-    expect(screen.getByText('۲ محصول')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'فقط کالاهای موجود' }))
-    expect(screen.queryByRole('link', { name: 'کالای ناموجود' })).not.toBeInTheDocument()
-    expect(screen.getByText('۱ محصول')).toBeInTheDocument()
-    expect(screen.getByText('فیلتر موجودی روی کالاهای همین صفحه اعمال شده است.')).toBeInTheDocument()
-  })
-
-  it('requests popular ordering with the existing catalog sort key', async () => {
-    const listProducts = setup()
-    fireEvent.click(screen.getByRole('button', { name: 'پرفروش‌ترین' }))
-    await waitFor(() => expect(listProducts).toHaveBeenCalledWith({ categoryId: 'category-1', page: 1, perPage: 24, sortBy: 'popular' }))
-  })
-
-  it('orders the fetched page by integer price without a new API parameter', () => {
-    const listProducts = setup()
-    fireEvent.click(screen.getByRole('button', { name: 'ارزان‌ترین' }))
-    expect(listProducts).not.toHaveBeenCalled()
-    const names = screen.getAllByRole('heading', { level: 3 }).map(heading => heading.textContent)
-    expect(names).toEqual(['کالای ناموجود', 'کالای موجود'])
-    expect(screen.getByText('مرتب‌سازی قیمت روی کالاهای همین صفحه اعمال شده است.')).toBeInTheDocument()
+  it('renders the server order and total without a second page-local filter', () => {
+    const request = setup()
+    expect(screen.getByText('۲ کالا')).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 3 }).map(item => item.textContent)).toEqual(['کالای موجود', 'کالای ناموجود'])
+    expect(request).not.toHaveBeenCalled()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   })
 })

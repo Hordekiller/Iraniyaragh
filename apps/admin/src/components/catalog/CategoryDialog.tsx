@@ -14,6 +14,7 @@ import {
   TextField,
 } from '@mui/material';
 import type { CategorySummary } from '@iranyaragh/contracts';
+import { CatalogImageFields, emptyImage, type ImageFields } from './CatalogImageFields';
 import { ApiClientError } from '@/lib/api/client';
 import { createCategory, createIdempotencyKey, updateCategory } from '@/lib/catalog/catalog-api';
 import { categoryDescendants, categoryPaths } from '@/lib/catalog/category-hierarchy';
@@ -34,6 +35,7 @@ type CategoryDialogProps = {
 
 export function CategoryDialog({ open, onClose, categories, category, initialParentId, onSaved }: CategoryDialogProps) {
   const feedback = useFeedback();
+  const [image, setImage] = useState<ImageFields>(emptyImage);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [parentId, setParentId] = useState('');
@@ -44,6 +46,7 @@ export function CategoryDialog({ open, onClose, categories, category, initialPar
 
   useEffect(() => {
     if (open) {
+      setImage({ imageAssetId: category?.imageAssetId ?? null, imageAlt: category?.imageAlt ?? '', shopOrder: category?.shopOrder ?? 0, shopFeatured: category?.shopFeatured ?? false });
       setName(category?.name ?? '');
       setSlug(category?.slug ?? '');
       setParentId(category?.parentId ?? initialParentId ?? '');
@@ -76,7 +79,7 @@ export function CategoryDialog({ open, onClose, categories, category, initialPar
       let saved: CategorySummary;
       if (category) {
         saved = { ...(await updateCategory(category.id, {
-          name: name.trim(),
+          ...image, name: name.trim(),
           slug: slug.trim(),
           parentId: parentId || null,
         })).category, productCount: category.productCount };
@@ -84,7 +87,7 @@ export function CategoryDialog({ open, onClose, categories, category, initialPar
       } else {
         idempotencyKey.current ??= createIdempotencyKey('catalog-category');
         saved = { ...(await createCategory({
-          name: name.trim(),
+          ...image, name: name.trim(),
           slug: slug.trim(),
           ...(parentId ? { parentId } : {}),
         }, idempotencyKey.current)).category, productCount: 0 };
@@ -161,6 +164,7 @@ export function CategoryDialog({ open, onClose, categories, category, initialPar
               ))}
             </Select>
           </FormField>
+          <CatalogImageFields value={image} disabled={submitting} onChange={value => { idempotencyKey.current = null; setImage(value); }} />
         </Stack>
       </DialogContent>
       <DialogActions>

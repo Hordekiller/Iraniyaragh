@@ -11,6 +11,7 @@ import {
   Stack,
   TextField,
 } from '@mui/material';
+import { CatalogImageFields, emptyImage, type ImageFields } from './CatalogImageFields';
 import { ApiClientError } from '@/lib/api/client';
 import { createBrand, createIdempotencyKey, updateBrand } from '@/lib/catalog/catalog-api';
 import { SLUG_PATTERN } from '@/lib/catalog/catalog-labels';
@@ -28,6 +29,7 @@ type BrandDialogProps = {
 
 export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps) {
   const feedback = useFeedback();
+  const [image, setImage] = useState<ImageFields>(emptyImage);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [errors, setErrors] = useState<{ name?: string; slug?: string }>({});
@@ -37,6 +39,7 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
 
   useEffect(() => {
     if (open) {
+      setImage({ imageAssetId: brand?.imageAssetId ?? null, imageAlt: brand?.imageAlt ?? '', shopOrder: brand?.shopOrder ?? 0, shopFeatured: brand?.shopFeatured ?? false });
       setName(brand?.name ?? '');
       setSlug(brand?.slug ?? '');
       setErrors({});
@@ -63,11 +66,11 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
     try {
       let saved: { id: string; name: string; slug: string };
       if (brand) {
-        saved = (await updateBrand(brand.id, { name: name.trim(), slug: slug.trim() })).brand;
+        saved = (await updateBrand(brand.id, { ...image, name: name.trim(), slug: slug.trim() })).brand;
         feedback.success(`برند «${name.trim()}» به‌روزرسانی شد.`);
       } else {
         idempotencyKey.current ??= createIdempotencyKey('catalog-brand');
-        saved = (await createBrand({ name: name.trim(), slug: slug.trim() }, idempotencyKey.current)).brand;
+        saved = (await createBrand({ ...image, name: name.trim(), slug: slug.trim() }, idempotencyKey.current)).brand;
         feedback.success(`برند «${name.trim()}» ساخته شد.`);
       }
       idempotencyKey.current = null;
@@ -119,6 +122,7 @@ export function BrandDialog({ open, onClose, brand, onSaved }: BrandDialogProps)
                onChange={(event) => { idempotencyKey.current = null; setSlug(event.target.value.toLocaleLowerCase('en-US').replace(/\s+/g, '-')); }}
             />
           </FormField>
+          <CatalogImageFields value={image} disabled={submitting} onChange={value => { idempotencyKey.current = null; setImage(value); }} />
         </Stack>
       </DialogContent>
       <DialogActions>

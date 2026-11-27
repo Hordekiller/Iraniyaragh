@@ -3,6 +3,7 @@ import { ROUTE_PATHS } from './routes'
 const patterns = [
   ROUTE_PATHS.myCustomDoors, ROUTE_PATHS.customDoorOrder,
   ROUTE_PATHS.search, ROUTE_PATHS.bestsellers, ROUTE_PATHS.cart, ROUTE_PATHS.checkout,
+  ROUTE_PATHS.wishlist,
   ROUTE_PATHS.payment, ROUTE_PATHS.paymentResult, ROUTE_PATHS.paymentReturn,
   ROUTE_PATHS.credit, ROUTE_PATHS.invoices, ROUTE_PATHS.invoice, ROUTE_PATHS.account,
   ROUTE_PATHS.addresses, ROUTE_PATHS.notifications, ROUTE_PATHS.sessions, ROUTE_PATHS.orders, ROUTE_PATHS.order,

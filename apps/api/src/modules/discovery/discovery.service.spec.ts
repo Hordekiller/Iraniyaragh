@@ -15,7 +15,7 @@ describe('static sitemap destinations', () => {
     const shard = await service.shard('pages-home.xml.gz');
     const xml = gunzipSync(shard.body).toString('utf8');
     const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/gu)].map(match => match[1]);
-    expect(urls).toEqual(['https://iraniyaragh.com/', 'https://iraniyaragh.com/catalog', 'https://iraniyaragh.com/categories', 'https://iraniyaragh.com/custom-doors', 'https://iraniyaragh.com/help', 'https://iraniyaragh.com/about', 'https://iraniyaragh.com/contact', ...HELP_TOPIC_SLUGS.map(slug => `https://iraniyaragh.com/help/${slug}`)]);
+    expect(urls).toEqual(['https://iraniyaragh.com/', 'https://iraniyaragh.com/shop', 'https://iraniyaragh.com/catalog', 'https://iraniyaragh.com/categories', 'https://iraniyaragh.com/custom-doors', 'https://iraniyaragh.com/help', 'https://iraniyaragh.com/about', 'https://iraniyaragh.com/contact', ...HELP_TOPIC_SLUGS.map(slug => `https://iraniyaragh.com/help/${slug}`)]);
     expect(urls.join('\n')).not.toMatch(/policies|privacy|terms|https:\/\/iraniyaragh\.com\/(?:account|checkout)(?:$|\n)|\?|#/u);
   });
 });

@@ -126,15 +126,15 @@ export class BlogService {
   }
 
   async mediaOptions(): Promise<BlogMediaOption[]> {
-    const rows = await this.prisma.productMedia.findMany({ where: { state: 'READY', kind: 'IMAGE' }, orderBy: { createdAt: 'desc' }, take: 60, include: { renditions: true, product: { select: { name: true } } } });
-    return rows.flatMap(row => { const p = widestRenditionProjection(this.origin, row.renditions); return p ? [{ id: row.id, ...p, alt: row.altText ?? '', productName: row.product.name }] : []; });
+    const rows = await this.prisma.productMedia.findMany({ where: { assetScope: 'PRODUCT', state: 'READY', kind: 'IMAGE' }, orderBy: { createdAt: 'desc' }, take: 60, include: { renditions: true, product: { select: { name: true } } } });
+    return rows.flatMap(row => { const p = widestRenditionProjection(this.origin, row.renditions); return p ? [{ id: row.id, ...p, alt: row.altText ?? '', productName: row.product?.name ?? row.originalFilename }] : []; });
   }
 
   // ── Admin writes ──────────────────────────────────────────────────────────
 
   private async assertCover(tx: Tx, input: ValidatedBlogInput): Promise<void> {
     if (!input.coverMediaId) return;
-    const media = await tx.productMedia.findFirst({ where: { id: input.coverMediaId, state: 'READY', kind: 'IMAGE' }, select: { id: true } });
+    const media = await tx.productMedia.findFirst({ where: { id: input.coverMediaId, assetScope: 'PRODUCT', state: 'READY', kind: 'IMAGE' }, select: { id: true } });
     if (!media) throw new BadRequestException({ code: 'INVALID_MEDIA', message: 'The cover must be a ready, processed image.' });
   }
 
@@ -142,7 +142,7 @@ export class BlogService {
   private async withBodyImages(tx: Tx, draft: ValidatedBlogDraft): Promise<ValidatedBlogInput> {
     const { imageIds, ...input } = draft;
     if (!imageIds.length) return input;
-    const rows = await tx.productMedia.findMany({ where: { id: { in: imageIds }, state: 'READY', kind: 'IMAGE' }, include: { renditions: true } });
+    const rows = await tx.productMedia.findMany({ where: { id: { in: imageIds }, assetScope: 'PRODUCT', state: 'READY', kind: 'IMAGE' }, include: { renditions: true } });
     const images = rows.flatMap(row => { const p = widestRenditionProjection(this.origin, row.renditions); return p ? [{ id: row.id, ...p, altText: row.altText }] : []; });
     return { ...input, bodyHtml: rewriteBlogImages(input.bodyHtml, images) };
   }

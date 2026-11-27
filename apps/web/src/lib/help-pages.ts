@@ -50,6 +50,16 @@ const productCards: GuideItem = { target: PRODUCT_LINK, title: 'کالاها', t
 
 export const PAGE_GUIDES: readonly PageGuide[] = [
   {
+    id: 'shop', match: /^\/shop$/u, stage: 'browse', title: 'فروشگاه',
+    summary: 'دسته‌ها، برندها و کالاهای فروشگاه را ببینید یا از جستجو استفاده کنید.',
+    items: [searchItem, productCards, cartItem],
+  },
+  {
+    id: 'wishlist', match: /^\/wishlist$/u, stage: 'browse', title: 'علاقه‌مندی‌ها',
+    summary: 'کالاهای ذخیره‌شده را ببینید و برای بررسی قیمت و موجودی، صفحهٔ کالا را باز کنید.',
+    items: [productCards, accountItem],
+  },
+  {
     id: 'order-detail', match: /^\/orders\/[^/]+$/u, stage: 'track', title: 'جزئیات سفارش',
     summary: 'اقلام، مبالغ، تلاش‌های پرداخت، ارسال و تاریخچهٔ وضعیت این سفارش.',
     items: [

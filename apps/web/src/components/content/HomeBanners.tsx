@@ -21,7 +21,7 @@ export function HomeBanners({ banners, loading = false }: { banners: HomepageBan
     <section className="mt-10 lg:mt-14" aria-label="پیشنهادهای ویژه فروشگاه">
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
         {banners.map((banner, index) => (
-          <li key={banner.id}>
+          <li key={banner.id} data-shop-promotion={banner.id}>
             <BannerLink
               href={banner.href}
               label={`${banner.title}؛ ${banner.ctaLabel}`}

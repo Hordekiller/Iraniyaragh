@@ -10,6 +10,7 @@ import {
   CreateBucketCommand,
   HeadBucketCommand,
   PutBucketPolicyCommand,
+  PutBucketCorsCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 
@@ -67,11 +68,26 @@ async function allowPublicRead() {
   );
 }
 
+async function allowBrowserUploads() {
+  const origins = [...new Set((process.env.CORS_ORIGINS ?? '')
+    .split(',').map(value => value.trim()).filter(Boolean))];
+  if (!origins.length || origins.some(value => {
+    try {
+      const url = new URL(value);
+      return !['http:', 'https:'].includes(url.protocol) || url.origin !== value || !!url.username || !!url.password;
+    } catch { return true; }
+  })) throw new Error('CORS_ORIGINS must contain explicit HTTP(S) origins for browser media uploads.');
+  await client.send(new PutBucketCorsCommand({ Bucket: bucket, CORSConfiguration: {
+    CORSRules: [{ AllowedOrigins: origins, AllowedMethods: ['PUT'], AllowedHeaders: ['*'], ExposeHeaders: ['ETag'], MaxAgeSeconds: 300 }],
+  } }));
+}
+
 try {
   const state = await ensureBucket();
   await allowPublicRead();
+  await allowBrowserUploads();
   console.log(
-    `Object-storage bucket "${bucket}" ${state}; rendition-only public read policy applied.`,
+    `Object-storage bucket "${bucket}" ${state}; rendition-only public read and origin-scoped browser uploads configured.`,
   );
 } catch (error) {
   console.error(

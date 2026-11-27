@@ -148,7 +148,7 @@ describe('CatalogService', () => {
       expect(result.data.items.map(item => item.stockStatus)).toEqual(['LOW_STOCK', 'OUT_OF_STOCK']);
       expect(ctx.prisma.product.findMany).toHaveBeenCalledOnce();
       expect(ctx.prisma.product.findMany).toHaveBeenCalledWith(expect.objectContaining({ include: expect.objectContaining({
-        variants: { where: { isActive: true, status: 'ACTIVE' }, select: { salePrice: true, inventory: { select: { available: true } } } },
+        variants: expect.objectContaining({ where: { isActive: true, status: 'ACTIVE' }, select: expect.objectContaining({ salePrice: true, inventory: { select: { available: true } } }) }),
       }) }));
       expect(JSON.stringify(result)).not.toContain('available');
       expect(JSON.stringify(result)).not.toContain('inventory');
@@ -183,7 +183,7 @@ describe('CatalogService', () => {
       (ctx.prisma.product.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
       await ctx.service.listAdminProducts({ sortBy: 'constructor' as never, sortDir: 'toString' as never });
       expect(ctx.prisma.product.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ orderBy: { createdAt: 'desc' } }),
+        expect.objectContaining({ orderBy: [{ createdAt: 'desc' }, { id: 'asc' }] }),
       );
     });
   });
@@ -340,7 +340,7 @@ describe('CatalogService', () => {
       (ctx.prisma.brand.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([brandRow]);
       const list = await ctx.service.listBrands();
       expect(ctx.prisma.brand.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }),
+        expect.objectContaining({ include: { imageAsset: { include: { renditions: true } }, _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }),
       );
       expect(list.data.items[0]).toMatchObject({ id: 'brand-1', productCount: 2 });
     });
@@ -349,7 +349,7 @@ describe('CatalogService', () => {
       (ctx.prisma.category.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([categoryRow]);
       const list = await ctx.service.listCategories();
       expect(ctx.prisma.category.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }),
+        expect.objectContaining({ include: { imageAsset: { include: { renditions: true } }, _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }),
       );
       expect(list.data.items[0]).toMatchObject({ id: 'cat-1', productCount: 3 });
     });

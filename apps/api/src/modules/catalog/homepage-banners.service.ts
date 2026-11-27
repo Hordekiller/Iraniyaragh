@@ -78,7 +78,7 @@ export class HomepageBannersService {
 
   private async images(ids: string[], client: Pick<PrismaService, 'productMedia'> = this.prisma): Promise<Map<string, HomepageBannerImage>> {
     const productIds = ids.filter(id => !CABINET_MEDIA[id]);
-    const rows = productIds.length ? await client.productMedia.findMany({ where: { id: { in: productIds }, state: 'READY', kind: 'IMAGE' }, include: { renditions: true } }) : [];
+    const rows = productIds.length ? await client.productMedia.findMany({ where: { id: { in: productIds }, assetScope: 'PRODUCT', state: 'READY', kind: 'IMAGE' }, include: { renditions: true } }) : [];
     const map = new Map<string, HomepageBannerImage>();
     for (const id of ids) { const image = this.builtinImage(id); if (image) map.set(id, image); }
     for (const row of rows) { const p = widestRenditionProjection(this.origin, row.renditions); if (p) map.set(row.id, p); }
@@ -106,11 +106,11 @@ export class HomepageBannersService {
 
   async mediaOptions(): Promise<HomepageBannerMediaOption[]> {
     const rows = await this.prisma.productMedia.findMany({
-      where: { state: 'READY', kind: 'IMAGE' }, orderBy: { createdAt: 'desc' }, take: 60, include: { renditions: true, product: { select: { name: true } } },
+      where: { assetScope: 'PRODUCT', state: 'READY', kind: 'IMAGE' }, orderBy: { createdAt: 'desc' }, take: 60, include: { renditions: true, product: { select: { name: true } } },
     });
     return [
       ...Object.entries(CABINET_MEDIA).map(([id, asset]) => ({ id, ...this.builtinImage(id)!, alt: asset.alt, productName: asset.name })),
-      ...rows.flatMap(row => { const p = widestRenditionProjection(this.origin, row.renditions); return p ? [{ id: row.id, ...p, alt: row.altText ?? '', productName: row.product.name }] : []; }),
+      ...rows.flatMap(row => { const p = widestRenditionProjection(this.origin, row.renditions); return p ? [{ id: row.id, ...p, alt: row.altText ?? '', productName: row.product?.name ?? row.originalFilename }] : []; }),
     ];
   }
 

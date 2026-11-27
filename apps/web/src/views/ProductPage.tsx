@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -8,6 +8,7 @@ import {
   Truck,
   ShoppingBag,
   ShoppingCart,
+  Heart,
 } from 'lucide-react'
 import { useCatalogApi } from '../state/catalog-context'
 import { useCart } from '../state/cart-context'
@@ -27,6 +28,8 @@ import { HelpHint } from '../components/help/HelpHint'
 import { QuantityStepper } from '../components/cart/QuantityStepper'
 import { ProductReviews } from '../components/product/ProductReviews'
 import { MAX_CART_LINE_QUANTITY, type PublicReviewList } from '@iranyaragh/contracts'
+import { recordRecentProduct } from '../lib/recent-products'
+import { setWishlisted, subscribeWishlist, wishlistSlugs } from '../lib/wishlist'
 
 const STOCK_LABEL: Record<CatalogProduct['stockStatus'], string> = {
   IN_STOCK: 'موجود در انبار',
@@ -43,6 +46,7 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
   const { search } = useLocation()
   const requestedVariantId = new URLSearchParams(search).get('variant') ?? undefined
   const { slug = '' } = useParams<{ slug: string }>()
+  const wishlisted = useSyncExternalStore(subscribeWishlist, () => wishlistSlugs().includes(slug), () => false)
 
   const [product, setProduct] = useState<CatalogProduct | null>(initialProduct ?? null)
   const [loading, setLoading] = useState(!initialProduct)
@@ -50,6 +54,8 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
   const [selectedVariantId, setSelectedVariantId] = useState((requestedCatalogVariant(initialProduct?.variants ?? [], requestedVariantId) ?? defaultCatalogVariant(initialProduct?.variants ?? []))?.id ?? '')
   // Quantity chosen before the variant is in the cart; it belongs to one variant only.
   const [chosen, setChosen] = useState<{ variantId: string; quantity: number } | null>(null)
+
+  useEffect(() => { if (product?.slug === slug) recordRecentProduct(product.slug) }, [product?.slug, slug])
 
   const [resolvedSlug, setResolvedSlug] = useState(slug)
   if (resolvedSlug !== slug) {
@@ -212,9 +218,7 @@ export function ProductPage({ initialProduct, initialReviews = null, serverStruc
         </span>
       </nav>
 
-      <h1 className="mb-5 text-lg font-black leading-8 text-slate-900 sm:text-xl lg:text-2xl">
-        {product.name}
-      </h1>
+      <div className="mb-5 flex items-start justify-between gap-3"><h1 className="text-lg font-black leading-8 text-slate-900 sm:text-xl lg:text-2xl">{product.name}</h1><button type="button" aria-label={wishlisted ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها'} aria-pressed={wishlisted} onClick={() => { void setWishlisted(product.slug, !wishlisted).catch(() => show('ذخیرهٔ علاقه‌مندی انجام نشد؛ دوباره تلاش کنید یا فضای فهرست را بررسی کنید.')) }} className="flex size-11 shrink-0 items-center justify-center rounded-full border border-orange-200 text-orange-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-700"><Heart size={21} fill={wishlisted ? 'currentColor' : 'none'} aria-hidden="true" /></button></div>
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:gap-8">
         <MediaGallery

@@ -45,7 +45,16 @@ export type ProductAttributeConfigurationPayload = {
   isRequired?: boolean;
 };
 
-export type CategoryNode = {
+export type CatalogImageFields = {
+  imageAssetId?: string | null;
+  imageAlt?: string | null;
+  shopOrder?: number;
+  shopFeatured?: boolean;
+  image?: { url: string; width: number; height: number } | null;
+};
+export type CatalogImageInput = Omit<CatalogImageFields, 'image'>;
+
+export type CategoryNode = CatalogImageFields & {
   id: string;
   name: string;
   slug: string;
@@ -57,7 +66,7 @@ export type CategoryNode = {
 
 export type CategoryTreeResponse = ApiSuccess<{ tree: CategoryNode[] }>;
 
-export type CategorySummary = {
+export type CategorySummary = CatalogImageFields & {
   id: string;
   name: string;
   slug: string;
@@ -67,13 +76,13 @@ export type CategorySummary = {
 
 export type CategoryListResponse = ApiSuccess<{ items: CategorySummary[] }>;
 
-export type CategoryCreateRequest = {
+export type CategoryCreateRequest = CatalogImageInput & {
   name: string;
   slug: string;
   parentId?: string;
 };
 
-export type CategoryUpdateRequest = {
+export type CategoryUpdateRequest = CatalogImageInput & {
   name?: string;
   slug?: string;
   parentId?: string | null;
@@ -81,7 +90,7 @@ export type CategoryUpdateRequest = {
 
 export type CategoryResponse = ApiSuccess<{ category: CategoryNode }>;
 
-export type BrandSummary = {
+export type BrandSummary = CatalogImageFields & {
   id: string;
   name: string;
   slug: string;
@@ -90,12 +99,12 @@ export type BrandSummary = {
 
 export type BrandListResponse = ApiSuccess<{ items: BrandSummary[] }>;
 
-export type BrandCreateRequest = {
+export type BrandCreateRequest = CatalogImageInput & {
   name: string;
   slug: string;
 };
 
-export type BrandUpdateRequest = {
+export type BrandUpdateRequest = CatalogImageInput & {
   name?: string;
   slug?: string;
 };
@@ -157,6 +166,7 @@ export type ProductListItem = {
   primaryMedia?: PublicProductMediaImage | null;
   /** Lowest active-variant sale price, in IRR. Public catalog read model. */
   startingPrice?: Money | null;
+  previousPrice?: Money | null;
   /** Public status only; warehouse quantities are never exposed. */
   stockStatus?: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'UNKNOWN';
 };
@@ -168,7 +178,8 @@ export type ProductListQuery = {
   status?: CatalogStatus;
   brandId?: string;
   categoryId?: string;
-  sortBy?: 'name' | 'createdAt' | 'updatedAt' | 'popular';
+  sortBy?: 'name' | 'createdAt' | 'updatedAt' | 'popular' | 'price';
+  minPrice?: string; maxPrice?: string; available?: string; discounted?: string; slugs?: string; ids?: string; attributes?: string;
   sortDir?: 'asc' | 'desc';
 };
 

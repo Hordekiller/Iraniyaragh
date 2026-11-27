@@ -12,6 +12,8 @@ import { ProductPage } from '../../views/ProductPage'
 import type { PublicReviewList } from '@iranyaragh/contracts'
 import type { CatalogProduct } from '../../services/catalog/types'
 import { NavigationScrollReset } from './NavigationScrollReset'
+import { ShopTelemetry } from '../shop/ShopTelemetry'
+import { WishlistSync } from '../shop/WishlistSync'
 import { BlogNavProvider } from '../../lib/blog-nav'
 
 /** Next owns navigation and server data; the existing customer islands keep their router contract. */
@@ -28,7 +30,7 @@ export function Storefront({ children, hasBlog = false }: { children: ReactNode;
   return <Router location={{ pathname, search: search ? `?${search}` : '', hash: '' }} navigator={navigator}>
     <NavigationScrollReset />
     <ToastProvider><AuthProvider><CatalogProvider><CartProvider>
-      <BlogNavProvider hasBlog={hasBlog}><AppLayout serverMetadata>{children}</AppLayout></BlogNavProvider>
+      <WishlistSync /><ShopTelemetry /><BlogNavProvider hasBlog={hasBlog}><AppLayout serverMetadata>{children}</AppLayout></BlogNavProvider>
     </CartProvider></CatalogProvider></AuthProvider></ToastProvider>
   </Router>
 }

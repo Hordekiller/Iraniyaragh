@@ -13,7 +13,7 @@ function publicSlug(value: string) {
 /** Never measure orders, identities, cart or checkout paths. */
 export function publicAnalyticsPath(pathname: string): string | null {
   if (pathname === '/') return pathname
-  if (/^\/(?:categories|brands|blog|help|contact|about|custom-doors)\/?$/i.test(pathname)) return pathname
+  if (/^\/(?:shop|catalog|bestsellers|categories|brands|blog|help|contact|about|custom-doors)\/?$/i.test(pathname)) return pathname
   const match = /^\/(?:products|categories|brands|blog|help|policies)\/([^/]+)\/?$/i.exec(pathname)
   if (match && publicSlug(match[1])) return pathname
   return null
