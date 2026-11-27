@@ -126,6 +126,7 @@ describe('truthful server structured data', () => {
     expect(schema.hasVariant).toHaveLength(2)
     for (const child of schema.hasVariant) {
       expect(child).not.toHaveProperty('brand')
+      expect(child?.description).toBe('راهنمای نصب فقط آزمایشی')
       expect(child?.offers.seller).toMatchObject({ '@id': origin + '/#organization', url: origin + '/' })
     }
     expect(schema.hasVariant.map(child => child?.sku)).toEqual(['TEST-S', 'TEST-L'])
