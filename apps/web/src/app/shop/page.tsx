@@ -38,7 +38,7 @@ export default async function ShopPage() {
         </div>
       </section>
       {config.hero.length > 0 && <div className="mt-5"><HeroSlider banners={config.hero} headingLevel={2} /></div>}
-      <form action="/search" method="get" role="search" className="mt-5 flex gap-2"><label htmlFor="shop-search" className="sr-only">جستجوی کالا</label><input id="shop-search" name="q" type="search" placeholder="نام کالا یا برند را جستجو کنید…" className="min-h-12 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4" /><button className="min-h-12 rounded-xl bg-orange-700 px-5 font-bold text-white">جستجو</button></form>
+      <form action="/search" method="get" role="search" className="mt-5 flex gap-2"><label htmlFor="shop-search" className="sr-only">جستجوی کالا</label><input id="shop-search" name="q" type="search" placeholder="نام کالا یا برند را جستجو کنید…" className="min-h-12 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4" /><button type="submit" className="min-h-12 rounded-xl bg-orange-700 px-5 font-bold text-white">جستجو</button></form>
       <nav aria-label="دسترسی سریع فروشگاه" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           { href: ROUTES.categories, label: 'دسته‌بندی‌ها', icon: LayoutGrid },

@@ -57,7 +57,7 @@ export async function CollectionPage({ kind, slug = '', query }: { kind: Kind; s
         <label className="flex min-h-11 items-center gap-2 text-sm"><input name="available" type="checkbox" value="true" defaultChecked={query.available === 'true'} />فقط موجود</label>
         <label className="flex min-h-11 items-center gap-2 text-sm"><input name="discounted" type="checkbox" value="true" defaultChecked={query.discounted === 'true'} />کاهش قیمت واقعی</label>
         {Object.entries(query).filter(([key, value]) => typeof value === 'string' && key === 'ids').map(([key, value]) => <input key={key} type="hidden" name={key} value={String(value)} />)}
-        <button className="min-h-11 rounded-xl bg-orange-700 px-4 font-bold text-white">اعمال فیلتر</button><Link className="inline-flex min-h-11 items-center text-sm underline" href={data.basePath}>پاک کردن</Link>
+        <button type="submit" className="min-h-11 rounded-xl bg-orange-700 px-4 font-bold text-white">اعمال فیلتر</button><Link className="inline-flex min-h-11 items-center text-sm underline" href={data.basePath}>پاک کردن</Link>
       </form>
       <p className="text-sm text-slate-600">{data.result.meta.total.toLocaleString('fa-IR')} کالا</p>
       <section className="mt-5" aria-labelledby="collection-products-title"><h2 id="collection-products-title" className="sr-only">کالاهای {data.title}</h2>{data.result.items.length ? <ProductGrid products={data.result.items} /> : <p>کالایی با این شرایط یافت نشد.</p>}</section>

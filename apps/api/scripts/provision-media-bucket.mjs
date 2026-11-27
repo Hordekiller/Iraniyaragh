@@ -77,9 +77,28 @@ async function allowBrowserUploads() {
       return !['http:', 'https:'].includes(url.protocol) || url.origin !== value || !!url.username || !!url.password;
     } catch { return true; }
   })) throw new Error('CORS_ORIGINS must contain explicit HTTP(S) origins for browser media uploads.');
-  await client.send(new PutBucketCorsCommand({ Bucket: bucket, CORSConfiguration: {
-    CORSRules: [{ AllowedOrigins: origins, AllowedMethods: ['PUT'], AllowedHeaders: ['*'], ExposeHeaders: ['ETag'], MaxAgeSeconds: 300 }],
-  } }));
+  try {
+    await client.send(new PutBucketCorsCommand({ Bucket: bucket, CORSConfiguration: {
+      CORSRules: [{ AllowedOrigins: origins, AllowedMethods: ['PUT'], AllowedHeaders: ['*'], ExposeHeaders: ['ETag'], MaxAgeSeconds: 300 }],
+    } }));
+  } catch (error) {
+    const unsupported = error instanceof Error && (error.name === 'NotImplemented' || error.$metadata?.httpStatusCode === 501);
+    if (!unsupported || process.env.OBJECT_STORAGE_CORS_FALLBACK !== 'minio-global') throw error;
+    // The pinned community MinIO used by CI lacks PutBucketCors. It starts
+    // with MINIO_API_CORS_ALLOW_ORIGIN scoped to the same explicit origins.
+    // Verify the actual browser preflight instead of treating a 501 as success.
+    const probe = new URL(`${bucket}/quarantine/cors-probe`, endpoint.endsWith('/') ? endpoint : `${endpoint}/`);
+    for (const origin of origins) {
+      const response = await fetch(probe, { method: 'OPTIONS', headers: {
+        Origin: origin, 'Access-Control-Request-Method': 'PUT', 'Access-Control-Request-Headers': 'content-type',
+      } });
+      const allowedMethods = (response.headers.get('access-control-allow-methods') ?? '').split(/\s*,\s*/u);
+      if (!response.ok || response.headers.get('access-control-allow-origin') !== origin || !allowedMethods.includes('PUT')) {
+        throw new Error(`Object storage did not approve the browser PUT preflight for ${origin}.`);
+      }
+    }
+    console.log('Provider-managed browser CORS preflight verified for configured origins.');
+  }
 }
 
 try {
