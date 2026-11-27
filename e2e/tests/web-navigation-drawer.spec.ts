@@ -126,6 +126,8 @@ test('web: mobile categories button opens its own page and supports nested disco
   const categoryOrigin = process.env.WEB_E2E_URL ?? 'http://127.0.0.1:4173'
   await page.goto(categoryOrigin)
   const navigation = page.getByRole('navigation', { name: 'ناوبری پایین' })
+  await navigation.getByRole('button', { name: 'فروشگاه' }).click()
+  await expect(page).toHaveURL(`${categoryOrigin}/shop`)
   await navigation.getByRole('button', { name: /دسته‌بندی‌ها/ }).click()
   await expect(page).toHaveURL(`${categoryOrigin}/categories`)
   await expect(page.getByRole('heading', { name: 'دسته‌بندی کالاها', level: 1 })).toBeVisible()

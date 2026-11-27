@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright'
 
 const origin = process.env.WEB_E2E_REAL_URL ?? 'http://127.0.0.1:4174'
 
-test('web: real homepage artwork, slider controls and mobile tracking entry', async ({ page, isMobile }) => {
+test('web: real homepage artwork, slider controls and mobile shop entry', async ({ page, isMobile }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(origin)
   const slider = page.getByRole('region', { name: 'پیشنهادهای فروشگاه' })
@@ -21,10 +21,9 @@ test('web: real homepage artwork, slider controls and mobile tracking entry', as
   expect(audit.violations).toEqual([])
   if (isMobile) {
     const nav = page.getByRole('navigation', { name: 'ناوبری پایین' })
-    await nav.getByRole('button', { name: 'پیگیری سفارش‌ها' }).click()
-    await expect(page).toHaveURL(`${origin}/orders`)
-    await expect(nav.getByRole('button', { name: 'پیگیری سفارش‌ها' })).toHaveAttribute('aria-current', 'page')
-    await expect(page.getByRole('heading', { name: 'برای مشاهده سفارش‌ها وارد شوید' })).toBeVisible()
+    await nav.getByRole('button', { name: 'فروشگاه' }).click()
+    await expect(page).toHaveURL(`${origin}/shop`)
+    await expect(nav.getByRole('button', { name: 'فروشگاه' })).toHaveAttribute('aria-current', 'page')
     expect(await page.evaluate(() => document.body.scrollWidth <= window.innerWidth)).toBe(true)
   }
 })

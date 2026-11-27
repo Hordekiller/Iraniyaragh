@@ -66,7 +66,7 @@ test.beforeEach(async ({ page }) => {
     }),
   );
 });
-test("floating link clears site navigation and the live product purchase/menu dock", async ({
+test("floating custom-door link stays on the main site and clears the mobile navigation", async ({
   page,
 }, testInfo) => {
   await page.goto("/");
@@ -87,22 +87,18 @@ test("floating link clears site navigation and the live product purchase/menu do
   await expect(
     page.getByRole("button", { name: "افزودن به سبد خرید" }),
   ).toBeVisible();
-  await expect(link).toBeVisible();
+  await expect(link).toHaveCount(0);
   if (mobile) {
     for (const panel of ["قیمت و خرید", "منوی سایت"]) {
       await page.getByRole("button", { name: panel, exact: true }).click();
-      await expect
-        .poll(async () => {
-          const a = await link.boundingBox(),
-            b = await page.locator("#product-purchase").boundingBox();
-          return a!.y + a!.height <= b!.y - 5;
-        })
-        .toBe(true);
+      await expect(link).toHaveCount(0);
     }
   }
   await page.screenshot({
     path: testInfo.outputPath("product-floating-clearance.png"),
   });
+  await page.getByRole('link', { name: 'بازگشت به سایت اصلی' }).click();
+  await expect(link).toBeVisible();
   await link.click();
   await expect(
     page.getByRole("heading", { name: "سفارش آنلاین درب دکوفیکس" }),
