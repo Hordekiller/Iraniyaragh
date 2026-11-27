@@ -32,8 +32,7 @@ function disableCollection(disabled: boolean) {
   window.gtag?.('consent', 'update', { analytics_storage: disabled ? 'denied' : 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' })
 }
 
-function configureTag() {
-  const script = document.getElementById('iraniyaragh-ga4')
+function configureTag(script: HTMLElement | null) {
   if (script?.dataset.configured === 'true') return true
   const gtag = window.gtag
   if (!gtag || getChoice() !== 'accepted') return false
@@ -72,14 +71,17 @@ export function AnalyticsTracker() {
     window.gtag ??= function gtag() { window.dataLayer?.push(arguments) }
     const existing = document.getElementById('iraniyaragh-ga4')
     if (existing) {
-      if (existing.dataset.loaded === 'true' && !configured) queueMicrotask(() => { if (configureTag()) setConfigured(true) })
+      if (!configured) queueMicrotask(() => { if (configureTag(existing)) setConfigured(true) })
       return
     }
     const script = document.createElement('script')
     script.id = 'iraniyaragh-ga4'
     script.async = true
     script.src = 'https://www.googletagmanager.com/gtag/js?id=G-ERHW21LZXZ'
-    script.onload = () => { script.dataset.loaded = 'true'; if (configureTag()) setConfigured(true) }
+    // Queue consent and send_page_view:false before gtag.js starts running.
+    // Configuring only in onload allows its automatic initial page view to fire.
+    if (configureTag(script)) queueMicrotask(() => setConfigured(true))
+    script.onload = () => { script.dataset.loaded = 'true' }
     document.head.appendChild(script)
   }, [choice, configured, pathname])
 
@@ -100,7 +102,7 @@ export function AnalyticsTracker() {
     disableCollection(next !== 'accepted')
     if (next === 'accepted') {
       lastTrackedPath.current = null
-      if (!configured && document.getElementById('iraniyaragh-ga4') && configureTag()) setConfigured(true)
+      if (!configured && configureTag(document.getElementById('iraniyaragh-ga4'))) setConfigured(true)
     }
     window.dispatchEvent(new Event(CONSENT_EVENT))
   }
