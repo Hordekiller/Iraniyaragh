@@ -169,8 +169,13 @@ export class CatalogService {
       const rows = ids.flatMap(id => { const row = byId.get(id); return row ? [row] : []; });
       return { data: { items: rows.map(row => this.productListItem(row)), meta: { page, perPage, total, pages: Math.ceil(total / perPage) } } };
     }
+    const sortOrder: Prisma.ProductOrderByWithRelationInput = sortBy === 'name'
+      ? { name: sortDir }
+      : sortBy === 'updatedAt'
+        ? { updatedAt: sortDir }
+        : { createdAt: sortDir };
     const [rows, total] = await Promise.all([
-      this.prisma.product.findMany({ where, orderBy: [{ [sortBy]: sortDir }, { id: 'asc' }], skip: (page - 1) * perPage, take: perPage, ...(includeDrafts ? {} : { include: this.publicListMediaInclude() }) }),
+      this.prisma.product.findMany({ where, orderBy: [sortOrder, { id: 'asc' }], skip: (page - 1) * perPage, take: perPage, ...(includeDrafts ? {} : { include: this.publicListMediaInclude() }) }),
       this.prisma.product.count({ where }),
     ]);
     return { data: { items: rows.map(row => this.productListItem(row)), meta: { page, perPage, total, pages: Math.ceil(total / perPage) } } };
