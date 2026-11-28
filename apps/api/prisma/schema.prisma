@@ -3165,6 +3165,8 @@ model SearchTerm {
   term String @db.VarChar(100)
   weight Int
   @@id([documentId, term])
+  @@index([term], map: "SearchTerm_prefix_idx")
+  @@index([term(ops: raw("gin_trgm_ops"))], type: Gin, map: "SearchTerm_typo_idx")
 }
 model SearchAlias {
   term String @id

@@ -46,7 +46,8 @@ No indexed price or stock value is trusted for checkout.
 Migrations `20261128110000_instant_search`,
 `20261128120000_search_verified_variant_specs` and
 `20261128130000_search_trigger_efficiency` and
-`20261128140000_search_bulk_variant_sync` create the projection, indexes,
+`20261128140000_search_bulk_variant_sync` and
+`20261128150000_search_term_fk_alignment` create the projection, indexes,
 triggers and initial backfill. Bulk variant statements refresh each affected
 product once. Index replacement happens in the same database
 transaction as catalog writes; a failed catalog transaction also rolls back
@@ -99,8 +100,8 @@ not claimed as achieved until measured on the deployed environment with a
 representative catalog and concurrency.
 
 On 2026-11-28, the isolated PostgreSQL fixture run completed 30 warm direct
-database searches with p95 10.18 ms. Its golden set had top-three hit rate
+database searches with p95 12.77 ms. Its golden set had top-three hit rate
 1.00, MRR 1.00 and zero-result rate 0.00. One committed product-to-projection
-update took 14.51 ms, and the projection tables and indexes occupied 434,176
+update took 9.31 ms, and the projection tables and indexes occupied 311,296
 bytes. These measurements use synthetic test products and do not include HTTP,
 real catalog size, server concurrency or VPS resource consumption.
