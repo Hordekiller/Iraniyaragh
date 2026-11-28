@@ -40,8 +40,8 @@ describe('Search engine failure boundaries', () => {
 
   it('returns a ranked page and facets from a bounded transaction', async () => {
     const results: unknown[] = [
-      [{ q: 'ریل', keyboard: '' }], [], [], [{ id: 'p1' }], [{ total: 1n }],
-      [{ kind: 'category', id: 'c1', name: 'ریل', slug: 'rail', count: 1n }],
+      [{ q: 'ریل', keyboard: '' }], [], [],
+      [{ ids: ['p1'], total: 1n, facets: [{ kind: 'category', id: 'c1', name: 'ریل', slug: 'rail', count: 1 }] }],
     ];
     const queryRaw = vi.fn().mockImplementation(async () => results.shift());
     const executeRaw = vi.fn().mockResolvedValue(0);
@@ -50,6 +50,8 @@ describe('Search engine failure boundaries', () => {
     const result = await engine.search({ search: 'ریل', perPage: 8 });
     expect(result).toMatchObject({ ids: ['p1'], total: 1, degraded: false, categories: [{ id: 'c1', count: 1 }] });
     expect(executeRaw).toHaveBeenCalledTimes(2);
+    expect(queryRaw).toHaveBeenCalledTimes(4);
+    expect(queryRaw.mock.calls[3]?.[0].sql).toContain('AS MATERIALIZED');
   });
 
   it('uses a bounded title fallback and reports when both paths fail', async () => {

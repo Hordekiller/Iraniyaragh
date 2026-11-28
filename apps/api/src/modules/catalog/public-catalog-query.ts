@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import type { ProductListQueryDto } from './catalog.dto';
 
 /** Full-catalog filters are applied before pagination; money stays in integer IRR. */
-export function filteredCatalogSql(query: Partial<ProductListQueryDto>, categoryIds: string[] | null): Prisma.Sql {
+export function filteredCatalogSql(query: Partial<ProductListQueryDto>, categoryIds: string[] | null, includePrice = true): Prisma.Sql {
   const conditions: Prisma.Sql[] = [Prisma.sql`p.status = 'ACTIVE'`];
   if (categoryIds) conditions.push(categoryIds.length ? Prisma.sql`p."categoryId" IN (${Prisma.join(categoryIds)})` : Prisma.sql`FALSE`);
   if (query.brandId) conditions.push(Prisma.sql`p."brandId" = ${query.brandId}`);
@@ -26,10 +26,13 @@ export function filteredCatalogSql(query: Partial<ProductListQueryDto>, category
     }
     if (options.length) conditions.push(Prisma.sql`EXISTS (SELECT 1 FROM "ProductVariant" v WHERE v."productId" = p.id AND v."isActive" AND v.status = 'ACTIVE' AND ${Prisma.join(options, ' AND ')})`);
   }
-  return Prisma.sql`SELECT p.id, p.name, p."createdAt", p."updatedAt", lowest."salePrice" AS price
-    FROM "Product" p
+  const price = includePrice ? Prisma.sql`lowest."salePrice"` : Prisma.sql`NULL::bigint`;
+  const priceJoins = includePrice ? Prisma.sql`
     LEFT JOIN LATERAL (SELECT v.id, v."salePrice" FROM "ProductVariant" v WHERE v."productId" = p.id AND v."isActive" AND v.status = 'ACTIVE' ORDER BY v."salePrice", v.id LIMIT 1) lowest ON TRUE
     LEFT JOIN LATERAL (SELECT r."salePrice" FROM "VariantPriceRecord" r WHERE r."variantId" = lowest.id AND r."effectiveAt" <= NOW() ORDER BY r."effectiveAt" DESC, r."createdAt" DESC, r.id DESC LIMIT 1) latest ON TRUE
-    LEFT JOIN LATERAL (SELECT r."salePrice" FROM "VariantPriceRecord" r WHERE r."variantId" = lowest.id AND r."effectiveAt" <= NOW() ORDER BY r."effectiveAt" DESC, r."createdAt" DESC, r.id DESC OFFSET 1 LIMIT 1) previous ON TRUE
+    LEFT JOIN LATERAL (SELECT r."salePrice" FROM "VariantPriceRecord" r WHERE r."variantId" = lowest.id AND r."effectiveAt" <= NOW() ORDER BY r."effectiveAt" DESC, r."createdAt" DESC, r.id DESC OFFSET 1 LIMIT 1) previous ON TRUE` : Prisma.empty;
+  return Prisma.sql`SELECT p.id, p.name, p."createdAt", p."updatedAt", ${price} AS price
+    FROM "Product" p
+    ${priceJoins}
     WHERE ${Prisma.join(conditions, ' AND ')}`;
 }
