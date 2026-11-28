@@ -96,7 +96,7 @@ export class ProductListQueryDto {
   @IsOptional() @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED']) status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   @IsOptional() @IsString() brandId?: string;
   @IsOptional() @IsString() categoryId?: string;
-  @IsOptional() @IsEnum(['name', 'createdAt', 'updatedAt', 'popular', 'price']) sortBy: 'name' | 'createdAt' | 'updatedAt' | 'popular' | 'price' = 'createdAt';
+  @IsOptional() @IsEnum(['name', 'createdAt', 'updatedAt', 'popular', 'price', 'relevance']) sortBy: 'name' | 'createdAt' | 'updatedAt' | 'popular' | 'price' | 'relevance' = 'createdAt';
   @IsOptional() @IsString() @Matches(AMOUNT) minPrice?: string;
   @IsOptional() @IsString() @Matches(AMOUNT) maxPrice?: string;
   @IsOptional() @IsIn(['true', 'false']) available?: string;

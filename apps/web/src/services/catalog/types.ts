@@ -55,6 +55,7 @@ export type CatalogProduct = {
 }
 
 export type CatalogQuery = {
+  signal?: AbortSignal
   page?: number
   minPrice?: string
   maxPrice?: string
@@ -67,7 +68,7 @@ export type CatalogQuery = {
   categoryId?: string
   categorySlug?: string
   brand?: string
-  sortBy?: 'popular' | 'price_asc' | 'price_desc' | 'newest'
+  sortBy?: 'popular' | 'price_asc' | 'price_desc' | 'relevance' | 'newest'
   /** Bound small curated homepage collections without fetching a full catalog page. */
   perPage?: number
 }
@@ -96,7 +97,12 @@ export type CatalogListResult = {
  * model; see docs/AGENT_WORKSTREAMS.md, User UI lane). All methods resolve
  * view models or reject — they never silently fake data in a shipped build.
  */
+export type CatalogSuggestions = CatalogListResult & { facets: { categories: import('@iranyaragh/contracts').SearchFacet[]; brands: import('@iranyaragh/contracts').SearchFacet[] }; correctedQuery: string | null }
+
 export interface CatalogApi {
+  popularSearches?(signal: AbortSignal): Promise<string[]>
+  recordSearchClick?(query: string, productId: string): Promise<void>
+  suggest?(query: string, signal: AbortSignal): Promise<CatalogSuggestions>
   listCategories(): Promise<CatalogCategory[]>
   getHomepageCollections(): Promise<HomepageCollectionsConfig>
   /** Live admin-managed banners; absent in adapters that have no banner source. */

@@ -3147,3 +3147,42 @@ model WishlistItem {
   @@id([userId, productId])
   @@index([userId, createdAt])
 }
+
+// PostgreSQL triggers maintain this public-text projection in the catalog write transaction.
+model SearchDocument {
+  id String @id
+  productId String
+  title String
+  identifier String
+  updatedAt DateTime @default(now()) @db.Timestamptz
+  terms SearchTerm[]
+  @@index([productId])
+  @@index([identifier])
+}
+model SearchTerm {
+  documentId String
+  document SearchDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  term String @db.VarChar(100)
+  weight Int
+  @@id([documentId, term])
+  @@index([term], map: "SearchTerm_prefix_idx")
+  @@index([term(ops: raw("gin_trgm_ops"))], type: Gin, map: "SearchTerm_typo_idx")
+}
+model SearchAlias {
+  term String @id
+  replacement String
+  updatedAt DateTime @default(now()) @db.Timestamptz
+}
+model SearchProductKeywords {
+  productId String @id
+  keywords String @default("")
+  boost Int @default(0)
+}
+model SearchDailyMetric {
+  day DateTime @db.Date
+  query String
+  searches Int @default(0)
+  zeroResults Int @default(0)
+  clicks Int @default(0)
+  @@id([day, query])
+}

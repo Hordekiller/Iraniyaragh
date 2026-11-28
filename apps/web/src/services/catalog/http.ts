@@ -1,5 +1,6 @@
 import { API_ERROR_CODES } from '@iranyaragh/contracts'
 import type {
+  SearchResponse,
   ApiErrorCode,
   BrandListResponse,
   CategoryListResponse,
@@ -77,12 +78,25 @@ export class CatalogHttpClient implements CatalogApi {
     return response.data.banners
   }
 
+  async popularSearches(signal: AbortSignal) {
+    return (await this.request<{ data: { queries: string[] } }>('/api/v1/search/popular', signal)).data.queries
+  }
+  async recordSearchClick(query: string, productId: string) {
+    await this.fetcher(`${this.baseUrl}/api/v1/search/click`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: query, productId }), keepalive: true })
+  }
+
+  async suggest(query: string, signal: AbortSignal) {
+    const response = await this.request<SearchResponse>(`/api/v1/search/suggest?q=${encodeURIComponent(query)}`, signal)
+    return { ...response.data, items: response.data.items.map(item => this.mapProduct(item)) }
+  }
+
   async listProducts(query: CatalogQuery = {}): Promise<CatalogListResult> {
     const perPage = Number.isInteger(query.perPage)
       ? Math.max(1, Math.min(100, query.perPage!))
       : 100
     const params = new URLSearchParams({ page: String(query.page ?? 1), perPage: String(perPage) })
-    if (query.search?.trim()) params.set('search', query.search.trim())
+    if (query.search?.trim()) params.set('q', query.search.trim())
+    if (query.sortBy === 'relevance') params.set('sortBy', 'relevance')
     if (query.categoryId) {
       params.set('categoryId', query.categoryId)
     } else if (query.categorySlug) {
@@ -122,7 +136,7 @@ export class CatalogHttpClient implements CatalogApi {
     if (query.ids?.length) params.set('ids', query.ids.join(','))
     if (query.attributes && Object.keys(query.attributes).length) params.set('attributes', JSON.stringify(query.attributes))
     const response = await this.request<ProductListResponse>(
-      `/api/v1/catalog/products?${params}`,
+      `/api/v1/${query.search?.trim() ? 'search/products' : 'catalog/products'}?${params}`, query.signal,
     )
     const items = response.data.items.map((item) => this.mapProduct(item))
     return { items: await this.withRatings(items), meta: response.data.meta }
@@ -249,11 +263,11 @@ export class CatalogHttpClient implements CatalogApi {
     }
   }
 
-  private async request<T extends { data: unknown }>(path: string): Promise<T> {
+  private async request<T extends { data: unknown }>(path: string, signal?: AbortSignal): Promise<T> {
     let response: Response
     try {
       response = await this.fetcher(`${this.baseUrl}${path}`, {
-        headers: { Accept: 'application/json' },
+        headers: { Accept: 'application/json' }, signal,
       })
     } catch {
       throw new CatalogError({

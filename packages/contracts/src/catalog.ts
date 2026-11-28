@@ -178,7 +178,7 @@ export type ProductListQuery = {
   status?: CatalogStatus;
   brandId?: string;
   categoryId?: string;
-  sortBy?: 'name' | 'createdAt' | 'updatedAt' | 'popular' | 'price';
+  sortBy?: 'name' | 'createdAt' | 'updatedAt' | 'popular' | 'price' | 'relevance';
   minPrice?: string; maxPrice?: string; available?: string; discounted?: string; slugs?: string; ids?: string; attributes?: string;
   sortDir?: 'asc' | 'desc';
 };

@@ -47,6 +47,16 @@ export const openApiPublicCatalog: { products: SchemaObject; product: SchemaObje
   product: { type: 'object', required: ['data'], properties: { data: { type: 'object', required: ['product'], properties: { product: { ...publicProductItem, required: [...(publicProductItem.required ?? []), 'description', 'brand', 'category', 'variants', 'media'], properties: { ...publicProductItem.properties, description: { type: 'string', nullable: true }, brand: { type: 'object', nullable: true }, category: { type: 'object', nullable: true }, variants: { type: 'array', items: { type: 'object' } }, media: { type: 'array', items: publicImage } } } } } } },
 };
 
+const searchFacet: SchemaObject = { type: 'object', required: ['id', 'name', 'slug', 'count'], properties: { id: { type: 'string' }, name: { type: 'string' }, slug: { type: 'string' }, count: { type: 'integer', minimum: 0 } } };
+export const openApiSearchProducts: SchemaObject = {
+  type: 'object', required: ['data'], properties: { data: { type: 'object', required: ['items', 'meta', 'facets', 'correctedQuery', 'degraded'], properties: {
+    items: { type: 'array', items: publicProductItem },
+    meta: { type: 'object', required: ['page', 'perPage', 'total', 'pages'], properties: { page: { type: 'integer' }, perPage: { type: 'integer' }, total: { type: 'integer' }, pages: { type: 'integer' } } },
+    facets: { type: 'object', required: ['categories', 'brands'], properties: { categories: { type: 'array', items: searchFacet }, brands: { type: 'array', items: searchFacet } } },
+    correctedQuery: { type: 'string', nullable: true }, degraded: { type: 'boolean' },
+  } } },
+};
+
 export const openApiCatalogFailures = {
   validation: failureSchema('Request body failed schema validation, or the Idempotency-Key header is missing or malformed.', ['INVALID_REQUEST', 'VALIDATION_ERROR'], 'INVALID_REQUEST', 'Request validation failed.', 400),
   unauthorized: failureSchema('Missing, invalid, revoked or expired authentication, or stale fresh-auth window.', ['AUTH_SESSION_INVALID', 'AUTH_REAUTHENTICATION_REQUIRED'], 'AUTH_SESSION_INVALID', 'Authentication is required.', 401),
