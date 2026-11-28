@@ -184,7 +184,7 @@ export function SearchPage() {
               onChange={(event) => setDraft(event.target.value)}
               maxLength={150}
               aria-label="نام یا مدل کالا"
-              placeholder="مثلاً دستگیره کابینت یا مدل کالا…"
+              placeholder="نام یا مدل کالا را وارد کنید…"
               className="h-14 w-full rounded-2xl border border-white/20 bg-white pr-12 pl-11 text-sm text-slate-900 placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
             />
             {draft && (
