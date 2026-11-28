@@ -1,48 +1,60 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
-import { CatalogProvider } from '../state/CatalogProvider'
-import type { CatalogApi, CatalogListResult } from '../services/catalog/types'
-import { SearchPage } from './SearchPage'
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
+import { CatalogProvider } from "../state/CatalogProvider";
+import type { CatalogApi, CatalogListResult } from "../services/catalog/types";
+import { SearchPage } from "./SearchPage";
 
 function result(): CatalogListResult {
   return {
     items: [
       {
-        id: 'p-101',
-        slug: 'ronix-2210-hammer-drill',
-        name: 'دریل چکشی رونیکس',
-        brand: 'Ronix',
-        category: { id: 'cat-power', name: 'ابزار برقی', slug: 'power-tools' },
-        image: '/images/hero1.jpg',
+        id: "p-101",
+        slug: "ronix-2210-hammer-drill",
+        name: "دریل چکشی رونیکس",
+        brand: "Ronix",
+        category: { id: "cat-power", name: "ابزار برقی", slug: "power-tools" },
+        image: "/images/hero1.jpg",
         media: [],
         variants: [],
         description: null,
-        price: { amount: '28500000', currency: 'IRR' },
+        price: { amount: "28500000", currency: "IRR" },
         oldPrice: null,
         rating: 4.8,
         reviews: 342,
-        stockStatus: 'IN_STOCK',
+        stockStatus: "IN_STOCK",
         badge: null,
       },
     ],
     meta: { page: 1, perPage: 24, total: 1, pages: 1 },
-  }
+  };
 }
 
 function stubCatalog(overrides: Partial<CatalogApi> = {}): CatalogApi {
   return {
     listCategories: vi.fn(async () => []),
-    getHomepageCollections: vi.fn(async () => ({ version: 0, sections: [], updatedAt: null })),
+    getHomepageCollections: vi.fn(async () => ({
+      version: 0,
+      sections: [],
+      updatedAt: null,
+    })),
     listProducts: vi.fn(async () => result()),
-    getProductBySlug: vi.fn(async () => { throw new Error('not found') }),
+    getProductBySlug: vi.fn(async () => {
+      throw new Error("not found");
+    }),
     ...overrides,
-  }
+  };
 }
 
 function renderSearch(query: string | undefined, api: CatalogApi) {
   return render(
-    <MemoryRouter initialEntries={[query === undefined ? '/search' : `/search?q=${encodeURIComponent(query)}`]}>
+    <MemoryRouter
+      initialEntries={[
+        query === undefined
+          ? "/search"
+          : `/search?q=${encodeURIComponent(query)}`,
+      ]}
+    >
       <Routes>
         <Route
           path="/search"
@@ -54,80 +66,185 @@ function renderSearch(query: string | undefined, api: CatalogApi) {
         />
       </Routes>
     </MemoryRouter>,
-  )
+  );
 }
 
-describe('SearchPage', () => {
-  it('asks for a term when the query is empty and never calls the api', () => {
-    const api = stubCatalog()
-    renderSearch(undefined, api)
+describe("SearchPage", () => {
+  it("asks for a term when the query is empty and never calls the api", () => {
+    const api = stubCatalog();
+    renderSearch(undefined, api);
 
-    expect(screen.getByRole('heading', { name: /نتایج جستجو/ })).toBeInTheDocument()
-    expect(screen.getByText('عبارتی برای جستجو وارد کنید.')).toBeInTheDocument()
-    expect(api.listProducts).not.toHaveBeenCalled()
-  })
+    expect(
+      screen.getByRole("heading", {
+        name: "محصول موردنظرتان را سریع پیدا کنید",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "از دسته‌بندی‌ها شروع کنید" }),
+    ).toBeInTheDocument();
+    expect(api.listProducts).not.toHaveBeenCalled();
+  });
 
-  it('shows the loading state and then the matching products', async () => {
-    renderSearch('دریل', stubCatalog())
+  it("shows the loading state and then the matching products", async () => {
+    renderSearch("دریل", stubCatalog());
 
-    expect(await screen.findByText(/برای «دریل»/)).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /^دریل چکشی رونیکس$/ })).toBeInTheDocument()
-    expect(screen.getByText('۱ کالا یافت شد')).toBeInTheDocument()
-  })
+    expect(await screen.findByText(/برای «دریل»/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: /^دریل چکشی رونیکس$/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("۱ کالا یافت شد")).toBeInTheDocument();
+  });
 
-  it('shows the product count from the returned items, not the pagination total', async () => {
-    renderSearch('bosch', stubCatalog({ listProducts: vi.fn(async () => ({
-      items: result().items,
-      meta: { page: 1, perPage: 24, total: 3, pages: 1 },
-    })) }))
-
-    expect(await screen.findByText('۱ کالا یافت شد')).toBeInTheDocument()
-  })
-
-  it('shows an empty-result hint when nothing matches', async () => {
+  it("shows the total count across pages", async () => {
     renderSearch(
-      'banana',
-      stubCatalog({ listProducts: vi.fn(async () => ({ items: [], meta: { page: 1, perPage: 24, total: 0, pages: 0 } })) }),
-    )
+      "bosch",
+      stubCatalog({
+        listProducts: vi.fn(async () => ({
+          items: result().items,
+          meta: { page: 1, perPage: 24, total: 3, pages: 1 },
+        })),
+      }),
+    );
 
-    expect(await screen.findByText(/هیچ محصولی برای «banana» پیدا نشد\./)).toBeInTheDocument()
-  })
+    expect(await screen.findByText("۳ کالا یافت شد")).toBeInTheDocument();
+  });
 
-  it('shows a Persian error alert when the search fails', async () => {
-    renderSearch('دریل', stubCatalog({
-      listProducts: vi.fn(async () => { throw new Error('down') }),
-    }))
+  it("shows an empty-result hint when nothing matches", async () => {
+    renderSearch(
+      "banana",
+      stubCatalog({
+        listProducts: vi.fn(async () => ({
+          items: [],
+          meta: { page: 1, perPage: 24, total: 0, pages: 0 },
+        })),
+      }),
+    );
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('دریافت نتایج جستجو با خطا مواجه شد. لطفاً دوباره تلاش کنید.')
-  })
+    expect(
+      await screen.findByText(/کالایی برای «banana» پیدا نشد/),
+    ).toBeInTheDocument();
+  });
 
-  it('re-runs the search when the query parameter changes', async () => {
-    const listProducts = vi.fn(async () => result())
+  it("shows a Persian error alert when the search fails", async () => {
+    renderSearch(
+      "دریل",
+      stubCatalog({
+        listProducts: vi.fn(async () => {
+          throw new Error("down");
+        }),
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "دریافت نتایج جستجو با خطا مواجه شد. لطفاً دوباره تلاش کنید.",
+    );
+  });
+
+  it("re-runs the search when the query parameter changes", async () => {
+    const listProducts = vi.fn(async () => result());
     function Harness() {
-      const navigate = useNavigate()
+      const navigate = useNavigate();
       return (
         <div>
           <CatalogProvider api={stubCatalog({ listProducts })}>
             <SearchPage />
           </CatalogProvider>
-          <button onClick={() => navigate('/search?q=two')}>next</button>
+          <button onClick={() => navigate("/search?q=two")}>next</button>
         </div>
-      )
+      );
     }
     render(
-      <MemoryRouter initialEntries={['/search?q=one']}>
+      <MemoryRouter initialEntries={["/search?q=one"]}>
         <Routes>
           <Route path="/search" element={<Harness />} />
         </Routes>
       </MemoryRouter>,
-    )
+    );
 
-    await screen.findByRole('link', { name: /^دریل چکشی رونیکس$/ })
+    await screen.findByRole("link", { name: /^دریل چکشی رونیکس$/ });
 
-    fireEvent.click(screen.getByText('next'))
+    fireEvent.click(screen.getByText("next"));
 
-    expect(await screen.findByText(/برای «two»/)).toBeInTheDocument()
-    expect(listProducts.mock.calls.length).toBeGreaterThanOrEqual(2)
-    expect((listProducts.mock.calls as unknown as Array<[Record<string, string>]>)[1][0]).toEqual({ search: 'two' })
-  })
-})
+    expect(await screen.findByText(/برای «two»/)).toBeInTheDocument();
+    expect(listProducts.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(
+      (
+        listProducts.mock.calls as unknown as Array<[Record<string, unknown>]>
+      )[1][0],
+    ).toMatchObject({ search: "two", page: 1, perPage: 24 });
+  });
+
+  it("submits a new search from the page form", async () => {
+    const listProducts = vi.fn(async () => result());
+    renderSearch(undefined, stubCatalog({ listProducts }));
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "نام یا مدل کالا" }),
+      { target: { value: "  دریل  " } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "جستجوی کالا" }));
+    expect(
+      await screen.findByRole("heading", { name: "برای «دریل»" }),
+    ).toBeInTheDocument();
+    expect(listProducts).toHaveBeenCalledWith(
+      expect.objectContaining({ search: "دریل" }),
+    );
+  });
+
+  it("sends server-side filters and pagination with the search term", async () => {
+    const listProducts = vi.fn(async () => ({
+      ...result(),
+      meta: { page: 1, perPage: 24, total: 50, pages: 3 },
+    }));
+    renderSearch("دریل", stubCatalog({ listProducts }));
+    await screen.findByText("۵۰ کالا یافت شد");
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "فقط کالاهای موجود" }),
+    );
+    expect(await screen.findByText("موجود")).toBeInTheDocument();
+    expect(listProducts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: "دریل", available: true, page: 1 }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /بعدی/ }));
+    expect(listProducts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: "دریل", available: true, page: 2 }),
+    );
+  });
+
+  it("applies category, discount and price sorting on the server", async () => {
+    const listProducts = vi.fn(async () => result());
+    renderSearch(
+      "دریل",
+      stubCatalog({
+        listCategories: vi.fn(async () => [
+          {
+            id: "cat-power",
+            parentId: null,
+            name: "ابزار برقی",
+            slug: "power-tools",
+            productCount: 3,
+            image: "",
+          },
+        ]),
+        listProducts,
+      }),
+    );
+    await screen.findByRole("option", { name: "ابزار برقی" });
+    fireEvent.change(screen.getByRole("combobox", { name: "دسته‌بندی" }), {
+      target: { value: "cat-power" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "دارای تخفیف" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "مرتب‌سازی" }), {
+      target: { value: "price_asc" },
+    });
+    await waitFor(() =>
+      expect(listProducts).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          search: "دریل",
+          categoryId: "cat-power",
+          discounted: true,
+          sortBy: "price_asc",
+        }),
+      ),
+    );
+  });
+});

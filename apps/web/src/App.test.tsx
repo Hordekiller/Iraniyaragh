@@ -116,7 +116,7 @@ const routes: Array<[string, () => Promise<void> | void]> = [
     '/search',
     async () => {
       expect(
-        await screen.findByText('عبارتی برای جستجو وارد کنید.'),
+        await screen.findByRole('heading', { name: 'از دسته‌بندی‌ها شروع کنید' }),
       ).toBeInTheDocument()
     },
   ],

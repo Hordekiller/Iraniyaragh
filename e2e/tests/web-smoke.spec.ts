@@ -167,7 +167,7 @@ test.describe('web: storefront shell', () => {
     await search.press('Enter');
 
     await expect(page).toHaveURL(/\/search\?q=/);
-    await expect(page.getByRole('heading', { name: /نتایج جستجو/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /برای «دریل رونیکس»/ })).toBeVisible();
     await expect(page.getByText(/دریل چکشی ۱۳/)).toBeVisible();
     await expect(page.getByText(/ست دریل و/)).toBeVisible();
 
