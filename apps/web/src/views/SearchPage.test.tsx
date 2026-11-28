@@ -178,7 +178,7 @@ describe("SearchPage", () => {
     const listProducts = vi.fn(async () => result());
     renderSearch(undefined, stubCatalog({ listProducts }));
     fireEvent.change(
-      screen.getByRole("searchbox", { name: "نام یا مدل کالا" }),
+      screen.getByRole("combobox", { name: "نام یا مدل کالا" }),
       { target: { value: "  دریل  " } },
     );
     fireEvent.click(screen.getByRole("button", { name: "جستجوی کالا" }));
@@ -187,6 +187,39 @@ describe("SearchPage", () => {
     ).toBeInTheDocument();
     expect(listProducts).toHaveBeenCalledWith(
       expect.objectContaining({ search: "دریل" }),
+    );
+  });
+
+  it("updates the full result list while typing and keeps active filters", async () => {
+    const listProducts = vi.fn(async () => result());
+    renderSearch("دریل", stubCatalog({ listProducts }));
+    await screen.findByRole("heading", { name: "برای «دریل»" });
+    fireEvent.click(screen.getByRole("checkbox", { name: "فقط کالاهای موجود" }));
+    await waitFor(() => expect(listProducts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: "دریل", available: true }),
+    ));
+    fireEvent.change(screen.getByRole("combobox", { name: "نام یا مدل کالا" }), {
+      target: { value: "دریل چکشی" },
+    });
+    await screen.findByRole("heading", { name: "برای «دریل چکشی»" });
+    expect(listProducts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: "دریل چکشی", available: true, page: 1 }),
+    );
+  });
+
+  it("waits for Persian composition before updating the full results", async () => {
+    const listProducts = vi.fn(async () => result());
+    renderSearch("دریل", stubCatalog({ listProducts }));
+    await screen.findByRole("heading", { name: "برای «دریل»" });
+    const input = screen.getByRole("combobox", { name: "نام یا مدل کالا" });
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "لولا" } });
+    await new Promise(resolve => setTimeout(resolve, 240));
+    expect(screen.getByRole("heading", { name: "برای «دریل»" })).toBeInTheDocument();
+    fireEvent.compositionEnd(input, { data: "لولا" });
+    await screen.findByRole("heading", { name: "برای «لولا»" });
+    expect(listProducts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: "لولا" }),
     );
   });
 

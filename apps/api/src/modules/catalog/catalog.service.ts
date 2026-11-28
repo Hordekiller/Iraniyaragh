@@ -13,6 +13,7 @@ import { ContentTooLargeError, rewriteDescriptionImages, sanitizeDescriptionFrag
 import { widestRenditionProjection } from '../media/media-url';
 import { AuditLogService } from '../audit/audit-log.service';
 import type { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductDescriptionDto, ProductListQueryDto, ProductStatusDto, ProductVariantAttributesUpdateDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
+import { SearchEngine } from '../search/search-engine.service';
 import { filteredCatalogSql } from './public-catalog-query';
 import { publicProductStockStatus } from './public-product-stock';
 import { CatalogIdempotencyService } from './catalog-idempotency.service';
@@ -46,10 +47,23 @@ type GenerationContext = { slug: string; status: ProductStatus; requiredAttribut
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService, private readonly audit: AuditLogService, private readonly idempotency: CatalogIdempotencyService, @Optional() private readonly config?: ConfigService<EnvironmentVariables, true>) {}
+  constructor(private readonly prisma: PrismaService, private readonly audit: AuditLogService, private readonly idempotency: CatalogIdempotencyService, @Optional() private readonly config?: ConfigService<EnvironmentVariables, true>, @Optional() private readonly searchEngine?: SearchEngine) {}
 
   async listPublicProducts(query: Partial<ProductListQueryDto>): Promise<ProductListResponse> {
+    if (query.search?.trim() && this.searchEngine) return this.searchPublicProducts(query);
     return this.listProducts(query, false);
+  }
+
+  async searchPublicProducts(query: Partial<ProductListQueryDto>) {
+    if (!this.searchEngine) throw new BadRequestException('Search is unavailable.');
+    const ranked = await this.searchEngine.search(query);
+    const rows = ranked.ids.length ? await this.prisma.product.findMany({ where: { id: { in: ranked.ids }, status: 'ACTIVE' }, include: this.publicListMediaInclude() }) : [];
+    const byId = new Map(rows.map(row => [row.id, row]));
+    return { data: {
+      items: ranked.ids.flatMap(id => { const row = byId.get(id); return row ? [this.productListItem(row)] : []; }),
+      meta: { page: ranked.page, perPage: ranked.perPage, total: ranked.total, pages: Math.ceil(ranked.total / ranked.perPage) },
+      facets: { categories: ranked.categories, brands: ranked.brands }, correctedQuery: ranked.correctedQuery, degraded: ranked.degraded,
+    } };
   }
 
   async listAdminProducts(query: Partial<ProductListQueryDto>): Promise<ProductListResponse> {

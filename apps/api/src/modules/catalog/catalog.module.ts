@@ -1,3 +1,7 @@
+import { SearchAdminService } from '../search/search-admin.service';
+import { SearchEngine } from '../search/search-engine.service';
+import { SearchController } from '../search/search.controller';
+import { AuthModule } from '../auth/auth.module';
 import { WishlistController } from './wishlist.controller';
 import { WishlistService } from './wishlist.service';
 import { ShopController } from './shop.controller';
@@ -19,5 +23,5 @@ import { StorefrontContactsService } from './storefront-contacts.service';
 import { HomepageHeroController } from './homepage-hero.controller';
 import { HomepageHeroService } from './homepage-hero.service';
 
-@Module({ imports: [AuditModule], controllers: [WishlistController, ShopController, CatalogController, HomepageCollectionsController, HomepageBannersController, HomepageHeroController, StorefrontHelperController, StorefrontContactsController], providers: [WishlistService, ShopService, CatalogService, CatalogIdempotencyService, CatalogImportService, HomepageCollectionsService, HomepageBannersService, HomepageHeroService, StorefrontHelperService, StorefrontContactsService], exports: [CatalogService, CatalogImportService, CatalogIdempotencyService] })
+@Module({ imports: [AuditModule, AuthModule], controllers: [SearchController, WishlistController, ShopController, CatalogController, HomepageCollectionsController, HomepageBannersController, HomepageHeroController, StorefrontHelperController, StorefrontContactsController], providers: [SearchAdminService, SearchEngine, WishlistService, ShopService, CatalogService, CatalogIdempotencyService, CatalogImportService, HomepageCollectionsService, HomepageBannersService, HomepageHeroService, StorefrontHelperService, StorefrontContactsService], exports: [CatalogService, CatalogImportService, CatalogIdempotencyService] })
 export class CatalogModule {}

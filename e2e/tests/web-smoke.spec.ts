@@ -171,12 +171,23 @@ test.describe('web: storefront shell', () => {
     await expect(page.getByText(/دریل چکشی ۱۳/)).toBeVisible();
     await expect(page.getByText(/ست دریل و/)).toBeVisible();
 
-    await expect(page.getByRole('button', { name: 'پاک کردن جستجو' })).toBeVisible();
-    await tap(page.getByRole('button', { name: 'پاک کردن جستجو' }));
+    await expect(page.getByRole('banner').getByRole('button', { name: 'پاک کردن جستجو' })).toBeVisible();
+    await tap(page.getByRole('banner').getByRole('button', { name: 'پاک کردن جستجو' }));
     await expect(search).toHaveValue('');
-    await expect(page.getByRole('button', { name: 'پاک کردن جستجو' })).toBeHidden();
+    await expect(page.getByRole('banner').getByRole('button', { name: 'پاک کردن جستجو' })).toBeHidden();
 
     await network.assertNone();
+  });
+
+  test('search page updates the complete result list while typing', async ({ page }) => {
+    await page.goto('/search');
+    const input = page.getByRole('combobox', { name: 'نام یا مدل کالا' });
+    await input.fill('دریل');
+    await expect(page.getByRole('heading', { name: 'برای «دریل»' })).toBeVisible();
+    await expect(page.getByText(/دریل چکشی ۱۳/).first()).toBeVisible();
+    await input.fill('دریل چکشی');
+    await expect(page.getByRole('heading', { name: 'برای «دریل چکشی»' })).toBeVisible();
+    await expect(page).toHaveURL(/q=%D8%AF%D8%B1%DB%8C%D9%84/);
   });
 
   test('mobile: floating bottom navigation and search toggle work', async ({ page }) => {
@@ -201,7 +212,11 @@ test.describe('web: storefront shell', () => {
     await expect(categories).toHaveAttribute('aria-current', 'page');
 
     await tap(page.getByRole('button', { name: 'جستجو' }).first());
-    await expect(page.locator('input[placeholder="جستجوی ابزار..."]')).toBeVisible();
+    await expect(page.locator('dialog#mobile-header-search')).toBeVisible();
+    const mobileSearch = page.locator('input#site-search-mobile');
+    await expect(mobileSearch).toBeFocused();
+    await mobileSearch.fill('دریل');
+    await expect(page.getByRole('listbox', { name: 'پیشنهادهای کالا' })).toContainText('دریل');
 
     await network.assertNone();
   });

@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronDown, Menu, Phone, Search, ShoppingBag, X } from 'lucide-react'
+import { SmartSearch } from '../search/SmartSearch'
+import { MobileSearch } from '../search/MobileSearch'
+import { Link, NavLink, useLocation } from 'react-router-dom'
+import { ChevronDown, Menu, Phone, Search, ShoppingBag } from 'lucide-react'
 import { useCart } from '../../state/cart-context'
 import { toPersianDigits } from '../../lib/format'
 import { ROUTES } from '../../lib/routes'
@@ -24,10 +25,8 @@ type SiteHeaderProps = {
 export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSearch, onOpenLogin }: SiteHeaderProps) {
   const hasBlog = useHasBlog()
   const shopMode = useShopNavigation()
-  const navigate = useNavigate()
   const location = useLocation()
   const locationIdentity = `${location.pathname}${location.search}${location.hash}`
-  const reduceMotion = useReducedMotion()
   const [menu, setMenu] = useState({ locationKey: locationIdentity, open: false })
   if (menu.locationKey !== locationIdentity) setMenu({ locationKey: locationIdentity, open: false })
   const menuOpen = menu.locationKey === locationIdentity && menu.open
@@ -35,18 +34,6 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
   const openMenu = () => setMenu({ locationKey: locationIdentity, open: true })
   const { state } = useCart()
   const itemCount = state.cart.lines.reduce((sum, line) => sum + line.quantity, 0)
-
-  function submitSearch() {
-    if (!searchQuery.trim()) return
-    void navigate(`${ROUTES.search}?q=${encodeURIComponent(searchQuery.trim())}`)
-  }
-
-  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      submitSearch()
-    }
-  }
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-100">
@@ -62,21 +49,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
 
           {/* Search - Desktop */}
           <div className="hidden min-w-0 lg:flex items-center flex-1 max-w-[480px] mr-auto">
-            <div className="relative w-full">
-              <input
-                id="site-search-desktop"
-                value={searchQuery}
-                onChange={e => onSearchChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                aria-label="جستجو در محصولات"
-                placeholder="جستجو در کالاهای فروشگاه..."
-                className="w-full h-11 pr-11 pl-4 bg-slate-50 border border-slate-200 rounded-full text-[13.5px] placeholder:text-slate-400 focus:outline-none focus:border-[#FF4D00]/40 focus:bg-white focus:ring-4 focus:ring-[#FF4D00]/10 transition"
-              />
-              <Search size={18} aria-hidden="true" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              {searchQuery && (
-                <button onClick={() => onSearchChange('')} aria-label="پاک کردن جستجو" className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center"><X size={14} /></button>
-              )}
-            </div>
+            <SmartSearch inputId="site-search-desktop" value={searchQuery} onChange={onSearchChange} />
           </div>
 
           {/* Actions */}
@@ -111,26 +84,7 @@ export function SiteHeader({ searchQuery, onSearchChange, showSearch, onToggleSe
           <span className="mr-auto text-[11px] text-slate-500">فروشگاه تخصصی ابزار و یراق‌آلات</span>
         </nav>
 
-        {/* Mobile Search Expand */}
-        <AnimatePresence>
-          {showSearch && (
-            <motion.div id="mobile-header-search" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className="lg:hidden overflow-hidden">
-              <div className="pb-4">
-                <div className="relative">
-                  <input id="site-search-mobile" autoFocus value={searchQuery} onChange={e => onSearchChange(e.target.value)} onKeyDown={handleKeyDown} aria-label="جستجو در محصولات" placeholder="جستجوی ابزار..." className="w-full h-12 pr-11 pl-12 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-[#FF4D00]" />
-                  <Search size={18} aria-hidden="true" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <button
-                    onClick={() => { onSearchChange(''); onToggleSearch() }}
-                    aria-label="بستن جستجو"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-200/70 text-slate-500 flex items-center justify-center hover:bg-slate-900 hover:text-white transition"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {showSearch && <MobileSearch value={searchQuery} onChange={onSearchChange} onClose={onToggleSearch} />}
       </div>
       {menuOpen && <SiteNavigationDrawer onClose={closeMenu} />}
     </header>

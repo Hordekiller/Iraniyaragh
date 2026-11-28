@@ -8,6 +8,8 @@ import { commerceStub, signedInStore, testAuthProps } from '../../test/commerce'
 import { AppLayout } from './AppLayout'
 import { MemorySessionStore } from '../../lib/auth/session-store'
 import { CartPage } from '../../views/CartPage'
+import { CatalogProvider } from '../../state/CatalogProvider'
+import { CatalogFixtureClient } from '../../services/catalog/fixtures'
 
 describe('AppLayout', () => {
   it('renders the shared RTL shell and live cart count', async () => {
@@ -17,11 +19,11 @@ describe('AppLayout', () => {
         <ToastProvider>
           <AuthProvider {...testAuthProps(store)}>
             <CartProvider api={commerceStub()}>
-              <Routes>
+              <CatalogProvider api={new CatalogFixtureClient({ delayMs: 0 })}><Routes>
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<span>outlet-content</span>} />
                 </Route>
-              </Routes>
+              </Routes></CatalogProvider>
             </CartProvider>
           </AuthProvider>
         </ToastProvider>
@@ -51,11 +53,11 @@ describe('AppLayout', () => {
         <ToastProvider>
           <AuthProvider {...testAuthProps(store)}>
             <CartProvider api={commerceStub()}>
-              <Routes>
+              <CatalogProvider api={new CatalogFixtureClient({ delayMs: 0 })}><Routes>
                 <Route element={<AppLayout />}>
                   <Route path="/cart" element={<CartPage />} />
                 </Route>
-              </Routes>
+              </Routes></CatalogProvider>
             </CartProvider>
           </AuthProvider>
         </ToastProvider>

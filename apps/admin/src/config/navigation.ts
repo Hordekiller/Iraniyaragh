@@ -117,6 +117,7 @@ export const navigation: NavigationGroup[] = [
   {
     label: 'کالا و انبار',
     items: [
+      { label: 'جستجوی فروشگاه', href: '/catalog/search', icon: PackageSearch, permission: 'catalog.read' },
       { label: 'کالا و SKU', href: '/catalog', icon: PackageSearch, permission: 'catalog.read' },
       { label: 'دسته‌بندی و زیرمجموعه‌ها', href: '/catalog/categories', icon: Boxes, permission: 'catalog.read' },
       { label: 'برندها', href: '/catalog/brands', icon: BookmarkCheck, permission: 'catalog.read' },

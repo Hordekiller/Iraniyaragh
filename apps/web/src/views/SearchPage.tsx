@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -7,9 +7,9 @@ import {
   LayoutGrid,
   Search,
   SlidersHorizontal,
-  X,
 } from "lucide-react";
 import { ProductGrid } from "../components/product/ProductGrid";
+import { SmartSearch } from "../components/search/SmartSearch";
 import { useCatalogApi } from "../state/catalog-context";
 import { toPersianDigits } from "../lib/format";
 import { ROUTES } from "../lib/routes";
@@ -21,6 +21,7 @@ import type {
 
 type SortKey = NonNullable<CatalogQuery["sortBy"]>;
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "relevance", label: "مرتبط‌ترین" },
   { value: "newest", label: "جدیدترین" },
   { value: "popular", label: "پرفروش‌ترین" },
   { value: "price_asc", label: "ارزان‌ترین" },
@@ -35,7 +36,7 @@ export function SearchPage() {
   const categoryId = params.get("category") ?? "";
   const sortBy =
     SORT_OPTIONS.find((option) => option.value === params.get("sort"))?.value ??
-    "newest";
+    "relevance";
   const available = params.get("available") === "1";
   const discounted = params.get("discounted") === "1";
   const pageNumber = Number(params.get("page"));
@@ -45,6 +46,7 @@ export function SearchPage() {
   if (searchInput.term !== term) setSearchInput({ term, draft: term });
   const draft = searchInput.term === term ? searchInput.draft : term;
   const setDraft = (value: string) => setSearchInput({ term, draft: value });
+  const [composing, setComposing] = useState(false);
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [response, setResponse] = useState<{
     key: string;
@@ -63,6 +65,19 @@ export function SearchPage() {
   ]);
 
   useEffect(() => {
+    if (composing || draft.trim() === term) return;
+    const timer = window.setTimeout(() => {
+      const next = new URLSearchParams(params);
+      const query = draft.trim();
+      if (query) next.set("q", query);
+      else next.delete("q");
+      next.delete("page");
+      setParams(next, { replace: true });
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [composing, draft, term, params, setParams]);
+
+  useEffect(() => {
     let cancelled = false;
     api
       .listCategories()
@@ -75,8 +90,9 @@ export function SearchPage() {
     };
   }, [api]);
   useEffect(() => {
-    if (!term) return;
+    if (term.replace(/[^\p{L}\p{N}]/gu, "").length < 2) return;
     let cancelled = false;
+    const controller = new AbortController();
     api
       .listProducts({
         search: term,
@@ -86,6 +102,7 @@ export function SearchPage() {
         discounted,
         page,
         perPage: PAGE_SIZE,
+        signal: controller.signal,
       })
       .then((result) => {
         if (!cancelled) setResponse({ key, result, error: false });
@@ -95,6 +112,7 @@ export function SearchPage() {
       });
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [api, term, categoryId, sortBy, available, discounted, page, retry, key]);
 
@@ -116,11 +134,6 @@ export function SearchPage() {
     else next.delete(name);
     next.delete("page");
     setParams(next);
-  }
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const nextTerm = draft.trim();
-    if (nextTerm) setParams({ q: nextTerm });
   }
   function movePage(nextPage: number) {
     const next = new URLSearchParams(params);
@@ -148,11 +161,11 @@ export function SearchPage() {
       </nav>
       <section
         aria-labelledby="search-title"
-        className="relative isolate overflow-hidden rounded-[28px] bg-slate-950 p-5 text-white sm:p-8 lg:px-10 lg:py-9"
+        className="relative isolate rounded-[28px] bg-slate-950 p-5 text-white sm:p-8 lg:px-10 lg:py-9"
       >
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute -left-16 -top-24 -z-10 size-72 rounded-full border-[44px] border-white/5"
+          className="pointer-events-none absolute left-0 top-0 -z-10 size-48 rounded-full border-[44px] border-white/5"
         />
         <p className="flex items-center gap-2 text-xs font-bold text-orange-200">
           <Search size={17} aria-hidden="true" /> جستجو در فروشگاه ایرانی یراق
@@ -167,47 +180,10 @@ export function SearchPage() {
           نام کالا یا مدل آن را بنویسید؛ سپس نتایج را بر اساس دسته‌بندی، موجودی
           و قیمت مرتب کنید.
         </p>
-        <form
-          onSubmit={submit}
-          role="search"
-          className="mt-6 flex max-w-3xl flex-col gap-2 sm:flex-row"
-        >
-          <div className="relative min-w-0 flex-1">
-            <Search
-              size={20}
-              aria-hidden="true"
-              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
-            />
-            <input
-              type="search"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              maxLength={150}
-              aria-label="نام یا مدل کالا"
-              placeholder="نام یا مدل کالا را وارد کنید…"
-              className="h-14 w-full rounded-2xl border border-white/20 bg-white pr-12 pl-11 text-sm text-slate-900 placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
-            />
-            {draft && (
-              <button
-                type="button"
-                onClick={() => setDraft("")}
-                aria-label="پاک کردن عبارت جستجو"
-                className="absolute left-2 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-          <button
-            type="submit"
-            className="h-14 rounded-2xl bg-[#FF4D00] px-7 text-sm font-black text-white hover:bg-[#C2410C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
-          >
-            جستجوی کالا
-          </button>
-        </form>
+        <div className="relative z-20 mt-6 max-w-3xl"><SmartSearch value={draft} onChange={setDraft} onCompositionChange={setComposing} label="نام یا مدل کالا" large /></div>
       </section>
 
-      {!term ? (
+      {term.replace(/[^\p{L}\p{N}]/gu, "").length < 2 ? (
         <section aria-labelledby="browse-title" className="mt-8">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -349,7 +325,7 @@ export function SearchPage() {
               دارای تخفیف
             </label>
           </div>
-          {(categoryId || available || discounted || sortBy !== "newest") && (
+          {(categoryId || available || discounted || sortBy !== "relevance") && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
               <span>فیلترهای فعال:</span>
               {categoryId && (
@@ -368,7 +344,7 @@ export function SearchPage() {
                   تخفیف‌دار
                 </span>
               )}
-              {sortBy !== "newest" && (
+              {sortBy !== "relevance" && (
                 <span className="rounded-full bg-orange-50 px-3 py-1.5 text-orange-900">
                   {
                     SORT_OPTIONS.find((option) => option.value === sortBy)
@@ -436,7 +412,7 @@ export function SearchPage() {
                 {(categoryId ||
                   available ||
                   discounted ||
-                  sortBy !== "newest") && (
+                  sortBy !== "relevance") && (
                   <button
                     type="button"
                     onClick={() => setParams({ q: term })}

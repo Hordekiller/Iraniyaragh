@@ -2352,6 +2352,668 @@
         ]
       }
     },
+    "/search/suggest": {
+      "get": {
+        "operationId": "SearchController_suggest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "meta",
+                        "facets",
+                        "correctedQuery",
+                        "degraded"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name",
+                              "slug",
+                              "status",
+                              "brandId",
+                              "categoryId",
+                              "createdAt",
+                              "updatedAt",
+                              "primaryMedia"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "slug": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PUBLISHED"
+                                ]
+                              },
+                              "brandId": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "categoryId": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "primaryMedia": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "position",
+                                  "role",
+                                  "alt",
+                                  "caption",
+                                  "width",
+                                  "height",
+                                  "sources"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IMAGE"
+                                    ]
+                                  },
+                                  "position": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "PRIMARY",
+                                      "GALLERY",
+                                      "VIDEO_POSTER"
+                                    ]
+                                  },
+                                  "alt": {
+                                    "type": "string"
+                                  },
+                                  "caption": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "width": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "height": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "sources": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "required": [
+                                        "url",
+                                        "width",
+                                        "height",
+                                        "type"
+                                      ],
+                                      "properties": {
+                                        "url": {
+                                          "type": "string",
+                                          "format": "uri"
+                                        },
+                                        "width": {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        "height": {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        "type": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "nullable": true
+                              },
+                              "stockStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "IN_STOCK",
+                                  "LOW_STOCK",
+                                  "OUT_OF_STOCK",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              "previousPrice": {
+                                "type": "object",
+                                "nullable": true,
+                                "description": "Verified prior price for the cheapest active variant, only when reduced.",
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "startingPrice": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "required": [
+                            "page",
+                            "perPage",
+                            "total",
+                            "pages"
+                          ],
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "perPage": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            },
+                            "pages": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "facets": {
+                          "type": "object",
+                          "required": [
+                            "categories",
+                            "brands"
+                          ],
+                          "properties": {
+                            "categories": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "slug",
+                                  "count"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "slug": {
+                                    "type": "string"
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            },
+                            "brands": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "slug",
+                                  "count"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "slug": {
+                                    "type": "string"
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "correctedQuery": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "degraded": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Persian instant search; up to eight public products with live commerce values",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/search/products": {
+      "get": {
+        "operationId": "SearchController_products",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "meta",
+                        "facets",
+                        "correctedQuery",
+                        "degraded"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name",
+                              "slug",
+                              "status",
+                              "brandId",
+                              "categoryId",
+                              "createdAt",
+                              "updatedAt",
+                              "primaryMedia"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "slug": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PUBLISHED"
+                                ]
+                              },
+                              "brandId": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "categoryId": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "primaryMedia": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "position",
+                                  "role",
+                                  "alt",
+                                  "caption",
+                                  "width",
+                                  "height",
+                                  "sources"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IMAGE"
+                                    ]
+                                  },
+                                  "position": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "PRIMARY",
+                                      "GALLERY",
+                                      "VIDEO_POSTER"
+                                    ]
+                                  },
+                                  "alt": {
+                                    "type": "string"
+                                  },
+                                  "caption": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "width": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "height": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  },
+                                  "sources": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "required": [
+                                        "url",
+                                        "width",
+                                        "height",
+                                        "type"
+                                      ],
+                                      "properties": {
+                                        "url": {
+                                          "type": "string",
+                                          "format": "uri"
+                                        },
+                                        "width": {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        "height": {
+                                          "type": "integer",
+                                          "minimum": 1
+                                        },
+                                        "type": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "nullable": true
+                              },
+                              "stockStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "IN_STOCK",
+                                  "LOW_STOCK",
+                                  "OUT_OF_STOCK",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              "previousPrice": {
+                                "type": "object",
+                                "nullable": true,
+                                "description": "Verified prior price for the cheapest active variant, only when reduced.",
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
+                              "startingPrice": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "required": [
+                            "page",
+                            "perPage",
+                            "total",
+                            "pages"
+                          ],
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "perPage": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            },
+                            "pages": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "facets": {
+                          "type": "object",
+                          "required": [
+                            "categories",
+                            "brands"
+                          ],
+                          "properties": {
+                            "categories": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "slug",
+                                  "count"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "slug": {
+                                    "type": "string"
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            },
+                            "brands": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "slug",
+                                  "count"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "slug": {
+                                    "type": "string"
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "correctedQuery": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "degraded": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ranked public search with complete filtering, facets and pagination",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/search/click": {
+      "post": {
+        "operationId": "SearchController_click",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/search/popular": {
+      "get": {
+        "operationId": "SearchController_popular",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/search/admin": {
+      "get": {
+        "operationId": "SearchController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "search"
+        ]
+      },
+      "post": {
+        "operationId": "SearchController_command",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "search"
+        ]
+      }
+    },
     "/wishlist": {
       "get": {
         "operationId": "WishlistController_list",
