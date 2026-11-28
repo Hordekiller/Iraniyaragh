@@ -26,7 +26,7 @@ describe.sequential('Persian instant search on PostgreSQL', () => {
     await prisma.brand.create({data:{id:id('brand'),name:'کیو آر پی',slug:id('brand')}});
     await prisma.category.create({data:{id:id('category'),name:'یراق کابینت',slug:id('category')}});
     for (const [key,name,sku] of fixtures) {
-      await prisma.product.create({data:{id:id(key),name,slug:id(key),description:'TEST FIXTURE — not for sale',status:key==='hidden'?'DRAFT':'ACTIVE',brandId:id('brand'),categoryId:id('category'),variants:{create:{id:id(`${key}-v`),sku:`${sku}-${run}`,skuKey:`${sku}-${run}`,combinationSignature:'none',title:sku,salePrice:10000n,status:'ACTIVE',isActive:true}}}});
+      await prisma.product.create({data:{id:id(key),name,slug:id(key),description:key==='screw'?'لوله — TEST FIXTURE, not for sale':'TEST FIXTURE — not for sale',status:key==='hidden'?'DRAFT':'ACTIVE',brandId:id('brand'),categoryId:id('category'),variants:{create:{id:id(`${key}-v`),sku:`${sku}-${run}`,skuKey:`${sku}-${run}`,combinationSignature:'none',title:sku,salePrice:10000n,status:'ACTIVE',isActive:true}}}});
     }
     await prisma.productVariant.update({where:{id:id('screw-v')},data:{barcode:'9876543210123',lengthCm:27}});
   });
@@ -49,6 +49,10 @@ describe.sequential('Persian instant search on PostgreSQL', () => {
     expect((await search('ریل 46')).ids).toEqual([]);
     expect((await search('K64')).ids).toEqual([]);
     expect((await search('ریل 45')).ids).not.toContain(id('slide40'));
+  });
+  it('does not suggest a different product from a short typo in its description', async () => {
+    expect((await search('لولا')).ids).not.toContain(id('screw'));
+    expect((await search('گازر')).ids).toContain(id('hinge'));
   });
   it('finds verified barcode and dimensions without fuzzy number matching', async () => {
     expect((await search('9876543210123')).ids).toContain(id('screw'));

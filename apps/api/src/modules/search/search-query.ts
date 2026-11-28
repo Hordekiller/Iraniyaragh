@@ -16,8 +16,12 @@ export function rankedSearchSql(queries: string[]): Prisma.Sql {
     tokens.forEach((token, tokenIndex) => {
       const protectedToken = /^[0-9]+$/.test(token);
       const fuzzy = !protectedToken && /^[ء-ی]{4,}$/u.test(token);
+      // Four-letter Persian words have many accidental one-edit neighbours.
+      // Accept their typo matches only in prominent catalog fields, not in a
+      // passing description word such as لوله for the query لولا.
+      const shortFuzzyWeight = token.length === 4 ? Prisma.sql`AND t.weight >= 60` : Prisma.empty;
       const prefix = `${token}%`;
-      const predicate = protectedToken ? Prisma.sql`t.term = ${token}` : Prisma.sql`(t.term LIKE ${prefix} ${fuzzy ? Prisma.sql`OR (t.term % ${token} AND abs(length(t.term)-${token.length}) <= 1 AND levenshtein_less_equal(t.term, ${token}, 1) <= 1)` : Prisma.empty})`;
+      const predicate = protectedToken ? Prisma.sql`t.term = ${token}` : Prisma.sql`(t.term LIKE ${prefix} ${fuzzy ? Prisma.sql`OR (t.term % ${token} AND abs(length(t.term)-${token.length}) <= 1 AND levenshtein_less_equal(t.term, ${token}, 1) <= 1 ${shortFuzzyWeight})` : Prisma.empty})`;
       branches.push(Prisma.sql`SELECT t."documentId", ${queryIndex} AS alternative, ${tokenIndex} AS token, ${tokens.length} AS required,
         max(t.weight + CASE WHEN t.term=${token} THEN 40 WHEN t.term LIKE ${prefix} THEN 20 ELSE 0 END) AS score
         FROM "SearchTerm" t WHERE ${predicate} GROUP BY t."documentId"`);

@@ -25,6 +25,7 @@ describe('Search query safeguards', () => {
     expect(numeric.sql).toContain('levenshtein_less_equal');
     const identifier = rankedSearchSql(['K63']);
     expect(identifier.sql).not.toContain('levenshtein_less_equal');
+    expect(rankedSearchSql(['لولا']).sql).toContain('t.weight >= 60');
     expect(rankedSearchSql([]).sql).toContain('WHERE FALSE');
   });
 });
