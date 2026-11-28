@@ -231,7 +231,7 @@ describe("Door configurator", () => {
     configurator();
     fireEvent.click(await screen.findByRole("button", { name: /مدل آزمون جداگانه/ }));
     expect(screen.getByRole("img", { name: "تصویر دستگیره L" })).toHaveAttribute("src", "/media/approved-handle.webp");
-    expect(screen.getByRole("img", { name: "تصویر دستگیره ۴۵ درجه" })).toHaveAttribute("src", "/images/doors/handle-45.svg");
+    expect(screen.getByRole("img", { name: "تصویر دستگیره ۴۵ درجه" })).toHaveAttribute("src", "/images/doors/handle-45.png");
   });
   it("adds a second, mirrored door without changing the registered original or its dimensions", async () => {
     sessionStorage.setItem("iranyaragh:door-draft:v1:anonymous", JSON.stringify([{
