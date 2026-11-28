@@ -35,7 +35,8 @@ export class SearchEngine {
           categoryIds = categories.map(c => c.id);
         }
         const matches = rankedSearchSql(queries);
-        const eligible = filteredCatalogSql({ ...query, search: undefined }, categoryIds);
+        const needsPrice = query.sortBy === 'price' || Boolean(query.minPrice || query.maxPrice) || query.discounted === 'true';
+        const eligible = filteredCatalogSql({ ...query, search: undefined }, categoryIds, needsPrice);
         const matched = Prisma.sql`SELECT e.*, r.score FROM (${matches}) r JOIN (${eligible}) e ON e.id=r.id`;
         const sales = Prisma.sql`greatest(
           coalesce((SELECT sum(oi.quantity) FROM "OrderItem" oi JOIN "ProductVariant" v ON v.id=oi."variantId" JOIN "Order" o ON o.id=oi."orderId" WHERE v."productId"=m.id AND (o.status::text='CREDIT_APPROVED' OR (o.status::text='PAID' AND EXISTS (SELECT 1 FROM "Payment" pay WHERE pay."orderId"=o.id AND pay.status::text IN ('PAID','PARTIALLY_REFUNDED'))))),0)
@@ -45,18 +46,29 @@ export class SearchEngine {
           : query.sortBy === 'popular' ? Prisma.sql`${sales} DESC, score DESC`
           : Prisma.sql`score DESC`;
         const order = Prisma.sql`(score >= 10000) DESC, ${sort}`;
-        const rows = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`SELECT id FROM (${matched}) m ORDER BY ${order}, id ASC LIMIT ${perPage} OFFSET ${(page-1)*perPage}`);
-        const counts = await tx.$queryRaw<{ total: bigint }[]>(Prisma.sql`SELECT count(*) AS total FROM (${matched}) m`);
-        const facets = await tx.$queryRaw<{ kind: string; id: string; name: string; slug: string; count: bigint }[]>(Prisma.sql`
-          WITH matches AS (${matched})
-          SELECT 'category' AS kind, c.id,c.name,c.slug,count(*) AS count FROM matches m JOIN "Product" p ON p.id=m.id JOIN "Category" c ON c.id=p."categoryId" GROUP BY c.id
-          UNION ALL SELECT 'brand',b.id,b.name,b.slug,count(*) FROM matches m JOIN "Product" p ON p.id=m.id JOIN "Brand" b ON b.id=p."brandId" GROUP BY b.id ORDER BY count DESC, id LIMIT 40`);
+        // The ranked term match is the expensive part of a suggestion request.
+        // Materialize it once so page, total and facets share the same snapshot
+        // and PostgreSQL does not repeat fuzzy matching three times.
+        const result = await tx.$queryRaw<{ ids: string[]; total: bigint; facets: { kind: string; id: string; name: string; slug: string; count: number }[] }[]>(Prisma.sql`
+          WITH matched AS MATERIALIZED (${matched}),
+          page_rows AS (
+            SELECT id, row_number() OVER (ORDER BY ${order}, id ASC) AS position
+            FROM matched m ORDER BY ${order}, id ASC LIMIT ${perPage} OFFSET ${(page-1)*perPage}
+          ), facet_rows AS (
+            SELECT 'category' AS kind, c.id,c.name,c.slug,count(*) AS count FROM matched m JOIN "Product" p ON p.id=m.id JOIN "Category" c ON c.id=p."categoryId" GROUP BY c.id
+            UNION ALL SELECT 'brand',b.id,b.name,b.slug,count(*) FROM matched m JOIN "Product" p ON p.id=m.id JOIN "Brand" b ON b.id=p."brandId" GROUP BY b.id ORDER BY count DESC, id LIMIT 40
+          )
+          SELECT coalesce((SELECT jsonb_agg(id ORDER BY position) FROM page_rows),'[]'::jsonb) AS ids,
+            (SELECT count(*) FROM matched) AS total,
+            coalesce((SELECT jsonb_agg(to_jsonb(facet_rows) ORDER BY count DESC, id) FROM facet_rows),'[]'::jsonb) AS facets`);
+        const rows = result[0]?.ids ?? [];
+        const facets = result[0]?.facets ?? [];
         let correctedQuery: string | null = null;
         if (queries.length > 1 && rows.length) {
           const primary = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`SELECT id FROM (${rankedSearchSql([q])}) original LIMIT 1`);
           if (!primary.length) correctedQuery = aliases[0]?.replacement ?? normalized[0]!.keyboard ?? reverse[0]?.replacement ?? null;
         }
-        return { ...empty, ids: rows.map(r => r.id), total: Number(counts[0]?.total ?? 0), categories: facets.filter(f=>f.kind==='category').map(f=>({...f,count:Number(f.count)})), brands: facets.filter(f=>f.kind==='brand').map(f=>({...f,count:Number(f.count)})), correctedQuery };
+        return { ...empty, ids: rows, total: Number(result[0]?.total ?? 0), categories: facets.filter(f=>f.kind==='category').map(f=>({...f,count:Number(f.count)})), brands: facets.filter(f=>f.kind==='brand').map(f=>({...f,count:Number(f.count)})), correctedQuery };
       }, { timeout: 5000, maxWait: 1000 });
     } catch (error) {
       if (error instanceof BadRequestException) throw error;

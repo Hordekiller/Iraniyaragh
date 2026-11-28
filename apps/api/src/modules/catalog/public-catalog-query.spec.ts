@@ -23,6 +23,13 @@ describe('filteredCatalogSql', () => {
     expect(filteredCatalogSql({}, null).sql).not.toContain('FALSE');
   });
 
+  it('omits price history joins when a relevance search does not use price', () => {
+    const query = filteredCatalogSql({ brandId: 'brand-1', available: 'true' }, null, false);
+    expect(query.sql).not.toContain('VariantPriceRecord');
+    expect(query.sql).toContain('NULL::bigint AS price');
+    expect(query.sql).toContain('SUM(balance.available) > 0');
+  });
+
   it('rejects invalid selections and reversed price bounds', () => {
     expect(() => filteredCatalogSql({ slugs: 'bad slug' }, null)).toThrow();
     expect(() => filteredCatalogSql({ ids: 'bad/id' }, null)).toThrow();
