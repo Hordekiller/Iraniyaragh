@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Home, LayoutGrid, ShoppingBag, Search, User, PackageSearch } from 'lucide-react'
+import { Home, LayoutGrid, ShoppingBag, User, Heart, DoorOpen, CircleHelp, Store } from 'lucide-react'
 import { ROUTES } from '../../lib/routes'
 import { useAuth } from '../../state/auth-context'
+import { useShopNavigation } from '../../lib/shop-navigation'
 
 type MobileBottomNavProps = { onOpenSearch: () => void; onOpenLogin: () => void; embedded?: boolean }
 
-export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }: MobileBottomNavProps) {
+export function MobileBottomNav({ onOpenLogin, embedded = false }: MobileBottomNavProps) {
   const { pathname } = useLocation()
   const navRef = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -23,6 +24,7 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }:
   }, [embedded, pathname])
   const navigate = useNavigate()
   const { state: authState } = useAuth()
+  const shopMode = useShopNavigation()
 
   // Product pages provide their own persistent purchase controls.
   if (!embedded && (pathname.startsWith('/products/') || pathname.startsWith('/product/'))) {
@@ -30,24 +32,30 @@ export function MobileBottomNav({ onOpenSearch, onOpenLogin, embedded = false }:
     return <div aria-hidden="true" data-testid="product-dock-spacer" className="h-[calc(var(--product-dock-height,14rem)+3.75rem)] lg:h-0" />
   }
 
-  const items = [
-    { label: 'خانه', icon: Home, active: pathname === ROUTES.home, action: () => { void navigate(ROUTES.home) } },
-    { label: 'جستجو', icon: Search, active: pathname === ROUTES.search, action: () => { onOpenSearch(); window.scrollTo({ top: 0, behavior: 'smooth' }) } },
+  const account = { label: 'حساب کاربری', short: 'پروفایل', icon: User, active: pathname === ROUTES.account || pathname.startsWith(`${ROUTES.account}/`), action: () => { if (authState.phase === 'authenticated') void navigate(ROUTES.account); else onOpenLogin() } }
+  const items = shopMode ? [
+    { label: 'فروشگاه', icon: Store, active: pathname === ROUTES.shop, action: () => { void navigate(ROUTES.shop) } },
     { label: 'دسته‌بندی‌ها', short: 'دسته‌ها', icon: LayoutGrid, active: pathname === ROUTES.categories || pathname.startsWith('/categories/'), action: () => { void navigate(ROUTES.categories) } },
     { label: 'سبد خرید', icon: ShoppingBag, active: pathname === ROUTES.cart || pathname === ROUTES.checkout, action: () => { void navigate(ROUTES.cart) } },
-    { label: 'پیگیری سفارش‌ها', short: 'پیگیری', icon: PackageSearch, active: pathname === ROUTES.orders || pathname.startsWith(`${ROUTES.orders}/`), action: () => { void navigate(ROUTES.orders) } },
-    { label: 'حساب کاربری', short: 'پروفایل', icon: User, active: pathname === ROUTES.account || pathname.startsWith(`${ROUTES.account}/`), action: () => { if (authState.phase === 'authenticated') void navigate(ROUTES.account); else onOpenLogin() } },
+    { label: 'علاقه‌مندی‌ها', short: 'علاقه‌ها', icon: Heart, active: pathname === ROUTES.wishlist, action: () => { void navigate(ROUTES.wishlist) } },
+    account,
+  ] : [
+    { label: 'خانه', icon: Home, active: pathname === ROUTES.home, action: () => { void navigate(ROUTES.home) } },
+    { label: 'فروشگاه', icon: Store, active: false, action: () => { void navigate(ROUTES.shop) } },
+    { label: 'درب سفارشی', short: 'درب', icon: DoorOpen, active: pathname.startsWith(ROUTES.customDoors), action: () => { void navigate(ROUTES.customDoors) } },
+    { label: 'پشتیبانی', icon: CircleHelp, active: pathname.startsWith(ROUTES.help), action: () => { void navigate(ROUTES.help) } },
+    account,
   ]
 
   return <>
     <nav ref={navRef} aria-label="ناوبری پایین" className={embedded ? 'w-full lg:hidden' : 'pointer-events-none fixed inset-x-0 bottom-0 z-50 lg:hidden'}>
       <div className={embedded ? 'mx-auto w-full max-w-[480px]' : 'mx-auto max-w-[480px] px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]'}>
-        <div className={`pointer-events-auto grid grid-cols-6 px-1 py-2 ${embedded ? 'rounded-2xl' : 'rounded-full border border-white/80 bg-white/85 shadow-[0_12px_36px_rgba(15,23,42,0.18)] backdrop-blur-xl'}`}>
-          {items.map(({ label, short, icon: Icon, active, action }) => <button type="button" key={label} onClick={action} aria-label={short && !label.includes(short) ? `${short} (${label})` : label} aria-current={active ? 'page' : undefined}
+        <div className={`pointer-events-auto grid grid-cols-5 px-1 py-2 ${embedded ? 'rounded-2xl' : 'rounded-full border border-white/80 bg-white/85 shadow-[0_12px_36px_rgba(15,23,42,0.18)] backdrop-blur-xl'}`}>
+          {items.map(item => { const { label, icon: Icon, active, action } = item; const short = 'short' in item ? item.short : undefined; return <button type="button" key={label} onClick={action} aria-label={short && !label.includes(short) ? `${short} (${label})` : label} aria-current={active ? 'page' : undefined}
             className={`flex min-h-12 min-w-11 flex-col items-center justify-center gap-1 rounded-full px-0.5 py-2 text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-700 ${active ? 'bg-orange-50 text-[#C2410C]' : 'text-slate-600 hover:bg-orange-50'}`}>
             <Icon size={21} strokeWidth={active ? 2.3 : 1.9} aria-hidden="true" />
             <span>{short ?? label}</span>
-          </button>)}
+          </button> })}
         </div>
       </div>
     </nav>

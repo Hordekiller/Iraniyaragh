@@ -184,27 +184,17 @@ test.describe('web: direct quantity entry', () => {
     }
   })
 
-  test('lets the end of the cart scroll clear of the help button', async ({ page }) => {
-    test.skip(!isMobile(page), 'floating help button is mobile-only')
-    // The fixture build has no API; answer the admin helper switch as "on".
-    await page.route('**/api/v1/catalog/storefront-helper', (route) =>
-      route.fulfill({
-        json: { data: { enabled: true } },
-        headers: {
-          'access-control-allow-origin': new URL(page.url() || 'http://127.0.0.1:4173').origin,
-          'access-control-allow-credentials': 'true',
-        },
-      }),
-    )
+  test('lets the end of the cart scroll clear of the shop navigation', async ({ page }) => {
+    test.skip(!isMobile(page), 'bottom navigation is mobile-only')
     await addQuantity(page, '3')
     await openCart(page)
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-    const helpButton = page.getByRole('button', { name: 'راهنمای این صفحه' })
-    await expect(helpButton).toBeVisible()
-    const help = await helpButton.boundingBox()
+    await expect(page.getByRole('button', { name: 'راهنمای این صفحه' })).toHaveCount(0)
+    const navigation = page.getByRole('navigation', { name: 'ناوبری پایین' })
+    const nav = await navigation.boundingBox()
     const summaryEnd = await page.getByRole('complementary').evaluate((node) => node.getBoundingClientRect().bottom)
-    expect(help).not.toBeNull()
-    expect(summaryEnd).toBeLessThanOrEqual(help!.y)
+    expect(nav).not.toBeNull()
+    expect(summaryEnd).toBeLessThanOrEqual(nav!.y)
   })
 
   test('has no accessibility violations in the selector', async ({ page }) => {

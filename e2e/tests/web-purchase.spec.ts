@@ -3,7 +3,6 @@ import AxeBuilder from '@axe-core/playwright'
 import type { Page } from '@playwright/test'
 import {
   createExternalRequestsTracker,
-  isMobile,
   signInFixtureCustomer,
   tap,
 } from './helpers'
@@ -85,19 +84,13 @@ test.describe('web: fixture purchase journey', () => {
         await tap(page.getByRole('link', { name: 'ادامه فرایند خرید' }))
       }
       if (route === '/orders') {
-        if (isMobile(page)) {
-          // The bottom account tab opens `/account`, whose profile shortcuts
-          // intentionally wait for `/customers/me`. Fixture-auth tokens are
-          // not accepted by the real API, so use the authenticated header menu
-          // for the orders route (the same customer-facing navigation used on
-          // desktop) instead of depending on a successful profile response.
-          await tap(page.getByRole('button', { name: 'حساب کاربری' }).first())
-          await tap(page.getByRole('menuitem', { name: /سفارش‌های من/ }))
-          await expect(page.getByRole('menu')).toBeHidden()
-        } else {
-          await tap(page.getByRole('navigation', { name: 'ناوبری اصلی', exact: true })
-            .getByRole('link', { name: 'پیگیری سفارش', exact: true }))
-        }
+        // Shop navigation is active after entering the product journey. The
+        // authenticated account menu exposes orders on both viewport sizes.
+        // The account page's shortcuts wait for `/customers/me`, which fixture
+        // auth intentionally cannot satisfy against the real API.
+        await tap(page.getByRole('button', { name: 'حساب کاربری' }).first())
+        await tap(page.getByRole('menuitem', { name: /سفارش‌های من/ }))
+        await expect(page.getByRole('menu')).toBeHidden()
       }
       await expect(page).toHaveURL(new RegExp(`${route}$`))
       await network.assertNone()

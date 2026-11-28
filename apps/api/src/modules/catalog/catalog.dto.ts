@@ -12,24 +12,31 @@ export class MoneyDto {
   @IsString() @IsIn(['IRR']) currency!: 'IRR';
 }
 
-export class CategoryCreateDto {
+export class CatalogImageDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(128) imageAssetId?: string | null;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) imageAlt?: string | null;
+  @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) shopOrder?: number;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() shopFeatured?: boolean;
+}
+
+export class CategoryCreateDto extends CatalogImageDto {
   @IsString() @MaxLength(150) name!: string;
   @IsString() @Matches(SLUG) @MaxLength(150) slug!: string;
   @IsOptional() @IsString() @MaxLength(128) parentId?: string;
 }
 
-export class CategoryUpdateDto {
+export class CategoryUpdateDto extends CatalogImageDto {
   @IsOptional() @IsString() @MaxLength(150) name?: string;
   @IsOptional() @IsString() @Matches(SLUG) @MaxLength(150) slug?: string;
   @IsOptional() @IsString() @MaxLength(128) parentId?: string | null;
 }
 
-export class BrandCreateDto {
+export class BrandCreateDto extends CatalogImageDto {
   @IsString() @MaxLength(150) name!: string;
   @IsString() @Matches(SLUG) @MaxLength(150) slug!: string;
 }
 
-export class BrandUpdateDto {
+export class BrandUpdateDto extends CatalogImageDto {
   @IsOptional() @IsString() @MaxLength(150) name?: string;
   @IsOptional() @IsString() @Matches(SLUG) @MaxLength(150) slug?: string;
 }
@@ -89,7 +96,14 @@ export class ProductListQueryDto {
   @IsOptional() @IsEnum(['DRAFT', 'PUBLISHED', 'ARCHIVED']) status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   @IsOptional() @IsString() brandId?: string;
   @IsOptional() @IsString() categoryId?: string;
-  @IsOptional() @IsEnum(['name', 'createdAt', 'updatedAt', 'popular']) sortBy: 'name' | 'createdAt' | 'updatedAt' | 'popular' = 'createdAt';
+  @IsOptional() @IsEnum(['name', 'createdAt', 'updatedAt', 'popular', 'price']) sortBy: 'name' | 'createdAt' | 'updatedAt' | 'popular' | 'price' = 'createdAt';
+  @IsOptional() @IsString() @Matches(AMOUNT) minPrice?: string;
+  @IsOptional() @IsString() @Matches(AMOUNT) maxPrice?: string;
+  @IsOptional() @IsIn(['true', 'false']) available?: string;
+  @IsOptional() @IsIn(['true', 'false']) discounted?: string;
+  @IsOptional() @IsString() @MaxLength(10040) slugs?: string;
+  @IsOptional() @IsString() @MaxLength(3200) ids?: string;
+  @IsOptional() @IsString() @MaxLength(2000) attributes?: string;
   @IsOptional() @IsEnum(['asc', 'desc']) sortDir: 'asc' | 'desc' = 'desc';
 }
 

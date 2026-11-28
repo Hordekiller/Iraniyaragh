@@ -5,6 +5,7 @@ describe('ProductMediaCleanupService', () => {
   it('expires intents and deletes due objects only after consulting database state', async () => {
     const now = new Date('2026-09-15T08:00:00Z');
     const prisma = {
+      $transaction: vi.fn().mockResolvedValue(undefined),
       productMedia: {
         updateMany: vi.fn().mockResolvedValueOnce({ count: 2 }).mockResolvedValueOnce({ count: 1 }),
         findMany: vi.fn()
@@ -23,6 +24,7 @@ describe('ProductMediaCleanupService', () => {
 
   it('does not clear the deletion marker when object storage fails', async () => {
     const prisma = {
+      $transaction: vi.fn().mockResolvedValue(undefined),
       productMedia: {
         updateMany: vi.fn().mockResolvedValue({ count: 0 }),
         findMany: vi.fn().mockResolvedValueOnce([{ id: 'm1', objectKey: 'quarantine/m1', sourceDeleteAt: new Date() }]),

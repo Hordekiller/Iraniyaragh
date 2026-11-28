@@ -25,10 +25,21 @@ export class CatalogController {
   @ApiQuery({ name: 'search', required: false, type: String, maxLength: 150 })
   @ApiQuery({ name: 'categoryId', required: false, type: String })
   @ApiQuery({ name: 'brandId', required: false, type: String })
-  @ApiQuery({ name: 'sortBy', required: false, enum: ['name', 'createdAt', 'updatedAt', 'popular'] })
+  @ApiQuery({ name: 'sortBy', required: false, enum: ['name', 'createdAt', 'updatedAt', 'popular', 'price'] })
+  @ApiQuery({ name: 'minPrice', required: false, type: String, pattern: '^\\d{1,15}$' })
+  @ApiQuery({ name: 'maxPrice', required: false, type: String, pattern: '^\\d{1,15}$' })
+  @ApiQuery({ name: 'available', required: false, enum: ['true', 'false'] })
+  @ApiQuery({ name: 'discounted', required: false, enum: ['true', 'false'] })
+  @ApiQuery({ name: 'ids', required: false, type: String, description: 'Up to 24 comma-separated product IDs.' })
+  @ApiQuery({ name: 'slugs', required: false, type: String, description: 'Up to 40 comma-separated product slugs.' })
+  @ApiQuery({ name: 'attributes', required: false, type: String, description: 'JSON object of up to 8 attribute codes and option codes; all match one active variant.' })
   @ApiQuery({ name: 'sortDir', required: false, enum: ['asc', 'desc'] })
   @ApiOkResponse({ schema: openApiPublicCatalog.products })
   async publicProducts(@Query() query: ProductListQueryDto): Promise<ProductListResponse> { return this.catalog.listPublicProducts(query); }
+
+  @Get('categories/:id/filters')
+  @PublicCatalogCache()
+  async categoryFilters(@Param('id') id: string) { return this.catalog.categoryFilters(id); }
 
   @Get('products/:idOrSlug')
   @PublicCatalogCache()

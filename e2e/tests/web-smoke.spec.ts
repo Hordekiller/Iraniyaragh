@@ -187,6 +187,8 @@ test.describe('web: storefront shell', () => {
     await page.goto('/');
 
     const navigation = page.getByRole('navigation', { name: 'ناوبری پایین', exact: true });
+    await tap(navigation.getByRole('button', { name: 'فروشگاه' }));
+    await expect(page).toHaveURL(/\/shop$/);
     const categories = navigation.getByRole('button', { name: /دسته‌بندی‌ها/ });
     await expect(categories).toBeVisible();
     // No phone is configured for this build, so the bottom nav must not offer a

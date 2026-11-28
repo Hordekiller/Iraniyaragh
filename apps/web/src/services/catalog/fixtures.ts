@@ -61,6 +61,12 @@ export class CatalogFixtureClient implements CatalogApi {
       items = items.filter(p => p.brand?.toLowerCase() === brand);
     }
 
+    if (query.slugs) items = items.filter(item => query.slugs!.includes(item.slug));
+    if (query.ids) items = items.filter(item => query.ids!.includes(item.id));
+    if (query.available) items = items.filter(item => ['IN_STOCK', 'LOW_STOCK'].includes(item.stockStatus));
+    if (query.discounted) items = items.filter(item => item.oldPrice && BigInt(item.oldPrice.amount) > BigInt(item.price.amount));
+    if (query.minPrice) items = items.filter(item => item.priceAvailable !== false && BigInt(item.price.amount) >= BigInt(query.minPrice!));
+    if (query.maxPrice) items = items.filter(item => item.priceAvailable !== false && BigInt(item.price.amount) <= BigInt(query.maxPrice!));
     switch (query.sortBy) {
       case 'price_asc':
         items.sort((a, b) => Number(a.price.amount) - Number(b.price.amount));

@@ -13,6 +13,7 @@ import { ContentTooLargeError, rewriteDescriptionImages, sanitizeDescriptionFrag
 import { widestRenditionProjection } from '../media/media-url';
 import { AuditLogService } from '../audit/audit-log.service';
 import type { AttributeDefinitionCreateDto, AttributeDefinitionUpdateDto, AttributeOptionCreateDto, AttributeOptionUpdateDto, BrandCreateDto, BrandUpdateDto, CategoryCreateDto, CategoryUpdateDto, ProductAttributeConfigurationUpdateDto, ProductCreateDto, ProductDescriptionDto, ProductListQueryDto, ProductStatusDto, ProductVariantAttributesUpdateDto, ProductVariantStatusDto, ProductVariantUpdateDto, VariantGenerateDto, VariantGeneratePreviewDto, VariantPriceUpdateDto } from './catalog.dto';
+import { filteredCatalogSql } from './public-catalog-query';
 import { publicProductStockStatus } from './public-product-stock';
 import { CatalogIdempotencyService } from './catalog-idempotency.service';
 import { EMPTY_AXIS_SIGNATURE, canonicalizeSku, combinationSignature, legacyCombinationSignature, pendingCombinationSignature } from './variant-identifiers';
@@ -28,8 +29,9 @@ const statusToApi = (status: ProductStatus): 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' 
 const PRODUCT_SORT_FIELDS = new Set(['name', 'createdAt', 'updatedAt', 'popular'] as const);
 const ORDER_DIRECTIONS = new Set(['asc', 'desc'] as const);
 
-type CategoryTreeNode = { id: string; name: string; slug: string; parentId: string | null; children: CategoryTreeNode[]; createdAt: string; updatedAt: string };
-type CategoryInput = { id: string; name: string; slug: string; parentId: string | null; createdAt: Date | string; updatedAt: Date | string; children?: CategoryInput[] };
+type ImageFields = { imageAssetId?: string | null; imageAlt?: string | null; shopOrder?: number; shopFeatured?: boolean };
+type CategoryTreeNode = ImageFields & { id: string; name: string; slug: string; parentId: string | null; children: CategoryTreeNode[]; createdAt: string; updatedAt: string };
+type CategoryInput = ImageFields & { id: string; name: string; slug: string; parentId: string | null; createdAt: Date | string; updatedAt: Date | string; children?: CategoryInput[] };
 type BrandRow = { id: string; name: string; slug: string; _count: { products: number } };
 type CategoryRow = { id: string; name: string; slug: string; parentId: string | null; _count: { products: number } };
 type VariantAttributeValueRow = { attributeId: string; optionId: string; attribute: { code: string; name: string }; option: { code: string; label: string } };
@@ -154,8 +156,9 @@ export class CatalogService {
       ...(query.categoryId ? { categoryId: categoryIds ? { in: categoryIds } : query.categoryId } : {}),
       ...(query.search ? { OR: [{ name: { contains: query.search, mode: 'insensitive' } }, { slug: { contains: query.search, mode: 'insensitive' } }] } : {}),
     };
-    const requestedSort = query.sortBy && PRODUCT_SORT_FIELDS.has(query.sortBy) ? query.sortBy : 'createdAt';
-    const sortBy = includeDrafts && requestedSort === 'popular' ? 'createdAt' : requestedSort;
+    if (!includeDrafts && (query.sortBy === 'price' || query.minPrice || query.maxPrice || query.available || query.discounted || query.ids || query.slugs || query.attributes)) return this.listFilteredProducts(query, categoryIds, page, perPage);
+    const requestedSort = query.sortBy && PRODUCT_SORT_FIELDS.has(query.sortBy as 'createdAt') ? query.sortBy : 'createdAt';
+    const sortBy = requestedSort === 'price' || (includeDrafts && requestedSort === 'popular') ? 'createdAt' : requestedSort;
     const sortDir = query.sortDir && ORDER_DIRECTIONS.has(query.sortDir) ? query.sortDir : 'desc';
     if (sortBy === 'popular' && !includeDrafts) {
       const [ids, total] = await Promise.all([
@@ -166,18 +169,37 @@ export class CatalogService {
       const rows = ids.flatMap(id => { const row = byId.get(id); return row ? [row] : []; });
       return { data: { items: rows.map(row => this.productListItem(row)), meta: { page, perPage, total, pages: Math.ceil(total / perPage) } } };
     }
+    const sortOrder: Prisma.ProductOrderByWithRelationInput = sortBy === 'name'
+      ? { name: sortDir }
+      : sortBy === 'updatedAt'
+        ? { updatedAt: sortDir }
+        : { createdAt: sortDir };
     const [rows, total] = await Promise.all([
-      this.prisma.product.findMany({ where, orderBy: { [sortBy]: sortDir }, skip: (page - 1) * perPage, take: perPage, ...(includeDrafts ? {} : { include: this.publicListMediaInclude() }) }),
+      this.prisma.product.findMany({ where, orderBy: [sortOrder, { id: 'asc' }], skip: (page - 1) * perPage, take: perPage, ...(includeDrafts ? {} : { include: this.publicListMediaInclude() }) }),
       this.prisma.product.count({ where }),
     ]);
     return { data: { items: rows.map(row => this.productListItem(row)), meta: { page, perPage, total, pages: Math.ceil(total / perPage) } } };
   }
 
-  private async popularProductIds(input: { categoryIds: string[] | null; brandId?: string; search?: string; page: number; perPage: number }): Promise<string[]> {
+  private async listFilteredProducts(query: Partial<ProductListQueryDto>, categoryIds: string[] | null, page: number, perPage: number): Promise<ProductListResponse> {
+    const filtered = filteredCatalogSql(query, categoryIds);
+    const order = query.sortBy === 'price' ? Prisma.sql`price` : query.sortBy === 'name' ? Prisma.sql`name` : Prisma.sql`"createdAt"`;
+    const direction = query.sortDir === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+    const [ids, counts] = await Promise.all([
+      query.sortBy === 'popular' ? this.popularProductIds({ categoryIds, brandId: query.brandId, search: query.search, page, perPage, eligible: filtered }) : this.prisma.$queryRaw<{id: string}[]>(Prisma.sql`SELECT id FROM (${filtered}) matched ORDER BY ${order} ${direction} NULLS LAST, id ASC LIMIT ${perPage} OFFSET ${(page - 1) * perPage}`).then(rows => rows.map(row => row.id)),
+      this.prisma.$queryRaw<{total: bigint}[]>(Prisma.sql`SELECT COUNT(*) AS total FROM (${filtered}) matched`),
+    ]);
+    const byId = new Map((ids.length ? await this.prisma.product.findMany({ where: { id: { in: ids }, status: 'ACTIVE' }, include: this.publicListMediaInclude() }) : []).map(row => [row.id, row]));
+    const total = Number(counts[0]?.total ?? 0);
+    return { data: { items: ids.flatMap(id => { const row = byId.get(id); return row ? [this.productListItem(row)] : []; }), meta: { page, perPage, total, pages: Math.ceil(total / perPage) } } };
+  }
+
+  private async popularProductIds(input: { categoryIds: string[] | null; brandId?: string; search?: string; page: number; perPage: number; eligible?: Prisma.Sql }): Promise<string[]> {
     if (input.categoryIds?.length === 0) return [];
     const conditions: Prisma.Sql[] = [Prisma.sql`p.status::text = 'ACTIVE'`];
     if (input.categoryIds) conditions.push(Prisma.sql`p."categoryId" IN (${Prisma.join(input.categoryIds)})`);
     if (input.brandId) conditions.push(Prisma.sql`p."brandId" = ${input.brandId}`);
+    if (input.eligible) conditions.push(Prisma.sql`p.id IN (SELECT id FROM (${input.eligible}) eligible)`);
     const salesConditions: Prisma.Sql[] = [Prisma.sql`product.status::text = 'ACTIVE'`];
     if (input.categoryIds) salesConditions.push(Prisma.sql`product."categoryId" IN (${Prisma.join(input.categoryIds)})`);
     if (input.brandId) salesConditions.push(Prisma.sql`product."brandId" = ${input.brandId}`);
@@ -546,25 +568,25 @@ export class CatalogService {
     return this.idempotency.run({
       actorId, scope: 'catalog.brand.create', key: idempotencyKey, payload: normalized,
       execute: async tx => {
-      const created = await this.mapPrismaError(tx.brand.create({ data: { name: normalized.name, slug: normalized.slug }, include: { _count: { select: { products: true } } } }), 'Brand');
-      await this.audit.record({ actorId, action: 'catalog.brand.created', entityType: 'Brand', entityId: created.id, requestId: getRequestId(), after: { name: created.name, slug: created.slug } }, tx);
-      return { response: { data: { brand: { id: created.id, name: created.name, slug: created.slug, productCount: created._count.products } } }, resourceType: 'Brand', resourceId: created.id };
+      const created = await this.mapPrismaError(tx.brand.create({ data: { name: normalized.name, slug: normalized.slug, ...await this.imageInput(tx, input) }, include: { _count: { select: { products: true } } } }), 'Brand');
+      await this.audit.record({ actorId, action: 'catalog.brand.created', entityType: 'Brand', entityId: created.id, requestId: getRequestId(), after: { name: created.name, slug: created.slug, ...this.imageMetadata(created) } }, tx);
+      return { response: { data: { brand: { id: created.id, name: created.name, slug: created.slug, productCount: created._count.products, ...this.imageMetadata(created) } } }, resourceType: 'Brand', resourceId: created.id };
       },
     });
   }
 
   async updateBrand(actorId: string, id: string, input: BrandUpdateDto): Promise<BrandResponse> {
     const brand = await this.mapPrismaError(this.prisma.$transaction(async tx => {
-      const updated = await tx.brand.update({ where: { id }, data: { ...(input.name ? { name: input.name.trim() } : {}), ...(input.slug ? { slug: input.slug } : {}) }, include: { _count: { select: { products: true } } } });
-      await this.audit.record({ actorId, action: 'catalog.brand.updated', entityType: 'Brand', entityId: id, requestId: getRequestId(), after: { name: updated.name, slug: updated.slug } }, tx);
+      const updated = await tx.brand.update({ where: { id }, data: { ...(input.name ? { name: input.name.trim() } : {}), ...(input.slug ? { slug: input.slug } : {}), ...await this.imageInput(tx, input) }, include: { _count: { select: { products: true } } } });
+      await this.audit.record({ actorId, action: 'catalog.brand.updated', entityType: 'Brand', entityId: id, requestId: getRequestId(), after: { name: updated.name, slug: updated.slug, ...this.imageMetadata(updated) } }, tx);
       return updated;
     }), 'Brand');
-    return { data: { brand: { id: brand.id, name: brand.name, slug: brand.slug, productCount: brand._count.products } } };
+    return { data: { brand: { id: brand.id, name: brand.name, slug: brand.slug, productCount: brand._count.products, ...this.imageMetadata(brand) } } };
   }
 
   async listBrands(): Promise<BrandListResponse> {
-    const brands = await this.prisma.brand.findMany({ orderBy: { name: 'asc' }, include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } });
-    return { data: { items: brands.map(brand => ({ id: brand.id, name: brand.name, slug: brand.slug, productCount: brand._count.products })) } };
+    const brands = await this.prisma.brand.findMany({ orderBy: { name: 'asc' }, include: { imageAsset: { include: { renditions: true } }, _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } });
+    return { data: { items: brands.map(brand => ({ id: brand.id, name: brand.name, slug: brand.slug, productCount: brand._count.products, ...this.imageMetadata(brand), image: this.imageProjection(brand.imageAsset) })) } };
   }
 
   async createCategory(actorId: string, idempotencyKey: string, input: CategoryCreateDto): Promise<CategoryResponse> {
@@ -572,8 +594,8 @@ export class CatalogService {
     return this.idempotency.run({
       actorId, scope: 'catalog.category.create', key: idempotencyKey, payload: normalized,
       execute: async tx => {
-      const created = await this.mapPrismaError(tx.category.create({ data: { name: normalized.name, slug: normalized.slug, parentId: normalized.parentId }, include: this.categoryInclude() }), 'Category');
-      await this.audit.record({ actorId, action: 'catalog.category.created', entityType: 'Category', entityId: created.id, requestId: getRequestId(), after: { name: created.name, slug: created.slug } }, tx);
+      const created = await this.mapPrismaError(tx.category.create({ data: { name: normalized.name, slug: normalized.slug, parentId: normalized.parentId, ...await this.imageInput(tx, input) }, include: this.categoryInclude() }), 'Category');
+      await this.audit.record({ actorId, action: 'catalog.category.created', entityType: 'Category', entityId: created.id, requestId: getRequestId(), after: { name: created.name, slug: created.slug, ...this.imageMetadata(created) } }, tx);
       return { response: { data: { category: this.categoryNode(created) } }, resourceType: 'Category', resourceId: created.id };
       },
     });
@@ -586,15 +608,15 @@ export class CatalogService {
       if (input.parentId !== undefined && input.parentId !== null) {
         await this.assertCategoryParentDoesNotCreateCycle(tx, id, input.parentId);
       }
-      const updated = await tx.category.update({ where: { id }, data: { ...(input.name ? { name: input.name.trim() } : {}), ...(input.slug ? { slug: input.slug } : {}), ...(input.parentId !== undefined ? { parentId: input.parentId } : {}) }, include: this.categoryInclude() });
-      await this.audit.record({ actorId, action: 'catalog.category.updated', entityType: 'Category', entityId: id, requestId: getRequestId(), after: { name: updated.name, slug: updated.slug } }, tx);
+      const updated = await tx.category.update({ where: { id }, data: { ...(input.name ? { name: input.name.trim() } : {}), ...(input.slug ? { slug: input.slug } : {}), ...(input.parentId !== undefined ? { parentId: input.parentId } : {}), ...await this.imageInput(tx, input) }, include: this.categoryInclude() });
+      await this.audit.record({ actorId, action: 'catalog.category.updated', entityType: 'Category', entityId: id, requestId: getRequestId(), after: { name: updated.name, slug: updated.slug, ...this.imageMetadata(updated) } }, tx);
       return updated;
     }), 'Category');
     return { data: { category: this.categoryNode(category) } };
   }
 
   async listCategories(): Promise<CategoryListResponse> {
-    const categories = await this.prisma.category.findMany({ orderBy: { name: 'asc' }, include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } });
+    const categories = await this.prisma.category.findMany({ orderBy: { name: 'asc' }, include: { imageAsset: { include: { renditions: true } }, _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } });
     const counts = new Map(categories.map(category => [category.id, category._count.products]));
     const parents = new Map(categories.map(category => [category.id, category.parentId]));
     const remainingChildren = new Map<string, number>();
@@ -609,24 +631,58 @@ export class CatalogService {
       remainingChildren.set(parent, remaining);
       if (remaining === 0) ready.push(parent);
     }
-    return { data: { items: categories.map(category => ({ id: category.id, name: category.name, slug: category.slug, parentId: category.parentId, productCount: counts.get(category.id)! })) } };
+    return { data: { items: categories.map(category => ({ id: category.id, name: category.name, slug: category.slug, parentId: category.parentId, productCount: counts.get(category.id)!, ...this.imageMetadata(category), image: this.imageProjection(category.imageAsset) })) } };
+  }
+
+  async categoryFilters(categoryId: string) {
+    const ids = await this.publicCategoryIds(categoryId);
+    if (!ids.length) return { data: { attributes: [] } };
+    const rows = await this.prisma.$queryRaw<Array<{ code: string; name: string; optionCode: string; label: string }>>(Prisma.sql`
+      SELECT DISTINCT a.code, a.name, o.code AS "optionCode", o.label
+      FROM "Product" p JOIN "ProductVariant" v ON v."productId" = p.id
+      JOIN "ProductVariantAttributeValue" av ON av."variantId" = v.id
+      JOIN "AttributeDefinition" a ON a.id = av."attributeId"
+      JOIN "AttributeOption" o ON o.id = av."optionId"
+      WHERE p.status = 'ACTIVE' AND p."categoryId" IN (${Prisma.join(ids)}) AND v."isActive" AND v.status = 'ACTIVE' AND a.status = 'ACTIVE' AND o.status = 'ACTIVE'
+      ORDER BY a.code, o.code LIMIT 201`);
+    // A truncated facet could hide valid values. Omit it rather than pretend it is complete.
+    if (rows.length > 200) return { data: { attributes: [] } };
+    const groups = new Map<string, { code: string; name: string; options: Array<{ code: string; label: string }> }>();
+    for (const row of rows) {
+      const group = groups.get(row.code) ?? { code: row.code, name: row.name, options: [] };
+      group.options.push({ code: row.optionCode, label: row.label }); groups.set(row.code, group);
+    }
+    return { data: { attributes: [...groups.values()].slice(0, 8) } };
   }
 
   async categoryTree(): Promise<CategoryTreeResponse> {
     const rows = await this.prisma.category.findMany({ orderBy: { name: 'asc' }, include: { children: true } });
-    const nodes = new Map<string, CategoryTreeNode>(rows.map(row => [row.id, { id: row.id, name: row.name, slug: row.slug, parentId: row.parentId, children: [], createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() }]));
+    const nodes = new Map<string, CategoryTreeNode>(rows.map(row => [row.id, { ...this.imageMetadata(row), id: row.id, name: row.name, slug: row.slug, parentId: row.parentId, children: [], createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() }]));
     for (const node of nodes.values()) if (node.parentId && nodes.has(node.parentId)) nodes.get(node.parentId)!.children.push(node);
     return { data: { tree: [...nodes.values()].filter(node => node.parentId === null) } };
+  }
+
+  private imageMetadata(row: ImageFields) { return { imageAssetId: row.imageAssetId ?? null, imageAlt: row.imageAlt ?? null, shopOrder: row.shopOrder ?? 0, shopFeatured: row.shopFeatured ?? false }; }
+  private imageProjection(asset: { state: string; renditions: PublicRenditionRow[] } | null | undefined) {
+    return asset?.state === 'READY' ? widestRenditionProjection(this.config?.get('PUBLIC_MEDIA_ORIGIN', { infer: true }) ?? 'http://localhost:9000/products', asset.renditions) : null;
+  }
+  private async imageInput(tx: Prisma.TransactionClient, input: ImageFields) {
+    const { imageAssetId, imageAlt, shopOrder, shopFeatured } = input;
+    if (imageAssetId !== undefined) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(1752064113, 1935892600)`;
+      if (imageAssetId && !await tx.productMedia.findFirst({ where: { id: imageAssetId, assetScope: 'STOREFRONT', state: 'READY', kind: 'IMAGE' }, select: { id: true } })) throw new BadRequestException({ code: 'INVALID_MEDIA', message: 'Choose a ready storefront image.' });
+    }
+    return { ...(imageAssetId !== undefined ? { imageAssetId } : {}), ...(imageAlt !== undefined ? { imageAlt: imageAlt?.trim() || null } : {}), ...(shopOrder !== undefined ? { shopOrder } : {}), ...(shopFeatured !== undefined ? { shopFeatured } : {}) };
   }
 
   private productInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, variants: true } as const; }
   private adminProductInclude() { return { brand: { include: { _count: { select: { products: true } } } }, category: { include: { _count: { select: { products: true } } } }, media: { where: { state: 'READY' as const, kind: 'IMAGE' as const }, orderBy: { position: 'asc' as const }, include: { renditions: true } }, attributes: { include: { attribute: { select: { code: true, name: true } } }, orderBy: { attribute: { code: 'asc' as const } } }, variants: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] as Prisma.ProductVariantOrderByWithRelationInput[], include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } } } as const; }
   private publicImageMediaFilter() { return { state: 'READY' as const, kind: 'IMAGE' as const, altText: { not: null }, width: { not: null }, height: { not: null } } as const; }
-  private publicListMediaInclude() { return { variants: { where: { isActive: true, status: 'ACTIVE' as const }, select: { salePrice: true, inventory: { select: { available: true } } } }, media: { where: { ...this.publicImageMediaFilter(), role: 'PRIMARY' as const }, take: 1, include: { renditions: { where: { purpose: 'CARD' }, orderBy: { format: 'asc' as const } } } } } as const; }
+  private publicListMediaInclude() { return { variants: { where: { isActive: true, status: 'ACTIVE' as const }, orderBy: [{ salePrice: 'asc' }, { id: 'asc' }] as Prisma.ProductVariantOrderByWithRelationInput[], select: { salePrice: true, priceRecords: { where: { effectiveAt: { lte: new Date() } }, orderBy: [{ effectiveAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }] as Prisma.VariantPriceRecordOrderByWithRelationInput[], take: 2, select: { salePrice: true } }, inventory: { select: { available: true } } } }, media: { where: { ...this.publicImageMediaFilter(), role: 'PRIMARY' as const }, take: 1, include: { renditions: { where: { purpose: 'CARD' }, orderBy: { format: 'asc' as const } } } } } as const; }
   private publicProductInclude() { return { brand: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, category: { include: { _count: { select: { products: { where: { status: ProductStatus.ACTIVE } } } } } }, attributes: { include: { attribute: { select: { code: true, name: true } } } }, variants: { where: { isActive: true }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] as Prisma.ProductVariantOrderByWithRelationInput[], include: { attributeValues: { include: { attribute: { select: { code: true, name: true } }, option: { select: { code: true, label: true } } } } } }, media: { where: this.publicImageMediaFilter(), orderBy: { position: 'asc' as const }, include: { renditions: { orderBy: { width: 'asc' as const } } } } } as const; }
   private categoryInclude() { return { children: true } as const; }
-  private productListItem(row: { id: string; name: string; slug: string; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; media?: PublicMediaRow[]; variants?: Array<{ salePrice: bigint; inventory?: Array<{ available: number }> }> }) { const prices = row.variants?.map(variant => variant.salePrice) ?? []; const startingPrice = prices.length ? { amount: prices.reduce((lowest, price) => price < lowest ? price : lowest, prices[0]!).toString(), currency: 'IRR' as const } : null; const primary = row.media && row.media[0] && row.media[0].kind === 'IMAGE' && row.media[0].altText !== null && row.media[0].width !== null && row.media[0].height !== null ? this.publicImage(row.media[0]) : null; return { id: row.id, name: row.name, slug: row.slug, status: statusToApi(row.status), brandId: row.brandId, categoryId: row.categoryId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), ...(row.media ? { primaryMedia: primary } : {}), ...(row.variants ? { startingPrice } : {}), ...(row.variants?.every(variant => variant.inventory !== undefined) ? { stockStatus: publicProductStockStatus(row.variants.map(variant => variant.inventory!)) } : {}) }; }
-  private categoryNode(row: CategoryInput): CategoryTreeNode { return { id: row.id, name: row.name, slug: row.slug, parentId: row.parentId, children: (row.children ?? []).map(child => this.categoryNode(child)), createdAt: new Date(row.createdAt).toISOString(), updatedAt: new Date(row.updatedAt).toISOString() }; }
+  private productListItem(row: { id: string; name: string; slug: string; status: ProductStatus; brandId: string | null; categoryId: string | null; createdAt: Date; updatedAt: Date; media?: PublicMediaRow[]; variants?: Array<{ salePrice: bigint; priceRecords?: Array<{salePrice: bigint}>; inventory?: Array<{ available: number }> }> }) { const prices = row.variants?.map(variant => variant.salePrice) ?? []; const startingPrice = prices.length ? { amount: prices.reduce((lowest, price) => price < lowest ? price : lowest, prices[0]!).toString(), currency: 'IRR' as const } : null; const lowest = row.variants?.reduce((a, b) => b.salePrice < a.salePrice ? b : a, row.variants[0]!); const history = lowest?.priceRecords; const previousPrice = history?.length === 2 && history[0]!.salePrice === lowest?.salePrice && history[1]!.salePrice > lowest.salePrice ? { amount: history[1]!.salePrice.toString(), currency: 'IRR' as const } : null; const primary = row.media && row.media[0] && row.media[0].kind === 'IMAGE' && row.media[0].altText !== null && row.media[0].width !== null && row.media[0].height !== null ? this.publicImage(row.media[0]) : null; return { id: row.id, name: row.name, slug: row.slug, status: statusToApi(row.status), brandId: row.brandId, categoryId: row.categoryId, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), ...(row.media ? { primaryMedia: primary } : {}), ...(row.variants ? { startingPrice, previousPrice } : {}), ...(row.variants?.every(variant => variant.inventory !== undefined) ? { stockStatus: publicProductStockStatus(row.variants.map(variant => variant.inventory!)) } : {}) }; }
+  private categoryNode(row: CategoryInput): CategoryTreeNode { return { ...this.imageMetadata(row), id: row.id, name: row.name, slug: row.slug, parentId: row.parentId, children: (row.children ?? []).map(child => this.categoryNode(child)), createdAt: new Date(row.createdAt).toISOString(), updatedAt: new Date(row.updatedAt).toISOString() }; }
   private productDetail(row: ProductDetailRow) { return { ...this.productListItem(row), version: row.version, description: this.descriptionProjection(row.description, row.media), brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, attributes: row.attributes?.map(attribute => ({ attributeCode: attribute.attribute.code, attributeName: attribute.attribute.name, isVariantAxis: attribute.isVariantAxis, isRequired: attribute.isRequired })), variants: row.variants.map(variant => this.productVariantPrivateDetail(variant, row.attributes)) }; }
   private productDetailPublic(row: ProductDetailRow) { return { ...this.productListItem(row), description: this.descriptionProjection(row.description, row.media), brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, productCount: row.brand._count.products } : null, category: row.category ? { id: row.category.id, name: row.category.name, slug: row.category.slug, parentId: row.category.parentId, productCount: row.category._count.products } : null, variants: row.variants.map(variant => this.productVariantPublic(variant, row.attributes)), media: (row.media ?? []).filter(media => media.kind === 'IMAGE').map(media => this.publicImage(media)) }; }
   private publicImage(media: PublicMediaRow): PublicProductMediaImage {

@@ -16,6 +16,7 @@ const categories: CategorySummary[] = [
   { id: 'c1', name: 'کرکره', slug: 'shutter', parentId: null, productCount: 1 },
   { id: 'c2', name: 'قفل‌ها', slug: 'locks', parentId: null, productCount: 5 },
 ];
+const imageFields = { imageAssetId: null, imageAlt: '', shopOrder: 0, shopFeatured: false };
 
 function renderDialog(props: Partial<React.ComponentProps<typeof CategoryDialog>> = {}) {
   const onClose = vi.fn();
@@ -37,7 +38,7 @@ describe('CategoryDialog', () => {
     fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'doors' } });
     fireEvent.click(screen.getByRole('button', { name: 'ساخت دسته‌بندی' }));
 
-    await waitFor(() => expect(createCategory).toHaveBeenCalledWith({ name: 'درب‌ها', slug: 'doors' }, expect.any(String)));
+    await waitFor(() => expect(createCategory).toHaveBeenCalledWith({ ...imageFields, name: 'درب‌ها', slug: 'doors' }, expect.any(String)));
     expect(onSaved).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -54,6 +55,7 @@ describe('CategoryDialog', () => {
 
     await waitFor(() =>
       expect(createCategory).toHaveBeenCalledWith({
+        ...imageFields,
         name: 'قفل دستگیره‌ای',
         slug: 'handle-locks',
         parentId: 'c2',
@@ -81,7 +83,7 @@ describe('CategoryDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ذخیرهٔ تغییرات' }));
 
     await waitFor(() =>
-      expect(updateCategory).toHaveBeenCalledWith('c2', { name: 'قفل‌ها', slug: 'locks-v2', parentId: null }),
+      expect(updateCategory).toHaveBeenCalledWith('c2', { ...imageFields, name: 'قفل‌ها', slug: 'locks-v2', parentId: null }),
     );
   });
 

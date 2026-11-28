@@ -1,3 +1,4 @@
+import { StorefrontAssetsController } from './storefront-assets.controller';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { EnvironmentVariables } from '../../config/environment';
@@ -16,7 +17,7 @@ import { PRODUCT_MEDIA_STORAGE } from './storage.port';
 
 @Module({
   imports: [AuditModule, CatalogModule],
-  controllers: [MediaController],
+  controllers: [MediaController, StorefrontAssetsController],
   providers: [
     MediaPolicyService,
     MediaService,

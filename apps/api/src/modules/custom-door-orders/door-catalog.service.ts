@@ -164,7 +164,7 @@ export class DoorCatalogService {
         );
       if (input.imageMediaId) {
         const image = await tx.productMedia.findFirst({
-          where: { id: input.imageMediaId, state: "READY", kind: "IMAGE" },
+          where: { id: input.imageMediaId, assetScope: "PRODUCT", state: "READY", kind: "IMAGE" },
           select: { id: true },
         });
         if (!image)
@@ -223,7 +223,7 @@ export class DoorCatalogService {
       );
     return this.transaction(async (tx) => {
       if (cfg.imageMediaId) {
-        const image = await tx.productMedia.findFirst({ where: { id: cfg.imageMediaId, state: "READY", kind: "IMAGE" }, select: { id: true } });
+        const image = await tx.productMedia.findFirst({ where: { id: cfg.imageMediaId, assetScope: "PRODUCT", state: "READY", kind: "IMAGE" }, select: { id: true } });
         if (!image) throw new BadRequestException("تصویر شیشه باید از رسانه‌های آماده و تأییدشده انتخاب شود.");
       }
       if (input.variantId) {

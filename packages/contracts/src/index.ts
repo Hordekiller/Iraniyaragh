@@ -56,3 +56,4 @@ export * from './door-manufacturing';
 export * from './promotions';
 export * from './blog';
 export * from './reviews';
+export type { ShopSectionKind, ShopSection, ShopContent, ShopAdminConfig, ShopPublicConfig, ShopUpdate, ShopAdminResponse, ShopPublicResponse, StorefrontAsset, StorefrontAssetListResponse, WishlistResponse } from './shop';

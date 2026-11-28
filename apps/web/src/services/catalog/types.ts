@@ -56,6 +56,13 @@ export type CatalogProduct = {
 
 export type CatalogQuery = {
   page?: number
+  minPrice?: string
+  maxPrice?: string
+  available?: boolean
+  discounted?: boolean
+  slugs?: string[]
+  ids?: string[]
+  attributes?: Record<string, string>
   search?: string
   categoryId?: string
   categorySlug?: string
@@ -73,6 +80,9 @@ export type CatalogCategory = {
   slug: string
   productCount: number
   image: string
+  imageAlt?: string | null
+  shopOrder?: number
+  shopFeatured?: boolean
 }
 
 export type CatalogListResult = {

@@ -34,7 +34,7 @@ export class HomepageHeroService {
   }
   private async images(ids: string[], client: Pick<PrismaService, 'productMedia'> = this.prisma) {
     const productIds = ids.filter(id => !BUILTINS[id]);
-    const rows = productIds.length ? await client.productMedia.findMany({ where: { id: { in: productIds }, state: 'READY', kind: 'IMAGE' }, include: { renditions: true } }) : [];
+    const rows = productIds.length ? await client.productMedia.findMany({ where: { id: { in: productIds }, assetScope: 'PRODUCT', state: 'READY', kind: 'IMAGE' }, include: { renditions: true } }) : [];
     const map = new Map<string, HomepageBannerImage>();
     for (const id of ids) { const image = this.builtinImage(id); if (image) map.set(id, image); }
     for (const row of rows) { const image = widestRenditionProjection(this.mediaOrigin, row.renditions); if (image) map.set(row.id, image); }
@@ -55,10 +55,10 @@ export class HomepageHeroService {
     }]) };
   }
   async mediaOptions(): Promise<HomepageBannerMediaOption[]> {
-    const rows = await this.prisma.productMedia.findMany({ where: { state: 'READY', kind: 'IMAGE' }, orderBy: { createdAt: 'desc' }, take: 60, include: { renditions: true, product: { select: { name: true } } } });
+    const rows = await this.prisma.productMedia.findMany({ where: { assetScope: 'PRODUCT', state: 'READY', kind: 'IMAGE' }, orderBy: { createdAt: 'desc' }, take: 60, include: { renditions: true, product: { select: { name: true } } } });
     return [
       ...Object.entries(BUILTINS).map(([id, builtin]) => ({ id, ...this.builtinImage(id)!, alt: builtin.alt, productName: builtin.name })),
-      ...rows.flatMap(row => { const image = widestRenditionProjection(this.mediaOrigin, row.renditions); return image ? [{ id: row.id, ...image, alt: row.altText ?? '', productName: row.product.name }] : []; }),
+      ...rows.flatMap(row => { const image = widestRenditionProjection(this.mediaOrigin, row.renditions); return image ? [{ id: row.id, ...image, alt: row.altText ?? '', productName: row.product?.name ?? row.originalFilename }] : []; }),
     ];
   }
   async update(actorId: string, requestId: string, raw: HomepageBannersUpdate, idempotencyKey: string): Promise<HomepageBannersAdminConfig> {

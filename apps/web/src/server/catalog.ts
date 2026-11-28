@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { notFound, permanentRedirect } from 'next/navigation'
-import type { BrandListResponse } from '@iranyaragh/contracts'
+import type { BrandListResponse, BrandSummary, ShopPublicConfig, ShopPublicResponse } from '@iranyaragh/contracts'
 import { CatalogFixtureClient } from '../services/catalog/fixtures'
 import { fixtureAllProducts } from '../services/catalog/fixture-data'
 import type { CatalogApi } from '../services/catalog/types'
@@ -19,7 +19,7 @@ const publicFetch: typeof fetch = (input, init) => fetch(input, { ...init, cache
 function isolatedFixture() { return process.env.APP_ENVIRONMENT === 'test' && process.env.NEXT_PUBLIC_FIXTURE_CATALOG === 'true' }
 export function catalogApi(): CatalogApi { return isolatedFixture() ? new CatalogFixtureClient({ delayMs: 0 }) : new CatalogHttpClient({ baseUrl: apiOrigin(), fetch: publicFetch }) }
 export const categories = cache(() => catalogApi().listCategories())
-export const brands = cache(async () => isolatedFixture() ? [...new Set(fixtureAllProducts.map(item => item.brand).filter((name): name is string => !!name))].map(name => ({ id: name, name, slug: name.toLowerCase() })) : (await publicJson<BrandListResponse>('/api/v1/catalog/brands')).data.items)
+export const brands = cache(async (): Promise<BrandSummary[]> => isolatedFixture() ? [...new Set(fixtureAllProducts.map(item => item.brand).filter((name): name is string => !!name))].map(name => ({ id: name, name, slug: name.toLowerCase(), productCount: 0 })) : (await publicJson<BrandListResponse>('/api/v1/catalog/brands')).data.items)
 export const products = cache(async (query: Parameters<ReturnType<typeof catalogApi>['listProducts']>[0]) => catalogApi().listProducts(query))
 export const product = cache(async (slug: string) => {
   const decodedSlug = decodedRouteSlug(slug)
@@ -58,3 +58,12 @@ export const homeCatalog = cache(async () => {
   }))
   return { categories: allCategories.filter(item => item.parentId === null), categoryCollections: collections.filter(item => item !== null) }
 })
+
+export const shopConfig = cache(async (): Promise<ShopPublicConfig> => {
+  if (isolatedFixture()) return { hero: [], banners: [], categoryIds: [], brandIds: [], sections: [
+    ['categories', 'دسته‌بندی کالاها'], ['offers', 'پیشنهادهای ویژه'], ['bestsellers', 'پرفروش‌ها'], ['newest', 'تازه رسیده‌ها'], ['brands', 'خرید بر پایهٔ برند'], ['campaigns', 'جشنواره‌های فعال'], ['recent', 'بازدیدهای اخیر شما'],
+  ].map(([kind, title]) => ({ id: kind!, kind: kind as ShopPublicConfig['sections'][number]['kind'], title: title!, description: '', enabled: true, limit: 8, categoryId: null, productIds: [] })) }
+  return (await publicJson<ShopPublicResponse>('/api/v1/catalog/shop')).data.config
+})
+
+export const categoryFilters = cache(async (categoryId: string): Promise<Array<{code: string; name: string; options: Array<{code: string; label: string}>}>> => isolatedFixture() ? [] : (await publicJson<{data: {attributes: Array<{code: string; name: string; options: Array<{code: string; label: string}>}>}}>(`/api/v1/catalog/categories/${encodeURIComponent(categoryId)}/filters`)).data.attributes)

@@ -1,4 +1,8 @@
-import { useRef } from "react";
+"use client";
+
+import { useEffect, useRef } from "react";
+import { shopEvent } from "../analytics/shop-events";
+import { CONSENT_EVENT } from "../analytics/analytics-policy";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProductCard } from "./ProductCard";
@@ -9,7 +13,7 @@ type ProductCarouselProps = {
   title: string;
   description?: string;
   products: CatalogProduct[];
-  moreHref: string;
+  moreHref?: string;
   /** `offer` is the visually distinct special-offers treatment. */
   variant?: "default" | "offer";
   status?: "ready" | "loading" | "error";
@@ -28,6 +32,16 @@ export function ProductCarousel({
 }: ProductCarouselProps) {
   const offer = variant === "offer";
   const listRef = useRef<HTMLUListElement>(null);
+  const itemKey = products.map(product => product.id).join('|');
+  useEffect(() => {
+    if (!id.startsWith('shop-') || !itemKey || !listRef.current) return;
+    let visible = false, sent = false;
+    const send = () => { if (visible && !sent) sent = shopEvent('view_item_list', { item_list_id: id, items: itemKey.split('|').slice(0, 24).map(item_id => ({ item_id })) }); };
+    const observer = new IntersectionObserver(entries => { visible = entries.some(entry => entry.isIntersecting); send(); }, { threshold: 0.5 });
+    observer.observe(listRef.current);
+    window.addEventListener(CONSENT_EVENT, send);
+    return () => { observer.disconnect(); window.removeEventListener(CONSENT_EVENT, send); };
+  }, [id, itemKey]);
   const scroll = (direction: "previous" | "next") => {
     const list = listRef.current;
     if (!list) return;
@@ -43,7 +57,7 @@ export function ProductCarousel({
   };
 
   return (
-    <section
+    <section data-shop-list={id}
       className={`mt-8 lg:mt-14 ${offer ? "rounded-3xl bg-gradient-to-l from-[#9A3412] to-[#C2410C] p-4 text-white sm:p-6" : ""}`}
       aria-labelledby={`${id}-title`}
       aria-busy={status === "loading"}
@@ -65,12 +79,12 @@ export function ProductCarousel({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1 lg:gap-2">
-          <Link
+          {moreHref && <Link
             to={moreHref}
             className={`rounded-xl px-3 py-2 text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00] sm:text-sm ${offer ? "bg-white text-[#9A3412] hover:bg-orange-50" : "text-[#9A3412] hover:bg-orange-50"}`}
           >
             مشاهده همه
-          </Link>
+          </Link>}
           <button
             type="button"
             onClick={() => scroll("previous")}

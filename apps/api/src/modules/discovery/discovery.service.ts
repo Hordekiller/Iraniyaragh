@@ -90,7 +90,7 @@ export class DiscoveryService {
       // Policy text still awaits business approval and its HTML is noindex.
       // Only canonical, indexable public destinations belong in the sitemap.
       return this.singleflight(filename, async () => {
-        const paths = ['/', '/catalog', '/categories', '/custom-doors', '/help', '/about', '/contact', ...HELP_TOPIC_SLUGS.map(slug => `/help/${slug}`)];
+        const paths = ['/', '/shop', '/catalog', '/categories', '/custom-doors', '/help', '/about', '/contact', ...HELP_TOPIC_SLUGS.map(slug => `/help/${slug}`)];
         if (await this.prisma.blogPost.count({ where: liveBlog(new Date()), take: 1 })) paths.push('/blog');
         return this.urlset(paths.map(path => ({ path })));
       });
@@ -185,7 +185,7 @@ export class DiscoveryService {
     const result = new Map<string, string[]>();
     if (!productIds.length) return result;
     const media = await this.prisma.productMedia.findMany({ where: { productId: { in: productIds }, state: 'READY', kind: 'IMAGE' }, orderBy: [{ productId: 'asc' }, { position: 'asc' }], include: { renditions: true } });
-    for (const item of media) if (!result.has(item.productId)) result.set(item.productId, this.imageUrls(item.renditions));
+    for (const item of media) if (item.productId && !result.has(item.productId)) result.set(item.productId, this.imageUrls(item.renditions));
     return result;
   }
 

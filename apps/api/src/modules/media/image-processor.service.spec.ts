@@ -5,7 +5,7 @@ import { ProductMediaImageProcessor } from './image-processor.service';
 
 async function setup(scan: 'CLEAN' | 'INFECTED' | 'UNAVAILABLE' = 'CLEAN') {
   const source = await sharp({ create: { width: 64, height: 32, channels: 3, background: '#cc3300' } }).png().toBuffer();
-  const media = { id: 'media-1', productId: 'product-1', state: 'UPLOADED', kind: 'IMAGE', version: 1, objectKey: 'quarantine/products/product-1/media-1/source.png', declaredMime: 'image/png' };
+  const media = { id: 'media-1', productId: 'product-1' as string | null, state: 'UPLOADED', kind: 'IMAGE', version: 1, objectKey: 'quarantine/products/product-1/media-1/source.png', declaredMime: 'image/png' };
   const tx = { productMediaRendition: { deleteMany: vi.fn(), createMany: vi.fn() }, productMedia: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) } };
   const prisma = {
     productMedia: { findUnique: vi.fn().mockResolvedValue(media), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
@@ -31,6 +31,15 @@ describe('ProductMediaImageProcessor', () => {
       where: { id: 'media-1', state: 'PROCESSING' },
       data: expect.objectContaining({ state: 'READY', detectedMime: 'image/png', width: 64, height: 32 }),
     }));
+  });
+
+  it('processes an independent storefront image through the same scanner and immutable rendition pipeline', async () => {
+    const ctx = await setup();
+    ctx.prisma.productMedia.findUnique.mockResolvedValue({ ...ctx.media, productId: null });
+    await ctx.processor.process('media-1');
+    expect(ctx.scanner.scan).toHaveBeenCalledOnce();
+    expect(ctx.storage.putObject).toHaveBeenCalledWith(expect.objectContaining({ objectKey: expect.stringContaining('/storefront/media-1/') }));
+    expect(ctx.tx.productMedia.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ state: 'READY' }) }));
   });
 
   it('fails closed when the scanner is unavailable', async () => {

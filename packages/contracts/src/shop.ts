@@ -1,0 +1,13 @@
+import type { ApiSuccess } from './index';
+import type { HomepageBannerInput, HomepageBannerPublic } from './homepage-banners';
+export type ShopSectionKind = 'categories' | 'brands' | 'offers' | 'newest' | 'bestsellers' | 'manual' | 'category' | 'campaigns' | 'recent';
+export type ShopSection = { id: string; kind: ShopSectionKind; title: string; description: string; enabled: boolean; limit: number; categoryId: string | null; productIds: string[] };
+export type ShopContent = { hero: HomepageBannerInput[]; banners: HomepageBannerInput[]; categoryIds: string[]; brandIds: string[]; sections: ShopSection[] };
+export type ShopAdminConfig = ShopContent & { version: number; updatedAt: string | null };
+export type ShopPublicConfig = Omit<ShopContent, 'hero' | 'banners'> & { hero: HomepageBannerPublic[]; banners: HomepageBannerPublic[] };
+export type ShopUpdate = ShopContent & { expectedVersion: number };
+export type ShopAdminResponse = ApiSuccess<{ config: ShopAdminConfig }>;
+export type ShopPublicResponse = ApiSuccess<{ config: ShopPublicConfig }>;
+export type StorefrontAsset = { id: string; state: string; version: number; altText: string | null; failureCode: string | null; image: { url: string; width: number; height: number } | null };
+export type StorefrontAssetListResponse = ApiSuccess<{ items: StorefrontAsset[] }>;
+export type WishlistResponse = ApiSuccess<{ items: { id: string; slug: string }[] }>;

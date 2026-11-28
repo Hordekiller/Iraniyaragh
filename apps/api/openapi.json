@@ -2352,6 +2352,113 @@
         ]
       }
     },
+    "/wishlist": {
+      "get": {
+        "operationId": "WishlistController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Wishlist"
+        ]
+      },
+      "put": {
+        "operationId": "WishlistController_set",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Wishlist"
+        ]
+      }
+    },
+    "/wishlist/merge": {
+      "post": {
+        "operationId": "WishlistController_merge",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Wishlist"
+        ]
+      }
+    },
+    "/catalog/shop": {
+      "get": {
+        "operationId": "ShopController_publicConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Shop"
+        ]
+      }
+    },
+    "/catalog/shop/admin": {
+      "get": {
+        "operationId": "ShopController_adminConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Shop"
+        ]
+      },
+      "put": {
+        "operationId": "ShopController_update",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Shop"
+        ]
+      }
+    },
     "/catalog/products": {
       "get": {
         "operationId": "CatalogController_publicProducts",
@@ -2369,6 +2476,75 @@
             }
           },
           {
+            "name": "attributes",
+            "required": false,
+            "in": "query",
+            "description": "JSON object of up to 8 attribute codes and option codes; all match one active variant.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slugs",
+            "required": false,
+            "in": "query",
+            "description": "Up to 40 comma-separated product slugs.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "description": "Up to 24 comma-separated product IDs.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "discounted",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "available",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{1,15}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "minPrice",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{1,15}$",
+              "type": "string"
+            }
+          },
+          {
             "name": "sortBy",
             "required": false,
             "in": "query",
@@ -2377,7 +2553,8 @@
                 "name",
                 "createdAt",
                 "updatedAt",
-                "popular"
+                "popular",
+                "price"
               ],
               "type": "string"
             }
@@ -2592,6 +2769,22 @@
                                   "UNKNOWN"
                                 ]
                               },
+                              "previousPrice": {
+                                "type": "object",
+                                "nullable": true,
+                                "description": "Verified prior price for the cheapest active variant, only when reduced.",
+                                "properties": {
+                                  "amount": {
+                                    "type": "string"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "IRR"
+                                    ]
+                                  }
+                                }
+                              },
                               "startingPrice": {
                                 "type": "object",
                                 "nullable": true,
@@ -2620,6 +2813,38 @@
               }
             }
           },
+          "304": {
+            "description": "The public representation has not changed; no body is returned.",
+            "headers": {
+              "ETag": {
+                "description": "Strong validator for the current representation."
+              },
+              "Cache-Control": {
+                "description": "public, no-cache"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/categories/{id}/filters": {
+      "get": {
+        "operationId": "CatalogController_categoryFilters",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "Previously returned ETag for conditional revalidation.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
           "304": {
             "description": "The public representation has not changed; no body is returned.",
             "headers": {
@@ -2808,6 +3033,22 @@
                                 "OUT_OF_STOCK",
                                 "UNKNOWN"
                               ]
+                            },
+                            "previousPrice": {
+                              "type": "object",
+                              "nullable": true,
+                              "description": "Verified prior price for the cheapest active variant, only when reduced.",
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "IRR"
+                                  ]
+                                }
+                              }
                             },
                             "startingPrice": {
                               "type": "object",
@@ -8064,6 +8305,89 @@
         },
         "tags": [
           "Media"
+        ]
+      }
+    },
+    "/catalog/admin/storefront-assets": {
+      "get": {
+        "operationId": "StorefrontAssetsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StorefrontAssets"
+        ]
+      }
+    },
+    "/catalog/admin/storefront-assets/uploads": {
+      "post": {
+        "operationId": "StorefrontAssetsController_upload",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StorefrontAssets"
+        ]
+      }
+    },
+    "/catalog/admin/storefront-assets/{id}/confirm": {
+      "post": {
+        "operationId": "StorefrontAssetsController_confirm",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StorefrontAssets"
+        ]
+      }
+    },
+    "/catalog/admin/storefront-assets/{id}/archive": {
+      "post": {
+        "operationId": "StorefrontAssetsController_archive",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StorefrontAssets"
         ]
       }
     },

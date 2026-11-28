@@ -13,6 +13,9 @@ import { SECTION_IDS } from '../../lib/site-config'
 import { useRouteMetadata } from '../../lib/use-route-metadata'
 import { useHelperSwitchSync } from '../../lib/use-helper-enabled'
 import { useAuth } from '../../state/auth-context'
+import { useShopNavigation } from '../../lib/shop-navigation'
+import { Link } from 'react-router-dom'
+import { ROUTES } from '../../lib/routes'
 
 /**
  * Shared storefront shell. Owns the login dialog and header search state, and
@@ -21,6 +24,7 @@ import { useAuth } from '../../state/auth-context'
  */
 export function AppLayout({ children, serverMetadata = false }: { children?: ReactNode; serverMetadata?: boolean } = {}) {
   const auth = useAuth()
+  const shopMode = useShopNavigation()
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [searchParams] = useSearchParams()
@@ -49,6 +53,7 @@ export function AppLayout({ children, serverMetadata = false }: { children?: Rea
         پرش به محتوای اصلی
       </a>
       <TopBar />
+      {shopMode && <div className="border-b border-orange-100 bg-orange-50 px-4 py-1 text-left text-xs"><Link to={ROUTES.home} className="inline-flex min-h-9 items-center font-bold text-orange-900 underline-offset-4 hover:underline">بازگشت به سایت اصلی</Link></div>}
       <SiteHeader
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -73,10 +78,10 @@ export function AppLayout({ children, serverMetadata = false }: { children?: Rea
         onOpenSearch={() => setShowSearch(true)}
         onOpenLogin={auth.open}
       />
-      <DoorOrderFloatingLink />
+      {!shopMode && <DoorOrderFloatingLink />}
       <LoginDialog open={loginOpen} onClose={auth.close} />
-      <GuidedTour />
-      <PageHelper />
+      {!shopMode && <GuidedTour />}
+      {!shopMode && <PageHelper />}
       <ContactLauncher key={location.pathname} />
     </>
   )
@@ -84,6 +89,7 @@ export function AppLayout({ children, serverMetadata = false }: { children?: Rea
 
 function routeAnnouncement(pathname: string): string {
   if (pathname === '/') return 'صفحه خانه'
+  if (pathname === '/shop') return 'صفحه فروشگاه'
   if (pathname === '/categories') return 'صفحه دسته‌بندی کالاها'
   if (pathname === '/policies/privacy') return 'صفحه حریم خصوصی'
   if (pathname === '/help') return 'مرکز راهنمای مشتری'

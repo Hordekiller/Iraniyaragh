@@ -57,7 +57,7 @@ export type ProductMediaPrimaryRequest = {
 
 export type AdminProductMedia = {
   id: string;
-  productId: string;
+  productId: string | null;
   kind: ProductMediaKind;
   state: ProductMediaState;
   role: ProductMediaRole;

@@ -237,6 +237,7 @@ enum StocktakeScopeType {
 }
 
 model User {
+  wishlist WishlistItem[]
   orderReturnsRecorded        OrderReturn[]                 @relation("OrderReturnActor")
   returnHolidaysCreated       ReturnHoliday[]               @relation("ReturnHolidayActor")
   doorCatalogRevisions        DoorCatalogRevision[]
@@ -552,15 +553,26 @@ model LoginAttempt {
 }
 
 model Brand {
+  imageAssetId String?
+  imageAsset ProductMedia? @relation("BrandImage", fields: [imageAssetId], references: [id], onDelete: Restrict)
+  imageAlt String? @db.VarChar(200)
+  shopOrder Int @default(0)
+  shopFeatured Boolean @default(false)
   id        String    @id @default(cuid())
   name      String
   slug      String    @unique
   products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  @@index([imageAssetId])
 }
 
 model Category {
+  imageAssetId String?
+  imageAsset ProductMedia? @relation("CategoryImage", fields: [imageAssetId], references: [id], onDelete: Restrict)
+  imageAlt String? @db.VarChar(200)
+  shopOrder Int @default(0)
+  shopFeatured Boolean @default(false)
   id        String     @id @default(cuid())
   name      String
   slug      String     @unique
@@ -570,9 +582,11 @@ model Category {
   products  Product[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  @@index([imageAssetId])
 }
 
 model Product {
+  wishlistedBy WishlistItem[]
   id          String                          @id @default(cuid())
   name        String
   slug        String                          @unique
@@ -589,14 +603,20 @@ model Product {
   reviews     ProductReview[]
   createdAt   DateTime                        @default(now())
   updatedAt   DateTime                        @updatedAt
+  @@index([status, categoryId, createdAt, id])
+  @@index([status, brandId, createdAt, id])
 }
 
 model ProductMedia {
+  assetScope String @default("PRODUCT") @db.VarChar(16)
+  categoryImages Category[] @relation("CategoryImage")
+  brandImages Brand[] @relation("BrandImage")
+  shopReferences ShopAssetReference[]
   doorModels       DoorModel[]
   blogPostCovers   BlogPost[]
   id               String                  @id @default(cuid())
-  productId        String
-  product          Product                 @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productId        String?
+  product          Product?                @relation(fields: [productId], references: [id], onDelete: Restrict)
   kind             MediaKind
   state            MediaState              @default(PENDING_UPLOAD)
   role             MediaRole               @default(GALLERY)
@@ -633,6 +653,7 @@ model ProductMedia {
   @@index([posterMediaId])
   @@index([sourceDeleteAt])
   @@index([archivedAt])
+  @@index([assetScope, createdAt, id])
 }
 
 model ProductMediaRendition {
@@ -690,6 +711,7 @@ model ProductVariant {
 
   @@unique([productId, combinationSignature])
   @@index([productId])
+  @@index([productId, status, salePrice, id])
 }
 
 model AttributeDefinition {
@@ -771,6 +793,7 @@ model VariantPriceRecord {
 
   @@index([variantId, effectiveAt])
   @@index([effectiveAt])
+  @@index([variantId, effectiveAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
 }
 
 model CatalogImportRecord {
@@ -3097,4 +3120,30 @@ model OrderReturnRefund {
   refund      Refund      @relation(fields: [refundId], references: [id], onDelete: Restrict)
 
   @@index([returnId])
+}
+
+/// Independent shop settings; homepage settings retain their existing tables.
+model ShopConfig {
+  id String @id @default("shop") @db.VarChar(32)
+  version Int @default(0)
+  content Json @default("{}")
+  updatedAt DateTime @updatedAt
+  assets ShopAssetReference[]
+}
+model ShopAssetReference {
+  configId String @db.VarChar(32)
+  mediaId String
+  config ShopConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  media ProductMedia @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  @@id([configId, mediaId])
+  @@index([mediaId])
+}
+model WishlistItem {
+  userId String
+  productId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@id([userId, productId])
+  @@index([userId, createdAt])
 }

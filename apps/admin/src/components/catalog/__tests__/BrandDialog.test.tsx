@@ -13,6 +13,7 @@ vi.mock('@/lib/catalog/catalog-api', () => ({
 }));
 
 const brand: BrandSummary = { id: 'b1', name: 'آبان لک', slug: 'abanlock', productCount: 3 };
+const imageFields = { imageAssetId: null, imageAlt: '', shopOrder: 0, shopFeatured: false };
 
 function renderDialog(props: Partial<React.ComponentProps<typeof BrandDialog>> = {}) {
   const onClose = vi.fn();
@@ -35,7 +36,7 @@ describe('BrandDialog', () => {
     fireEvent.change(screen.getByLabelText(/شناسهٔ یکتا/), { target: { value: 'Ab an lock' } });
     fireEvent.click(screen.getByRole('button', { name: 'ساخت برند' }));
 
-    await waitFor(() => expect(createBrand).toHaveBeenCalledWith({ name: 'آبان', slug: 'ab-an-lock' }, expect.any(String)));
+    await waitFor(() => expect(createBrand).toHaveBeenCalledWith({ ...imageFields, name: 'آبان', slug: 'ab-an-lock' }, expect.any(String)));
     expect(await screen.findByText(/برند «آبان» ساخته شد/)).toBeInTheDocument();
     expect(onSaved).toHaveBeenCalledTimes(1);
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: 'b1', slug: 'abanlock' }));
@@ -50,7 +51,7 @@ describe('BrandDialog', () => {
     const button = screen.getByRole('button', { name: 'ذخیرهٔ تغییرات' });
     fireEvent.click(button);
 
-    await waitFor(() => expect(updateBrand).toHaveBeenCalledWith('b1', { name: 'آبان لک', slug: 'abanlock' }));
+    await waitFor(() => expect(updateBrand).toHaveBeenCalledWith('b1', { ...imageFields, name: 'آبان لک', slug: 'abanlock' }));
   });
 
   it('reuses the idempotency key after an ambiguous create failure', async () => {

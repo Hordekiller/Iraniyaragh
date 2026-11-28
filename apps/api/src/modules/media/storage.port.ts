@@ -29,18 +29,18 @@ export interface ProductMediaStorage {
 }
 
 export function mediaRenditionObjectKey(input: {
-  productId: string;
+  productId: string | null;
   mediaId: string;
   mediaVersion: number;
   purpose: string;
   format: 'jpeg' | 'webp';
 }): string {
-  if (!OPAQUE_ID.test(input.productId) || !OPAQUE_ID.test(input.mediaId) || input.mediaVersion < 1) {
+  if ((input.productId !== null && !OPAQUE_ID.test(input.productId)) || !OPAQUE_ID.test(input.mediaId) || input.mediaVersion < 1) {
     throw new Error('Invalid rendition object key input.');
   }
   const purpose = input.purpose.toLowerCase();
   if (!/^[a-z_]+$/u.test(purpose)) throw new Error('Invalid rendition purpose.');
-  return `renditions/products/${input.productId}/${input.mediaId}/v${input.mediaVersion}/${purpose}.${input.format}`;
+  return `renditions/products/${input.productId ?? "storefront"}/${input.mediaId}/v${input.mediaVersion}/${purpose}.${input.format}`;
 }
 
 const EXTENSION_BY_MIME: Readonly<Record<string, string>> = {
@@ -53,17 +53,17 @@ const EXTENSION_BY_MIME: Readonly<Record<string, string>> = {
 const OPAQUE_ID = /^[A-Za-z0-9_-]{1,128}$/u;
 
 export function mediaSourceObjectKey(input: {
-  productId: string;
+  productId: string | null;
   mediaId: string;
   declaredMime: string;
   nonce?: string;
 }): string {
-  if (!OPAQUE_ID.test(input.productId) || !OPAQUE_ID.test(input.mediaId)) {
+  if ((input.productId !== null && !OPAQUE_ID.test(input.productId)) || !OPAQUE_ID.test(input.mediaId)) {
     throw new Error('Product and media identifiers must be opaque safe path segments.');
   }
   const extension = EXTENSION_BY_MIME[input.declaredMime];
   if (!extension) throw new Error('Unsupported product media MIME type.');
   const nonce = input.nonce ?? randomUUID();
   if (!OPAQUE_ID.test(nonce)) throw new Error('Media object nonce must be a safe path segment.');
-  return `quarantine/products/${input.productId}/${input.mediaId}/${nonce}.${extension}`;
+  return `quarantine/products/${input.productId ?? "storefront"}/${input.mediaId}/${nonce}.${extension}`;
 }

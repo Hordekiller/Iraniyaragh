@@ -47,6 +47,19 @@ export class ProductMediaCleanupService {
       const removed = await this.prisma.productMediaRendition.deleteMany({ where: { mediaId: media.id } });
       archived += removed.count;
     }
+    // Storefront library orphans receive a long authoring grace period. The attach/archive
+    // lock prevents a concurrent category or shop save from claiming an archived image.
+    await this.prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(1752064113, 1935892600)`;
+      const orphans = await tx.productMedia.findMany({
+        where: { assetScope: 'STOREFRONT', state: 'READY', createdAt: { lt: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) }, categoryImages: { none: {} }, brandImages: { none: {} }, shopReferences: { none: {} }, blogPostCovers: { none: {} }, doorModels: { none: {} } },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: BATCH_SIZE, select: { id: true },
+      });
+      if (orphans.length) {
+        await tx.productMedia.updateMany({ where: { id: { in: orphans.map(row => row.id) } }, data: { state: 'ARCHIVED', archivedAt: now, sourceDeleteAt: now, version: { increment: 1 } } });
+        await tx.auditLog.createMany({ data: orphans.map(row => ({ action: 'storefront.asset.orphan_archived', entityType: 'ProductMedia', entityId: row.id })) });
+      }
+    });
     return { expired: expired.count, sources, archived };
   }
 }

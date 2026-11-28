@@ -51,7 +51,8 @@ export class CatalogHttpClient implements CatalogApi {
           name: category.name,
           slug: category.slug,
           productCount: category.productCount,
-          image: PLACEHOLDER_IMAGE,
+          image: category.image?.url ?? '',
+          imageAlt: category.imageAlt, shopOrder: category.shopOrder, shopFeatured: category.shopFeatured,
         })),
       )
       .finally(() => {
@@ -112,6 +113,14 @@ export class CatalogHttpClient implements CatalogApi {
     } else if (query.sortBy === 'popular') {
       params.set('sortBy', 'popular')
     }
+    if (query.sortBy === 'price_asc' || query.sortBy === 'price_desc') { params.set('sortBy', 'price'); params.set('sortDir', query.sortBy === 'price_asc' ? 'asc' : 'desc') }
+    if (query.minPrice) params.set('minPrice', query.minPrice)
+    if (query.maxPrice) params.set('maxPrice', query.maxPrice)
+    if (query.available) params.set('available', 'true')
+    if (query.discounted) params.set('discounted', 'true')
+    if (query.slugs?.length) params.set('slugs', query.slugs.join(','))
+    if (query.ids?.length) params.set('ids', query.ids.join(','))
+    if (query.attributes && Object.keys(query.attributes).length) params.set('attributes', JSON.stringify(query.attributes))
     const response = await this.request<ProductListResponse>(
       `/api/v1/catalog/products?${params}`,
     )
@@ -232,7 +241,7 @@ export class CatalogHttpClient implements CatalogApi {
       price: product.startingPrice ??
         variantPrice ?? { amount: '0', currency: 'IRR' },
       priceAvailable: product.startingPrice != null || variantPrice != null,
-      oldPrice: null,
+      oldPrice: 'previousPrice' in product ? product.previousPrice ?? null : null,
       rating: null,
       reviews: 0,
       stockStatus: product.stockStatus ?? 'UNKNOWN',

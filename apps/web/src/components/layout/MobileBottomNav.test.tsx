@@ -23,22 +23,22 @@ function RouteProbe() {
 }
 
 describe('MobileBottomNav', () => {
-  it('routes tracking to owned orders and marks order detail active', () => {
+  it('retains shop controls on shared order routes after a shop visit', () => {
+    window.sessionStorage.setItem('iranyaragh:navigation-mode', 'shop')
     render(<MemoryRouter initialEntries={['/orders/order-1']}><Harness /></MemoryRouter>)
-    const tracking = screen.getByRole('button', { name: 'پیگیری سفارش‌ها' })
-    expect(tracking).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: 'خانه' })).not.toHaveAttribute('aria-current')
-    fireEvent.click(tracking)
-    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.orders)
+    expect(screen.getByRole('button', { name: 'فروشگاه' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'فروشگاه' }))
+    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.shop)
   })
   beforeEach(() => {
     window.scrollTo = vi.fn()
+    window.sessionStorage.clear()
   })
 
-  it('keeps six actions and the translucent floating capsule', () => {
+  it('keeps five actions and the translucent floating capsule', () => {
     render(<MemoryRouter><Harness /></MemoryRouter>)
     const nav = screen.getByRole('navigation', { name: 'ناوبری پایین' })
-    expect(nav.querySelectorAll('button')).toHaveLength(6)
+    expect(nav.querySelectorAll('button')).toHaveLength(5)
     expect(nav.querySelector('.backdrop-blur-xl')).not.toBeNull()
   })
 
@@ -59,17 +59,14 @@ describe('MobileBottomNav', () => {
     }
   })
 
-  it('triggers the search opener', () => {
-    const onOpenSearch = vi.fn()
+  it('opens the shop from general navigation', () => {
     render(
       <MemoryRouter>
-        <Harness onOpenSearch={onOpenSearch} />
+        <Harness />
       </MemoryRouter>,
     )
-
-    fireEvent.click(screen.getByRole('button', { name: /جستجو/ }))
-
-    expect(onOpenSearch).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'فروشگاه' }))
+    expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.shop)
   })
 
   it('opens login from the profile button for a guest', () => {
@@ -97,7 +94,7 @@ describe('MobileBottomNav', () => {
     expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.home)
   })
 
-  it.each(['/', '/elsewhere', '/categories/power-tools'])('routes the categories button from %s to its dedicated page', (path) => {
+  it.each(['/shop', '/catalog', '/categories/power-tools'])('routes the shop categories button from %s to its dedicated page', (path) => {
     render(
       <MemoryRouter initialEntries={[path]}>
         <Harness />
@@ -108,7 +105,7 @@ describe('MobileBottomNav', () => {
 
     expect(screen.getByTestId('current-path')).toHaveTextContent(ROUTES.categories)
     expect(screen.getByRole('button', { name: /دسته‌بندی‌ها/ })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: 'خانه' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('button', { name: 'فروشگاه' })).not.toHaveAttribute('aria-current')
   })
   it('lets the product dock own the canonical product route without a second fixed menu', () => {
     render(<MemoryRouter initialEntries={['/products/test-product']}><Harness /></MemoryRouter>)

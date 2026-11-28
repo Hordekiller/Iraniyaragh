@@ -278,7 +278,7 @@ jobs:
       - name: Start MinIO and provision the media bucket
         run: |
           mkdir -p "$RUNNER_TEMP/minio-data"
-          MINIO_ROOT_USER=minio MINIO_ROOT_PASSWORD=change-me-now \
+          MINIO_ROOT_USER=minio MINIO_ROOT_PASSWORD=change-me-now MINIO_API_CORS_ALLOW_ORIGIN="$CORS_ORIGINS" \
             "$RUNNER_TEMP/minio-bin/minio" server "$RUNNER_TEMP/minio-data" \
             --address ':9000' > minio.log 2>&1 &
           MINIO_PID=$!
@@ -288,7 +288,7 @@ jobs:
             sleep 1
           done
           curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null 2>&1 || { echo "::error ::MinIO not ready"; tail -n 60 minio.log; exit 1; }
-          pnpm --filter @iranyaragh/api media:bucket
+          OBJECT_STORAGE_CORS_FALLBACK=minio-global pnpm --filter @iranyaragh/api media:bucket
       - name: Build API, start it and the media and PDF workers, build and smoke web and admin
         run: |
           # The PDF worker launches Chromium with its sandbox on, which needs user namespaces.
